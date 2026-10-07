@@ -12,6 +12,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
 import { armHoverIntent } from "./hoverintent-testing";
+import {
+  FORM_DIALOG_MAX_FIELDS,
+  intentForFieldCount,
+  MODAL_INTENTS,
+  type ModalIntent,
+} from "./modal";
 import { Popover } from "./popover";
 
 // A dialog covers the page. `aria-modal` says so to a screen reader and does
@@ -35,7 +41,12 @@ function Harness() {
     <>
       <Button onClick={() => setOpen(true)}>Open</Button>
       <Button>Behind the dialog</Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy="t">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="t"
+        intent="form"
+      >
         <Heading size="large" id="t">
           Log activity
         </Heading>
@@ -52,7 +63,12 @@ function ProseReceipt() {
   return (
     <>
       <Button onClick={() => setOpen(true)}>Open</Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy="p">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="p"
+        intent="form"
+      >
         <Heading size="large" id="p">
           Won this quarter
         </Heading>
@@ -74,7 +90,12 @@ function TwoReceipts() {
   return (
     <>
       <Button onClick={() => setOpen(true)}>Open</Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy="w">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="w"
+        intent="form"
+      >
         <Heading size="large" id="w">
           Won this quarter
         </Heading>
@@ -224,7 +245,12 @@ describe("a dialog holds the keyboard", () => {
   function NothingToAnswer() {
     const [open, setOpen] = useState(true);
     return (
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy="n">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="n"
+        intent="form"
+      >
         <Heading size="large" id="n">
           Nothing to answer
         </Heading>
@@ -291,6 +317,7 @@ describe("a dialog whose mutation removes its own opener", () => {
           open={open}
           onClose={() => setOpen(false)}
           labelledBy="row-h"
+          intent="form"
           returnFocusTo={named ? () => row.current : undefined}
         >
           <Heading size="large" id="row-h">
@@ -344,6 +371,7 @@ describe("a dialog whose mutation removes its own opener", () => {
           open={open}
           onClose={() => setOpen(false)}
           labelledBy="prec-h"
+          intent="form"
           returnFocusTo={resolve}
         >
           <Heading size="large" id="prec-h">
@@ -393,7 +421,7 @@ describe("a dialog whose mutation removes its own opener", () => {
 describe("a dialog that is leaving", () => {
   function twoStops(open: boolean, onClose: () => void) {
     return (
-      <Modal open={open} onClose={onClose} labelledBy="x">
+      <Modal open={open} onClose={onClose} labelledBy="x" intent="form">
         <Heading size="large" id="x">
           Log activity
         </Heading>
@@ -436,7 +464,12 @@ describe("a dialog that is leaving", () => {
       ]);
     try {
       const withProbe = (open: boolean) => (
-        <Modal open={open} onClose={() => undefined} labelledBy="p">
+        <Modal
+          open={open}
+          onClose={() => undefined}
+          labelledBy="p"
+          intent="form"
+        >
           <Heading size="large" id="p">
             Log activity
           </Heading>
@@ -527,7 +560,7 @@ describe("a drawer is a dialog anchored to the right edge", () => {
           open={open}
           onClose={() => setOpen(false)}
           labelledBy="d"
-          placement="right"
+          intent="drawer"
         >
           <Heading size="large" id="d">
             Write email
@@ -545,25 +578,86 @@ describe("a drawer is a dialog anchored to the right edge", () => {
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+});
 
-  // The width of a drawer comes from the viewport, so the centred-box size
-  // variants must not also apply — two width rules would fight.
-  it("ignores the centred-box size variant", () => {
+// The box classes are what the stylesheet sizes and places, so they are the
+// contract each intent is held to.
+function boxOf(intent: ModalIntent) {
+  render(
+    <Modal open onClose={() => {}} labelledBy="b" intent={intent}>
+      <Heading size="large" id="b">
+        Box
+      </Heading>
+    </Modal>,
+  );
+  const dialog = screen.getByRole("dialog", { name: "Box" });
+  expect(dialog.getAttribute("aria-modal")).toBe("true");
+  return { box: dialog.className, overlay: dialog.parentElement?.className };
+}
+
+describe("an intent decides the box on its own", () => {
+  it.each<[ModalIntent, string, string]>([
+    ["confirm", "modal modal-confirm", "overlay"],
+    ["form", "modal modal-form", "overlay"],
+    ["drawer", "modal modal-drawer", "overlay overlay-right"],
+    [
+      "drawer-reading",
+      "modal modal-drawer modal-drawer-wide",
+      "overlay overlay-right",
+    ],
+    ["full", "modal modal-full", "overlay"],
+  ])("%s draws %s", (intent, box, overlay) => {
+    expect(boxOf(intent)).toEqual({ box, overlay });
+  });
+
+  it("draws no box for a dialog that names none, rather than the lightbox", () => {
+    render(
+      // @ts-expect-error a dialog that names no shape does not compile
+      <Modal open onClose={() => {}} labelledBy="n">
+        <Heading size="large" id="n">
+          Unnamed
+        </Heading>
+      </Modal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Unnamed" }).className).toBe("");
+  });
+
+  it("takes no width but the intent's", () => {
     render(
       <Modal
         open
         onClose={() => {}}
-        labelledBy="d"
-        placement="right"
+        labelledBy="w"
+        intent="form"
+        // @ts-expect-error the legacy width props are gone
         size="wide"
       >
-        <Heading size="large" id="d">
-          Evidence
+        <Heading size="large" id="w">
+          Wide
         </Heading>
       </Modal>,
     );
-    const dialog = screen.getByRole("dialog", { name: "Evidence" });
-    expect(dialog.classList.contains("modal-drawer")).toBe(true);
-    expect(dialog.classList.contains("modal-wide")).toBe(false);
+    expect(screen.getByRole("dialog", { name: "Wide" }).className).toBe(
+      "modal modal-form",
+    );
+  });
+
+  it("names every intent it takes", () => {
+    expect([...MODAL_INTENTS].sort()).toEqual(
+      ["confirm", "drawer", "drawer-reading", "form", "full"].sort(),
+    );
+  });
+});
+
+describe("a form's field count picks its shape", () => {
+  it("keeps six fields or fewer in the centred form", () => {
+    expect(FORM_DIALOG_MAX_FIELDS).toBe(6);
+    expect(intentForFieldCount(1)).toBe("form");
+    expect(intentForFieldCount(6)).toBe("form");
+  });
+
+  it("moves the seventh field and beyond into the drawer", () => {
+    expect(intentForFieldCount(7)).toBe("drawer");
+    expect(intentForFieldCount(30)).toBe("drawer");
   });
 });

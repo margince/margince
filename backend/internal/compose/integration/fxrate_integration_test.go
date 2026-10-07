@@ -49,7 +49,7 @@ func TestFxRateAppendForward(t *testing.T) {
 		t.Fatalf("got %+v, want USD→EUR", r1)
 	}
 
-	// Same UTC day → corrects the row in place (one row survives).
+	// Same installation-zone day → corrects the row in place (one row survives).
 	if _, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.9200", EffectiveDate: today}); err != nil {
 		t.Fatalf("correct USD: %v", err)
 	}

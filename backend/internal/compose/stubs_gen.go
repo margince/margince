@@ -95,6 +95,14 @@ func (stubs) ReadActivityPipelineTrace(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "ReadActivityPipelineTrace")
 }
 
+func (stubs) GetActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetActivityProjectFiling")
+}
+
+func (stubs) UndoActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UndoActivityProjectFiling")
+}
+
 func (stubs) RelinkActivity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RelinkActivityParams) {
 	httperr.NotImplemented(w, r, "RelinkActivity")
 }
@@ -147,6 +155,10 @@ func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }
 
+func (stubs) PauseReportingSchedules(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PauseReportingSchedules")
+}
+
 func (stubs) ResetData(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ResetData")
 }
@@ -191,6 +203,14 @@ func (stubs) PreviewAiBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewAiBudget")
 }
 
+func (stubs) GetAiCallStats(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiCallStatsParams) {
+	httperr.NotImplemented(w, r, "GetAiCallStats")
+}
+
+func (stubs) GetAiTaskFlow(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiTaskFlowParams) {
+	httperr.NotImplemented(w, r, "GetAiTaskFlow")
+}
+
 func (stubs) ListAiCalls(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAiCallsParams) {
 	httperr.NotImplemented(w, r, "ListAiCalls")
 }
@@ -207,8 +227,20 @@ func (stubs) GetAiHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiHealth")
 }
 
+func (stubs) GetAiPriceSync(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiPriceSync")
+}
+
+func (stubs) ReplaceAiPriceSync(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReplaceAiPriceSync")
+}
+
 func (stubs) GetAiProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiProfile")
+}
+
+func (stubs) GetAiProviderHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiProviderHealth")
 }
 
 func (stubs) ListAiProviderKeys(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -227,6 +259,14 @@ func (stubs) TestAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, pro
 	httperr.NotImplemented(w, r, "TestAiProviderKey")
 }
 
+func (stubs) ListProviderLocations(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "ListProviderLocations")
+}
+
+func (stubs) SetAiProviderSettings(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "SetAiProviderSettings")
+}
+
 func (stubs) GetAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiRouting")
 }
@@ -239,8 +279,24 @@ func (stubs) PreviewAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewAiRouting")
 }
 
+func (stubs) GetAiRoutingSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiRoutingSchema")
+}
+
 func (stubs) GetAiStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiStatus")
+}
+
+func (stubs) GetAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiTaskOverrides")
+}
+
+func (stubs) ReplaceAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReplaceAiTaskOverrides")
+}
+
+func (stubs) PreviewAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAiTaskOverrides")
 }
 
 func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageParams) {
@@ -255,16 +311,108 @@ func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
 }
 
+func (stubs) CompareReportingEditions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CompareReportingEditionsParams) {
+	httperr.NotImplemented(w, r, "CompareReportingEditions")
+}
+
+func (stubs) GetReportingEdition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReportingEdition")
+}
+
+func (stubs) GetReportingEditionEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetReportingEditionEvidenceParams) {
+	httperr.NotImplemented(w, r, "GetReportingEditionEvidence")
+}
+
+func (stubs) ExportReportingEdition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ExportReportingEdition")
+}
+
+func (stubs) EvaluateReporting(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.EvaluateReportingParams) {
+	httperr.NotImplemented(w, r, "EvaluateReporting")
+}
+
+func (stubs) ExportReportingEvaluation(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ExportReportingEvaluationParams) {
+	httperr.NotImplemented(w, r, "ExportReportingEvaluation")
+}
+
+func (stubs) GetReportingEvidence(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetReportingEvidenceParams) {
+	httperr.NotImplemented(w, r, "GetReportingEvidence")
+}
+
+func (stubs) GetReportingExecution(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReportingExecution")
+}
+
+func (stubs) RetryReportingExecution(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RetryReportingExecution")
+}
+
 func (stubs) ExplainAnalyticsCell(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ExplainAnalyticsCell")
+}
+
+func (stubs) GetReportingFramework(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetReportingFramework")
+}
+
+func (stubs) PublishReportingFramework(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PublishReportingFrameworkParams) {
+	httperr.NotImplemented(w, r, "PublishReportingFramework")
+}
+
+func (stubs) GetReportingMetrics(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetReportingMetrics")
 }
 
 func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }
 
+func (stubs) ListReportingReports(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingReportsParams) {
+	httperr.NotImplemented(w, r, "ListReportingReports")
+}
+
+func (stubs) CreateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateReportingReport")
+}
+
 func (stubs) RenderAnalyticsReport(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RenderAnalyticsReport")
+}
+
+func (stubs) ArchiveReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveReportingReport")
+}
+
+func (stubs) GetReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReportingReport")
+}
+
+func (stubs) UpdateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateReportingReportParams) {
+	httperr.NotImplemented(w, r, "UpdateReportingReport")
+}
+
+func (stubs) ListReportingEditions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListReportingEditionsParams) {
+	httperr.NotImplemented(w, r, "ListReportingEditions")
+}
+
+func (stubs) FreezeReportingEdition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.FreezeReportingEditionParams) {
+	httperr.NotImplemented(w, r, "FreezeReportingEdition")
+}
+
+func (stubs) EvaluateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.EvaluateReportingReportParams) {
+	httperr.NotImplemented(w, r, "EvaluateReportingReport")
+}
+
+func (stubs) ListReportingExecutions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListReportingExecutionsParams) {
+	httperr.NotImplemented(w, r, "ListReportingExecutions")
+}
+
+func (stubs) ListReportingSchedules(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListReportingSchedules")
+}
+
+func (stubs) CreateReportingSchedule(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "CreateReportingSchedule")
 }
 
 func (stubs) GetReportRun(w nethttp.ResponseWriter, r *nethttp.Request, runId openapi_types.UUID) {
@@ -275,8 +423,28 @@ func (stubs) ExplainReportRunCell(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ExplainReportRunCell")
 }
 
+func (stubs) UpdateReportingSchedule(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateReportingScheduleParams) {
+	httperr.NotImplemented(w, r, "UpdateReportingSchedule")
+}
+
 func (stubs) GetAnalyticsSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsSchema")
+}
+
+func (stubs) ListReportingTargets(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingTargetsParams) {
+	httperr.NotImplemented(w, r, "ListReportingTargets")
+}
+
+func (stubs) CreateReportingTarget(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateReportingTarget")
+}
+
+func (stubs) GetReportingTarget(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReportingTarget")
+}
+
+func (stubs) UpdateReportingTarget(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateReportingTargetParams) {
+	httperr.NotImplemented(w, r, "UpdateReportingTarget")
 }
 
 func (stubs) ApproveApprovalBundle(w nethttp.ResponseWriter, r *nethttp.Request, bundleId crmcontracts.BundleId) {
@@ -377,6 +545,10 @@ func (stubs) Login(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) Logout(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "Logout")
+}
+
+func (stubs) CompleteMfaChallenge(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CompleteMfaChallenge")
 }
 
 func (stubs) OidcSignInCallback(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.OidcSignInCallbackParamsProvider, params crmcontracts.OidcSignInCallbackParams) {
@@ -1071,6 +1243,14 @@ func (stubs) RecordConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "RecordConsent")
 }
 
+func (stubs) AllowContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AllowContact")
+}
+
+func (stubs) RevokeOverride(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, overrideId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RevokeOverride")
+}
+
 func (stubs) RequestDetailsConfirmation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RequestDetailsConfirmation")
 }
@@ -1221,6 +1401,10 @@ func (stubs) CreateCustomField(w nethttp.ResponseWriter, r *nethttp.Request, par
 
 func (stubs) RenameCustomField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RenameCustomFieldParams) {
 	httperr.NotImplemented(w, r, "RenameCustomField")
+}
+
+func (stubs) ListCustomFieldLiveLists(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCustomFieldLiveLists")
 }
 
 func (stubs) UpdateCustomFieldOptions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateCustomFieldOptionsParams) {
@@ -1379,6 +1563,10 @@ func (stubs) AcceptAppliedDealChange(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "AcceptAppliedDealChange")
 }
 
+func (stubs) GetDealCommitments(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetDealCommitments")
+}
+
 func (stubs) GetDealCoverage(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetDealCoverage")
 }
@@ -1459,6 +1647,10 @@ func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethtt
 	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
 }
 
+func (stubs) PreviewEmailSignOff(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewEmailSignOff")
+}
+
 func (stubs) EmbedReindexStart(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexStart")
 }
@@ -1493,6 +1685,10 @@ func (stubs) GetFieldHistory(w nethttp.ResponseWriter, r *nethttp.Request, param
 
 func (stubs) PreviewFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewFilter")
+}
+
+func (stubs) ProposeFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ProposeFilter")
 }
 
 func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFilterVocabularyParams) {
@@ -1831,6 +2027,10 @@ func (stubs) RestoreList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "RestoreList")
 }
 
+func (stubs) VisitList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "VisitList")
+}
+
 func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMagicParams) {
 	httperr.NotImplemented(w, r, "GetMagic")
 }
@@ -1887,6 +2087,10 @@ func (stubs) SaveMyEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "SaveMyEmailSignature")
 }
 
+func (stubs) SaveMyGreetingName(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveMyGreetingName")
+}
+
 func (stubs) GetMyLinkedInAccount(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyLinkedInAccount")
 }
@@ -1907,12 +2111,36 @@ func (stubs) SaveMyLocale(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyLocale")
 }
 
+func (stubs) DisableMyMfa(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DisableMyMfa")
+}
+
+func (stubs) GetMyMfa(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetMyMfa")
+}
+
+func (stubs) StartMyTotpEnrolment(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "StartMyTotpEnrolment")
+}
+
+func (stubs) ConfirmMyTotp(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConfirmMyTotp")
+}
+
 func (stubs) ListNotificationPreferences(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListNotificationPreferences")
 }
 
 func (stubs) SaveNotificationPreference(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveNotificationPreference")
+}
+
+func (stubs) ListMySessions(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListMySessions")
+}
+
+func (stubs) RevokeMySession(w nethttp.ResponseWriter, r *nethttp.Request, sessionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RevokeMySession")
 }
 
 func (stubs) GetMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -2331,6 +2559,10 @@ func (stubs) UpdateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "UpdateRecordRole")
 }
 
+func (stubs) GetRecordLists(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetRecordLists")
+}
+
 func (stubs) GetRecordTags(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetRecordTags")
 }
@@ -2499,6 +2731,10 @@ func (stubs) PutSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "PutSchedulingProfile")
 }
 
+func (stubs) ListMeetingProposals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMeetingProposalsParams) {
+	httperr.NotImplemented(w, r, "ListMeetingProposals")
+}
+
 func (stubs) CreateMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateMeetingProposalParams) {
 	httperr.NotImplemented(w, r, "CreateMeetingProposal")
 }
@@ -2589,6 +2825,10 @@ func (stubs) ArchiveStageExitCriterion(w nethttp.ResponseWriter, r *nethttp.Requ
 
 func (stubs) UpdateStageExitCriterion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, criterionId openapi_types.UUID, params crmcontracts.UpdateStageExitCriterionParams) {
 	httperr.NotImplemented(w, r, "UpdateStageExitCriterion")
+}
+
+func (stubs) GetStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetStatus")
 }
 
 func (stubs) ListTags(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListTagsParams) {
@@ -2689,6 +2929,14 @@ func (stubs) ReactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) ChangeUserRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ChangeUserRole")
+}
+
+func (stubs) ListUserSessions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListUserSessions")
+}
+
+func (stubs) RevokeUserSession(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, sessionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RevokeUserSession")
 }
 
 func (stubs) ListSavedViews(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSavedViewsParams) {

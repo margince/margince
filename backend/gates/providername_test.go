@@ -5,7 +5,7 @@
 
 package gates
 
-// The rule a REGISTERED NAME must satisfy is the contract's, on both surfaces
+// The rule a registered name must satisfy is the contract's, on both surfaces
 // that have one.
 //
 // `Provider` (a licensed data vendor) and `ProviderRef` (a messaging

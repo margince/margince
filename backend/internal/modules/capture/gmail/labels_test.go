@@ -83,7 +83,7 @@ func TestListContainersReadsTheMailboxsLabels(t *testing.T) {
 	api := &fakeAPI{labels: []connector.NamedContainer{{ID: "Label_3", Name: "Familie"}}}
 	c := New(fakeOAuth{access: "access-1"}, api)
 
-	got, err := c.ListContainers(context.Background(), authBytes(t))
+	got, _, err := c.ListContainers(context.Background(), authBytes(t))
 	if err != nil {
 		t.Fatalf("ListContainers: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestListContainersReadsTheMailboxsLabels(t *testing.T) {
 // wrong answer.
 func TestListContainersRefusesMalformedAuth(t *testing.T) {
 	c := New(fakeOAuth{access: "access-1"}, &fakeAPI{})
-	if _, err := c.ListContainers(context.Background(), []byte("not json")); err == nil {
+	if _, _, err := c.ListContainers(context.Background(), []byte("not json")); err == nil {
 		t.Fatal("a malformed auth bundle listed containers instead of failing")
 	}
 }

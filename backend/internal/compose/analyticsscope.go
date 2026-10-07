@@ -47,8 +47,8 @@ const (
 // for nothing, which resolves to their lens default rather than to the
 // workspace — the distinction this whole file exists to make.
 type RequestedScope struct {
-	Kind string
-	ID   *ids.UUID
+	Kind string    `json:"kind"`
+	ID   *ids.UUID `json:"id,omitempty"`
 }
 
 // ResolvedScope is what the server decided, and what every answer must quote
@@ -124,6 +124,16 @@ func AnalyticsPopulationClause(
 	ctx context.Context, tx pgx.Tx, requested RequestedScope, alias string, arg func(any) int,
 	unowned unownedPopulation,
 ) (ResolvedScope, string, error) {
+	col := paramOwnerID
+	if alias != "" {
+		col = alias + "." + paramOwnerID
+	}
+	return analyticsPopulationExpression(ctx, tx, requested, col, arg, unowned)
+}
+
+// The expression is a trusted catalog column, allowing event-time attribution
+// to use the same scope authority as current ownership.
+func analyticsPopulationExpression(ctx context.Context, tx pgx.Tx, requested RequestedScope, col string, arg func(any) int, unowned unownedPopulation) (ResolvedScope, string, error) {
 	resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
 	if err != nil {
 		return ResolvedScope{}, "", err
@@ -131,11 +141,6 @@ func AnalyticsPopulationClause(
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return ResolvedScope{}, "", errors.New("compose: no actor bound to context")
-	}
-
-	col := paramOwnerID
-	if alias != "" {
-		col = alias + "." + paramOwnerID
 	}
 
 	switch resolved.Kind {

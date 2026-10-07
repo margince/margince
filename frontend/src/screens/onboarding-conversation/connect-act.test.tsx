@@ -648,7 +648,6 @@ describe("the way onward", () => {
     renderConnectAct();
     const onward = screen.getByRole("button", { name: "Continue" });
     expect(onward.closest(".ob-stage-acts")).toBeTruthy();
-    expect(onward.closest(".mw-thread")).toBeNull();
   });
 
   // With a mailbox live the step is left as connected: the skip flag is
@@ -700,7 +699,6 @@ describe("the consent guarantees", () => {
     ] as const) {
       const found = screen.getByText(en[key]);
       expect(found.closest("details")).toBe(fold);
-      expect(found.closest(".mw-thread")).toBeNull();
     }
   });
 });

@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // newMagicService assembles the receipt's read.
@@ -151,12 +150,9 @@ type magicUndoJudge struct {
 
 // JudgeUndoPage answers a whole page.
 //
-// The workspace-level questions are asked ONCE here rather than per line: the
-// object grant and the installation's overlay posture are properties of the
-// caller and the workspace, and asking them a hundred times over is a hundred
-// round trips for one answer. isOverlayUncached in particular opens its own
-// transaction, so per-line it would take a second connection while this one
-// holds the page — the deadlock shape every reader here is written to avoid.
+// The object grants are asked ONCE per record type and grant rather than per
+// line: they are properties of the caller, and asking them a hundred times over
+// is a hundred round trips for a handful of answers.
 func (j magicUndoJudge) JudgeUndoPage(
 	ctx context.Context, tx pgx.Tx, subjects []magic.UndoSubject,
 ) (map[ids.UUID]*crmcontracts.MagicUndo, error) {
@@ -164,12 +160,9 @@ func (j magicUndoJudge) JudgeUndoPage(
 	if len(subjects) == 0 {
 		return out, nil
 	}
-	// The object grant the WRITE takes. Without it a rep who owns the row but
-	// holds no update permission is offered a control that can only 403 —
-	// row authority alone is not the question the writer asks.
-	posture := undoPosture{mayWrite: auth.Require(ctx, "deal", principal.ActionUpdate) == nil}
+	grants := undoGrants{}
 	for _, subject := range subjects {
-		answer, err := j.judgeOne(ctx, tx, subject, posture)
+		answer, err := j.judgeOne(ctx, tx, subject, grants)
 		if err != nil {
 			return nil, err
 		}
@@ -180,13 +173,23 @@ func (j magicUndoJudge) JudgeUndoPage(
 	return out, nil
 }
 
-// undoPosture is what the page resolved once for every line on it: facts about
-// the CALLER and the WORKSPACE rather than about any one entry.
-type undoPosture struct {
-	// mayWrite is the object grant the write itself takes. Row authority alone
-	// is not the question: a rep who owns the row but holds no update
-	// permission would be offered a control that can only 403.
-	mayWrite bool
+// undoGrants remembers, for one page, which object grants the caller holds,
+// keyed by record type and grant.
+type undoGrants map[string]bool
+
+// holds answers whether the caller holds the object grant the undo of this
+// entry writes with, on the entry's OWN record type. Without it a rep who owns
+// the row but holds no grant is offered a control that can only 403 — row
+// authority alone is not the question the writer asks.
+func (g undoGrants) holds(ctx context.Context, row AuditRow) bool {
+	grant := undoGrantFor(row)
+	key := row.EntityType + "/" + string(grant)
+	held, asked := g[key]
+	if !asked {
+		held = auth.Require(ctx, row.EntityType, grant) == nil
+		g[key] = held
+	}
+	return held
 }
 
 // judgeOne answers for one entry, or declines to answer at all.
@@ -196,26 +199,26 @@ type undoPosture struct {
 // an entry it never looked at is how a greyed control acquires a reason that is
 // not true.
 func (j magicUndoJudge) judgeOne(
-	ctx context.Context, tx pgx.Tx, subject magic.UndoSubject, posture undoPosture,
+	ctx context.Context, tx pgx.Tx, subject magic.UndoSubject, grants undoGrants,
 ) (*crmcontracts.MagicUndo, error) {
 	if !servesRecordType(subject.EntityType) {
 		return magicRefusal(string(ReasonUnsupportedRecordType)), nil
 	}
-	if !posture.mayWrite {
-		return magicRefusal(string(ReasonNotWritableByCaller)), nil
-	}
 	var row AuditRow
 	err := tx.QueryRow(ctx, `
-		SELECT id, entity_type, entity_id, action, before, after, occurred_at
+		SELECT id, entity_type, entity_id, action, before, after, evidence, occurred_at
 		  FROM audit_log
 		 WHERE id = $1`, subject.AuditID).
 		Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action,
-			&row.Before, &row.After, &row.OccurredAt)
+			&row.Before, &row.After, &row.Evidence, &row.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return magicRefusal(string(ReasonUnsupportedRecordType)), nil
 	}
 	if err != nil {
 		return nil, err
+	}
+	if !grants.holds(ctx, row) {
+		return magicRefusal(string(ReasonNotWritableByCaller)), nil
 	}
 	// A scope MISS is an answer — no control for a record this reader cannot
 	// change — while a broken read is not. Collapsing both into a silent "no"

@@ -35,9 +35,9 @@ export type Fact = Readonly<{
  * a row must be shown as unknown, the caller passes the honest words as
  * `value`.
  *
- * `numeric` sets tabular figures on every value, for the case the workbench
- * runtime rows already handle by hand: a column of counts that would otherwise
- * shift as digits change width.
+ * `numeric` sets tabular figures on every value, for the case the runtime
+ * chip's rows (`.mw-aistat-r dd`) already handle by hand: a column of counts
+ * that would otherwise shift as digits change width.
  */
 export function FactList({
   facts,

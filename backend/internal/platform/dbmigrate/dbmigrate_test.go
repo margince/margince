@@ -252,6 +252,12 @@ func TestContactRenameAcceptsThePreviouslyShippedContent(t *testing.T) {
 
 // Every recorded equivalent digest is admitted only for its exact source and
 // namespace. Unrelated applied content and later source edits remain errors.
+//
+// Asked of BOTH doors at once. assertContentMatches is what a migrate runs and
+// ContentAdmitted is what the test-database head probe asks, and a probe
+// stricter than the migrator is not a safer probe — it calls a template the
+// migrator would reuse not-at-head and rebuilds it. They share one reader of
+// the list; this is what says so.
 func TestEquivalentContentIsAdmittedAndNothingElseIs(t *testing.T) {
 	t.Parallel()
 	for _, m := range loadNamespaceMigrations(t, "core") {
@@ -263,12 +269,20 @@ func TestEquivalentContentIsAdmittedAndNothingElseIs(t *testing.T) {
 					t.Errorf("a database holding applied-but-equivalent content refused: %v — it reached the "+
 						"schema this source builds and has nowhere else to go", err)
 				}
+				if !ContentAdmitted("core", m, admitted) {
+					t.Error("the probe's door refused content the migrator admits, so a reusable template " +
+						"is reported not-at-head and rebuilt for nothing")
+				}
 
 				// Some OTHER applied content on the same version is still a mismatch.
 				stranger := "bb" + strings.Repeat("0", 62)
 				if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &stranger}}, m); err == nil {
 					t.Error("applied content that is not the recorded one was admitted — an entry excuses one " +
 						"known byte sequence, not every database on this version")
+				}
+				if ContentAdmitted("core", m, stranger) {
+					t.Error("the probe's door admitted content the migrator refuses, so a template the " +
+						"migrator would rebuild is reported at head and reused")
 				}
 
 				// And the entry must expire when the SOURCE changes again. Without this the
@@ -351,5 +365,67 @@ func TestARevertOfAnUnappliedVersionHasNothingToCompare(t *testing.T) {
 	m := Migration{Version: "0210", Name: "other", UpSQL: "SELECT 1", DownSQL: "SELECT 1"}
 	if err := assertContentMatches("core", map[string]appliedRow{}, m); err != nil {
 		t.Errorf("an unapplied version refused: %v", err)
+	}
+}
+
+// The marker is read off the file, on a line of its own.
+//
+// A line of its own because the string is going to appear in prose — this comment and
+// the constant's own doc are two places already — and a migration that merely MENTIONS
+// the marker must still be wrapped. Losing atomicity is not the kind of thing a file
+// should be able to ask for by accident.
+func TestLoadReadsTheNoTransactionMarkerOffItsOwnLine(t *testing.T) {
+	t.Parallel()
+	fsys := fstest.MapFS{
+		"core/0001_wrapped.up.sql":   {Data: []byte("CREATE TABLE a ();")},
+		"core/0001_wrapped.down.sql": {Data: []byte("DROP TABLE a;")},
+		"core/0002_asked.up.sql": {Data: []byte(
+			NoTransactionMarker + "\nCREATE INDEX CONCURRENTLY i ON a (x);",
+		)},
+		"core/0002_asked.down.sql": {Data: []byte("DROP INDEX CONCURRENTLY IF EXISTS i;")},
+		"core/0003_mentions.up.sql": {Data: []byte(
+			"-- Not " + NoTransactionMarker + ": this one is fine wrapped.\nCREATE TABLE c ();",
+		)},
+		"core/0003_mentions.down.sql": {Data: []byte("DROP TABLE c;")},
+	}
+	loaded, err := Load(fsys, "core")
+	if err != nil {
+		t.Fatalf("Load → %v", err)
+	}
+
+	want := map[string]bool{"wrapped": false, "asked": true, "mentions": false}
+	if len(loaded) != len(want) {
+		t.Fatalf("loaded %d migrations, want %d", len(loaded), len(want))
+	}
+	for _, m := range loaded {
+		expected, named := want[m.Name]
+		if !named {
+			t.Errorf("Load returned a migration this test does not name: %q — a map default "+
+				"would let it stand in for an expected one and read as a pass", m.Name)
+			continue
+		}
+		if m.Unwrapped() != expected {
+			t.Errorf("%s: Unwrapped = %v, want %v — a file that only names the marker in prose "+
+				"must still be wrapped, and one that asks for it on its own line must not be",
+				m.Name, m.Unwrapped(), expected)
+		}
+	}
+}
+
+// The marker is inside the digest, so asking for it is a content change.
+//
+// Digest is what tells "this database applied version X" from "this database applied
+// the migration this binary calls X". A file that gained or lost the marker runs
+// differently, so a database migrated before the change has to read as a different
+// migration rather than as the same one.
+func TestTheNoTransactionMarkerChangesTheDigest(t *testing.T) {
+	t.Parallel()
+	plain := Migration{Version: "0001", Name: "x", UpSQL: "CREATE INDEX i ON a (x);", DownSQL: "DROP INDEX i;"}
+	asked := plain
+	asked.UpSQL = NoTransactionMarker + "\n" + plain.UpSQL
+
+	if Digest(plain) == Digest(asked) {
+		t.Error("the marker left the digest unchanged, so a database that applied the wrapped " +
+			"spelling reads as having applied the unwrapped one")
 	}
 }

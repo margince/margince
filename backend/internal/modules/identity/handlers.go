@@ -80,6 +80,17 @@ type Handlers struct {
 	// secret. Keyed by user id rather than IP: the account is what is being
 	// guessed at, and a caller who already holds a session can change IP.
 	changeFailures *ratelimit.Limiter // 10 failures/min per user
+	// The second-factor guessing surface: /auth/mfa completes a login with a
+	// six-digit code, and the disable step-up verifies the same code behind a
+	// session. Both take the login pair's numbers — the challenge guards the
+	// same account the password does and arrives from the same anonymous edge,
+	// so a looser bound here would just move the brute force one step right.
+	// mfaFailures is keyed by the USER ID off the VERIFIED challenge signature
+	// (or the session), never off the request body: a body-chosen key would
+	// let an attacker rotate keys per guess, and an email-keyed one would let
+	// ten bogus posts lock the real owner out.
+	mfaFailures *ratelimit.Limiter // 10 failures/min per user
+	mfaPerIP    *ratelimit.Limiter // 30/min per client IP
 
 	// Issuing a set-password link is authenticated and admin-only, so these
 	// two are not anti-anonymous-abuse throttles like the pair above — they
@@ -115,6 +126,7 @@ type Handlers struct {
 	embedReindexAvailable bool
 	// listsAvailable is the installation's lists.enabled.
 	listsAvailable bool
+
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (installationbrand.go).
 	installationBrand InstallationBrand
@@ -126,16 +138,6 @@ type Handlers struct {
 	// decision must not depend on.
 	mcpResource string
 
-	// oauthAccessTokenTTL is the operator's lifetime for an OAuth-minted
-	// passport, from --oauth-access-token-ttl. Zero means unset, and an
-	// unset TTL keeps the mint's own default: a connector's access token
-	// is a 30-day passport unless an operator shortens it, which is the
-	// posture every deployment had before the flag existed. It applies to
-	// BOTH mints of a connection's life — the code exchange and every
-	// rotation — because a short-lived access token an hour-old rotation
-	// re-issues for 30 days is not short-lived.
-	oauthAccessTokenTTL time.Duration
-
 	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
 	// and /callback (WithOIDCProviders). Absent from oidcProviders means the
 	// deployment never composed the provider, and a source that answers "no
@@ -144,7 +146,13 @@ type Handlers struct {
 	// the flow redirects through — never derived from the request Host.
 	oidcProviders map[string]OIDCProviderSource
 	stateSigner   OIDCStateSigner
-	oidcRoutes    OIDCRoutes
+	// mfaSigner signs the short-lived 202 challenge a password login hands back
+	// when a member owes a second factor, and verifies it at /auth/mfa. Nil when
+	// unwired — a login that would challenge instead fails closed rather than
+	// mint an unsigned token, and MFA cannot be confirmed without the vault the
+	// same composition step wires.
+	mfaSigner  MFAChallengeSigner
+	oidcRoutes OIDCRoutes
 	// oidcPerIP throttles the two unauthenticated OIDC edges — an exchange
 	// failure on /callback still drives one outbound token-exchange POST
 	// carrying the shared Gmail-capture client credentials, so an uncapped
@@ -189,6 +197,8 @@ func NewHandlers(svc *Service) Handlers {
 		resetPerEmail:         ratelimit.New("identity/reset-per-address", ratelimit.FailClosed, 3, time.Hour),
 		resetPerIP:            ratelimit.New("identity/reset-per-ip", ratelimit.FailClosed, 30, time.Hour),
 		changeFailures:        ratelimit.New("identity/password-change-failures", ratelimit.FailClosed, 10, time.Minute),
+		mfaFailures:           ratelimit.New("identity/mfa-failures", ratelimit.FailClosed, 10, time.Minute),
+		mfaPerIP:              ratelimit.New("identity/mfa-per-ip", ratelimit.FailClosed, 30, time.Minute),
 		passwordLinkPerActor:  ratelimit.New("identity/password-link-per-actor", ratelimit.FailClosed, 20, time.Hour),
 		passwordLinkPerTarget: ratelimit.New("identity/password-link-per-target", ratelimit.FailClosed, 5, time.Hour),
 		oidcPerIP:             ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
@@ -207,7 +217,7 @@ func NewHandlers(svc *Service) Handlers {
 // is a reset handler whose panic would reach an operator as an opaque 500 on a
 // wipe that had otherwise finished.
 func (h *Handlers) ResetRateLimits() {
-	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.oidcPerIP, h.capabilitiesPerIP} {
+	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.mfaFailures, h.mfaPerIP, h.oidcPerIP, h.capabilitiesPerIP} {
 		if bucket != nil {
 			bucket.Reset()
 		}
@@ -244,27 +254,6 @@ func (h Handlers) WithMCPResource(resource string) Handlers {
 	return h
 }
 
-// WithOAuthAccessTokenTTL sets how long a passport minted through the OAuth
-// handshake lives. Connector norms are minutes plus refresh, while a passport
-// defaults to 30 days; this is the knob that lets an operator take that to
-// 15m without a code change, now that the refresh machinery makes a short
-// lifetime cheap. Zero leaves the default alone.
-func (h Handlers) WithOAuthAccessTokenTTL(ttl time.Duration) Handlers {
-	h.oauthAccessTokenTTL = ttl
-	return h
-}
-
-// accessTokenTTL is what the two OAuth mints pass to mintPassport: nil when no
-// operator TTL is configured, so the mint applies its own default rather than
-// this package deciding the number twice.
-func (h Handlers) accessTokenTTL() *time.Duration {
-	if h.oauthAccessTokenTTL == 0 {
-		return nil
-	}
-	ttl := h.oauthAccessTokenTTL
-	return &ttl
-}
-
 // Login implements (POST /auth/login). The route is public; the singleton
 // company is bound by the middleware (installation.go).
 func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
@@ -293,11 +282,19 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, session, err := h.svc.Login(r.Context(), string(req.Email), req.Password, presentedDeviceProof(r))
+	id, session, err := h.svc.Login(withUserAgent(r.Context(), r.UserAgent()), string(req.Email), req.Password, presentedDeviceProof(r))
 	if err != nil {
 		if errors.Is(err, ErrBadCredentials) {
 			h.loginFailures.Record(accountKey)
 			httperr.Unauthorized(w, r, "invalid email or password")
+			return
+		}
+		if errors.Is(err, errMFARequired) {
+			// Password verified; the member owes a second factor. Hand back a
+			// signed, short-lived challenge and no session — the flow resumes at
+			// /auth/mfa. A 202, not a 200, so a client that predates MFA never
+			// reads this as signed-in.
+			h.writeMFAChallenge(w, r, id.UserID)
 			return
 		}
 		httperr.Write(w, r, err)

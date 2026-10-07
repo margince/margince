@@ -442,7 +442,7 @@ type Activity struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// ChannelProvider Which transport carried this message — non-null exactly when `kind=message`.
+	// ChannelProvider Which transport carried this message: set on every `kind=message` row, null on every other kind.
 	// The kind says what sort of interaction happened; this says what carried it. They
 	// are separate axes, and reading one off the other is what ADR-0107 retired.
 	ChannelProvider *ProviderRef `json:"channel_provider,omitempty"`
@@ -492,13 +492,13 @@ type Activity struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
-	// SourceActivityId The activity this one was derived FROM — today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+	// SourceActivityId The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
 	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
-	// SourceId Provider message/event id — idempotency key part.
+	// SourceId Provider message/event id; part of the idempotency key.
 	SourceId *string `json:"source_id,omitempty"`
 
-	// SourceSystem Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
+	// SourceSystem Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
 	SourceSystem *string `json:"source_system,omitempty"`
 	Subject      *string `json:"subject,omitempty"`
 
@@ -711,6 +711,15 @@ type EmailSummary struct {
 	// the exchange had more. Null when no participant resolves to a name this caller may
 	// see — the row then says the direction alone rather than inventing a stranger.
 	Counterparty *string `json:"counterparty,omitempty"`
+
+	// CounterpartyContactId The contact `counterparty` names, when the party it was taken from resolved to one
+	// this caller may see. Present so a client can key a face on the RECORD rather than on
+	// the phrase: the phrase cannot be turned back into a contact, and matching it by name
+	// is wrong in both directions — a contact renamed since capture stops matching and
+	// draws a second colour, and two contacts sharing a name cannot be told apart. Absent
+	// when the far side resolved to no contact, which is a face the client has nothing
+	// better to key than the words.
+	CounterpartyContactId *string `json:"counterparty_contact_id,omitempty"`
 
 	// Delivery What happened to an outbound message, when this row is one and a delivery was
 	// staged for it. Absent on an inbound message, and on an outbound one logged

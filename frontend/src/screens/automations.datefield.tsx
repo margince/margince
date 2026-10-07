@@ -120,7 +120,7 @@ export function DateFieldSelect({
         disabled={disabled}
         placeholder={t("auto.dateField.placeholder")}
       />
-      {hint && <p className="t-caption datefield-hint">{hint}</p>}
+      {hint && <p className="t-caption param-hint">{hint}</p>}
     </>
   );
 }

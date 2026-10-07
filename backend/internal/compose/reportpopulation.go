@@ -16,6 +16,8 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // populationRule says WHOSE records a surface measures.
@@ -40,18 +42,24 @@ const (
 	measureEveryReadableRow
 )
 
-// callersOwnPopulation is the population a prebuilt report measures.
-//
-// Empty, deliberately: `POST /reports/{report}` carries no scope parameter, so
-// the caller names nothing and the resolver answers with their own lens
-// default — a rep's records, a manager's teams. There is no wider population to
-// forge here because there is no field to forge it in, which is why this is a
-// function with a name rather than a `RequestedScope{}` literal at two call
-// sites that would read as an oversight.
-//
-// If this endpoint ever takes a scope, this is the one place that changes, and
-// both the aggregate and its drill-through change with it.
 func callersOwnPopulation() RequestedScope { return RequestedScope{} }
+
+func requestedReportScope(scope *RequestedScope) RequestedScope {
+	if scope == nil {
+		return callersOwnPopulation()
+	}
+	return *scope
+}
+
+func checkReportScope(spec reportSpec, scope *RequestedScope) error {
+	if scope == nil {
+		return nil
+	}
+	if !measuresOwners(spec) || scope.Kind == "" {
+		return apperrors.ErrInvalidArgument
+	}
+	return nil
+}
 
 // reportPopulationClause is the population half for the report engine's own
 // WHERE builders.

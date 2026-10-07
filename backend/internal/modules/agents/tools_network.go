@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -39,25 +38,9 @@ type KnownColleague struct {
 	Interactions90d int    `json:"interactions_90d"`
 }
 
-// WhoKnowsLister answers "which colleagues know this contact", warmest first.
-// Compose implements it over the interaction projection through the same
-// row-scoped read the HTTP surface uses.
-// The bool is truncation, spelled the way IntroPathLister spells it: the walk is
-// capped, and a capped list a model is handed with nothing marking it is one it
-// will report as the whole network.
-type WhoKnowsLister func(ctx context.Context, contactID ids.UUID) (colleagues []KnownColleague, truncated bool, err error)
-
 // CoverageReader answers "how is this deal covered, and what is wrong with
 // it". Compose implements it over compose/network.
 type CoverageReader func(ctx context.Context, dealID ids.UUID) (DealCoverageAnswer, error)
-
-// WhoKnowsAnswer is what who_knows answers: the colleagues who know one
-// contact, warmest first. An empty list is a real answer — it says the contact
-// is cold — so it is never an error and never null.
-type WhoKnowsAnswer struct {
-	ContactID  ids.UUID         `json:"contact_id"`
-	Colleagues []KnownColleague `json:"colleagues"`
-}
 
 // IntroPathAnswer is what intro_path_to answers: the warm routes into an
 // account, and whether the candidate set the warmth was computed over was
@@ -228,70 +211,6 @@ func RegisterNetworkTools(r *Registry, whoKnows WhoKnowsLister, coverage Coverag
 	if atRisk != nil {
 		r.Register(atRiskTool{list: atRisk})
 	}
-}
-
-// --- who_knows (🟢 read) ---
-
-type whoKnowsTool struct{ list WhoKnowsLister }
-
-func (t whoKnowsTool) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "who_knows", Title: "Who knows this contact", Version: toolVersionV1,
-		Description:   whoKnowsCopy.render(),
-		Instead:       whoKnowsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getContactNetwork",
-		InputSchema: schema(`{"type":"object","properties":{
-			"contact_id":{"type":"string","format":"uuid","description":"The contact to ask about"}},
-			"required":["contact_id"],"additionalProperties":false}`),
-		OutputSchema: schemaFor[WhoKnowsAnswer](),
-		// The view renders this tool's own answer as a ranked list. What it buys
-		// over the text is the band and the interaction count side by side —
-		// including the case the seam is careful about, where a colleague has an
-		// absent strength rather than a zero one.
-		UI: &mcp.ToolUI{ResourceURI: apps.RelationshipMapURI},
-	}
-}
-
-// whoKnowsTruncatedMessage is the third spelling of one rule: a ranked list that
-// stopped at its cap is not the whole network, and a model told nothing reports
-// it as one.
-//
-// It has to be true of BOTH bounds the seam reports through one flag, and they
-// differ in what they cost: the result cap trims a full ranking, so the ten
-// returned really are the warmest, while the scan bound stops the reading before
-// the ranking, so past it they are the warmest of a sample. A message asserting
-// either would be false half the time — so it states what holds in both cases,
-// which is that colleagues exist beyond this list and it is not the network.
-const whoKnowsTruncatedMessage = "More colleagues know this contact than are listed here. " +
-	"Report these as the ones found, not as everyone who knows them."
-
-func (t whoKnowsTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct {
-		ContactID ids.UUID `json:"contact_id"`
-	}
-	if err := decodeArgs(in, &args); err != nil {
-		return nil, err
-	}
-	colleagues, truncated, err := t.list(ctx, args.ContactID)
-	if err != nil {
-		return nil, err
-	}
-	if colleagues == nil {
-		// An empty LIST, not a null. The documented shape is an array, and a
-		// model handed null reads it as "unknown" rather than "nobody".
-		colleagues = []KnownColleague{}
-	}
-	// An empty answer is returned as an empty list, not an error. "Nobody here
-	// knows them" is a true and useful answer to this question — it is the
-	// answer that says the account is cold — and turning it into a failure
-	// would make the model narrate a problem instead of a fact.
-	noteDerivedContent(ctx)
-	noteEvidence(ctx, datasource.EntityContact, args.ContactID)
-	if truncated {
-		noteWarning(ctx, warningSweepTruncated, whoKnowsTruncatedMessage)
-	}
-	return json.Marshal(WhoKnowsAnswer{ContactID: args.ContactID, Colleagues: colleagues})
 }
 
 // --- company_coverage (🟢 read) ---

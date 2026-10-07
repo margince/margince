@@ -5,6 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
+import { forecastEvaluation } from "./reporting.scenarios";
+import {
+  reportingStoryEvaluation,
+  reportingStoryRoutes,
+} from "./reporting.story-fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -179,7 +184,18 @@ const forecastReadings = {
 };
 
 const routes: RouteMap = {
-  "GET /me": meRoute({ forecast: ["create"] }),
+  ...reportingStoryRoutes(),
+  "GET /analytics/evaluate": () =>
+    jsonResponse(
+      globalThis.location.hash.includes("/forecast")
+        ? forecastEvaluation
+        : reportingStoryEvaluation,
+    ),
+  "GET /me": meRoute({
+    forecast: ["create"],
+    report_definition: ["read"],
+    reporting_framework: ["read"],
+  }),
   "GET /analytics/context": () =>
     jsonResponse({
       default_scope: { kind: "workspace", label: "Whole company" },
@@ -195,28 +211,6 @@ const routes: RouteMap = {
   "GET /pipelines": () => jsonResponse(pipelines),
   "POST /reports/pipeline-current": () => run("pipeline-current", stageRows),
   "POST /reports/forecast": () => run("forecast", forecastRows),
-  "POST /reports/win-loss": () =>
-    run("win-loss", [
-      {
-        status: "won",
-        deal_count: 8,
-        raw_minor: 500000,
-        median_days: 21,
-        p75_days: 40,
-      },
-      {
-        status: "lost",
-        deal_count: 4,
-        raw_minor: 200000,
-        median_days: 55,
-        p75_days: null,
-      },
-    ]),
-  "POST /reports/stage-age": () =>
-    run("stage-age", [
-      { stage_id: "pl-s1", deal_count: 6, median_days: 12, p75_days: 30 },
-      { stage_id: "pl-s2", deal_count: 3, median_days: null, p75_days: null },
-    ]),
   "POST /reports/open-deals-per-company": () =>
     run("open-deals-per-company", companyRows),
   "GET /reports/pipeline-current/derivation": () => jsonResponse(derivation),
@@ -260,7 +254,9 @@ const clickButton =
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     for (const name of names) {
       await userEvent.click(
-        await within(canvasElement).findByRole("button", { name }),
+        await within(canvasElement.ownerDocument.body).findByRole("button", {
+          name,
+        }),
       );
     }
   };
@@ -272,7 +268,10 @@ type Story = StoryObj;
 
 // The default segment: the stage table inside the report card, the explain verb
 // in the card's head, and the open value drawn as a bar with its weighted part.
-export const DealsByStage: Story = { render: screenStory };
+export const DealsByStage: Story = {
+  render: screenStory,
+  play: clickButton("Pipeline analysis"),
+};
 
 // The section the screen opens on: the answer with the period drawn as won,
 // evidence and best case against the call, the readings under it, and the
@@ -287,7 +286,7 @@ export const Forecast: Story = {
 // selection. This story asked for a button by the card's title and found none.
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
-  play: clickButton("Deals"),
+  play: clickButton("Pipeline analysis"),
 };
 
 // The performance section: closed outcomes beside stage velocity, every
@@ -379,7 +378,7 @@ export const Delivery: Story = {
       </StoryProviders>
     );
   },
-  play: clickButton("Delivery"),
+  play: clickButton("More analysis", "Delivery"),
 };
 
 export const DataCoverage: Story = {
@@ -394,7 +393,7 @@ export const DataCoverage: Story = {
       </StoryProviders>
     );
   },
-  play: clickButton("Data coverage"),
+  play: clickButton("More analysis", "Data coverage"),
 };
 
 export const MyOutcomes: Story = {
@@ -434,14 +433,14 @@ export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's head, and
   // the Forecast section the screen opens on draws no report cards at all.
-  play: clickButton("Deals", "Explain this number"),
+  play: clickButton("Pipeline analysis", "Explain this number"),
 };
 
 // One stage's figure explained in a drawer, over the table it came from.
 export const ExplainRow: Story = {
   render: screenStory,
   play: async (context) => {
-    await clickButton("Deals", "Explain Qualify")(context);
+    await clickButton("Pipeline analysis", "Explain Qualify")(context);
     await screen.findByRole("dialog");
   },
 };
@@ -462,7 +461,7 @@ export const ExplainLoading: Story = {
     );
   },
   play: async (context) => {
-    await clickButton("Deals", "Explain this number")(context);
+    await clickButton("Pipeline analysis", "Explain this number")(context);
     await within(context.canvasElement).findByText("How this number is built");
   },
 };

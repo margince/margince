@@ -28,7 +28,7 @@ func (MeetingDeliveryArgs) Kind() string { return "meeting_delivery" }
 
 // InsertOpts uses the job catalog’s retry and queue policy.
 func (MeetingDeliveryArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{Queue: river.QueueDefault, MaxAttempts: 1, UniqueOpts: river.UniqueOpts{ByState: activeSweepStates}}
+	return *jobs.QueuedAs[MeetingDeliveryArgs](&river.InsertOpts{MaxAttempts: 1, UniqueOpts: river.UniqueOpts{ByState: activeSweepStates}})
 }
 
 type meetingDeliveryWorker struct {
@@ -56,7 +56,7 @@ func addMeetingDeliveryJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 	if cfg.GmailRegistry == nil {
 		return nil
 	}
-	reminders := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendPacing, cfg.SendOrigin)
+	reminders := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendOrigin)
 	reminders.store = reminders.store.WithSendAuthority(workerMailAuthority(cfg.SendRegistry))
 	addDeclaredWorker[MeetingDeliveryArgs](reg, &meetingDeliveryWorker{pool: pool, registry: cfg.GmailRegistry, vault: cfg.ControllerVault, origin: cfg.SendOrigin, reminders: reminders})
 	return periodicFor(cfg, MeetingDeliveryArgs{})

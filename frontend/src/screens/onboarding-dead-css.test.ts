@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { reachedModules } from "../../scripts/lib/bundle-reach";
 
 // Dead CSS reads as intent. A rule with a comment explaining its layout is
 // indistinguishable from a live one until somebody greps the sources, so the
@@ -33,24 +34,6 @@ function gatedStylesheets(): string[] {
   return [...own, ...conversation];
 }
 
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" || entry.name === "dist"
-        ? []
-        : sourceFiles(path);
-    }
-    if (path === fileURLToPath(import.meta.url)) {
-      // This file names dead classes in CODE, not only in prose: the allowlist
-      // below is a string literal, so a gate that read itself would vouch for
-      // every name it mentions and could never fail.
-      return [];
-    }
-    return /\.(tsx?|html)$/.test(entry.name) ? [path] : [];
-  });
-}
-
 // A class named in PROSE is not a class in use, and this is the difference
 // that made the manual sweep necessary: `.dropzone` survived every earlier
 // count because one story file's comment happens to say the word. Block
@@ -71,7 +54,12 @@ function declaredClasses(css: string): string[] {
   ];
 }
 
-const sourcePaths = sourceFiles(srcRoot);
+// THE MODULES THE BUNDLE LOADS, not every file under src/. A rule reached only
+// by a story or a test is dead to the user: the story renders it in isolation
+// and the test asserts on it, so both keep vouching for markup the app never
+// produces. The catalog census next door reads the same corpus, for the same
+// reason and through the same resolver.
+const sourcePaths = [...reachedModules().keys()];
 const sources = sourcePaths.map((file) => code(readFileSync(file, "utf8")));
 const sourceText = sources.join("\n");
 
@@ -90,8 +78,7 @@ function codeOfFileNamed(fileName: string): string | null {
 }
 
 // Whole tokens, hyphens included, so `.ob-live` is not answered for by
-// `.ob-live-card`. A test that queries `.ob-live-coverage` counts as a use:
-// deleting the rule under it would break that test, which makes it live.
+// `.ob-live-card`.
 const namedInSource = new Set(
   [...sourceText.matchAll(/[A-Za-z][A-Za-z0-9_-]*/g)].map((m) => m[0]),
 );
@@ -130,6 +117,16 @@ const runtimeClasses = [
     head: "is-",
     composedAs: `is-\${notice.tone}`,
     variants: ["error", "paused", "resumed"],
+  },
+  {
+    // The triage row styles the shared confidence meter, which composes its own
+    // modifier from the ConfidenceLevel union. Recorded here rather than left to
+    // a test naming the class: a test that renders the meter proves the meter
+    // works, and says nothing about whether the app ever draws one.
+    composedBy: "trust.tsx",
+    head: "confidence-",
+    composedAs: `confidence-\${level}`,
+    variants: ["high", "med", "low"],
   },
 ] as const;
 

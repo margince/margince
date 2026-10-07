@@ -1,12 +1,13 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import {
   Button,
+  Disclosure,
   Field,
   SegmentedControl,
-  StatCard,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -17,6 +18,7 @@ import { SegmentBar } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import {
   formatDateAbbrev,
+  formatDateTime,
   formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
@@ -32,24 +34,18 @@ import {
   type ForecastPeriod,
   useForecastReadings,
 } from "./forecast.queries";
-// The section's layout classes (toolbar, the checks-and-receipt pair) live in
-// the screen's sheet; imported here too so the view draws the same when it is
-// rendered on its own.
+import { ReportingForecastGraphs } from "./reporting.forecast";
 import "./analytics.css";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
-// The forecast section: what the period is expected to bring in, what the
-// figure does not cover, and what a contact believes instead.
-//
-// The three readings are not equal tiles by accident. A CALL is somebody's
-// judgement, EVIDENCE is the part with confirmed dates behind it, and ALREADY
-// WON is money that arrived — three different kinds of claim, and a reader who
-// takes them for one number has been told something untrue.
 export function ForecastView({
   selection,
   canSubmit,
-}: Readonly<{ selection: AnalyticsSelection; canSubmit: boolean }>) {
+}: Readonly<{
+  selection: AnalyticsSelection;
+  canSubmit: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const [period, setPeriod] = useState<ForecastPeriod>("quarter");
@@ -92,7 +88,16 @@ export function ForecastView({
       <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
         {(data) => (
           <>
+            {data.period_start && data.period_end && (
+              <p className="t-caption">
+                {formatDateAbbrev(data.period_start, locale, data.timezone)} –{" "}
+                {formatDateAbbrev(data.period_end, locale, data.timezone)}
+              </p>
+            )}
             <ForecastAnswer readings={data} locale={locale} />
+            {period === "quarter" && (
+              <ReportingForecastGraphs scope={selection.scope} />
+            )}
             {canCall && editing ? (
               <ForecastCallEditor
                 readings={data}
@@ -108,31 +113,33 @@ export function ForecastView({
               four numbers. */}
             <div className="analytics-pair">
               <ForecastReview />
-              <EvidenceReceipt
-                title={t("forecast.receipt")}
-                counts={[
-                  {
-                    key: "eligible",
-                    term: t("forecast.eligible"),
-                    value: formatNumber(data.eligible_count, locale),
-                  },
-                  {
-                    key: "priced",
-                    term: t("forecast.priced"),
-                    value: formatNumber(data.priced_count, locale),
-                  },
-                  {
-                    key: "confirmed",
-                    term: t("forecast.confirmed"),
-                    value: formatNumber(data.confirmed_date_count, locale),
-                  },
-                  {
-                    key: "fx",
-                    term: t("forecast.fxMissing"),
-                    value: formatNumber(data.fx_missing_count, locale),
-                  },
-                ]}
-              />
+              <Disclosure summary={t("forecast.receipt")}>
+                <EvidenceReceipt
+                  title={t("forecast.receipt")}
+                  counts={[
+                    {
+                      key: "eligible",
+                      term: t("forecast.eligible"),
+                      value: formatNumber(data.eligible_count, locale),
+                    },
+                    {
+                      key: "priced",
+                      term: t("forecast.priced"),
+                      value: formatNumber(data.priced_count, locale),
+                    },
+                    {
+                      key: "confirmed",
+                      term: t("forecast.confirmed"),
+                      value: formatNumber(data.confirmed_date_count, locale),
+                    },
+                    {
+                      key: "fx",
+                      term: t("forecast.fxMissing"),
+                      value: formatNumber(data.fx_missing_count, locale),
+                    },
+                  ]}
+                />
+              </Disclosure>
             </div>
           </>
         )}
@@ -141,15 +148,7 @@ export function ForecastView({
   );
 }
 
-// How far the call sits from the evidence, in the sentence that direction
-// needs.
-//
-// THREE sentences and an UNSIGNED magnitude, because a difference cannot be
-// said in one. A signed figure in a sentence ending "over evidence" printed a
-// call twenty thousand SHORT of its evidence as "-€20,000.00 over evidence",
-// which is the wrong direction stated twice and then contradicted by a minus
-// sign. Equal is its own arm rather than a zero: "±€0 over evidence" is a
-// difference nobody has.
+// Compare the period forecast with won sales plus confirmed committed deals.
 function callDetail(
   call: NonNullable<Readings["current_call"]>,
   readings: Readings,
@@ -160,7 +159,8 @@ function callDetail(
   // in: a reporting figure and the date beside it must not be bucketed on two
   // different calendars.
   const date = formatDateAbbrev(call.created_at, locale, readings.timezone);
-  const difference = call.amount_minor - readings.evidence_minor;
+  const difference =
+    call.amount_minor - (readings.won_minor + readings.evidence_minor);
   if (difference === 0) {
     return t("forecast.currentCallDetailEven", { date });
   }
@@ -227,10 +227,10 @@ function ForecastAnswer({
             {call
               ? t("forecast.answerWithCall", {
                   call: money(call.amount_minor),
-                  evidence: money(readings.evidence_minor),
+                  evidence: money(readings.won_minor + readings.evidence_minor),
                 })
               : t("forecast.answerNoCall", {
-                  evidence: money(readings.evidence_minor),
+                  evidence: money(readings.won_minor + readings.evidence_minor),
                 })}
           </p>
           {/* The same answer as one shape: what is banked, what is committed
@@ -271,6 +271,9 @@ function ForecastAnswer({
                 : undefined
             }
           />
+          {call && (
+            <p className="t-caption">{callDetail(call, readings, locale, t)}</p>
+          )}
         </PanelBody>
       </Panel>
 
@@ -294,27 +297,6 @@ function ForecastAnswer({
           fold is the strip's, so a card that did not declare it would keep its
           box while the rows beside it lost theirs. */}
       <StatStrip>
-        <StatCard
-          narrow="row"
-          label={t("forecast.currentCall")}
-          // No call is a reading, not a missing figure: the sentence above
-          // already says the book is running on evidence alone, and a slot in a
-          // row compared across must not answer that with a glyph.
-          value={call ? slot(call.amount_minor) : t("forecast.currentCallNone")}
-          detail={call ? callDetail(call, readings, locale, t) : undefined}
-        />
-        <StatCard
-          narrow="row"
-          label={t("forecast.evidence")}
-          value={slot(readings.evidence_minor)}
-          detail={t("forecast.evidenceDetail")}
-        />
-        <StatCard
-          narrow="row"
-          label={t("forecast.alreadyWon")}
-          value={slot(readings.won_minor)}
-          detail={t("forecast.alreadyWonDetail")}
-        />
         {/* Both are absent for a managed-teams reading, which covers several
             populations at once: a landing summed across books that are called
             separately, and a coverage rate blended over them, would each
@@ -452,5 +434,45 @@ function ForecastCallEditor({
         </Field>
       </PanelBody>
     </Panel>
+  );
+}
+
+export function SharedForecastView({ token }: Readonly<{ token: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const query = useQuery({
+    queryKey: ["shared-forecast", token],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/forecast/shared/{token}", {
+        params: { path: { token } },
+      });
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  return (
+    <div className="wrap">
+      <QueryGate query={query} pendingLabel={t("analytics.sectionForecast")}>
+        {(view) => (
+          <>
+            <p className="t-caption">
+              {view.kind === "snapshot"
+                ? t("reporting.frozen")
+                : t("reporting.live")}
+              {view.as_of
+                ? ` · ${formatDateTime(view.as_of, locale, zone)}`
+                : ""}
+            </p>
+            {view.withheld && (
+              <Callout tone="warning" title={t("reporting.restricted")}>
+                {t("reporting.restricted")}
+              </Callout>
+            )}
+            <ForecastAnswer readings={view.readings} locale={locale} />
+          </>
+        )}
+      </QueryGate>
+    </div>
   );
 }

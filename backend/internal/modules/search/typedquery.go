@@ -117,22 +117,57 @@ func prefixArmSQL(tailPos int) string {
 // stems, so a fragment offered as `study:*` reaches neither the stored `studi`
 // nor the simple `studies` — and every search is a fragment as it is typed.
 func matchExpression(entity string, headPos, tailPos int, hasFragment bool) string {
-	wholeWords := fmt.Sprintf(
-		`websearch_to_tsquery('simple', f_unaccent($%[1]d)) || websearch_to_tsquery('simple', f_fold_apostrophes($%[1]d))`,
-		headPos)
-	if entity == entityActivity {
-		wholeWords += fmt.Sprintf(
-			` || websearch_to_tsquery('german', f_unaccent($%[1]d)) || websearch_to_tsquery('english', f_unaccent($%[1]d))`,
-			headPos)
-	}
+	finished := wholeWordsExpression(entity, headPos)
 	if !hasFragment {
-		return fmt.Sprintf(`(%s)`, wholeWords)
+		return fmt.Sprintf(`(%s)`, finished)
 	}
 	fragment := prefixArmSQL(tailPos)
 	if entity == entityActivity {
-		fragment = fmt.Sprintf(
-			`(%s || websearch_to_tsquery('german', f_unaccent($%[2]d)) || websearch_to_tsquery('english', f_unaccent($%[2]d)))`,
-			fragment, tailPos)
+		fragment = fmt.Sprintf(`(%s%s)`, fragment, stemmedParses(tailPos))
 	}
-	return fmt.Sprintf(`((%s) && %s)`, wholeWords, fragment)
+	return fmt.Sprintf(`((%s) && %s)`, finished, fragment)
+}
+
+// wholeWordsExpression matches the text bound at pos as whole words, in every
+// parse the entity's index speaks (see matchExpression).
+func wholeWordsExpression(entity string, pos int) string {
+	whole := simpleWholeWords(pos)
+	if entity == entityActivity {
+		whole += stemmedParses(pos)
+	}
+	return whole
+}
+
+// simpleWholeWords matches the text bound at pos as whole, unstemmed words:
+// unaccented, OR-ed with the apostrophe-collapsed parse.
+func simpleWholeWords(pos int) string {
+	return fmt.Sprintf(
+		`websearch_to_tsquery('simple', f_unaccent($%[1]d)) || websearch_to_tsquery('simple', f_fold_apostrophes($%[1]d))`,
+		pos)
+}
+
+// stemmedParses ORs the German and English parse of the text bound at pos onto
+// the tsquery before it, for the activity index, which stores stems.
+func stemmedParses(pos int) string {
+	return fmt.Sprintf(
+		` || websearch_to_tsquery('german', f_unaccent($%[1]d)) || websearch_to_tsquery('english', f_unaccent($%[1]d))`,
+		pos)
+}
+
+// scoreExpression ranks one hit: a record carrying the fragment as a WHOLE word
+// outranks every record that only carries a longer word starting with it, so a
+// per-type cap keeps "Philip" ahead of the "Philipp"s a prefix also reaches.
+//
+// Normalisation 32 maps ts_rank_cd to rank/(rank+1), in [0, 1), so the
+// whole-word bonus of 1 is a strict tier, the rank still orders each tier, and
+// no own-text score falls below zero, where the employer arm ranks. The bonus
+// is unstemmed: a shared stem would lift "studies" level with "study".
+func scoreExpression(entity, alias string, headPos, tailPos int, hasFragment bool) string {
+	rank := fmt.Sprintf(`ts_rank_cd(%s.search_tsv, %s, 32)`,
+		alias, matchExpression(entity, headPos, tailPos, hasFragment))
+	if !hasFragment {
+		return rank
+	}
+	return fmt.Sprintf(`((%s.search_tsv @@ (%s))::int + %s)`,
+		alias, simpleWholeWords(tailPos), rank)
 }

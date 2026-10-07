@@ -129,6 +129,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 
 	calls := []struct{ tool, args string }{
 		{"list_pipelines", `{}`},
+		{"read_reporting", `{"mode":"catalog"}`},
 		{"read_brief", `{}`},
 		// The night writing back onto the morning it just read. The narrative
 		// is the run-level half and the item names one the snapshot above
@@ -239,11 +240,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"check_availability", `{"from":"2026-01-05T09:00:00Z","to":"2026-01-05T17:00:00Z"}`},
 		{"relink_activity", `{"activity_id":"` + activity.String() + `","entity_type":"contact","entity_id":"` +
 			contact.String() + `"}`},
-		// The batch forms answer a count-and-ids shape of their own. The thread
-		// one names a key no activity carries, which is a well-formed empty
-		// answer; the set one names the activity above, onto a company.
-		{"relink_thread", `{"thread_key":"thread:conformance","entity_type":"contact","entity_id":"` +
-			contact.String() + `"}`},
+		// The set form answers a count shape of its own: it names the activity
+		// above, onto a company. relink_thread is absent because it never runs for
+		// an assistant, so it has no answer to hold against a schema.
 		{"relink_activities", `{"activity_ids":["` + activity.String() + `"],"entity_type":"company","entity_id":"` +
 			company.String() + `"}`},
 		{"disqualify_lead", `{"lead_id":"` + lead.String() + `"}`},
@@ -357,6 +356,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 // listed here and then made reachable fails as loudly as one that was never
 // covered, so the list cannot quietly outlive its reason.
 var unreachableInThisLane = gatekit.Waive(map[string]string{
+	"relink_thread": "refused for an assistant at every destination and however it is called, so it has no answer to hold to a schema; " +
+		"TestAThreadRelinkIsRefusedOnTheExecutionPathAtEveryDestination (modules/agents) holds the refusal itself",
 	"read_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +
 		"TestAUserAndTheirAgentReadOneListTheSameWay (lists_http_integration_test.go) calls it through the served MCP surface and holds its answer to its schema",
 	"change_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +
@@ -366,8 +367,10 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"read_import_run": "needs a seat holding import_run.read, which this lane's seat does not " +
 		"carry — a migration run is an admin-scoped object, and granting it here would widen the " +
 		"authority every other tool in the sweep runs under",
-	"read_import_report":   "needs a run that has been dry-run, which needs the object store above",
-	"commit_import":        "confirm-first, and needs the object store above to reach a committable run",
+	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
+	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
+	"decide_duplicate": "needs a filed review-queue pair, which a create under a second passport produces; " +
+		"TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt (choicecards_mcp_integration_test.go) calls it through the served registry and holds its answer to its schema, which this sweep's census cannot read from here",
 	"book_meeting":         "needs a live calendar provider",
 	"invite_meeting":       "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
 	"send_email":           "needs an outbound mail provider",

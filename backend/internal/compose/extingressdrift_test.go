@@ -55,6 +55,8 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"CrossDoorIdentity": "what a record is called to EVERY door, which is a CLAIM rather than a description: a record stating one asks to be bound to whatever row already holds it, and binding is what makes two rows' content reachable through each other. " +
 		"Deliberately unpublishable, for the reason participantsAreProviderAttested is. The values are provider-stated — an RFC Message-ID, an iCal UID — and a unit able to assert one could name an identity it never observed and reach the activity holding it. That is the same forgery the inbound-mail rule refuses for a Cc line, reached through a different field. " +
 		"The core fills it only from what a connector read out of the provider's own payload. A unit's record carries none, binds to nothing, and lands under its own natural key — which is what every record did before cross-door identity existed, so the absence costs a unit nothing it had",
+	"WithheldParties": "the list the participant cap refused, from which capture binds the workspace's seats on an ATTESTED list only. " +
+		"A unit's record is never attested, so a withheld list it supplied would bind nobody; the field stays the core connectors' own",
 	"participantsAreProviderAttested": "the attestation that a PROVIDER enumerated the party list, which is what lets capture bind an invited colleague's user_id from it. " +
 		"Deliberately unpublishable rather than merely unpublished: it is the core's answer about the SOURCE, stamped from the registry that ran the connector, and a unit able to assert it could manufacture an interaction edge naming any colleague — the exact forgery the inbound-mail rule refuses. " +
 		"Unexported so it cannot be set by assignment either, which means a unit's record arrives un-attested and keeps the strict mail rule",
@@ -77,6 +79,8 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"Fields": "the envelope's `any`. The published surface is typed instead — Record.Activity — so a unit cannot hand the sink a shape it does not switch on",
 	"DeliveredTo": "the receiving server's own delivery header, and it is a CORE judgement rather than a field to publish: the value is trusted only from a header position a sender could not have authored, which mailmap.TopDeliveredTo decides once. " +
 		"A unit supplying it would be supplying the conclusion instead of the evidence — and the conclusion adds an address to a seat's own self-set, which is the one thing a unit must not be able to assert. Empty from a unit means what it means everywhere: no trustworthy claim, so no alias is learned",
+	"ProviderReceivedAt": "a mailbox provider's own arrival time (Gmail's internalDate, Graph's receivedDateTime), which excuses a privacy notice for mail a mailbox already held before it was connected. " +
+		"Only the core mail connectors read it off a provider API they authenticate to. A unit-supplied time would be the unit's claim, and a backdated one would excuse a duty. Zero from a unit means no arrival time is known, so its mail never counts as already held",
 })
 
 // TestThePublishedRecordMirrorsTheCaptureEnvelope walks the core envelope and

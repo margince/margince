@@ -10,6 +10,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -37,21 +38,34 @@ func (s *Service) WithDealSuggestions(d DealSuggestions) *Service {
 //
 // A reader who may not read suggestions is shown none and no total, rather than
 // losing the whole lane: the approvals and pairs beside them are theirs to
-// answer whatever they may read about deals.
-func (s *Service) openSuggestionItems(ctx context.Context, depth int) ([]crmcontracts.AttentionItem, *int, error) {
+// answer whatever they may read about deals. A read that FAILS is shown the
+// same way and named as a failed source, because the suggestion visibility
+// clause is the heaviest statement on the page and a stall in it must cost the
+// reader their suggestions, not their day.
+func (s *Service) openSuggestionItems(
+	ctx context.Context, depth int,
+) ([]crmcontracts.AttentionItem, *int, *crmcontracts.WorklistSourceUnavailable) {
 	if s.suggestions == nil {
 		return nil, nil, nil
 	}
-	list, err := s.suggestions.OpenSuggestions(ctx, depth)
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
+	var list []crmcontracts.DealSuggestion
+	var open int
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+		var err error
+		if list, err = s.suggestions.OpenSuggestions(ctx, depth); err != nil {
+			return err
+		}
+		open, err = s.suggestions.CountOpen(ctx)
+		return err
+	})
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return nil, nil, nil
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	open, err := s.suggestions.CountOpen(ctx)
-	if err != nil {
-		return nil, nil, err
+	case err != nil:
+		slog.ErrorContext(ctx, "the deal-suggestion read failed", "error", err)
+		return nil, nil, &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceDealSuggestion, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
+		}
 	}
 	items := make([]crmcontracts.AttentionItem, 0, len(list))
 	for _, suggestion := range list {

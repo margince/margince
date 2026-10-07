@@ -148,7 +148,7 @@ export function CompanyRail({
         <DealsSection view={view} loading={loading} onTab={onTab} />
         <ProjectsSection view={view} loading={loading} onTab={onTab} />
         <ContactsSection view={view} loading={loading} onTab={onTab} />
-        <ListsSection lists={view?.list_memberships} />
+        <ListsSection companyId={companyId} />
         <CompanyHoldSection company={resolved} />
         {/* Beside the hold, and for the same reason: both are about the
             account's mail DOMAIN rather than about the work on it. */}

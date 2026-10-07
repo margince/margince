@@ -44,6 +44,9 @@
  * bare <button> painted as an underlined link; it is a Button now, and the only
  * thing left for this sheet to say is where it sits. */
 .backfill-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
   margin-top: var(--space-3);
 }
 
@@ -103,6 +106,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);
+  color: var(--textPrimary);
   transition:
     background-color var(--dur-move) var(--ease-out),
     color var(--dur-move) var(--ease-out),
@@ -119,7 +123,7 @@
 }
 .capture-hero.done .capture-mark {
   background: var(--successBg);
-  color: var(--success);
+  color: var(--successText);
 }
 
 /* The three headline figures a newly-connected mailbox grows, each on its own
@@ -167,7 +171,7 @@
 }
 .capture-hero.done .capture-stat-glyph {
   background: var(--successBg);
-  color: var(--success);
+  color: var(--successText);
 }
 /* Tabular, so a figure climbing under CountUp changes its digits without moving
    its caption. */

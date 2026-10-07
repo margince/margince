@@ -63,7 +63,7 @@ export function useWorkingHours(refreshOnReturn = false) {
 // minutesOf reads `HH:MM` as minutes past midnight, so two times can be
 // compared without a date to attach them to. NaN for anything else, which the
 // caller treats as "cannot compare" rather than as zero.
-function minutesOf(written: string): number {
+export function minutesOf(written: string): number {
   const [hour, minute] = written.split(":");
   const hours = Number(hour);
   const minutes = Number(minute);
@@ -80,7 +80,7 @@ function minutesOf(written: string): number {
 // will receive roughly half the bookings they do today and will not necessarily
 // connect the two. Saying so at the moment they save is the difference between
 // a setting and a trap.
-function narrowing(before: WorkingHours, after: WorkingHours): boolean {
+export function narrowing(before: WorkingHours, after: WorkingHours): boolean {
   const wasHours = minutesOf(before.end_time) - minutesOf(before.start_time);
   const nowHours = minutesOf(after.end_time) - minutesOf(after.start_time);
   if (Number.isNaN(wasHours) || Number.isNaN(nowHours)) {
@@ -123,16 +123,33 @@ function WorkingHoursForm({
   hours,
 }: Readonly<{ chosen: boolean; hours: WorkingHours }>) {
   const t = useT();
+  const [draft, setDraft] = useState(hours);
+  const [narrowed, setNarrowed] = useState(false);
+  const save = useSaveWorkingHours();
+  const submit = () => {
+    const next = { ...draft, days: [...draft.days].sort((a, b) => a - b) };
+    // Computed against what was on the screen before this save, not against
+    // the fallback: a reader who has already narrowed once and is now editing
+    // a label should not be told again.
+    setNarrowed(narrowing(hours, next));
+    save.mutate(next);
+  };
+  return (
+    <>
+      <WorkingHoursFields chosen={chosen} value={draft} onChange={setDraft} />
+      <Button onClick={submit} disabled={save.isPending}>
+        {t("workingHours.save")}
+      </Button>
+      <WorkingHoursOutcome narrowed={narrowed} save={save} />
+    </>
+  );
+}
+
+export function useSaveWorkingHours() {
+  const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [start, setStart] = useState(hours.start_time);
-  const [end, setEnd] = useState(hours.end_time);
-  const [days, setDays] = useState<readonly number[]>(hours.days);
-  const [zone, setZone] = useState(hours.timezone);
-  const browserZone = viewerZone();
-  const [narrowed, setNarrowed] = useState(false);
-
-  const save = useMutation({
+  return useMutation({
     scope: { id: "working-hours" },
     mutationFn: async (next: WorkingHours) => {
       const { data, error } = await api.PUT("/me/working-hours", {
@@ -151,21 +168,23 @@ function WorkingHoursForm({
       toast.show(t("settings.saved"));
     },
   });
+}
 
-  const submit = () => {
-    const next: WorkingHours = {
-      start_time: start,
-      end_time: end,
-      days: [...days].sort((a, b) => a - b),
-      timezone: zone,
-    };
-    // Computed against what was on the screen before this save, not against
-    // the fallback: a reader who has already narrowed once and is now editing
-    // a label should not be told again.
-    setNarrowed(narrowing(hours, next));
-    save.mutate(next);
-  };
-
+// The fields alone, so the meeting settings page can save hours together with
+// the rest of its draft while this card keeps its own button for a reader who
+// may set hours but not book.
+export function WorkingHoursFields({
+  chosen,
+  value,
+  onChange,
+}: Readonly<{
+  chosen: boolean;
+  value: WorkingHours;
+  onChange: (next: WorkingHours) => void;
+}>) {
+  const t = useT();
+  const browserZone = viewerZone();
+  const { start_time: start, end_time: end, days, timezone: zone } = value;
   return (
     <>
       {!chosen && (
@@ -180,7 +199,9 @@ function WorkingHoursForm({
               {...control}
               type="time"
               value={start}
-              onChange={(event) => setStart(event.target.value)}
+              onChange={(event) =>
+                onChange({ ...value, start_time: event.target.value })
+              }
             />
           )}
         </Field>
@@ -190,7 +211,9 @@ function WorkingHoursForm({
               {...control}
               type="time"
               value={end}
-              onChange={(event) => setEnd(event.target.value)}
+              onChange={(event) =>
+                onChange({ ...value, end_time: event.target.value })
+              }
             />
           )}
         </Field>
@@ -203,11 +226,12 @@ function WorkingHoursForm({
             label={t(dayLabelKey(day))}
             checked={days.includes(day)}
             onChange={(event) =>
-              setDays(
-                event.target.checked
+              onChange({
+                ...value,
+                days: event.target.checked
                   ? [...days, day]
                   : days.filter((chosenDay) => chosenDay !== day),
-              )
+              })
             }
           />
         ))}
@@ -217,7 +241,11 @@ function WorkingHoursForm({
         hint={t("workingHours.timezoneHelp")}
       >
         {(control) => (
-          <TimezoneSelect {...control} value={zone} onChange={setZone} />
+          <TimezoneSelect
+            {...control}
+            value={zone}
+            onChange={(timezone) => onChange({ ...value, timezone })}
+          />
         )}
       </Field>
       {!chosen && browserZone !== zone && (
@@ -225,9 +253,23 @@ function WorkingHoursForm({
           {t("workingHours.browserZone", { zone: browserZone })}
         </p>
       )}
-      <Button onClick={submit} disabled={save.isPending}>
-        {t("workingHours.save")}
-      </Button>
+    </>
+  );
+}
+
+export function WorkingHoursOutcome({
+  narrowed,
+  save,
+}: Readonly<{
+  narrowed: boolean;
+  save: Pick<
+    ReturnType<typeof useSaveWorkingHours>,
+    "isSuccess" | "isError" | "error"
+  >;
+}>) {
+  const t = useT();
+  return (
+    <>
       {/* After the save, never before: the reader has made the change, and the
           sentence is about what it will do rather than a warning against making
           it — which is why the tone is `info` and not `warning`. The save

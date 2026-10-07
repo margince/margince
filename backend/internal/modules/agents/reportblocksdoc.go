@@ -42,7 +42,7 @@ const reportBlocksVersion = "1"
 // reportBlocksNotation states the one rule a composer gets wrong, because it is
 // the rule no field list can carry: a figure is never written, only cited.
 const reportBlocksNotation = "A block carries STRUCTURE and WORDS; a figure is named, never written. " +
-	"Every number cites a saved run and a cell inside it, and the server resolves that citation " +
+	"Each cell uses exactly one reference: run_id/group/column for a saved query, metric_ref with selection and metric for a live standard metric, or edition_ref with edition_id and metric for a frozen edition. The server resolves that citation " +
 	"under the reading caller's own authority. A block carrying a literal number is refused EVEN " +
 	"WHEN a valid citation sits beside it: the literal is what would render, the two can " +
 	"disagree, and no reader could tell the page shows a figure the database never computed."

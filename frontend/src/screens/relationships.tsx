@@ -421,7 +421,7 @@ export function AddRelationshipAction({
       >
         {t(copy.add)}
       </Button>
-      <Modal open={open} onClose={close} labelledBy={headingId}>
+      <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t(copy.add)}
         </Heading>
@@ -493,7 +493,7 @@ export function AddRelationshipAction({
             )}
           </Field>
           {target && (
-            <p className="relationships-confirm">
+            <p>
               {t("rel.addConfirm", {
                 target: target.name,
                 kind: t(KIND_LABELS[kind]),
@@ -501,28 +501,28 @@ export function AddRelationshipAction({
             </p>
           )}
           <ErrorLine error={mutation.error} />
-          <div className="form-actions">
-            <Button onClick={close} disabled={mutation.isPending}>
-              {t("create.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              disabled={!target || mutation.isPending}
-              onClick={() =>
-                target &&
-                mutation.mutate({
-                  target,
-                  kind,
-                  field: endpoint.field,
-                  role,
-                  startedAt,
-                })
-              }
-              data-testid="add-relationship-submit"
-            >
-              {t("create.save")}
-            </Button>
-          </div>
+        </div>
+        <div className="actions">
+          <Button onClick={close} disabled={mutation.isPending}>
+            {t("create.cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={!target || mutation.isPending}
+            onClick={() =>
+              target &&
+              mutation.mutate({
+                target,
+                kind,
+                field: endpoint.field,
+                role,
+                startedAt,
+              })
+            }
+            data-testid="add-relationship-submit"
+          >
+            {t("create.save")}
+          </Button>
         </div>
       </Modal>
     </>

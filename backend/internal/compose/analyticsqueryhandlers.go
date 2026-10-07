@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -29,7 +30,8 @@ import (
 
 // analyticsQueryHandlers serves the schema and the query.
 type analyticsQueryHandlers struct {
-	db *database.DB
+	reportMetrics *reporting.Service
+	db            *database.DB
 	// floor is the installation's group floor, injected so a test can move it
 	// without editing a setting.
 	floor analyticsquery.Floor
@@ -206,9 +208,9 @@ func (h analyticsQueryHandlers) RenderAnalyticsReport(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 	var blocks []RenderedBlock
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
-		blocks, err = RenderReport(ctx, tx, documentFromWire(body), h.floor)
+		blocks, err = RenderReport(ctx, tx, documentFromWire(body), h.floor, h.reportMetrics)
 		return err
 	}); err != nil {
 		httperr.Write(w, r, err)
@@ -230,7 +232,7 @@ func (h analyticsQueryHandlers) RenderAnalyticsReport(w http.ResponseWriter, r *
 			block.Severity = &severity
 		}
 		for _, v := range b.Values {
-			value := crmcontracts.RenderedValue{Withheld: v.Withheld}
+			value := crmcontracts.RenderedValue{Withheld: v.Withheld, Coverage: v.Coverage, Context: v.Context, Unit: v.Unit, DefinitionVersion: v.DefinitionVersion}
 			if v.Value != nil {
 				held := v.Value
 				value.Value = &held
@@ -259,7 +261,13 @@ func documentFromWire(in crmcontracts.ReportDocument) reportdoc.Document {
 		}
 		if b.Cells != nil {
 			for _, c := range *b.Cells {
-				cell := reportdoc.Cell{RunID: c.RunId.String(), Column: c.Column}
+				cell := reportdoc.Cell{MetricRef: c.MetricRef, EditionRef: c.EditionRef}
+				if c.RunId != nil {
+					cell.RunID = c.RunId.String()
+				}
+				if c.Column != nil {
+					cell.Column = *c.Column
+				}
 				if c.Group != nil {
 					cell.Group = *c.Group
 				}

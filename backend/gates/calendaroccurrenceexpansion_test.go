@@ -5,7 +5,7 @@
 
 package gates
 
-// Every calendar pull lists OCCURRENCES, never recurring series masters.
+// Every calendar pull lists occurrences, never recurring series masters.
 //
 // A cancellation is keyed on the event id the capture landed under
 // (meetingmap.Settle → capture.CancelMeeting), so what one id refers to decides

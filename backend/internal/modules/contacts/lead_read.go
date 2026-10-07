@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -41,14 +42,17 @@ const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lea
 // leadNextTaskDueSQL is when the next open task a reader may open falls due —
 // the deadline the Next task column prints, taking the audience for the reason
 // the pair beside it does.
-const leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done
+var leadTaskWorkSQL = " AND " + auth.LiveIntakeTaskClause("a")
+
+var leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `
 	     AND a.audience = 'workspace'
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1)`
 
-// leadLastActivitySQL is the last-touch clock, excluding system remediation for
-// the same reason last_activity_of_contact does: work the product files ABOUT a
-// lead is not the lead engaging.
+// leadLastActivitySQL is the last-touch clock, excluding system remediation and
+// called-off meetings for the same reason last_activity_of_contact does: work
+// the product files ABOUT a lead, or a meeting that did not happen, is not the
+// lead engaging.
 //
 // The row that PRINTS it and the expression that ORDERS BY it read this, so a
 // reader sees the instant the list was arranged by rather than a second reading
@@ -56,7 +60,7 @@ const leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity 
 func leadLastActivitySQL() string {
 	return `(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     ` + auth.OriginIsEngagement("a") + `)`
+	     AND ` + relstrength.NotCalledOffSQL("a") + auth.OriginIsEngagement("a") + `)`
 }
 
 var leadColumns = `id, full_name, email, title, company_name, candidate_company_key,
@@ -83,7 +87,7 @@ var leadColumns = `id, full_name, email, title, company_name, candidate_company_
 	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1),
 	` + leadLastActivitySQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done),
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `),
 	-- The next open task, as the pair it is: its title and its deadline
 	-- describe ONE task, so they select one row. The subject is content and
 	-- the due date is a marker, but splitting them by that distinction would
@@ -96,7 +100,7 @@ var leadColumns = `id, full_name, email, title, company_name, candidate_company_
 	-- actually open. The count and the max beside them are aggregate markers
 	-- over all tasks and owe nothing.
 	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `
 	     AND a.audience = 'workspace'
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1),
 	` + leadNextTaskDueSQL + `,
@@ -115,7 +119,7 @@ var leadColumns = `id, full_name, email, title, company_name, candidate_company_
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
 	  LIMIT 1),
-	legal_hold`
+	legal_hold, ` + leadHasInboundSQL
 
 // readLead resolves one lead row; active names the custom-field columns
 // to carry alongside the core ones — nil for internal decision reads whose
@@ -155,6 +159,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	var status string
 	var version int64
 	var openTasks int
+	var hasInbound bool
 	var authorName, authorSeatName *string
 	var authorID *ids.UUID
 
@@ -167,7 +172,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &openTasks,
-		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold,
+		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -206,6 +211,9 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.Status = crmcontracts.LeadStatus(status)
 	l.Version = &version
 	l.OpenTaskCount = &openTasks
+	if !hasInbound {
+		policy.enabled = false
+	}
 	l.SlaDeadlineAt, l.SlaState = leadSLAFields(policy, l.RoutedAt, l.CreatedAt, l.FirstResponseAt, l.ArchivedAt)
 	l.Author = sourceAuthorOf(authorID, authorSeatName, authorName, l.SourceSystem)
 	return l, nil

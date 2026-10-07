@@ -46,16 +46,24 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 	// handle: a registry built for a named workspace must not admit through a
 	// service that resolves a different one.
 	return registryWithGate(db, auth.NewGate(identity.NewServiceFor(db)), nil, send, companyEnricher{}, nil, nil, nil,
-		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), false)
+		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), registryFeatures{})
+}
+
+// registryFeatures are what a server role adds to the tool surface. firstDrafts
+// is a pointer to the server's own engines, so options binding a model lane
+// after the registry is built still reach draft_email.
+type registryFeatures struct {
+	lists       bool
+	firstDrafts *firstMessageEngines
 }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
 	db := InstallationDB(pool)
 	brief := meetingBriefReader(newMeetingBriefService(db))
 	if brain == nil {
-		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), false)
+		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), registryFeatures{})
 	}
-	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), false)
+	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), registryFeatures{})
 }
 
 // registryWithGate composes the tool surface. The volume budget charger arrives as
@@ -72,109 +80,38 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) 
 // model path has none, and the offline fake binds no embeddings model — and
 // every path that can lose the vector lane says so on the wire rather than
 // serving a lexically-ranked page under a semantic label.
-func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, listsOn bool, opts ...agents.RegistryOption) *agents.Registry {
-	pool := db.Pool()
-	provider := providerWithTranscripts(db, transcriptOnLanding)
-	// Retry safety, wired for EVERY role that composes this surface rather than
-	// arriving as the API server's option the way the read charger does. The
-	// difference is who the promise is made to: the read bound governs agent
-	// principals, so a role no agent reaches needs no meter — but the retry key
-	// is advertised on every mutating tool's schema by the registry itself, so
-	// any surface built here can be asked to honour one, and a surface that
-	// advertises the key and cannot claim it refuses the call.
-	//
-	// The replay reader is the composite provider this registry is already
-	// composed over, so a recorded result's records are re-checked through the
-	// same door — mirror included — that a live read of them would take.
-	// The contract's per-record-type tier floor, on EVERY role that composes this
-	// surface. A verb's own tier cannot express "confirm-first for a project and
-	// auto-execute for a contact", so without this the tool door admits at a tier
-	// the contract tightened and the REST door refuses (#982) — one credential,
-	// two answers, which is what ADR-0055 exists to prevent.
+func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, features registryFeatures, opts ...agents.RegistryOption) *agents.Registry {
+	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
+	// Every mutating tool shares retry claims and replay authorization on every host role.
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
-		agents.WithBaseLanguage(installationLanguage(pool)))
-	// ONE approvals service for both directions of the 🟡 loop, and it is the
-	// service that carries the follow-on EFFECTS. Staging can run on a bare
-	// engine — it writes a proposal and nothing else — but deciding cannot: a
-	// kind whose release the engine does not know about would be marked approved
-	// and never performed, so a held message would read as sent and stay held.
-	// The HTTP door decides on an effects-registered service for exactly this
-	// reason (approvalsHandlersWithEffects); here approvalQueue refuses at boot
-	// an engine that could decide a kind it cannot release.
+		agents.WithBaseLanguage(installationLanguage(pool)),
+		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))))
+	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
 	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
-		// A create says what it filed for review. Without this seam it stays
-		// silent, which is what it did before — see tools_dupereport.go for why
-		// silence was the defect.
-		openDuplicatesFor(pool))
-	// list_records reads its rows and its filter VOCABULARY off the same
-	// provider: the vocabulary is a property of the deployment's own stores,
-	// resolved once at boot.
+		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
-	// The three lifecycle transitions reach their owning modules directly
-	// rather than through the provider: each one's behaviour IS that module's
-	// entry point, which is what the REST route calls too.
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
-	// The bulk change runs the engine the /v1/bulk routes run, admitted against
-	// this registry's own gate so an agent's changed records meet the write
-	// counter the registry charges them to.
-	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(listsOn)})
-	// enrich rides the site-read seam rather than the datasource one: it reads
-	// the company's OWN website, which no record provider can answer.
+	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})
 	agents.RegisterEnrichTool(registry, provider, enricher)
-	// Pipeline config, and it registers next to the core CRUD set because it is
-	// what makes two of those verbs reachable: create_record for a deal and
-	// advance_deal both name ids no other tool yields. Config is not a record,
-	// so it rides its own seam rather than the datasource one.
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))
-	// The confirm-first queue, read and answered from the same conversation a
-	// call was staged in. Nothing here decides anything the human behind the
-	// passport could not decide in the app.
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
 	agents.RegisterReportTool(registry,
 		reportToolRunner(newReportEngine(pool)),
 		reportToolCatalog(), reportPlanVocabulary())
-	// The vocabulary that plan is written in, as a TOOL and not only as the
-	// margince://schema/reports resource — same reason describe_query_vocabulary
-	// exists next to query_workspace, and one reason more: the Surface-B runner
-	// is offered no resource read at all, so for a scheduled agent this is the
-	// ONLY route to the names run_report refuses against.
 	agents.RegisterReportVocabularyTool(registry,
 		agents.NewReportVocabularyResource(reportToolCatalog()))
-	// The forecast, read through the same assembler the HTTP surface uses, so
-	// the two transports cannot disagree about what a quarter contains.
-	// A report whose every figure came from a saved run, rendered through the
-	// SAME validator and renderer POST /analytics/reports/render calls. The
-	// floor is DefaultFloor on both paths: a figure a contact may not see is one
-	// a model asking on their behalf may not see either.
+	agents.RegisterReportingTool(registry, reportingReader(pool))
 	agents.RegisterAnalyticsReportTool(registry,
 		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
-	// The typed analytics query, through the SAME engine POST /analytics/query
-	// calls: one compiler, one derived per-caller schema, one floor, one run
-	// store — so a tool and a screen cannot disagree about one aggregate. Its
-	// vocabulary is published at margince://schema/analytics rather than
-	// recited in the tool schema, the same move run_report made.
+	// The UI and tools share calculation engines and current-reader disclosure rules.
 	agents.RegisterAnalyticsQueryTool(registry,
 		analyticsQueryToolRunner(InstallationDB(pool)))
-	// The vocabulary that query is written in, as a TOOL and not only as the
-	// margince://schema/analytics resource — same reason
-	// describe_report_vocabulary exists beside run_report.
 	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{})
-	// The write vocabulary, as a TOOL and not only as the
-	// margince://schema/record-fields resource — same reason
-	// describe_query_vocabulary exists beside query_workspace, and measured on
-	// this one: a tools-only client reaches the field names by refusal alone,
-	// and a run writing three record types from one card paid one refusal per
-	// type before it wrote anything.
 	agents.RegisterRecordFieldsTool(registry, agents.RecordFieldsResource{})
-	// The grammar that document is written in, as a TOOL and not only as the
-	// margince://schema/report-blocks resource — same reason
-	// describe_report_vocabulary exists beside run_report: the Surface-B runner
-	// is offered no resource step, so for a scheduled agent this is the only
-	// route to the kinds compose_analytics_report refuses against.
 	agents.RegisterReportBlocksTool(registry,
 		agents.NewReportBlocksResource(reportBlockGrammar()))
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))
@@ -182,99 +119,38 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))
 	agents.RegisterInputChecksTool(registry, inputChecksToolReader(pool))
 	agents.RegisterCoverageTool(registry, coverageToolReader(pool))
-	// The governed workspace query. It takes the provider as well as the runner
-	// because the two halves of an answer come from different places: the plan
-	// selects records through the search module, and each selected record is
-	// READ back through the datasource seam — the one path that stamps the
-	// trust tier, collects the envelope's freshness, applies this caller's
-	// object RBAC and row scope to the record itself, and charges the record
-	// against their read bound.
-	// The seat namer names each row's owner; seatNamer says why.
+	// Search references are read back through the governed provider before disclosure.
 	agents.RegisterQueryTool(registry, provider,
-		queryRunner(pool, embedder),
-		seatNamer(identity.NewService(pool)))
-	// The vocabulary that plan is written in, as a TOOL and not only as the
-	// margince://schema/query resource — because a client that reads tools and
-	// not resources could otherwise watch query_workspace refuse a name and
-	// have no way to learn the right one. Same resolver, same document; the
-	// resource stays for the clients that prefer it.
+		queryRunner(pool, embedder))
 	agents.RegisterVocabularyTool(registry, search.NewQuerySchemaResource(queryVocabulary(pool)))
-	// The morning brief. It ranks the rep's own open deals.
 	agents.RegisterBriefTool(registry, briefReader(pool))
-	// The write half: the overnight agent puts what it found onto the run it
-	// just read. Same engine, and the engine owns every refusal — whose run,
-	// which items, which citations.
 	agents.RegisterAnnotateBriefTool(registry, briefAnnotator(pool))
-	// The intent tools ground on the graph walk; search_context rides the same
-	// retriever's ranked half, which is what the embed lane is for.
-	// The comms tools ride the same store paths as the HTTP transport. The risk
-	// decorator adds the coverage findings a deal anchor would otherwise
-	// assemble without.
-	searchRetriever := search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder)
-	retriever := riskAwareRetriever{pool: pool, inner: searchRetriever}
+	searchRetriever, retriever := registryRetrievers(pool, embedder)
 	agents.RegisterIntentTools(registry, retriever, meetingBrief, provider)
-	// The transport directory, read from this package's boot snapshot — the
-	// composed set is the composition root's fact, so the module takes it as a
-	// seam rather than enumerating connectors it may not reach.
 	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
-	// search_context takes the provider as well, for the reason query_workspace
-	// does: the retriever answers refs and excerpts, and every record behind
-	// them is READ BACK through the datasource seam — where the trust tier is
-	// stamped, the caller's own row scope is re-applied, and the record is
-	// charged against their read bound.
 	agents.RegisterContextSearchTool(registry, provider, retriever)
-	// The evidence behind a saved run: the report drawer's own drill-through
-	// names the records, the same retriever searches only those, and each
-	// listed record is read back through the provider as search_context's are.
 	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
 		db: InstallationDB(pool), floor: analyticsquery.DefaultFloor,
 		ranker: searchRetriever, classifier: searchRetriever,
 	}.SearchReportEvidence)
-	// Identity resolution. The ladder is workspace-wide by design — a duplicate
-	// is a duplicate whoever is looking — so the provider is not decoration
-	// here: it is the ONLY thing that applies this caller's row scope to a
-	// record the resolver named, and the tool serves nothing it did not read
-	// back through it.
 	agents.RegisterResolveTool(registry, provider, entityResolver(pool))
 	agents.RegisterWhoamiTool(registry, actingIdentity(pool))
 	agents.RegisterColleaguesTool(registry, colleagueLister(pool))
-	agents.RegisterTagTools(registry, tagSeam(pool))
-	// Registered on every role so the tool list is the contract's, and refused
-	// while the installation has lists switched off, as the routes are.
-	agents.RegisterListTools(registry, newListSeam(pool, listsOn))
-	// The migrate-in verbs, ALWAYS served: the contract declares all four, and
-	// a registry that does not serve a declared verb advertises something
-	// tools/list cannot offer. A registry built with no Server falls back to
-	// bare handlers — its reads work, and the three verbs that need the source
-	// file refuse with errNoObjectStore, which is what a role storing no
-	// objects can honestly do.
+	agents.RegisterTagTools(registry, tagSeamFor(db))
+	agents.RegisterDuplicateTools(registry, duplicateQueueSeam(db))
+	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
-	// The pipeline-risk intents: the candidate set rides the deals
-	// module's row-scoped list, the drafts land through the provider.
 	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider))
-	// The commercial reads: what this workspace promised and has not
-	// delivered, and what the delivery side of a project is being handed.
-	// Both ride the owning modules' own gated store paths
-	// (commercialseams.go).
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
-	// The project page, read by the tool through the SAME assembly the HTTP
-	// route serves (project360seam.go), under the same per-section gates.
 	agents.RegisterProject360Tool(registry, project360Reader(pool))
-	// The relationship-graph reads (ADR-0078): who here knows this contact,
-	// how a deal is covered, who can get us into an account, and which of the
-	// caller's deals the coverage rules flag. All 🟢 — they name contacts, they
-	// change nothing.
-	agents.RegisterNetworkTools(registry, whoKnowsLister(pool), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
+	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, contacts.NewStore(InstallationDB(pool))), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
 		introPathLister(pool),
 		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
-	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
+	comms := newCommsAdapter(pool, drafter, send)
+	comms.firstDrafts = features.firstDrafts
+	agents.RegisterCommsTools(registry, comms, provider)
 	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
-	// The composed extension set's governed tools ride the same registry
-	// and admission gate as the core tools, registered last so a name that
-	// collides with a core verb fails loudly (RegisterExtensions stashed
-	// them at boot, before this ran).
-	//
 	registerComposedTools(registry)
 	return registry
 }
@@ -387,4 +263,9 @@ func providerWithTranscripts(db *database.DB, onLanding activities.TranscriptRea
 		provider = provider.WithTranscriptEnqueue(onLanding)
 	}
 	return provider
+}
+
+func registryRetrievers(pool *pgxpool.Pool, embedder search.Embedder) (*search.Retriever, riskAwareRetriever) {
+	retriever := search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder)
+	return retriever, riskAwareRetriever{pool: pool, inner: retriever}
 }

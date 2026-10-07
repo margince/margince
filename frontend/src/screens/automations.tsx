@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
@@ -7,10 +7,8 @@ import {
   Badge,
   Button,
   EmptyState,
-  Modal,
   OverflowMenu,
 } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -18,7 +16,9 @@ import { Switch } from "../design-system/switch";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { AutomationInspectors } from "./automationdetail";
-import { AutomationForm } from "./automations.form";
+import { DeleteAutomationAction } from "./automations.delete";
+import { AutomationDialog } from "./automations.form";
+import { RulePausedReason } from "./automations.lists";
 import { scalarText } from "./automations.params";
 import {
   problemMessageOf,
@@ -81,64 +81,6 @@ function InspectorToggles({
       >
         {t("auto.preview.open")}
       </Button>
-    </>
-  );
-}
-
-// Deleting an automation drops the rule entirely — the records it watched stop
-// being watched — so it asks first, the way every other destructive verb in
-// settings does. It owns its own mutation and its own staged state rather than
-// borrowing the row's: the question, the refusal and the write are one thing,
-// and keeping them together is what lets the row stay a row.
-//
-// The refusal stays IN the dialog, which is where the reader still is. A row
-// that reported it underneath would report it behind the thing covering it.
-function DeleteAutomationAction({
-  automation,
-}: Readonly<{ automation: Automation }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [asking, setAsking] = useState(false);
-
-  const remove = useMutation({
-    mutationFn: async () => {
-      const { error } = await api.DELETE("/automations/{id}", {
-        params: { path: { id: automation.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      setAsking(false);
-      queryClient.invalidateQueries({ queryKey: ["automations"] });
-    },
-  });
-
-  return (
-    <>
-      <Button
-        variant="danger"
-        disabled={remove.isPending}
-        onClick={() => setAsking(true)}
-      >
-        {t("auto.delete")}
-      </Button>
-      <ConfirmModal
-        open={asking}
-        onClose={() => {
-          setAsking(false);
-          remove.reset();
-        }}
-        title={t("auto.deleteTitle")}
-        confirmLabel={t("auto.delete")}
-        confirmVariant="danger"
-        pending={remove.isPending}
-        error={remove.isError ? problemMessageOf(remove.error, t) : null}
-        onConfirm={() => remove.mutate()}
-      >
-        <p>{t("auto.deleteBody", { name: automation.name })}</p>
-      </ConfirmModal>
     </>
   );
 }
@@ -238,50 +180,6 @@ function AutomationStatus({
       pending={pending}
       onChange={onChange}
     />
-  );
-}
-
-// The definition editor, behind the row's Edit verb.
-//
-// A name plus every parameter the schema declares is a form submitted together,
-// so it is a dialog rather than a panel that unfolds under the row — which is
-// what stopped the list reading as a list. Its own refusal stays inside it,
-// because the dialog is covering the row that would otherwise have reported it.
-function AutomationEditor({
-  automation,
-  entry,
-  open,
-  pending,
-  refusal,
-  onSubmit,
-  onClose,
-}: Readonly<{
-  automation: Automation;
-  entry: CatalogEntry;
-  /** Closed, it stays MOUNTED so the dialog can animate out. */
-  open: boolean;
-  pending: boolean;
-  /** The server's own words for a refused save, or null while there is none. */
-  refusal: string | null;
-  onSubmit: (name: string, params: Record<string, unknown>) => void;
-  onClose: () => void;
-}>) {
-  const t = useT();
-  const titleId = useId();
-  return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <AutomationForm
-        entry={entry}
-        titleId={titleId}
-        initialName={automation.name}
-        initialParams={automation.params}
-        submitLabel={t("trust.save")}
-        pending={pending}
-        onSubmit={onSubmit}
-        onCancel={onClose}
-      />
-      {refusal !== null && <ErrorLine>{refusal}</ErrorLine>}
-    </Modal>
   );
 }
 
@@ -413,6 +311,7 @@ export function AutomationRow({
           </OverflowMenu>
         )}
       </div>
+      <RulePausedReason automation={automation} />
       <AutomationInspectors
         automationId={automation.id}
         runsOpen={runsOpen}
@@ -420,13 +319,15 @@ export function AutomationRow({
         canConfigure={canViewRuns}
       />
       {editing !== null && entry && (
-        <AutomationEditor
+        <AutomationDialog
           key={editing.seq}
-          automation={automation}
           entry={entry}
           open={editing.open}
+          initialName={automation.name}
+          initialParams={automation.params}
+          submitLabel={t("trust.save")}
           pending={writeInFlight === "definition"}
-          refusal={refused === "definition" ? refusal : null}
+          refusal={refused === "definition" && <ErrorLine>{refusal}</ErrorLine>}
           onSubmit={(name, params) =>
             patch.mutate({
               id: automation.id,
@@ -453,7 +354,6 @@ export function AutomationRow({
 export function AutomationsAdmin() {
   const t = useT();
   const queryClient = useQueryClient();
-  const createTitleId = useId();
   const [staged, setStaged] = useState<StagedTemplate | null>(null);
   // Grants come from the session (/v1/me); until they arrive every predicate
   // is false, so the section shows no mutation affordance until one is confirmed.
@@ -583,30 +483,21 @@ export function AutomationsAdmin() {
         )}
         {/* Name and parameters are one form submitted together, so they live
             behind the library's verb rather than unfolding under it. */}
-        <Modal
-          open={staged?.open === true}
-          onClose={() => setStaged(shut)}
-          labelledBy={createTitleId}
-        >
-          {staged && (
-            <AutomationForm
-              key={staged.seq}
-              entry={staged.entry}
-              titleId={createTitleId}
-              initialName={staged.entry.name}
-              submitLabel={t("auto.create")}
-              pending={create.isPending}
-              onSubmit={(name, params) =>
-                create.mutate({ key: staged.entry.key, name, params })
-              }
-              onCancel={() => setStaged(shut)}
-            />
-          )}
-          {/* The refusal stays where the reader is: the dialog is still open
-              over the card, so a line underneath it would report the failure
-              behind the thing covering it. */}
-          <ErrorLine error={create.error} />
-        </Modal>
+        {staged && (
+          <AutomationDialog
+            key={staged.seq}
+            open={staged.open}
+            entry={staged.entry}
+            initialName={staged.entry.name}
+            submitLabel={t("auto.create")}
+            pending={create.isPending}
+            refusal={<ErrorLine error={create.error} />}
+            onSubmit={(name, params) =>
+              create.mutate({ key: staged.entry.key, name, params })
+            }
+            onClose={() => setStaged(shut)}
+          />
+        )}
       </PanelBody>
     </Panel>
   );

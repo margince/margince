@@ -71,13 +71,14 @@ type Story = StoryObj<typeof CoachControl>;
  *  so the closed face always names what it is showing. Content-sized and
  *  capped: full width it read as a control over the page below it. */
 export const WhoseQueue: Story = {
-  render: () => frame(<OwnerPicker owner="" onOwner={() => {}} />),
+  render: () => frame(<OwnerPicker owner="" onOwner={() => {}} scope="mine" />),
 };
 
 /** The same dial with a colleague chosen — the state that stands in place of
  *  the scope switch on the header line beside it. */
 export const AColleaguesDay: Story = {
-  render: () => frame(<OwnerPicker owner={LENA} onOwner={() => {}} />),
+  render: () =>
+    frame(<OwnerPicker owner={LENA} onOwner={() => {}} scope="team" />),
 };
 
 /** Both verbs at rest. The hand-off is a glyph on a row of them; the note is a

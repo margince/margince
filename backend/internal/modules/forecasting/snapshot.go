@@ -51,11 +51,13 @@ const (
 
 // NewSnapshot is one frozen set of readings and the rows behind it.
 type NewSnapshot struct {
-	Period       Period
-	Scope        Scope
-	Trigger      string
-	BaseCurrency string
-	Readings     Readings
+	PipelineID            *ids.UUID
+	PopulationFingerprint string
+	Period                Period
+	Scope                 Scope
+	Trigger               string
+	BaseCurrency          string
+	Readings              Readings
 	// TakenAt is the instant the readings describe. Passed rather than read
 	// from a clock here so a snapshot and the readings inside it cannot be
 	// stamped microseconds apart, which is what makes a daily arbiter fire on
@@ -88,31 +90,9 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 		return ids.Nil, err
 	}
 
-	var id ids.UUID
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO forecast_snapshot
-		    (period_start, period_end, scope_kind, scope_id, taken_at, local_day,
-		     trigger, definition_version, base_currency,
-		     won_minor, evidence_minor, best_case_minor, open_minor, weighted_minor,
-		     eligible_count, priced_count, confirmed_date_count, fx_missing_count,
-		     call_id, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-		        $15, $16, $17, $18, $19, $20)
-		RETURNING id`,
-		in.Period.StartDate, in.Period.EndDate, in.Scope.Kind, in.Scope.ID,
-		in.TakenAt,
-		// The local day the snapshot was taken on, in the installation's own
-		// zone — the same conversion every reading goes through. Derived from
-		// TakenAt rather than read from a clock, so the row the daily arbiter
-		// sees is the row this snapshot actually describes.
-		in.Period.LocalDay(in.TakenAt),
-		in.Trigger, DefinitionVersion, in.BaseCurrency,
-		in.Readings.WonMinor, in.Readings.EvidenceMinor, in.Readings.BestCaseMinor,
-		in.Readings.OpenMinor, in.Readings.WeightedMinor,
-		in.Readings.EligibleCount, in.Readings.PricedCount,
-		in.Readings.ConfirmedDateCount, in.Readings.FxMissingCount,
-		in.CallID, capturedBy).Scan(&id); err != nil {
-		return ids.Nil, fmt.Errorf("forecasting: writing the snapshot: %w", err)
+	id, err := s.insertSnapshot(ctx, tx, in, capturedBy)
+	if err != nil {
+		return ids.Nil, err
 	}
 
 	if err := s.writeContributions(ctx, tx, id, in.Readings.Contributions, capturedBy); err != nil {
@@ -277,16 +257,23 @@ func nullableInt(v int) *int {
 
 // SnapshotSide loads one snapshot's definition version and its per-deal rows.
 //
-// Gated on read: a snapshot is a record of what the workspace expected, and
-// reading one is reading the forecast.
+// Gated on read, then passed through the store's lens: a snapshot freezes the
+// workspace's figures, and its per-deal rows must not reach a caller who could
+// not have read those deals or that population live.
 func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snapshotSide, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
 		return snapshotSide{}, err
 	}
+	if s.lens == nil {
+		return snapshotSide{}, errors.New("forecasting: no snapshot lens is bound, so a snapshot's rows cannot be narrowed")
+	}
 	var out snapshotSide
+	var scope Scope
 	err := tx.QueryRow(ctx,
-		`SELECT definition_version, period_start, period_end FROM forecast_snapshot WHERE id = $1`, id).
-		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd)
+		`SELECT definition_version, period_start, period_end, scope_kind, scope_id, pipeline_id, base_currency
+		 FROM forecast_snapshot WHERE id = $1`, id).
+		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd, &scope.Kind, &scope.ID,
+			&out.PipelineID, &out.BaseCurrency)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return snapshotSide{}, apperrors.ErrNotFound
 	}
@@ -342,6 +329,13 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	if err != nil {
 		return snapshotSide{}, fmt.Errorf("forecasting: collecting the snapshot's contributions: %w", err)
 	}
+	out.Scope = scope
+	frozen := len(out.Contributions)
+	out.Contributions, err = s.lens(ctx, tx, scope, out.PipelineID, out.Contributions)
+	if err != nil {
+		return snapshotSide{}, err
+	}
+	out.Withheld = len(out.Contributions) < frozen
 	return out, nil
 }
 
@@ -392,5 +386,25 @@ func (s *Store) MovementTx(
 			Message: "a movement compares two readings of the same period",
 		}
 	}
+	if opening.Scope.Kind != closing.Scope.Kind || !sameID(opening.Scope.ID, closing.Scope.ID) ||
+		!sameID(opening.PipelineID, closing.PipelineID) {
+		return Movement{}, &values.ParseError{
+			Field: "from", Code: "populations_differ",
+			Message: "a movement compares two readings of the same scope and pipeline",
+		}
+	}
+	if opening.BaseCurrency != closing.BaseCurrency {
+		return Movement{}, &values.ParseError{
+			Field: "from", Code: "currencies_differ",
+			Message: "a movement compares two readings in the same base currency",
+		}
+	}
 	return Classify(reading, opening, closing), nil
+}
+
+func sameID(a, b *ids.UUID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }

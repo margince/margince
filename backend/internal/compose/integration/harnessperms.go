@@ -157,9 +157,15 @@ var (
 	AdminPerms       = principal.Permissions{
 		RoleKeys: []string{roleAdmin},
 		Objects: map[string]principal.ObjectGrant{
-			objContact: {Create: true, Read: true, Update: true, Delete: true},
-			objCompany: {Create: true, Read: true, Update: true, Delete: true},
-			objDeal:    {Create: true, Read: true, Update: true, Delete: true},
+			"report_definition":   {Create: true, Read: true, Update: true, Delete: true},
+			"report_schedule":     {Create: true, Read: true, Update: true, Delete: true},
+			"report_edition":      {Create: true, Read: true, Update: true},
+			"sales_target":        {Create: true, Read: true, Update: true},
+			"reporting_framework": {Read: true, Update: true},
+			"reporting_credit":    {Read: true},
+			objContact:            {Create: true, Read: true, Update: true, Delete: true},
+			objCompany:            {Create: true, Read: true, Update: true, Delete: true},
+			objDeal:               {Create: true, Read: true, Update: true, Delete: true},
 			// The admin role holds contracts in full (identity/internal/policy.go),
 			// mirrored here so the fixture matches production rather than a
 			// narrower admin that would make a suite pass for the wrong reason.
@@ -289,6 +295,9 @@ func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]prin
 	// admin's.
 	out["role_admin"] = principal.ObjectGrant{Read: true}
 	out["authentication_policy"] = principal.ObjectGrant{Read: true}
+	for _, object := range []string{"report_definition", "sales_target", "reporting_framework", "report_schedule", "report_edition", "reporting_credit"} {
+		out[object] = principal.ObjectGrant{Read: true}
+	}
 	for _, object := range []string{
 		"user_admin",
 		"team_admin",

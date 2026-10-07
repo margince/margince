@@ -35,6 +35,10 @@ func ForecastDeals(
 	ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope,
 	asOf time.Time, baseCurrency string,
 ) ([]forecasting.Deal, forecasting.Scope, bool, error) {
+	return forecastDealsForPipeline(ctx, tx, period, scope, asOf, baseCurrency, nil)
+}
+
+func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope, asOf time.Time, baseCurrency string, pipeline *ids.UUID) ([]forecasting.Deal, forecasting.Scope, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
@@ -92,6 +96,15 @@ func ForecastDeals(
 	if err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
+	// The converted figure is the SAME money under another column: Compute sums
+	// it, so leaving it unmasked would print the withheld amount in every total.
+	baseValue, err = auth.MaskedExpressionSQL(ctx, tableDeal, "amount_minor", "d", baseValue, arg)
+	if err != nil {
+		return nil, forecasting.Scope{}, false, err
+	}
+	if pipeline != nil {
+		populationClause += fmt.Sprintf(" AND d.pipeline_id=$%d", arg(*pipeline))
+	}
 	sql := fmt.Sprintf(`
 		SELECT d.id, d.owner_id, %[9]s, d.currency, %[1]s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
@@ -119,31 +132,35 @@ func ForecastDeals(
 	defer rows.Close()
 
 	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (forecasting.Deal, error) {
-		var d forecasting.Deal
-		var owner *ids.UUID
-		var currency, category *string
-		var stage *ids.UUID
-		err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency, &d.BaseMinor,
-			&d.ExpectedCloseDate, &d.CloseProvisional, &d.ClosedAt,
-			&d.Won, &category, &d.StageProbability, &stage)
-		if stage != nil {
-			d.StageID = stage.String()
-		}
-		if owner != nil {
-			d.Owner = owner.String()
-		}
-		if currency != nil {
-			d.Currency = *currency
-		}
-		if category != nil {
-			d.Category = *category
-		}
-		return d, err
+		return scanForecastDeal(row)
 	})
 	if err != nil {
 		return nil, forecasting.Scope{}, false, fmt.Errorf("compose: collecting the forecast's deals: %w", err)
 	}
 	return out, forecastScopeFromResolved(resolved), limited, nil
+}
+
+func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
+	var d forecasting.Deal
+	var owner *ids.UUID
+	var currency, category *string
+	var stage *ids.UUID
+	err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency, &d.BaseMinor,
+		&d.ExpectedCloseDate, &d.CloseProvisional, &d.ClosedAt,
+		&d.Won, &category, &d.StageProbability, &stage)
+	if stage != nil {
+		d.StageID = stage.String()
+	}
+	if owner != nil {
+		d.Owner = owner.String()
+	}
+	if currency != nil {
+		d.Currency = *currency
+	}
+	if category != nil {
+		d.Category = *category
+	}
+	return d, err
 }
 
 // requestedFromForecastScope carries the forecast module's scope vocabulary

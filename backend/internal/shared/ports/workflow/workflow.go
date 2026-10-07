@@ -163,11 +163,13 @@ const (
 )
 
 // The user-facing catalog's actions that have no lower-level kind: notify
-// is delivery to a human, and draft_email creates a draft and never sends —
-// the send is a separate, approval-gated act.
+// is delivery to a human, draft_email creates a draft and never sends —
+// the send is a separate, approval-gated act — and add_list_member puts the
+// record on a Shortlist.
 const (
-	ActionNotify     ActionKind = "notify"
-	ActionDraftEmail ActionKind = "draft_email"
+	ActionNotify        ActionKind = "notify"
+	ActionDraftEmail    ActionKind = "draft_email"
+	ActionAddListMember ActionKind = "add_list_member"
 )
 
 // AllActionKinds is the closed set, in declaration order. The registry maps
@@ -177,7 +179,7 @@ func AllActionKinds() []ActionKind {
 	return []ActionKind{
 		ActionCreateRecord, ActionUpdateRecord, ActionCreateTask, ActionAssignOwner,
 		ActionAdvanceDeal, ActionSendEmail, ActionEmitFlowEvent, ActionRecomputeScore,
-		ActionEnqueueJob, ActionNotify, ActionDraftEmail,
+		ActionEnqueueJob, ActionNotify, ActionDraftEmail, ActionAddListMember,
 	}
 }
 
@@ -264,6 +266,10 @@ type StagedApprovalError struct {
 	// Nothing new is disclosed. It describes THIS call, built from arguments
 	// this caller supplied, and the human sees the same text.
 	Summary string
+	// ReleasableByCaller says the credential that staged this can answer it
+	// itself, so the answer may offer decide_approval as a move that works.
+	// False sends the caller to the contact, who releases it in the CRM.
+	ReleasableByCaller bool
 }
 
 // MaxStagedSummary bounds the summary this answer repeats.

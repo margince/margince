@@ -8,12 +8,11 @@ import (
 	"flag"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/cliflags"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -55,7 +54,6 @@ type apiConfig struct {
 	metricsAccess         string
 	vatCheckBaseURL       string
 	geocodeBaseURL        string
-	oauthAccessTokenTTL   time.Duration
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
 	// (OPS-CFG-2) rather than at each of the three places that used to ask.
 	// It selects the configuration overlay and which license authorities are
@@ -67,11 +65,10 @@ type apiConfig struct {
 	// it, and stderr before the log handler is built is a different stream in a
 	// different format from everything else they are reading.
 	unknownVars []string
-	// envFaults are configuration faults found while REGISTERING the flags,
-	// before parsing can begin — a malformed duration in the environment is
-	// the only one today. Carried so they join the faults found after parsing
-	// rather than pre-empting them.
-	envFaults []string
+	// trustedProxies is --trusted-proxies as parsed, filled only once parsing
+	// found it valid — a malformed list is a boot fault, never an empty set.
+	trustedProxiesRaw string
+	trustedProxies    httpserver.TrustedProxies
 }
 
 // apiFlagSet registers this role's flags and their environment bindings, and
@@ -90,11 +87,11 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 		"path to the deployment configuration file (A107/ADR-0061: bootstrap + auth); a missing file boots an existing installation but cannot bootstrap an empty database")
 	env.String(fs, &cfg.schemaDSN, "schema-dsn", "MARGINCE_SCHEMA_DSN", "",
 		"Postgres DSN (owner role) for the customfields runtime-DDL pool; unset = the two schema-change operations answer 501")
-	fs.StringVar(&cfg.addr, "addr", ":8080", "listen address")
+	env.String(fs, &cfg.addr, "addr", "MARGINCE_ADDR", ":8080", "listen address")
 	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
 	env.String(fs, &cfg.redisPassword, "redis-password", "MARGINCE_REDIS_PASSWORD", "",
 		"Event-bus credential, where the instance requires one")
-	fs.BoolVar(&cfg.inlineRelay, "inline-relay", true, "run the outbox relay in this process (false when cmd/worker runs it)")
+	env.Bool(fs, &cfg.inlineRelay, "inline-relay", "MARGINCE_INLINE_RELAY", true, "run the outbox relay in this process (false when cmd/worker runs it)")
 	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "drive the AI surfaces with the offline fake model (dev/test only)")
 	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
@@ -118,20 +115,9 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.webhookKey, "webhook-key", "MARGINCE_WEBHOOK_KEY", "", "base64 32-byte key sealing outbound-webhook signing secrets; enables the mutating /webhook-subscriptions surface, and (with --inline-relay) the cg:webhooks delivery consumer. Empty = those paths answer 503 and no inline delivery runs. Re-attempting a parked delivery is the worker role's River job, never this one's.")
 	env.String(fs, &cfg.metricsToken, "metrics-token", "MARGINCE_METRICS_TOKEN", "", "shared secret /metrics requires as a Bearer credential. Empty (the default) configures none, and /metrics then refuses every scrape unless --metrics-access=open")
 	env.String(fs, &cfg.metricsAccess, "metrics-access", "MARGINCE_METRICS_ACCESS", metricsAccessToken, "who /metrics serves: token (the default) requires --metrics-token as a Bearer credential and refuses every scrape without one; open serves anyone who reaches the port, for a scraper that discovers its targets by annotation and cannot carry a credential. Choose open only where a private listener, a NetworkPolicy or an ingress that does not route /metrics already contains the port — the exposition names every route and carries workspace ids")
+	env.String(fs, &cfg.trustedProxiesRaw, "trusted-proxies", "MARGINCE_TRUSTED_PROXIES", "", "comma-separated CIDR prefixes (or addresses) of the reverse proxies in front of this process. X-Forwarded-For is believed ONLY from a direct peer inside one of them, walked from the right to the first hop outside them, and that hop is what every per-IP rate limit keys on. Empty (the default) believes no header and keys on the TCP peer — behind a proxy that is the PROXY, so every client shares one bucket. Name the proxies' own networks, never 0.0.0.0/0, which is refused")
 	env.String(fs, &cfg.vatCheckBaseURL, "vat-check-base-url", "MARGINCE_VAT_CHECK_BASE_URL", "", "same variable the worker reads to reach VIES; read here only to decide whether this role queues a consultation at all. Set on both roles together, or a stated VAT number goes unverified and /vat-check answers 404")
 	env.String(fs, &cfg.geocodeBaseURL, "geocode-base-url", "MARGINCE_GEOCODE_BASE_URL", "", "same variable the worker reads to reach Nominatim; read here only to decide whether this role queues a coordinate lookup at all. Set on both roles together, or every address write queues a lookup no worker can answer and the row lands as a geocode failure naming the wrong cause")
-	// A malformed TTL is CARRIED rather than returned, so it can be reported
-	// beside a missing DSN instead of hiding it for a boot. Returning here
-	// would put this fault ahead of every other one by accident of ordering —
-	// the same one-fault-per-boot the collection below exists to end. The flag
-	// still registers, on the compiled default, so parsing proceeds far enough
-	// to find whatever else is wrong.
-	accessTokenTTL, ttlErr := envDuration(oauthAccessTokenTTLEnv)
-	if ttlErr != nil {
-		cfg.envFaults = append(cfg.envFaults, ttlErr.Error())
-	}
-	fs.DurationVar(&cfg.oauthAccessTokenTTL, "oauth-access-token-ttl", accessTokenTTL,
-		"lifetime of the access token (an Agent Seat Passport) the OAuth handshake mints, for the code exchange and every refresh rotation; 0 = the passport default of 720h (30 days), maximum 2160h (90 days)")
 	return fs, env, cfg, nil
 }
 
@@ -158,7 +144,7 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	// rather than in each flag's default because `flag` echoes a non-empty default
 	// in its usage output, and these values are DSNs, signing keys, OAuth client
 	// secrets and bearer tokens — see internal/platform/cliflags.
-	env.Apply(fs, config.FromOS)
+	envErr := env.Apply(fs, config.FromOS)
 	// After Apply, so the report describes the environment the role actually
 	// consulted.
 	cfg.unknownVars = registry.Undeclared(config.Environ())
@@ -171,15 +157,14 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	// run then answered with the licence refusal, which is a second fact that
 	// was true all along. Two boots to learn two requirements, and an operator
 	// who fixes both at once never sees the second message at all.
-	faults := append([]string{}, cfg.envFaults...)
+	var faults []string
+	// A value the environment holds but its flag cannot read joins the faults
+	// found below, so one boot names every one of them.
+	if envErr != nil {
+		faults = append(faults, strings.Split(envErr.Error(), "\n")...)
+	}
 	if cfg.dsn == "" {
 		faults = append(faults, "--dsn or MARGINCE_DSN required")
-	}
-	// A TTL the mint would refuse must fail the BOOT, not the first handshake
-	// of a connector nobody is watching.
-	if cfg.oauthAccessTokenTTL < 0 || cfg.oauthAccessTokenTTL > identity.MaxOAuthAccessTokenTTL {
-		faults = append(faults, fmt.Sprintf("--oauth-access-token-ttl %s is out of range: 0 (the default) or up to %s",
-			cfg.oauthAccessTokenTTL, identity.MaxOAuthAccessTokenTTL))
 	}
 	// ONE authority, because capture builds a URL out of it. --graph-tenant is
 	// spliced straight into login.microsoftonline.com/%s/oauth2/..., so a list
@@ -191,6 +176,11 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	// this flag, so an operator configuring multi-directory sign-in has a
 	// reason to reach for the more prominent variable and break capture with it.
 	faults = append(faults, metricsAccessFaults(cfg.metricsAccess, cfg.metricsToken)...)
+	if trusted, err := httpserver.ParseTrustedProxies(cfg.trustedProxiesRaw); err != nil {
+		faults = append(faults, "--trusted-proxies: "+err.Error())
+	} else {
+		cfg.trustedProxies = trusted
+	}
 	if strings.Contains(cfg.graphTenant, ",") {
 		faults = append(faults, "--graph-tenant takes ONE authority (a directory id, or common) and got a list: "+
 			cfg.graphTenant+" — several directories is a SIGN-IN posture, so put them in --microsoft-signin-tenant")
@@ -228,22 +218,6 @@ func metricsAccessFaults(access, token string) []string {
 	default:
 		return []string{fmt.Sprintf("--metrics-access %q is not a posture: token (the default) or open", access)}
 	}
-}
-
-// envDuration reads a duration from the environment as the default for its
-// flag. A value the parser rejects is a boot error rather than a silently
-// ignored setting — an operator who mistypes a TTL must not be told nothing and
-// left running the default.
-func envDuration(key string) (time.Duration, error) {
-	raw := config.FromOS(key)
-	if raw == "" {
-		return 0, nil
-	}
-	d, err := time.ParseDuration(raw)
-	if err != nil {
-		return 0, fmt.Errorf("api: %s=%q is not a duration (e.g. 15m, 24h): %w", key, raw, err)
-	}
-	return d, nil
 }
 
 // senderConfigured reports whether this deployment can put a message in

@@ -36,6 +36,7 @@ import (
 // — not because they are gated differently: the gating is the same nothing, and
 // that is why they belong here rather than behind a condition of their own.
 func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig) {
+	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool, corrector: NewCloseDateCorrector(pool, log)})
 	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool, reconciler: NewFollowUpReconciler(pool, log)})
 	assuranceSweep := &assuranceSweepWorker{

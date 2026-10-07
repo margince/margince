@@ -30,8 +30,8 @@
 }
 
 /* The room, the Core's column, the headline and the promise sentence belong to
-   `design-system/onboarding-stage.css`, which every screen before the workbench
-   stands in. What is below is the TAIL that changes: the ask, and then the read
+   `design-system/onboarding-stage.css`, which every onboarding screen stands
+   in, the conversation's own room included. What is below is the TAIL that changes: the ask, and then the read
    growing under it.
 
    ONE ALIGNMENT, and it is the stage's: left. The theatre's regions each used

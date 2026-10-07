@@ -119,7 +119,10 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 
 // RetireCustomField soft-retires the field (CUSTOM-FIELDS-WIRE-4):
 // status flips to retired, archived_at stays null, the physical column
-// and every value in it are preserved.
+// and every value in it are preserved. The Live Lists still filtering on
+// it are read through ListCustomFieldLiveLists, never carried here: the
+// idempotency replay stores this answer as catalog data and would repeat
+// list names without asking whether the caller may still find them.
 func (h Handlers) RetireCustomField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RetireCustomFieldParams) {
 	field, err := h.svc.Retire(r.Context(), ids.UUID(id))
 	if err != nil {

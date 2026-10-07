@@ -53,7 +53,7 @@ func (h connectorHandlers) ListConnectorContainers(w http.ResponseWriter, r *htt
 		})
 		return
 	}
-	containers, err := h.registry.ListContainers(r.Context(), string(provider),
+	containers, truncated, err := h.registry.ListContainers(r.Context(), string(provider),
 		ids.From[ids.UserKind](actor.UserID))
 	switch {
 	case errors.Is(err, capture.ErrContainersUnsupported):
@@ -85,5 +85,9 @@ func (h connectorHandlers) ListConnectorContainers(w http.ResponseWriter, r *htt
 	for _, c := range containers {
 		out = append(out, crmcontracts.ConnectorContainer{Id: c.ID, Name: c.Name})
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectorContainers{Containers: out})
+	// Carried even when false, so a client reading an older server's answer as
+	// "complete" is a decision about a MISSING field rather than about this one.
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectorContainers{
+		Containers: out, Truncated: &truncated,
+	})
 }

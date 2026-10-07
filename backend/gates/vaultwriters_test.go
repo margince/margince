@@ -68,6 +68,13 @@ var vaultWriters = map[string]string{
 	// the link would put a live credential in the audit log.
 	"internal/modules/consent/confirmstage.go": "audit_log, under the confirm_token create verb",
 
+	// Sealed when a TOTP enrolment STARTS, before any factor guards the account:
+	// the pending user_mfa row holds only the ref, and the act that changes what
+	// guards a sign-in — the factor becoming live — is what ConfirmTOTP records.
+	// Disabling deletes the sealed secret and records that too. The secret itself
+	// is absent from both entries for the confirmstage reason above.
+	"internal/modules/identity/mfa.go": "system_log, actions mfa_enrolled/mfa_disabled — the seal is recorded when the factor it guards is confirmed or removed",
+
 	// The declared no-domain-fact posture: bytes move, nothing changes meaning,
 	// so it records operationally rather than as an entity change.
 	"internal/platform/extsecrets/store.go": "system_log — the explicit no-domain-fact posture",

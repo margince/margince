@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -120,6 +121,7 @@ type CompanyNamePromoter struct {
 	pool      *pgxpool.Pool
 	store     *contacts.Store
 	approvals *approvals.Service
+	feedback  *ai.FeedbackStore
 	log       *slog.Logger
 }
 
@@ -132,6 +134,7 @@ func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePr
 		pool:      pool,
 		store:     contacts.NewStore(InstallationDB(pool)),
 		approvals: approvals.NewService(InstallationDB(pool)),
+		feedback:  ai.NewFeedbackStore(InstallationDB(pool)),
 		log:       log,
 	}
 }
@@ -163,6 +166,9 @@ func (p *CompanyNamePromoter) sweepWorkspace(ctx context.Context, ws ids.UUID) e
 		if err != nil {
 			return err
 		}
+		if err := p.rule(ctx, candidates); err != nil {
+			return err
+		}
 		for _, cand := range candidates {
 			if err := p.decideOne(ctx, cand); err != nil {
 				p.log.WarnContext(ctx, "company-name promotion: candidate failed",
@@ -180,6 +186,83 @@ func (p *CompanyNamePromoter) sweepWorkspace(ctx context.Context, ws ids.UUID) e
 	p.log.WarnContext(ctx, "company-name promotion: page ceiling reached, the rest waits for the next pass",
 		"workspace", ws.String(), "pages", companyNamePromotionMaxPages)
 	return nil
+}
+
+// rule applies what a human already decided about each signature, before any
+// of it is counted as evidence.
+//
+// THE EDGE LIVES HERE. `contacts` cannot see the feedback store — a module does
+// not import a sibling — and the ruling must not be restated in SQL beside the
+// signature read, which would leave two answers to what a verdict means. So the
+// ledger is consulted at the seam and the signatures arrive at the decision
+// already ruled on.
+//
+// A verdict about a contact's `company_name` field is a statement about that
+// contact's record, and this sweep asks a question about their employer. It
+// still binds: `suppressed` says the observation itself is wrong, and a wrong
+// observation corroborates nothing, whatever it is pointed at. Corroboration is
+// the entire safety property here — one signature is one unverified sender
+// claim — so evidence a human has struck must not help reach it.
+//
+// One read per page, not per contact: a sweep exists to process many.
+func (p *CompanyNamePromoter) rule(ctx context.Context, candidates []contacts.CompanyNameCandidate) error {
+	subjects := make([]ids.UUID, 0)
+	for _, cand := range candidates {
+		for _, sig := range cand.Signatures {
+			subjects = append(subjects, sig.ContactID.UUID)
+		}
+	}
+	if len(subjects) == 0 {
+		return nil
+	}
+	var verdicts map[ids.UUID]map[string]ai.Verdict
+	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		var err error
+		verdicts, err = p.feedback.VerdictsForManyTx(ctx, tx, "contact", subjects)
+		return err
+	}); err != nil {
+		return fmt.Errorf("consulting the verdicts recorded about the signatures: %w", err)
+	}
+	claim := ai.VerdictLookupKey(ai.ClaimProfileField, ai.ClaimKey(ai.ProfileFieldClaimPath(companyNameField)))
+	for i := range candidates {
+		candidates[i].Signatures = ruledSignatures(candidates[i].Signatures, verdicts, claim)
+	}
+	return nil
+}
+
+// ruledSignatures drops what a human struck and carries what they decided.
+func ruledSignatures(signatures []contacts.SignatureCompanyName,
+	verdicts map[ids.UUID]map[string]ai.Verdict, claim string,
+) []contacts.SignatureCompanyName {
+	kept := make([]contacts.SignatureCompanyName, 0, len(signatures))
+	for _, sig := range signatures {
+		v, found := verdicts[sig.ContactID.UUID][claim]
+		if !found {
+			kept = append(kept, sig)
+			continue
+		}
+		// AGAINST THE VALUE: a decision is about the answer that was in front
+		// of the human, and an accepted research claim can have replaced the
+		// whole row since. Verdict.AsOf is where that ruling lives, and this
+		// reader asks it the same question a rendered page does.
+		decision, applies := v.AsOf(sig.Value, sig.CapturedAt)
+		if !applies {
+			kept = append(kept, sig)
+			continue
+		}
+		switch decision.Verdict {
+		case ai.VerdictSuppressed:
+			continue
+		case ai.VerdictCorrected:
+			if decision.CorrectedValue != nil {
+				sig.Value = *decision.CorrectedValue
+			}
+		case ai.VerdictConfirmed:
+			sig.Confirmed = true
+		}
+		kept = append(kept, sig)
+	}
+	return kept
 }
 
 func (p *CompanyNamePromoter) decideOne(ctx context.Context, cand contacts.CompanyNameCandidate) error {

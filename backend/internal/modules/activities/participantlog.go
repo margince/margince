@@ -44,9 +44,23 @@ const (
 // It is silent for a non-interaction kind and for an activity with no contact
 // link — an unlinked note is a workspace-shared thought, not a conversation
 // with anybody.
-func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, direction *string, links []ActivityLinkInput) error {
-	if !relstrength.IsParticipantKind(kind) {
+//
+// A row that names its source author was not logged by the caller: an import
+// writes another system's history, and the caller is whoever ran the import.
+// Our side is then the author's seat when the source names one, and nobody when
+// it names only an author with no seat here (an inbound mail's external sender,
+// a departed rep the source spelled by name). The backfill skips these rows for
+// the same reason (participantbackfill.go, class 3).
+func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, in LogActivityInput) error {
+	if !relstrength.IsParticipantKind(in.Kind) {
 		return nil
+	}
+	stamp := loggedStamp{direction: in.Direction, links: in.Links, envelope: suppliedEnvelope(in)}
+	if in.Author.AuthorID != nil {
+		return stampLoggedCounterparties(ctx, tx, activityID, stamp, *in.Author.AuthorID)
+	}
+	if in.Author.AuthorName != nil {
+		return stampLoggedCounterparties(ctx, tx, activityID, stamp, ids.Nil)
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
@@ -54,16 +68,42 @@ func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 		// acting on its own) records no our-side participant rather than
 		// attributing the conversation to nobody. The contact side below still
 		// stands, so the timeline keeps what it knows.
-		return stampLoggedCounterparties(ctx, tx, activityID, direction, links, ids.Nil)
+		return stampLoggedCounterparties(ctx, tx, activityID, stamp, ids.Nil)
 	}
-	return stampLoggedCounterparties(ctx, tx, activityID, direction, links, actor.UserID)
+	return stampLoggedCounterparties(ctx, tx, activityID, stamp, actor.UserID)
+}
+
+// loggedStamp is what one logged interaction says about who was in it.
+type loggedStamp struct {
+	direction *string
+	links     []ActivityLinkInput
+	// envelope is the address headers a logged email stated; nil when it
+	// stated none.
+	envelope *mailParticipants
+}
+
+// suppliedEnvelope is the logged email's From/To/Cc, normalised, or nil for
+// any other kind and for an email that names no address.
+func suppliedEnvelope(in LogActivityInput) *mailParticipants {
+	if in.Kind != string(crmcontracts.ActivityKindEmail) || (in.EmailFrom == "" && len(in.EmailTo) == 0 && len(in.EmailCc) == 0) {
+		return nil
+	}
+	normalize := func(addrs []string) []string {
+		out := make([]string, 0, len(addrs))
+		for _, addr := range addrs {
+			out = append(out, normalizeAddress(addr))
+		}
+		return out
+	}
+	return &mailParticipants{From: normalizeAddress(in.EmailFrom), To: normalize(in.EmailTo), Cc: normalize(in.EmailCc)}
 }
 
 // stampLoggedCounterparties writes the rows, with the roles the direction
 // implies — our side sends on outbound and receives on inbound, mirroring
 // exactly what capture stamps, so a logged call and a captured mail fold
 // through the same arithmetic.
-func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, direction *string, links []ActivityLinkInput, userID ids.UUID) error {
+func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, stamp loggedStamp, userID ids.UUID) error {
+	direction := stamp.direction
 	// A logged meeting often carries no direction at all — nobody "sends" a
 	// meeting. It defaults to the outbound roles, which is what a rep logging
 	// their own call means, and the fold treats an undirected interaction as
@@ -77,16 +117,55 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 			return err
 		}
 	}
-	for _, link := range links {
+	for _, link := range stamp.links {
 		if link.EntityType != linkEntityContact {
 			continue
 		}
 		contact := link.EntityID
-		if err := insertLoggedParticipant(ctx, tx, activityID, theirRole, nil, &contact); err != nil {
+		role := theirRole
+		if stamp.envelope != nil {
+			var err error
+			if role, err = envelopeRole(ctx, tx, contact, *stamp.envelope); err != nil {
+				return err
+			}
+		}
+		// The logger put a contact the stated headers do not name in the
+		// conversation, but the headers say who sent it: keep the evidence on
+		// the receiving side, never as the sender.
+		if role == "" {
+			role = unstatedRecipientRole(theirRole)
+		}
+		if err := insertLoggedParticipant(ctx, tx, activityID, role, nil, &contact); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// unstatedRecipientRole is the role of a linked contact the stated headers do
+// not name: their side's role, unless that would make them the sender.
+func unstatedRecipientRole(theirRole string) string {
+	if theirRole == "from" {
+		return "cc"
+	}
+	return theirRole
+}
+
+// envelopeRole is the header a contact's address appears on, with the
+// precedence normalizeParticipants gives: From, then To, then Cc. "" when none.
+func envelopeRole(ctx context.Context, tx pgx.Tx, contact ids.UUID, envelope mailParticipants) (string, error) {
+	var role string
+	if err := tx.QueryRow(ctx, `
+		SELECT CASE WHEN bool_or(e.email = $2) THEN 'from'
+		            WHEN bool_or(e.email = ANY($3)) THEN 'to'
+		            WHEN bool_or(e.email = ANY($4)) THEN 'cc'
+		            ELSE '' END
+		  FROM contact_email e
+		 WHERE e.contact_id = $1 AND e.archived_at IS NULL`,
+		contact, envelope.From, envelope.To, envelope.Cc).Scan(&role); err != nil {
+		return "", fmt.Errorf("activities: reading which header names a linked contact: %w", err)
+	}
+	return role, nil
 }
 
 // insertLoggedParticipant writes one row, idempotently against the ACT-DDL-3

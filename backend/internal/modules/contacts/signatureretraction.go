@@ -101,7 +101,7 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 			WITH wrong AS (
 			    SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value
 			      FROM contact_profile_field f
-			      JOIN activity a ON f.source_ref = 'activity:' || a.id::text
+			      JOIN activity a ON a.id = `+sourceRefActivityID+`
 			     WHERE f.source = $1
 			       AND NOT `+SenderPredicate("f.contact_id", "a")+`
 			       AND NOT EXISTS (
@@ -155,6 +155,23 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 	})
 	return removed, err
 }
+
+// sourceRefActivityID is the activity a profile field's source_ref names, as a
+// uuid, so the retraction joins activity through its primary key.
+//
+// Comparing text instead (`f.source_ref = 'activity:' || a.id::text`) cannot use
+// any index: it renders every activity id as text and hashes the lot, on every
+// pass, to find the few hundred a signature was read from.
+//
+// The pattern admits exactly the refs that comparison could match and no other.
+// A uuid's text form is its canonical lowercase spelling, which is also how the
+// writer renders the ref (enrichsignature.go), so anything else — an uppercase
+// or unhyphenated spelling, a ref of another kind such as site_read — could
+// never have joined, and here reads as NULL and joins nothing. The CASE is what
+// keeps the cast from ever seeing such a ref: an unguarded cast would raise on
+// the first one and fail the whole pass.
+const sourceRefActivityID = `CASE WHEN f.source_ref ~ '^activity:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+			           THEN substr(f.source_ref, 10)::uuid END`
 
 // auditRetractions writes the write shape for each contact the sweep touched.
 //

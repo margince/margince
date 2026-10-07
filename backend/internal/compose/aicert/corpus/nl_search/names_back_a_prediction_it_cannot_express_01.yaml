@@ -1,0 +1,38 @@
+name: nl_search_names_back_a_prediction_it_cannot_express
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: company
+  text: companies in Berlin that are likely to buy
+  today: '2026-09-30'
+  lang: en
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: country, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: city, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: industry, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: lifecycle, type: picklist, operators: [eq, neq, in, exists], options: [unknown, target, prospect, opportunity,
+      customer, former_customer, disqualified]}
+  - {name: size_band, type: picklist, operators: [eq, neq, in, exists], options: [1-10, 11-50, 51-200, 201-500,
+      501-1000, 1001-5000, 5000+]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: last_activity_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: owner_id, type: id, operators: [eq, neq, in, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      and:
+      - field: city
+        op: eq
+        value: Berlin
+    unsupported: 1
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: The passing answer keeps city equals Berlin and names 'likely to buy' as unsupported, with a reason saying
+    no field records a prediction of buying. Mapping 'likely to buy' onto lifecycle, a stage or any other field
+    is a guess the reader would take for a real filter, and fails.

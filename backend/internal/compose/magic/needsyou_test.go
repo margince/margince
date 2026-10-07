@@ -66,12 +66,12 @@ func decisionsWaiting(
 // reader is asked. Two kinds sharing a key would ask one question twice.
 func TestADecisionWaitingCarriesTheKindItAsksAbout(t *testing.T) {
 	want := map[string]string{
-		"coldstart":           "magic.action.approval_coldstart",
-		"send_email":          "magic.action.approval_send_email",
-		"advance_deal":        "magic.action.approval_advance_deal",
-		"promote_lead":        "magic.action.approval_promote_lead",
-		"overnight":           "magic.action.approval_overnight",
-		"transcript_proposal": "magic.action.approval_transcript_proposal",
+		"coldstart":       "magic.action.approval_coldstart",
+		"send_email":      "magic.action.approval_send_email",
+		"advance_deal":    "magic.action.approval_advance_deal",
+		"promote_lead":    "magic.action.approval_promote_lead",
+		"overnight":       "magic.action.approval_overnight",
+		"commitment_task": "magic.action.approval_commitment_task",
 	}
 	seen := make(map[string]string, len(want))
 	for kind, key := range want {
@@ -293,22 +293,16 @@ func TestATargetedProposalNamesTheRecordAndItsCaption(t *testing.T) {
 	}
 }
 
-// Nothing has happened yet, so there is nothing to put back — said out loud
-// rather than left absent for a client to guess about.
-func TestADecisionNotYetMadeHasNothingToTakeBack(t *testing.T) {
+// Nothing has happened yet, so there is nothing to put back, and the line says
+// nothing about undoing: its action is the decision, and a refusal would read as
+// "this cannot be undone" about a change nobody has made.
+func TestADecisionNotYetMadeCarriesNoUndo(t *testing.T) {
 	lines := decisionsWaiting(t, stagedApproval("coldstart"))
 	if len(lines) != 1 {
 		t.Fatalf("lines = %d, want the one staged decision", len(lines))
 	}
-	undo := lines[0].Undo
-	if undo == nil {
-		t.Fatal("undo = absent, want a stated policy a client can draw")
-	}
-	if undo.Undoable {
-		t.Error("a decision nobody has made is offered as undoable")
-	}
-	if undo.Reason == nil || *undo.Reason != nothingToUndo {
-		t.Errorf("undo reason = %v, want %q", undo.Reason, nothingToUndo)
+	if undo := lines[0].Undo; undo != nil {
+		t.Errorf("undo = %+v, want none: a decision waiting is decided, not undone", *undo)
 	}
 }
 
@@ -323,5 +317,66 @@ func TestAFailedApprovalReadReachesTheCaller(t *testing.T) {
 	}
 	if lines != nil || refused != nil {
 		t.Errorf("lines = %v and refusal = %v alongside a failure, want neither", lines, refused)
+	}
+}
+
+// A DECISION NAMES THE RECORD IT IS ABOUT.
+//
+// The contract promises a label on every entity reference, and without one the
+// screen draws "No record named" on a line asking somebody to decide. The label
+// is the one the staging FROZE, not the record's name today: the reader is being
+// asked about what they were shown, and a rename between staging and deciding
+// must not quietly change the question.
+func TestADecisionWaitingNamesItsTarget(t *testing.T) {
+	staged := stagedApproval("advance_deal")
+	targetType, targetID := "deal", openapi_types.UUID(ids.NewV7())
+	frozen := "Weber GmbH — Phase 2"
+	staged.TargetEntityType = &targetType
+	staged.TargetEntityId = &targetID
+	staged.TargetLabel = &frozen
+
+	lines := decisionsWaiting(t, staged)
+	if len(lines) != 1 {
+		t.Fatalf("lines = %d, want the one staged decision", len(lines))
+	}
+	entity := lines[0].Entity
+	if entity == nil || entity.Label == nil {
+		t.Fatalf("the entity carries no label, so the row reads as no record named: %+v", entity)
+	}
+	if *entity.Label != frozen {
+		t.Errorf("label = %q, want the name the staging froze", *entity.Label)
+	}
+}
+
+// A staging that named no target carries no entity at all, so there is nothing
+// to label — and a label without an id would point a reader at nothing.
+func TestADecisionAboutNoRecordCarriesNoEntity(t *testing.T) {
+	lines := decisionsWaiting(t, stagedApproval("coldstart"))
+	if len(lines) != 1 {
+		t.Fatalf("lines = %d, want the one staged decision", len(lines))
+	}
+	if lines[0].Entity != nil {
+		t.Errorf("a targetless staging carries entity %+v", lines[0].Entity)
+	}
+}
+
+// A new contact offered from mail names who wrote; one staged before it
+// carried a name falls back to the sentence that names only the kind.
+func TestAContactProposalNamesWhoWroteWhenItCan(t *testing.T) {
+	named := stagedApproval("capture_counterparty")
+	label := "Boris <boris@customer.example>"
+	named.TargetLabel = &label
+	unnamed := stagedApproval("capture_counterparty")
+
+	lines := decisionsWaiting(t, named, unnamed)
+	if len(lines) != 2 {
+		t.Fatalf("got %d lines, want 2", len(lines))
+	}
+	if lines[0].Summary.Key != "magic.action.approval_capture_counterparty" ||
+		(*lines[0].Summary.Values)["target"] != label {
+		t.Errorf("a named proposal reads %+v, want the sentence naming %q", lines[0].Summary, label)
+	}
+	if lines[1].Summary.Key != genericApprovalSentence {
+		t.Errorf("a proposal with no name reads %q, want the generic sentence", lines[1].Summary.Key)
 	}
 }

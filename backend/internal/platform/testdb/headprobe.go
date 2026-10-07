@@ -248,7 +248,11 @@ func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]recordedRow) st
 			// column is there and only its rows are old. It carries the remedy for
 			// that reason.
 			return fmt.Sprintf("%s %s_%s recorded no content digest, so what it applied cannot be compared with what this binary embeds — this template predates the digest and rows are never back-filled; `make test-db-up` rebuilds it", ns.Name, m.Version, m.Name)
-		case row.digest != dbmigrate.Digest(m):
+		// Asked of dbmigrate rather than compared here: a migrate admits content
+		// it has recorded as building the same schema, and a probe that did not
+		// would call a template the migrator would reuse not-at-head and rebuild
+		// it for nothing.
+		case !dbmigrate.ContentAdmitted(ns.Name, m, row.digest):
 			return fmt.Sprintf("%s %s_%s was applied from different content than this binary embeds — the migration was edited after this database was migrated", ns.Name, m.Version, m.Name)
 		}
 	}

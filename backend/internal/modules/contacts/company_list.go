@@ -5,8 +5,7 @@ package contacts
 
 // The company list read: the shared listPage runner bound to the
 // company table — DM-VOCAB-2 sort vocabulary, the shared filter
-// chain plus the classification filter, and the company row scan +
-// domain attachment.
+// chain, and the company row scan + domain attachment.
 
 import (
 	"context"
@@ -155,7 +154,7 @@ func foldDomainQuery(raw string) string {
 }
 
 // ListCompanies is the row-scoped company list read:
-// quick-find, owner, domain, classification and custom-field filters,
+// quick-find, owner, domain and custom-field filters,
 // keyset pagination under the validated sort.
 // companyCommonFilters is the shared filter set for an account list: every dial
 // the contact and lead lists also carry, plus the domain an account is found by.

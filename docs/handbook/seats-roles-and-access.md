@@ -145,10 +145,11 @@ someone reports an empty app, check their role first.
 
 Holding more than one role gives you the widest of them.
 
-The six roles are seeded, not frozen. Through the `/roles` API (no settings page
-yet) only an Admin copies, restores or widens a role; other role editors rename,
-narrow or archive. An archived role grants nothing. This page describes the
-**seeded** grants; the permission decides, so a custom role reaches what it holds.
+Roles can be copied and changed in **Settings → Roles and permissions**. A new
+role starts as a copy of another (**New role**, then **Copy rights from**). Only
+an Admin copies, restores or widens a role; other role editors rename, narrow or
+archive one. An archived role grants nothing. The table above shows the six
+roles as they ship. A changed or custom role reaches what its permissions allow.
 
 ## Row scope: which records, not which kinds
 
@@ -158,42 +159,30 @@ Row scope has three levels: **own**, **team**, **all**.
 - **team**: those, plus records owned by your teammates
 - **all**: everything in the company
 
-Here is the part that differs from most CRMs, and it is deliberate:
+This differs from most CRMs. Any seat that can read records reads every
+contact, company, lead, deal and project in the company, whatever its row scope.
+The app states it: "Reads every contact, company, lead and deal in the company."
+Row scope decides which records you may change. This includes projects.
 
-> **Reading a contact, company, lead, deal or project ignores row scope
-> entirely.**
-
-Every seat holding the read permission reads every contact, company, lead, deal
-and project in the company. The app states it: "Reads every contact, company,
-lead and deal in the company."
-
-Row scope governs **writes**, not customer reads. Projects used to be the
-exception and are not any more: a consultant delivering a project they neither
-owned nor were granted got a 404, which is not a privacy boundary, only a
-broken one.
-
-Two things "everything" above does NOT cover, for any role including Admin,
-because neither is a tier of row scope:
+Two exceptions apply to every role, Admin included:
 
 - **Correspondence you were not part of.** Mail and meetings carry their own
   audience, and seniority does not override it.
-- **A captured contact still private to the colleague whose mailbox made it.** A
-  connector creates a contact from a message nothing has judged yet, and it
-  belongs to that seat alone until a classifier judges the sender or the owner
-  publishes it themselves. An admin gets a 404, which is the point: connecting
-  a mailbox with a year of history must not put every correspondent, a lawyer
-  and a doctor among them, in front of the company.
+- **A captured contact still private to its owner.** A connector creates a
+  contact from a message nothing has judged yet. The contact belongs to the
+  colleague whose mailbox made it until a classifier judges the sender or the
+  owner publishes it. An administrator cannot open it either, so connecting a
+  mailbox with a year of history does not show every correspondent, a lawyer
+  or a doctor among them, to the whole company.
 
-The reasoning is that a shared pipeline is the point. Two narrowings survive: a
-record created by a connector can stay private to its owner until promoted, and a
-per-record share can widen access further.
+A shared pipeline is the default. A per-record share can widen access further.
 
-Your personal things (lists, saved views, automations, your writing voice) keep
-the classic owner rule.
+Saved views, automations and your writing voice keep the classic owner rule; a
+shared list shows each reader only the records they may see.
 
 **Team lead is the one team-scoped role.** A Team lead reads and works the
 records of everyone sharing a live team with them, with no share arranged first.
-A Team lead who belongs to no team reaches exactly their own rows.
+A Team lead who belongs to no team reaches only their own records.
 
 **User is own-scoped.** For every role but Team lead, being on a team with
 somebody does not by itself let you edit their records; that takes an explicit
@@ -201,10 +190,6 @@ share or an unbounded seat.
 
 An **ownerless** record is readable by everyone and writable by nobody until
 somebody claims it.
-
-Every record tells the app whether you can write it, so the edit buttons you see
-match the answer the server would give. That is a convenience, not the
-enforcement: the server checks again regardless.
 
 ## Seeing and sharing records
 
@@ -228,8 +213,10 @@ To take back a share in Margince, open the record, choose **Share**, find the co
 Also called: unshare, remove access.
 
 ### How do I make a contact or company visible to everyone?
-To make a private contact or company visible to the whole company, open it, press the access chip under its name (it reads **Private**), choose **All users in the company** and press **Save**. Nothing changes until you press **Save**, so moving through the answers with the arrow keys is safe. To hide it again, press the chip (it now reads **Shared**), choose **Only the owner** and press **Save**; users and teams it was shared with keep access. **Manage access** in the same panel opens the full list of who can open the record and why. The choice is offered only to someone who may change the record; anyone else, and anyone on an archived record, sees the reason instead.
-A record with **no owner** cannot be made owner-only, because no seat could then read it: **Only the owner** is greyed out with "Assign an owner first." If you are not the owner, **Only the owner** warns "You lose access unless it is shared with you or your team." and, if no share reaches you, Margince takes you back to the list.
+To make a private contact or company visible to the whole company, open it, press the access chip under its name (it reads **Private**), choose **All users in the company** and press **Save**. Nothing changes until you press **Save**, so moving through the answers with the arrow keys is safe. To hide it again, press the chip (it now reads **Shared**), choose **Only the owner** and press **Save**. Users and teams it was shared with keep access. **Manage access** in the same panel opens the full list of who can open the record and why. The choice is offered only to someone who may change the record; anyone else, and anyone on an archived record, sees the reason instead.
+A record with **no owner** cannot be made owner-only, because no seat could then read it. On such a record **Only the owner** is greyed out, with the note "Assign an owner first".
+If you are not the owner, **Only the owner** warns "You lose access unless it is shared with you or your team".
+If no share reaches you, Margince then takes you back to the list.
 Also called: publish a contact, make public, make private.
 
 ## Who can see this record
@@ -260,15 +247,15 @@ setting with a different effect.
 
 ## What you see when you are not allowed
 
-Margince gives two different refusals, and the difference is deliberate.
+Margince gives two different refusals.
 
-**You may not do this to this kind of record** → a refusal that says so:
+*You may not do this to this kind of record* → a refusal that says so:
 
 > You do not have permission for this action. Ask an administrator, or the user
 > who shared this record, to extend your access.
 
-**You may not see this particular record** → **not found**. Not "forbidden". The
-existence of the record is hidden, so a leaked link tells you nothing.
+*You may not see this particular record* → **not found**, so the existence of
+the record is hidden and a leaked link tells you nothing.
 
 One refinement: a record you can *read* but not *write* gives you the first
 refusal, not "not found". It is visibly yours to read, so there is nothing left
@@ -281,11 +268,10 @@ open it. Copy the address to ask someone who has access."
 ## Teams
 
 A team in Margince is a named group of colleagues. Creating or renaming one
-takes the team-administration permission (`team_admin`). **Only an Admin changes
-who is on a team**, or archives or restores one. Anyone can see the teams.
+takes the team-administration permission. Only an Admin changes who is on a team,
+or archives or restores one. Anyone can see the teams.
 
-**A team carries no permissions of its own.** It is not a role. It does two
-things:
+**A team carries no permissions of its own.** It does two things:
 
 1. **It is a share target.** You can share a record with a whole team in one act.
 2. It resolves team-level row scope, which is what "their team" means for a
@@ -314,8 +300,8 @@ projects. Configuration cannot.
 
 Rules worth knowing:
 
-- **A share is capped at your own access, no wider.** You cannot give away
-  something you do not have.
+- **A share is capped at your own access.** You cannot give away something you
+  do not have.
 - Someone holding a record through a read share **cannot pass it on**.
 - Sharing never widens what a *role* may do, only which records it reaches.
   Share a deal with someone whose role cannot read deals at all and the share
@@ -323,18 +309,18 @@ Rules worth knowing:
 - A write share to someone on a read seat is refused: "A read-only seat cannot
   hold write access. Upgrade the seat first, or grant read access."
 - Re-sharing the same record **replaces** the whole share. Anything you leave out
-  is cleared, not kept.
+  is cleared.
 - Revoking takes effect on the recipient's next request. There is no undo.
-- An agent cannot share at all. The grant verbs reject any non-human caller;
-  there is no staged path to it.
+- An agent cannot share at all, and cannot ask a colleague to approve a share
+  for it.
 
 There are no sharing hierarchies, no rules-based sharing, and no delegating the
 right to share. Flat, explicit grants only. Every share and un-share is audited.
 
 ## Inviting and removing colleagues: the rules
 
-Inviting and removing colleagues takes the user-administration permission
-(`user_admin`), which only the Admin role holds by default, and only a human may
+Inviting and removing colleagues takes the user-administration permission,
+which only the Admin role holds by default, and only a human may
 use it: an agent may never create a human account.
 
 Inviting, deactivating and the **Members** settings list all answer to that
@@ -353,13 +339,11 @@ If your installation sends email, they get a link. If not, the administrator
 takes a one-time link from **Get set-password link** and hands it over directly.
 An invitation link lasts 7 days.
 
-Before you send the invitation, the **User access** panel previews what the new
-user will be able to reach, computed from the same permission data the real
-gates read, so the invite screen shows the truth rather than a second
-interpretation of it.
+Before you send the invitation, the **User access** panel shows what the new
+colleague will be able to reach.
 
-An invite is refused if you are out of seats. Nothing about that clears on its
-own, so there is no point retrying.
+An invite is refused if you are out of seats. Retrying does not help until a
+seat is freed or the licence is raised.
 
 **Changing a role replaces it.** "Holds {roles}. Choosing a role replaces all of
 them."
@@ -371,22 +355,15 @@ seat never is. Their records keep them as owner until someone reassigns them.
 
 The last active administrator cannot be deactivated or demoted.
 
-Deactivating the company's **agent identity** stops what that agent was doing on
-your data. It does not stop scheduled extension jobs: a job acts as itself, and
-each record it captures is landed under the live authority of the member whose
-connection produced it. To stop one of those, disconnect the member or retire
-the extension.
-
 ## Field masking
 
-Field masking in Margince can hide a single column of a record you are otherwise
-allowed to read. Nothing uses it today. There was once a rule hiding deal values
-from members, and it was removed: **deal values are visible to everyone who can
-read the deal.**
+Deal values are visible to everyone who can read the deal. Field masking can hide
+a single field of a record you are otherwise allowed to read, but nothing hides
+a field by default.
 
-If your administrator ever does set a mask, the value reads as empty and the
-record names which fields were withheld. Sorting or filtering by a hidden column
-is refused rather than quietly returning wrong results.
+If a field is masked, it reads as empty and the record names which fields were
+withheld. Sorting or filtering by a masked field is refused, so the list never
+shows results that are silently wrong.
 
 ## Where the audit trail fits
 
@@ -394,7 +371,7 @@ Seats, roles and row scope decide what a seat *can* do. The audit trail records
 what it *did*: every action, attributed to a human, an agent or a connector,
 with the authorization rule that allowed it.
 
-Reading it takes the audit-log read permission (`audit_log`), which only the
+Reading it takes the audit-log read permission, which only the
 Admin role holds by default, because it names every actor and every record they
 touched. See
 [What is kept, what is destroyed](retention-exports-and-deletion.md#the-audit-trail).

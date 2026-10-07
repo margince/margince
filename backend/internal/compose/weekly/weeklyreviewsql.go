@@ -55,7 +55,7 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 		if review, err = scanReview(ctx, tx, row); err != nil {
 			return err
 		}
-		review.Prior, err = readPriorWeek(ctx, tx, review.PriorReviewID, userID)
+		review.Prior, err = readPriorWeek(ctx, tx, review)
 		return err
 	})
 	if err != nil {
@@ -81,7 +81,7 @@ const reviewSelect = `
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
 	       base_currency, prior_review_id,
 	       coalesce(narrative, ''), narrated_at,
-	       learnings_state
+	       learnings_state, numeric_summary
 	  FROM weekly_review`
 
 // scanReview reads one review row and its frozen deal lines.
@@ -100,7 +100,7 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&created, &won, &lost, &currency, &review.PriorReviewID,
-		&review.Narrative, &review.NarratedAt, &review.LearningsState); {
+		&review.Narrative, &review.NarratedAt, &review.LearningsState, &review.NumericSummary); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return Review{}, apperrors.ErrNotFound
 	case err != nil:
@@ -229,6 +229,7 @@ func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool
 		cols = append(cols, name)
 		args = append(args, value)
 	}
+	add("numeric_summary", review.NumericSummary)
 	add("user_id", review.UserID)
 	add("local_week_start", review.LocalWeekStart)
 	add("as_of", review.AsOf)

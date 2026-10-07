@@ -56,6 +56,8 @@ func entityTypeOfEvent(eventType string) string {
 		return "deal"
 	case eventEngagementReply:
 		return "activity"
+	case eventListEvaluated:
+		return "list"
 	default:
 		return "unclassified"
 	}

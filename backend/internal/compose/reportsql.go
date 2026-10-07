@@ -108,7 +108,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		var where []string
-		where, out.narrowed, err = buildReportWhere(ctx, tx, spec, req, callersOwnPopulation(), arg)
+		where, out.narrowed, err = buildReportWhere(ctx, tx, spec, req, requestedReportScope(req.Scope), arg)
 		if err != nil {
 			return err
 		}

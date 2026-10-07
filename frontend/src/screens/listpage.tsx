@@ -2,31 +2,32 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // One list, opened: what it is for, who looks after it, how many of its
-// members this reader can see, the members themselves, why each is there, and
-// what changed. The members are the record list's own rows, narrowed by
-// list_id, so the page is never one request per member.
+// members this reader can see, the members themselves with what put each
+// there, and what changed. The members are the record list's own rows, narrowed by
+// list_id, so the page is never one request per member (listmembers.tsx).
 
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { api } from "../api/client";
+import { useEffect, useMemo, useRef } from "react";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
-import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { throwProblem, useMe } from "./common";
+import { useMe } from "./common";
+import { customColumnLabel } from "./filterdata";
+import { EditFilterAction, mayEditFilter } from "./filterlistedit";
+import { ListChangeSummary } from "./listchanges";
 import { ListHistoryPanel } from "./listhistory";
 import {
   ListHealthBadge,
   ListKindBadge,
   RECORD_TYPE_LABEL,
-  SHARING_LABEL,
 } from "./listlibrary";
+import { useMemberColumns } from "./listmembercolumns";
+import { MEMBER_SOURCES, MemberRows, type MemberSource } from "./listmembers";
+import { ArchiveListAction } from "./listrules";
 import {
   type List,
   type ListRecordType,
@@ -34,26 +35,15 @@ import {
   useList,
   useListsAvailable,
   useUpdateList,
+  useVisitList,
 } from "./lists.queries";
 import { ListSettingsAction } from "./listsettings";
-import { ListWhy } from "./listwhy";
+import { useListAudienceLabel } from "./listsharing";
 import "./lists.css";
-
-/** Where each record type's rows are read, and the screen a row opens. */
-const MEMBER_SOURCES = {
-  contact: { path: "/contacts", screen: "contacts" },
-  company: { path: "/companies", screen: "companies" },
-  deal: { path: "/deals", screen: "deals" },
-  lead: { path: "/leads", screen: "leads" },
-} as const;
-
-type MemberSource = keyof typeof MEMBER_SOURCES;
 
 function isMemberSource(type: ListRecordType): type is MemberSource {
   return type in MEMBER_SOURCES;
 }
-
-const MEMBER_PAGE = 50;
 
 export function ListScreen({ listID }: Readonly<{ listID?: string }>) {
   const t = useT();
@@ -67,6 +57,7 @@ export function ListScreen({ listID }: Readonly<{ listID?: string }>) {
 function ListBody({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const list = useList(listID);
+  useVisitOnce(listID, list.isSuccess && list.isFetchedAfterMount);
   if (list.isPending) {
     return null;
   }
@@ -78,17 +69,40 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
       <ListHead list={list.data} />
       <ListNotices list={list.data} />
       <MembersPanel list={list.data} />
-      <ListHistoryPanel listID={list.data.id} />
+      <ListHistoryPanel
+        listID={list.data.id}
+        live={list.data.list_type === "dynamic"}
+      />
     </div>
   );
+}
+
+/**
+ * Records one visit per opened list, once this page has read the list itself
+ * rather than a cached copy. The server counts "since your last visit" from
+ * the visit before the one in progress, so the read and the visit may land in
+ * either order and the page shows the same counts.
+ */
+function useVisitOnce(listID: string, readThisMount: boolean) {
+  const { mutate } = useVisitList();
+  const visited = useRef<string | null>(null);
+  useEffect(() => {
+    if (readThisMount && visited.current !== listID) {
+      visited.current = listID;
+      mutate(listID);
+    }
+  }, [listID, readThisMount, mutate]);
 }
 
 function ListHead({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const archive = useArchiveList();
-  const lastExport = list.dependencies?.[0];
+  const audienceOf = useListAudienceLabel();
+  const exports = (list.dependencies ?? []).filter(
+    (use) => use.kind === "export",
+  );
+  const lastExport = exports[0];
   return (
     <header className="lists-head">
       <div className="lists-head-title">
@@ -104,14 +118,15 @@ function ListHead({ list }: Readonly<{ list: List }>) {
             list.visible_count == null
               ? "—"
               : formatNumber(list.visible_count, locale),
-          sharing: t(SHARING_LABEL[list.sharing]),
+          sharing: audienceOf(list),
           steward: list.steward_name ?? t("lists.noSteward"),
         })}
       </p>
+      <ListCheckLine list={list} />
       {lastExport && (
         <p className="t-caption">
-          {plural("lists.head.exported", list.dependencies?.length ?? 0, {
-            count: formatNumber(list.dependencies?.length ?? 0, locale),
+          {plural("lists.head.exported", exports.length, {
+            count: formatNumber(exports.length, locale),
             when: formatDateTime(lastExport.occurred_at, locale, viewerZone()),
           })}
         </p>
@@ -119,22 +134,71 @@ function ListHead({ list }: Readonly<{ list: List }>) {
       {list.can_edit && !list.archived_at && (
         <div className="card-actions">
           <ListSettingsAction list={list} />
-          <Button
-            variant="ghost"
-            pending={archive.isPending}
-            onClick={() => archive.mutate({ id: list.id, archive: true })}
-          >
-            {t("lists.archive")}
-          </Button>
+          <EditFilterAction list={list} />
+          <ArchiveListAction list={list} />
         </div>
       )}
     </header>
   );
 }
 
-/** What the list says about itself: archived, broken, or looked after by nobody. */
+/**
+ * When a Live List was last checked for who joined and left, and what it
+ * gained and lost since the reader's last visit. A Shortlist says nothing.
+ */
+function ListCheckLine({ list }: Readonly<{ list: List }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (list.list_type !== "dynamic") {
+    return null;
+  }
+  const check = list.last_check;
+  const pulse = list.since_last_visit;
+  const changes = list.changes_since_visit;
+  const type = list.entity_type;
+  const when = check
+    ? formatDateTime(check.checked_at, locale, viewerZone())
+    : "";
+  return (
+    <>
+      <p className="t-caption">
+        {!check
+          ? t("lists.head.notChecked")
+          : check.outcome === "too_large"
+            ? t("lists.head.tooLarge", { when })
+            : t("lists.head.lastChecked", { when })}
+      </p>
+      {changes ? (
+        <ListChangeSummary
+          summary={changes}
+          onOpen={
+            isMemberSource(type)
+              ? (id) => navigate({ screen: MEMBER_SOURCES[type].screen, id })
+              : undefined
+          }
+        />
+      ) : (
+        pulse &&
+        pulse.entered + pulse.left > 0 && (
+          <p className="t-caption">
+            {t("lists.head.pulse", {
+              entered: formatNumber(pulse.entered, locale),
+              left: formatNumber(pulse.left, locale),
+            })}
+          </p>
+        )
+      )}
+    </>
+  );
+}
+
+/**
+ * What the list says about itself: archived, broken, looked after by nobody,
+ * or filtering on a field that was retired.
+ */
 function ListNotices({ list }: Readonly<{ list: List }>) {
   const t = useT();
+  const plural = usePlural();
   const me = useMe();
   const update = useUpdateList();
   const archive = useArchiveList();
@@ -160,8 +224,30 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   }
   if (list.health === "invalid") {
     return (
-      <Callout tone="danger" title={t("lists.invalid.title")}>
+      <Callout
+        tone="danger"
+        title={t("lists.invalid.title")}
+        actions={
+          mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
+        }
+      >
         {t("lists.invalid.body")}
+      </Callout>
+    );
+  }
+  if (list.health === "retired_field") {
+    const fields = list.retired_fields ?? [];
+    return (
+      <Callout
+        tone="warning"
+        title={t("lists.retiredField.title")}
+        actions={
+          mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
+        }
+      >
+        {plural("lists.retiredField.body", fields.length, {
+          fields: fields.map(customColumnLabel).join(", "),
+        })}
       </Callout>
     );
   }
@@ -195,11 +281,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   );
 }
 
-type MemberRow = Readonly<Record<string, unknown> & { id: string }>;
-
 function MembersPanel({ list }: Readonly<{ list: List }>) {
   const t = useT();
-  const [why, setWhy] = useState<MemberRow | null>(null);
+  const joined = useMemo(
+    () => new Set(list.joined_since_visit ?? []),
+    [list.joined_since_visit],
+  );
+  const columns = useMemberColumns(list, joined);
   if (!isMemberSource(list.entity_type)) {
     return (
       <Panel title={t("lists.members.title")}>
@@ -216,123 +304,10 @@ function MembersPanel({ list }: Readonly<{ list: List }>) {
         <MemberRows
           list={list}
           source={list.entity_type}
-          onWhy={setWhy}
           onOpen={(row) => navigate({ screen: source.screen, id: row.id })}
+          columns={columns}
         />
       </PanelBody>
-      <ListWhy
-        list={list}
-        record={why ? { id: why.id, name: recordName(why, t) } : null}
-        onClose={() => setWhy(null)}
-      />
     </Panel>
   );
-}
-
-function MemberRows({
-  list,
-  source,
-  onWhy,
-  onOpen,
-}: Readonly<{
-  list: List;
-  source: MemberSource;
-  onWhy: (row: MemberRow) => void;
-  onOpen: (row: MemberRow) => void;
-}>) {
-  const t = useT();
-  const members = useInfiniteQuery({
-    queryKey: ["lists", "members", list.id, list.version],
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET(MEMBER_SOURCES[source].path, {
-        params: {
-          query: { list_id: list.id, limit: MEMBER_PAGE, cursor: pageParam },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    getNextPageParam: (last) =>
-      last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
-  });
-  const rows: MemberRow[] =
-    members.data?.pages.flatMap((page) => page.data as MemberRow[]) ?? [];
-  return (
-    <SurfaceState
-      state={
-        members.isPending
-          ? "loading"
-          : members.isError
-            ? "unavailable"
-            : rows.length > 0
-              ? "ready"
-              : "empty"
-      }
-      emptyLabel={
-        list.list_type === "dynamic"
-          ? t("lists.members.emptyLive")
-          : t("lists.members.emptyShortlist")
-      }
-      loadingLabel={t("lists.members.loading")}
-      loadingLines={5}
-    >
-      <DataTable
-        label={t("lists.members.title")}
-        rows={rows}
-        rowKey={(row) => row.id}
-        onRowClick={onOpen}
-        columns={[
-          {
-            key: "name",
-            header: t("lists.col.name"),
-            grow: true,
-            render: (row) => recordName(row, t),
-          },
-          {
-            key: "why",
-            header: t("lists.members.whyColumn"),
-            render: (row) => (
-              <span className="cell-actions">
-                <Button
-                  variant="ghost"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onWhy(row);
-                  }}
-                >
-                  {t("lists.members.why")}
-                </Button>
-              </span>
-            ),
-          },
-        ]}
-      />
-      {members.hasNextPage && (
-        <Button
-          variant="ghost"
-          pending={members.isFetchingNextPage}
-          onClick={() => members.fetchNextPage()}
-        >
-          {t("lists.members.more")}
-        </Button>
-      )}
-    </SurfaceState>
-  );
-}
-
-/** A record's name, whichever field its type names itself by. */
-export function recordName(
-  row: Readonly<Record<string, unknown>>,
-  t: ReturnType<typeof useT>,
-): string {
-  for (const field of ["full_name", "display_name", "name", "email"]) {
-    const value = row[field];
-    if (typeof value === "string" && value.trim() !== "") {
-      return value;
-    }
-  }
-  return t("lists.unnamed");
 }

@@ -23,6 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -36,6 +37,28 @@ type bulkUndoPlan struct {
 	batchID ids.UUID
 	// ownersBefore is each record's owner before the change.
 	ownersBefore map[openapi_types.UUID]*openapi_types.UUID
+	// tasks is the task create_task filed under each record.
+	tasks map[openapi_types.UUID]bulkCreatedTask
+	// taggings is the tag assignment add_tag made on each record.
+	taggings map[openapi_types.UUID]openapi_types.UUID
+	// members is each record's list membership as remove_from_list took it.
+	members map[openapi_types.UUID]collections.RemovedMember
+}
+
+// membershipOf answers the list membership remove_from_list took from a
+// record; a forward change has no plan and knows none.
+func (p *bulkUndoPlan) membershipOf(id openapi_types.UUID) (collections.RemovedMember, bool) {
+	if p == nil {
+		return collections.RemovedMember{}, false
+	}
+	was, known := p.members[id]
+	return was, known
+}
+
+// bulkCreatedTask is one task create_task filed, at the version it left it.
+type bulkCreatedTask struct {
+	id      openapi_types.UUID
+	version int64
 }
 
 var (
@@ -93,13 +116,30 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 	case len(op.result.Changed) == 0:
 		return bulkChange{}, errBulkNothingToUndo
 	}
-	plan := &bulkUndoPlan{batchID: batchID, ownersBefore: make(map[openapi_types.UUID]*openapi_types.UUID, len(op.result.Changed))}
+	plan := &bulkUndoPlan{
+		batchID:      batchID,
+		ownersBefore: make(map[openapi_types.UUID]*openapi_types.UUID, len(op.result.Changed)),
+		tasks:        map[openapi_types.UUID]bulkCreatedTask{},
+		taggings:     map[openapi_types.UUID]openapi_types.UUID{},
+		members:      map[openapi_types.UUID]collections.RemovedMember{},
+	}
 	items := make([]crmcontracts.BulkItem, len(op.result.Changed))
 	for i, outcome := range op.result.Changed {
 		items[i] = crmcontracts.BulkItem{Id: outcome.ID, Version: outcome.Version}
 		plan.ownersBefore[outcome.ID] = outcome.OwnerBefore
+		if outcome.TaskID != nil {
+			plan.tasks[outcome.ID] = bulkCreatedTask{id: *outcome.TaskID, version: outcome.TaskVersion}
+		}
+		if outcome.MemberAddedAt != nil {
+			plan.members[outcome.ID] = collections.RemovedMember{Note: outcome.MemberNote, AddedAt: *outcome.MemberAddedAt}
+		}
+		if outcome.TaggableID != nil {
+			plan.taggings[outcome.ID] = *outcome.TaggableID
+		}
 	}
-	return bulkChange{recordType: op.recordType, verb: op.verb, items: items, listID: op.listID, undo: plan}, nil
+	return bulkChange{
+		recordType: op.recordType, verb: op.verb, items: items, listID: op.listID, tagID: op.tagID, undo: plan,
+	}, nil
 }
 
 // undoOne reverses the change on one record.
@@ -110,9 +150,14 @@ func undoOne(
 	var leftBehind []storekit.LeftBehind
 	var restored storekit.RestoreReport
 	var err error
-	if isListVerb(change.verb) {
+	switch {
+	case isListVerb(change.verb):
 		// The inverse membership change, through the same writer.
 		return applyMembership(ctx, tx, target, change, item, change.verb == crmcontracts.BulkVerbRemoveFromList)
+	case isTagVerb(change.verb):
+		return applyTagging(ctx, tx, target, change, item, change.verb == crmcontracts.BulkVerbRemoveTag)
+	case change.verb == crmcontracts.BulkVerbCreateTask:
+		return undoTask(ctx, tx, target, change, item)
 	}
 	switch change.verb {
 	case crmcontracts.BulkVerbReassignOwner:
@@ -123,7 +168,10 @@ func undoOne(
 		}
 	case crmcontracts.BulkVerbArchive:
 		var report storekit.RestoreReport
-		report, err = target.restore(ctx, tx, ids.UUID(item.Id), item.Version, change.pendingLinks)
+		var archiver bulkArchiver
+		if archiver, err = archiverOf(target); err == nil {
+			report, err = archiver.restore(ctx, tx, ids.UUID(item.Id), item.Version, change.pendingLinks)
+		}
 		sample = crmcontracts.BulkSampleRow{
 			Id: item.Id, Label: report.Label,
 			Before: crmcontracts.BulkRecordState{Archived: true},
@@ -170,7 +218,11 @@ func handBack(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID)},
 		After:  crmcontracts.BulkRecordState{OwnerId: before},
 	}
-	return sample, crmcontracts.BulkSkip{}, target.reassign(ctx, tx, id, ids.From[ids.UserKind](owner), item.Version)
+	reassigner, err := reassignerOf(target)
+	if err != nil {
+		return crmcontracts.BulkSampleRow{}, crmcontracts.BulkSkip{}, err
+	}
+	return sample, crmcontracts.BulkSkip{}, reassigner.reassign(ctx, tx, id, ids.From[ids.UserKind](owner), item.Version)
 }
 
 // undoSkipFor is bulkSkipFor for an undo, where a version that moved means the

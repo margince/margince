@@ -98,14 +98,11 @@ const minSendSnooze = time.Second
 // there is nothing to deduplicate against — and a unique-by-args window would
 // silently drop the second of two legitimate sends staged in the same instant.
 //
-// The queue is named HERE and not only in the contract. comms_send_email is
-// opts_owner: caller, which makes api/jobs.yaml's `queue:` a description of
-// where the rows are meant to land rather than the thing that puts them there;
-// River reads this struct. An InsertOpts naming no queue is River's own
-// default, so leaving it out would keep the send on the shared pool however
-// the contract reads.
+// The queue is api/jobs.yaml's and jobs.QueuedAs supplies it. Naming one here
+// too is what this kind was already bitten by: the declaration moved to
+// comms_send, nothing read it, and every send went on landing on `default`.
 func sendInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{Queue: commsSendQueue, MaxAttempts: sendMaxAttempts}
+	return jobs.QueuedAs[SendEmailArgs](&river.InsertOpts{MaxAttempts: sendMaxAttempts})
 }
 
 // deliveryDispatcher is the one attempt the worker drives. It exists so the
@@ -319,58 +316,19 @@ func (s commsSeats) ActiveSeat(ctx context.Context, userID ids.UserID) (bool, st
 	return true, "", nil
 }
 
-// SendPacing is the deployment's outbound pacing: how many messages one
-// mailbox may transmit per window, and how long a delivery may be deferred
-// before it parks with a reason instead of being deferred silently forever.
-// The zero value takes the defaults below.
-type SendPacing struct {
-	Limit  int
-	Window time.Duration
-	MaxAge time.Duration
-	// ScheduleGrace bounds how late a message a rep chose to send later may
-	// still fire. Past it the message is held for a human: the rep picked a
-	// moment, and mail timed for Monday 09:00 is wrong mail at 18:00
-	// (ADR-0104 §6).
-	ScheduleGrace time.Duration
-}
-
-// The pacing defaults. The rate is a BURST bound, not a quota: Gmail enforces
-// its own per-user daily cap and throttles an account that bursts past it, so
-// this exists to keep a legitimate run of sends from costing a user their
-// mailbox's standing. The age bound is a day — past that a message nobody
-// could send has stopped being news, and an operator should see why.
-const (
-	defaultSendRateLimit  = 30
-	defaultSendRateWindow = time.Minute
-	defaultSendMaxAge     = 24 * time.Hour
-)
-
-// withDefaults fills the unset knobs. A zero is read as "not configured", never
-// as "no sends allowed" or "defer forever" — a forgotten flag must degrade to
-// the conservative rule, not to the absence of it.
-func (p SendPacing) withDefaults() SendPacing {
-	if p.Limit <= 0 {
-		p.Limit = defaultSendRateLimit
-	}
-	if p.Window <= 0 {
-		p.Window = defaultSendRateWindow
-	}
-	if p.MaxAge <= 0 {
-		p.MaxAge = defaultSendMaxAge
-	}
-	if p.ScheduleGrace <= 0 {
-		p.ScheduleGrace = defaultScheduleGrace
-	}
-	return p
-}
-
 // newSendWorker assembles the dispatcher the worker role drives: the delivery
 // store, the mailbox resolver over the capture registry, the consent gate, and
 // the policy chain. Every one of those edges crosses a module boundary, which
 // is why the assembly lives here and not in comms.
-func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPacing, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *commsSendWorker {
-	p := pacing.withDefaults()
-	return &commsSendWorker{dispatcher: controllerLaneOn(comms.NewDispatcher(
+func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *commsSendWorker {
+	return &commsSendWorker{dispatcher: newPacedDispatcher(pool, func(pace sendPace) deliveryDispatcher {
+		return newSendDispatcher(pool, registry, pace, blob, relay, vault)
+	})}
+}
+
+// newSendDispatcher builds the dispatcher for one pace.
+func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace sendPace, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
+	return controllerLaneOn(comms.NewDispatcher(
 		// The reconcile seam is the cross-module edge comms must not hold
 		// itself: activities owns the timeline row, comms owns the delivery,
 		// and the two meet here.
@@ -379,9 +337,9 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 		NewSendSeatAuthority(pool),
 		NewSendAttachmentAuthority(pool, blob),
 		consentGateFor(pool),
-		[]comms.SendPolicy{comms.NewMailboxRatePolicy(p.Limit, p.Window, time.Now)},
+		[]comms.SendPolicy{comms.NewMailboxRatePolicy(pace.limit, pace.window, time.Now)},
 		time.Now,
-		p.MaxAge,
+		pace.maxAge,
 		// The SAME ladder length River enqueues with (sendInsertOpts): the
 		// dispatcher parks on the last rung, and it can only know which rung
 		// that is by being told the runner's own number. Read off the insert
@@ -393,7 +351,7 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 		// them there. Injected here for the reason the consent gate is: this is
 		// the one construction every send goes through, so no surface can end
 		// up with a dispatcher that checks nothing and looks green doing it.
-	).WithRequirementChecker(requirementCheckerFor(pool)), relay, vault)}
+	).WithRequirementChecker(requirementCheckerFor(pool)), relay, vault)
 }
 
 // controllerLaneOn gives the dispatcher the transport for the installation's own

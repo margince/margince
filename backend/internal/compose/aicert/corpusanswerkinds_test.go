@@ -88,6 +88,7 @@ var recognisedOwners = []string{
 	"cold_start/acts, cold_start/company_message, cold_start/sitereadmessage",
 	// strong | moderate | weak. The band IS the answer; the claims are why.
 	"growth_fit/growth_fit",
+	"nl_search/filter_propose",
 	// asks_us | informs_us. An ANSWER vocabulary rather than a set of field
 	// names: the site's whole output is one of these two words per message, so
 	// every kind wants a scenario that scores it — and both do, in

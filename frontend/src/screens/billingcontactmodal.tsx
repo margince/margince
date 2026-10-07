@@ -87,7 +87,7 @@ export function BillingContactModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {editing ? t("billing.changeTitle") : t("billing.addTitle")}
       </Heading>
@@ -127,23 +127,21 @@ export function BillingContactModal({
         </Field>
         <p className="t-caption">{t("billing.roleNote")}</p>
         <ErrorLine error={write.error} />
-        <div className="actions">
-          <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            onClick={() => {
-              // The mutation already HOLDS the failure — the alert above renders
-              // from its `isError`. What is swallowed here is only the promise
-              // `mutateAsync` returns, which is otherwise an unhandled rejection
-              // for a refusal the reader is already looking at.
-              submit().catch(() => {});
-            }}
-            disabled={write.isPending || (!editing && !contact)}
-          >
-            {editing ? t("billing.saveChange") : t("billing.saveAdd")}
-          </Button>
-        </div>
+      </div>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
+          {t("deals.cancel")}
+        </Button>
+        <Button
+          onClick={() => {
+            // The alert above shows the failure from `isError`; this only stops
+            // the rejected `mutateAsync` promise going unhandled.
+            submit().catch(() => {});
+          }}
+          disabled={write.isPending || (!editing && !contact)}
+        >
+          {editing ? t("billing.saveChange") : t("billing.saveAdd")}
+        </Button>
       </div>
     </Modal>
   );

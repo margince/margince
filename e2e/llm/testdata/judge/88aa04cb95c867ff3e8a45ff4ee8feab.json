@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer calls the deal 'lost' when the criterion explicitly requires not calling it lost, closed, or won.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer says the valantic Migrationsprojekt deal (EUR 9,500) left this quarter's pipeline — slipped out or moved to a later date — and does not call it lost, closed or won. Answer no if it calls it lost or won, gives a different cause, or leaves the deal out.",
+  "answer": "Open pipeline fell from EUR 179,000 to EUR 164,500. Vorort Systeme Ausbau was repriced down by EUR 5,000, from EUR 31,000 to EUR 26,000, and valantic Migrationsprojekt (EUR 9,500) was lost, which is why the open number dropped."
+}

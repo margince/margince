@@ -238,6 +238,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		// the natural key alone exactly as it did before.
 		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay},
 		Participants:      m.participants.Participants,
+		WithheldParties:   m.participants.Withheld,
 		Addresses:         m.addresses,
 	}.WithProviderAttestedParticipants(true)
 }

@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -37,7 +38,7 @@ import (
 // be reset by the mailbox simply syncing again.
 func recordImportTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-	ownerUserID ids.UUID, birth birthDecision,
+	ownerUserID ids.UUID, birth birthDecision, receivedAt time.Time,
 ) error {
 	if ownerUserID == ids.Nil {
 		// No identifiable seat behind this capture. Nothing to attribute the
@@ -51,12 +52,33 @@ func recordImportTx(
 	// seat's newest live connection would name the wrong mailbox for anyone who
 	// has two. A seat's decisions are per seat anyway, so the column would have
 	// no reader; it lands with the code that can fill it honestly.
+	//
+	// provider_received_at is the provider's own arrival time in THIS seat's
+	// mailbox (connector.NormalizedRecord.ProviderReceivedAt), NULL when the
+	// transport stated none. It is what proves the mail was already held before
+	// the seat connected the mailbox (contacts.receivedBeforeConnectedTx).
+	var received *time.Time
+	if !receivedAt.IsZero() {
+		received = &receivedAt
+	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons)
-		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6)
+		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
+		                            provider_received_at)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6, $7)
 		ON CONFLICT (activity_id, user_id) DO NOTHING`,
-		activityID, ownerUserID, birth.posture, birth.verdictStatus, birth.reason, birth.reasons); err != nil {
+		activityID, ownerUserID, birth.posture, birth.verdictStatus, birth.reason, birth.reasons, received); err != nil {
 		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
+	}
+	// A row written before the provider's time was known (a delta round names
+	// ids only) learns it from the next capture that carries it, such as the
+	// backfill. Only an empty value is filled: the decisions on the row stay.
+	if received != nil {
+		if _, err := tx.Exec(ctx, `
+			UPDATE capture_import SET provider_received_at = $3
+			 WHERE activity_id = $1 AND user_id = $2 AND provider_received_at IS NULL`,
+			activityID, ownerUserID, received); err != nil {
+			return fmt.Errorf("capture: recording when %s arrived: %w", activityID, err)
+		}
 	}
 	return nil
 }
@@ -134,7 +156,7 @@ func (s *Sink) recordThisImport(
 		// belongs to.
 		return nil
 	}
-	if err := recordImportTx(ctx, tx, id, owner, birth); err != nil {
+	if err := recordImportTx(ctx, tx, id, owner, birth, rec.ProviderReceivedAt); err != nil {
 		return err
 	}
 	if err := stampCaptureParticipants(ctx, tx, id, owner, fields.Kind, fields.Direction, rec.Counterparty); err != nil {
@@ -242,7 +264,9 @@ func seatDeliveredTx(
 // stamps a footer per recipient, a second seat whose transport maps the body
 // differently. Refusing is the safe direction for all of them — the seat still
 // holds the message in its own mailbox, and the capture reports it skipped
-// rather than claiming a grant it cannot prove.
+// rather than claiming a grant it cannot prove. A file kept from private mail
+// by name only has no checksum, so a message carrying one is never proven
+// either: its file names are private too.
 func replayClaimIsProvenTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields, parts []connector.Part,
 ) (bool, error) {
@@ -286,6 +310,12 @@ func replayClaimIsProvenTx(
 // is on this message — the evidence that their provider delivered it, rather
 // than that they typed its Message-ID.
 //
+// The Delivered-To the receiving server wrote counts as much as a recipient
+// line: mail to a list, a group address or a Bcc names none of the seat's
+// addresses anywhere else, yet it reached their mailbox. Only the trusted
+// position is read (connector.NormalizedRecord.DeliveredTo), which a sender
+// cannot write.
+//
 // EXACT addresses only, never a declared domain. A seat declares a domain with
 // no proof of control, so a domain arm here would let anybody claim a colleague's
 // domain and then treat any message naming an address on it as delivered to
@@ -300,6 +330,9 @@ func mailboxWasARecipientTx(ctx context.Context, tx pgx.Tx, rec connector.Normal
 	}
 	if self.Empty() {
 		return false, nil
+	}
+	if self.CoversAddressExactly(rec.DeliveredTo) {
+		return true, nil
 	}
 	for _, a := range rec.Addresses {
 		if self.CoversAddressExactly(a) {

@@ -52,6 +52,7 @@ export function ExcuseModal({
         setNote("");
         onClose();
       }}
+      intent="form"
       title={t("notice.excuseTitle")}
       confirmLabel={t("notice.excuseConfirm")}
       // Disabled until there is a ground, because the server refuses without

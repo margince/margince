@@ -17,6 +17,7 @@ const row = {
   cache_read_per_mtok: "0",
   cache_write_per_mtok: "0",
   effective_date: "2026-09-29",
+  source: "seed" as const,
 };
 
 function story(refuse = false) {
@@ -49,7 +50,7 @@ function story(refuse = false) {
 }
 
 const meta: Meta<typeof RemovePriceDialog> = {
-  title: "Settings/AI/Models and routing/Remove a price",
+  title: "Settings/AI/AI models/Remove a price",
   component: RemovePriceDialog,
   parameters: { layout: "fullscreen" },
 };

@@ -5,7 +5,14 @@
 
 export type ParamField = {
   key: string;
-  kind: "integer" | "string" | "boolean" | "date_field" | "enum";
+  kind:
+    | "integer"
+    | "string"
+    | "boolean"
+    | "date_field"
+    | "enum"
+    | "live_list"
+    | "shortlist";
   min?: number;
   max?: number;
   initial: string;
@@ -42,6 +49,12 @@ function paramKind(type: unknown): ParamField["kind"] | null {
   return null;
 }
 
+// listKind reads a string property the schema marks as naming a list, by
+// the kind of list it must be.
+function listKind(format: unknown): "live_list" | "shortlist" | null {
+  return format === "live_list" || format === "shortlist" ? format : null;
+}
+
 // enumOptions reads a schema property's own closed value list, when it
 // has one — a string-typed "enum" array is the schema's way of saying
 // "pick one of these", which renders as a picker rather than free text
@@ -74,9 +87,7 @@ export function paramFields(schema: Record<string, unknown>): ParamField[] {
     const kind: ParamField["kind"] | null =
       key === "date_field" && isDateFieldPicker
         ? "date_field"
-        : options
-          ? "enum"
-          : paramKind(raw.type);
+        : (listKind(raw.format) ?? (options ? "enum" : paramKind(raw.type)));
     if (kind === null) {
       return [];
     }

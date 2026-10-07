@@ -9,8 +9,9 @@
 // their own name — and only then do they answer.
 
 import { useId, useState } from "react";
-import { Badge, Button, Field, Modal } from "../design-system/atoms";
+import { Badge, Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import {
@@ -72,68 +73,61 @@ export function IntroDecisionDrawer({
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      labelledBy={titleId}
-      placement="right"
-      size="wide"
-    >
+    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
       <Heading size="large" id={titleId} className="modal-title">
         {t("contact.intro.decideTitle", { name: contactName })}
       </Heading>
 
-      <p>{request.internal_reason}</p>
-      {request.value_for_target ? (
-        <p>
-          <strong>{t("contact.intro.valueLabel")}: </strong>
-          {request.value_for_target}
-        </p>
-      ) : null}
-
-      {request.forwardable_note ? (
-        <section>
-          <Heading size="medium">{t("contact.intro.noteLabel")}</Heading>
-          {/* Provenance beside the words, not in a tooltip: the colleague is
-              about to forward these under their own name, so whether a model
-              wrote them is part of what they are deciding. */}
-          {request.note_ai_generated ? (
-            <Badge tone="ai">{t("contact.intro.noteByModel")}</Badge>
-          ) : null}
-          <blockquote>{request.forwardable_note}</blockquote>
-        </section>
-      ) : null}
-
-      {request.name_drop_allowed ? (
-        <p>{t("contact.intro.nameDropRequested")}</p>
-      ) : null}
-
-      <ChoiceList<IntroDecision>
-        legend={t("contact.intro.decideLegend")}
-        value={answer}
-        onChange={setAnswer}
-        choices={answers.map((a) => ({
-          value: a,
-          label: t(DECISION_LABEL[a]),
-          description: t(DECISION_HELP[a]),
-        }))}
-      />
-
-      <Field
-        label={t("contact.intro.decideReasonLabel")}
-        hint={t("contact.intro.decideReasonHint")}
-      >
-        {(control) => (
-          <textarea
-            {...control}
-            rows={3}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-        )}
-      </Field>
-
-      <div className="form-actions">
+      <div className="form-stack">
+        <p>{request.internal_reason}</p>
+        {request.value_for_target ? (
+          <p>
+            <strong>{t("contact.intro.valueLabel")}: </strong>
+            {request.value_for_target}
+          </p>
+        ) : null}
+        {request.forwardable_note ? (
+          <section>
+            <Heading size="medium">{t("contact.intro.noteLabel")}</Heading>
+            {/* Who wrote the note sits beside its words, not in a tooltip: the
+                colleague forwards them under their own name. */}
+            {request.note_ai_generated ? (
+              <Badge tone="ai">{t("contact.intro.noteByModel")}</Badge>
+            ) : null}
+            <blockquote>{request.forwardable_note}</blockquote>
+          </section>
+        ) : null}
+        {request.name_drop_allowed ? (
+          <p>{t("contact.intro.nameDropRequested")}</p>
+        ) : null}
+        <ChoiceList<IntroDecision>
+          legend={t("contact.intro.decideLegend")}
+          value={answer}
+          onChange={setAnswer}
+          choices={answers.map((a) => ({
+            value: a,
+            label: t(DECISION_LABEL[a]),
+            description: t(DECISION_HELP[a]),
+          }))}
+        />
+        <Field
+          label={t("contact.intro.decideReasonLabel")}
+          hint={t("contact.intro.decideReasonHint")}
+        >
+          {(control) => (
+            <Textarea
+              {...control}
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          )}
+        </Field>
+        {decide.isError ? (
+          <ErrorLine>{t("contact.intro.decideFailed")}</ErrorLine>
+        ) : null}
+      </div>
+      <div className="actions">
         <Button onClick={onClose} variant="ghost">
           {t("contact.intro.cancel")}
         </Button>
@@ -141,11 +135,6 @@ export function IntroDecisionDrawer({
           {t("contact.intro.decideAction")}
         </Button>
       </div>
-      {decide.isError ? (
-        <p role="alert">
-          <Badge tone="danger">{t("contact.intro.decideFailed")}</Badge>
-        </p>
-      ) : null}
     </Modal>
   );
 }

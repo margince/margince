@@ -1,3 +1,4 @@
+import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -639,45 +640,24 @@ export function meetingRow(
 export function leadRow(id: string, due?: string): WorklistItem {
   return {
     id,
-    source: "lead_response",
+    source: "task",
     level: due === undefined ? 1 : 2,
-    category: "leads",
-    title: "Weber GmbH · inbound enquiry",
-    because:
-      due === undefined
-        ? // A breached lead the way the lane really builds one: the overdue
-          // reason plus how long it has been waiting. The second reason CARRIES
-          // A VALUE, which is what makes this fixture able to tell a slot that
-          // filters on the reason kind from one that merely takes the first
-          // value it meets.
-          [
-            { kind: "response_overdue" },
-            { kind: "waiting_days", value: { kind: "days", days: 3 } },
-          ]
-        : [{ kind: "response_due_soon", value: { kind: "date", date: due } }],
-    consequence: "buyer_waits",
-    actions: ["open"],
+    category: "tasks",
+    title: "Call Weber GmbH",
+    subject: { type: "lead", id },
+    due_at: due,
+    because: [{ kind: due === undefined ? "overdue" : "due_today" }],
+    consequence: "task_slips",
+    actions: ["complete", "snooze"],
   };
 }
 
-/** A leads count the page carries whole — considered, shown and read to the end. */
 export function wholeLeads(n: number): WorklistCount {
-  return {
-    category: "leads",
-    considered: n,
-    shown: n,
-    more_available: false,
-  };
+  return { category: "tasks", considered: n, shown: n, more_available: false };
 }
 
-/** A leads count whose read stopped at its bound: more exist than the page shows. */
 export function boundedLeads(considered: number, shown: number): WorklistCount {
-  return {
-    category: "leads",
-    considered,
-    shown,
-    more_available: true,
-  };
+  return { category: "tasks", considered, shown, more_available: true };
 }
 
 type WorklistItem = components["schemas"]["WorklistItem"];
@@ -898,3 +878,33 @@ export function taskRow(id: string, title: string): WorklistItem {
     actions: ["complete", "open"],
   };
 }
+
+export const sharedWeeklyNumbers: components["schemas"]["WeeklyNumericSummary"] =
+  {
+    version: "analytics-1",
+    timezone: REPORTING_FIXTURE_ZONE,
+    currency: "EUR",
+    interval: {
+      start_at: "2026-09-07T00:00:00Z",
+      end_at: "2026-09-14T00:00:00Z",
+    },
+    evaluated_at: "2026-09-14T06:00:00Z",
+    won_minor: 21600000,
+    bookings_coverage: { status: "ok", withheld: false },
+    meetings_coverage: { status: "ok", withheld: false },
+  };
+export const unavailableWeeklyNumbers: components["schemas"]["WeeklyNumericSummary"] =
+  {
+    ...sharedWeeklyNumbers,
+    won_minor: undefined,
+    bookings_coverage: {
+      status: "unavailable",
+      withheld: true,
+      reason: "Some source values are no longer readable.",
+    },
+    meetings_coverage: {
+      status: "partial",
+      withheld: false,
+      reason: "Some meeting history predates confirmed outcomes.",
+    },
+  };

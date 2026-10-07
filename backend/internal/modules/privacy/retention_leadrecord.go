@@ -39,7 +39,7 @@ func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UU
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
-		  company_name = NULL, candidate_company_key = NULL, raw = NULL, linkedin_url = NULL,
+		  company_name = NULL, candidate_company_key = NULL, linkedin_url = NULL,
 		  disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		  archived_at = coalesce(archived_at, now())
 		WHERE id = $1`, id); err != nil {
@@ -62,6 +62,13 @@ func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UU
 		`DELETE FROM embedding WHERE entity_type = 'lead' AND entity_id = $1`, id); err != nil {
 		return err
 	}
+	// The duplicate-pair snapshots naming this lead, for the reason the tables
+	// above go: an anonymize fires no cascade, and the evidence holds the name and
+	// address the UPDATE has just nulled off the lead row.
+	if err := scrubDedupeEvidence(ctx, tx, nil, []ids.UUID{id}); err != nil {
+		return err
+	}
+
 	// The lead's communication record, for the same reason as the two tables
 	// above: an anonymize fires no cascade, so each table that names the lead
 	// has to be named here. A basis row carries the thread it was earned on and
@@ -112,6 +119,13 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 		       subject_id = NULL, subject_kind = NULL
 		 WHERE subject_kind = 'lead' AND subject_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's decisions: %w", err)
+	}
+	// An override has no address to carry it forward onto, unlike the
+	// suppression above: it is deleted outright, the same verb the Art. 17
+	// lead-twin sweep uses against it.
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM communication_override WHERE lead_id = $1`, id); err != nil {
+		return fmt.Errorf("clear the lead's overrides: %w", err)
 	}
 	return nil
 }

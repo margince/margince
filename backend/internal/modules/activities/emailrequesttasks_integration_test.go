@@ -31,8 +31,15 @@ func seedEmailRequest(t *testing.T, e *loadEnv, subject, label, verdict string) 
 // that ask what a thread shared with the wrong correspondent does.
 func seedEmailRequestWithCounterparty(t *testing.T, e *loadEnv, subject, label, verdict, counterparty string) ids.UUID {
 	t.Helper()
+	links := []ActivityLinkInput{{EntityType: "contact", EntityID: e.buyer(t)}}
+	return seedEmailRequestFiledUnder(t, e, subject, label, verdict, counterparty, links, mailParticipants{})
+}
+
+// seedEmailRequestFiledUnder files the request under `links`, with the From and
+// Cc headers `envelope` states; an empty envelope states none.
+func seedEmailRequestFiledUnder(t *testing.T, e *loadEnv, subject, label, verdict, counterparty string, links []ActivityLinkInput, envelope mailParticipants) ids.UUID {
+	t.Helper()
 	store := storeKnowing(e)
-	contact := e.buyer(t)
 	direction, key := "inbound", ids.NewV7().String()
 	body := "From: buyer@customer.test\nTo: rep-" + e.rep.String() + "@load.test\n\nPlease send the report."
 	source, _, err := store.LogActivity(asClassifier(e), LogActivityInput{
@@ -42,7 +49,8 @@ func seedEmailRequestWithCounterparty(t *testing.T, e *loadEnv, subject, label, 
 		// The settlement reads bind a thread to its correspondent, so a fixture
 		// without one is not the shape production writes.
 		CounterpartyEmail: counterparty,
-		Links:             []ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+		Links:             links,
+		EmailFrom:         envelope.From, EmailCc: envelope.Cc,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -63,8 +71,8 @@ func seedEmailRequestWithCounterparty(t *testing.T, e *loadEnv, subject, label, 
 func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.T) {
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
-	seedEmailRequest(t, e, "Thanks for the report", "noise", OwedVerdictInformsUs)
-	seedEmailRequest(t, e, "I will send my draft", "commitment", OwedVerdictInformsUs)
+	thanks := seedEmailRequest(t, e, "Thanks for the report", "noise", OwedVerdictInformsUs)
+	draft := seedEmailRequest(t, e, "I will send my draft", "commitment", OwedVerdictInformsUs)
 	store := storeKnowing(e)
 	for range 2 {
 		if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
@@ -117,7 +125,9 @@ func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.
 	if moves[source].Move != crmcontracts.EmailSummaryMoveNone {
 		t.Fatal("completed request still asks for a reply")
 	}
-	if err := e.owner.QueryRow(e.as(), `SELECT count(*) FROM activity WHERE source_system = 'email_request'`).Scan(&count); err != nil {
+	// This test's own mail only: the package's other tests share the database.
+	if err := e.owner.QueryRow(e.as(), `SELECT count(*) FROM activity WHERE source_system = 'email_request' AND source_activity_id = ANY($1)`,
+		[]ids.UUID{source, thanks, draft}).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 	if count != 1 {

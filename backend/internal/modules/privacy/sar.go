@@ -29,9 +29,10 @@ import (
 // SARPackage is the assembled export. Sections hold raw row maps —
 // the package is a data handover, not an API shape.
 type SARPackage struct {
-	Subject map[string]any   `json:"subject"`
-	Emails  []map[string]any `json:"emails"`
-	Phones  []map[string]any `json:"phones"`
+	ReportingContributions []map[string]any `json:"reporting_contributions"`
+	Subject                map[string]any   `json:"subject"`
+	Emails                 []map[string]any `json:"emails"`
+	Phones                 []map[string]any `json:"phones"`
 	// The messaging-channel accounts bound to the subject: which provider
 	// identity writes as them, the handle it carries, whether they have blocked
 	// this installation's bot, and whether the binding is still live.
@@ -94,6 +95,12 @@ type SARPackage struct {
 	CommunicationDecisions   []map[string]any `json:"communication_decisions"`
 	CommunicationBases       []map[string]any `json:"communication_bases"`
 	CommunicationSuppression []map[string]any `json:"communication_suppression"`
+	// The standing vouches a rep recorded that a machine-level refusal for one
+	// category may be overruled for this subject — not consent, not a lawful
+	// basis, but a human decision on the record. Owed for the same reason the
+	// suppression above is: a subject asking what is held about them is owed
+	// the record that a human decided to write to them anyway, and why.
+	CommunicationOverrides []map[string]any `json:"communication_overrides"`
 	// The times a named contact decided a message to this subject went out
 	// DESPITE a refusal. Art. 15 owes what is held, and a subject asking why
 	// they received something the installation had refused is owed the override
@@ -148,9 +155,12 @@ type SARPackage struct {
 	HandoffHistory []map[string]any `json:"handoff_history"`
 	// ListMemberships is each Shortlist the subject is on, by name, with who
 	// chose them, when and the note on why. ListMembershipHistory is every
-	// time they were added or taken off one.
+	// time they were added or taken off one, or seen joining or leaving a
+	// Live List. LiveListMemberships is each Live List whose last check held
+	// them, and since when.
 	ListMemberships       []map[string]any `json:"list_memberships"`
 	ListMembershipHistory []map[string]any `json:"list_membership_history"`
+	LiveListMemberships   []map[string]any `json:"live_list_memberships"`
 	// ProviderClaims is what a licensed data provider asserted about the
 	// subject and this installation retained — bought from a third party
 	// rather than given by them, which is precisely the holding Art. 15(1)(g)

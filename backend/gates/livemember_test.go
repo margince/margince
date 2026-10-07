@@ -5,9 +5,9 @@
 
 package gates
 
-// "Someone who still works here" is `status = 'active' AND archived_at IS
-// NULL` on app_user, and TWO functions in two different packages each called
-// themselves the ONE spelling of it while the tree held about twenty copies.
+// "Someone who still works here" is `status = 'active' AND archived_at IS NULL`
+// on app_user, and two functions in two packages each called themselves the one
+// spelling of it while the tree held about twenty copies.
 //
 // company360's said so; search's said so as well, and its own comment recorded
 // that company360 had already spelled it that way — so the second author knew
@@ -132,6 +132,7 @@ var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
 	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
 	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
 	"internal/modules/identity/userrole.go":      "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
+	"internal/modules/identity/usersessions.go":  "ensureUserExists resolves the admin's named target for a session review; a deactivated member is exactly whose sessions an admin inspects after suspending them, and their live sessions are what the revoke beside it exists to end. archived_at alone, because an archived row is genuinely gone",
 })
 
 // appUserAlias finds what app_user is called in a statement, so a sibling

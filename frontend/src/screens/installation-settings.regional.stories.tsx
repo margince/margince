@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { RegionalSettingsFields } from "./installation-settings.regional";
+import { defaultOperations } from "./operationsettings.fixtures";
 import { StoryProviders } from "./story-utils";
 
 function RegionalFields() {
@@ -17,6 +18,8 @@ function RegionalFields() {
     sign_in_providers: [],
     max_upload_bytes: 25000000,
     dead_work_banner_hours: 24,
+    oauth_access_token_ttl_minutes: 43_200,
+    operations: defaultOperations,
     forecast_forward_measure: "commit_evidence",
     timezone: "Europe/Berlin",
     base_currency: "EUR",

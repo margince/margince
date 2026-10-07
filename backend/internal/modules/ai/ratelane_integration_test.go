@@ -178,4 +178,11 @@ func TestSeededSheetArrivesWithItsLanesFiled(t *testing.T) {
 	if embedders != want {
 		t.Errorf("the seeded sheet holds %d embedding rows, want %d — the seed writes the lane the sheet declares", embedders, want)
 	}
+	var unseeded int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM ai_model_rate WHERE source <> 'seed'`).Scan(&unseeded); err != nil {
+		t.Fatalf("count unseeded: %v", err)
+	}
+	if unseeded != 0 {
+		t.Errorf("%d seeded rows are not filed as seed; the sync would never re-price them", unseeded)
+	}
 }

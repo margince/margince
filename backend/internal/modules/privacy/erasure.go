@@ -84,10 +84,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 	// hangs off must not destroy the correspondence itself below its floor.
 	floorInterval, floorAnchor := statutoryFloorArgs()
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritableForSubjectRights(ctx, tx, "contact", subject.UUID); err != nil {
-			return err
-		}
-		if err := refuseContactUnderLegalHold(ctx, tx, subject); err != nil {
+		if err := requireErasableContact(ctx, tx, subject); err != nil {
 			return err
 		}
 		keys, err := subjectIdentifiers(ctx, tx, subject)
@@ -113,6 +110,9 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 			return err
 		}
 
+		if err := redactSubjectReporting(ctx, tx, subject); err != nil {
+			return err
+		}
 		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities, reason)
 		if err != nil {
 			return err
@@ -257,6 +257,9 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 // they answered to, the proposals read out of them, and the transmitted copy in
 // the send log.
 func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
+	if err := redactReportingSource(ctx, tx, "activity", activities); err != nil {
+		return err
+	}
 	// The vectors go with the text they were built from. purgeDerivedTraces
 	// reaches embeddings through activity_link, which by construction cannot
 	// see the unlinked mail redactSubjectTimeline now covers — and
@@ -326,7 +329,7 @@ func anonymizeSubjectRows(
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE contact SET first_name = NULL, last_name = NULL, full_name = $2,
-		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
+		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
 		  source_author_name = NULL,
@@ -368,6 +371,12 @@ func anonymizeSubjectRows(
 	if err := deleteSubjectListMemberships(ctx, tx, contactID, wiped); err != nil {
 		return nil, err
 	}
+	// The duplicate-pair snapshots naming either end, which hold the name,
+	// address and phone number as the detector read them. Both ends, because a
+	// promoted subject is a contact AND the lead twins just wiped.
+	if err := scrubDedupeEvidence(ctx, tx, []ids.UUID{contactID.UUID}, wiped); err != nil {
+		return nil, err
+	}
 	if err := purgeContactDerivedRows(ctx, tx, contactID, subjects); err != nil {
 		return nil, err
 	}
@@ -377,14 +386,18 @@ func anonymizeSubjectRows(
 // purgeContactDerivedRows deletes what the system DERIVED about the subject and
 // keyed on their contact id.
 //
-// The four tables share a posture that makes them one step rather than four:
+// The five tables share a posture that makes them one step rather than five:
 // none is anonymizable. An embedding is an opaque vector of the text, a
 // provenance row says where a now-erased field came from, an enrichment row
 // holds the subject's title and employer with the verbatim sentence it was
 // read from, and a correction verdict is what a human typed over what the
-// system inferred. Nulling any of them leaves a row asserting something about
-// a contact nobody may now assert anything about, so all four are deleted.
+// system inferred, and a cached brief is what a model wrote about them. Nulling
+// any of them leaves a row asserting something about a contact nobody may now
+// assert anything about, so all five are deleted.
 func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, subjects []ids.UUID) error {
+	if err := purgeSubjectBriefCache(ctx, tx, contactID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM embedding WHERE entity_type = 'contact' AND entity_id = $1`, contactID); err != nil {
 		return err
@@ -476,4 +489,11 @@ func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string
 		}
 	}
 	return nil
+}
+
+func requireErasableContact(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {
+	if err := auth.EnsureWritableForSubjectRights(ctx, tx, "contact", subject.UUID); err != nil {
+		return err
+	}
+	return refuseContactUnderLegalHold(ctx, tx, subject)
 }

@@ -81,6 +81,7 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		deals = append(deals, dealLineToWire(line))
 	}
 	out := crmcontracts.WeeklyReview{
+		NumericSummary: review.NumericSummary,
 		Id:             openapi_types.UUID(review.ID),
 		LocalWeekStart: openapi_types.Date{Time: review.LocalWeekStart},
 		GeneratedAt:    review.GeneratedAt,

@@ -93,19 +93,41 @@ export const SHEET = [
 // so its absence never lights a row: the pill follows the ROUTING, and a vendor
 // nobody points at is not this installation's problem.
 export const PROVIDER_KEYS = [
-  { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-  { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
-  { provider: "openai", configured: false, env_var: "OPENAI_API_KEY" },
+  {
+    provider: "gemini",
+    configured: true,
+    env_var: "GEMINI_API_KEY",
+    usable: true,
+  },
+  {
+    provider: "anthropic",
+    configured: false,
+    env_var: "ANTHROPIC_API_KEY",
+    usable: false,
+  },
+  {
+    provider: "openai",
+    configured: false,
+    env_var: "OPENAI_API_KEY",
+    usable: false,
+  },
   {
     provider: "openai_compatible",
     configured: true,
     env_var: "OPENAI_COMPATIBLE_API_KEY",
+    usable: true,
   },
-  { provider: "jev", configured: true, env_var: "TYPESAFE_API_KEY" },
+  {
+    provider: "jev",
+    configured: true,
+    env_var: "TYPESAFE_API_KEY",
+    usable: true,
+  },
   {
     provider: "jev_compatible",
     configured: false,
     env_var: "JEV_COMPATIBLE_API_KEY",
+    usable: true,
     optional: true,
   },
 ];
@@ -163,6 +185,7 @@ export function backendFor(
       provider: string;
       configured: boolean;
       env_var: string;
+      usable: boolean;
       optional?: boolean;
     }[];
   } = {},

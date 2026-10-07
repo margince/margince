@@ -1,0 +1,69 @@
+name: upload-artifact-retried
+description: >-
+  Upload one artifact, trying twice, so a transient artifact-service failure
+  does not red a lane whose tests all passed.
+
+# Why this exists: a 403 from GitHub's artifact service on a single shard costs
+# the whole integration lane. The fan-in cannot find that shard's coverage pods,
+# `ci` reports the fan-in's failure, and the push-time check files a "main is
+# red" issue naming a tree whose every test passed — plus whatever time the next
+# reader spends ruling out their own diff.
+#
+# Tolerating the loss instead is the worse trade. These pods are what the fan-in
+# merges into SonarCloud's coverage number, so a quietly missing one arrives
+# there as ~0% new-code coverage and fails the gate on well-tested code. The
+# second attempt is therefore NOT tolerant: a pod that is genuinely absent, or a
+# service that is genuinely down, still fails loudly and in the same place.
+#
+# actions/upload-artifact has no retry input, and its own internal retry
+# classifies that 403 as non-retryable and gives up. A fresh step is what gets a
+# fresh connection, which is why this wraps the action rather than configuring
+# it.
+
+inputs:
+  name:
+    description: Artifact name.
+    required: true
+  path:
+    description: File, directory or wildcard pattern to upload.
+    required: true
+  if-no-files-found:
+    description: >-
+      What an empty path means: `error` (the caller's pods are evidence), or
+      `ignore` where the files are genuinely optional.
+    default: error
+  retention-days:
+    description: >-
+      Days the artifact is kept. Empty leaves the repository's own default,
+      which is what a caller that named no retention was already getting.
+    default: ''
+  include-hidden-files:
+    description: Whether dotfiles under `path` are uploaded.
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Upload ${{ inputs.name }}
+      id: first
+      continue-on-error: true
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: ${{ inputs.if-no-files-found }}
+        retention-days: ${{ inputs.retention-days }}
+        include-hidden-files: ${{ inputs.include-hidden-files }}
+    # `overwrite` because a first attempt that failed at finalize may still have
+    # claimed the name, and the retry must replace that entry rather than refuse
+    # it as a duplicate.
+    - name: Upload ${{ inputs.name }} (retry)
+      if: steps.first.outcome == 'failure'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: ${{ inputs.if-no-files-found }}
+        retention-days: ${{ inputs.retention-days }}
+        include-hidden-files: ${{ inputs.include-hidden-files }}
+        overwrite: true

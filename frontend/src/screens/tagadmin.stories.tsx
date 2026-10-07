@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 
 import {
   installFetchStub,
@@ -62,6 +63,7 @@ function Card({
 }: Readonly<{ words?: typeof WORDS; grants?: Record<string, string[]> }>) {
   installFetchStub({
     "GET /me": meRoute(grants as never),
+    "POST /tags/t-2/merge": () => jsonResponse({ moved: 9, collapsed: 2 }),
     "GET /tags": () =>
       jsonResponse({
         data: words,
@@ -147,4 +149,40 @@ export const Narrow: Story = {
       <Card />
     </div>
   ),
+};
+
+/** After a merge: what moved and what collapsed, counted apart. */
+export const Merged: Story = {
+  render: () => <Card />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const row = (await body.findByText("Churn Risk")).closest("li");
+    if (!row) {
+      throw new Error("the Churn Risk word is not drawn as a list row");
+    }
+    await userEvent.click(within(row).getByRole("button", { name: "Merge" }));
+    await userEvent.click(
+      await body.findByRole("combobox", { name: "Keep this tag" }),
+    );
+    await userEvent.click(
+      await body.findByRole("option", { name: "Key Account" }),
+    );
+    const dialog = within(await body.findByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: "Merge" }));
+    await body.findByRole("heading", { name: "Merged" });
+  },
+};
+
+/** Editing a word: its name and its colour, committed together. */
+export const EditingTag: Story = {
+  render: () => <Card />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const row = (await body.findByText("Churn Risk")).closest("li");
+    if (!row) {
+      throw new Error("the Churn Risk word is not drawn as a list row");
+    }
+    await userEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    await body.findByRole("dialog", { name: "Edit tag" });
+  },
 };

@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -73,7 +72,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 
 	var review Review
 	var created bool
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err = e.withMeasurementSnapshot(ctx, func(tx pgx.Tx) error {
 		// The week under review is the one that just CLOSED, not the one in
 		// progress: a retrospective of a week still being lived would be
 		// rewritten every day it ran.
@@ -177,6 +176,9 @@ func (e *Engine) measureWeek(
 		return err
 	}
 	if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
+		return err
+	}
+	if err := e.measureNumeric(ctx, tx, review, start, end, now); err != nil {
 		return err
 	}
 	// The plan's outcome, settled once and then frozen alongside the rest.

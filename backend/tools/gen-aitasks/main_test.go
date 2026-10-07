@@ -15,8 +15,8 @@ const minimalContract = `
 tiers: [alpha, beta]
 
 tasks:
-  foo: {display_name: "Test task foo", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only]}
-  bar: {display_name: "Test task bar", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only]}
+  bar: {display_name: "Test task bar", summary: "Does a thing.", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
 
 degrade_to:
   beta: alpha
@@ -64,7 +64,7 @@ func TestParseContractRejectsUnknownLadderTier(t *testing.T) {
 tiers: [alpha]
 
 tasks:
-  foo: {display_name: "Test task foo", ladder: [alpha, gamma], execution_mode: background, on_budget_exhausted: queue, status: planned}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, gamma], execution_mode: background, on_budget_exhausted: queue, status: planned}
 
 degrade_to:
   alpha: alpha
@@ -86,7 +86,7 @@ func TestParseContractRejectsUnknownDegradeToTier(t *testing.T) {
 tiers: [alpha]
 
 tasks:
-  foo: {display_name: "Test task foo", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: planned}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: planned}
 
 degrade_to:
   alpha: gamma
@@ -117,7 +117,7 @@ func TestParseContractRejectsExecutionModeBudgetPolicyMismatch(t *testing.T) {
 tiers: [alpha]
 
 tasks:
-  foo: {display_name: "Test task foo", ladder: [alpha], execution_mode: MODE, on_budget_exhausted: POLICY, status: planned}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha], execution_mode: MODE, on_budget_exhausted: POLICY, status: planned}
 
 degrade_to:
   alpha: alpha
@@ -196,6 +196,7 @@ degrade_to: {cheap_cloud: cheap_cloud}
 tasks:
   t:
     display_name: "Test task t"
+    summary: "Does a thing."
     ladder: [cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -224,6 +225,7 @@ degrade_to: {cheap_cloud: cheap_cloud}
 tasks:
   t:
     display_name: "Test task t"
+    summary: "Does a thing."
     ladder: [cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -270,6 +272,7 @@ degrade_to: {alpha: alpha}
 tasks:
   foo:
     display_name: "Test task foo"
+    summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -302,6 +305,7 @@ degrade_to: {alpha: alpha}
 tasks:
   foo:
     display_name: "Test task foo"
+    summary: "Does a thing."
     ladder: [alpha]
     ladder: [alpha]
     execution_mode: background
@@ -313,6 +317,7 @@ degrade_to: {alpha: alpha}
 tasks:
   foo:
     display_name: "Test task foo"
+    summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -346,6 +351,7 @@ tiers: [beta]
 tasks:
   smuggled:
     display_name: "Test task smuggled"
+    summary: "Does a thing."
     ladder: [beta]
     execution_mode: background
     on_budget_exhausted: queue
@@ -389,6 +395,7 @@ degrade_to: {alpha: alpha}
 tasks:
   foo:
     display_name: "Test task foo"
+    summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -400,6 +407,7 @@ degrade_to: {alpha: alpha}
 tasks:
   foo:
     display_name: "Test task foo"
+    summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -430,6 +438,7 @@ degrade_to: {alpha: alpha}
 tasks:
   foo:
     display_name: "Test task foo"
+    summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -458,6 +467,7 @@ degrade_to: {cheap_cloud: cheap_cloud}
 tasks:
   t:
     display_name: "Test task t"
+    summary: "Does a thing."
     ladder: [cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -486,6 +496,7 @@ tiers: [alpha, beta]
 tasks:
   foo:
     display_name: "Test task foo"
+    summary: "Does a thing."
     ladder: [alpha, beta]
     execution_mode: background
     on_budget_exhausted: queue
@@ -497,7 +508,7 @@ tasks:
       - name: morning_brief
         kind: agent_loop
         tools: [list_records, read_record]
-  bar: {display_name: "Test task bar", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
+  bar: {display_name: "Test task bar", summary: "Does a thing.", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
 
 degrade_to:
   beta: alpha
@@ -614,6 +625,7 @@ degrade_to: {cheap_cloud: cheap_cloud}
 tasks:
   t:
     display_name: "Test task t"
+    summary: "Does a thing."
     ladder: [cheap_cloud]
     ` + def + sites + "\n"
 }
@@ -641,9 +653,9 @@ const decisionContract = `
 tiers: [alpha, beta]
 
 tasks:
-  zed: {display_name: "Test task zed", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only], decision: true}
-  foo: {display_name: "Test task foo", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only]}
-  abe: {display_name: "Test task abe", ladder: [beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only], decision: true, local_only: true}
+  zed: {display_name: "Test task zed", summary: "Does a thing.", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only], decision: true}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only]}
+  abe: {display_name: "Test task abe", summary: "Does a thing.", ladder: [beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only], decision: true, local_only: true}
 
 degrade_to:
   beta: alpha
@@ -686,7 +698,7 @@ func TestTheEgressPageNamesEachTasksDecisionReachAndLocalOnlyDeclaration(t *test
 	page := string(emitEgressDoc(c))
 	for task, want := range map[string]string{
 		"abe": "| `abe` | `beta` | no | no | yes | only a local decision provider | shipped |",
-		"foo": "| `foo` | `alpha` → `beta` | no | no | no | — | shipped |",
+		"foo": "| `foo` | `alpha` → `beta` | no | no | no | none | shipped |",
 		"zed": "| `zed` | `alpha` | no | no | no | the bound decision model | shipped |",
 	} {
 		if !strings.Contains(page, want) {

@@ -354,17 +354,16 @@ export const SETTINGS_PAGES = [
     // direction — a card narrower than its page withholds itself — and it
     // closes when they move to `oauth_application`.
     requires: reads("authentication_policy"),
-    // SignInMethodsCard writes `installation_settings:update`. The OAuth cards
-    // ask `capture_settings:update`, which is a wider audience than this page's
-    // own read, so it is not an arm: a reader who can only reach the OAuth half
-    // still consults the page rather than owning it.
-    // SignInMethodsCard writes `installation_settings:update`; the two OAuth
-    // application cards beside it save and remove through
-    // `capture_settings:update`, which is a different grant and a wider
-    // audience. Both are on this page, so either makes it the reader's to work
-    // in — a custom role holding only the OAuth half has working controls.
+    // SignInMethodsCard writes on two grants: the provider switches save
+    // `installation_settings:update`, while the group→role map saves
+    // `authentication_policy:update` — admin-only, because writing it grants
+    // roles. The two OAuth application cards beside them save and remove
+    // through `capture_settings:update`, a different grant and a wider audience.
+    // All are on this page, so any of them makes it the reader's to work in — a
+    // custom role holding only the OAuth half still has working controls.
     changes: acts(
       writes("installation_settings", ["update"]),
+      writes("authentication_policy", ["update"]),
       writes("capture_settings", ["update"]),
     ),
   },
@@ -613,37 +612,6 @@ export const SETTINGS_PAGES = [
   },
 
   {
-    id: "models",
-    group: "ai",
-    // Installation, not workspace: `PUT /ai/routing` re-points which vendor
-    // processes the installation's text, and `/ai/provider-keys` writes the
-    // installation key vault. Both contract summaries say "installation".
-    scope: "installation",
-    // The routing and provider-key cards read on `ai_routing`; the tiers card's
-    // health and the AI tasks card read on `ai_diagnostics` (ai/health.go), and
-    // on that grant alone the tiers card still answers (ai-routing.tsx
-    // HealthOnly). Management is seeded diagnostics WITHOUT routing.
-    requires: anyOf(reads("ai_routing"), reads("ai_diagnostics")),
-    // Bindings and keys write on `ai_routing:update`, a provider sheet's prices
-    // on the `ai_model_rate` upsert (removal is admitted on update).
-    changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
-  },
-  {
-    id: "automations",
-    group: "ai",
-    scope: "workspace",
-    // The write, which admin and ops alone hold. Management and manager read
-    // `automation` — they see what ran, on the records it touched — but a role
-    // that cannot change an automation has nothing to do on the page that
-    // defines them.
-    requires: writes("automation"),
-    // Not the sentinel: this page's `requires` is already a write, so resolving
-    // `changes` to it would inherit a requirement that deliberately carries no
-    // seat ceiling — a read seat holding the automation grants would be told the
-    // page is theirs to work in. The card offers delete as well.
-    changes: acts(writes("automation"), destroys("automation")),
-  },
-  {
     id: "usage",
     group: "ai",
     scope: "workspace",
@@ -663,12 +631,43 @@ export const SETTINGS_PAGES = [
     ),
   },
   {
+    id: "models",
+    group: "ai",
+    // Installation, not workspace: `PUT /ai/routing` re-points which vendor
+    // processes the installation's text, and `/ai/provider-keys` writes the
+    // installation key vault. Both contract summaries say "installation".
+    scope: "installation",
+    // The routing and provider-key cards read on `ai_routing`; the tiers card's
+    // health and the AI tasks card read on `ai_diagnostics` (ai/health.go), and
+    // on that grant alone the tiers card still answers (ai-routing.tsx
+    // HealthOnly). Management is seeded diagnostics WITHOUT routing.
+    requires: anyOf(reads("ai_routing"), reads("ai_diagnostics")),
+    // Bindings and keys write on `ai_routing:update`, a provider sheet's prices
+    // on the `ai_model_rate` upsert (removal is admitted on update).
+    changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
+  },
+  {
     id: "model-calls",
     group: "ai",
     scope: "workspace",
     requires: reads("ai_diagnostics"),
     // AiCallsCard is a read of what the models were asked. Reading it is the act.
     changes: readingIsTheAct,
+  },
+  {
+    id: "automations",
+    group: "ai",
+    scope: "workspace",
+    // The write, which admin and ops alone hold. Management and manager read
+    // `automation` — they see what ran, on the records it touched — but a role
+    // that cannot change an automation has nothing to do on the page that
+    // defines them.
+    requires: writes("automation"),
+    // Not the sentinel: this page's `requires` is already a write, so resolving
+    // `changes` to it would inherit a requirement that deliberately carries no
+    // seat ceiling — a read seat holding the automation grants would be told the
+    // page is theirs to work in. The card offers delete as well.
+    changes: acts(writes("automation"), destroys("automation")),
   },
 
   {
@@ -731,19 +730,19 @@ export const SETTINGS_PAGES = [
     id: "system-health",
     group: "governance",
     scope: "installation",
-    // Either card's grant. `JobHealthCard` asks `job_health:read` and the
-    // reindex card asks its own, so a reader holding one finds that card and
-    // the other withheld — which is the union being a union rather than one
-    // object with a decorative term.
-    requires: anyOf(reads("job_health"), reads("embedding_reindex")),
-    // EmbedReindexCard spends tokens to rebuild the embed store. Watching the
-    // queue beside it is a read, and watching a stalled queue is an operator
-    // acting, so the job-health read is the second arm.
-    // The reindex is a mutation and takes the seat; watching the queue beside it
-    // is a read, and watching a stalled queue is an operator acting — so that arm
-    // stands outside the ceiling.
+    // Any card's grant, so a reader holding one finds that card and the others
+    // withheld. The schedules answer to the settings editor's grant, not the
+    // read every role holds.
+    requires: anyOf(
+      reads("job_health"),
+      reads("embedding_reindex"),
+      writes("installation_settings", ["update"]),
+    ),
+    // The reindex and the schedules are writes and take the seat; watching a
+    // stalled queue is an operator acting, so that arm stands outside it.
     changes: anyOf(
       acts(writes("embedding_reindex", ["update"])),
+      acts(writes("installation_settings", ["update"])),
       reads("job_health"),
     ),
   },

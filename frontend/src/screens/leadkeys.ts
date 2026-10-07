@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { QueryKey } from "@tanstack/react-query";
+import { derivedRecordKeys } from "./activitykeys";
 
 // Which cached reads a write to ONE lead makes stale, and the keys those reads
 // are filed under — spelled here rather than at each site, the way
@@ -87,5 +88,10 @@ export function leadPromotePreviewKey(id: string): QueryKey {
  * page whether it was written alone or as one of forty.
  */
 export function leadWriteKeys(id: string): QueryKey[] {
-  return [LEAD_LIST_KEY, leadKey(id), ["record-history", "lead", id]];
+  return [
+    LEAD_LIST_KEY,
+    leadKey(id),
+    ["record-history", "lead", id],
+    ...derivedRecordKeys("lead", id),
+  ];
 }

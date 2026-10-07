@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states Greta's meeting is recorded in the CRM as a record only and explicitly says nothing was sent to her, meeting both requirements of the criterion.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer says the meeting with Greta Lindqvist is recorded in the CRM, and says that recording it sent nobody an invitation. Answer no if it says Greta was invited, or never says the booking is a record only.",
+  "answer": "Greta: the pricing walkthrough is recorded in the CRM against her for Thursday 15 October, 10:00-10:45, as a record only. Nothing was sent to her. Omar Haddad: the calendar invitation has NOT gone out. It is waiting for your approval, so nobody has been notified yet; approval id 01a1."
+}

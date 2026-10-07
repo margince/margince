@@ -639,7 +639,7 @@ describe("the conversational company act", () => {
     expect(costRow?.querySelector("dd")?.textContent).toContain("$0.079529");
     // The rail takes no free text — this transparency lives beside a chip
     // and jump-link surface, never a composer that could ask it a question.
-    expect(document.querySelector(".mw-composer")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^send\b/i })).toBeNull();
   });
 });
 

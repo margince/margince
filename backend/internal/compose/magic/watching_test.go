@@ -206,3 +206,43 @@ func TestAConnectionWithNoRecordedAddressNamesNone(t *testing.T) {
 		t.Errorf("provider = %q, want microsoft", values["provider"])
 	}
 }
+
+// THE LINE NAMES THE MAILBOX IT IS ABOUT.
+//
+// The contract promises a label on every entity reference "where the reader may
+// see it", and the screen falls back to "No record named" without one. A lane
+// that asks a reader to go and fix a mailbox has to say which mailbox.
+func TestAWatchedMailboxNamesItself(t *testing.T) {
+	line, ok := concernLine(CaptureConcern{
+		ConnectionID: ids.UUID{0x11},
+		Kind:         "reauth_required",
+		Provider:     "google",
+		AccountLabel: "sales@acme.test",
+	}, watchInstant)
+	if !ok {
+		t.Fatal("the condition draws no line")
+	}
+	if line.Entity == nil || line.Entity.Label == nil {
+		t.Fatalf("the entity carries no label, so the row reads as no record named: %+v", line.Entity)
+	}
+	if *line.Entity.Label != "sales@acme.test" {
+		t.Errorf("label = %q, want the mailbox as its owner named it", *line.Entity.Label)
+	}
+}
+
+// A connection with no label of its own says nothing rather than something
+// blank: a seat with one mailbox never names it, and the contract asks for
+// absence rather than an invention.
+func TestAnUnlabelledMailboxCarriesNoLabel(t *testing.T) {
+	line, ok := concernLine(CaptureConcern{
+		ConnectionID: ids.UUID{0x12},
+		Kind:         "reauth_required",
+		Provider:     "google",
+	}, watchInstant)
+	if !ok {
+		t.Fatal("the condition draws no line")
+	}
+	if line.Entity == nil || line.Entity.Label != nil {
+		t.Errorf("an unlabelled connection carries label %v", line.Entity.Label)
+	}
+}

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -234,7 +235,10 @@ func (f *faultyEnrichBrain) Complete(context.Context, model.Request) (model.Resp
 
 func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	e := integration.Setup(t)
+	// Two due candidates, so a pass that kept walking after a deferral asks
+	// twice and a stop asks once.
 	seedEnrichContact(t, e, "flaky@acme.example", "Thanks,\nFlaky Contact\nCOO\n+49 30 1111111")
+	seedEnrichContact(t, e, "flakier@acme.example", "Thanks,\nFlakier Contact\nCFO\n+49 30 2222222")
 
 	t.Run("garbage output fails the candidate, not the pass", func(t *testing.T) {
 		brain := &faultyEnrichBrain{garbage: true}
@@ -259,6 +263,18 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 		}
 		if brain.calls != 1 {
 			t.Fatalf("model calls = %d, want 1 — the stop must end the pass, not walk the fleet", brain.calls)
+		}
+	})
+
+	t.Run("a provider outage ends the pass cleanly", func(t *testing.T) {
+		down := &ai.ProviderDownError{Provider: "acme", Health: model.HealthDown, RetryAfter: time.Now().Add(time.Hour)}
+		brain := &faultyEnrichBrain{err: down}
+		enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
+		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+			t.Fatalf("an outage must not be an error: %v", err)
+		}
+		if brain.calls != 1 {
+			t.Fatalf("model calls = %d, want 1 — the outage must end the pass, not walk the second candidate", brain.calls)
 		}
 	})
 }
@@ -854,5 +870,73 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 	}
 	if fields != 0 {
 		t.Errorf("%d misattributed field rows survived, want 0: the stale row is still withdrawn", fields)
+	}
+}
+
+// The retraction joins a field to its message through the uuid its source_ref
+// names. What that parse must never do is widen the match or break the pass: a
+// ref that is not a canonical activity ref could never have matched the text
+// comparison it replaces, so it must be left alone — and it must not raise, or
+// one odd row would fail every pass after it.
+func TestTheRetractionMatchesOnlyCanonicalActivityRefs(t *testing.T) {
+	e := integration.Setup(t)
+	contact := seedForeignSignature(t, e)
+
+	var activity ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Contacts.ApplySignatureFields(e.Admin(), ids.From[ids.ContactKind](contact), activity,
+		[]contacts.SignatureField{{
+			Name: "title", Value: "PARTNER MANAGER DACH",
+			Evidence: "PARTNER MANAGER DACH", Confidence: 1,
+			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath("title")),
+		}}); err != nil {
+		t.Fatalf("seeding the wrong field through the real applier: %v", err)
+	}
+	// Two rows the same pass wrote in name only: one names the same message in
+	// a spelling the writer never produces, one is not a uuid at all.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO contact_profile_field (contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
+			VALUES ($1, 'role', 'Partner', 'Partner', 'activity:' || upper($2::text), 'capture_enrich', 'agent:enrich'),
+			       ($1, 'linkedin', 'x', 'x', 'activity:not-a-uuid', 'capture_enrich', 'agent:enrich')`,
+			contact, activity)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the non-canonical refs: %v", err)
+	}
+
+	removed, err := e.Contacts.RetractMisattributedSignatureFields(e.Admin())
+	if err != nil {
+		t.Fatalf("a non-canonical ref failed the pass: %v", err)
+	}
+	if removed != 1 {
+		t.Errorf("removed %d fields, want 1 — only the canonical ref names a message", removed)
+	}
+	var left []string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(context.Background(),
+			`SELECT field FROM contact_profile_field WHERE contact_id = $1 ORDER BY field`, contact)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var f string
+			if err := rows.Scan(&f); err != nil {
+				return err
+			}
+			left = append(left, f)
+		}
+		return rows.Err()
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(left) != 2 || left[0] != "linkedin" || left[1] != "role" {
+		t.Errorf("fields left = %v, want [linkedin role]: a ref the text match could not reach was taken", left)
 	}
 }

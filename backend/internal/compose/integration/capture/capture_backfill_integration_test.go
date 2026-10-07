@@ -275,9 +275,11 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 	// one-live-run guard permits it and the same 6-month window never narrows.
 	startWithCursor := func(t *testing.T, cursorJSON string) ids.UUID {
 		t.Helper()
-		run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+		// Over, not a plain start: a plain start would continue the previous
+		// subtest's failed run instead of opening a fresh one.
+		run, err := registry.StartBackfillOver(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 		if err != nil {
-			t.Fatalf("StartBackfill: %v", err)
+			t.Fatalf("StartBackfillOver: %v", err)
 		}
 		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, execErr := tx.Exec(e.Admin(),
@@ -310,9 +312,24 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 		// Valid JSON, but an array — not the {"page_token":...} object.
 		assertTerminalError(t, startWithCursor(t, `[1,2,3]`))
 	})
-	t.Run("a page the provider rejects fails the run", func(t *testing.T) {
-		// Readable cursor; the provider then rejects the malformed token.
-		assertTerminalError(t, startWithCursor(t, `{"page_token":"not-an-offset"}`))
+	t.Run("a page that fails on an unclassified fault is retried, not ended", func(t *testing.T) {
+		// Readable cursor; the page then fails with an error no class names.
+		// That is an internal fault, and the connector already walks past a
+		// single message it cannot capture, so what fails a whole page is
+		// retried under the give-up cap rather than ending the run.
+		id := startWithCursor(t, `{"page_token":"not-an-offset"}`)
+		done, completed, retryAfter, err := registry.RunBackfillStep(wsCtx, id)
+		if done || completed || err == nil || retryAfter <= 0 {
+			t.Fatalf("step = done=%v completed=%v retryAfter=%v err=%v, want a live run waiting to retry", done, completed, retryAfter, err)
+		}
+		if status, _, _, _ := readBackfillRow(t, e, id); status != "running" {
+			t.Fatalf("row status = %s, want running", status)
+		}
+		// End it: a run left running here would be a live run nothing pages,
+		// refusing every later start on this connection.
+		if _, err := registry.CancelBackfill(grantCtx, "gmail", rep); err != nil {
+			t.Fatalf("CancelBackfill: %v", err)
+		}
 	})
 }
 

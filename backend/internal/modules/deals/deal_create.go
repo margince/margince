@@ -91,9 +91,6 @@ func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (crmcontract
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	if !in.OwnerExact {
-		in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
-	}
 	active, err := s.activeColumns(ctx)
 	if err != nil {
 		return crmcontracts.Deal{}, err
@@ -125,9 +122,6 @@ func (s *Store) CreateDealTx(ctx context.Context, tx pgx.Tx, in CreateDealInput)
 	born, err := s.readyDealCreate(ctx, in)
 	if err != nil {
 		return crmcontracts.Deal{}, err
-	}
-	if !in.OwnerExact {
-		in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	}
 	return s.createDealInTx(ctx, tx, in, born, nil)
 }
@@ -259,35 +253,47 @@ const (
 	linkEntityProject = "project"
 )
 
-// createDealInTx guards the birth invariants (open stage, future close,
-// visible company), inserts the deal with its first stage-history
-// row, and runs the write shape — all inside the caller's transaction.
-func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInput, born bornDeal, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
+// clearedForBirth runs every gate a newborn deal must pass and answers the
+// input with its owner settled. They are one step because they share a
+// moment: each reads the transaction and none of them writes, so a gate that
+// slipped past the insert would be refusing a row that already exists.
+func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInput) (CreateDealInput, error) {
+	// A decided owner arrives already settled: the qualify seam carries the
+	// LEAD's owner over rather than assigning one, and the suggestion seam
+	// asks auth.EnsureAssignee itself before it decides.
+	if !in.OwnerExact {
+		owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+		if err != nil {
+			return in, err
+		}
+		in.OwnerID = owner
+	}
+
 	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID); err != nil {
-		return crmcontracts.Deal{}, err
+		return in, err
 	}
 
 	// INV-CLOSE-PAST (formulas §11): deals are born open, and an open
 	// deal never claims a past close date — reject at source rather
 	// than let the nightly corrector inherit a knowingly-invalid row.
 	if err := s.rejectPastCloseDate(ctx, tx, in.ExpectedClose); err != nil {
-		return crmcontracts.Deal{}, err
+		return in, err
 	}
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
-		return crmcontracts.Deal{}, err
+		return in, err
 	}
 
 	if err := ensureBirthLinksVisible(ctx, tx, in, s.ensureProjectAttachable); err != nil {
-		return crmcontracts.Deal{}, err
+		return in, err
 	}
 
 	// A newborn deal has no current source, so every named key is a NEW
-	// assignment and a retired one is refused. The FK below would catch an
+	// assignment and a retired one is refused. The insert's FK would catch an
 	// unknown key, but not a retired one — the row exists, it is simply no
 	// longer a choice.
 	if in.AcquisitionSource != nil {
 		if err := ensureAssignableAcquisitionSource(ctx, tx, *in.AcquisitionSource, nil); err != nil {
-			return crmcontracts.Deal{}, err
+			return in, err
 		}
 	}
 	// Visible is not enough for the partner: it must actually BE one, or the
@@ -295,8 +301,19 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	// from the partner row's margin tier).
 	if in.PartnerCompanyID != nil {
 		if err := s.installation.EnsurePartner(ctx, tx, *in.PartnerCompanyID); err != nil {
-			return crmcontracts.Deal{}, err
+			return in, err
 		}
+	}
+	return in, nil
+}
+
+// createDealInTx clears the birth gates, inserts the deal with its first
+// stage-history row, and runs the write shape — all inside the caller's
+// transaction.
+func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInput, born bornDeal, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
+	in, err := s.clearedForBirth(ctx, tx, in)
+	if err != nil {
+		return crmcontracts.Deal{}, err
 	}
 
 	id := ids.New[ids.DealKind]()
@@ -308,7 +325,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		in.ExpectedArrMinor, in.SourceSystem, in.CloseDateProvisional,
 	})
 	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
-	_, err := tx.Exec(ctx,
+	_, err = tx.Exec(ctx,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
 		                   company_id, partner_company_id, partner_attribution,
 		                   project_id, owner_id, expected_close_date, source, captured_by,
@@ -336,11 +353,11 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, fmt.Errorf("insert deal: %w", err)
 	}
 
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change)
-		 VALUES ($1, NULL, $2, $3, $4, $5)`,
-		id, in.StageID, born.by, in.AmountMinor, in.Currency); err != nil {
-		return crmcontracts.Deal{}, fmt.Errorf("record stage history: %w", err)
+	if err := s.recordStageHistory(ctx, tx, stageHistoryInput{
+		DealID: id, ToStageID: in.StageID, ChangedBy: born.by, OwnerID: uuidOfFilter(in.OwnerID), PipelineID: in.PipelineID.UUID,
+		Amount: in.AmountMinor, Currency: in.Currency,
+	}); err != nil {
+		return crmcontracts.Deal{}, err
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", "deal", id.UUID, nil, map[string]any{dealNameColumn: in.Name})

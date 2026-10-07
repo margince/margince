@@ -5,7 +5,7 @@
 
 package gates
 
-// The RBAC vocabulary is DECLARED in the contract and restated in Go, and the
+// The RBAC vocabulary is declared in the contract and restated in Go, and the
 // two must not drift.
 //
 // api/crm.yaml's RbacObject and RbacAction enums are what the web client types

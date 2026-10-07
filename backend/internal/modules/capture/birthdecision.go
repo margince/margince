@@ -392,8 +392,13 @@ func (d birthDecision) bornAudience() (audience, reason string) {
 		if d.posture == "" {
 			return audienceWorkspace, ""
 		}
-	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner, VerdictPending:
-		return audienceParticipants, audienceReasonPendingVerdict
+	default:
+		// One list, shared with the re-derivation the join performs: a verdict
+		// that holds a message here must hold it there, or an audience depends on
+		// which of the two last looked at the row.
+		if holdsItsMessages(d.verdictStatus) {
+			return audienceParticipants, audienceReasonPendingVerdict
+		}
 	}
 	switch d.posture {
 	case PostureHeld, PostureClassified:

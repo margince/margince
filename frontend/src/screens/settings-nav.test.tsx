@@ -278,8 +278,8 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "capture",
   "integrations",
   "knowledge",
-  "automations",
   "usage",
+  "automations",
   "privacy",
   "system-health",
 );

@@ -24,6 +24,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/reportdoc"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,6 +36,10 @@ import (
 // disagreeing about one document, which is the drift the seam exists to
 // prevent.
 type RenderedValue struct {
+	Coverage          *crmcontracts.ReportingCoverage `json:"coverage,omitempty"`
+	Context           *crmcontracts.ReportingContext  `json:"context,omitempty"`
+	Unit              *string                         `json:"unit,omitempty"`
+	DefinitionVersion *string                         `json:"definition_version,omitempty"`
 	// Value is nil for a withheld figure AND for a cell that resolved to
 	// nothing. Withheld tells the two apart, which matters: one is a number
 	// somebody may not see, the other is a number that does not exist.
@@ -56,7 +62,7 @@ type RenderedBlock struct {
 // could disagree if a row changed between them — the same document would then
 // show two different numbers for one cell.
 func RenderReport(
-	ctx context.Context, tx pgx.Tx, doc reportdoc.Document, floor analyticsquery.Floor,
+	ctx context.Context, tx pgx.Tx, doc reportdoc.Document, floor analyticsquery.Floor, metrics *reporting.Service,
 ) ([]RenderedBlock, error) {
 	runIDs, err := reportdoc.Validate(doc)
 	if err != nil {
@@ -77,6 +83,7 @@ func RenderReport(
 		answers[id] = run.Answer
 	}
 
+	metricReader := reportMetricReader{service: metrics, cache: map[string]crmcontracts.ReportingEvaluation{}}
 	out := make([]RenderedBlock, 0, len(doc.Blocks))
 	for _, b := range doc.Blocks {
 		rendered := RenderedBlock{
@@ -87,6 +94,14 @@ func RenderReport(
 			Values: []RenderedValue{},
 		}
 		for _, c := range b.Cells {
+			if c.MetricRef != nil || c.EditionRef != nil {
+				value, err := metricReader.read(ctx, tx, c)
+				if err != nil {
+					return nil, err
+				}
+				rendered.Values = append(rendered.Values, value)
+				continue
+			}
 			id, err := ids.Parse(c.RunID)
 			if err != nil {
 				// Unreachable: Validate parsed every run id already. Returned

@@ -1,7 +1,7 @@
 # Einwilligung in die Erfassung privater E-Mail-Korrespondenz
 
-> Vorlage. **Nur erforderlich, wenn die private Nutzung des dienstlichen
-> Postfachs erlaubt oder geduldet ist.** Ist sie wirksam untersagt und wird das
+> Vorlage. Nur erforderlich, wenn die private Nutzung des dienstlichen
+> Postfachs erlaubt oder geduldet ist. Ist sie wirksam untersagt und wird das
 > Verbot durchgesetzt, trägt § 26 Abs. 1 BDSG die Verarbeitung und dieses
 > Dokument entfällt.
 
@@ -27,22 +27,22 @@ Charakter haben.
 
 Mir ist bekannt:
 
-1. **Was erfasst wird** — Absender, Empfänger, Betreff, Text und Anhänge,
+1. **Was erfasst wird:** Absender, Empfänger, Betreff, Text und Anhänge,
    sowie daraus abgeleitete Kontaktdatensätze.
-2. **Wer es lesen kann** — bei der Voreinstellung `classified` zunächst nur ich
+2. **Wer es lesen kann:** bei der Voreinstellung `classified` zunächst nur ich
    und die auf der Nachricht genannten Personen. Ein Klassifikator gibt danach
    nur gewöhnliche geschäftliche Threads für das Team frei. Als privat oder
    beraterlich eingestufte Korrespondenz bleibt zurückgehalten. Eine
    Administratorin kann zurückgehaltene Inhalte nicht lesen.
-3. **Was ich selbst steuern kann** — einzelne Absender ausschließen, bereits
+3. **Was ich selbst steuern kann:** einzelne Absender ausschließen, bereits
    erfasste Post löschen, jede automatische Entscheidung auf der Seite
    „Absender“ einsehen und korrigieren, einzelne Threads freigeben oder privat
    halten, das Postfach jederzeit trennen.
 4. **Dass die Einwilligung freiwillig ist.** Ich kann sie verweigern oder
    jederzeit mit Wirkung für die Zukunft widerrufen, formlos gegenüber
-   [Kontakt]. **Weder die Verweigerung noch der Widerruf haben nachteilige
-   Folgen für mein Beschäftigungsverhältnis.**
-5. **Was ein Widerruf bewirkt** — die weitere Erfassung endet. Bereits erfasste
+   [Kontakt]. Weder die Verweigerung noch der Widerruf haben nachteilige
+   Folgen für mein Beschäftigungsverhältnis.
+5. **Was ein Widerruf bewirkt:** Die weitere Erfassung endet. Bereits erfasste
    Nachrichten bleiben gespeichert, soweit gesetzliche Aufbewahrungspflichten
    bestehen; im Übrigen kann ich ihre Löschung verlangen.
 
@@ -51,9 +51,9 @@ Ort, Datum: ________________  Unterschrift: ________________
 ## Hinweise für die durchführende Stelle
 
 - **Eine Einwilligung je Person und je Version.** Ändert sich, was das System
-  tut, ist erneut einzuholen — eine Einwilligung deckt nur das, worüber sie
+  tut, ist erneut einzuholen, denn eine Einwilligung deckt nur das, worüber sie
   informiert.
-- **Dokumentieren, nicht nur einsammeln.** Art. 7 Abs. 1 DSGVO verlangt den
+- **Dokumentieren.** Art. 7 Abs. 1 DSGVO verlangt den
   Nachweis. Wer wann welche Version unterschrieben hat, gehört in die Akte.
 - **Margince prüft nichts davon.** Das System verbindet ein Postfach ohne
   Rücksicht darauf, ob dieses Blatt existiert.

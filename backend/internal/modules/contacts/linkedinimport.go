@@ -325,8 +325,7 @@ func upsertGhost(ctx context.Context, tx pgx.Tx, owner ids.UUID, row linkedInRow
 		     source, synced_at)
 		VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), $7, NULLIF($8, ''),
 	        NULLIF($9, ''), 'csv_export', now())
-		ON CONFLICT (owner_user_id, normalized_name,
-		             coalesce(normalized_company, ''), coalesce(connected_on, 'epoch'::date))
+		ON CONFLICT (owner_user_id, normalized_name, normalized_company, connected_on)
 		  WHERE provider_member_ref IS NULL
 		DO UPDATE SET
 		    full_name  = EXCLUDED.full_name,

@@ -283,7 +283,7 @@ func (c *Connector) pullFolder(
 			// cursor so the next cycle retries from the same watermark.
 			return "", err
 		}
-		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, sentByOwner); err != nil {
+		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, sentByOwner, time.Time{}); err != nil {
 			return "", err
 		}
 	}
@@ -321,7 +321,13 @@ func (c *Connector) selectMessages(ctx context.Context, access, folder, start st
 // a no-op; only a real Sink write fault returns a non-nil error (which stops
 // the pull). It is a package function (no receiver) so a pull holds no shared
 // state.
-func captureOne(ctx context.Context, raw []byte, sink connector.Sink, bounces connector.BounceSink, owner, folderID string, sentByOwner bool) (captured bool, err error) {
+//
+// receivedAt is Graph's receivedDateTime when the listing carried it, and zero
+// when it did not (the delta rounds name ids only).
+func captureOne(
+	ctx context.Context, raw []byte, sink connector.Sink, bounces connector.BounceSink,
+	owner, folderID string, sentByOwner bool, receivedAt time.Time,
+) (captured bool, err error) {
 	msg, err := mailmap.Parse(raw, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the Gmail connector)
@@ -331,6 +337,7 @@ func captureOne(ctx context.Context, raw []byte, sink connector.Sink, bounces co
 	}
 	msg = msg.AttestSentByOwner(sentByOwner)
 	rec := msg.ToRecord(connectorName, raw)
+	rec.ProviderReceivedAt = receivedAt
 	// Which folder Graph filed it in, so an owner who keeps one out of the CRM
 	// is answered before the message is stored. Set here rather than in
 	// mailmap.ToRecord because the folder is provider metadata off the message
@@ -435,14 +442,16 @@ func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) 
 
 // ListContainers returns the mailbox's folders, satisfying
 // connector.ContainerLister.
-func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+func (c *Connector) ListContainers(
+	ctx context.Context, auth connector.Auth,
+) ([]connector.NamedContainer, bool, error) {
 	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
-		return nil, fmt.Errorf("graph: malformed auth state: %w", err)
+		return nil, false, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
 	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	return c.api.ListFolders(ctx, refreshed.AccessToken)
 }

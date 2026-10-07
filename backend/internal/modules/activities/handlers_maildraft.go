@@ -65,17 +65,18 @@ func (h Handlers) DiscardMailDraft(w http.ResponseWriter, r *http.Request, id cr
 
 func mailDraftResponse(d MailDraft) crmcontracts.MailDraft {
 	out := crmcontracts.MailDraft{
-		Id:         openapi_types.UUID(d.ID),
-		AnchorType: d.Anchor.Type,
-		AnchorId:   openapi_types.UUID(d.Anchor.ID),
-		To:         addressLine(d.Content.To),
-		Cc:         addressLine(d.Content.Cc),
-		Bcc:        addressLine(d.Content.Bcc),
-		Subject:    d.Content.Subject,
-		Body:       d.Content.Body,
-		Version:    d.Version,
-		CreatedAt:  d.CreatedAt,
-		UpdatedAt:  d.UpdatedAt,
+		Id:           openapi_types.UUID(d.ID),
+		AnchorType:   d.Anchor.Type,
+		AnchorId:     openapi_types.UUID(d.Anchor.ID),
+		To:           addressLine(d.Content.To),
+		Cc:           addressLine(d.Content.Cc),
+		Bcc:          addressLine(d.Content.Bcc),
+		Subject:      d.Content.Subject,
+		Body:         d.Content.Body,
+		Version:      d.Version,
+		AgentDrafted: d.AgentDrafted,
+		CreatedAt:    d.CreatedAt,
+		UpdatedAt:    d.UpdatedAt,
 	}
 	if d.Content.HTMLBody != "" {
 		html := d.Content.HTMLBody

@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// Every model call either NAMES the record it is about, or says why it names
+// Every model call either names the record it is about, or says why it names
 // none.
 //
 // With payload capture on, `ai_call_payload` holds the request and response of
@@ -145,6 +145,7 @@ var namesNoSubject = gatekit.Waive(map[string]string{
 	"internal/compose/briefs/briefl2.go:askModel":               "the call ranks a queue against each other; it is about the ordering rather than about any one item in it",
 	"internal/compose/corpusask.go:askCorpusLane":               "passages retrieved from across the workspace's documents, which is several records by construction",
 	"internal/compose/fxrefresh.go:extract":                     "a published exchange-rate page. No record, and no personal data to erase",
+	"internal/compose/filterproposal.go:ProposeFilter":          "a sentence the reader typed and the workspace's filter vocabulary; no record is read, so there is none to cite",
 	"internal/compose/sitereaddebug.go:CompleteValidated":       "a recording WRAPPER rather than a site: it forwards the caller's context unchanged, so whatever subject the caller named travels through it",
 	"internal/compose/sitereaddebug.go:debugTriage":             "the operator debug lane, run against a URL before any record is chosen",
 	"internal/compose/voicebuilddemo.go:demonstrationDraft":     "a member's own writing, read to build their voice profile. The subject is that profile, which is not a record the citation's vocabulary names",

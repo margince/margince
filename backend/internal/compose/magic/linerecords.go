@@ -59,7 +59,7 @@ func (s *Service) LineRecords(
 	offset := pos.offset
 	out := crmcontracts.MagicLineRecords{Data: []crmcontracts.MagicLineRecord{}}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, _, err := doneSince(ctx, tx, from, maxLimit)
+		entries, _, _, err := doneSince(ctx, tx, from, maxLimit)
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func lineMembers(entries []entry, lineID ids.UUID) ([]entry, bool) {
 	var key string
 	for _, e := range entries {
 		if e.ID == lineID {
-			_, k, ok := lineOf(e)
+			k, ok := groupKeyOf(e)
 			if !ok {
 				return nil, false
 			}
@@ -118,7 +118,7 @@ func lineMembers(entries []entry, lineID ids.UUID) ([]entry, bool) {
 		if seen[e.EntityID] {
 			continue
 		}
-		if _, k, ok := lineOf(e); ok && k == key {
+		if k, ok := groupKeyOf(e); ok && k == key {
 			seen[e.EntityID] = true
 			members = append(members, e)
 		}
@@ -132,7 +132,7 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 	out := make([]crmcontracts.MagicLineRecord, 0, len(members))
 	subjects := make([]UndoSubject, 0, len(members))
 	for _, e := range members {
-		changes, err := visibleChanges(ctx, e.EntityType, fieldChanges(e.Before, e.After))
+		changes, err := visibleChanges(ctx, e.EntityType, changesOf(e))
 		if err != nil {
 			return nil, err
 		}
@@ -164,6 +164,16 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 		}
 	}
 	return out, nil
+}
+
+// changesOf is what one member's row shows as changed. A create or an archive
+// changed the whole record rather than some of its fields, and listing every
+// column of a new contact as "empty → value" says less than its name does.
+func changesOf(e entry) []crmcontracts.MagicFieldChange {
+	if bulkActions[e.Action] {
+		return []crmcontracts.MagicFieldChange{}
+	}
+	return fieldChanges(e.Before, e.After)
 }
 
 // fieldChanges lists every field an audit image moved, old value to new, sorted

@@ -59,12 +59,6 @@ const (
 	maxPassportTTL     = 90 * 24 * time.Hour
 )
 
-// MaxOAuthAccessTokenTTL is the ceiling mintPassport admits a TTL against,
-// exported so a process role can refuse an out-of-range
-// --oauth-access-token-ttl while it boots rather than leaving the first
-// connector handshake to discover it.
-const MaxOAuthAccessTokenTTL = maxPassportTTL
-
 // passportScopeVocabulary is the closed verb vocabulary (interfaces.md §2), in
 // ascending authority order. It is the ONE list: admission (validScopes) and
 // BOTH discovery documents (oauthScopesSupported for the authorization server,
@@ -282,8 +276,7 @@ func (s *Service) revokePassportTx(
 		// The same ceiling IssuePasswordLink carries, for a smaller reason.
 		// Revoking is denial rather than takeover — but a delegated holder who
 		// could cut off every agent acting for an administrator has reach over
-		// that administrator's work, and one grant should not buy both the
-		// widened list and power over the contacts it lists.
+		// that administrator's work.
 		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf, reachDenial); err != nil {
 			return apperrors.ErrNotFound
 		}

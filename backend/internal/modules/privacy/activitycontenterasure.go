@@ -53,6 +53,9 @@ import (
 // retention window is scoped to time — so an unwired seam is not a degraded
 // mode, it is an erasure that reports success over an intact original.
 func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {
+	if err := redactReportingSource(ctx, tx, "activity", []ids.UUID{id}); err != nil {
+		return err
+	}
 	if e.purgeRawCaptures == nil {
 		return fmt.Errorf("%w: this eraser was built without a raw-capture purger, so it can destroy "+
 			"an activity's text and not the provider original behind it", ErrRetentionSeamMissing)

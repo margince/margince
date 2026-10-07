@@ -349,10 +349,14 @@ func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
 
 // lastContact is the newest exchange that has already happened. The timeline's
 // first rows can be scheduled meetings with future times, which are plans and
-// not contact.
+// not contact; a canceled or no-show meeting is no contact at all.
 func lastContact(f facts) (crmcontracts.Activity, bool) {
 	for _, a := range f.timeline {
-		if !a.OccurredAt.After(f.now) && relstrength.IsInteractionKind(string(a.Kind)) {
+		var status string
+		if a.MeetingStatus != nil {
+			status = string(*a.MeetingStatus)
+		}
+		if !a.OccurredAt.After(f.now) && relstrength.InteractionCounts(string(a.Kind), status) {
 			return a, true
 		}
 	}

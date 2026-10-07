@@ -38,7 +38,8 @@ func trackingTable(ctx context.Context, conn *pgx.Conn, namespace string) (strin
 			name           text NOT NULL,
 			applied_at     timestamptz NOT NULL DEFAULT now(),
 			content_digest text
-		)`, table))
+		)`, table,
+	))
 	if err != nil {
 		return "", fmt.Errorf("pgmigrate: creating %s: %w", table, err)
 	}
@@ -52,7 +53,8 @@ func trackingTable(ctx context.Context, conn *pgx.Conn, namespace string) (strin
 	// — which is precisely the divergence the column exists to expose. A NULL
 	// means "unverifiable", and every reader must treat it as such.
 	if _, err := conn.Exec(ctx, fmt.Sprintf(
-		`ALTER TABLE %s ADD COLUMN IF NOT EXISTS content_digest text`, table)); err != nil {
+		`ALTER TABLE %s ADD COLUMN IF NOT EXISTS content_digest text`, table,
+	)); err != nil {
 		return "", fmt.Errorf("pgmigrate: adding %s.content_digest: %w", table, err)
 	}
 	if _, err := conn.Exec(ctx, fmt.Sprintf(grantTrackingTableToApp, table)); err != nil {

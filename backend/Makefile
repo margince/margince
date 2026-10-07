@@ -329,6 +329,9 @@ endif
 # `RESUME=<dir>` picks a directory; `RESUME=` (empty) turns it off, which is how
 # a run is forced to measure everything fresh.
 RESUME ?= 1
+# STALE_ONLY skips a model whose committed record is already current for this
+# build, so a sweep pays only for what changed. `STALE_ONLY=0` re-measures it.
+STALE_ONLY ?= 1
 ifeq ($(RESUME),1)
 override RESUME := $(CURDIR)/../.tmp/aicert/resume
 endif
@@ -345,9 +348,9 @@ endif
 AICERT_TIMEOUT ?= 90m
 
 # ROUTING= certifies a DEPLOYMENT rather than a model: it reads that config's
-# `seeds.ai_routing` and certifies each task against the model bound at the task's
-# LEADING ladder rung — the one that would actually serve it. One run therefore
-# writes records across several models, which is what the config binds.
+# `seeds.ai_routing` and certifies each task against every distinct model its
+# ladder binds — the rung that answers, then each fallback a failed call falls
+# to. One run therefore writes records across several models.
 #
 # It is mutually exclusive with MODEL=, and the run refuses both: one names a
 # deployment, the other one candidate to A/B a prompt fix against. Under ROUTING=
@@ -364,7 +367,7 @@ AICERT_TIMEOUT ?= 90m
 # than 5 — about 1.4 calls a run, more on a model that scores low. A
 # borderline scenario extends from 3 runs to at most 9, so one scenario costs at
 # most 9 candidate and 27 judge calls; a settled one 3 runs and about 4.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run. Under ROUTING= every distinct rung of a task's ladder is certified, fallback included; STALE_ONLY=0 re-measures records already current
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
@@ -373,7 +376,7 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
 	  MARGINCE_AICERT_UPSTREAM='$(if $(UPSTREAM),$(UPSTREAM),$(MARGINCE_AICERT_UPSTREAM))' \
 	  MARGINCE_AICERT_JUDGE_UPSTREAM='$(JUDGE_UPSTREAM)' \
-	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \
+	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" MARGINCE_AICERT_STALE_ONLY=$(STALE_ONLY) \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
@@ -653,7 +656,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-recordfields -in api/crm.yaml -out internal/modules/agents/recordshapes_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json -routing-go internal/modules/ai/routingschema_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
@@ -670,7 +673,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md
+	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/ai-provider-outages.md
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.
@@ -679,10 +682,10 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# Same blind spot, same guard: a handbook page copied in by handbook-embed
 	# and never `git add`ed is untracked, so the diff above sees nothing while
 	# the binary would ship a page no reviewer read.
-	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md')"; \
-		[ -z "$$u" ] || { echo "drift: uncommitted embedded handbook page(s):" >&2; echo "$$u" >&2; exit 1; }
+	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md' ../docs/reference/ai-provider-outages.md internal/modules/agents/apps/actions.json)"; \
+		[ -z "$$u" ] || { echo "drift: uncommitted generated page(s):" >&2; echo "$$u" >&2; exit 1; }
 
-# The MCP App admission vocabulary is AUTHORED in frontend/src/mcp-apps, where
+# The MCP App admission vocabulary and the per-view action lists are AUTHORED in frontend/src/mcp-apps, where
 # the build-time validator imports it, and copied here because go:embed cannot
 # reach outside its own package directory. Two validators in two languages are a
 # defect unless they cannot disagree: a document that passes the build check and
@@ -691,6 +694,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 # drifting, and `drift` fails a stale one.
 mcp-apps-vocab: ## Copy the MCP App admission vocabulary in from the frontend
 	cp ../frontend/src/mcp-apps/forbidden.json internal/modules/agents/apps/forbidden.json
+	cp ../frontend/src/mcp-apps/actions.json internal/modules/agents/apps/actions.json
 
 # The operator handbook is AUTHORED in docs/handbook and copied here for the
 # same reason as the vocabulary above: go:embed cannot reach outside its own

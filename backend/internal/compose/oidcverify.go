@@ -179,6 +179,13 @@ type oidcClaims struct {
 	// as a fallback where a work/school account carries no `email` claim, and
 	// only under a tenant this installation trusts.
 	PreferredUsername string `json:"preferred_username"`
+	// Groups is the token's standard `groups` claim, feeding identity's
+	// additive group→role grants. Absent decodes as nil — the empty list the
+	// sign-in adapters hand on, never an error, because most Google tokens
+	// carry no such claim and a token naming no groups simply grants nothing.
+	Groups []string `json:"groups"`
+	// GivenName is the standard `given_name` claim; absent decodes as "".
+	GivenName string `json:"given_name"`
 }
 
 // Verify returns the decoded claims only for a well-formed, correctly-signed

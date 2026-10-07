@@ -2,27 +2,37 @@
 // the built-in commands the palette already knows.
 //
 // Its own file because it is its own subject — a query, a debounce, a floor, a
-// refusal that must not read as an empty workspace, and a second read that
-// turns a project id into the line a reader recognises it by. None of that is
-// what a command palette IS, and all of it is what `palette.tsx` was mostly
-// made of.
+// refusal that must not read as an empty workspace, and the grouping that keeps
+// one kind of hit from crowding out the rest. None of that is what a command
+// palette IS, and all of it is what `palette.tsx` was mostly made of.
 
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useDeferredValue } from "react";
 import { api } from "../api/client";
-import { useT } from "../i18n";
+import type { components } from "../api/schema";
+import { formatDate } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { Command } from "./palette";
+import { useRecordZone } from "./recordzone";
 import {
-  SEARCH_HIT_KIND_KEY,
-  type SearchHitType,
+  groupSearchHits,
+  SEARCH_GROUP_KEY,
   searchHitDestination,
+  searchHitHasCard,
 } from "./searchkinds";
+
+type SearchResult = components["schemas"]["SearchResult"];
 
 // How long a palette search may take before the wait is worth reporting. Below
 // this the answer is quicker than a keystroke and a placeholder would flash on
 // every letter typed; above it, an unchanged list reads as a palette that has
 // stopped listening.
 export const SEARCH_PENDING_DELAY_MS = 300;
+
+// How many hits of each kind the palette offers. Enough to pick the one meant
+// out of a short list, few enough that every kind the word found still fits on
+// screen; the rest are on the results page, one row away.
+export const PALETTE_PER_TYPE = 3;
 
 // What the live search arm has to say: the rows it found, and whether it is
 // still working or gave up. The two flags are returned rather than swallowed —
@@ -38,8 +48,14 @@ type SearchArm = Readonly<{
 // Live record hits for the palette (RS-1): debounced via useDeferredValue
 // rather than a timer (craft: no real-clock waits in the render path), and
 // gated on a 2-char floor so single keystrokes don't fire a query per key.
+//
+// GROUPED, a few of each kind: relevance does not compare across kinds, and a
+// short list ranked across them was all mail threads for a word that also
+// named a company — the company was found and never shown.
 export function useSearchCommands(query: string): SearchArm {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
   const deferred = useDeferredValue(query.trim());
   const enabled = deferred.length >= 2;
   const result = useQuery({
@@ -47,7 +63,13 @@ export function useSearchCommands(query: string): SearchArm {
     enabled,
     queryFn: async () => {
       const { data, error } = await api.GET("/search", {
-        params: { query: { q: deferred, limit: 5 } },
+        params: {
+          query: {
+            q: deferred,
+            per_type: PALETTE_PER_TYPE,
+            with_employees: true,
+          },
+        },
       });
       if (error) {
         // Thrown rather than flattened to an empty list: react-query carries it
@@ -60,118 +82,69 @@ export function useSearchCommands(query: string): SearchArm {
       return data.data;
     },
   });
-  // Every hit with somewhere to go. `searchHitRoute` is the one place that
-  // knows where each kind lives, so a type the server learns to return is
-  // routable here the moment it is routable anywhere — and an activity, which
-  // has no page, drops out by answering null rather than by being named in a
-  // second list that has to be kept in step.
-  //
-  // An EMAIL hit goes to the search SCREEN with that message open. The palette
-  // owns no page and every Command carries a route, so it cannot open a drawer
-  // itself — it sends the reader to the one page that already owns this one.
-  const hits = (result.data ?? []).flatMap((hit) => {
-    const route = searchHitDestination(
-      { ...hit, type: hit.type as SearchHitType },
-      deferred,
-    );
-    return route ? [{ hit, route }] : [];
-  });
-  const projectLines = useProjectHitLines(
-    hits.filter(({ hit }) => hit.type === "project").map(({ hit }) => hit.id),
+  // The second line says which one of a kind this is; the group heading
+  // already says what kind. A project's is its key and its account, which is
+  // how two projects called "Rollout" are told apart, and the server sends it.
+  const secondLine = (hit: SearchResult): string | undefined => {
+    // A partner is a property of a company rather than a kind of its own.
+    if (hit.type === "company" && hit.is_partner === true) {
+      return t("search.partner.badge");
+    }
+    // A contact found through its employer, which is why it is listed at all.
+    if (hit.works_at) {
+      return t("search.contact.worksAt", {
+        company: hit.works_at.company_name,
+      });
+    }
+    return hit.snippet ?? undefined;
+  };
+  // Every hit with somewhere to go, asked of the one place that knows where
+  // each kind lives. An activity that is not a message has no page and drops
+  // out by answering null; an EMAIL goes to the results screen with that
+  // message open, the one page that already owns its drawer.
+  const commands = groupSearchHits(result.data ?? []).flatMap(
+    ({ group, hits }) =>
+      hits.flatMap((hit): Command[] => {
+        const route = searchHitDestination(hit, deferred);
+        if (!route) {
+          return [];
+        }
+        return [
+          {
+            id: `record:${hit.type}:${hit.id}`,
+            label: hit.title ?? hit.id,
+            subtitle: secondLine(hit),
+            // A message is cited the way every surface cites one; this file
+            // carries the subject and the date and draws neither.
+            cite: hit.email_summary
+              ? {
+                  subject: hit.email_summary.subject,
+                  occurredAt: formatDate(
+                    hit.email_summary.occurred_at,
+                    locale,
+                    zone,
+                  ),
+                }
+              : undefined,
+            mark: searchHitHasCard(hit.type)
+              ? {
+                  identity: hit.id,
+                  name: hit.title ?? hit.id,
+                  logo: hit.logo_url,
+                }
+              : undefined,
+            group: t(SEARCH_GROUP_KEY[group]),
+            type: "record",
+            route,
+          },
+        ];
+      }),
   );
   return {
-    commands: hits.map(({ hit, route }) => {
-      // A partner is a property of a company rather than a kind of its own,
-      // so the line that would say "Company" says the account is a partner:
-      // the name finds the record, and the second line says what it is.
-      // Every kind is named TRANSLATED, because this line used to print the
-      // wire word and showed a German reader "company" where the rest of the
-      // product says Unternehmen.
-      const kind =
-        hit.type === "company" && hit.is_partner === true
-          ? t("search.kind.partnerCompany")
-          : t(SEARCH_HIT_KIND_KEY[hit.type as SearchHitType]);
-      return {
-        id: `record:${hit.type}:${hit.id}`,
-        label: hit.title ?? hit.id,
-        // A project's secondary line is its key or its company, not the word
-        // "project": a search hit for one carries no snippet, and two projects
-        // called "Rollout" are told apart by the key a rep already types into
-        // subject lines.
-        subtitle:
-          hit.type === "project" ? (projectLines.get(hit.id) ?? kind) : kind,
-        type: "record" as const,
-        route,
-      };
-    }),
+    commands,
     // `isFetching` rather than `isPending`: a disabled query reports pending
     // forever, and the palette opens with an empty box every time.
     pending: enabled && result.isFetching,
     failed: enabled && result.isError,
   };
-}
-
-/**
- * The secondary line for each project hit: the key when the project has one,
- * else the company's name. At most five hits are on screen, so the reads are
- * per record and share the cache entries the project page and the company
- * reference already fill.
- */
-function useProjectHitLines(projectIds: string[]): Map<string, string> {
-  const projects = useQueries({
-    queries: projectIds.map((id) => ({
-      queryKey: ["project", id, "ref"],
-      staleTime: 60_000,
-      queryFn: async () => {
-        const { data, error } = await api.GET("/projects/{id}", {
-          params: { path: { id } },
-        });
-        if (error) {
-          // A palette line that cannot be resolved falls back to the kind;
-          // the hit itself still routes. The project page reports the
-          // failure in full.
-          return null;
-        }
-        return data;
-      },
-    })),
-  });
-  const companyIds = projects.flatMap((query) =>
-    query.data && !query.data.key && query.data.company_id
-      ? [query.data.company_id]
-      : [],
-  );
-  const companies = useQueries({
-    queries: companyIds.map((id) => ({
-      // The same entry EntityRef fills for a company reference.
-      queryKey: ["company", "ref", id],
-      staleTime: 60_000,
-      queryFn: async () => {
-        const { data, error } = await api.GET("/companies/{id}", {
-          params: { path: { id } },
-        });
-        if (error) {
-          return null;
-        }
-        return data.display_name ?? null;
-      },
-    })),
-  });
-  const companyName = new Map(
-    companyIds.map((id, index) => [id, companies[index]?.data ?? null]),
-  );
-  const lines = new Map<string, string>();
-  projects.forEach((query, index) => {
-    const project = query.data;
-    if (!project) {
-      return;
-    }
-    const line =
-      project.key ??
-      (project.company_id ? companyName.get(project.company_id) : null);
-    if (line) {
-      lines.set(projectIds[index], line);
-    }
-  });
-  return lines;
 }

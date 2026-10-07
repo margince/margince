@@ -4,6 +4,7 @@
 import { Fragment, type ReactNode, useEffect, useMemo, useRef } from "react";
 import { TableScroll } from "./atoms";
 import "./atoms.css";
+import { autolinkBlocks } from "./markdown-autolink";
 import { runText } from "./markdown-highlight";
 import {
   type Block,
@@ -115,9 +116,13 @@ export function Markdown({
   source,
   highlight,
   onHighlight,
+  autolink = false,
 }: Readonly<{
   /** The raw document. Every byte of it is treated as hostile. */
   source: string;
+  /** For a note: a bare http(s) address becomes a link, and every link shows
+   *  its own destination as its text. A corpus document renders as written. */
+  autolink?: boolean;
   highlight?: MarkdownHighlight;
   /**
    * Which of the three outcomes the highlight reached, reported on every
@@ -131,11 +136,13 @@ export function Markdown({
   // Keyed on the two values rather than on the object: a caller building
   // `{ quote, line }` in its own render would otherwise re-parse the document
   // on every keystroke anywhere above it.
-  const doc = useMemo(
-    () =>
-      readMarkdown(source, quote === undefined ? undefined : { quote, line }),
-    [source, quote, line],
-  );
+  const doc = useMemo(() => {
+    const read = readMarkdown(
+      source,
+      quote === undefined ? undefined : { quote, line },
+    );
+    return autolink ? { ...read, blocks: autolinkBlocks(read.blocks) } : read;
+  }, [source, quote, line, autolink]);
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -7,7 +7,7 @@ import { useCanWrite } from "../app/capability";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
@@ -87,7 +87,9 @@ export function ContactDealRooms({
           <RoomRow key={room.id} room={room} email={email} emails={emails} />
         ))}
         {rooms.data?.cut ? (
-          <p className="t-caption">{t("contactdealrooms.cut")}</p>
+          <PanelBody>
+            <p className="t-caption">{t("contactdealrooms.cut")}</p>
+          </PanelBody>
         ) : null}
       </QueryStates>
     </Panel>

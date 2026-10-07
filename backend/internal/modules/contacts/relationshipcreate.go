@@ -81,7 +81,7 @@ func (s *Store) CreateRelationship(ctx context.Context, in CreateRelationshipInp
 	}
 
 	var out relationshipRow
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = writeRelationshipInTx(ctx, tx, in, capturedBy)
 		return err
@@ -139,6 +139,9 @@ func writeRelationshipInTx(
 	if err := validRelationshipShape(in.Kind, in); err != nil {
 		return out, err
 	}
+	if err := lockEmploymentClocks(ctx, tx, in); err != nil {
+		return out, err
+	}
 	// Before the endpoints are checked, because the check is what this lock
 	// makes true: an archive in flight either commits first and LiveOnly
 	// refuses this attach, or waits and sweeps the edge this writes with
@@ -184,6 +187,25 @@ func writeRelationshipInTx(
 		return out, mapRelationshipConstraint(err, in.Kind)
 	}
 	return out, emitRelationshipChange(ctx, tx, "create", nil, out)
+}
+
+// lockEmploymentClocks takes the last-activity locks an employment's triggers
+// will need — the new employer, the contact, and the contact's current
+// employers a primary demotion re-dates — before anything else is locked or
+// probed. Taken later, the endpoint probe's share on the company is what two
+// hires at one account each upgrade into the other's deadlock.
+func lockEmploymentClocks(ctx context.Context, tx pgx.Tx, in CreateRelationshipInput) error {
+	if in.Kind != employmentKind {
+		return nil
+	}
+	var targets storekit.LastActivityTargets
+	if in.ContactID != nil {
+		targets.Contacts = []ids.UUID{in.ContactID.UUID}
+	}
+	if in.CompanyID != nil {
+		targets.Companies = []ids.UUID{in.CompanyID.UUID}
+	}
+	return storekit.LockLastActivityTargets(ctx, tx, targets)
 }
 
 // ensureRelationshipEndpoints validates every supplied endpoint as a

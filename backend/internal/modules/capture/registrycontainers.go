@@ -40,14 +40,16 @@ var ErrContainersUnsupported = errors.New("capture: this provider does not list 
 // cached list would offer yesterday's mailbox. It costs one provider round
 // trip, which is why the picker asks for it when it opens rather than on every
 // keystroke.
-func (r *Registry) ListContainers(ctx context.Context, name string, userID ids.UserID) ([]connector.NamedContainer, error) {
+func (r *Registry) ListContainers(
+	ctx context.Context, name string, userID ids.UserID,
+) ([]connector.NamedContainer, bool, error) {
 	conn, err := r.connector(name)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	lister, ok := conn.(connector.ContainerLister)
 	if !ok {
-		return nil, ErrContainersUnsupported
+		return nil, false, ErrContainersUnsupported
 	}
 	var credentialRef *string
 	var authBytes []byte
@@ -59,13 +61,13 @@ func (r *Registry) ListContainers(ctx context.Context, name string, userID ids.U
 			userID, name).Scan(&credentialRef, &authBytes)
 	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, apperrors.ErrNotFound
+			return nil, false, apperrors.ErrNotFound
 		}
-		return nil, fmt.Errorf("capture: reading the connection to list its folders: %w", err)
+		return nil, false, fmt.Errorf("capture: reading the connection to list its folders: %w", err)
 	}
 	auth, resolveErr := r.resolveCredential(ctx, credentialRef, authBytes)
 	if resolveErr != nil {
-		return nil, resolveErr
+		return nil, false, resolveErr
 	}
 	return lister.ListContainers(ctx, auth)
 }

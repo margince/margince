@@ -1,17 +1,17 @@
 # Set up outbound mail
 
 Margince sends mail two ways, and an installation needs both set up before every
-button that mails somebody works. This page says which mail goes which way,
-how to configure the second way (the SMTP relay), and what breaks without it.
+button that mails somebody works: the user's connected mailbox, and the SMTP
+relay configured below.
 
 ## Which mail goes out which way
 
-**Mail a user writes goes out through that user's connected mailbox.** The
+Mail a user writes goes out through **that user's connected mailbox**. The
 composer, replies, scheduled sends and sequences all send as the rep, through
 the Gmail, Microsoft 365 or IMAP connection they made under Settings →
 Integrations. [connect-a-mailbox.md](connect-a-mailbox.md) sets that up.
 
-**Mail the installation writes by itself goes out through the SMTP relay** in
+Mail the installation writes by itself goes out through **the SMTP relay** in
 the deployment file's `email:` block. It never uses anybody's connected mailbox,
 even when the user who pressed the button has one. This covers:
 
@@ -69,7 +69,7 @@ Two more settings have to be in place:
   these messages are built on it. With a real sender configured it must be an
   https address a recipient can open; `MARGINCE_ENV=dev` admits the dev stack's
   `http://localhost`, which only you can open.
-- **Both the api and the worker read the same deployment file**, because they
+- Both the api and the worker must read **the same deployment file**, because they
   split the work. The api sends password resets and invitations itself, at the
   moment of the request. For the privacy notice and the confirm links, the api
   only stages the message, and only when it has a relay configured; `cmd/worker`
@@ -83,7 +83,7 @@ mail configured)`.
 
 ## What happens without a relay
 
-Nothing refuses to boot, and every mail in the table above fails quietly or
+Nothing refuses to boot. Every mail in the table above fails without notice or
 with a one-line message:
 
 - **Send privacy notice** and **Ask them to confirm their details** answer

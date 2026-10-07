@@ -1,0 +1,44 @@
+name: nl_search_reads_not_as_a_negation
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: company
+  text: companies in Austria that are not customers and whose industry mentions software
+  today: '2026-09-30'
+  lang: en
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: country, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: city, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: industry, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: lifecycle, type: picklist, operators: [eq, neq, in, exists], options: [unknown, target, prospect, opportunity,
+      customer, former_customer, disqualified]}
+  - {name: size_band, type: picklist, operators: [eq, neq, in, exists], options: [1-10, 11-50, 51-200, 201-500,
+      501-1000, 1001-5000, 5000+]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: last_activity_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: owner_id, type: id, operators: [eq, neq, in, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      and:
+      - field: country
+        op: eq
+        value: AT
+      - field: lifecycle
+        op: neq
+        value: customer
+      - field: industry
+        op: contains
+        value: software
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: The passing filter is country equals AT, lifecycle not equal to customer (neq), and industry containing
+    'software' (contains, since 'mentions' is a substring match on free text). Dropping the negation, or matching
+    industry exactly, fails.

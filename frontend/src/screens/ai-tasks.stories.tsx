@@ -62,7 +62,7 @@ function story() {
 }
 
 const meta: Meta<typeof AiTasksCard> = {
-  title: "Settings/AI/Models and routing/AI tasks",
+  title: "Settings/AI/AI models/AI tasks",
   component: AiTasksCard,
 };
 export default meta;

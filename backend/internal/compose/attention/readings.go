@@ -82,11 +82,12 @@ func readingsOf(
 		if keepsRow(row, filterChangedSinceBrief) {
 			out.ChangedSinceBrief++
 		}
+		if prospectingWork(row.item) {
+			out.Prospecting++
+		}
 		switch row.item.Category {
 		case crmcontracts.WorklistItemCategoryCustomerWaiting:
 			out.BuyerReplies++
-		case categoryLeads:
-			out.Prospecting++
 		case categoryDecisions:
 			// Counted from `considered`, which is held before the fold, so a
 			// hundred alike approvals read as a hundred here even where the queue

@@ -11,6 +11,8 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -19,6 +21,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -77,13 +80,31 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	// resigns. This is the case livemember_test names as outside its rule: a row
 	// resolved by id to render a name does not ask whether the contact still
 	// works here.
+	// The contact's own address, for a row capture resolved to a contact
+	// without keeping an address — the logged path writes those. The address
+	// the MESSAGE stated wins over the contact's primary one, so the fold
+	// below recognises the bare header row it duplicates even when the sender
+	// wrote from a secondary address. It rides the SCOPED contact join, so an
+	// address surfaces only where the contact itself may be named.
 	rows, err := tx.Query(ctx, `
 		SELECT ap.role, coalesce(ap.address, ''), p.id,
 		       coalesce(p.full_name, u.display_name, ap.display_name), ap.user_id,
-		       coalesce(u.email, '')
+		       coalesce(u.email, ''), coalesce(stated_pe.email, own_pe.email, '')
 		  FROM activity_participant ap
 		  `+contactJoin+`
 		  LEFT JOIN app_user u ON u.id = ap.user_id
+		  LEFT JOIN LATERAL (
+		       SELECT e.email FROM contact_email e
+		        WHERE e.contact_id = p.id AND e.archived_at IS NULL
+		          AND EXISTS (
+		           SELECT 1 FROM activity_participant stated
+		            WHERE stated.activity_id = ap.activity_id AND stated.role = ap.role
+		              AND lower(stated.address) = e.email)`+
+		contactaddress.ReachableOrder+` LIMIT 1) stated_pe ON p.id IS NOT NULL
+		  LEFT JOIN LATERAL (
+		       SELECT e.email FROM contact_email e
+		        WHERE e.contact_id = p.id AND e.archived_at IS NULL`+
+		contactaddress.ReachableOrder+` LIMIT 1) own_pe ON p.id IS NOT NULL
 		 WHERE ap.activity_id = $1
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc')
 		 ORDER BY CASE ap.role
@@ -92,8 +113,113 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	if err != nil {
 		return emailParties{}, err
 	}
-	defer rows.Close()
+	out, err := collectEmailParties(rows)
+	if err != nil {
+		return emailParties{}, err
+	}
+	// The logged path keeps the stated header addresses as rows of their own
+	// beside the contacts and seats they resolved to, so without the fold the
+	// sender reads as "Their Name, their@address" — two parties where the
+	// message had one.
+	out.from = foldStatedDuplicates(out.from)
+	out.to = foldStatedDuplicates(out.to)
+	out.cc = foldStatedDuplicates(out.cc)
+	out.bcc = foldStatedDuplicates(out.bcc)
+	if len(out.from) == 0 {
+		sender, err := receivedFromTx(ctx, tx, id)
+		if err != nil {
+			return emailParties{}, err
+		}
+		if sender != "" {
+			out.from = append(out.from, crmcontracts.EmailParty{Address: sender})
+		}
+	}
+	return out, nil
+}
 
+// receivedFromTx is the sender of a received message whose capture recorded
+// no sender participant: older captures dropped an address the seat held,
+// which left the drawer with no From line at all. On a received message the
+// counterparty IS the sender, so it answers rather than a gap.
+func receivedFromTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (string, error) {
+	var sender string
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(counterparty_email, '') FROM activity
+		 WHERE id = $1 AND archived_at IS NULL AND direction = 'inbound'`, id).Scan(&sender)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("activities: reading who sent %s: %w", id, err)
+	}
+	return sender, nil
+}
+
+// counterpartyOf names the other side for a row: the first party the caller
+// can name, how many more there were, and WHICH CONTACT supplied the name.
+//
+// The id travels beside the phrase because the phrase cannot be turned back
+// into a record. A client keying a face on the words alone has to guess which
+// contact they mean, and guesses wrong in both directions: a contact renamed
+// since capture stops matching and draws a second colour, and two contacts
+// sharing a name cannot be told apart at all. It is the id of the party the
+// name came FROM, not of the row — a message names one far side and the ` +N`
+// counts the rest.
+//
+// A message whose participants all resolve to nothing gets no counterparty
+// rather than an invented stranger, and an unresolved address names no contact.
+func counterpartyOf(parties []crmcontracts.EmailParty) (*string, *openapi_types.UUID) {
+	if len(parties) == 0 {
+		return nil, nil
+	}
+	var named string
+	var namedBy *openapi_types.UUID
+	for _, p := range parties {
+		if p.DisplayName != nil && strings.TrimSpace(*p.DisplayName) != "" {
+			named, namedBy = *p.DisplayName, p.ContactId
+			break
+		}
+		if named == "" && p.Address != "" {
+			named, namedBy = p.Address, p.ContactId
+		}
+	}
+	if named == "" {
+		return nil, nil
+	}
+	if extra := len(parties) - 1; extra > 0 {
+		named += " +" + strconv.Itoa(extra)
+	}
+	return &named, namedBy
+}
+
+// foldStatedDuplicates drops an address-only party whose address an
+// identified party on the same header already carries: the header's
+// statement and capture's resolution both describe that human, and the
+// envelope draws them as one line. A bare address nobody resolved stays —
+// it is the only record of that party.
+func foldStatedDuplicates(parties []crmcontracts.EmailParty) []crmcontracts.EmailParty {
+	identified := make(map[string]bool, len(parties))
+	for _, p := range parties {
+		if (p.ContactId != nil || p.UserId != nil) && p.Address != "" {
+			identified[strings.ToLower(p.Address)] = true
+		}
+	}
+	if len(identified) == 0 {
+		return parties
+	}
+	kept := parties[:0]
+	for _, p := range parties {
+		if p.ContactId == nil && p.UserId == nil && identified[strings.ToLower(p.Address)] {
+			continue
+		}
+		kept = append(kept, p)
+	}
+	return kept
+}
+
+// collectEmailParties reads the participant rows into the four header lists.
+func collectEmailParties(rows pgx.Rows) (emailParties, error) {
+	defer rows.Close()
 	// Empty, not nil. Every one of these four is `required` in the contract, and
 	// a nil slice marshals to `null` rather than `[]` — so a message with
 	// nobody in copy served a null the viewer is entitled to treat as a list.
@@ -105,18 +231,22 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 		bcc:  emptyParties(),
 	}
 	for rows.Next() {
-		var role, address, seatEmail string
+		var role, address, seatEmail, contactEmail string
 		var contactID, userID *ids.UUID
 		var fullName *string
-		if err := rows.Scan(&role, &address, &contactID, &fullName, &userID, &seatEmail); err != nil {
+		if err := rows.Scan(&role, &address, &contactID, &fullName, &userID, &seatEmail, &contactEmail); err != nil {
 			return emailParties{}, err
 		}
 		// The seat's own address, when the participant row carries none. Capture
 		// writes an address for a party it read off a header and only a user_id
 		// for one it resolved to a seat, so this is the difference between a
-		// header line naming a colleague and one with a gap in it.
+		// header line naming a colleague and one with a gap in it. A contact
+		// resolved without an address gets their own the same way.
 		if address == "" {
 			address = seatEmail
+		}
+		if address == "" {
+			address = contactEmail
 		}
 		party := crmcontracts.EmailParty{Address: address, DisplayName: fullName}
 		if contactID != nil {
@@ -138,31 +268,8 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 			out.bcc = append(out.bcc, party)
 		}
 	}
-	return out, rows.Err()
-}
-
-// counterpartyOf names the other side for a row: the first party the caller
-// can name, and how many more there were. A message whose participants all
-// resolve to nothing gets no counterparty rather than an invented stranger.
-func counterpartyOf(parties []crmcontracts.EmailParty) *string {
-	if len(parties) == 0 {
-		return nil
+	if err := rows.Err(); err != nil {
+		return emailParties{}, err
 	}
-	var named string
-	for _, p := range parties {
-		if p.DisplayName != nil && strings.TrimSpace(*p.DisplayName) != "" {
-			named = *p.DisplayName
-			break
-		}
-		if named == "" && p.Address != "" {
-			named = p.Address
-		}
-	}
-	if named == "" {
-		return nil
-	}
-	if extra := len(parties) - 1; extra > 0 {
-		named += " +" + strconv.Itoa(extra)
-	}
-	return &named
+	return out, nil
 }

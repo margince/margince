@@ -24,11 +24,9 @@ import { LoadMoreButton, QueryStates, throwProblem } from "./common";
 // that mounts one panel alone would otherwise render it unstyled.
 import "./automationdetail.css";
 
-// The human surface for the two already-live, human-only automation ops
-// (listAutomationRuns / previewAutomation). Co-located with automations.tsx
-// (the strength.tsx / company-context.tsx precedent: a row's expandable body
-// in its own file) so the screen stays legible. Both panels are pure reads;
-// neither writes.
+// The human surface for the two human-only automation ops
+// (listAutomationRuns / previewAutomation), in its own file so automations.tsx
+// stays legible. Both panels are pure reads; neither writes.
 
 type AutomationRun = components["schemas"]["AutomationRun"];
 type Outcome = AutomationRun["outcome"];

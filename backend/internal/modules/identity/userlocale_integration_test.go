@@ -95,6 +95,10 @@ func TestChoosingADisplayLanguageWritesTheSeatItsAuditAndItsEvent(t *testing.T) 
 	if seat.UserID.UUID != userID {
 		t.Errorf("the answer names user %s, want the caller %s", seat.UserID, userID)
 	}
+	if textOf(seat.GreetingName) != textOf(storedGreetingName(t, svc, userID)) {
+		t.Errorf("the answer reports greeting name %q, the seat holds %q",
+			textOf(seat.GreetingName), textOf(storedGreetingName(t, svc, userID)))
+	}
 
 	audits, events := localeLedger(t, svc, userID)
 	if audits != 1 {

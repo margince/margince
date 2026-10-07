@@ -15,11 +15,8 @@ import { meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import {
-  forgetPlatformDeclines,
-  InstallationSetup,
-  outstandingStep,
-} from "./installation-setup";
+import { InstallationSetup, outstandingStep } from "./installation-setup";
+import { forgetPlatformDeclines } from "./installation-setup.decline";
 
 afterEach(() => {
   // Every case starts with the platform question unanswered by this account.
@@ -170,6 +167,39 @@ async function reportArrived(qc: QueryClient) {
   await waitFor(() =>
     expect(qc.getQueryState(["installation-setup"])?.status).toBe("success"),
   );
+}
+
+/** Binds Gemini through the model form and waits for the ignition. */
+async function igniteGemini(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(await screen.findByLabelText("API key"), "AIza-secret");
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "Model connected" });
+}
+
+/**
+ * Holds every later read of the setup report until `answer()`, counting them,
+ * so a test can look at the screen while the re-read is in flight. With
+ * `refuseFirst`, the first read the server answers is a 500.
+ */
+function holdSetupReads({ refuseFirst = false } = {}) {
+  const serve = globalThis.fetch;
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  let reads = 0;
+  vi.stubGlobal("fetch", async (request: Request, init?: RequestInit) => {
+    if (!new URL(request.url).pathname.endsWith("/installation/setup")) {
+      return serve(request, init);
+    }
+    reads += 1;
+    await held;
+    if (refuseFirst && reads === 1) {
+      return jsonResponse({ title: "refused" }, 500);
+    }
+    return serve(request, init);
+  });
+  return { answer, count: () => reads };
 }
 
 describe("the first-run setup gate", () => {
@@ -388,6 +418,94 @@ describe("the first-run setup gate", () => {
     expect(writes[1].url).toBe("/v1/ai/routing");
   });
 
+  it("drops the step's status line once the binding lands", async () => {
+    const user = userEvent.setup();
+    mount(setupReport(false, false));
+    expect(await screen.findByText("No model connected")).toBeTruthy();
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("No model connected")).toBeNull();
+  });
+
+  // The pressed Continue unmounts with the form, so focus is handed to the
+  // title a screen reader reads the ignition from, in order.
+  it("hands the reader to the stage title when the ignition starts", async () => {
+    const user = userEvent.setup();
+    mount(setupReport(false, false));
+    await user.type(await screen.findByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    const title = await screen.findByRole("heading", {
+      name: "Model connected",
+    });
+    expect(document.activeElement).toBe(title);
+  });
+
+  // The report is re-read only once the reader presses past the ignition, and
+  // until it answers it still asks for the model: letting go first would draw
+  // the model form again for the round trip.
+  it("holds the ignition until the next question arrives, then hands the reader to it", async () => {
+    const user = userEvent.setup();
+    const report = setupReport(false, false);
+    mount(report);
+    await igniteGemini(user);
+
+    const reads = holdSetupReads();
+    report.steps[0].configured = true;
+    report.complete = true;
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    // Held while the server is asked, so a second press is not a second ask,
+    // and the wait is said to a reader who cannot see the spinner.
+    const carryOn = screen.getByRole("button", { name: "Continue" });
+    await user.click(carryOn);
+    expect(reads.count()).toBe(1);
+    const described = (carryOn.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map((id) => document.getElementById(id)?.textContent);
+    expect(described).toContain("Checking setup…");
+    expect(
+      screen.getByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+
+    reads.answer();
+    const next = await screen.findByRole("heading", {
+      name: "What does your company run on?",
+    });
+    expect(document.activeElement).toBe(next);
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+  });
+
+  // A failed re-read leaves the stale report, which still asks for a model
+  // that is bound. The ignition stands, says so, and the press is the retry.
+  it("keeps the ignition standing when the re-read fails, and the press retries", async () => {
+    const user = userEvent.setup();
+    const report = setupReport(false, false);
+    mount(report);
+    await igniteGemini(user);
+
+    const reads = holdSetupReads({ refuseFirst: true });
+    report.steps[0].configured = true;
+    report.complete = true;
+    reads.answer();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "What does your company run on?",
+      }),
+    ).toBeTruthy();
+    expect(reads.count()).toBe(2);
+  });
+
   // Every chat tier, not just one. A half-bound installation answers for one
   // task and refuses another, with nothing on screen saying which was configured.
   it("binds every chat tier and the embedding lane", async () => {
@@ -440,6 +558,68 @@ describe("the first-run setup gate", () => {
     expect(routing.embeddings.base_url).toBe("https://openrouter.ai/api");
   });
 
+  // The residency choice binds under the profile it was offered as, at a
+  // location, keyed by a service-account file rather than a pasted key.
+  it("binds Gemini on Vertex in the EU under eu_hosted, keyed by the key file", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Provider" }),
+      "Gemini on Vertex AI (EU data residency)",
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Location" }).textContent,
+    ).toContain("eu");
+    const keyFile = JSON.stringify({
+      type: "service_account",
+      client_email: "m@acme-eu.iam.gserviceaccount.com",
+      private_key: "-----BEGIN PRIVATE KEY-----",
+    });
+    await user.click(screen.getByLabelText("Service-account key (JSON)"));
+    await user.paste(keyFile);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(2));
+    expect(writes[0]).toEqual({
+      url: "/v1/ai/provider-keys/gemini_vertex",
+      body: { service_account_json: keyFile },
+    });
+    const routing = writes[1].body as {
+      profile: string;
+      tiers: Record<string, { provider: string; location?: string }>;
+      embeddings: { provider: string; location?: string };
+    };
+    expect(routing.profile).toBe("eu_hosted");
+    for (const bound of Object.values(routing.tiers)) {
+      expect(bound).toMatchObject({
+        provider: "gemini_vertex",
+        location: "eu",
+      });
+    }
+    // The EU multi-region serves no embedder, so that lane sits in an EU region.
+    expect(routing.embeddings).toMatchObject({
+      provider: "gemini_vertex",
+      location: "europe-west4",
+    });
+  });
+
+  it("refuses a pasted key file that is not JSON before writing anything", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Provider" }),
+      "Gemini on Vertex AI (EU data residency)",
+    );
+    await user.click(screen.getByLabelText("Service-account key (JSON)"));
+    await user.paste("AIza-an-api-key");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText(/this is not json/i)).toBeTruthy();
+    expect(writes.length).toBe(0);
+  });
+
   // Continue is always pressable. Pressing it early is how a reader learns
   // what is missing: the field turns red and the rail names it, and nothing is
   // written — a grey button would have said only that something is wrong.
@@ -485,6 +665,26 @@ describe("the first-run setup gate", () => {
     expect(
       screen.getByRole("button", { name: "Continue" }).getAttribute("disabled"),
     ).toBeNull();
+  });
+
+  it("holds no copy of a stored key in the mutation cache when the binding fails", async () => {
+    const user = userEvent.setup();
+    const { writes, qc } = mount(setupReport(false, false), ["/ai/routing"]);
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(2));
+
+    await waitFor(() =>
+      expect(
+        JSON.stringify(
+          qc
+            .getMutationCache()
+            .getAll()
+            .map((m) => m.state.variables),
+        ),
+      ).not.toContain("AIza-secret"),
+    );
   });
 
   // A first-time admin should not have to know a model id by heart. The sheet

@@ -126,6 +126,8 @@ func TestRouteLeadMatchFiresForEveryLeadSomebodyAskedFor(t *testing.T) {
 		{"an inbound capture", json.RawMessage(`{"source_system":"gmail"}`), true},
 		{"a website read", json.RawMessage(`{"source_system":"siteread"}`), false},
 		{"a crawl", json.RawMessage(`{"source_system":"crawl"}`), false},
+		{"a historical import", json.RawMessage(`{"source_system":"mirror:hubspot"}`), false},
+		{"another historical source", json.RawMessage(`{"source_system":"mirror:legacy"}`), false},
 	}
 	for _, tc := range cases {
 		matched, err := routeLeadCreateTask{}.Match(context.Background(), workflow.Event{Payload: tc.payload})

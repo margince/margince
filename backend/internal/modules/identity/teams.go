@@ -22,7 +22,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -272,36 +271,18 @@ func (s *Service) recordTeamChange(ctx context.Context, tx pgx.Tx, actor Identit
 // team too. Walking it here alone would make this answer wider than the
 // predicate that decides what the reader then reads.
 func (s *Service) SharesLiveTeamWithCaller(ctx context.Context, other ids.UserID) (bool, error) {
-	// Refuses an agent seat and a Deal Room buyer. It admits the system and
-	// connector principals, which is why the seated-identity check follows: a
-	// background pass has no place on the chart to answer from.
-	if err := auth.RequireHuman(ctx); err != nil {
+	me, err := teamMembershipHuman(ctx)
+	if err != nil {
 		return false, err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return false, apperrors.ErrPermissionDenied
-	}
-	me := ids.From[ids.UserKind](actor.UserID)
-	// Asking about themselves needs no query: a reader is their own teammate,
-	// and the caller need not special-case it.
-	if me == other {
+	if me == other.UUID {
 		return true, nil
 	}
 	var shares bool
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The other party must be a LIVE seat, not merely a row.
-		// team_membership survives a deactivation — SetTeamMember refuses to
-		// ADD a suspended member but nothing removes one who leaves — so a
-		// membership-only answer would call a departed colleague a teammate,
-		// and the callers act on that: one opens their queue, the other puts a
-		// notice in it that nobody will ever read.
-		return tx.QueryRow(ctx, `SELECT EXISTS (
-		         SELECT 1 FROM team_membership ma
-		           JOIN team_membership mb ON mb.team_id = ma.team_id AND mb.user_id = $2
-		           JOIN team t ON t.id = ma.team_id AND t.archived_at IS NULL
-		           JOIN app_user u ON u.id = mb.user_id AND `+LiveMemberSQL("u")+`
-		          WHERE ma.user_id = $1)`, me, other).Scan(&shares)
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		shares, err = SharesLiveTeamWithCallerTx(ctx, tx, other)
+		return err
 	})
 	return shares, err
 }
@@ -319,22 +300,11 @@ func (s *Service) SharesLiveTeamWithCaller(ctx context.Context, other ids.UserID
 // the answer to "may I read this team" is no either way, and distinguishing the
 // two would tell an outsider which team ids are real.
 func (s *Service) CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if _, err := teamMembershipHuman(ctx); err != nil {
 		return false, err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return false, apperrors.ErrPermissionDenied
-	}
-	me := ids.From[ids.UserKind](actor.UserID)
 	var member bool
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT EXISTS (
-		         SELECT 1 FROM team_membership m
-		           JOIN team t ON t.id = m.team_id AND t.archived_at IS NULL
-		           JOIN app_user u ON u.id = m.user_id AND `+LiveMemberSQL("u")+`
-		          WHERE m.team_id = $1 AND m.user_id = $2)`, team, me).Scan(&member)
-	})
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error { var err error; member, err = CallerLeadsLiveTeamTx(ctx, tx, team); return err })
 	return member, err
 }
 
@@ -342,8 +312,10 @@ func (s *Service) CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool,
 func validTeamName(raw string) (string, error) {
 	name := strings.TrimSpace(raw)
 	if name == "" || utf8.RuneCountInString(name) > maxTeamName {
-		return "", &values.ParseError{Field: "name", Code: "invalid_team_name",
-			Message: fmt.Sprintf("a team name is 1 to %d characters", maxTeamName)}
+		return "", &values.ParseError{
+			Field: "name", Code: "invalid_team_name",
+			Message: fmt.Sprintf("a team name is 1 to %d characters", maxTeamName),
+		}
 	}
 	return name, nil
 }

@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -164,7 +165,8 @@ func (o ownDomainReader) ReaderAddresses(
 // needing one gate per independently-built store.
 func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithBaseCurrency(identity.BaseCurrencyOf)
+		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithBaseCurrency(identity.BaseCurrencyOf).
+		WithRuleUses(ruleUsesOf(pool))
 }
 
 // dealWorthTodaySQL is what the filter builder's deal amount compares: the
@@ -190,7 +192,7 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireStagedSurfaces(pool)
 	s.wireAnalyticsSurface(pool)
-	s.wireCaptureSettingsSurface(pool)
+	s.wireCaptureSettingsSurface(pool, log)
 	s.wireExportSurface(pool, log)
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
@@ -220,8 +222,11 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 // across the literal and here would put half of that seam out of sight of the
 // other half.
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
+	reportingService := newReportingService(pool, time.Now)
+	s.reportingHandlers = reporting.NewHandlers(reportingService)
+	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.forecastHandlers = forecasting.NewHandlers(
-		forecasting.NewStore(InstallationDB(pool)),
+		newForecastStoreFor(pool),
 		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure,
 		func() time.Time { return time.Now().UTC() },
@@ -231,16 +236,17 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	// reader, which is its own change.
 	s.analyticsQueryHandlers = newAnalyticsQueryHandlers(
 		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)))
+	s.reportMetrics = reportingService
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
-		forecasting.NewStore(InstallationDB(pool)),
+		newForecastStoreFor(pool),
 		func() time.Time { return time.Now().UTC() },
 	)
 }
 
-func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
+func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger) {
 	// The workspace capture-settings surface (CAP-WIRE-7, ADR-0072):
 	// read the auto-enrich posture (all roles), toggle it (admin/ops).
 	s.captureSettingsHandlers = captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(pool))}
@@ -257,12 +263,12 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// WithCatalogue wires the public OpenRouter model read unconditionally: it
 	// needs no tenant credential, so there is no "no provider connected"
 	// configuration to honor here.
-	catalogue := ai.NewModelCatalogue(systemClock{})
-	routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(catalogue)
+	s.priceCatalogues = newAIPriceCatalogues()
+	routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(s.priceCatalogues.broker)
 	s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
-	// The price refresh reads the same bindings and the same broker list, so
-	// its 15-minute cache is the picker's too.
-	s.voiceHandlers = s.WithCatalogueRefresh(routing, catalogue)
+	// The sync reads the picker's broker cache. s.vault is nil until WithKeyvault,
+	// which rebuilds the sync over the vault it brings.
+	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, config.FromOS, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
@@ -307,6 +313,12 @@ func (s *Server) wireExportSurface(pool *pgxpool.Pool, log *slog.Logger) {
 	s.filterPreviewHandlers = filterPreviewHandlers{
 		pool:        pool,
 		collections: collectionsStore,
+	}
+	// The lane stays nil until WithFilterProposals binds one, which is the
+	// no-model answer: a 409 saying a model is needed, never a 500.
+	s.filterProposalHandlers = filterProposalHandlers{
+		pool: pool, collections: collectionsStore, now: time.Now,
+		labels: catalogLabels(customfields.NewService(pool, nil)),
 	}
 	s.exportBundleHandlers = newExportBundleHandlers(pool, log)
 }
@@ -364,6 +376,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		clearHold: activities.ClearCounterpartyHoldTx,
 	}
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool)
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
@@ -403,12 +416,11 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// so it needs no pool of its own. Nil lane here for the same reason as the
 	// brief's: WithAccountDraft binds the api role's, and without it the
 	// endpoint answers from its deterministic floor rather than 501-ing.
-	s.accountDraftHandlers = accountdraft.NewHandlers(
-		accountdraft.NewService(s.company360Svc, nil).
-			WithEnvelope(draftEnvelope(pool, s.log)).
-			WithEmailSummaries(emailRows(pool)).
-			WithDossier(s.companyDossierSvc),
-	)
+	s.firstDrafts.account = accountdraft.NewService(s.company360Svc, nil).
+		WithEnvelope(draftEnvelope(pool, s.log)).
+		WithEmailSummaries(emailRows(pool)).
+		WithDossier(s.companyDossierSvc)
+	s.accountDraftHandlers = accountdraft.NewHandlers(s.firstDrafts.account)
 	s.company360Handlers = company360.NewHandlers(s.company360Svc)
 	// The contact page is the company page's sibling, so it is wired here
 	// rather than beside the handler sets.

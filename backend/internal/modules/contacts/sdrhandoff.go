@@ -32,6 +32,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -148,7 +149,7 @@ func (s *Store) SubmitHandoff(ctx context.Context, in NewSDRHandoff) (ids.UUID, 
 		).Scan(&id); err != nil {
 			return fmt.Errorf("contacts: submitting the handoff: %w", err)
 		}
-		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, nil, in.Note, actor.ID); err != nil {
+		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, nil, in.Note, actor.ID, s.clock().UTC()); err != nil {
 			return err
 		}
 		if _, err := storekit.AuditEvent(ctx, tx, "create", "sdr_handoff", id, map[string]any{
@@ -241,7 +242,7 @@ func (s *Store) DecideHandoff(ctx context.Context, id ids.UUID, in HandoffDecisi
 		if tag.RowsAffected() == 0 {
 			return handoffDecisionMiss(ctx, tx, id)
 		}
-		if err := appendHandoffEvent(ctx, tx, id, in.Status, in.ReasonID, kind, in.Note, actor.ID); err != nil {
+		if err := appendHandoffEvent(ctx, tx, id, in.Status, in.ReasonID, kind, in.Note, actor.ID, s.clock().UTC()); err != nil {
 			return err
 		}
 		if _, err := storekit.AuditEvent(ctx, tx, "update", "sdr_handoff", id, map[string]any{
@@ -295,13 +296,28 @@ func validateHandoffDecision(in HandoffDecision) error {
 // appendHandoffEvent records one transition. Both writers go through it, so the
 // submission and every later decision cannot come to be recorded two ways.
 func appendHandoffEvent(
-	ctx context.Context, tx pgx.Tx, id ids.UUID, status string, reasonID *ids.UUID, reasonKind *string, note, actor string,
+	ctx context.Context, tx pgx.Tx, id ids.UUID, status string, reasonID *ids.UUID, reasonKind *string, note, actor string, at time.Time,
 ) error {
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO sdr_handoff_event (handoff_id, to_status, reason_id, reason_applies_to, note, actor)
-		VALUES ($1, $2, $3, $4, nullif($5, ''), $6)`, id, status, reasonID, reasonKind, note, actor); err != nil {
+	var dealID, submitterID *ids.UUID
+	if err := tx.QueryRow(ctx, "SELECT deal_id,submitted_by FROM sdr_handoff WHERE id="+storekit.Placeholders([]ids.UUID{id}), id).Scan(&dealID, &submitterID); err != nil {
+		return fmt.Errorf("contacts: reading the handoff transition context: %w", err)
+	}
+	if dealID != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "deal", *dealID); err != nil {
+			return err
+		}
+	}
+	var eventNote *string
+	if note != "" {
+		eventNote = &note
+	}
+	args := []any{id, status, reasonID, reasonKind, eventNote, actor, at, dealID, submitterID}
+	if _, err := tx.Exec(ctx, `INSERT INTO sdr_handoff_event
+       (handoff_id,to_status,reason_id,reason_applies_to,note,actor,occurred_at,deal_id_at_change,submitter_id_at_change)
+       VALUES (`+storekit.Placeholders(args)+`)`, args...); err != nil {
 		return fmt.Errorf("contacts: recording the handoff transition: %w", err)
 	}
+
 	return nil
 }
 
@@ -421,7 +437,7 @@ func (s *Store) ResubmitHandoff(ctx context.Context, id ids.UUID, assignTo *ids.
 		if tag.RowsAffected() == 0 {
 			return errHandoffNotRecycled
 		}
-		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, nil, "", actor.ID); err != nil {
+		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, nil, "", actor.ID, s.clock().UTC()); err != nil {
 			return err
 		}
 		if _, err := storekit.AuditEvent(ctx, tx, "update", "sdr_handoff", id, map[string]any{

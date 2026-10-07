@@ -16,10 +16,13 @@ import {
 export function ShortlistVerb({
   recordType,
   disabled,
+  exclude,
   onPick,
 }: Readonly<{
   recordType: ListRecordType;
   disabled: boolean;
+  /** A Shortlist not to offer: the one the rows are already shown on. */
+  exclude?: string;
   onPick: (list: Readonly<{ id: string; name: string }>) => void;
 }>) {
   const t = useT();
@@ -29,7 +32,7 @@ export function ShortlistVerb({
     available,
   );
   const editable = (shortlists.data?.data ?? []).filter(
-    (list) => list.can_edit && !list.archived_at,
+    (list) => list.can_edit && !list.archived_at && list.id !== exclude,
   );
   if (!available || editable.length === 0) {
     return null;

@@ -9,6 +9,7 @@ package agents
 // matches what the tool actually does.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -52,8 +53,8 @@ func TestAnAbsentSeamRegistersNoTool(t *testing.T) {
 func TestNobodyKnowsThemIsAnAnswerNotAnError(t *testing.T) {
 	// "The account is cold" is true, useful, and exactly what a rep needs to
 	// hear. Returning an error would make the model narrate a malfunction.
-	tool := whoKnowsTool{list: func(context.Context, ids.UUID) ([]KnownColleague, bool, error) {
-		return nil, false, nil
+	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
+		return WhoKnowsReading{}, nil
 	}}
 	out, err := tool.Handle(context.Background(), json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
@@ -74,8 +75,8 @@ func TestNobodyKnowsThemIsAnAnswerNotAnError(t *testing.T) {
 // at_risk_relationships already make: a ranked list a model is handed with
 // nothing marking its cap is one it reports as the whole network.
 func TestACappedColleagueListSaysSo(t *testing.T) {
-	tool := whoKnowsTool{list: func(context.Context, ids.UUID) ([]KnownColleague, bool, error) {
-		return []KnownColleague{{UserID: ids.NewV7(), DisplayName: "Anna Weber"}}, true, nil
+	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
+		return WhoKnowsReading{Colleagues: []KnownColleague{{UserID: ids.NewV7(), DisplayName: "Anna Weber"}}, Truncated: true}, nil
 	}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	r.Register(tool)
@@ -94,8 +95,8 @@ func TestACappedColleagueListSaysSo(t *testing.T) {
 
 // And an uncapped one does not, or the warning says nothing.
 func TestAnUncappedColleagueListClaimsNoCap(t *testing.T) {
-	tool := whoKnowsTool{list: func(context.Context, ids.UUID) ([]KnownColleague, bool, error) {
-		return []KnownColleague{{UserID: ids.NewV7(), DisplayName: "Anna Weber"}}, false, nil
+	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
+		return WhoKnowsReading{Colleagues: []KnownColleague{{UserID: ids.NewV7(), DisplayName: "Anna Weber"}}, Truncated: false}, nil
 	}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	r.Register(tool)
@@ -115,9 +116,9 @@ func TestWhoKnowsRefusesAMalformedContactID(t *testing.T) {
 	// The seam is never reached with a bad id: a tool that forwarded garbage
 	// would turn a typo into a database error.
 	reached := false
-	tool := whoKnowsTool{list: func(context.Context, ids.UUID) ([]KnownColleague, bool, error) {
+	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
 		reached = true
-		return nil, false, nil
+		return WhoKnowsReading{}, nil
 	}}
 	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"contact_id":"not-a-uuid"}`)); err == nil {
 		t.Error("a malformed contact_id was accepted")
@@ -132,8 +133,8 @@ func TestTheSeamsErrorReachesTheCaller(t *testing.T) {
 	// agent told "nobody knows them" when it was actually refused would report
 	// a cold account instead of a permission problem.
 	denied := errors.New("permission denied")
-	tool := whoKnowsTool{list: func(context.Context, ids.UUID) ([]KnownColleague, bool, error) {
-		return nil, false, denied
+	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
+		return WhoKnowsReading{}, denied
 	}}
 	_, err := tool.Handle(context.Background(), json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
 	if !errors.Is(err, denied) {
@@ -318,5 +319,53 @@ func TestASweepThatCouldNotAssessADealSaysSo(t *testing.T) {
 	if _, warned := warningNamed(sealedEnvelope(t, out), warningSectionWithheld); !warned {
 		t.Error("a sweep with an unassessable deal reports no withheld warning, so its empty " +
 			"findings list reads as a clean pipeline")
+	}
+}
+
+// who_knows names the contact it answered about.
+//
+// The whole question is which HUMAN a network sits around, and an answer
+// carrying only the id has left every surface to print that id at a reader —
+// which is what the card did. CoverageSeat.ContactName makes the same argument
+// for a deal's seats; this is the sibling read.
+func TestWhoKnowsNamesTheContactItAnsweredAbout(t *testing.T) {
+	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
+		return WhoKnowsReading{
+			ContactName: "Marta Vogel",
+			Colleagues:  []KnownColleague{{UserID: ids.NewV7(), DisplayName: "Anna Weber"}},
+		}, nil
+	}}
+
+	out, err := tool.Handle(context.Background(),
+		json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
+	if err != nil {
+		t.Fatalf("who_knows answered an error: %v", err)
+	}
+	var payload struct {
+		ContactName string `json:"contact_name"`
+	}
+	if err := json.Unmarshal(out, &payload); err != nil {
+		t.Fatalf("unreadable payload: %v", err)
+	}
+	if payload.ContactName != "Marta Vogel" {
+		t.Errorf("contact_name = %q, want the name the seam read — a surface handed none prints "+
+			"the id at a reader instead", payload.ContactName)
+	}
+}
+
+// A contact the workspace holds no name for carries no name, rather than an
+// empty one a client would render as a blank where a name belongs.
+func TestWhoKnowsOmitsTheNameItDoesNotHave(t *testing.T) {
+	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
+		return WhoKnowsReading{Colleagues: []KnownColleague{}}, nil
+	}}
+
+	out, err := tool.Handle(context.Background(),
+		json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
+	if err != nil {
+		t.Fatalf("who_knows answered an error: %v", err)
+	}
+	if bytes.Contains(out, []byte(`"contact_name"`)) {
+		t.Errorf("the payload carries a contact_name key with nothing behind it: %s", out)
 	}
 }

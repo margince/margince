@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -66,14 +67,13 @@ func (h rateRefreshHandlers) ProposeFxRateRefresh(w http.ResponseWriter, r *http
 	// ByArgs uniqueness now hashes only the river:"unique"-tagged WorkspaceID
 	// (RequestedBy is provenance, untagged), so two admins refreshing the same
 	// workspace collapse to one in-flight refresh rather than racing two.
-	opts := &river.InsertOpts{
-		Queue: rateRefreshQueue,
+	opts := jobs.QueuedAs[FxRateRefreshArgs](&river.InsertOpts{
 		// One-off: an admin pressed refresh and nothing re-presses it. The
 		// sheet is diffed at the end, so a run that gives up stages nothing and
 		// the next click starts over.
 		MaxAttempts: oneOffJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}
+	})
 	if err := h.enqueue.Enqueue(ctx, args, opts); err != nil {
 		httperr.Write(w, r, err)
 		return

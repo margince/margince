@@ -34,7 +34,7 @@ const (
 	TaskEnrich Task = "enrich"
 	// TaskGrowthFit is How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it.
 	TaskGrowthFit Task = "growth_fit"
-	// TaskNlSearch is Declared, not built (ADR-0074).
+	// TaskNlSearch is A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. Nothing is saved: Save stays a human's press. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic reading of a sentence to fall back to.
 	TaskNlSearch   Task = "nl_search"
 	TaskOfferDraft Task = "offer_draft"
 	// TaskOwedVerdict is Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. An informs_us verdict ends the obligation and hides the row from the queue, never deletes or archives it, and every row it hides is counted and listed under its own figure in /worklist/hidden. It never outranks a human: a request somebody accepted stays owed whatever the verdict says. The figure is what keeps this safe: this is one model call's opinion about a customer's mail, so a wrong verdict has to be visible to the lead who reads that figure. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it.
@@ -43,7 +43,7 @@ const (
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them.
 	TaskRateExtract Task = "rate_extract"
-	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests carrying a later outbound message on the same thread, so a conversation nobody has answered is never judged here and costs nothing. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
+	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests we have since answered: our attested reply on the thread, our attested mail to the sender with the same subject, or a logged call or held meeting with the sender's contact — the answers the needs-reply check recognises. A conversation nobody has answered is never judged here and costs nothing; the off-thread answers reach the prompt marked as such, a call's or meeting's notes as its text. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
 	TaskRequestSettlement Task = "request_settlement"
 	// TaskSignalExtract is SIG-F-3: read the material events out of a settled thread — contract_ended, new_opportunity, commitment_made — each citing the message it came from. Floor 0.7; below it the event is dropped, never guessed. An event is an OBSERVATION and is written directly; what follows from one is a structural claim and stages for a human.
 	TaskSignalExtract Task = "signal_extract"
@@ -59,7 +59,7 @@ const (
 	TaskSummarize Task = "summarize"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
 	TaskTranscript Task = "transcript"
-	// TaskTranscriptPropose is S-E04.3 / MEET-AC-3/4: read the next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from (ADR-0058). Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Every proposal is a structural claim, so it STAGES for a human (approval kind transcript_proposal) and writes nothing until confirmed.
+	// TaskTranscriptPropose is the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task; a named colleague's promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task).
 	TaskTranscriptPropose Task = "transcript_propose"
 	// TaskVoiceBuild is owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Four sites: the derive pass, the two evaluation passes, and the demonstration draft the profile card shows — a built voice nobody can read a sentence of is a voice nobody can judge.
 	TaskVoiceBuild Task = "voice_build"
@@ -114,6 +114,45 @@ var taskDisplayNames = map[Task]string{
 // served saying nothing than showing the key it was handed.
 func DisplayName(t Task) string { return taskDisplayNames[t] }
 
+// taskSummaries say in plain words what each task does, for a reader
+// deciding which model should serve it.
+var taskSummaries = map[Task]string{
+	TaskAccountScan:                   "Reads an account's recent emails and pipeline to find what it needs from you.",
+	TaskAgentLoop:                     "Runs the scheduled AI agents that act on your behalf with the tools they are given.",
+	TaskBriefRanking:                  "Orders the morning brief so the most important items come first.",
+	TaskCaptureClassify:               "Sorts each incoming email and meeting into what it is about, so it lands on the right record.",
+	TaskCaptureConfidentialityVerdict: "Decides whether an email thread in a restricted mailbox is ordinary enough to open to the team.",
+	TaskCaptureCounterpartyVerdict:    "Decides who a first-time sender is — an individual, a company mailbox, a newsletter, spam — before a contact is created.",
+	TaskCertJudge:                     "Grades model answers when a model is certified for a task. Used only in testing.",
+	TaskColdStart:                     "Runs the onboarding conversation that sets up your company profile.",
+	TaskCorpusAsk:                     "Answers questions from the documents your company filed, citing where each answer comes from.",
+	TaskDealHealth:                    "Writes the deal page's status card: where the deal stands and what could lose it.",
+	TaskDocumentExtract:               "Reads an attached document, such as an invoice or order, for deal facts you can accept.",
+	TaskDraftReply:                    "Drafts emails and replies for you to review before sending.",
+	TaskEnrich:                        "Fills in a contact's title, phone and other details from their own email signature.",
+	TaskGrowthFit:                     "Judges how well a company fits what we sell.",
+	TaskNlSearch:                      "Turns a list described in plain words into filters you can check and save.",
+	TaskOfferDraft:                    "Drafts offers and quotes from a deal's details.",
+	TaskOwedVerdict:                   "Decides whether an unanswered message actually asks us for something, or only informs us.",
+	TaskProposeRoles:                  "Suggests each contact's buying role — who signs, who champions, who can block.",
+	TaskRateExtract:                   "Reads exchange rates from a published rates page for the currency refresh.",
+	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
+	TaskSignalExtract:                 "Picks out important events from a finished thread, such as a contract ending or a new opportunity.",
+	TaskSiteExtract:                   "Reads a company's website in depth, quoting the pages each fact comes from.",
+	TaskSiteFactExtract:               "Picks short, quoted facts out of each page of a company's website.",
+	TaskSiteTriage:                    "Decides what an email domain's website is — a company, a personal site or a mailbox provider — before a company is created.",
+	TaskStageEvidenceExtract:          "Reads what the buyer wrote or said against a deal stage's exit criteria.",
+	TaskSummarize:                     "Writes the short summaries shown on account, contact and deal pages.",
+	TaskTranscript:                    "Reads pasted meeting transcripts. Not in use yet.",
+	TaskTranscriptPropose:             "Reads next steps and commitments out of a meeting transcript.",
+	TaskVoiceBuild:                    "Learns your writing voice from emails you wrote, so drafts sound like you.",
+	TaskWeeklyLearnings:               "Suggests what last week's results teach for the week ahead.",
+	TaskWeeklyReview:                  "Writes the one or two sentences that open your weekly review.",
+}
+
+// Summary is what this task does, in plain words; empty for an unknown task.
+func Summary(t Task) string { return taskSummaries[t] }
+
 // ExecutionMode distinguishes request-bound work from work carried by a
 // durable background job. Budget exhaustion degrades the former and
 // defers the latter.
@@ -139,7 +178,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "e62a4d8789784f6bc2736d434f3954a0eb9682eb2880c3d75df2b1ec89062ce6"
+const TaskContractHash = "bb16b18f9270e3f587916f05013bf4d4a17a8c64f09f30b7cd8d32b06c2025e9"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -296,7 +335,7 @@ var taskStatus = map[Task]string{
 	TaskDraftReply:                    "shipped",
 	TaskEnrich:                        "shipped",
 	TaskGrowthFit:                     "shipped",
-	TaskNlSearch:                      "planned",
+	TaskNlSearch:                      "shipped",
 	TaskOfferDraft:                    "shipped",
 	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
@@ -388,6 +427,9 @@ var taskSites = map[Task][]Site{
 	},
 	TaskGrowthFit: {
 		{Name: "growth_fit", Kind: "one_shot"},
+	},
+	TaskNlSearch: {
+		{Name: "filter_propose", Kind: "one_shot"},
 	},
 	TaskOfferDraft: {
 		{Name: "draft", Kind: "one_shot"},
@@ -562,7 +604,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskDraftReply:                    {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},
 	TaskEnrich:                        {TokenBudget: 0, Conditional: false},
 	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
-	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
+	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: true},
 	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
 	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},

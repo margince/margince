@@ -17,30 +17,35 @@ const KEYS = {
       provider: "gemini",
       configured: true,
       env_var: "GEMINI_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai_compatible",
       configured: true,
       env_var: "OPENAI_COMPATIBLE_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "anthropic",
       configured: true,
       env_var: "ANTHROPIC_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai",
       configured: false,
       env_var: "OPENAI_API_KEY",
+      usable: false,
       optional: false,
     },
     {
       provider: "jev",
       configured: false,
       env_var: "TYPESAFE_API_KEY",
+      usable: false,
       optional: false,
     },
   ],
@@ -105,7 +110,7 @@ function stub(allow: GrantSpec = WRITER) {
 }
 
 const meta: Meta<typeof AiProviderKeysCard> = {
-  title: "Settings/AI/Models and routing/Providers and prices",
+  title: "Settings/AI/AI models/Providers and prices",
   component: AiProviderKeysCard,
   parameters: { layout: "padded" },
 };
@@ -117,7 +122,12 @@ const openSheet =
   async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: `Manage ${name}` }),
+      within(await body.findByTestId(`ai-provider-row-${name}`)).getByRole(
+        "button",
+        {
+          name: /^Edit/,
+        },
+      ),
     );
   };
 

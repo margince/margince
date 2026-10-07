@@ -5,14 +5,15 @@
 
 package gates
 
-// Contact-satellite lifecycle reach as a fitness function. piicoverage_test.go
-// proves Art. 17 erasure and Art. 15 SAR reach every table its registry
-// declares PII-bearing; it says nothing about the three OTHER lifecycle paths a
-// contact's child rows ride — the retention anonymizer, the merge relink, and the
-// archive cascade. Those are where a new satellite rots invisibly: a satellite
-// nobody archived stays live under an archived Contact, and one nobody relinked
-// is orphaned on the merged-away half. Neither errors, and neither is visible
-// until someone reads the row that should be gone.
+// Every table with a contact_id column is reached by the retention anonymizer,
+// the merge relink and the archive cascade, or says why not.
+// piicoverage_test.go proves Art. 17 erasure and Art. 15 SAR reach every table
+// its registry declares PII-bearing; it says nothing about the three OTHER
+// lifecycle paths a contact's child rows ride — the retention anonymizer, the
+// merge relink, and the archive cascade. Those are where a new satellite rots
+// invisibly: a satellite nobody archived stays live under an archived Contact,
+// and one nobody relinked is orphaned on the merged-away half. Neither errors,
+// and neither is visible until someone reads the row that should be gone.
 //
 // The obligations are DERIVED, never listed:
 //
@@ -158,6 +159,7 @@ const (
 // merge's own transaction.
 var carriedThroughAPort = map[string]portCarry{
 	"communication_suppression": {consentPkg, "Store.CarryStopsTx", "holdsALiveStop"},
+	"communication_override":    {consentPkg, "Store.CarryOverridesTx", "holdsALiveOverride"},
 	"withdrawal_credential":     {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"preference_token":          {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"confirm_token":             {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},

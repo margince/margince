@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { ThemeToggle } from "../app/theme-toggle";
 import { AmbientWaves } from "./ambient-waves";
@@ -10,9 +17,10 @@ import { Logomark } from "./logomark";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
 import "./onboarding-stage.css";
 import { Heading } from "./heading";
+import { useScrollRegion } from "./scrollregion";
 
 /**
- * The room every onboarding question is asked in, before the workbench.
+ * The room every onboarding question is asked in.
  *
  * ONE STAGE, NOT FOUR COLUMNS. First run, the gate and the payoff each had
  * their own full-viewport frame, and the three disagreed about everything a
@@ -53,6 +61,29 @@ export type StageProgress = Readonly<{ steps: readonly string[]; at: number }>;
  * renamed.
  */
 export const STAGE_TITLE_ID = "ob-stage-title";
+
+/**
+ * Hands the reader to the stage headline whenever `board` (the caller's name
+ * for what the board shows) changes. A swap unmounts the control just pressed,
+ * so focus would fall to the body and a screen reader go quiet; from the title
+ * it reads the new board in order. The first board is an arrival, not a swap.
+ *
+ * Opt-in rather than the stage's own rule, because a flow that moves focus
+ * into its board itself (the conversation's entries) would be fought by it.
+ */
+export function useStageTitleFocus(board: string | undefined): void {
+  const shown = useRef(board);
+  useEffect(() => {
+    const swapped =
+      shown.current !== undefined &&
+      board !== undefined &&
+      shown.current !== board;
+    if (swapped) {
+      document.getElementById(STAGE_TITLE_ID)?.focus();
+    }
+    shown.current = board;
+  }, [board]);
+}
 
 /**
  * The Core's element id, for a surface that has to send something TO it.
@@ -104,15 +135,20 @@ function StageBand({
         {/* What the reader is doing here at all, beside whose software it is.
             The stop and the sub-step trail it muted: a masthead names the place
             first and the position second, and the position is also what the
-            dashes are for. */}
+            dashes are for. The separator is held to its name, so a band that
+            wraps never strands a dot on a line of its own. */}
         <span className="ob-stage-flow">{flow}</span>
         {progress === undefined && step === undefined ? null : (
           <span className="ob-stage-step">
-            · {step ?? progress?.steps[progress.at]}
+            ·{"\u00a0"}
+            {step ?? progress?.steps[progress.at]}
           </span>
         )}
         {where === undefined ? null : (
-          <span className="ob-stage-where">· {where}</span>
+          <span className="ob-stage-where">
+            ·{"\u00a0"}
+            {where}
+          </span>
         )}
       </p>
       {progress === undefined ? null : (
@@ -140,14 +176,20 @@ function StageBand({
             {coreStateLabel}
           </p>
         )}
-        {aside}
-        {/* Setup is railless: no top bar, so without this the reader meets nine
-            screens in a row with no way to change a theme they can already see.
-            The STAGE owns it rather than each screen passing one, because it is
-            true of every onboarding screen and a per-caller prop is a rule that
-            holds until the screen that forgets it. */}
-        <span className="ob-stage-rule" aria-hidden="true" />
-        <ThemeToggle />
+        {/* One item, so a wrapping slot breaks after the state in words and
+            never strands the theme toggle on a line of its own. */}
+        <div className="ob-stage-tools">
+          {aside}
+          {/* Setup is railless: no top bar, so without this the reader meets
+              nine screens in a row with no way to change a theme they can
+              already see. The STAGE owns it rather than each screen passing one,
+              because it is true of every onboarding screen and a per-caller prop
+              is a rule that holds until the screen that forgets it. */}
+          <span className="ob-stage-pref">
+            <span className="ob-stage-rule" aria-hidden="true" />
+            <ThemeToggle />
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -308,6 +350,12 @@ export function OnboardingStage({
   // The rail's action cell, handed to whichever step is on the board so it
   // can put its own way onward there — see StageActions.
   const [actsSlot, setActsSlot] = useState<HTMLElement | null>(null);
+  const board = useRef<HTMLDivElement>(null);
+  const boardRegion = useScrollRegion(
+    board,
+    { labelledBy: STAGE_TITLE_ID },
+    "block",
+  );
   return (
     <div className="ob-page">
       {/* The ground the card stands on, the same one the sign-in surface has.
@@ -352,7 +400,11 @@ export function OnboardingStage({
               feed={coreFeed}
             />
           </div>
-          <div className="ob-stage-board arrive-stack">
+          <div
+            ref={board}
+            className="ob-stage-board arrive-stack"
+            {...boardRegion}
+          >
             {eyebrow === undefined ? null : (
               <Eyebrow as="h2">{eyebrow}</Eyebrow>
             )}
@@ -365,6 +417,7 @@ export function OnboardingStage({
               size="xlarge"
               className="ob-stage-title"
               id={STAGE_TITLE_ID}
+              tabIndex={-1}
             >
               {title}
             </Heading>

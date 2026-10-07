@@ -57,13 +57,6 @@ type refreshRequest struct {
 	Scopes            []string
 	Resource          string
 	CanonicalResource string
-	// AccessTokenTTL is the operator's configured access-token lifetime
-	// (--oauth-access-token-ttl), nil when unset. It rides the request for
-	// the same reason CanonicalResource does: it is deployment
-	// configuration the transport holds, and a rotation that ignored it
-	// would hand back a 30-day passport an hour after the operator
-	// shortened the one the exchange minted.
-	AccessTokenTTL *time.Duration
 }
 
 // lockedGrant is the presented refresh row together with the consent above
@@ -190,7 +183,7 @@ func (s *Service) rotateRefreshTokenTx(
 	if err != nil {
 		return IssuedPassport{}, "", false, err
 	}
-	issued, refresh, err = spendAndReissue(writeCtx, tx, locked, scopes, in.AccessTokenTTL)
+	issued, refresh, err = spendAndReissue(writeCtx, tx, locked, scopes)
 	return issued, refresh, false, err
 }
 
@@ -335,9 +328,9 @@ func narrowedScopes(requested, granted []string) ([]string, error) {
 // passports the token minted are retired and one fresh passport takes their
 // place. All of it in the caller's transaction, so no commit can leave a
 // connector holding two live passports, or a successor whose predecessor is
-// still spendable. accessTokenTTL is the operator's configured lifetime for the
-// fresh passport, nil for the mint's own default.
-func spendAndReissue(ctx context.Context, tx pgx.Tx, l lockedGrant, scopes []string, accessTokenTTL *time.Duration) (IssuedPassport, string, error) {
+// still spendable. The fresh passport lives as long as the installation's
+// access-token setting says now, not as long as the one it replaces did.
+func spendAndReissue(ctx context.Context, tx pgx.Tx, l lockedGrant, scopes []string) (IssuedPassport, string, error) {
 	// Conditional UPDATE with the row count asserted: belt-and-braces BEHIND
 	// the lock, not instead of it — the same shape consumeAuthCode uses to
 	// keep a single-use credential single-use.
@@ -383,8 +376,12 @@ func spendAndReissue(ctx context.Context, tx pgx.Tx, l lockedGrant, scopes []str
 		return IssuedPassport{}, "", err
 	}
 	label := oauthPassportLabel(l.clientID)
+	ttl, err := oauthAccessTokenTTL(ctx, tx)
+	if err != nil {
+		return IssuedPassport{}, "", err
+	}
 	issued, err := mintPassport(ctx, tx, l.identity(),
-		IssuePassportInput{Label: &label, Scopes: scopes, TTL: accessTokenTTL}, &l.grantID)
+		IssuePassportInput{Label: &label, Scopes: scopes, TTL: &ttl}, &l.grantID)
 	if err != nil {
 		return IssuedPassport{}, "", err
 	}

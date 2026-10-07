@@ -49,7 +49,8 @@ func buildCatalog() map[Language]Copy {
 type writeLine = func(field func(*Copy) *string, english, german, vietnamese string)
 
 // resetLines is the password reset a colleague asked for.
-// unsubscribeLines is the footer beneath an outgoing message.
+// unsubscribeLines is what a send adds beneath the message: the closing for a
+// sender with no signature, and the unsubscribe footer.
 func unsubscribeLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.UnsubscribeLabel },
 		"Unsubscribe",
@@ -59,6 +60,10 @@ func unsubscribeLines(line writeLine) {
 		"Manage your preferences",
 		"E-Mail-Einstellungen verwalten",
 		"Quản lý tùy chọn email")
+	line(func(c *Copy) *string { return &c.SignOffClosing },
+		"Best regards,",
+		"Viele Grüße,",
+		"Trân trọng,")
 }
 
 func resetLines(line writeLine) {

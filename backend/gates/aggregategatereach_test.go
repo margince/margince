@@ -5,7 +5,7 @@
 
 package gates
 
-// Every job the `ci` aggregate depends on can actually RUN on the merge queue.
+// Every job the `ci` aggregate depends on can actually run on the merge queue.
 //
 // `ci` is the single required status check, and scripts/ci-verdict.sh refuses any
 // result other than `success` on `merge_group` — because GitHub counts a skipped

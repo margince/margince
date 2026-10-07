@@ -111,22 +111,29 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 		return PreparedSend{}, err
 	}
 
-	// The sender's own sign-off, appended by the SERVER rather than written by
-	// the model or typed by the rep.
-	//
-	// Every drafting prompt in this product tells the model not to write one —
-	// "the composer adds the sender's own; a name you guessed would go out over
-	// the wrong signature" — and until now nothing did, so every message went
-	// out unsigned and the instruction described a step that did not exist.
-	//
-	// Before deliverability, so the signature sits under the message and ABOVE
-	// the unsubscribe footer. A sign-off below the legal footer reads as part of
-	// it, which is the arrangement every mail client's own "signature before
-	// quoted text" setting exists to avoid.
-	signed, err := s.signedBody(ctx, in.Body)
+	// Who the recipient sees this is from, read ONCE: the From header and a
+	// closing's name line both carry it, and two reads could give two names.
+	fromName, err := s.senderDisplayName(ctx)
 	if err != nil {
 		return PreparedSend{}, err
 	}
+
+	// The sender's own sign-off, appended by the SERVER rather than written by
+	// the model or typed by the rep.
+	//
+	// Every drafting prompt in this product tells the model not to write one,
+	// so this is the only sign-off a message carries; a human sender with no
+	// signature gets a plain closing with their name rather than none.
+	//
+	// Before deliverability, so the sign-off sits under the message and ABOVE
+	// the unsubscribe footer. A sign-off below the legal footer reads as part of
+	// it, which is the arrangement every mail client's own "signature before
+	// quoted text" setting exists to avoid.
+	sign, err := s.signOffAs(ctx, in.Body, in.Subject, fromName)
+	if err != nil {
+		return PreparedSend{}, err
+	}
+	signed := sign.under(in.Body)
 
 	// Deliverability is derived here, after the gates, so both transports
 	// get it and neither can send marketing mail without it.
@@ -159,19 +166,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	// footer, in its own syntax. Two alternatives of one message that disagreed
 	// would be two messages, and which one the recipient reads is their client's
 	// decision rather than ours — including whether they can unsubscribe.
-	htmlBody, err := s.signedHTML(ctx, safeHTML, derived)
-	if err != nil {
-		return PreparedSend{}, err
-	}
-
-	// Who the recipient sees this is from. Resolved here, beside the signature
-	// and before the transaction, because both answer "who is sending this" and
-	// a message whose header and sign-off named different contacts would be one
-	// message telling two stories.
-	fromName, err := s.senderDisplayName(ctx)
-	if err != nil {
-		return PreparedSend{}, err
-	}
+	htmlBody := signedHTML(safeHTML, sign, derived)
 
 	return PreparedSend{
 		in:        in,

@@ -235,7 +235,11 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// page of two, which is the property this budget protects rather than the
 	// absolute number. It cannot be asked per row: the word would then grow with
 	// the page, which is the shape this test exists to refuse.
-	const budget = 49
+	// 50 since the account's open commitments are counted from the claims and
+	// tasks the commitment rule files, rather than from the signal table the
+	// health facts already read: one statement over the account's employed
+	// contacts, the same one whether it employs two or two hundred.
+	const budget = 50
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

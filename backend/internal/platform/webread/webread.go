@@ -143,11 +143,20 @@ func newFetcher(transport http.RoundTripper) *Fetcher {
 		// disallow — every hop re-passes the robots gate too. The robots
 		// fetches themselves are exempt or a redirecting robots.txt would
 		// recurse into its own policy lookup.
+		//
+		// Exempt by the chain's FIRST request, not by where the hop points:
+		// a robots.txt that redirects to an ordinary page (thainakonintimex.com
+		// sends it to /TH/home.html) is still the robots fetch. Keyed on the
+		// hop's target instead, that hop asked the gate, the gate fetched
+		// robots.txt again, and that redirected again — each level a new
+		// request, so the five-hop cap never tripped, and each wrapping the
+		// error below it, so one deep read formatted half a gigabyte of error
+		// text before failing.
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return errors.New("webread: too many redirects")
 			}
-			if req.URL.Path == "/robots.txt" {
+			if via[0].URL.Path == "/robots.txt" || req.URL.Path == "/robots.txt" {
 				return nil
 			}
 			allowed, err := f.pathAllowed(req.Context(), req.URL)

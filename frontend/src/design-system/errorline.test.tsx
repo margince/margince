@@ -4,13 +4,16 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../screens/common";
 import { Button } from "./atoms";
 import { ErrorLine } from "./errorline";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function inEnglish(node: ReactNode) {
   return render(<LocaleProvider initial="en">{node}</LocaleProvider>);
@@ -96,5 +99,89 @@ describe("ErrorLine", () => {
     const line = screen.getByText("Only the owner can post here.");
     expect(line.tagName).toBe("P");
     expect(line.className).toBe("t-danger");
+  });
+});
+
+describe("ErrorLine in a dialog", () => {
+  const watchScrolls = () =>
+    vi
+      .spyOn(HTMLElement.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+
+  it("scrolls itself into view when it arrives inside a dialog", () => {
+    const scroll = watchScrolls();
+    inEnglish(
+      <div className="modal">
+        <ErrorLine>The save was refused.</ErrorLine>
+      </div>,
+    );
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(scroll.mock.calls[0]?.[0]).toMatchObject({ block: "nearest" });
+  });
+
+  it("scrolls again when the message changes, and not on a re-render of the same one", () => {
+    const scroll = watchScrolls();
+    const view = (message: string) => (
+      <LocaleProvider initial="en">
+        <div className="modal">
+          <ErrorLine>{message}</ErrorLine>
+        </div>
+      </LocaleProvider>
+    );
+    const { rerender } = render(view("First refusal."));
+    rerender(view("First refusal."));
+    expect(scroll).toHaveBeenCalledTimes(1);
+    rerender(view("Second refusal."));
+    expect(scroll).toHaveBeenCalledTimes(2);
+  });
+
+  it("scrolls for each failed attempt, even when the refusal reads the same", () => {
+    const scroll = watchScrolls();
+    const view = (error: Error) => (
+      <LocaleProvider initial="en">
+        <div className="modal">
+          <ErrorLine error={error} />
+        </div>
+      </LocaleProvider>
+    );
+    const first = new Error("The save was refused.");
+    const { rerender } = render(view(first));
+    rerender(view(first));
+    expect(scroll).toHaveBeenCalledTimes(1);
+    rerender(view(new Error("The save was refused.")));
+    expect(scroll).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops above a sticky action row by the height the row is drawn at", () => {
+    watchScrolls();
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(844);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const top = this.classList.contains("actions") ? 744 : 0;
+        return DOMRect.fromRect({ y: top, height: 844 - top });
+      },
+    );
+    inEnglish(
+      <div className="modal" style={{ overflowY: "auto" }}>
+        <div className="form-stack">
+          <ErrorLine>The save was refused.</ErrorLine>
+        </div>
+        <div className="actions" style={{ position: "sticky" }} />
+      </div>,
+    );
+    expect(screen.getByRole("alert").style.scrollMarginBlockEnd).toBe("100px");
+  });
+
+  it("leaves the page where it is outside a dialog, and for a standing state", () => {
+    const scroll = watchScrolls();
+    inEnglish(
+      <>
+        <ErrorLine>The save was refused.</ErrorLine>
+        <div className="modal">
+          <ErrorLine standing>Only the owner can post here.</ErrorLine>
+        </div>
+      </>,
+    );
+    expect(scroll).not.toHaveBeenCalled();
   });
 });

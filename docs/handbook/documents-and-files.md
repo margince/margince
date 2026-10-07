@@ -1,13 +1,12 @@
 # Documents and files
 
-Margince holds files in three different places, for three different reasons.
-Knowing which is which saves a lot of confusion.
+Margince holds files in three different places, for three different reasons:
 
-1. **Documents** on a company, a contact or a deal — the papers of the
+1. **Documents** on a company, a contact or a deal: the papers of the
    relationship.
-2. **Files** on a deal — everything the deal has picked up, including
+2. **Files** on a deal: everything the deal has picked up, including
    attachments that arrived with email.
-3. **Document sets** in Settings → Knowledge — bodies of text the whole
+3. **Document sets** in Settings → Knowledge: bodies of text the whole
    company can ask questions of.
 
 ### How do I upload a document?
@@ -36,8 +35,8 @@ A file filed on a deal can be read for deal fields and can be added to the deal'
 Also called: attach a proposal to a deal, add a file to an opportunity.
 
 ### What is the maximum file size for an upload?
-The maximum size of a document uploaded in Margince is **25 MB by default**. An operator running the installation can change it to anything between 1 MB and 100 MB, and the upload form always shows the number that installation accepts ("Up to {size}."). A larger file is refused: "The file exceeds {size}, the limit on this installation. Choose a smaller file."
-A document in a knowledge document set has a lower limit, **5 MB by default**.
+The maximum size of a document uploaded in Margince is **25 MB by default**. Whoever runs your installation can change it to anything between 1 MB and 100 MB. The upload form always shows the limit that applies ("Up to {size}."). A larger file is refused: "The file exceeds {size}, the limit on this installation. Choose a smaller file."
+A document in a knowledge document set has a lower limit, **5 MB by default**, which can also be set between 1 MB and 100 MB.
 Also called: file size limit, upload limit, how big can a file be.
 
 ## Documents
@@ -73,26 +72,22 @@ Every document carries a category:
 - **Superseded**
 
 Superseded documents are hidden by default so the list shows what is live. You
-can show them with **Show superseded** to read the history — they are not
-deleted. If everything left in a list is superseded, the app tells you rather
-than showing what looks like an empty list: "Only superseded documents remain.
+can show them with **Show superseded** to read the history; they are not
+deleted. If everything left in a list is superseded, the app tells you: "Only superseded documents remain.
 Show them to see the history."
 
 ### When an upload half-works or fails
 
 If a document is uploaded but its category and title fail to save, Margince
-tells you exactly that instead of pretending it worked: "Uploaded, but not
-filed. The file is stored and listed below, but its category and title were not
+tells you: "Uploaded, but not filed. The file is stored and listed below, but its category and title were not
 saved, so it is filed under Other."
 
-If the whole upload fails: "Upload failed. Nothing was stored." Nothing
-half-happened.
+If the whole upload fails: "Upload failed. Nothing was stored."
 
 ### Picking a deal to file against
 
-The deal search on the upload form covers a bounded number of the company's
-newest deals. It says so, with the actual numbers, rather than silently
-omitting old deals: "Search covers this company’s {deals} newest deals and
+The deal search on the upload form covers a limited number of the company's
+newest deals, and says so: "Search covers this company’s {deals} newest deals and
 shows the first {matches} matches. Older deals cannot be selected here."
 
 ## Having a file read for deal fields
@@ -113,18 +108,17 @@ Four fields can come back from a reading: **Deal name**, **Amount**,
 - **Edit** lets you correct a value before accepting it.
 - **Dismiss** writes nothing. "Nothing was saved. The file stays attached."
 
-Three outcomes are kept carefully apart, because they are three different
-answers:
+The panel tells these outcomes apart:
 
 - **Nobody has read this file yet.** "This file has not been read for deal
   fields yet."
-- **It was read and it states none of the deal fields.** "AI read this file and
+- **It was read and states no deal fields.** "AI read this file and
   found none of the deal fields."
 - **It could not be read at all.** "This file could not be read."
 
 A field the file mentions but not clearly enough is left out and labelled
 "omitted (stated, but not clearly enough to accept)". A field the file does not
-mention at all is labelled "omitted (not stated in this file)". The system does
+mention at all is labelled "omitted (not stated in this file)". Margince does
 not fill a gap with a guess.
 
 ## Files on a deal
@@ -136,12 +130,12 @@ with an attachment."
 
 So an attachment on a captured email shows up here automatically, labelled with
 where it came from: "Attachment of a message from {who}, {when}". When the
-sender is not known, it says "an unknown sender" rather than leaving it blank.
+sender is not known, it says "an unknown sender".
 
 ### How do I remove a file from a deal?
 To remove a file from a deal in Margince, open the deal's **Documents** tab, open the file's row actions in the **Files** panel, and choose **Hide from this deal** or **Delete**.
-- **Hide from this deal** — "The message and its attachment stay on the activity and in the company library. Only this deal stops listing it." Bring it back with **Show hidden files** and **Show on this deal again**.
-- **Delete** — "The file is removed from this deal, and from any Deal Room sharing it."
+- **Hide from this deal**: the deal stops listing the file at once, and the message and its attachment stay on the activity and in the company library. The toast "Hidden from this deal" offers **Undo**. Later, bring it back with **Show hidden files** and **Show on this deal again**.
+- **Delete**: asks first, "The file is removed from this deal, and from any Deal Room sharing it."
 Use hide when the file is simply not relevant here; use delete when it should not be on the deal at all.
 Also called: delete an attachment, remove a document.
 
@@ -165,8 +159,8 @@ To create a knowledge base in Margince, open **Settings → Knowledge** and fill
 Also called: knowledge base, FAQ, handbook, document library, corpus.
 
 ### Which files can a document set take?
-A document set in Margince accepts **plain text, Markdown, CSV or JSON** only: "PDF and Word files are not supported and are refused." Margince will not accept a file it cannot read and then quietly hold nothing; each refused file is named, "{filename}: {message}". To use a PDF or Word document, save it as plain text or Markdown first.
-The size limit for one document in a set is **5 MB by default**.
+A document set in Margince accepts **plain text, Markdown, CSV or JSON** only: "PDF and Word files are not supported and are refused." Each refused file is named: "{filename}: {message}". To use a PDF or Word document, save it as plain text or Markdown first.
+The size limit for one document in a set is **5 MB by default**; see [What is the maximum file size for an upload?](#what-is-the-maximum-file-size-for-an-upload).
 Also called: can I upload a PDF to the knowledge base, supported formats.
 
 ### How do I ask my documents a question?
@@ -177,41 +171,29 @@ To ask your documents a question in Margince, open the command palette and choos
 "Answers come only from one document set, questions the set does not cover are refused, and every sentence cites its passage."
 Also called: search the knowledge base, ask the handbook, FAQ.
 
-### What a document set holds
-**The size limit for one document in a set is 5 MB by default.** That is lower
-than the attachment limit on purpose: a corpus document is plain text by
-construction, and 5 MB of plain text is roughly a million words, which is well
-past any handbook. An operator can change it within the same 1–100 MB range.
-
-There is no reader for PDFs or Word files in a document set; the app refuses
-one rather than filing it empty.
-
 ### The refusal that makes it useful
 
 A document set answers only from what is filed in it, and a question it does
 not cover is refused rather than guessed at.
 
 When you ask something the set does not cover, you get **"Not covered by this
-set"** — "{name} was searched in full and has nothing close enough to answer
-this. It covers:" followed by the set's own description. Not a
-plausible-sounding paragraph assembled from nothing. This is the single most
-important property of the feature.
+set"**: "{name} was searched in full and has nothing close enough to answer
+this. It covers:" followed by the set's own description.
 
-Every sentence in an answer carries the passage it rests on. The app also
-distinguishes an answer that was written from the passages ("Written by
-Margince from your documents") from one that is just the passages themselves
-("Source passages only. No answer was written."), so you always know whether a
-model was involved.
+Every sentence in an answer carries the passage it rests on. An answer written
+from the passages says "Written by Margince from your documents". When only the
+passages are shown, it says "Source passages only. No answer was written." So
+you always know whether an AI model was involved.
 
 ### When asking cannot answer
 
-- **This set is still being read** — "{embedded} of {total} passages are
+- **This set is still being read**: "{embedded} of {total} passages are
   searchable. Retry shortly. The question is not the problem."
-- **No search index is configured** — "Nothing was searched. This installation
+- **No search index is configured**: "Nothing was searched. This installation
   has no search index configured."
-- **No document sets** — "This company has no documents yet, so there is
+- **No document sets**: "This company has no documents yet, so there is
   nothing to search."
-- **You cannot open this company’s documents** — "You do not have access to this
+- **You cannot open this company’s documents**: "You do not have access to this
   document set. An administrator can grant access."
 
 ### Documents in a set
@@ -221,37 +203,34 @@ Each document in a set moves through a visible state as it is taken in:
 - **Queued**
 - **Indexing…**
 - **Searchable**
-- **Could not be read** — with "Why this file could not be read"
+- **Could not be read**, with "Why this file could not be read"
 
 The set shows its own coverage: "{documents} documents · {embedded} of {total}
 passages searchable". If it is being re-read after a change to how text is
-indexed, it says so — "Reindexing this set" — and says no data was lost; asking
-it will report that it is not ready rather than answering from half an index.
+indexed, it says "Reindexing this set" and that no data was lost. A question
+asked meanwhile is told the set is not ready, instead of being answered from
+part of the set.
 
 ### Removing things from a document set
 
-**Archive set** — "Archive this document set? The set and its documents are no
+**Archive set**: "Archive this document set? The set and its documents are no
 longer searchable. Nothing is deleted."
 
-**Delete** a document — "Delete this document? The file, its extracted text and
+**Delete** a document: "Delete this document? The file, its extracted text and
 its search index are permanently deleted."
-
-Two clearly different acts, described as two clearly different acts.
 
 ### Who can see which sets exist
 Not everyone can see which document sets exist. If they are not yours to see,
-the Knowledge page says exactly that — "You do not have access to the list of
-document sets." — rather than showing you an empty page that reads like "there
-are none".
+the Knowledge page says "You do not have access to the list of document sets."
+instead of showing an empty page.
 
 ## Other files the product takes
 
 Margince takes files on two more upload routes, with their own limits:
 
 - **A CSV file to import** (prospects, companies or contacts), and **vCard
-  files** — 10 MB by default.
-- **Your own LinkedIn `Connections.csv`** — 8 MB by default.
+  files**: 10 MB by default.
+- **Your own LinkedIn `Connections.csv`**: 8 MB by default.
 
 All four limits (attachments, document-set documents, CSV import, LinkedIn
-import) are set per installation and must each sit between 1 MB and 100 MB.
-Above that range the answer is a different design, not a bigger number.
+import) are set per installation, each between 1 MB and 100 MB.

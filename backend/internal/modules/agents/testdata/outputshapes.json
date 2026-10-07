@@ -855,10 +855,20 @@
                     "archived": {
                       "type": "boolean"
                     },
+                    "done": {
+                      "type": "boolean"
+                    },
                     "listed": {
                       "type": "boolean"
                     },
                     "owner_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "tagged": {
+                      "type": "boolean"
+                    },
+                    "task_id": {
                       "type": "string",
                       "format": "uuid"
                     }
@@ -873,10 +883,20 @@
                     "archived": {
                       "type": "boolean"
                     },
+                    "done": {
+                      "type": "boolean"
+                    },
                     "listed": {
                       "type": "boolean"
                     },
                     "owner_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "tagged": {
+                      "type": "boolean"
+                    },
+                    "task_id": {
                       "type": "string",
                       "format": "uuid"
                     }
@@ -1806,6 +1826,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "candidate_id": {
+                  "type": "string"
+                },
                 "confidence": {
                   "type": "number"
                 },
@@ -1840,6 +1863,7 @@
                 }
               },
               "required": [
+                "candidate_id",
                 "confidence",
                 "evidence",
                 "other_record_id"
@@ -1855,6 +1879,29 @@
           },
           "record_type": {
             "type": "string"
+          },
+          "tag_offer": {
+            "type": "object",
+            "properties": {
+              "exists": {
+                "type": "boolean"
+              },
+              "may_create": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "tag_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "exists",
+              "may_create",
+              "name"
+            ]
           },
           "trust_tier": {
             "type": "string"
@@ -2604,6 +2651,101 @@
       "warnings"
     ]
   },
+  "decide_duplicate": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "disposition": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "disposition"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "demote_lead": {
     "type": "object",
     "properties": {
@@ -3252,6 +3394,12 @@
       "data": {
         "type": "object",
         "properties": {
+          "ai_disclosure": {
+            "type": "string"
+          },
+          "ai_generated": {
+            "type": "boolean"
+          },
           "body": {
             "type": "string"
           },
@@ -3278,8 +3426,21 @@
               ]
             }
           },
+          "not_saved": {
+            "type": "string"
+          },
+          "saved_draft_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "subject": {
             "type": "string"
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -3924,6 +4085,28 @@
           "scope_limited": {
             "type": "boolean"
           },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "taken_at": {
+                  "type": "string"
+                },
+                "trigger": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "taken_at",
+                "trigger"
+              ]
+            }
+          },
           "timezone": {
             "type": "string"
           },
@@ -3947,6 +4130,7 @@
           "period_start",
           "priced_count",
           "scope_kind",
+          "snapshots",
           "timezone",
           "weighted_minor",
           "won_minor"
@@ -4425,6 +4609,9 @@
           "management_token": {
             "type": "string"
           },
+          "provider": {
+            "type": "string"
+          },
           "reminder_status": {
             "type": "string"
           },
@@ -4439,6 +4626,12 @@
           },
           "version": {
             "type": "integer"
+          },
+          "video_call": {
+            "type": "boolean"
+          },
+          "video_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -5278,6 +5471,25 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ]
                 },
                 "record_type": {
                   "type": "string"
@@ -8065,6 +8277,12 @@
                   "offered"
                 ]
               },
+              "mapping": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
               "rows_read": {
                 "type": "integer"
               },
@@ -9027,6 +9245,25 @@
             "type": "string",
             "format": "uuid"
           },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_you": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "is_you"
+            ]
+          },
           "record_type": {
             "type": "string"
           },
@@ -9042,6 +9279,116 @@
           "id",
           "record_type"
         ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "read_reporting": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "catalog": {
+            "type": "object"
+          },
+          "evaluation": {
+            "type": "object"
+          },
+          "reports": {
+            "type": "object"
+          },
+          "report": {
+            "type": "object"
+          },
+          "editions": {
+            "type": "object"
+          },
+          "edition": {
+            "type": "object"
+          },
+          "evidence": {
+            "type": "object"
+          },
+          "comparison": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "evidence": {
         "type": "array",
@@ -10256,6 +10603,25 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ]
+                },
                 "record_type": {
                   "type": "string"
                 },
@@ -11328,6 +11694,9 @@
           "contact_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "contact_name": {
+            "type": "string"
           }
         },
         "required": [

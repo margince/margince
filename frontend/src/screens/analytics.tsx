@@ -5,13 +5,13 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { useRoute } from "../app/router";
-import { EmptyState, StatCard } from "../design-system/atoms";
+import { Button, EmptyState, StatCard } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Popover } from "../design-system/popover";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
-import { SurfaceState } from "../design-system/surfacestate";
 import {
   formatDateTime,
   formatMoneyCompact,
@@ -54,19 +54,19 @@ import {
   ExplainPanel,
   rowDerivationUrl,
 } from "./analytics.explain";
-import { ForecastView } from "./analytics.forecast";
+import { ForecastView, SharedForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
-import { StageAgeTable, WinLossTable } from "./analytics.performance";
+import { MyOutcomesView } from "./analytics.outcomes";
 import { QuestionsView } from "./analytics.questions";
-import {
-  FORECAST_CATEGORIES,
-  MEETING_STATUSES,
-} from "./analytics.questions.values";
+import { FORECAST_CATEGORIES } from "./analytics.questions.values";
 import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { ForecastShareActions } from "./analytics.share";
 import { QueryGate, throwProblem } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
+import { ReportingDefinitions } from "./reporting.definitions";
+import { ReportingLibrary } from "./reporting.library";
+import { ReportingOverview } from "./reporting.overview";
+import { ReportingTargets } from "./reporting.targets";
 import "./analytics.css";
 
 // Analytics: a picker over three reports — deals-by-stage (unweighted beside
@@ -102,8 +102,6 @@ type ReportKey =
   | "pipeline-current"
   | "forecast"
   | "open-deals-per-company"
-  | "win-loss"
-  | "stage-age"
   | "projects-by-phase"
   | "project-commitments"
   | "projects-gone-quiet";
@@ -112,6 +110,9 @@ type ReportKey =
 // and the bodies both read this, so a section cannot come to list a report it
 // does not draw.
 const SECTION_REPORTS = {
+  reports: [],
+  targets: [],
+  definitions: [],
   // The forecast section draws its own view — readings, a call and a receipt,
   // none of which is a row set — so it lists no report card.
   forecast: [],
@@ -120,16 +121,13 @@ const SECTION_REPORTS = {
   // divides by category; what it is not is the forecast, which is now an
   // answer rather than a table.
   pipeline: ["pipeline-current", "forecast", "open-deals-per-company"],
-  // Closed outcomes and stage velocity: what happened, and how long things
-  // take. Both are the server's own report vocabulary — no rate or duration
-  // is computed in this file.
-  performance: ["win-loss", "stage-age"],
+  performance: [],
   // The rep's own week: a composed view like the forecast, not report cards.
   outcomes: [],
   // Source health: an ops view over the nightly check's own coverage rows.
   coverage: [],
   // What was sold becoming what is delivered: the three project reports.
-  delivery: ["projects-by-phase", "project-commitments", "projects-gone-quiet"],
+  delivery: ["project-commitments", "projects-gone-quiet", "projects-by-phase"],
   questions: [],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
@@ -154,8 +152,6 @@ const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
   "pipeline-current": ["stage_id"],
   forecast: ["forecast_category"],
   "open-deals-per-company": ["company_id", FIELD_CURRENCY],
-  "win-loss": ["status"],
-  "stage-age": ["stage_id"],
   // The specs' own defaults: an empty plan takes each report's declared
   // grouping and aggregates, which for these three is the whole point.
   "projects-by-phase": [],
@@ -179,18 +175,6 @@ function pricedFootnote(
     priced: formatNumber(pricedDeals, locale),
     total: formatNumber(total, locale),
   });
-}
-
-// What a reading says when the row it needs is not there. THREE facts, not one:
-// a read in flight resolves by waiting, a failed one never will, and a lens
-// that answered with nothing has told the truth. One word over all three said
-// "nothing to read yet" over a request that had failed.
-function absentReading(
-  query: Readonly<{ isLoading: boolean; isError: boolean }>,
-): MessageKey {
-  if (query.isLoading) return "analytics.readingLoading";
-  if (query.isError) return "analytics.readingUnavailable";
-  return "analytics.readingNone";
 }
 
 // The line under a report's title, for the reports whose copy says something
@@ -228,17 +212,6 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
   "open-deals-per-company": [
     { fn: "sum", field: "amount_minor", as: "raw_minor" },
     { fn: "count", as: "deal_count" },
-  ],
-  "win-loss": [
-    { fn: "count", as: "deal_count" },
-    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-    { fn: "median", field: "days_to_close", as: "median_days" },
-    { fn: "p75", field: "days_to_close", as: "p75_days" },
-  ],
-  "stage-age": [
-    { fn: "count", as: "deal_count" },
-    { fn: "median", field: "days_in_stage", as: "median_days" },
-    { fn: "p75", field: "days_in_stage", as: "p75_days" },
   ],
   "projects-by-phase": [],
   "project-commitments": [],
@@ -371,7 +344,9 @@ function ForecastStrip({
       {/* How to read the second figure in every slot, as the panel's one
           descriptive line: a notice box inside the panel was a pane inside a
           pane, and it outweighed the readings it was only explaining. */}
-      <PanelIntro>{t("analytics.forecastBanner")}</PanelIntro>
+      <Popover onHover label={t("analytics.weighted")}>
+        <p>{t("analytics.forecastBanner")}</p>
+      </Popover>
       {/* ONE strip, because there is now one denomination. A plate of ruled
           slots claims its figures are ONE comparison, and a strip per currency
           — the only honest way to show native sums, since adding euros to dong
@@ -717,7 +692,15 @@ function DataCoverageView({
       {(run) =>
         run == null ? (
           <Panel title={t("analytics.sectionCoverage")}>
-            <EmptyState>{t("analytics.coverageNeverRun")}</EmptyState>
+            <EmptyState>
+              {t("analytics.coverageNeverRun")}
+              <Button
+                variant="link"
+                onClick={() => openAnalyticsSection("forecast")}
+              >
+                {t("analytics.sectionForecast")}
+              </Button>
+            </EmptyState>
           </Panel>
         ) : (
           <Panel title={t("analytics.sectionCoverage")}>
@@ -753,7 +736,15 @@ function DataCoverageView({
               />
               {/* Record-level input problems live where they are answered: the
                 Forecast input review. One resolution surface, not two. */}
-              <p className="t-sub">{t("analytics.coverageInputsElsewhere")}</p>
+              <Button
+                variant="link"
+                onClick={() => openAnalyticsSection("forecast")}
+              >
+                {t("review.title")}
+              </Button>
+              {run.sources.some((source) => source.state !== "checked") && (
+                <p className="t-caption">{t("reporting.coverageAction")}</p>
+              )}
             </PanelBody>
           </Panel>
         )
@@ -785,165 +776,6 @@ function useDataCoverage() {
       return data;
     },
   });
-}
-
-type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
-
-// The seat's own outcomes: open pipeline and meetings, nothing computed here.
-//
-// Drawn only under an OWNER default lens. The report engine's population
-// default is the caller's own row scope, so for a wider lens the same
-// requests would measure a team while the heading said "my" — and there is
-// no per-report scope override on the wire to force self. The tab is hidden
-// for those lenses; a hand-typed address gets the explanation instead.
-function MyOutcomesView({
-  defaultScope,
-  locale,
-}: Readonly<{ defaultScope: AnalyticsScopeWire; locale: Locale }>) {
-  const t = useT();
-  const self = defaultScope.kind === "owner" ? (defaultScope.id ?? null) : null;
-
-  const pipelineQuery = useQuery({
-    queryKey: ["report", "pipeline-current", "outcomes", self],
-    enabled: self != null,
-    queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "pipeline-current" } },
-        body: {
-          // The seat pinned EXPLICITLY, not left to the server's default
-          // population: the default is also the caller's own today, so the
-          // two agree, but this card's heading says "my" and a heading must
-          // not be true by a coincidence this file cannot see.
-          filters: { owner_id: self },
-          aggregates: [
-            { fn: "count", as: "deal_count" },
-            { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-          ],
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  const meetingsQuery = useQuery({
-    queryKey: ["report", "activities-by-kind", "outcomes", self],
-    enabled: self != null,
-    queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "activities-by-kind" } },
-        body: {
-          filters: { kind: "meeting", host_user_id: self },
-          group_by: ["meeting_status"],
-          aggregates: [{ fn: "count", as: "meetings" }],
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  if (self == null) {
-    // A hand-typed address under a manager lens: the numbers this view could
-    // fetch would measure the default population, not the contact. `withheld`
-    // and not `empty`, which would claim they have no outcomes.
-    return (
-      <SurfaceState
-        state="withheld"
-        emptyLabel={t("common.empty")}
-        loadingLabel={t("analytics.sectionOutcomes")}
-        detail={{ withheldReason: t("analytics.outcomesOwnLensOnly") }}
-      >
-        {null}
-      </SurfaceState>
-    );
-  }
-
-  const pipelineRow = pipelineQuery.data?.rows[0];
-  const baseCurrency = pipelineQuery.data?.base_currency ?? null;
-  const noRow = t(absentReading(pipelineQuery));
-  const pipelineCount = pipelineRow
-    ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
-    : noRow;
-  const rawMinor = pipelineRow ? rowMoney(pipelineRow, "raw_minor") : null;
-  // The currency names what the figure is IN, so a read with none to name drops
-  // the parenthetical. TWO absences follow, never one word for both: no
-  // currency is a setting to fill, an absent sum is a row with no priced deal
-  // in it — and only the first has a reason worth a detail line.
-  const valueLabel = baseCurrency
-    ? t("analytics.baseValue", { currency: baseCurrency })
-    : t("analytics.baseValueUnnamed");
-  const openMoney = !baseCurrency
-    ? t("analytics.noBaseCurrency")
-    : rawMinor == null
-      ? t("analytics.forecastNoAmount")
-      : formatMoneyCompact(rawMinor, baseCurrency, locale);
-  const meetingRows = meetingsQuery.data?.rows ?? [];
-  const meetingsByStatus = new Map(
-    meetingRows
-      .filter((row) => typeof row.meeting_status === "string")
-      .map((row) => [String(row.meeting_status), rowCount(row, "meetings")]),
-  );
-
-  return (
-    <>
-      <Panel title={t("analytics.myPipeline")}>
-        <PanelBody>
-          <StatStrip>
-            {/* Both readings are one row of the pipeline report, and the
-                pipeline section draws that report — so the door is that
-                section rather than a deal list this view never queried. */}
-            <StatCard
-              narrow="row"
-              label={t("analytics.count")}
-              value={pipelineCount}
-              onOpen={() => openAnalyticsSection("pipeline")}
-            />
-            <StatCard
-              narrow="row"
-              label={valueLabel}
-              value={pipelineRow ? openMoney : noRow}
-              // WHY there is no figure, where a row came back and no currency
-              // names it: an installation that never set one is a setting away
-              // from a number, and "No amount" alone reads as a book worth
-              // nothing.
-              detail={
-                pipelineRow && !baseCurrency
-                  ? t("analytics.noBaseCurrencyWhy")
-                  : undefined
-              }
-              onOpen={() => openAnalyticsSection("pipeline")}
-            />
-          </StatStrip>
-        </PanelBody>
-      </Panel>
-      <Panel title={t("analytics.myMeetings")}>
-        <PanelBody>
-          {/* Current standing, stated as such: a held meeting was once booked
-              and the record no longer says so, so these are today's facts and
-              not a funnel. */}
-          <PanelIntro>{t("analytics.meetingsAsTheyStand")}</PanelIntro>
-          <StatStrip>
-            {MEETING_STATUSES.map((status) => (
-              <StatCard
-                key={status.key}
-                narrow="row"
-                label={t(status.labelKey)}
-                value={formatNumber(
-                  meetingsByStatus.get(status.key) ?? 0,
-                  locale,
-                )}
-              />
-            ))}
-          </StatStrip>
-        </PanelBody>
-      </Panel>
-    </>
-  );
 }
 
 // Which table a report's rows become — a switch in its own component so the
@@ -980,12 +812,6 @@ function ReportBody({
           baseCurrency={base}
         />
       );
-    case "win-loss":
-      return (
-        <WinLossTable rows={run.rows} locale={locale} baseCurrency={base} />
-      );
-    case "stage-age":
-      return <StageAgeTable rows={run.rows} stages={stages} locale={locale} />;
     case "projects-by-phase":
       return (
         <ProjectsByPhaseTable
@@ -1125,7 +951,7 @@ export function AnalyticsScreen() {
   // Read here rather than taken as a prop, so this screen stays drivable on its
   // own: a suite that renders it directly goes on pressing the tabs.
   const route = useRoute();
-  const section = sectionFromAddress(
+  const requested = sectionFromAddress(
     route.screen === "analytics" ? route.id : undefined,
   );
   // The server decides which population this reader measures and which ones
@@ -1147,28 +973,50 @@ export function AnalyticsScreen() {
     },
   });
 
-  // Sharing sits beside the tabs rather than inside a section, because the
-  // thing being shared is the SECTION the reader is on — a button that moved
-  // with the content would read as sharing one card.
+  const canReadReports = useCan("report_definition", "read");
+  const canReadTargets = useCan("sales_target", "read");
+  const canReadFramework = useCan("reporting_framework", "read");
   const canReadCoverage = useCan("data_coverage", "read");
   const coverageProbe = useDataCoverage();
+  const availableSections = SECTIONS.filter((candidate) => {
+    if (candidate === "performance") return canReadReports && canReadFramework;
+    if (candidate === "reports") return canReadReports;
+    if (candidate === "targets") return canReadTargets;
+    if (candidate === "definitions") return canReadFramework;
+    if (candidate === "outcomes") {
+      return context.data?.default_scope.kind === "owner";
+    }
+    if (candidate === "coverage") {
+      // The read starts only with the ops grant; the tab appears
+      // after the server has answered.
+      return canReadCoverage && coverageProbe.isSuccess;
+    }
+    return true;
+  });
+  const section =
+    ["performance", "reports", "targets", "definitions"].includes(requested) &&
+    !availableSections.includes(requested)
+      ? "forecast"
+      : requested;
   const header = (
     <div className="analytics-header">
       <RecordTabs
-        options={SECTIONS.filter((candidate) => {
-          if (candidate === "outcomes") {
-            return context.data?.default_scope.kind === "owner";
-          }
-          if (candidate === "coverage") {
-            // The read starts only with the ops grant; the tab appears
-            // after the server has answered.
-            return canReadCoverage && coverageProbe.isSuccess;
-          }
-          return true;
-        })}
+        options={availableSections.filter(
+          (candidate) =>
+            [
+              "performance",
+              "pipeline",
+              "forecast",
+              "reports",
+              "outcomes",
+            ].includes(candidate) || candidate === section,
+        )}
         value={section}
         onChange={openAnalyticsSection}
         labels={{
+          reports: t("reporting.reports"),
+          targets: t("reporting.targets"),
+          definitions: t("reporting.definitions"),
           forecast: t("analytics.sectionForecast"),
           pipeline: t("analytics.sectionPipeline"),
           performance: t("analytics.sectionPerformance"),
@@ -1180,19 +1028,67 @@ export function AnalyticsScreen() {
         label={t("analytics.sections")}
       />
       <div className="analytics-header-end">
-        {selection && context.data ? (
-          <AnalyticsScopePicker
-            scopes={context.data.allowed_scopes}
-            selected={selection.scope}
-            onSelect={selectScope}
-          />
-        ) : null}
-        {section === "forecast" && selection ? (
-          <ForecastShareActions target="forecast" scope={selection.scope} />
+        {(canReadTargets || canReadFramework) && (
+          <Popover label={t("reporting.settings")}>
+            {availableSections
+              .filter(
+                (candidate) =>
+                  candidate === "targets" || candidate === "definitions",
+              )
+              .map((candidate) => (
+                <Button
+                  key={candidate}
+                  variant="link"
+                  onClick={() => openAnalyticsSection(candidate)}
+                >
+                  {t(
+                    candidate === "targets"
+                      ? "reporting.targets"
+                      : "reporting.definitions",
+                  )}
+                </Button>
+              ))}
+          </Popover>
+        )}
+        <Popover label={t("reporting.additional")}>
+          {availableSections
+            .filter(
+              (candidate) =>
+                candidate === "questions" ||
+                candidate === "coverage" ||
+                candidate === "delivery",
+            )
+            .map((candidate) => (
+              <Button
+                key={candidate}
+                variant="link"
+                onClick={() => openAnalyticsSection(candidate)}
+              >
+                {t(
+                  candidate === "questions"
+                    ? "analytics.sectionQuestions"
+                    : candidate === "coverage"
+                      ? "analytics.sectionCoverage"
+                      : "analytics.sectionDelivery",
+                )}
+              </Button>
+            ))}
+        </Popover>
+        {selection && context.data && scopePickerApplies(section) ? (
+          <div className="analytics-scope-control">
+            <AnalyticsScopePicker
+              scopes={context.data.allowed_scopes}
+              selected={selection.scope}
+              onSelect={selectScope}
+            />
+          </div>
         ) : null}
       </div>
     </div>
   );
+
+  if (route.screen === "analytics" && route.id === "shared" && route.id2)
+    return <SharedForecastView token={route.id2} />;
 
   return (
     <div className="wrap">
@@ -1229,6 +1125,14 @@ function SectionBody({
   stages: readonly Stage[];
 }>) {
   switch (section) {
+    case "performance":
+      return selection ? <ReportingOverview scope={selection.scope} /> : null;
+    case "reports":
+      return <ReportingLibrary />;
+    case "targets":
+      return <ReportingTargets />;
+    case "definitions":
+      return <ReportingDefinitions />;
     case "questions":
       return selection && context ? (
         <QuestionsView
@@ -1267,4 +1171,8 @@ function SectionBody({
         </>
       );
   }
+}
+
+function scopePickerApplies(section: Section): boolean {
+  return ["performance", "forecast", "questions"].includes(section);
 }

@@ -43,7 +43,7 @@ function States() {
 }
 
 const meta: Meta<typeof States> = {
-  title: "Settings/AI/Models and routing/Task state",
+  title: "Settings/AI/AI models/Task state",
   component: States,
 };
 export default meta;

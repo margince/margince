@@ -1,50 +1,72 @@
-/* A row of bars sharing one baseline. Grid rather than flex so every column is
-   the same width regardless of how long its label is — a step whose name is
-   longer must not draw a wider bar than the one beside it. */
+.waterfall-scroll {
+  overflow-x: auto;
+  padding-block: var(--space-4) var(--space-2);
+}
 .waterfall-bars {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  align-items: end;
+  grid-auto-columns: minmax(5rem, 1fr);
   gap: var(--space-2);
-  min-height: 8rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .waterfall-bar {
-  display: grid;
-  align-content: end;
-  gap: var(--space-1);
-  height: 100%;
+  min-width: 0;
   text-align: center;
 }
-/* The label sits under the bar and may be longer than its column. It wraps
-   rather than ellipsizing: a bucket name cut to "reopened_or…" tells a reader
-   nothing, and there are few enough of them that two lines is affordable. */
-.waterfall-label {
-  order: 2;
-  overflow-wrap: anywhere;
+.waterfall-plot {
+  height: 11rem;
+  position: relative;
+  margin-inline: var(--space-2);
 }
 .waterfall-fill {
-  order: 1;
-  align-self: end;
+  position: absolute;
+  inset-inline: 0;
   min-height: 2px;
   border-radius: var(--r-sm);
-  background: var(--accent);
-}
-/* The two anchors are the totals, drawn recessed so the movement between them
-   is what the eye lands on. */
-.waterfall-anchor .waterfall-fill {
-  background: var(--borderSubtle);
 }
 .waterfall-up .waterfall-fill {
-  background: var(--success);
+  background: var(--accent);
+}
+.waterfall-anchor .waterfall-fill {
+  background: var(--accentText);
 }
 .waterfall-down .waterfall-fill {
-  background: var(--danger);
+  background: var(--warning);
+}
+.waterfall-zero,
+.waterfall-connector {
+  position: absolute;
+  inset-inline: calc(-1 * var(--space-2));
+  border-top: 1px solid var(--borderSubtle);
+}
+.waterfall-connector {
+  left: 100%;
+  right: calc(-3 * var(--space-2));
+  border-top-style: dashed;
+  border-top-color: var(--textSecondary);
+}
+.waterfall-label {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 .waterfall-warning {
   margin: var(--space-2) 0 0;
   color: var(--dangerText);
+}
+
+.waterfall-mark-action {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  padding: 0;
 }

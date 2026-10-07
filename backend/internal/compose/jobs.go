@@ -82,15 +82,23 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
+	// Schedules is the interval every {setting: …} cadence runs at, read from
+	// the admin's settings at boot and moved by its Watch while the worker
+	// runs. Nil schedules from the registered defaults.
+	Schedules *ScheduleBook
+	// ListsEnabled is lists.enabled: off, the Live List check records nothing.
+	ListsEnabled bool
 	// TestOnly is jobs.Config.TestOnly, carried here because jobtest boots its
 	// runners through NewJobRunner rather than through jobs.New — see there for
 	// what River does with it and why it keeps River's own name. Production
 	// leaves it false; TestJobRunnerConfigIsNeverSetInProduction holds that.
 	TestOnly bool
-	// SendPacing bounds how fast one mailbox transmits and how long a
-	// delivery may be deferred before it parks; the zero value takes the
-	// documented defaults (SendPacing.withDefaults).
-	SendPacing SendPacing
+	// DrainWindow is jobs.Config.SoftStopTimeout: how long a job already
+	// running when the runner stops keeps its work context. Zero leaves the
+	// runner's stop hard — every running job's work context is cancelled the
+	// moment the context the runner was started under is — which only a test
+	// harness wants.
+	DrainWindow time.Duration
 	// SendBlob is the object store the send lane AND the document reading read
 	// attachment bytes from. Both need it for the same reason — the bytes are
 	// object-store references, never rows — so they share the field rather than
@@ -128,19 +136,6 @@ type JobRunnerConfig struct {
 	// because a role that can fire a link-less message should still fire it.
 	SendOrigin SendOrigin
 
-	// CloseDateInterval is the deals close-date hygiene sweep's cadence — the
-	// operator-facing --close-date-interval. No worker is gated on it: the
-	// pass is database-only, so it registers on every role that runs jobs.
-	CloseDateInterval time.Duration
-	// ReconcileInterval is the overnight follow-up reconciliation's cadence
-	// (--reconcile-interval), on the same footing.
-	ReconcileInterval time.Duration
-	// TimeScanInterval is the automation clock-trigger scan's cadence
-	// (--time-scan-interval), on the same footing.
-	TimeScanInterval time.Duration
-	// PrivacyRetention carries the GDPR retention dispatcher's cadence
-	// (jobs_privacyretention.go).
-	PrivacyRetention PrivacyRetentionConfig
 	// WebhookRetry carries the retry dispatcher's cadence and the delivery
 	// engine one workspace's pass re-attempts through (jobs_webhookretry.go).
 	WebhookRetry WebhookRetryConfig
@@ -173,6 +168,9 @@ type JobRunnerConfig struct {
 	// could only fail every job it enqueued. Declared by omission, the posture
 	// GmailRegistry already takes.
 	ChannelVault keyvault.Vault
+	// AIKeyVault holds the sealed vendor keys the price sweep lists models with.
+	// Nil lists with the environment's keys only; the sweep still registers.
+	AIKeyVault keyvault.Vault
 	// ChannelAPI is the Telegram Bot API seam the poller dials out through. Nil
 	// takes the real client, which is what every process role passes; the
 	// acceptance suites substitute a fake, because a poller left on the real
@@ -265,10 +263,6 @@ type JobRunnerConfig struct {
 	// that geocodes nothing — an offline demo, or one that has not been given
 	// a provider — and the worker records that rather than retrying forever.
 	Geocoder geocode.Client
-	// Geocoding carries the backfill's cadence — the sweep that reaches
-	// companies whose address was written before this installation had a
-	// geocoder, and which no write will ever touch again.
-	Geocoding GeocodingConfig
 	// VatChecker asks the EU register whether a company's stated VAT ID is
 	// real. Nil in a deployment that checks nothing — an offline demo, or one
 	// that has not been given a provider — and the worker records nothing
@@ -280,11 +274,6 @@ type JobRunnerConfig struct {
 	// operator has not wired the outbound lanes — and the sweep registers
 	// nothing rather than queueing rows nobody can work.
 	TechnicalEnricher *TechnicalEnricher
-	// TechnicalEnrichment carries the refresh sweep's cadence. It is the pass
-	// that makes freshness real: a company's mail provider changes at the
-	// company, so nothing here is ever written when it does, and only coming
-	// back round observes it.
-	TechnicalEnrichment TechnicalEnrichmentConfig
 	// DocumentExtractBrain is the lane a queued document reading runs on. Nil =
 	// no AI configured, and the kind registers anyway so the reading FAILS with
 	// a message the rep can see rather than sitting queued behind a worker that
@@ -304,9 +293,6 @@ type JobRunnerConfig struct {
 	// then settles its domain from what the workspace already knows rather than
 	// leaving the question open forever.
 	DeepReadTriageBrain completer
-	// DeepReadCaps bounds each deep-read crawl; the zero value takes the
-	// compose defaults (CrawlCaps.withDefaults).
-	DeepReadCaps CrawlCaps
 	// Blobstore holds the logo bytes a deep read resolves from the site it
 	// crawls (A55). Nil is a worker role with no object store: reads still
 	// run and still land their facts, and every company keeps the monogram
@@ -376,10 +362,11 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 	}
 
 	return jobs.New(pool, jobs.Config{
-		Queues:       jobQueues(),
-		Workers:      reg.workers,
-		PeriodicJobs: periodic,
-		TestOnly:     cfg.TestOnly,
+		Queues:          jobQueues(),
+		Workers:         reg.workers,
+		PeriodicJobs:    periodic,
+		SoftStopTimeout: cfg.DrainWindow,
+		TestOnly:        cfg.TestOnly,
 	}, log)
 }
 
@@ -399,7 +386,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)
-	addGraphWatchJobs(reg, cfg, log)
+	addGraphWatchJobs(reg, pool, cfg, log)
 	addAuthzDisagreementWorker(reg, pool, log)
 	addNotificationMailJobs(reg, pool, cfg, log)
 	addNotificationDigestJobs(reg, pool, cfg, log)
@@ -423,7 +410,9 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
 		addDealScoutJobs(reg, pool, cfg, log),
+		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
+		addAIPriceSyncJobs(reg, pool, cfg, log),
 		registerTelegramPoll(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.
@@ -437,6 +426,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
+		periodicFor(cfg, ReportScheduleSweepArgs{}),
 		periodicFor(cfg, RiskVerdictSweepArgs{}),
 		periodicFor(cfg, TimeScanArgs{}),
 		periodicFor(cfg, VoiceBuildRetryArgs{}),

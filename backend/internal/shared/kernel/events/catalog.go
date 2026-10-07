@@ -39,6 +39,18 @@ var catalog = map[string]struct {
 	// the subject as stopped forever, which is the state this event exists to
 	// end.
 	"consent.suppression_lifted": {contactStreamEntity, 1},
+	// A rep recorded a standing vouch that one category's machine-level refusal
+	// may be overruled for this contact. Its own type rather than a
+	// consent.changed for the same reason consent.suppressed is: an override is
+	// not consent, it does not expire on its own, and a consumer folding it into
+	// a generic change would have no way to tell "may now write" from "may no
+	// longer write" — the two states this catalog most needs kept apart.
+	"consent.override_recorded": {contactStreamEntity, 1},
+	// A standing override taken back by somebody who outranked the level that
+	// recorded it. Its own type for the same reason consent.suppression_lifted
+	// is: a consumer that saw only override_recorded would keep treating the
+	// category as vouched for forever, which is the state this event ends.
+	"consent.override_lifted": {contactStreamEntity, 1},
 	// What a contact promised, asked or decided, and a human's correction of
 	// it. Both ride the CONTACT stream: a subscriber reacting to what somebody
 	// said wants the contact, and the claim id rides the payload for the reader
@@ -54,12 +66,14 @@ var catalog = map[string]struct {
 	// governs is how a member is represented on every message they send, which
 	// is a fact about that contact rather than about any one mail.
 	"email_signature.changed": {contactStreamEntity, 1},
-	// The language a member reads their interface in, and the name colleagues
-	// see them by. Both ride the contact stream for the same reason the sign-off
-	// does: they are facts about that contact, not about the installation, which
-	// names its own language in a setting and publishes nothing per reader.
-	"user_locale.changed":       {contactStreamEntity, 1},
-	"user_display_name.changed": {contactStreamEntity, 1},
+	// The language a member reads their interface in, the name colleagues see
+	// them by, and the name they are greeted by. All ride the contact stream for
+	// the same reason the sign-off does: they are facts about that contact, not
+	// about the installation, which names its own language in a setting and
+	// publishes nothing per reader.
+	"user_locale.changed":        {contactStreamEntity, 1},
+	"user_display_name.changed":  {contactStreamEntity, 1},
+	"user_greeting_name.changed": {contactStreamEntity, 1},
 	// What a member wants DELIVERED rides the identity stream rather than the
 	// contact one its neighbour above uses. A display language is something a
 	// subscriber rendering for this contact needs; what lands in their inbox is
@@ -172,7 +186,9 @@ var catalog = map[string]struct {
 	"list.restored":       {contactStreamEntity, 1},
 	"list.member_added":   {contactStreamEntity, 1},
 	"list.member_removed": {contactStreamEntity, 1},
+	"list.evaluated":      {contactStreamEntity, 1},
 
+	"reporting.changed":          {identityStreamEntity, 1},
 	"booking_page.updated":       {identityStreamEntity, 1},
 	"meeting_proposal.updated":   {activityStreamEntity, 1},
 	"meeting_invitation.updated": {activityStreamEntity, 1},

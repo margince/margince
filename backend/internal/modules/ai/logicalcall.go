@@ -15,6 +15,7 @@ import (
 // attempt ran, distinct from an ordinary first try (which carries "").
 const (
 	attemptReasonProviderError = "provider_error"
+	attemptReasonTimeout       = sentinelTimeout
 	attemptReasonSchemaInvalid = "schema_invalid"
 	attemptReasonBudgetDegrade = "budget_degrade"
 )
@@ -24,7 +25,7 @@ const (
 //
 // Held by: TestTheAttemptReasonDescriptionNamesEveryReason (backend/internal/modules/ai/logicalcall_test.go)
 var attemptReasons = append([]string{
-	attemptReasonProviderError, attemptReasonSchemaInvalid, attemptReasonBudgetDegrade,
+	attemptReasonProviderError, attemptReasonTimeout, attemptReasonSchemaInvalid, attemptReasonBudgetDegrade,
 }, decisionAttemptReasons...)
 
 // logicalCall buffers every attempt of one served-or-failed decision —
@@ -47,6 +48,10 @@ type logicalCall struct {
 	// occurrence was opened, because a recorder with no database cannot open
 	// one and a start that failed has nothing to renew.
 	rail *railOccurrence
+	// settings is what this call's task is sent with, read once on first use
+	// so every attempt, its deadline and its recorded snapshot agree even when
+	// an admin saves new overrides mid-call.
+	settings *EffectiveTask
 }
 
 func newLogicalCall() *logicalCall {

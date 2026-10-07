@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
+import type { GrantSpec } from "../app/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -25,10 +27,10 @@ const TEAMS = [
   { id: "t-3", name: "Enterprise (forming)", member_count: 0 },
 ];
 
-function story(teams: Record<string, unknown>[]) {
+function story(teams: Record<string, unknown>[], allow: GrantSpec = {}) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({}),
+      "GET /me": meRoute(allow),
       // A page, the way the endpoint answers one: the card reads the shared
       // roster walk, which follows `page.next_cursor` to the end of the list.
       "GET /teams": () =>
@@ -65,4 +67,15 @@ export const TeamsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(TEAMS),
+};
+
+export const NewTeamDialog: Story = {
+  render: story(TEAMS, { team_admin: ["create"] }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "New team" }),
+    );
+    await within(document.body).findByRole("dialog");
+  },
 };

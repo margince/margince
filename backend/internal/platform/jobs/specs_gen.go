@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "34cdf57109948553cb8170f251fd21e57d5d866c5da34bf64f3c11afd3e273ac"
+const JobContractHash = "43ff15b9efb446fba9e1fba276c36f256e3565597e60f9f48a27c00c24334daf"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -36,7 +36,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 65 * time.Minute, DerivedFrom: "agentSchedulerPassTimeout"},
 		MaxAttempts:  1,
 		OptsOwner:    OptsArgs,
-		Cadence:      Cadence{OperatorField: "AgentScheduler.Interval", ScheduleWhenPositive: "AgentScheduler.Interval"},
+		Cadence:      Cadence{Setting: "installation.agent_runner_interval_seconds"},
 		Registration: Registration{When: []string{"AgentScheduler.Service"}},
 	},
 	"agent_task_retention": {
@@ -79,6 +79,16 @@ var specs = map[string]Spec{
 		MaxAttempts: 1,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 1 * time.Minute},
+	},
+	"ai_price_sync_sweep": {
+		Kind:      "ai_price_sync_sweep",
+		GoType:    "AIPriceSyncSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "rate_refresh",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"approval_auto_apply": {
 		Kind:        "approval_auto_apply",
@@ -264,7 +274,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{OperatorField: "CloseDateInterval"},
+		Cadence:   Cadence{Setting: "installation.close_date_sweep_interval_seconds"},
 	},
 	"comms_authz_disagreement": {
 		Kind:      "comms_authz_disagreement",
@@ -399,7 +409,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{OperatorField: "ReconcileInterval"},
+		Cadence:   Cadence{Setting: "installation.follow_up_reconcile_interval_seconds"},
 	},
 	"forecast_snapshot_sweep": {
 		Kind:      "forecast_snapshot_sweep",
@@ -428,7 +438,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
-		Cadence:      Cadence{OperatorField: "Geocoding.BackfillInterval", ScheduleWhenPositive: "Geocoding.BackfillInterval"},
+		Cadence:      Cadence{Setting: "installation.geocode_backfill_interval_seconds", OffAtZero: true},
 		Registration: Registration{When: []string{"Geocoder"}},
 	},
 	"geocode_company": {
@@ -464,7 +474,7 @@ var specs = map[string]Spec{
 		FanOutUnit:   FanOutConnection,
 		FanOutTo:     "gmail_watch_renew_connection",
 		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{OperatorField: "GmailWatch.Interval"},
+		Cadence:      Cadence{Setting: "installation.gmail_watch_scan_interval_seconds"},
 		Registration: Registration{When: []string{"GmailRegistry", "GmailWatch.Topic"}},
 	},
 	"gmail_watch_renew_connection": {
@@ -498,7 +508,7 @@ var specs = map[string]Spec{
 		FanOutUnit:   FanOutConnection,
 		FanOutTo:     "graph_watch_renew_connection",
 		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{OperatorField: "GraphWatch.Interval", ScheduleWhenPositive: "GraphWatch.Interval"},
+		Cadence:      Cadence{Setting: "installation.graph_watch_scan_interval_seconds"},
 		Registration: Registration{When: []string{"GmailRegistry.OffersGraph", "GraphWatch.NotificationURL"}},
 	},
 	"graph_watch_renew_connection": {
@@ -561,6 +571,16 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
+	"list_evaluate": {
+		Kind:      "list_evaluate",
+		GoType:    "ListEvaluateArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 15 * time.Minute},
 	},
 	"mail_draft_retention": {
 		Kind:        "mail_draft_retention",
@@ -629,10 +649,10 @@ var specs = map[string]Spec{
 		GoType:      "PrivacyRetentionArgs",
 		Role:        Worker,
 		Queue:       "privacy_retention",
-		Timeout:     TimeoutPolicy{Fixed: 405 * time.Minute, DerivedFrom: "privacyRetentionPassTimeout"},
+		Timeout:     TimeoutPolicy{Fixed: 26300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
-		Cadence:     Cadence{OperatorField: "PrivacyRetention.Interval", ScheduleWhenPositive: "PrivacyRetention.Interval"},
+		Cadence:     Cadence{Setting: "installation.retention_sweep_interval_seconds"},
 	},
 	"provider_lookup_sweep": {
 		Kind:         "provider_lookup_sweep",
@@ -667,6 +687,16 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
 		Args:         []ArgField{{Name: "RunID"}, {Name: "Workspace"}},
 	},
+	"report_schedule_sweep": {
+		Kind:      "report_schedule_sweep",
+		GoType:    "ReportScheduleSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 6 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 5 * time.Minute},
+	},
 	"risk_verdict_sweep": {
 		Kind:      "risk_verdict_sweep",
 		GoType:    "RiskVerdictSweepArgs",
@@ -692,10 +722,10 @@ var specs = map[string]Spec{
 		GoType:       "SiteDeepReadArgs",
 		Role:         Worker,
 		Queue:        "deep_read",
-		Timeout:      TimeoutPolicy{OperatorField: "DeepReadCaps"},
+		Timeout:      TimeoutPolicy{Fixed: 830 * time.Second, DerivedFrom: "deepReadTimeout"},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"DeepReadBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the deployment's own. The worker clamps it against the configured cap, so it can only ever narrow what an operator set, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the installation's own. The worker clamps it against the page limit an admin set, so it can only ever narrow it, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
 	},
 	"stage_evidence_read": {
 		Kind:         "stage_evidence_read",
@@ -726,7 +756,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
-		Cadence:      Cadence{OperatorField: "TechnicalEnrichment.BackfillInterval", ScheduleWhenPositive: "TechnicalEnrichment.BackfillInterval"},
+		Cadence:      Cadence{Setting: "installation.technical_backfill_interval_seconds", OffAtZero: true},
 		Registration: Registration{When: []string{"TechnicalEnricher"}},
 	},
 	"technical_enrich_company": {
@@ -780,7 +810,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{OperatorField: "TimeScanInterval"},
+		Cadence:   Cadence{Setting: "installation.time_scan_interval_seconds"},
 	},
 	"transcript_propose": {
 		Kind:         "transcript_propose",
@@ -833,7 +863,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 1580 * time.Second, DerivedFrom: "webhookRetrySweepTimeout"},
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
-		Cadence:      Cadence{OperatorField: "WebhookRetry.Interval", ScheduleWhenPositive: "WebhookRetry.Interval"},
+		Cadence:      Cadence{Setting: "installation.webhook_retry_interval_seconds"},
 		Registration: Registration{When: []string{"WebhookRetry.Deliverer"}},
 	},
 	"weekly_review_generate": {
@@ -857,7 +887,7 @@ var queues = map[string]int{
 	"ai_capture":        2,
 	"capture_part_slim": 1,
 	"comms_send":        3,
-	"deep_read":         2,
+	"deep_read":         6,
 	"default":           5,
 	"geocode":           1,
 	"privacy_retention": 2,

@@ -226,7 +226,7 @@ func TestAFoldedGroupCanBePinned(t *testing.T) {
 
 	// The group's id, learned from an unpinned assembly of the same day.
 	plain := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		waitingRead{}, worklistCursor{}, nil)
 	var groupID string
 	for _, row := range plain.Queue {
 		if row.Source == "batch" {
@@ -244,7 +244,7 @@ func TestAFoldedGroupCanBePinned(t *testing.T) {
 
 	svc := &Service{pinned: map[RowRef]bool{{Source: "batch", RowID: groupID}: true}}
 	out := svc.worklistFrom(t.Context(), day, scopeAll, "", 50,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		waitingRead{}, worklistCursor{}, nil)
 
 	if len(out.Queue) == 0 {
 		t.Fatal("the pinned day drew no rows")

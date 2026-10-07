@@ -175,7 +175,8 @@ func (inertRetriever) AssembleContext(context.Context, datasource.EntityRef, ret
 func fullRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
+	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil, nil)
+	RegisterReportingTool(r, func(context.Context, ReportingRead) (ReportingAnswer, error) { return ReportingAnswer{}, nil })
 	RegisterMeetingInvitationTool(r, nil, nil)
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, nil })
 	RegisterReportTool(r, nil, probeReportCatalog, probeReportPlan)
@@ -202,7 +203,7 @@ func fullRegistry(t *testing.T) *Registry {
 		return crmcontracts.Project360{}, nil
 	})
 	RegisterNetworkTools(r,
-		func(context.Context, ids.UUID) ([]KnownColleague, bool, error) { return nil, false, nil },
+		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, nil },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) { return DealCoverageAnswer{}, nil },
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, nil },
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
@@ -212,7 +213,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterBulkTool(r, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
-	}, nil)
+	})
 	RegisterVocabularyTool(r, inertVocabulary{})
 	// The REAL resource, over the probe catalog. Nothing about the report
 	// vocabulary needs a pool or a seam, so a stub here would put a test double
@@ -238,6 +239,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, nil, probeVocabulary{})

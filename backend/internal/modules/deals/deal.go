@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -22,7 +23,7 @@ import (
 // ensureOpenBirthStage guards create: deals are born open — AdvanceDeal
 // is the ONE path that derives won/lost and maintains the
 // closed_at/lost_reason/FX invariants. Creating straight onto a terminal
-// stage would put an "open" deal on a won column — silent forecast
+// stage would put an string(DealOpen) deal on a won column — silent forecast
 // corruption, no CHECK trips.
 func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID) error {
 	var semantic string
@@ -109,7 +110,11 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		return nil, err
 	}
 	if in.Name != nil {
-		p.Set(dealNameColumn, current.Name, *in.Name)
+		name, err := httperr.RequireNonBlank("name", *in.Name)
+		if err != nil {
+			return nil, err
+		}
+		p.Set(dealNameColumn, current.Name, name)
 	}
 	// The forecast fields are assigned only where the request actually moves
 	// them. Every other column may be re-set freely — the audit diff records a
@@ -164,7 +169,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 	if in.ExpectedClose != nil {
 		// INV-CLOSE-PAST (formulas §11): an open deal never claims a past
 		// close date. Closed deals keep their historical dates editable.
-		if string(current.Status) == "open" {
+		if string(current.Status) == string(DealOpen) {
 			if err := s.rejectPastCloseDate(ctx, tx, in.ExpectedClose); err != nil {
 				return nil, err
 			}
@@ -346,7 +351,7 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	if err := refuseManualArrEdit(current, resultingArr, arrEditMove{Arr: arrMoved, Currency: currencyMoved}); err != nil {
 		return err
 	}
-	if string(current.Status) != "open" && resultingAmount != nil && (amountMoved || currencyMoved) {
+	if string(current.Status) != string(DealOpen) && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
 		rateBefore, rateDateBefore := frozenBefore(current)
 		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*resultingCurrency),
@@ -389,109 +394,10 @@ func (s *Store) installationToday(ctx context.Context, tx pgx.Tx) (time.Time, er
 	// instead of a column on the row, so the DST rules and the date boundary
 	// stay where they were rather than being re-derived in Go.
 	var today time.Time
-	if err := tx.QueryRow(ctx, `SELECT (timezone($1, now()))::date`, zone).Scan(&today); err != nil {
+	//craft:ignore naked-any pgx binds the zone and injected clock as SQL parameters.
+	arguments := []any{zone, s.clock()}
+	if err := tx.QueryRow(ctx, "SELECT (timezone("+storekit.Placeholders(arguments)+"::timestamptz))::date", arguments...).Scan(&today); err != nil {
 		return time.Time{}, fmt.Errorf("resolve the installation's today: %w", err)
 	}
 	return dateOnly(today), nil
-}
-
-// PastCloseDateError maps to 422 close_date_past (INV-CLOSE-PAST).
-type PastCloseDateError struct{}
-
-func (e *PastCloseDateError) Error() string {
-	return "an open deal cannot claim a close date in the past; pick today or later"
-}
-
-// FieldFault refuses an expected close date already in the past.
-func (e *PastCloseDateError) FieldFault() (field, code, message string) {
-	return closeDateField, "close_date_past", e.Error()
-}
-
-// AmountCurrencyPairError maps to 422: amount_minor and currency come
-// together or not at all (data-model §6 money rules).
-// The deal's money and forecast fields, whose wire name and column name are the
-// SAME word — deliberately, because the contract was written from the schema, and
-// a refusal that named a different field from the column it guards would send a
-// caller looking for an input they did not send. So these three do duty at both
-// layers: a FieldFault names them, every p.Set on the deal row spells them, and
-// forecastColumns is built from them.
-//
-// dealTable is the opposite case and says so: a table name and an RBAC object
-// that happen to share a word are two subjects, so the constant stands for the
-// table and the RBAC object stays a literal.
-//
-// currencyField names the wire field a money-pair refusal points at: amount and
-// currency are atomic, and the currency is the half a caller can supply.
-const currencyField = "currency"
-
-// amountField is the other half of a money value.
-const amountField = "amount_minor"
-
-// arrField is the recurring figure. It shares the currency with amountField
-// rather than carrying one of its own: a deal quoting its one-off price in one
-// currency and its subscription in another is not a deal anyone can forecast.
-const arrField = "expected_arr_minor"
-
-// closeDateField names the column a slipped forecast moves.
-const closeDateField = "expected_close_date"
-
-// The frozen base-currency columns, which move together or not at all: a rate
-// without the date it was taken on cannot be reproduced, a date without a rate
-// converts nothing, and the converted amount is stored beside them because
-// deriving it later would ask every reader to apply both minor-unit scales.
-const (
-	fxRateColumn     = "fx_rate_to_base"
-	fxRateDateColumn = "fx_rate_date"
-	baseAmountColumn = "amount_minor_base"
-)
-
-// The two things a partner can have done for a deal. Sourced means they
-// brought it; influenced means they helped one we already had. Commission
-// accrues on sourced only, which is why the difference is stored and not
-// inferred.
-const (
-	attributionSourced    = "sourced"
-	attributionInfluenced = "influenced"
-)
-
-// partnerAttributionField names the wire field both attribution refusals
-// point at.
-const partnerAttributionField = "partner_attribution"
-
-// PartnerAttributionUnpairedError maps to 422: an attribution describes a
-// partner, so a deal that names none has nothing to attribute.
-type PartnerAttributionUnpairedError struct{}
-
-func (e *PartnerAttributionUnpairedError) Error() string {
-	return "partner_attribution needs a partner_company_id — set the partner in the same request, or clear the attribution"
-}
-
-// FieldFault refuses an attribution on a deal that names no partner.
-func (e *PartnerAttributionUnpairedError) FieldFault() (field, code, message string) {
-	return partnerAttributionField, "partner_attribution_unpaired", e.Error()
-}
-
-// PartnerAttributionValueError maps to 422: the vocabulary is closed.
-type PartnerAttributionValueError struct{ Got string }
-
-func (e *PartnerAttributionValueError) Error() string {
-	return "partner_attribution must be " + attributionSourced + " or " + attributionInfluenced
-}
-
-// FieldFault refuses an attribution outside the two-value vocabulary.
-func (e *PartnerAttributionValueError) FieldFault() (field, code, message string) {
-	return partnerAttributionField, "partner_attribution_invalid", e.Error()
-}
-
-// TerminalStageOnCreateError maps to 422: create on an open stage, then
-// advance — won/lost is derived, never asserted at birth.
-type TerminalStageOnCreateError struct{ Semantic string }
-
-func (e *TerminalStageOnCreateError) Error() string {
-	return "deals cannot be created on a " + e.Semantic + " stage; create open, then advance"
-}
-
-// FieldFault refuses creating a deal directly into a won/lost stage.
-func (e *TerminalStageOnCreateError) FieldFault() (field, code, message string) {
-	return "stage_id", "terminal_stage_on_create", e.Error()
 }

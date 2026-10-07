@@ -23,7 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -61,6 +61,7 @@ type TeamMember struct {
 
 // TeamReview is one team's frozen week.
 type TeamReview struct {
+	NumericSummary *crmcontracts.WeeklyNumericSummary
 	ID             ids.UUID
 	TeamID         ids.UUID
 	TeamName       string
@@ -129,7 +130,7 @@ func (e *Engine) AssembleTeamFor(
 	}
 	var review TeamReview
 	var created bool
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := e.withMeasurementSnapshot(ctx, func(tx pgx.Tx) error {
 		thisWeek, err := WeekStartOf(ctx, tx, now)
 		if err != nil {
 			return err
@@ -148,6 +149,9 @@ func (e *Engine) AssembleTeamFor(
 			return nil
 		}
 		if err := gatherTeamWeek(ctx, tx, &review, members); err != nil {
+			return err
+		}
+		if err := e.measureTeamNumeric(ctx, tx, &review, now); err != nil {
 			return err
 		}
 		id, wrote, err := insertTeamReview(ctx, tx, review)

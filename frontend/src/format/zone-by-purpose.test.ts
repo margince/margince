@@ -142,8 +142,36 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/reporting.fixtures.ts",
+    why: "The report API fixture carries the installation timezone so schedule and frozen-period rendering remain independent of the browser zone.",
+  },
+  {
+    file: "screens/reporting.schedule.tsx",
+    why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
+  },
+  {
     file: "screens/book.testkit.ts",
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
+  },
+  {
+    file: "screens/companyhealthreason.test.tsx",
+    why: "Asserts that a booked meeting's day is named in the record's zone; the day boundary is only checkable against zones the test chose.",
+  },
+  {
+    file: "screens/booking-guest-month.test.ts",
+    why: "A month is read in the guest's zone, and only a zone with a fall-back clock change makes it longer than the server's 31-day bound.",
+  },
+  {
+    file: "screens/booking-picker.test.ts",
+    why: "The week grid's empty working days depend on the host's zone against the reader's, so the test pins both to make them disagree.",
+  },
+  {
+    file: "screens/companies.thread.test.tsx",
+    why: "The account page's email drawer must date a message in the record zone, so the test pins one fourteen hours off UTC that a drawer dated in the viewer's zone cannot match.",
+  },
+  {
+    file: "screens/contactmeetings.test.tsx",
+    why: "The next meeting's end comes from its calendar invitation, and the test names the record zone it renders that span in, so the expected span is stated rather than inherited.",
   },
   {
     file: "screens/book.test.tsx",
@@ -164,6 +192,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "format/preferences.test.tsx",
     why: "Regional notation must preserve explicit timezone and midnight fixtures.",
+  },
+  {
+    file: "screens/magic.timeline.test.ts",
+    why: "The receipt's axis names whole hours and midnights on the reader's own clock, so its expected instants exist only for a named zone: UTC for the plain arithmetic, Berlin to prove the ticks follow the viewer's offset rather than the server's, and Kathmandu for an offset that is not a whole hour. A zone read off the runner would move every expected tick with the machine.",
   },
   {
     file: "screens/worklist.leadfacts.test.ts",
@@ -278,16 +310,36 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The offline `me` fixture stands in for a real installation's stored settings, and its company timezone is one of those settings — a value on the wire, not a zone this code picks.",
   },
   {
-    file: "design-system/composed.stories.tsx",
-    why: "TimelineRow takes its zone as a prop; the story has to hand it a named one to show what the row renders.",
+    file: "design-system/pipelineboard.stories.tsx",
+    why: "PipelineBoard takes the record's zone as a prop for its cards' close dates; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
+  },
+  {
+    file: "design-system/recordview.stories.tsx",
+    why: "RecordView hands its zone to TimelineRow as a prop; the story has to hand it a named one to show what the row renders.",
+  },
+  {
+    file: "design-system/timelinelist.stories.tsx",
+    why: "TimelineList and GroupedTimelineList take their zone as a prop; the story has to hand them a named one to show the day and time each row renders.",
   },
   {
     file: "design-system/composed.test.tsx",
     why: "Same prop, asserted: the row's rendered time is only checkable against a zone the test chose.",
   },
   {
+    file: "design-system/composed.timelinetext.test.tsx",
+    why: "RecordView requires its zone prop; these suites assert a body's links, and a fixed zone keeps the rows they render identical on every runner.",
+  },
+  {
     file: "design-system/dealcard.stories.tsx",
     why: "DealCard takes the record's zone as a required prop for its close date; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
+  },
+  {
+    file: "screens/dealpipelineboard.stories.tsx",
+    why: "DealPipelineBoard passes the record's zone through to PipelineBoard for its cards' close dates; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
+  },
+  {
+    file: "screens/dealpipelineboard.test.tsx",
+    why: "Same prop, satisfied rather than asserted: the suite is about the cards' verbs, and the zone only fills the board's required signature.",
   },
   {
     file: "design-system/select.stories.tsx",

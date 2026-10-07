@@ -1410,22 +1410,22 @@ describe("LeadsScreen — rich create (P-15)", () => {
       }
       return emptyPage();
     });
+    const user = userEvent.setup();
     render(<LeadsScreen />);
-    await userEvent.click(await screen.findByTestId("new-record"));
-    await userEvent.type(screen.getByLabelText("Full name *"), "Otto Fischer");
-    await userEvent.type(screen.getByLabelText("Email"), "otto@example.test");
-    await userEvent.type(
-      screen.getByLabelText("LinkedIn URL"),
-      "https://linkedin.com/in/otto",
-    );
-    await userEvent.type(screen.getByLabelText("Company"), "Otto Fischer GmbH");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(await screen.findByTestId("new-record"));
+    const form = within(screen.getByRole("dialog"));
+    await user.type(form.getByLabelText("Full name *"), "Otto Fischer");
+    await user.type(form.getByLabelText("Email"), "otto@example.test");
+    const linkedin = "https://linkedin.com/in/otto";
+    await user.type(form.getByLabelText("LinkedIn URL"), linkedin);
+    await user.type(form.getByLabelText("Company"), "Otto Fischer GmbH");
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toMatchObject({
       full_name: "Otto Fischer",
       email: "otto@example.test",
-      linkedin_url: "https://linkedin.com/in/otto",
+      linkedin_url: linkedin,
       company_name: "Otto Fischer GmbH",
       owner_id: "u-9",
       source: "manual",

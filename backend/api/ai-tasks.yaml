@@ -90,6 +90,10 @@
 #                     (observed-unit and denominator functions, the work-shape
 #                     floor) is behaviour and stays in code; naming the rule
 #                     here lets the build prove the mapping is total.
+#   summary           what the task does, in plain words, for the reader of a
+#                     settings or usage screen deciding which model serves it.
+#                     Required, ends with a full stop, short enough for a
+#                     tooltip.
 #
 # Deliberately NOT declared here (ADR-0074): answer schemas — two sites build
 # theirs per call (one varies its very shape) and four tasks send none at all,
@@ -109,6 +113,7 @@ tiers: [local_small, cheap_cloud, premium, frontier, local_large]
 tasks:
   capture_classify:
     display_name: "Message classification"
+    summary: "Sorts each incoming email and meeting into what it is about, so it lands on the right record."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -120,6 +125,7 @@ tasks:
 
   owed_verdict:
     display_name: "Unanswered-message triage"
+    summary: "Decides whether an unanswered message actually asks us for something, or only informs us."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -131,6 +137,7 @@ tasks:
 
   request_settlement:
     display_name: "Did our reply settle it"
+    summary: "Checks whether our reply actually answered what the other side asked for."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -138,10 +145,11 @@ tasks:
     sites: [request_settle]
     company_context: none
     no_payload: true
-    doc: "Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests carrying a later outbound message on the same thread, so a conversation nobody has answered is never judged here and costs nothing. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill."
+    doc: "Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests we have since answered: our attested reply on the thread, our attested mail to the sender with the same subject, or a logged call or held meeting with the sender's contact — the answers the needs-reply check recognises. A conversation nobody has answered is never judged here and costs nothing; the off-thread answers reach the prompt marked as such, a call's or meeting's notes as its text. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill."
 
   capture_counterparty_verdict:
     display_name: "First-time sender check"
+    summary: "Decides who a first-time sender is — an individual, a company mailbox, a newsletter, spam — before a contact is created."
     ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
@@ -155,6 +163,7 @@ tasks:
 
   capture_confidentiality_verdict:
     display_name: "Thread confidentiality check"
+    summary: "Decides whether an email thread in a restricted mailbox is ordinary enough to open to the team."
     ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
@@ -168,6 +177,7 @@ tasks:
 
   signal_extract:
     display_name: "Signal extraction"
+    summary: "Picks out important events from a finished thread, such as a contract ending or a new opportunity."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -179,6 +189,7 @@ tasks:
 
   stage_evidence_extract:
     display_name: "Stage evidence extraction"
+    summary: "Reads what the buyer wrote or said against a deal stage's exit criteria."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -190,16 +201,18 @@ tasks:
 
   transcript_propose:
     display_name: "Meeting follow-up extraction"
+    summary: "Reads next steps and commitments out of a meeting transcript."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
     sites: [next_steps]
     company_context: none
-    doc: "S-E04.3 / MEET-AC-3/4: read the next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from (ADR-0058). Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Every proposal is a structural claim, so it STAGES for a human (approval kind transcript_proposal) and writes nothing until confirmed."
+    doc: "the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task; a named colleague's promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task)."
 
   propose_roles:
     display_name: "Buying-role reading"
+    summary: "Suggests each contact's buying role — who signs, who champions, who can block."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -210,6 +223,7 @@ tasks:
 
   enrich:
     display_name: "Signature enrichment"
+    summary: "Fills in a contact's title, phone and other details from their own email signature."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -221,6 +235,7 @@ tasks:
 
   summarize:
     display_name: "Record summary"
+    summary: "Writes the short summaries shown on account, contact and deal pages."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -231,6 +246,7 @@ tasks:
 
   growth_fit:
     display_name: "Company fit assessment"
+    summary: "Judges how well a company fits what we sell."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -241,6 +257,7 @@ tasks:
 
   draft_reply:
     display_name: "Reply drafting"
+    summary: "Drafts emails and replies for you to review before sending."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -251,15 +268,18 @@ tasks:
 
   nl_search:
     display_name: "Natural-language search"
+    summary: "Turns a list described in plain words into filters you can check and save."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
-    status: planned
-    company_context: {scopes: [offer, market], token_budget: 600}
-    doc: "Declared, not built (ADR-0074)."
+    status: shipped
+    sites: [filter_propose]
+    company_context: {scopes: [offer, market], token_budget: 600, conditional: true}
+    doc: "A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. Nothing is saved: Save stays a human's press. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic reading of a sentence to fall back to."
 
   cold_start:
     display_name: "Onboarding read"
+    summary: "Runs the onboarding conversation that sets up your company profile."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -274,6 +294,7 @@ tasks:
 
   transcript:
     display_name: "Transcript reading"
+    summary: "Reads pasted meeting transcripts. Not in use yet."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -283,6 +304,7 @@ tasks:
 
   corpus_ask:
     display_name: "Document corpus question"
+    summary: "Answers questions from the documents your company filed, citing where each answer comes from."
     ladder: [premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -293,6 +315,7 @@ tasks:
 
   account_scan:
     display_name: "Reading what an account needs"
+    summary: "Reads an account's recent emails and pipeline to find what it needs from you."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -304,6 +327,7 @@ tasks:
 
   deal_health:
     display_name: "Deal status card"
+    summary: "Writes the deal page's status card: where the deal stands and what could lose it."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -314,6 +338,7 @@ tasks:
 
   weekly_review:
     display_name: "Weekly review narrative"
+    summary: "Writes the one or two sentences that open your weekly review."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -324,6 +349,7 @@ tasks:
 
   weekly_learnings:
     display_name: "What last week taught"
+    summary: "Suggests what last week's results teach for the week ahead."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -334,6 +360,7 @@ tasks:
 
   brief_ranking:
     display_name: "Morning brief ranking"
+    summary: "Orders the morning brief so the most important items come first."
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -344,6 +371,7 @@ tasks:
 
   agent_loop:
     display_name: "Agent reasoning loop"
+    summary: "Runs the scheduled AI agents that act on your behalf with the tools they are given."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -361,6 +389,7 @@ tasks:
 
   offer_draft:
     display_name: "Offer drafting"
+    summary: "Drafts offers and quotes from a deal's details."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -370,6 +399,7 @@ tasks:
 
   document_extract:
     display_name: "Document extraction"
+    summary: "Reads an attached document, such as an invoice or order, for deal facts you can accept."
     ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -381,6 +411,7 @@ tasks:
 
   site_extract:
     display_name: "Website deep read"
+    summary: "Reads a company's website in depth, quoting the pages each fact comes from."
     ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -391,6 +422,7 @@ tasks:
 
   site_fact_extract:
     display_name: "Website fact extraction"
+    summary: "Picks short, quoted facts out of each page of a company's website."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -401,6 +433,7 @@ tasks:
 
   site_triage:
     display_name: "Website triage"
+    summary: "Decides what an email domain's website is — a company, a personal site or a mailbox provider — before a company is created."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -412,6 +445,7 @@ tasks:
 
   cert_judge:
     display_name: "Certification judging"
+    summary: "Grades model answers when a model is certified for a task. Used only in testing."
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -422,6 +456,7 @@ tasks:
 
   voice_build:
     display_name: "Voice DNA build"
+    summary: "Learns your writing voice from emails you wrote, so drafts sound like you."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -432,6 +467,7 @@ tasks:
 
   rate_extract:
     display_name: "Exchange rate extraction"
+    summary: "Reads exchange rates from a published rates page for the currency refresh."
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue

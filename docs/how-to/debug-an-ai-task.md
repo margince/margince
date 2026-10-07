@@ -1,6 +1,6 @@
 # Debug an AI task against real input
 
-`make ai-probe` runs ONE production invocation site against input you supply, through
+`make ai-probe` runs one production invocation site against input you supply, through
 the same code production runs, and reports every boundary between that input and the
 verdict as numbers.
 
@@ -8,14 +8,14 @@ verdict as numbers.
 
 | you want to know | use |
 |---|---|
-| Is this model good enough for this prompt? | `make e2e-ai` — scores a fixed corpus, writes a record |
-| Does this site survive **this** input? | **`make ai-probe`** — one site, your input, no score, no record |
+| Is this model good enough for this prompt? | `make e2e-ai`: scores a fixed corpus, writes a record |
+| Does this site survive **this** input? | **`make ai-probe`**: one site, your input, no score, no record |
 | Which sites carry a certification record? | `make e2e-ai-report`, or the page generated from the same three trees: [reference/ai-certification.md](../reference/ai-certification.md) |
 
-The two are not interchangeable, and the gap between them is real. A site can be
-`certified` at reliability 1.00 on a corpus fixture of two lines and still fail every time
-on the half-megabyte page production hands it. Certification was honest — it measured the
-fixture. **A green record says nothing about an input the corpus never had.**
+The two answer different questions. A site can be `certified` at reliability 1.00 on a
+corpus fixture of two lines and still fail every time on the half-megabyte page production
+hands it. The certification measured the fixture correctly; a green record says nothing
+about an input the corpus never had.
 
 The probe is cheap: `list`, `scaffold` and `fetch` cost nothing, and `run --ai-fake` costs
 nothing. Only `run` against a real binding calls a model, and it makes one call with no
@@ -35,25 +35,24 @@ capture_classify/classify             one_shot    full_invocation  local_small,c
 ```
 
 The list comes from the census (`compose.NewTaskCensus()`, built from `tasks_gen.go`), so
-it cannot drift from the contract. **SCOPE is the column to read first** — see
+it cannot drift from the contract. Read the **SCOPE** column first; see
 [What a probe does not cover](#what-a-probe-does-not-cover).
 
-**LADDER is the ladder, not every rung that can answer.** It is
-`ai.TaskLadder(task)` — where a call starts and where it escalates on a provider
-or schema failure. Under budget pressure the router also *degrades*, and
-`degrade_to` reaches rungs the ladder never names: `draft_reply`'s ladder is
-`[cheap_cloud, premium]`, `cheap_cloud` degrades to `local_small`, so a model
-bound at `local_small` can end up serving `draft_reply`. `ai.ServableTiers(task)`
-is the honest set — the ladder plus the transitive `degrade_to` closure, ladder
-rungs first — and `ai.LeadingTier(task)` is just the first rung, what serves when
-nothing has gone wrong. If you are asking "which of my bound models could answer
-this task", ask the closure; the ladder alone under-answers it.
+**LADDER** lists where a call starts and where it escalates on a provider or schema
+failure (`ai.TaskLadder(task)`). Other rungs can answer too. Under budget pressure the
+router also *degrades*, and `degrade_to` reaches rungs the ladder never names:
+`draft_reply`'s ladder is `[cheap_cloud, premium]`, `cheap_cloud` degrades to
+`local_small`, so a model bound at `local_small` can end up serving `draft_reply`.
+`ai.ServableTiers(task)` is the full set: the ladder plus the transitive `degrade_to`
+closure, ladder rungs first. `ai.LeadingTier(task)` is the first rung, what serves when
+nothing has gone wrong. To ask which of your bound models could answer a task, use the
+closure; the ladder alone under-answers it.
 
 ## 2. Get a starting fixture
 
 Every site takes a differently shaped fixture (`page_text` here, `pages[].text` there,
-nothing web-shaped at all for `capture_classify`). Rather than read the Go types, copy the
-site's corpus scenario:
+nothing web-shaped at all for `capture_classify`). Instead of reading the Go types, copy
+the site's corpus scenario:
 
 ```bash
 make ai-probe ARGS='scaffold rate_extract/fx'
@@ -66,18 +65,17 @@ Edit the `fixture:` block, keep the shape, then run it:
 make ai-probe ARGS='run --scenario ../.tmp/aitask/rate_extract_fx.yaml --ai-fake'
 ```
 
-Artifacts land in the gitignored `.tmp/aitask/` **by design**: a fetched page or a real
-fixture carries whatever the source carried, and a probe must not be able to leave customer
-content somewhere a commit would pick it up. `--out -` writes to stdout instead; `--out
-<path>` puts it where you ask.
+Artifacts land in the gitignored `.tmp/aitask/`. A fetched page or a real fixture carries
+whatever the source carried, and a probe must not leave customer content where a commit
+would pick it up. `--out -` writes to stdout instead; `--out <path>` puts it where you ask.
 
 ## 3. Feed it real input
 
-`fetch` runs the production fetcher and emits what crosses the FETCH boundary:
+`fetch` runs the production fetcher and emits what crosses the fetch boundary:
 HTML reduced by `StripTags`, markdown and JSON verbatim.
 
-That is not always what a site is finally handed. A route may reduce further before
-building its request. `fetch` shows you the input to that step, not its output.
+A site is not always handed that output unchanged. A route may reduce further before
+building its request, and `fetch` shows you the input to that step.
 
 ```bash
 make ai-probe ARGS='fetch https://api.frankfurter.dev/v1/latest'
@@ -87,11 +85,10 @@ make ai-probe ARGS='fetch https://api.frankfurter.dev/v1/latest'
 fetched  media=application/json  bytes=214  passages=1  markdown=false  json=true
 ```
 
-**`passages=` is the number that earns its place here.** Passages are what
-`numberPassages` emits, one per non-empty line, and they are what an extracted row cites as
-evidence. A body served as one long line numbers to a *single* passage however many bytes
-it carries — so every row cites `[s0]` and the evidence gate has nothing to disagree with.
-A byte count hides that completely.
+Read `passages=`. Passages are what `numberPassages` emits, one per non-empty line, and an
+extracted row cites them as evidence. A body served as one long line numbers to a *single*
+passage however many bytes it carries, so every row cites `[s0]` and the evidence gate has
+nothing to disagree with. A byte count hides that.
 
 Then assemble a fixture and probe. `--fixture` takes JSON, so a large body never has to
 survive a YAML paste:
@@ -106,24 +103,23 @@ make ai-probe ARGS='run --site rate_extract/fx \
   --model anthropic:claude-sonnet-4-6'
 ```
 
-**The probe is told its model outright; it reads no routing file.** Nothing in
-this tree does any more — the installation's binding is a stored setting, seeded
-for a fresh install from `seeds.ai_routing` and changed under Settings → AI, and
-this lane opens no database to read it from. Exactly one of `--model
-provider:model` (one pinned model behind the full routed pipeline) and
-`--ai-fake` (the offline fake) is required.
+You name the probe's model, and **it reads no routing file**. The installation's binding is a
+stored setting, seeded for a fresh install from `seeds.ai_routing` and changed under
+Settings → AI, and this lane opens no database to read it from. Pass one of `--model
+provider:model` (one pinned model behind the full routed pipeline) or `--ai-fake` (the
+offline fake).
 
-`--model` carries a provider and a model and nowhere to put a **host**, so a
-broker-served `openai_compatible:…` model cannot be probed: that binding fails
-closed without a base URL, by design. Pin a native vendor here, and use
-`make e2e-ai … BASE_URL=…` when the question is specifically about the broker.
+`--model` carries a provider and a model and has no field for a **host**, so a
+broker-served `openai_compatible:…` model cannot be probed: that binding fails closed
+without a base URL. Pin a native vendor here, and use `make e2e-ai … BASE_URL=…` when the
+question is about the broker.
 
 ### `--expect` is not optional for every site
 
 `--fixture` carries what production is given; `--expect` carries what you assert about the
-reply. Several sites validate the expectation **before** calling the model —
-`rate_extract/fx` refuses one that is not a currency→rate map, `agent_loop` refuses a step
-name no declared tool could reach. Those sites need `--expect` or `--scenario`:
+reply. Several sites validate the expectation **before** calling the model:
+`rate_extract/fx` refuses one that is not a currency→rate map, and `agent_loop` refuses a
+step name no declared tool could reach. Those sites need `--expect` or `--scenario`:
 
 ```text
 failed    rate_extract/fx: the expected answer is not a map of currency code to its rate against the base: unexpected end of JSON input
@@ -149,61 +145,61 @@ evaluate  accepted
 
 | line | what it tells you |
 |---|---|
-| `scope=` | how much of production this exercised — read it every time |
-| `binding` | which model was pinned (`--model`, or the fake), and the tier ladder behind it — the pin is bound to every rung of that ladder, so the probe never fails as "no bound tier can serve" |
+| `scope=` | how much of production this exercised; read it every time |
+| `binding` | which model was pinned (`--model`, or the fake), and the tier ladder behind it. The pin is bound to every rung of that ladder, so the probe never fails as "no bound tier can serve" |
 | `caveat` | company context this DB-less lane could not assemble |
 | `request` | the system prompt and payload sized separately, the **passage count**, and the output ceiling |
 | `response` | billed usage, the served model, the tier that answered, latency |
 | `evaluate` | what the **production validator** made of the reply |
 
-Three things worth knowing:
+Four things to know:
 
-- **`HIT CAP` is an inference, not a fact.** `model.Response` carries no finish reason, so
-  it is derived from `OutputTokens >= MaxTokens`. A model that legitimately stopped exactly
-  at the ceiling looks identical to one that was cut off. It is printed as a flag beside the
-  raw numbers, never as a claim about why the provider stopped — but a site whose answer
-  scales with its input hits it long before anything else goes wrong.
-- **`~N tok` is `bytes/4`.** It under-reads by roughly a quarter on dense JSON. It exists to compare orders of magnitude against a context window
-  and an output cap, not to bill anyone.
-- **`served=` prefers what the provider said answered** over what the routing bound. A vendor
-  that silently substitutes a model is exactly what a surprising result is explained by.
+- **`HIT CAP` is an inference.** `model.Response` carries no finish reason, so it is
+  derived from `OutputTokens >= MaxTokens`. A model that stopped at the ceiling looks
+  identical to one that was cut off. It is printed as a flag beside the raw numbers and
+  makes no claim about why the provider stopped. A site whose answer scales with its input
+  hits it long before anything else goes wrong.
+- **`~N tok` is `bytes/4`.** It under-reads by roughly a quarter on dense JSON. Use it to
+  compare orders of magnitude against a context window and an output cap; it is not a bill.
+- **`served=` prefers what the provider said answered** over what the routing bound. A
+  vendor that substitutes a model without saying so explains many surprising results.
 - **`CACHED` would mean the call never happened.** The probe disables the result cache for
-  the same reason the certification lane does, so you should never see it — if you do, the
-  report is telling you a repeat was served from memory rather than measured.
+  the same reason the certification lane does, so you should never see it. If you do, a
+  repeat was served from memory instead of measured.
 
 ### `invalid` vs `wrong_answer` vs `failed`
 
-These are three different problems and the report keeps them apart:
+The report keeps three problems apart:
 
-- **`failed`** — the *harness* broke: a refused fixture, a dead model. Exits non-zero.
-- **`invalid`** — the production validator refused the reply (malformed, ungrounded).
-- **`wrong_answer`** — the validator ACCEPTED a well-formed reply that says something other
+- **`failed`**: the *harness* broke (a refused fixture, a dead model). Exits non-zero.
+- **`invalid`**: the production validator refused the reply (malformed, ungrounded).
+- **`wrong_answer`**: the validator accepted a well-formed reply that says something other
   than what you expected.
 
-`wrong_answer` frequently means **your expectation is wrong**, not the model's answer. A run
-against a euro-based page can come back:
+`wrong_answer` often means **your expectation is wrong**. A run against a euro-based page
+can come back:
 
 ```text
 evaluate  wrong_answer — "USD" is priced 0.9259259259 against the base where the scenario expects 1.08
 ```
 
 The page said `1 EUR = 1.08 USD`; the sheet stores one USD in euros, 0.9259259259. The
-reply and the site's anchor were right and the hand-written expectation, spelled in the
+reply and the site's anchor were right, and the hand-written expectation, spelled in the
 page's direction, was wrong. Check the source before you blame the model.
 
 ## What a probe does not cover
 
-Two limits come from the certification seam itself, not from this tool. It prints both on
-every run so a green probe is never read as more coverage than it bought.
+Two limits come from the certification seam itself. The probe prints both on every run so
+a green probe is never read as more coverage than it bought.
 
 **Scope** (`aitasks.ScopeOf`, also in `make e2e-ai-report`):
 
-- `full_invocation` — the whole production invocation (`rate_extract/*`, `site_extract/profile`,
+- `full_invocation`: the whole production invocation (`rate_extract/*`, `site_extract/profile`,
   `draft_reply/reply`, `enrich/signature`, `offer_draft/draft`, `voice_build/*`, …)
-- `single_turn` — the fixture seeds the window and one reply is graded (each `agent_loop`
-  site — one scheduled agent, graded on its own goal and tools — and the `cold_start`
+- `single_turn`: the fixture seeds the window and one reply is graded (each `agent_loop`
+  site, which is one scheduled agent graded on its own goal and tools, and the `cold_start`
   multi-turn sites)
-- `single_call` — one of several calls the site makes (`capture_classify/classify`,
+- `single_call`: one of several calls the site makes (`capture_classify/classify`,
   `capture_counterparty_verdict/verdict`)
 
 **Company context is never assembled**, because the lane is DB-less. It is declared for
@@ -212,7 +208,7 @@ without part of the real prompt, and the caveat line says so.
 
 ## Tuning a prompt
 
-1. `--dump-request <dir>` writes each post-`SecretStripper` request as JSON — the artifact a
+1. `--dump-request <dir>` writes each post-`SecretStripper` request as JSON, the artifact a
    prompt edit is diffed against.
 2. Edit the site's request builder in `internal/compose/certcase_*.go` or the production
    code it calls.
@@ -230,41 +226,39 @@ diff <(sed -E "$nonce" .tmp/aitask/before/*.request.json) \
      <(sed -E "$nonce" .tmp/aitask/after/*.request.json)
 ```
 
-**The nonce substitution is required, not optional.** Every call mints a fresh
-`untrusted-<uuid>` boundary marker and names it in both the system prompt and the
-payload — that marker is what makes a forged delimiter inside a fetched page inert,
-so it MUST differ per call. Two runs of an unchanged prompt therefore always differ
-in two places. The dumps stay faithful to what was actually sent; the normalisation
-happens in the diff, where it belongs.
+**The nonce substitution is required.** Every call mints a fresh `untrusted-<uuid>`
+boundary marker and names it in both the system prompt and the payload. The marker makes a
+forged delimiter inside a fetched page inert, so it must differ per call, and two runs of an
+unchanged prompt always differ in two places. The dumps stay faithful to what was sent; the
+normalisation happens in the diff.
 
-Remember the corpus prompts are byte-pinned: changing a shipped prompt moves the stamp
-of every scenario built from it, so `make e2e-ai-report` shows that site `stale` until it
-is re-certified. Adding a *scenario* is the cheaper case — the record stays right about
-what it measured and reads `partial`, and only the new case has to be paid for.
+The corpus prompts are byte-pinned: changing a shipped prompt moves the stamp of every
+scenario built from it, so `make e2e-ai-report` shows that site `stale` until it is
+re-certified. Adding a *scenario* costs less: the record stays right about what it measured
+and reads `partial`, and only the new case has to be paid for.
 
 ## Promoting a finding
 
-A scenario you probed is yours and stays in `.tmp/`. If it turns out to be a case the build
-should keep measuring, it becomes a committed corpus scenario —
-[write a certification case](write-a-certification-case.md) covers the provenance fields
-(`source`, `sanitized_by`) the corpus requires and the probe deliberately does not.
+A scenario you probed is yours and stays in `.tmp/`. If the build should keep measuring
+it, make it a committed corpus scenario.
+[Write a certification case](write-a-certification-case.md) covers the provenance fields
+(`source`, `sanitized_by`) the corpus requires and the probe does not.
 
 ## Flags
 
-One flagset serves all four verbs, so a flag a verb has no use for is accepted and
-ignored rather than refused — `list --site x` prints the whole table. The verb
-column is what each flag actually affects.
+One flagset serves all four verbs, so a flag a verb has no use for is accepted and ignored
+(`list --site x` prints the whole table). The verb column is what each flag affects.
 
 | flag | verbs | |
 |---|---|---|
 | `--site <task>/<variant>` | run, scaffold | which site to probe (needed with `--fixture`) |
 | `--scenario <file.yaml>` | run | fixture + expectation in the corpus format |
 | `--fixture <file.json>` / `--expect <file.json>` | run | the two halves separately |
-| `--model provider:model` / `--ai-fake` | run | exactly one; `--ai-fake` is free. No routing file: a native vendor only, since `--model` carries no host |
+| `--model provider:model` / `--ai-fake` | run | one of the two; `--ai-fake` is free. No routing file: a native vendor only, since `--model` carries no host |
 | `--json <path\|->` | run | the whole result, machine-readable |
 | `--dump-request <dir>` | run | each stripped request |
 | `--out <path\|->` | scaffold, fetch | where this verb's artifact goes |
 | `--work-dir <dir>` | scaffold, fetch | artifact sink (default gitignored `.tmp/aitask`); `run` writes only to the paths `--json` / `--dump-request` name |
 | `--corpus <dir>` | list, scaffold | corpus to read |
 
-The BYOK key is loaded from repo-root `.env.local`, exactly as `make e2e-ai` does.
+The BYOK key is loaded from repo-root `.env.local`, the same way `make e2e-ai` loads it.

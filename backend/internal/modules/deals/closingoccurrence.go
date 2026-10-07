@@ -90,14 +90,7 @@ func currentClosingOccurrence(ctx context.Context, tx pgx.Tx, dealID ids.DealID)
 	// deal is on no closing anybody can point at" — honest, and exactly the
 	// state the review path already refuses.
 	err := tx.QueryRow(ctx,
-		`SELECT h.id, h.semantic_at_change
-		   FROM deal_stage_history h
-		   JOIN deal d ON d.id = h.deal_id
-		  WHERE h.deal_id = $1
-		    AND d.status <> 'open'
-		    AND h.semantic_at_change = d.status
-		  ORDER BY h.changed_at DESC, h.id DESC
-		  LIMIT 1`, dealID).Scan(&out.ID, &out.Outcome)
+		`SELECT closing.id, closing.semantic_at_change FROM deal d `+CurrentClosingJoin("d", "closing")+` WHERE d.id = $1 AND closing.id IS NOT NULL`, dealID).Scan(&out.ID, &out.Outcome)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ClosingOccurrence{}, false, nil
 	}
@@ -203,3 +196,11 @@ func (e *StaleClosingError) Error() string {
 // and no rewording would fix it: the deal moved underneath the caller, and the
 // answer is to reload and look at the outcome it is on now.
 func (e *StaleClosingError) Unwrap() error { return apperrors.ErrConflict }
+
+// CurrentClosingJoin derives the same occurrence for row and aggregate reads.
+// Aliases must be compile-time identifiers from the calling query catalog.
+func CurrentClosingJoin(dealAlias, historyAlias string) string {
+	return fmt.Sprintf(`LEFT JOIN LATERAL (SELECT h.* FROM deal_stage_history h
+ WHERE h.deal_id=%[1]s.id AND %[1]s.status <> 'open' AND h.semantic_at_change=%[1]s.status
+ ORDER BY h.changed_at DESC,h.id DESC LIMIT 1) %[2]s ON true`, dealAlias, historyAlias)
+}

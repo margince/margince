@@ -5,10 +5,9 @@
 
 package gates
 
-// The Art. 7(1) demonstrability invariant as a fitness function: every
-// write that sets a contact_consent STATE appends a consent_event proof
-// row in the same function (data-model §3.4 — the current state is
-// always backed by an append-only event saying when, how, and by whom).
+// Every write that sets a contact_consent state appends a consent_event proof
+// row in the same function, so the current state is always backed by an
+// append-only event saying when, how, and by whom.
 // Subject repoints (SET contact_id, the merge/promotion carry-through)
 // and row deletions are not state changes and are out of scope by
 // construction. A state write without proof silently voids the

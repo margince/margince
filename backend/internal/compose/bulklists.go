@@ -16,7 +16,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,17 +42,6 @@ func (e *bulkEngine) admitListVerb(ctx context.Context, change bulkChange) error
 	return e.lists.CheckShortlistChange(ctx, ids.From[ids.ListKind](*change.listID), string(change.recordType))
 }
 
-// validateListVerb is validateBulkChange's arm for the two list verbs.
-func validateListVerb(change bulkChange) error {
-	if change.listID == nil {
-		return httperr.Validation("list_id", "required", string(change.verb)+" needs list_id, the Shortlist to change")
-	}
-	if change.ownerID != nil {
-		return httperr.Validation("owner_id", "not_allowed", string(change.verb)+" takes no owner_id")
-	}
-	return nil
-}
-
 // applyMembership adds one record to the Shortlist or takes it off. A forward
 // change holds the record to the version the caller was shown; an undo does
 // not, because a membership never moved the record's version.
@@ -73,10 +61,14 @@ func applyMembership(
 	member := collections.MemberChange{
 		EntityType: string(change.recordType), EntityID: id, Note: change.note, Reason: collections.ReasonBulk,
 	}
+	var removed collections.RemovedMember
 	if add {
-		_, err = change.lists.AddMemberTx(ctx, tx, list, member)
+		if was, known := change.undo.membershipOf(item.Id); known {
+			member.Note, member.AddedAt = was.Note, &was.AddedAt
+		}
+		_, err = change.writers.lists.AddMemberTx(ctx, tx, list, member)
 	} else {
-		err = change.lists.RemoveMemberTx(ctx, tx, list, member)
+		removed, err = change.writers.lists.RemoveMemberTx(ctx, tx, list, member)
 	}
 	if errors.Is(err, collections.ErrAlreadyMember) || errors.Is(err, collections.ErrNotMember) {
 		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
@@ -91,7 +83,11 @@ func applyMembership(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID), Listed: &before},
 		After:  crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID), Listed: &after},
 	}
-	return bulkApplied{sample: sample, outcome: bulkOutcome{ID: item.Id, Version: row.version}}, crmcontracts.BulkSkip{}, nil
+	outcome := bulkOutcome{ID: item.Id, Version: row.version}
+	if !add {
+		outcome.MemberNote, outcome.MemberAddedAt = removed.Note, &removed.AddedAt
+	}
+	return bulkApplied{sample: sample, outcome: outcome}, crmcontracts.BulkSkip{}, nil
 }
 
 // withListsIf runs the list verbs over the installation's collections store

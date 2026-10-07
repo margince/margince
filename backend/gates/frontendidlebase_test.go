@@ -5,7 +5,7 @@
 
 package gates
 
-// The deal board and the server must measure silence from the SAME timestamp,
+// The deal board and the server must measure silence from the same timestamp,
 // or a card ages differently from the list that filed the deal stalled.
 //
 // Both sides fall back from the newest activity to the creation instant, and

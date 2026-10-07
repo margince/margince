@@ -1,13 +1,14 @@
 import {
   type ComponentPropsWithoutRef,
   forwardRef,
+  type Ref,
   useEffect,
   useRef,
   useState,
 } from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
-import { BusyMark, Field, Textarea, TextInput } from "./atoms";
+import { BusyMark, Button, Field, Textarea, TextInput } from "./atoms";
 import "./inlinechoice.css";
 
 // Free-text editing follows the same save/refusal contract as choices.
@@ -47,10 +48,12 @@ const InlineTextControl = forwardRef<
 // blank the row forgot to fill.
 function ReadOnlyText({
   value,
+  display,
   suggested,
   readOnlyReason,
 }: Readonly<{
   value: string;
+  display?: string;
   suggested?: string;
   readOnlyReason?: string;
 }>) {
@@ -62,14 +65,42 @@ function ReadOnlyText({
       }
       title={readOnlyReason}
     >
-      {value || suggested || t("field.unset")}
+      {(value && display) || value || suggested || t("field.unset")}
     </span>
+  );
+}
+
+// The edit verb beside a value its caller draws as something to follow.
+export function InlineEditVerb({
+  label,
+  disabled,
+  onClick,
+  ref,
+}: Readonly<{
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+  ref?: Ref<HTMLButtonElement>;
+}>) {
+  const t = useT();
+  return (
+    <Button
+      ref={ref}
+      variant="link"
+      className="inline-editable"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {t("inlineChoice.change", { field: label })}
+    </Button>
   );
 }
 
 export function InlineText({
   label,
   value,
+  display,
+  verb,
   placeholder,
   suggested,
   maxLength,
@@ -84,6 +115,13 @@ export function InlineText({
 }: Readonly<{
   label: string;
   value: string;
+  // The resting reading of `value` when it is not the text the editor edits:
+  // a currency in its own code over the bare major-unit amount.
+  display?: string;
+  // The caller draws the value beside this as a link, so the resting trigger is
+  // the edit verb (disabled while `canEdit` is false): a link inside the trigger
+  // would be two controls in one.
+  verb?: boolean;
   placeholder: string;
   // A value the record carries elsewhere that stands in for this field until
   // one is written here (a contact's title, for the role at their current
@@ -158,11 +196,33 @@ export function InlineText({
   }, [editing, onEditingChange]);
 
   if (!canEdit || !editing) {
-    const shown = value || suggested || placeholder;
+    const shown = (value && display) || value || suggested || placeholder;
+    const change = t("inlineChoice.change", { field: label });
+    const open = () => {
+      setDraft(value);
+      setFailure(null);
+      // A previous Escape can leave this set if the browser never
+      // delivered the unmount's blur to this node's React handler — the
+      // one place `onBlur` below clears it. Cleared here too, the one
+      // path every new edit session always runs, so a stale flag cannot
+      // silently swallow this session's first blur commit.
+      cancelling.current = false;
+      setEditing(true);
+    };
+    if (verb)
+      return (
+        <InlineEditVerb
+          ref={trigger}
+          label={label}
+          disabled={!canEdit}
+          onClick={open}
+        />
+      );
     if (!canEdit) {
       return (
         <ReadOnlyText
           value={value}
+          display={display}
           suggested={suggested}
           readOnlyReason={readOnlyReason}
         />
@@ -177,19 +237,9 @@ export function InlineText({
         // with a value is a value, and dressing the fact as a link would say
         // it is a place to go.
         data-empty={value ? undefined : "true"}
-        aria-label={t("inlineChoice.change", { field: label })}
-        title={t("inlineChoice.change", { field: label })}
-        onClick={() => {
-          setDraft(value);
-          setFailure(null);
-          // A previous Escape can leave this set if the browser never
-          // delivered the unmount's blur to this node's React handler — the
-          // one place `onBlur` below clears it. Cleared here too, the one
-          // path every new edit session always runs, so a stale flag cannot
-          // silently swallow this session's first blur commit.
-          cancelling.current = false;
-          setEditing(true);
-        }}
+        aria-label={change}
+        title={change}
+        onClick={open}
       >
         {shown}
       </button>

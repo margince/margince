@@ -23,6 +23,7 @@ import {
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
+import { weeklyNumericStatus } from "./brief.numeric";
 import {
   useWeeklyReview,
   useWeeklyReviewIndex,
@@ -203,29 +204,7 @@ function readState(
   return query.isPending ? "loading" : "ready";
 }
 
-/**
- * What the week's wins were worth, and whether that beat the week before.
- *
- * THE PACE NUMBER, and it lives here rather than on the morning for a reason
- * the morning's own contract states: every figure in that strip describes the
- * same set — today's queue, before filtering — which is what keeps those
- * numbers stable as a rep works down the page. Money closed over a week is a
- * different population, and standing it beside four same-set figures would put
- * two measurements in one row with nothing saying they differ.
- *
- * Here the whole panel is already about one closed week, so a week-on-week
- * comparison is the question the surface exists to answer.
- *
- * BOTH WEEKS OR NEITHER for the delta. A prior week with no pipeline block is
- * one nobody could price, not one that earned nothing — so it yields no
- * comparison rather than a change measured against a zero that was never a
- * figure. The value still draws; only the comparison is withheld.
- *
- * The currencies must MATCH. Each week is stored in the currency it was
- * measured in, and an operator who changed the base currency mid-quarter leaves
- * two weeks whose numbers are not comparable. Subtracting across them would
- * print a change nobody can act on.
- */
+// A closed week is comparable only to a priced prior week in the same currency.
 function wonPace(
   review: WeeklyReview,
   locale: Locale,
@@ -293,6 +272,8 @@ function WeeklyBody({
   }
 
   const c = review.counts;
+  const numeric = weeklyNumericStatus(review.numeric_summary);
+  const { bookingsUnavailable, meetingsUnavailable } = numeric;
   const prior = review.prior?.counts;
   // The delta line, or nothing. A reading with no earlier week to measure
   // against gets no line at all rather than "+0": a rep's first week did not
@@ -327,6 +308,10 @@ function WeeklyBody({
           sentences 40px apart with nothing between them. */}
       <PanelBody className="brief-weekly-outcomes">
         <p className="t-sub">{t("brief.weekly.basis")}</p>
+        <p className="t-sub">{t(numeric.basis)}</p>
+        {numeric.partial && (
+          <p className="t-sub">{t("brief.weekly.numericPartial")}</p>
+        )}
         {/* On a phone the strip is a list, not ten boxes stacked. */}
         <StatStrip testId="weekly-strip">
           {c.tasks_completed !== undefined && (
@@ -363,11 +348,17 @@ function WeeklyBody({
           <StatCard
             narrow="row"
             label={t("brief.weekly.dealsWon")}
-            value={formatNumber(c.deals_won, locale)}
+            value={
+              bookingsUnavailable
+                ? t("reporting.unavailable")
+                : formatNumber(c.deals_won, locale)
+            }
             // Value uses the frozen close-time exchange rates.
             detail={
-              wonPace(review, locale, t, recordZone) ??
-              since(c.deals_won, prior?.deals_won)
+              bookingsUnavailable
+                ? review.numeric_summary?.bookings_coverage.reason
+                : (wonPace(review, locale, t, recordZone) ??
+                  since(c.deals_won, prior?.deals_won))
             }
           />
           <StatCard
@@ -390,14 +381,20 @@ function WeeklyBody({
             narrow="row"
             label={t("brief.weekly.meetingsHeld")}
             value={
-              c.meetings_held === 0
-                ? t("brief.weekly.noMeetings")
-                : t("brief.weekly.ofMeetings", {
-                    withStep: formatNumber(c.meetings_with_next_step, locale),
-                    held: formatNumber(c.meetings_held, locale),
-                  })
+              meetingsUnavailable
+                ? t("reporting.unavailable")
+                : c.meetings_held === 0
+                  ? t("brief.weekly.noMeetings")
+                  : t("brief.weekly.ofMeetings", {
+                      withStep: formatNumber(c.meetings_with_next_step, locale),
+                      held: formatNumber(c.meetings_held, locale),
+                    })
             }
-            detail={since(c.meetings_held, prior?.meetings_held)}
+            detail={
+              meetingsUnavailable
+                ? review.numeric_summary?.meetings_coverage.reason
+                : since(c.meetings_held, prior?.meetings_held)
+            }
           />
           <StatCard
             narrow="row"

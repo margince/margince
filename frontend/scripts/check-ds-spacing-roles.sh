@@ -112,10 +112,10 @@ done
 # design system, correct on the day it was written and wrong by the next
 # primitive.
 #
-# The intersection, rather than the shaped set alone, because this tier also
-# spaces classes it does not own: `.mw-conversation .ob-conv-thread` places a
-# SCREEN's thread inside the workbench, and reading that as ownership would turn
-# the screen's own base rule into a finding. A class declared with nothing above
+# The intersection, rather than the shaped set alone, because this tier may also
+# space a class it does not own: a descendant selector placing a SCREEN's element
+# inside a primitive, and reading that as ownership would turn the screen's own
+# base rule into a finding. A class declared with nothing above
 # it in the selector is what owning it looks like.
 CLAIMS="$(mktemp)"
 OWNED="$(mktemp)"

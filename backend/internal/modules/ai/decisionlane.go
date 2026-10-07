@@ -47,9 +47,9 @@ func ValidateDecisionsLane(profile Profile, lane DecisionsConfig) error {
 	if strings.TrimSpace(lane.Model) == "" {
 		return fmt.Errorf("ai: routing config: the decisions lane names no model")
 	}
-	if defaulted(lane.BaseURL, d.defaultEndpoint) == "" {
-		return fmt.Errorf("ai: routing config: the decisions lane binds %s, which has no default endpoint; set base_url "+
-			"to the full decision endpoint URL, e.g. %s or %s", d.name, exampleBrokerDecisionEndpoint, exampleSelfHostedDecisionEndpoint)
+	if decisionHostMissing(lane.Provider, lane.BaseURL) {
+		return missingHostError{provider: d.name, reason: fmt.Sprintf("ai: routing config: the decisions lane binds %s, which has no default endpoint; set base_url "+
+			"to the full decision endpoint URL, e.g. %s or %s", d.name, exampleBrokerDecisionEndpoint, exampleSelfHostedDecisionEndpoint)}
 	}
 	if profile == ProfileSovereign {
 		if !d.local && !d.localByEndpoint {
@@ -95,26 +95,4 @@ func refuseDecisionOnlyProvider(label, provider string) error {
 		return fmt.Errorf("ai: routing config: %s names %q, which answers decisions, not chat; bind it under `decisions:`", label, provider)
 	}
 	return nil
-}
-
-// decisionsResidencyGap refuses a decisions lane under eu_hosted that nothing
-// holds to an EU host: the vendor's own API, which promises none, and a broker,
-// whose decisions endpoint takes no `only:` pin. eu_hosted is the residency the
-// operator chose.
-func (cfg RoutingConfig) decisionsResidencyGap() error {
-	lane := cfg.Decisions
-	if cfg.Profile != ProfileEUHosted || lane == nil {
-		return nil
-	}
-	if providerIsVendorHosted(lane.Provider) {
-		return fmt.Errorf("ai: routing config: the decisions lane under profile eu_hosted: %s is its vendor's own API, "+
-			"which is not pinned to an EU host; unbind the lane, or declare profile cloud_frontier "+
-			"if this installation does not promise EU inference", lane.Provider)
-	}
-	if !IsOpenRouterHost(lane.BaseURL) {
-		return nil
-	}
-	return fmt.Errorf("ai: routing config: the decisions lane under profile eu_hosted: %s reaches OpenRouter, "+
-		"whose decisions endpoint cannot be pinned to an EU host; unbind the lane, or declare profile cloud_frontier "+
-		"if this installation does not promise EU inference", lane.Provider)
 }

@@ -5,7 +5,8 @@
 
 package gates
 
-// The queue's recorded verdicts live exactly as long as the figure that reads them.
+// The queue's recorded verdicts live as long as the figure that reads them, and
+// no longer.
 //
 // A deal_risk_day row, with the verdicts under it, exists to answer the same-day next-step figure on
 // GET /worklist/response, which reads at most responseWindowMaxDays back. The

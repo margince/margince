@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
-	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -48,5 +47,6 @@ func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
 func newWeeklyEngine(pool *pgxpool.Pool) *weekly.Engine {
 	return weekly.NewEngine(pool, newTeammatesSeam(pool)).
 		WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)}).
-		WithForecast(NewWeeklyForecast(forecasting.NewStore(InstallationDB(pool))))
+		WithNumeric(weeklyNumericEvaluator{}).
+		WithForecast(NewWeeklyForecast(newForecastStoreFor(pool)))
 }

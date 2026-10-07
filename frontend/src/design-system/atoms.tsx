@@ -13,10 +13,8 @@ import {
   type FormEventHandler,
   type InputHTMLAttributes,
   type ReactNode,
-  type RefObject,
   useEffect,
   useId,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -24,10 +22,17 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
-import { meshOf, meshStyle } from "./avatarmesh";
-import { coveredByDialog, useDialogFocus } from "./dialogfocus";
+import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
+import {
+  coveredByDialog,
+  panelsOpenedFrom,
+  useDialogFocus,
+} from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
+import { useScrollRegion } from "./scrollregion";
+import "./badge.css";
+import "./avatar.css";
 import "./atoms.css";
 import "./evidencemark.css";
 
@@ -383,8 +388,7 @@ export const BADGE_TONES = [
 ] as const;
 
 type BadgeTone = (typeof BADGE_TONES)[number];
-// The leading slot holds ONE mark, a glyph or the `live` dot. An `ai` badge's
-// mark is always Sparkles, so that tone is given neither to choose.
+// ONE leading mark, a glyph or the `live` dot; an `ai` badge's is Sparkles.
 type BadgeMark =
   | { tone?: Exclude<BadgeTone, "ai">; icon?: LucideIcon; live?: never }
   | { tone?: Exclude<BadgeTone, "ai">; icon?: never; live?: boolean }
@@ -395,23 +399,24 @@ export function Badge({
   tone = "default",
   icon,
   live,
+  wrap,
   children,
 }: Readonly<
   {
-    // `soft` is the tint a status wears beside prose and down a column;
-    // `primary` the solid fill for the one status a reader must not miss.
+    // `soft` tints a status in prose or a column; `primary` fills a must-see.
     variant?: "soft" | "primary";
+    wrap?: boolean;
     children: ReactNode;
   } & BadgeMark
 >) {
-  // `live` is true AS THE PAGE IS READ: the one place motion is a fact. The ai
-  // mark is decided here as well, for a tone that arrives untyped.
+  // `live` is true AS THE PAGE IS READ: the one place motion is a fact.
   const provenance = tone === "ai";
   const Icon = provenance ? Sparkles : icon;
   const classes = [
     "badge",
     variant === "primary" && "badge-primary",
     tone !== "default" && `badge-${tone}`,
+    wrap && "badge-wrap",
   ].filter(Boolean);
   return (
     <span className={classes.join(" ")}>
@@ -420,25 +425,6 @@ export function Badge({
       <span className="badge-label">{children}</span>
     </span>
   );
-}
-
-/**
- * The initials a chip falls back to.
- *
- * Split on whitespace AND on the punctuation an address uses, because the
- * signed-in reader is frequently known to the product only by their address:
- * `jane.doe@example.com` reads as "JD" here, where a whitespace-only split
- * gives the single letter "J" and every colleague whose address starts with a
- * J gets the same chip. Two letters at most — a third stops being a monogram
- * and starts being text set too small to read.
- */
-function monogramOf(name: string): string {
-  return name
-    .split(/[\s@._-]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => [...part][0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 export function Avatar({
@@ -1202,79 +1188,11 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-// The one dialog lives in modal.tsx and is published from here, because `Modal`
-// is the name three hundred call sites import from `./atoms` and moving a file
-// is not a reason to make every one of them say where it went.
+// The dialog (modal.tsx) and the scroll-region hook (scrollregion.ts) are
+// published from here, because `./atoms` is where their call sites import them
+// from, and moving a file is not a reason to make every one say where it went.
 export { Modal } from "./modal";
-
-/** Whether a box is holding more width than it is showing. */
-function overflowsSideways(element: HTMLElement | null): boolean {
-  return element !== null && element.scrollWidth - element.clientWidth > 1;
-}
-
-/** Spread onto the scrolling box. Empty while it has nothing hidden to reach. */
-type ScrollRegion = Readonly<{
-  tabIndex?: 0;
-  role?: "region";
-  "aria-label"?: string;
-}>;
-
-/**
- * Make a box that scrolls sideways reachable, and only then.
- *
- * A region holding content past its right edge is content pointer users can
- * drag to and keyboard users cannot reach at all, so it takes a tab stop and
- * announces itself by name. It takes neither while it fits: a tab stop in front
- * of every table in the product, most of which fit, is a cost every keyboard
- * reader pays for the few that do not. That is the same bargain
- * `useTruncationTooltip` strikes for a string that fits its row.
- *
- * Both spellings of a scrolling table body use this — `TableScroll` below, and
- * the list surface's own `.lt-scroll` (listtable.tsx) — so a reader meets the
- * same behaviour whichever table they land in.
- */
-export function useScrollRegion(
-  box: RefObject<HTMLElement | null>,
-  label: string,
-): ScrollRegion {
-  const [scrolls, setScrolls] = useState(false);
-  const [watched, setWatched] = useState<HTMLElement | null>(null);
-  // Measured after every render rather than when the rows change: the answer
-  // moves for reasons this hook never sees — a column the reader dragged, a
-  // cell whose badge arrived — and re-reading it is two property reads. Setting
-  // either answer twice is a no-op, so this cannot loop. The element goes into
-  // state as well, so a box that unmounts and comes back (a list switching
-  // between a board and a table) is re-watched rather than leaving the observer
-  // below holding a node that is no longer on the page.
-  useLayoutEffect(() => {
-    setScrolls(overflowsSideways(box.current));
-    setWatched(box.current);
-  });
-  // A window resize is only one of the ways the box changes size, and the least
-  // interesting one: the sidebar collapsing, a rail opening beside the table,
-  // a settings card that is 720px on one route and full width on the next all
-  // move the edge without the window moving at all. So the BOX is watched, and
-  // the table inside it too — a table that grew is the other half of the same
-  // question.
-  useEffect(() => {
-    // Measured once wherever the observer is unavailable (jsdom): the answer is
-    // still right for the render that just happened, it simply stops following
-    // a resize.
-    if (!watched || typeof ResizeObserver === "undefined") {
-      return;
-    }
-    const observer = new ResizeObserver(() =>
-      setScrolls(overflowsSideways(watched)),
-    );
-    observer.observe(watched);
-    const content = watched.firstElementChild;
-    if (content) {
-      observer.observe(content);
-    }
-    return () => observer.disconnect();
-  }, [watched]);
-  return scrolls ? { tabIndex: 0, role: "region", "aria-label": label } : {};
-}
+export { useScrollRegion } from "./scrollregion";
 
 /**
  * The box a table too wide for its column scrolls sideways INSIDE.
@@ -1285,8 +1203,9 @@ export function useScrollRegion(
  * had each written this wrapper by hand were four chances to forget the part
  * below.
  *
- * Reachability is `useScrollRegion`'s, above: the tab stop and the name arrive
- * only while the box is actually holding something past its right edge.
+ * Reachability is `useScrollRegion`'s (scrollregion.ts): the tab stop and the
+ * name arrive only while the box is actually holding something past its right
+ * edge.
  *
  * `label` is what the region is called ("Recent invoices", "Spend by task") and
  * is the caller's to translate. It is required rather than defaulted because a
@@ -1451,11 +1370,14 @@ export function OverflowMenu({
       if (event.key !== "Escape") {
         return;
       }
-      // A dialog opened from this menu owns Escape while it is up. Closing
-      // both layers on one keypress would take the reader back past the menu
-      // they were choosing from, and they would have to reopen it to pick
-      // something else.
-      if (coveredByDialog(trigger.current)) {
+      // A dialog or panel opened from this menu owns Escape while it is up.
+      // Closing both layers on one keypress would take the reader back past
+      // the menu they were choosing from, and they would have to reopen it to
+      // pick something else.
+      if (
+        coveredByDialog(trigger.current) ||
+        panelsOpenedFrom(panel.current).length > 0
+      ) {
         return;
       }
       setOpen(false);
@@ -1465,10 +1387,16 @@ export function OverflowMenu({
       if (!(event.target instanceof Node)) {
         return;
       }
-      // A dialog this menu opened is portalled to the body, so every click
-      // inside it looks like a click outside the menu. Closing on those would
-      // hide the item the dialog has to give focus back to when it closes.
-      if (event.target instanceof Element && event.target.closest(".overlay")) {
+      // A dialog or a panel this menu opened is portalled to the body, so every
+      // click inside it looks like a click outside the menu. Closing on those
+      // would hide the item it has to give focus back to when it closes.
+      const target = event.target;
+      if (
+        (target instanceof Element && target.closest(".overlay")) ||
+        panelsOpenedFrom(panel.current).some((opened) =>
+          opened.contains(target),
+        )
+      ) {
         return;
       }
       // The panel lives at the body, not inside the wrapper, so "outside" is

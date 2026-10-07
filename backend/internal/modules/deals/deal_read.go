@@ -145,6 +145,7 @@ var dealListFields = map[string]storekit.SortField{
 	closeDateField:          storekit.Column(fieldcatalog.TypeDate),
 	dealNameColumn:          storekit.Column(fieldcatalog.TypeText),
 	"status":                storekit.Column(fieldcatalog.TypeText),
+	filterOwnerID:           storekit.Column(storekit.KindUUID),
 	filterStageID:           {Kind: fieldcatalog.TypeNumber, Expr: orderByStagePosition},
 	filterCompanyID:         {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterCompanyID)},
 	filterPartnerCompanyID:  {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterPartnerCompanyID)},

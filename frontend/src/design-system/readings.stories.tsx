@@ -294,3 +294,25 @@ export const SegmentBars: Story = {
     </>
   ),
 };
+
+export const LongStageNames: Story = {
+  render: () => (
+    <BarList
+      label="Open pipeline by stage"
+      rows={[
+        {
+          key: "legal",
+          label: "Procurement, legal and security approval",
+          value: 25000000,
+          amount: "€250k",
+        },
+        {
+          key: "pilot",
+          label: "Technical pilot and stakeholder alignment",
+          value: 17000000,
+          amount: "€170k",
+        },
+      ]}
+    />
+  ),
+};

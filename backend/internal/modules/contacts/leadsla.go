@@ -73,6 +73,12 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 	return &deadline, &state
 }
 
+// A response target measures an actual incoming message, never a record
+// arriving through creation or import.
+var leadHasInboundSQL = auth.LiveLeadInquiryClause("lead")
+
+var leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL AND " + leadHasInboundSQL
+
 // slaStateClause renders one sla_state filter as SQL over the lead's own
 // columns, with the same arithmetic leadSLAFields applies in Go: the list
 // and the row must agree about which leads are overdue.
@@ -85,30 +91,6 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 //
 // With the target switched off no lead is in any SLA state, so the filter
 // matches nothing rather than pretending a default target.
-// leadOwesAReplySQL is the one spelling of "this lead still owes a first
-// reply": live, and nobody has answered it.
-//
-// FOUR readers ask it — the SLA state filter, the breach scan, the work
-// queue's band, and the list's own unanswered dial — and the question is one.
-// Spelled separately they drift, and a queue that disagrees with the filter
-// feeding it reports a count nobody can reconcile.
-//
-// Deliberately NOT a statement about the status ladder. A lead the system moved
-// to `contacted` because a cold outbound went out has had no genuine response,
-// and §18.1 is explicit that an auto-touch does not satisfy first response — so
-// the rung a lead sits on says nothing about whether somebody replied to it.
-//
-// Not a statement about OWNERSHIP either. An unowned lead is the funnel's normal
-// arrival state (CreateLead assigns nobody unless a human names an owner), so a
-// queue admitting only owned rows would drop the whole unassigned backlog the
-// Unassigned dial exists to show — and an unowned lead that breaches is exactly
-// what the configured intake seat answers for. What the BREACH SCAN narrows in
-// its own statement is the SOURCE: a name the product read off a web page owes
-// no first response, because nobody asked us for anything.
-//
-// Held by: TestTheOwesAReplyPredicateHasOneSpelling (leadowespelling_test.go)
-const leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL"
-
 func slaStateClause(ctx context.Context, policy leadSLAPolicy, state crmcontracts.ListLeadsParamsSlaState, arg func(any) int) string {
 	if !policy.enabled {
 		return "FALSE"

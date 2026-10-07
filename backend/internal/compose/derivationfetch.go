@@ -63,7 +63,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
-		where, narrowed, err := derivationWhere(ctx, tx, spec, plan, callersOwnPopulation(), arg)
+		where, narrowed, err := derivationWhere(ctx, tx, spec, plan, requestedReportScope(plan.scope), arg)
 		if err != nil {
 			return err
 		}
@@ -302,7 +302,7 @@ func derivationWhere(
 	// And the same POPULATION the aggregate was taken over. A drill-through
 	// narrowed differently from its own headline opens records the number
 	// never counted, which is the one thing an explanation must not do.
-	if spec.population == measureCallersOwn {
+	if spec.population == measureCallersOwn || requested.Kind != "" {
 		population, err := reportPopulationClause(ctx, tx, requested, arg)
 		if err != nil {
 			return nil, "", err
@@ -315,7 +315,7 @@ func derivationWhere(
 	// the owners its headline counted. A row handle pins its owner, which
 	// requireMeasurableOwners has already judged.
 	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec,
-		breaksDownByOwner(spec, plan.groupBy) && !pinsOwner(spec, predicateFields(plan.preds)), arg)
+		requested.Kind == "" && breaksDownByOwner(spec, plan.groupBy) && !pinsOwner(spec, predicateFields(plan.preds)), arg)
 	if err != nil {
 		return nil, "", err
 	}

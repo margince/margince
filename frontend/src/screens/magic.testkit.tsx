@@ -59,10 +59,12 @@ export function stubPending() {
   );
 }
 
-export function renderMagic(locale: Locale = "en"): RenderResult {
-  const client = new QueryClient({
+export function renderMagic(
+  locale: Locale = "en",
+  client: QueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+): RenderResult {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
@@ -80,14 +82,24 @@ export function renderMagic(locale: Locale = "en"): RenderResult {
  * `totals` or `sources_unavailable` would test a shape no server sends.
  */
 export function receipt(over: Partial<MagicReceipt> = {}): MagicReceipt {
+  const done = over.done ?? [];
+  const needsYou = over.needs_you ?? [];
+  const failed = over.could_not_complete ?? [];
+  const watching = over.watching ?? [];
   return {
     as_of: "2026-09-13T08:00:00Z",
     since: "2026-09-12T08:00:00Z",
-    done: [],
-    needs_you: [],
-    could_not_complete: [],
-    watching: [],
-    totals: { done: 0, needs_you: 0, could_not_complete: 0, watching: 0 },
+    done,
+    needs_you: needsYou,
+    could_not_complete: failed,
+    watching,
+    // The server counts what it draws, so a case's totals are its lanes'.
+    totals: {
+      done: done.length,
+      needs_you: needsYou.length,
+      could_not_complete: failed.length,
+      watching: watching.length,
+    },
     not_shown: [],
     sources_unavailable: [],
     ...over,

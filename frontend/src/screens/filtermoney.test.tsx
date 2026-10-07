@@ -9,7 +9,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ValueControl } from "./filtervalue";
-import { moneyText } from "./listwhy";
+import { moneyText } from "./listexplain";
 import type { FilterOp, LeafValue } from "./segmentpredicate";
 import { StoryProviders } from "./story-utils";
 

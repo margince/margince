@@ -56,6 +56,7 @@ DECLARE
     'passport',
     'project_health_assessment',
     'record_role',
+    'report_projection_fence',
     'role',
     'role_assignment',
     'sdr_handoff_reason',

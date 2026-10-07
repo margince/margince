@@ -328,6 +328,7 @@ export function FinanceFigure({
   return (
     <div className="fin-figure">
       <Eyebrow>{label}</Eyebrow>
+      {/* ds:ignore a money figure drawn in the ink, not a failure line */}
       <span className={hero ? "fin-amount fin-amount-hero" : "fin-amount"}>
         {value ?? "—"}
       </span>

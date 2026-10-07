@@ -388,7 +388,7 @@ func dateValue(r ranked) *crmcontracts.WorklistValue {
 		return &crmcontracts.WorklistValue{Kind: valueNone}
 	}
 	at := r.deadlineAt
-	return &crmcontracts.WorklistValue{Kind: "date", Date: &at}
+	return &crmcontracts.WorklistValue{Kind: valueDate, Date: &at}
 }
 
 func moneyValue(r ranked) *crmcontracts.WorklistValue {
@@ -412,14 +412,6 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 func daysSince(from, asOf time.Time) int {
 	days, _ := deadline.DaysPast(&from, asOf)
 	return days
-}
-
-// deadlineValue is a moment a reader still has time to act on, for the reasons
-// that name one. The client formats it in its own locale and zone; nothing here
-// composes a date into words.
-func deadlineValue(at time.Time) *crmcontracts.WorklistValue {
-	when := at
-	return &crmcontracts.WorklistValue{Kind: "date", Date: &when}
 }
 
 func daysValue(days int) *crmcontracts.WorklistValue {

@@ -3,7 +3,7 @@
 
 package compose
 
-// The three record types a bulk change acts on, each reached through its owning
+// The four record types a bulk change acts on, each reached through its owning
 // module's own single-record writes. The engine never writes a record itself:
 // it locks, compares and hands each row to the module, so the rules a row is
 // changed under are the ones a PATCH or an archive of that row would meet.
@@ -27,23 +27,35 @@ type bulkRow struct {
 	ownerID *ids.UUID
 }
 
-// bulkTarget is one record type's share of a bulk change. version is the one
-// the caller was shown; each write is conditioned on it.
+// bulkTarget is one record type's share of a bulk change.
 type bulkTarget interface {
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
+}
+
+// bulkReassigner is the share of a record type that has an owner to hand on.
+// version is the one the caller was shown; the write is conditioned on it.
+type bulkReassigner interface {
 	reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error
+}
+
+// bulkArchiver is the share of a record type that has a single-record archive.
+// A lead has none — it leaves the queue by being disqualified — so the archive
+// verb is refused for it before any row is tried.
+type bulkArchiver interface {
 	archive(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) error
 	// restore brings an archived record back, conditioned on version, and
 	// tries again the links earlier restores of the same undo left behind.
 	restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind) (storekit.RestoreReport, error)
 }
 
-// bulkTargets builds the three adapters over the stores the REST handlers use.
+// bulkTargets builds the four record adapters over the stores the REST
+// handlers use; the Worklist's own adapter is bulkworklist.go's.
 func bulkTargets(contactsStore *contacts.Store, dealsStore *deals.Store) map[crmcontracts.BulkRecordType]bulkTarget {
 	return map[crmcontracts.BulkRecordType]bulkTarget{
 		crmcontracts.BulkRecordTypeContact: contactBulkTarget{store: contactsStore},
 		crmcontracts.BulkRecordTypeCompany: companyBulkTarget{store: contactsStore},
 		crmcontracts.BulkRecordTypeDeal:    dealBulkTarget{store: dealsStore},
+		crmcontracts.BulkRecordTypeLead:    leadBulkTarget{store: contactsStore},
 	}
 }
 
@@ -118,4 +130,15 @@ func (t dealBulkTarget) restore(
 ) (storekit.RestoreReport, error) {
 	return t.store.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](id), &version,
 		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
+}
+
+type leadBulkTarget struct{ store *contacts.Store }
+
+func (t leadBulkTarget) lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error) {
+	row, err := t.store.LockLeadForBulkTx(ctx, tx, ids.From[ids.LeadKind](id))
+	return bulkRow{label: row.Label, version: row.Version, ownerID: row.OwnerID}, err
+}
+
+func (t leadBulkTarget) reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error {
+	return t.store.ReassignLeadTx(ctx, tx, ids.From[ids.LeadKind](id), owner, &version)
 }

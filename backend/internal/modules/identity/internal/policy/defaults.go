@@ -65,6 +65,11 @@ import (
 // departs in exactly the ways managementObjects names below; the two used to be
 // one variable, and the administration objects are what separated them.
 var managerObjects = grid(crud, map[string]grant{
+	reportingSalesTarget:     writeNoDelete,
+	reportingFrameworkObject: readOnly,
+	reportingReportEdition:   writeNoDelete,
+	reportingCreditObject:    readOnly,
+
 	objAiModelRate:          none,
 	objAiRouting:            none,
 	objAiBudget:             none,
@@ -153,6 +158,11 @@ var defaults = map[string]Document{
 	// surface the reading itself does not have.
 	"admin": {
 		Objects: grid(crud, map[string]grant{
+			reportingSalesTarget:     writeNoDelete,
+			reportingFrameworkObject: readUpdate,
+			reportingReportEdition:   writeNoDelete,
+			reportingCreditObject:    readOnly,
+
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
 			objAiBudget:             readUpdate,
@@ -241,6 +251,10 @@ var defaults = map[string]Document{
 	// property, admin included.
 	"rep": {
 		Objects: grid(readOnly, map[string]grant{
+			reportingReportDefinition: crud,
+			reportingReportSchedule:   crud,
+			reportingReportEdition:    writeNoDelete,
+
 			"activity": writeNoDelete,
 			// A rep ANSWERS an assurance finding, and is usually the only one
 			// who can: the finding is about the quality of an input, and the
@@ -351,6 +365,13 @@ var defaults = map[string]Document{
 	// grant here expresses.
 	"ops": {
 		Objects: grid(crud, map[string]grant{
+			reportingReportDefinition: readOnly,
+			reportingSalesTarget:      readOnly,
+			reportingFrameworkObject:  readOnly,
+			reportingReportSchedule:   readOnly,
+			reportingReportEdition:    readOnly,
+			reportingCreditObject:     readOnly,
+
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
 			objAiBudget:             readUpdate,

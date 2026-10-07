@@ -195,29 +195,7 @@
   padding-block-start: var(--space-4);
 }
 
-/*
- * A surface fills the pane even when its content does not.
- *
- * The foot bar is STICKY, which only pins it while there is more surface below
- * it to pin against. On a short act — the voice corpus with nothing attached
- * yet, an empty section — the surface ended a few hundred pixels down and the
- * bar came to rest there, a full-bleed rule with its fill drawn straight across
- * the middle of an otherwise empty column, and the pane's ground below it
- * reading as a screen that had failed to finish rendering.
- *
- * Three links in one chain, because the bar is three levels down and an `auto`
- * margin only pushes inside a flex column: the pane's surface fills the pane,
- * the scene fills the surface, the board fills the scene. Where the content is
- * already taller than the pane none of this binds — `min-block-size` and
- * `flex: 1` are both floors, not sizes.
- */
-.mw-artifact > .ob-conv-artifact {
-  display: flex;
-  min-block-size: 100%;
-  flex-direction: column;
-}
-
-.mw-artifact > .ob-conv-artifact > .ob-scene,
+/* The triage board fills its scene, so its continue bar rests at the foot. */
 .ob-scene > .ob-conv-confirm.ob-triage {
   flex: 1;
 }
@@ -1464,51 +1442,14 @@
   text-align: center;
 }
 
-.ob-connect-dialog-body {
-  margin-top: var(--space-4);
-}
-
-.ob-connect-dialog-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gapActions);
-  margin-top: var(--space-4);
-}
-
-.ob-connect-dialog-actions .btn {
-  width: 100%;
-}
-
-/* The panel spaces its own children with a flex gap, so the actions row asks
-   only for the DIFFERENCE between that gap and the beat it gets in the
-   block-flow dialogs — adding its full margin on top of the gap put 28px above
-   this one row and 16px above the identical row in every other dialog. */
-.ob-connect-linkedin-panel .ob-connect-dialog-actions {
-  margin-top: var(--space-1);
-}
-
-/* Same shape as the primary above it, one weight quieter: a bare label with no
-   padding sat in a row with a 44px-tall button and gave the reader a two-line
-   hit area for the choice that undoes the whole dialog. */
-.ob-connect-dialog-notnow {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-sm);
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.ob-connect-dialog-notnow:hover {
-  background: var(--bgHover);
+.ob-connect-dialog-title:has(+ .form-stack),
+.ob-connect-dialog-intro:has(+ .form-stack) {
+  margin-bottom: var(--space-4);
 }
 
 /* The authorization form itself keeps left-aligned labels — a form reads
    worse centred — inside the otherwise-centred dialog chrome above it. */
 .ob-connect-linkedin-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
   text-align: start;
 }
 
@@ -2615,20 +2556,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-/* The rail's composer, one size smaller than the split variant's: a single
-   input line, and a hint that stays one line — ellipsized, with the full
-   sentence still readable by title and by assistive tech. */
-.ob-conv-page .mw-composer textarea {
-  min-height: 38px;
-  padding: var(--space-2) var(--space-3);
-}
-
-.ob-conv-page .mw-composer > small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* A finding the narration or a jump just landed on lights up unmistakably —

@@ -70,11 +70,18 @@ func TestAQueuedRequestBecomesATimelineEntryUnderTheOwnersName(t *testing.T) {
 		t.Fatalf("the record was landed for %q; it is the endpoint owner's authority that bounds it", rt.ingestedFor[0])
 	}
 	sql, args := rt.tx.statementMentioning(t, "activity_id = nullif")
-	if !strings.Contains(sql, "state = $2") {
+	if !strings.Contains(sql, "SET state =") {
 		t.Fatalf("the advance does not set the state:\n%s", sql)
 	}
+	// The state is chosen in the statement — landed, or withdrawn where an
+	// archive got here first — so both spellings are arguments and the test
+	// names them rather than the placeholder that happens to carry each.
 	if args[1] != stateLanded || args[2] != landedActivity {
 		t.Fatalf("the row was advanced to %v naming activity %v", args[1], args[2])
+	}
+	if args[4] != stateWithdrawn {
+		t.Fatalf("the advance offers %v as its other state; an archive that arrived first "+
+			"has to land the row withdrawn", args[4])
 	}
 }
 

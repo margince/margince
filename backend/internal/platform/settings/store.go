@@ -224,7 +224,68 @@ func LockForWrite(ctx context.Context, tx pgx.Tx, key string) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, key); err != nil {
 		return fmt.Errorf("settings: serializing writes to %s: %w", key, err)
 	}
+	// And the ROW, where there is one, so a writer conflicts with a reader that
+	// is deciding something against this value in another transaction.
+	//
+	// The advisory lock above cannot do that: it serializes writers of this key
+	// and nothing else, so a reader holding the old value commits beside a write
+	// that replaced it. ReadForDecision is the other half — a reader that takes
+	// FOR SHARE blocks this statement until it commits, which is what lets a
+	// guard between here and the write below see what that reader did.
+	//
+	// Taken BEFORE any guard a caller runs, for that reason. Blocking after the
+	// guard would let the guard's answer go stale in exactly the window this
+	// closes.
+	//
+	// Locks nothing when the row is absent, which is the case the advisory lock
+	// exists for and is not this one: a decision taken against an unset value is
+	// refused by ReadForDecision before it can be taken at all.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM setting WHERE key = $1 FOR UPDATE`, key); err != nil {
+		return fmt.Errorf("settings: locking the %s row for write: %w", key, err)
+	}
 	return nil
+}
+
+// ReadForDecision resolves a setting a caller is about to DECIDE something
+// against, holding the row until that decision commits.
+//
+// RequireTx answers what the value is; this answers it and says "I am acting on
+// this", so a writer replacing it waits rather than slipping between the read
+// and the write it justified. FOR SHARE and not FOR KEY SHARE: the writer
+// updates `value`, which is not a key column, so a key-share lock would let
+// the two proceed side by side — the exact race this closes.
+//
+// For a caller whose write is only correct while this value stands. A reader
+// rendering it wants RequireTx: a screen is not harmed by the value changing
+// under it, and locking for every read would make a rare admin write wait on
+// every page that shows the setting.
+func ReadForDecision[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
+	return readTx(ctx, tx, e, " FOR SHARE")
+}
+
+// readTx is the one body behind RequireTx and ReadForDecision. They differ only
+// in whether the row is held, and a second copy of the gate, the absent-row
+// refusal and the decode would be free to drift from this one.
+//
+// lock is a constant at both call sites and never a caller's string.
+func readTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], lock string) (T, error) {
+	var zero T
+	if err := auth.Require(ctx, e.Object(), principal.ActionRead); err != nil {
+		return zero, err
+	}
+	var raw json.RawMessage
+	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`+lock, e.Key()).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return zero, UnsetValue{Setting: e.Key()}
+	}
+	if err != nil {
+		return zero, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
+	}
+	var out T
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
+	}
+	return out, nil
 }
 
 // lookup resolves a key to its declaration, refusing an unregistered one.
@@ -403,23 +464,7 @@ func SeedValue[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], v T) (stored 
 // convert against one currency and label the result another, and the finance
 // mirror would freeze that mistake onto rows it cannot revisit.
 func RequireTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
-	var zero T
-	if err := auth.Require(ctx, e.Object(), principal.ActionRead); err != nil {
-		return zero, err
-	}
-	var raw json.RawMessage
-	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`, e.Key()).Scan(&raw)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return zero, UnsetValue{Setting: e.Key()}
-	}
-	if err != nil {
-		return zero, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
-	}
-	var out T
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
-	}
-	return out, nil
+	return readTx(ctx, tx, e, "")
 }
 
 // SetTx writes a typed setting inside a transaction the caller already holds —

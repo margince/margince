@@ -37,6 +37,13 @@
   gap: var(--space-1);
 }
 
+.lists-library-count,
+.lists-member-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .lists-library-steward {
   flex-direction: row;
   align-items: center;
@@ -81,25 +88,39 @@
 }
 
 .lists-why-unmet {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .lists-why-unknown {
   color: var(--textSecondary);
 }
 
-.lists-why-note {
-  margin: 0;
-  padding-inline-start: var(--space-3);
-  border-inline-start: 2px solid var(--borderSubtle);
+/* A record's lists, one per line: the list's name as a link, its kind, and
+   for a Shortlist the reader may change, the way to take the record off. */
+.lists-record {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-/* The account's Shortlists on the company rail: one per line, each a link. */
-.co-rail-lists {
+.lists-record-set {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+
+.lists-record-set > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.lists-record-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }

@@ -5,7 +5,10 @@ package attention
 
 // How this feed's composed reads reach the database as ONE unit of work.
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Snapshots composes a multi-statement read inside a single database snapshot.
 //
@@ -19,7 +22,15 @@ type Snapshots interface {
 	// Detached answers a ctx with no snapshot on it, for the one write a
 	// composed read makes. The caller says why at its call site.
 	Detached(ctx context.Context) context.Context
+	// Degradable runs one lane the page can lose: it gets its own statement
+	// budget and its failure leaves the snapshot usable for the lanes after it.
+	Degradable(ctx context.Context, budget time.Duration, fn func(context.Context) error) error
 }
+
+// laneBudget is how long any one statement of a degradable lane may run
+// inside the page's snapshot. Well under httpserver.ResponseDeadline, so a
+// lane that stalls costs the page a few seconds and not the request its answer.
+const laneBudget = 4 * time.Second
 
 // inSnapshot runs fn inside this feed's snapshot.
 //
@@ -41,4 +52,16 @@ func (s *Service) detached(ctx context.Context) context.Context {
 		return ctx
 	}
 	return s.snapshots.Detached(ctx)
+}
+
+// degradable runs a lane whose failure the page reports as a named
+// unavailable source rather than as its own failure. Every producer of a
+// failed WorklistSourceUnavailable reads through it, because a lane that
+// errors on the shared snapshot without it aborts every read that follows.
+// budget is laneBudget, or what is left of it for a lane read in parts.
+func (s *Service) degradable(ctx context.Context, budget time.Duration, fn func(context.Context) error) error {
+	if s.snapshots == nil {
+		return fn(ctx)
+	}
+	return s.snapshots.Degradable(ctx, budget, fn)
 }

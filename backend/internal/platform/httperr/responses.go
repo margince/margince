@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -76,6 +78,26 @@ func Validation(field, code, message string) *DetailedError {
 		Detail: message,
 		Fields: []FieldError{{Field: field, Code: code, Message: message}},
 	}
+}
+
+// RequireNonBlank is the one rule for a record's required name, on create and
+// edit alike. It answers the trimmed text, so what was accepted is what is stored.
+func RequireNonBlank(field, raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		return "", Validation(field, "required", field+" is required")
+	}
+	return name, nil
+}
+
+// RefuseNull refuses a PATCH that sent a required field as an explicit null.
+// An optional pointer decodes null and absent alike, so without this a null
+// name reads as "leave it alone" and answers 200 for a clear it never did.
+func RefuseNull(r *http.Request, field string) error {
+	if slices.Contains(ClearedFields(r), field) {
+		return Validation(field, "required", field+" is required")
+	}
+	return nil
 }
 
 // RequireBodyID refuses a required body id the caller simply omitted, naming the

@@ -11,6 +11,7 @@ package deals
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -209,10 +210,20 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		in.ValidUntil = &v
 	}
 
-	offer, err := h.store.UpdateOffer(r.Context(), pathID[ids.OfferKind](id), in)
+	offerID := pathID[ids.OfferKind](id)
+	offer, retired, err := h.store.UpdateOffer(r.Context(), offerID, in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
+	}
+	// The row is already committed without the retired rendering, so a failed
+	// delete leaves an inert orphan, never a dangling reference — logged, as the
+	// render's reclamation of a superseded PDF is, rather than failing the edit.
+	if retired != nil && h.blob != nil {
+		if delErr := h.blob.Delete(r.Context(), *retired); delErr != nil {
+			slog.WarnContext(r.Context(), "reclaiming the rendering a buyer change retired",
+				"offer", offerID.String(), "ref", *retired, "err", delErr)
+		}
 	}
 	httperr.WriteJSON(w, http.StatusOK, offer)
 }

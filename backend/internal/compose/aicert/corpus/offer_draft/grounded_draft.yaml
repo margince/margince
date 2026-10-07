@@ -18,15 +18,16 @@ expect:
   outcome: accepted
   answer:
     act_501:
-      unit_price_minor: 150000
+      line_net_minor: 150000
       price_grounded: true
     act_502:
       unit_price_minor: 9900
       price_grounded: true
   rubric: >
     Score whether the onboarding line cites act_501 with a verbatim snippet
-    and a conversation price consistent with 1500.00 EUR (150000 minor
-    units), and whether the Pro-tier line cites act_502 and matches
+    and a quantity and per-unit conversation price whose product is 1500.00
+    EUR (150000 minor units) — ten hours at 15000 and one unit at 150000 are
+    the same line total — and whether the Pro-tier line cites act_502 and matches
     the rate card's Pro-tier product rather than guessing its own price.
   bands:
     certified_min: 70

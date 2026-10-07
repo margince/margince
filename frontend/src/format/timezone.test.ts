@@ -8,6 +8,7 @@ import {
   startOfDayInZone,
   timezoneOptions,
   viewerZone,
+  zoneOffsetMs,
 } from "./timezone";
 
 afterEach(() => {
@@ -78,6 +79,15 @@ describe("a record's clock against the reader's", () => {
     const instant = "2026-07-02T00:30:00Z";
     expect(formatDate(instant, "en", "Europe/Berlin")).toBe("02/07/2026");
     expect(formatDate(instant, "en", viewerZone())).toBe("01/07/2026");
+  });
+});
+
+describe("zoneOffsetMs", () => {
+  it("reads the same offset however far into its second an instant is", () => {
+    const twoHours = 2 * 60 * 60 * 1000;
+    for (const at of ["2026-09-12T08:00:00.000Z", "2026-09-12T08:00:00.001Z"]) {
+      expect(zoneOffsetMs(Date.parse(at), "Europe/Berlin")).toBe(twoHours);
+    }
   });
 });
 

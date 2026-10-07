@@ -28,8 +28,13 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 	// missed here either. A hand-written literal would have the same gap as
 	// the encoder it is checking.
 	filled := reflect.New(patchType).Elem()
+	operationsField, _ := patchType.FieldByName("Operations")
 	for i := range patchType.NumField() {
 		field := filled.Field(i)
+		if i == operationsField.Index[0] {
+			field.Set(reflect.ValueOf(filledOperationPatch(t)))
+			continue
+		}
 		if field.Kind() != reflect.Pointer {
 			t.Fatalf("%s is %s, want a pointer — a sparse patch marks absence with nil",
 				patchType.Field(i).Name, field.Kind())
@@ -42,6 +47,8 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 			value.Elem().SetString("x")
 		case reflect.Int:
 			value.Elem().SetInt(7)
+		case reflect.Bool:
+			value.Elem().SetBool(true)
 		case reflect.Slice:
 			// NON-EMPTY, for the same reason the scalars above are non-zero: an
 			// encoder that wrote a slice the caller did not give it would be
@@ -56,6 +63,19 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 			}
 			filledSlice.Index(0).SetString("x")
 			value.Elem().Set(filledSlice)
+		case reflect.Map:
+			// NON-EMPTY for the reason the slice above is: an empty map is a
+			// legitimate CHOICE on the group-role field — no group grants
+			// anything — so a fixture using it could not tell "encoded what it
+			// was given" from "encoded a map of its own".
+			mapType := value.Elem().Type()
+			if mapType.Key().Kind() != reflect.String || mapType.Elem().Kind() != reflect.String {
+				t.Fatalf("%s is a map of %s to %s, which this test does not know how to fill",
+					patchType.Field(i).Name, mapType.Key().Kind(), mapType.Elem().Kind())
+			}
+			filledMap := reflect.MakeMapWithSize(mapType, 1)
+			filledMap.SetMapIndex(reflect.ValueOf("x"), reflect.ValueOf("y"))
+			value.Elem().Set(filledMap)
 		default:
 			t.Fatalf("%s holds %s, which this test does not know how to fill — "+
 				"give it a case rather than letting the field go unchecked",
@@ -69,10 +89,10 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 		t.Fatalf("encoding a fully-populated patch: %v", err)
 	}
 
-	if len(encoded) != patchType.NumField() {
+	if want := patchType.NumField() - 1 + operationsField.Type.NumField(); len(encoded) != want {
 		t.Errorf("the encoder produced %d writes for %d patch fields — "+
 			"a field it does not encode is one that silently stops saving",
-			len(encoded), patchType.NumField())
+			len(encoded), want)
 	}
 
 	// Every write carries bytes, and no key appears twice. A duplicated entry

@@ -10,84 +10,9 @@ package main
 import (
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 const testDSN = "postgres://localhost/margince_test"
-
-// The access-token TTL: unset keeps the mint's own default, a flag or its env
-// equivalent sets it, and the flag wins over the environment (the usual
-// precedence — an explicit argument beats an inherited one).
-func TestOAuthAccessTokenTTLIsReadFromTheFlagAndTheEnvironment(t *testing.T) {
-	t.Run("unset is zero, which means the passport default", func(t *testing.T) {
-		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
-		if err != nil {
-			t.Fatalf("parsing: %v", err)
-		}
-		if cfg.oauthAccessTokenTTL != 0 {
-			t.Errorf("oauthAccessTokenTTL = %s, want 0 (unconfigured)", cfg.oauthAccessTokenTTL)
-		}
-	})
-
-	t.Run("the flag sets it", func(t *testing.T) {
-		cfg, err := parseAPIFlags([]string{"--dsn", testDSN, "--oauth-access-token-ttl", "15m"})
-		if err != nil {
-			t.Fatalf("parsing: %v", err)
-		}
-		if cfg.oauthAccessTokenTTL != 15*time.Minute {
-			t.Errorf("oauthAccessTokenTTL = %s, want 15m", cfg.oauthAccessTokenTTL)
-		}
-	})
-
-	t.Run("the environment sets it", func(t *testing.T) {
-		t.Setenv("MARGINCE_OAUTH_ACCESS_TOKEN_TTL", "30m")
-		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
-		if err != nil {
-			t.Fatalf("parsing: %v", err)
-		}
-		if cfg.oauthAccessTokenTTL != 30*time.Minute {
-			t.Errorf("oauthAccessTokenTTL = %s, want the env value 30m", cfg.oauthAccessTokenTTL)
-		}
-	})
-
-	t.Run("the flag beats the environment", func(t *testing.T) {
-		t.Setenv("MARGINCE_OAUTH_ACCESS_TOKEN_TTL", "30m")
-		cfg, err := parseAPIFlags([]string{"--dsn", testDSN, "--oauth-access-token-ttl", "15m"})
-		if err != nil {
-			t.Fatalf("parsing: %v", err)
-		}
-		if cfg.oauthAccessTokenTTL != 15*time.Minute {
-			t.Errorf("oauthAccessTokenTTL = %s, want the flag's 15m", cfg.oauthAccessTokenTTL)
-		}
-	})
-}
-
-// A TTL the passport mint would refuse, or a value that is not a duration at
-// all, must fail the boot — the alternative is a handshake failing in
-// production with nobody watching.
-func TestAnUnusableOAuthAccessTokenTTLFailsTheBoot(t *testing.T) {
-	t.Run("past the mint's ceiling", func(t *testing.T) {
-		over := (identity.MaxOAuthAccessTokenTTL + time.Hour).String()
-		if _, err := parseAPIFlags([]string{"--dsn", testDSN, "--oauth-access-token-ttl", over}); err == nil {
-			t.Fatalf("a TTL of %s was accepted, want a boot error naming the ceiling", over)
-		}
-	})
-
-	t.Run("negative", func(t *testing.T) {
-		if _, err := parseAPIFlags([]string{"--dsn", testDSN, "--oauth-access-token-ttl", "-1m"}); err == nil {
-			t.Fatal("a negative TTL was accepted, want a boot error")
-		}
-	})
-
-	t.Run("an env value that is not a duration", func(t *testing.T) {
-		t.Setenv("MARGINCE_OAUTH_ACCESS_TOKEN_TTL", "fifteen minutes")
-		if _, err := parseAPIFlags([]string{"--dsn", testDSN}); err == nil {
-			t.Fatal("a malformed env duration was ignored, want a boot error rather than a silent default")
-		}
-	})
-}
 
 // The connector publishes --public-base-url verbatim as its OAuth audience, its
 // RFC 9728 protected-resource document and its advertised MCP URL. A value that
@@ -160,11 +85,11 @@ func TestValidatePublicBaseURLRefusesUserinfoWithoutEchoingIt(t *testing.T) {
 // answered with a fault that had been true all along.
 func TestParseReportsEveryConfigurationFaultAtOnce(t *testing.T) {
 	t.Setenv("MARGINCE_DSN", "")
-	_, err := parseAPIFlags([]string{"--oauth-access-token-ttl", "99999h"})
+	_, err := parseAPIFlags([]string{"--metrics-access", "sometimes"})
 	if err == nil {
 		t.Fatal("parsing answered no error, want both faults reported")
 	}
-	for _, want := range []string{"--dsn", "--oauth-access-token-ttl"} {
+	for _, want := range []string{"--dsn", "--metrics-access"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the error does not mention %s — an operator fixing one fault at a time "+
 				"pays a boot per fault:\n%s", want, err)
@@ -182,26 +107,6 @@ func TestOneFaultIsNotRenderedAsAList(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "\n  - ") {
 		t.Errorf("a single fault was rendered as a bullet list:\n%s", err)
-	}
-}
-
-// A fault found while REGISTERING the flags joins the ones found after
-// parsing, instead of pre-empting them.
-//
-// A malformed duration in the environment used to return before the flag set
-// even existed, so it hid a missing DSN for a boot — the same one-fault-per-run
-// this collection exists to end, reintroduced by ordering.
-func TestAMalformedEnvDurationIsReportedBesideTheOtherFaults(t *testing.T) {
-	t.Setenv("MARGINCE_DSN", "")
-	t.Setenv(oauthAccessTokenTTLEnv, "not-a-duration")
-	_, err := parseAPIFlags(nil)
-	if err == nil {
-		t.Fatal("parsing answered no error, want both faults")
-	}
-	for _, want := range []string{"--dsn", oauthAccessTokenTTLEnv} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("the error does not mention %s:\n%s", want, err)
-		}
 	}
 }
 
@@ -317,4 +222,37 @@ func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 			t.Fatalf("err = %v, want a boot error naming the unknown posture", err)
 		}
 	})
+}
+
+// The trusted-proxy list is a boot fault when it cannot be honoured safely,
+// never a silent empty set: an operator who set it believes the limits key on
+// the client, and an ignored value would leave them keyed on the proxy.
+func TestParseAPIFlags_TrustedProxies(t *testing.T) {
+	t.Run("unset trusts nobody", func(t *testing.T) {
+		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !cfg.trustedProxies.Empty() {
+			t.Fatalf("default must trust nobody; got %s", cfg.trustedProxies)
+		}
+	})
+	t.Run("env value is parsed", func(t *testing.T) {
+		t.Setenv("MARGINCE_TRUSTED_PROXIES", "10.0.0.0/16")
+		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := cfg.trustedProxies.String(); got != "10.0.0.0/16" {
+			t.Fatalf("got %q", got)
+		}
+	})
+	for _, bad := range []string{"0.0.0.0/0", "ingress-nginx"} {
+		t.Run("refuses "+bad, func(t *testing.T) {
+			_, err := parseAPIFlags([]string{"--dsn", testDSN, "--trusted-proxies", bad})
+			if err == nil || !strings.Contains(err.Error(), "--trusted-proxies") {
+				t.Fatalf("want a --trusted-proxies boot fault, got %v", err)
+			}
+		})
+	}
 }

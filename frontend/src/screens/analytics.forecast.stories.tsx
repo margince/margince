@@ -6,7 +6,9 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import type { AnalyticsSelection } from "./analytics.context";
-import { ForecastView } from "./analytics.forecast";
+import { ForecastView, SharedForecastView } from "./analytics.forecast";
+import { forecastEvaluation } from "./reporting.scenarios";
+import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -79,7 +81,8 @@ function readings(over: Partial<Readings> = {}): Readings {
 // answer rather than its failure, and it is the ordinary state of a story.
 function routes(data: Readings): RouteMap {
   return {
-    "GET /me": meRoute({}),
+    ...reportingStoryRoutes(forecastEvaluation),
+    "GET /me": meRoute({ report_definition: ["read"] }),
     "GET /forecast": () => jsonResponse(data),
     "GET /forecast/assurance": () => jsonResponse({}, 404),
     "GET /forecast/assurance/preview": () =>
@@ -144,7 +147,7 @@ export const RecordingACall: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Update call",
+        name: "Update forecast",
       }),
     );
   },
@@ -175,3 +178,25 @@ export const EveryDealPricedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+function recipient(kind: "live" | "snapshot") {
+  return () => {
+    const view = {
+      kind,
+      target: "forecast",
+      as_of: kind === "snapshot" ? "2026-07-14T06:00:00Z" : undefined,
+      readings: readings(),
+      withheld: false,
+    } satisfies components["schemas"]["SharedForecastView"];
+    installFetchStub({
+      "GET /forecast/shared/fixture": () => jsonResponse(view),
+    });
+    return (
+      <StoryProviders>
+        <SharedForecastView token="fixture" />
+      </StoryProviders>
+    );
+  };
+}
+export const LiveRecipient: Story = { render: recipient("live") };
+export const SnapshotRecipient: Story = { render: recipient("snapshot") };

@@ -2,24 +2,42 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { ListLibrary } from "./listlibrary";
-import { listsMe, liveList, shortlist } from "./lists.fixtures";
+import {
+  listsMe,
+  liveList,
+  shortlist,
+  TEAM_ID,
+  teamsPage,
+} from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The team's lists: one row per list, with what it is for, how many members
-// the reader can see and who looks after it.
+// Shared views: one row per list, with what it is for, how many members the
+// reader can see, who looks after it and who can find it.
 const meta: Meta = { title: "Patterns/List library" };
 export default meta;
 
 type Story = StoryObj;
 
-export const TwoLists: Story = {
+// Three audiences: one named team, the reader's own teams, and everyone.
+export const ThreeLists: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": listsMe(true),
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
       "GET /lists": () =>
         jsonResponse({
-          data: [liveList, shortlist],
+          data: [
+            {
+              ...liveList,
+              id: "named-team",
+              name: "German accounts",
+              team_id: TEAM_ID,
+            },
+            liveList,
+            shortlist,
+          ],
           page: { has_more: false },
         }),
     });
@@ -42,5 +60,29 @@ export const NoListsYet: Story = {
         <ListLibrary />
       </StoryProviders>
     );
+  },
+};
+
+/** New Shortlist pressed: its name, what it is for, its record type and audience. */
+export const StartingAShortlist: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
+      "GET /lists": () => jsonResponse({ data: [], page: { has_more: false } }),
+    });
+    return (
+      <StoryProviders>
+        <ListLibrary />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "New Shortlist",
+      }),
+    );
+    await within(document.body).findByRole("dialog");
   },
 };

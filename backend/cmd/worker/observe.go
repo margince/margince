@@ -14,7 +14,8 @@
 //
 // So this listener carries only what is PROCESS-LOCAL and therefore differs
 // per target — the Go runtime, this process's own pool, this process's relay
-// counter, and the AI calls this process made. It re-serves no job-table
+// counter, the AI calls this process made, and the provider calls and mailbox
+// imports its capture lanes ran. It re-serves no job-table
 // gauge, and passes a nil outbox backlog for the same reason: that read is the
 // api's, and a second copy of a fleet-wide number is a worse operator surface
 // than one copy. It carries no workspace id and no tenant data at all, which
@@ -30,9 +31,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"sync/atomic"
 	"time"
 
@@ -130,7 +133,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	// of a shared table the api already serves, and a second copy of one
 	// number is a worse operator surface than one copy.
 	//
-	// Extra carries the AI counters, and they belong here by the same test
+	// Extra carries the AI and mailbox-import counters, and they belong here by the same test
 	// everything else on this listener passes: they count what THIS process
 	// routed, so they differ per target and no other role can answer them.
 	// While this was nil every call the enrichment lanes made was missing from
@@ -148,8 +151,12 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	mux.HandleFunc("/metrics", httpserver.Metrics(httpserver.MetricsInput{
 		Pool:      pool,
 		Published: events.PublishedTotal,
-		Extra:     ai.WriteProcessMetrics,
+		Extra:     writeProcessSections,
 	}))
+
+	if cfg.observePprof {
+		mountPprof(mux)
+	}
 
 	srv := &http.Server{
 		Addr: cfg.observeAddr,
@@ -171,6 +178,15 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	}
 	bound := listener.Addr().String()
 	log.Info("worker observability listener", "addr", bound)
+	if cfg.observePprof {
+		// WARN, and once per boot: this is the line that says the surface is
+		// wider than the probes and metrics an operator expects this port to
+		// carry, so it has to be findable in a log that is otherwise quiet
+		// about this listener — and it is the reminder to turn it back off.
+		log.Warn("worker: MARGINCE_OBSERVE_PPROF=true — /debug/pprof/ is served unauthenticated on the observe listener, "+
+			"including goroutine dumps and the process command line; keep the port contained and turn it off once the profile is taken",
+			"addr", bound)
+	}
 
 	go func() {
 		if err := srv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -188,6 +204,45 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 			log.Warn("stopping the worker observability listener", "err", err)
 		}
 	}}, nil
+}
+
+// writeProcessSections renders the counter families this process increments:
+// the AI calls it routed, and what its capture lanes decided, called and
+// imported.
+func writeProcessSections(w io.Writer) {
+	ai.WriteProcessMetrics(w)
+	compose.WriteCaptureProcessMetrics(w)
+}
+
+// mountPprof puts Go's runtime profiles on the observe mux, and ONLY there.
+//
+// Importing net/http/pprof also registers these same handlers on
+// http.DefaultServeMux, from the package's init. That registration is inert in
+// this binary — no server here is handed the default mux, and the observe
+// listener serves its own — so nothing reaches /debug/pprof unless this function
+// ran. Mounting explicitly rather than handing the default mux over is what
+// keeps it that way: the flag decides, not an import side effect.
+//
+// Index answers /debug/pprof/ itself AND every named profile under it —
+// /debug/pprof/heap, /allocs, /goroutine, /block, /mutex, /threadcreate — by
+// looking the trailing name up in runtime/pprof, so a profile the runtime adds
+// later is served without an edit here. The four below are the ones that are
+// not runtime/pprof profiles and so need a handler of their own.
+//
+// The listener's 10s write timeout stays as it is, and a 30s CPU profile still
+// works: a handler that samples over ?seconds=N (profile, trace, and the delta
+// form of a named profile) extends THAT response's write deadline by N itself,
+// through http.ResponseController. So the bound on how long an unauthenticated
+// client can hold a connection is widened per request, by exactly what the
+// request asked to sample, and only while this switch is on — rather than for
+// every probe and scrape on the port. A heap or allocs snapshot, the reading a
+// memory burst needs, is immediate.
+func mountPprof(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 }
 
 // workerReadyChecks are what this replica needs before it can do any work: its

@@ -95,7 +95,6 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	// The store-opened path reads the catalog through the unexported helper,
 	// not ActiveContactColumns: that one takes contact:read on the caller's
 	// behalf, and a seat may hold create without it.
@@ -131,7 +130,6 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	return s.createContactInTx(ctx, tx, in, by, nil)
 }
 
@@ -151,6 +149,12 @@ func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (
 func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by string,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
+	owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	in.OwnerID = owner
+
 	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
 		return crmcontracts.Contact{}, err
 	}

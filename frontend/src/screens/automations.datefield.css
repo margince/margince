@@ -1,4 +1,4 @@
-/* The hint under the date-field picker sits one step below its control. */
-.datefield-hint {
+/* The hint under a parameter picker sits one step below its control. */
+.param-hint {
   margin-top: var(--space-1);
 }

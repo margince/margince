@@ -47,9 +47,9 @@ type WaitingReply struct {
 	ContactID ids.UUID
 	CompanyID ids.UUID
 	DealID    ids.UUID
-	// HasOpenDeal reports whether an open deal is on this thread. It is what
-	// lets a caller keep an old wait that still has money behind it, and drop
-	// one that does not.
+	// HasOpenDeal reports whether an open deal is on this thread. Inside the
+	// horizon it is what lets a caller keep a stale wait with money behind it
+	// above routine work; past the horizon no wait survives on it.
 	//
 	// Read through the SAME visibility-gated links as the record ids above, so
 	// it means "an open deal this reader can see" rather than "an open deal
@@ -78,6 +78,23 @@ type WaitingReply struct {
 	// letting the caller infer it from a record id that is absent for other
 	// reasons too.
 	Threaded bool
+	// ThreadKey is the conversation the message belongs to, or empty. With Kind
+	// and ChannelProvider it names the conversation, as the thread walks do.
+	ThreadKey       string
+	ChannelProvider string
+	// EarlierRequests counts the conversation's earlier unanswered requests a
+	// caller folded into this row, and FirstAskedAt is when the first of them
+	// arrived. Zero when nothing was folded.
+	EarlierRequests int
+	FirstAskedAt    time.Time
+	// MeetingBookedAt is when the soonest booked meeting with this message's
+	// sender starts; nil when none is booked OR when none is discoverable to
+	// THIS reader — the column is fenced by the reader's own discover gate, so
+	// it is what this reader may be shown, never a global booking fact. A
+	// booked meeting does not settle the wait — only a held one does — but the
+	// caller stops counting waiting days against work that is already
+	// scheduled. bookedMeetingSQL holds the rule.
+	MeetingBookedAt *time.Time
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
 	// in, rather than one that merely reached a mailbox.
@@ -128,9 +145,9 @@ const WaitingScanCap = 200
 // on purpose: the bands separating an urgent wait from a stale one are the
 // caller's.
 //
-// A thread with an open deal is exempt — the one case where a long silence still
-// costs money, and a horizon outranking it would leave the caller's own
-// staleness rule nothing to act on.
+// No thread is exempt, an open deal included: only a request a human holds
+// outlives the horizon (heldRequestSQL). A deal gone quiet is the risk lane's
+// to raise, not the reply queue's.
 //
 // Applied BEFORE the cap, which is the whole shape of this query: a filter after
 // LIMIT lets two hundred rows nobody wants fill the scan and push a real
@@ -279,9 +296,10 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 		if err != nil {
 			return err
 		}
-		// The horizon this installation's own answering implies, measured in
-		// the same transaction as the scan it bounds — so the cutoff and the
-		// rows it judges come from one snapshot.
+		// The horizon this installation's own answering implies, read ONCE for
+		// this scan so every row it judges is judged by one cutoff. Remembered
+		// for up to an hour rather than re-measured here (waitinghorizoncache.go
+		// says what that trades).
 		horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
 		if err != nil {
 			return err
@@ -293,13 +311,16 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 		if err != nil {
 			return err
 		}
+		bookedDiscover, err := bookedDiscoverClause(ctx, arg)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				horizon,
 				liveRecord(openDealPredicate, "d"),
 				liveRecord(workingLeadPredicate, "ld"),
 				liveRecord(openDealPredicate, "openDeal"),
-				liveRecord(openDealPredicate, "fd"),
 				reader,
 				scopeUnbounded,
 				neverRelaxed, neverRelaxed,
@@ -307,7 +328,8 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 				fmt.Sprintf("$%d", arg(readerAddresses)),
 				neverRelaxed,
-				olderThan(before, arg)), args...)
+				olderThan(before, arg), bookedDiscover,
+				neverRelaxed), args...)
 		if err != nil {
 			return err
 		}
@@ -318,7 +340,8 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded); err != nil {
+				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
+				&row.MeetingBookedAt); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)

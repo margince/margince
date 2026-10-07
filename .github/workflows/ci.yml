@@ -158,9 +158,9 @@ jobs:
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
-              # Only the merge gate itself. release.yml and sbom.yml run no
-              # backend gate, so editing one cannot invalidate a gate result —
-              # and each proves itself when it runs.
+              # Only the merge gate itself. release.yml and sbom.yml boot no
+              # Postgres, so editing one cannot invalidate an integration
+              # result; each proves itself when it runs.
               #
               # The gate is three files now: this caller plus the lane workflows
               # it invokes. The lanes are globbed rather than named one by one so
@@ -280,6 +280,11 @@ jobs:
               # the next one, and running this lane on a root-script edit costs
               # minutes where missing it ships a gate that never ran.
               - 'scripts/**'
+              # And the action that installs the browser the UAT leg runs in.
+              # It decides whether that leg can run AT ALL — a change to it is
+              # unreviewable without the lane it governs, and the one that
+              # introduced it would have merged never once executed.
+              - '.github/actions/install-playwright-chromium/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -469,7 +474,7 @@ jobs:
         working-directory: .
         run: make test-desktop-launcher LAUNCHER_COVER_OUT=desktop/launcher/coverage.out
       - name: Upload launcher coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: go-coverage-launcher
           path: desktop/launcher/coverage.out
@@ -548,7 +553,7 @@ jobs:
         working-directory: .
         run: make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
       - name: Upload extension coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: go-coverage-extensions
           path: backend/coverage-extensions.out
@@ -675,12 +680,10 @@ jobs:
       - name: a package over its budget reads as a timeout
         working-directory: .
         run: make test-lane-timeout-report
-      # The pin gate rides along here, and only here, because it reads the WHOLE
-      # workflow directory while the backend scope names one file: sbom.yml and
-      # patch.yml match no scope, so gated on the classifier this check would
-      # skip on exactly the PR that unpins an action — and Renovate, which bumps
-      # `uses:` across all three workflows, auto-merges on green. Same reason the
-      # two gates above run unconditionally: supply-chain surface is not a scope.
+      # The pin gate rides along here unconditionally because it reads the whole
+      # workflow directory, and Renovate bumps `uses:` across every workflow and
+      # auto-merges on green. Same reason the two gates above run
+      # unconditionally: supply-chain surface is not a scope.
       # `make check-backend` keeps running it too, so a laptop `make check`
       # reproduces this verdict. Pure bash and grep — no toolchain to install.
       - name: Action and image pins
@@ -1161,14 +1164,11 @@ jobs:
         # install; esbuild ships prebuilt platform binaries as optional deps.
         timeout-minutes: 5
         run: pnpm install --frozen-lockfile --ignore-scripts
-      # SEPARATE from the install above, and bounded, because `--with-deps`
-      # shells out to apt inside the runner: an unresponsive mirror hangs with
-      # no output, and a hang folded into the previous step reaches a reader as
-      # "the lane timed out" rather than "the package repository did".
+      # Retried and split in the action, because `--with-deps` shells out to
+      # apt inside the runner and an unresponsive mirror hangs with no output.
+      # It also says which half hung, which one folded step could not.
       - name: Install the Playwright Chromium browser
-        working-directory: frontend
-        timeout-minutes: 6
-        run: pnpm exec playwright install --with-deps chromium
+        uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e
 

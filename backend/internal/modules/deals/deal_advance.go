@@ -199,13 +199,14 @@ func (s *Store) advanceOnTx(
 		// administrator may edit a stage's semantic afterwards, and a reader
 		// joining the live stage would then report an old closing as something
 		// it was not.
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change, approval_id, reversal_of, semantic_at_change)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-			id, ids.UUID(*current.StageId), in.ToStageID, by,
-			current.AmountMinor, current.Currency, winProbability, in.ApprovalID,
-			in.ReversalOf, semantic); err != nil {
-			return fmt.Errorf("record stage history: %w", err)
+		from := ids.UUID(*current.StageId)
+		if err := s.recordStageHistory(ctx, tx, stageHistoryInput{
+			DealID: id, FromStageID: &from, ToStageID: in.ToStageID, ChangedBy: by, OwnerID: (*ids.UUID)(current.OwnerId), PipelineID: ids.UUID(*current.PipelineId),
+			Amount: current.AmountMinor, Currency: current.Currency,
+			Probability: &winProbability, ApprovalID: in.ApprovalID,
+			ReversalOf: in.ReversalOf, Semantic: &semantic,
+		}); err != nil {
+			return err
 		}
 
 		// A move BACK over a recent automatic one is a reversal, counted on the
@@ -373,12 +374,12 @@ func resolveAdvanceTarget(ctx context.Context, tx pgx.Tx, toStage ids.StageID, c
 func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
 ) (*storekit.Patch, string, error) {
-	status := "open"
+	status := string(DealOpen)
 	var closedAt *time.Time
 	switch semantic {
 	case "won", "lost":
 		status = semantic
-		now := time.Now().UTC()
+		now := s.clock().UTC()
 		closedAt = &now
 		if StageSemantic(semantic) == SemanticLost && (in.LostReason == nil || *in.LostReason == "") {
 			return nil, "", &LostReasonRequiredError{}

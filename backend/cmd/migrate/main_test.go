@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
@@ -140,5 +141,57 @@ func TestUpSummaryMatchesTheShellMatcher(t *testing.T) {
 	summary := fmt.Sprintf(upSummaryFormat, 0, 0)
 	if !strings.HasPrefix(summary, prefix) {
 		t.Errorf("migrate prints %q but %s matches on prefix %q — migrate_template would report every template as behind; change both together", summary, script, prefix)
+	}
+}
+
+// A POSITIVE ceiling must never render as "0".
+//
+// Postgres reads statement_timeout = 0 as no timeout, so truncating a sub-millisecond
+// duration turns the tightest bound an operator can name into no bound at all — the
+// one direction this setting must not fail in. Zero itself still renders as zero,
+// because that is an operator saying explicitly that they accept an unbounded hold.
+func TestAPositiveCeilingNeverRendersAsNoTimeout(t *testing.T) {
+	for _, c := range []struct {
+		ceiling time.Duration
+		want    string
+	}{
+		{0, "0"},
+		{500 * time.Microsecond, "1"},
+		{time.Nanosecond, "1"},
+		{time.Millisecond, "1"},
+		{1500 * time.Microsecond, "1"},
+		{5 * time.Minute, "300000"},
+	} {
+		if got := ceilingMillis(c.ceiling); got != c.want {
+			t.Errorf("ceilingMillis(%s) = %q, want %q", c.ceiling, got, c.want)
+		}
+	}
+}
+
+// River's migrator runs under the migration ceiling, not unbounded.
+//
+// The wrapping order decides this and the obvious order is wrong: WithDSNParam
+// returns the DSN untouched when the parameter is already present, and
+// WithoutRequestCeilings writes statement_timeout=0 itself — so wrapping it on the
+// outside leaves the pool unbounded while reading exactly like a bounded one. Held
+// here because that is invisible at the call site and silent at runtime.
+func TestRiverMigrationDSNCarriesTheCeiling(t *testing.T) {
+	for _, dsn := range []string{
+		"postgres://u:p@localhost:5432/db",
+		"postgres://u:p@localhost:5432/db?sslmode=disable",
+		"host=localhost user=u dbname=db",
+	} {
+		got := riverMigrationDSN(dsn, defaultStatementCeiling)
+		if !strings.Contains(got, "statement_timeout=300000") {
+			t.Errorf("riverMigrationDSN(%q) = %q, want the 5m ceiling: River's migrator takes "+
+				"the same locks as the files above it", dsn, got)
+		}
+		if strings.Contains(got, "statement_timeout=0") {
+			t.Errorf("riverMigrationDSN(%q) = %q, which leaves the pool unbounded", dsn, got)
+		}
+		// The request ceilings it cannot live under are still lifted.
+		if !strings.Contains(got, "idle_in_transaction_session_timeout=0") {
+			t.Errorf("riverMigrationDSN(%q) = %q, want the idle ceiling lifted for DDL", dsn, got)
+		}
 	}
 }

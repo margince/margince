@@ -14,8 +14,8 @@ import (
 	"testing"
 )
 
-// Every setting read through an ungated machinery reader — settings.ApplyTx or
-// settings.ApplyManyTx — is declared MachineryApplied.
+// Every setting read through an ungated machinery reader (settings.ApplyTx or
+// settings.ApplyManyTx) is declared MachineryApplied.
 //
 // The store enforces this already — ApplyTx refuses an undeclared entry — but it
 // refuses at RUNTIME, inside whatever machinery was applying the posture. That

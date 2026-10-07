@@ -16,21 +16,22 @@
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 95,
-  "judge_score_min": 92,
-  "latency_p50": 5279,
-  "latency_p95": 7438,
-  "mean_tokens": 2112,
-  "mean_tokens_in": 1127,
-  "mean_tokens_out": 985,
+  "judge_score_p50": 96,
+  "judge_score_min": 93,
+  "latency_p50": 4766,
+  "latency_p95": 5912,
+  "mean_tokens": 2043,
+  "mean_tokens_in": 1131,
+  "mean_tokens_out": 911,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 10555,
+  "est_cost_microusd": 9895,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-09-26T07:16:46Z",
+  "thinking_level": "low",
+  "ran_at": "2026-09-30T11:47:48Z",
   "scenarios": [
     {
       "scenario": "order_form_states_all_four",
@@ -42,8 +43,8 @@
       "passed": 3,
       "judge_scores": [
         95,
-        93,
-        93
+        97,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -64,9 +65,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        95,
-        95,
-        97
+        97,
+        97,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -87,8 +88,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        92,
         93,
+        95,
         93
       ],
       "bands": {

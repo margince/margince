@@ -54,6 +54,7 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 	}
 	c := review.Counts
 	out := crmcontracts.TeamWeeklyReview{
+		NumericSummary: review.NumericSummary,
 		Id:             openapi_types.UUID(review.ID),
 		TeamId:         openapi_types.UUID(review.TeamID),
 		TeamName:       review.TeamName,

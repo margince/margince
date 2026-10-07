@@ -12,7 +12,7 @@ import type { Worklist } from "./worklist.queries";
 
 /** The lanes the strip's four worklist figures are summed from. */
 export const MEETINGS = "meetings";
-export const LEADS = "leads";
+export const TASKS = "tasks";
 export const DECISIONS = "decisions";
 
 // Which categories came back at a bound, as the server marked them.
@@ -26,6 +26,31 @@ export const DECISIONS = "decisions";
 // A lane that could not be read AT ALL is a different fact and is not in
 // `counts`: it travels in `sources_unavailable`, which names a SOURCE, and only
 // the server maps a source to its lane. The caller keeps that case strip-wide.
+// Whether one category's figure may be stated exactly, or only as a floor.
+//
+// Three ways a figure stops being exact, and they are different facts: the lane
+// came back at its bound, the lane could not be read at all, or the SCOPE the
+// lanes were filtered against was itself cut. Answered here rather than in the
+// strip so a test can ask the question without rendering five cards.
+export function floorTest(day: Worklist): (category: string) => boolean {
+  const bounded = boundedCategories(day);
+  const cut = scopeWasCut(day);
+  return (category) =>
+    cut ||
+    bounded.has(category) ||
+    day.sources_unavailable.some((e) => e.category === category || !e.category);
+}
+
+// Whether the SCOPE itself was answered short.
+//
+// A capped team roster is not a bounded lane and not an unreadable source: every
+// lane answered whole, over a membership that stopped at its cap. So every
+// figure on the strip is a floor, and none of the rows behind them looks short —
+// which is why the server has to say it and the strip cannot work it out.
+export function scopeWasCut(day: Worklist): boolean {
+  return day.scope_truncated === true;
+}
+
 export function boundedCategories(day: Worklist): ReadonlySet<string> {
   const out = new Set<string>();
   for (const count of day.counts) {

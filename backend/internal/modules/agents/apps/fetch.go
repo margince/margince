@@ -43,7 +43,7 @@ import (
 const (
 	// fetchTimeout bounds one document read end to end.
 	fetchTimeout = 10 * time.Second
-	// maxDocumentBytes caps a view. The built documents are ~11 KiB; a megabyte
+	// maxDocumentBytes caps a view. The built documents are ~60 KiB; a megabyte
 	// is room for growth and still far below anything that could exhaust a boot.
 	maxDocumentBytes = 1 << 20
 	// documentPrefix is the path the web tier serves the views under, and the
@@ -109,8 +109,8 @@ func (f *Fetcher) configured() bool { return f != nil && f.base != nil }
 // yields the same path either way, where concatenation yields a doubled or
 // missing separator.
 //
-// The file name is DERIVED from the URI (ui://margince/company-brief.html is
-// served at /mcp-apps/company-brief.html) rather than listed beside it, so there
+// The file name is DERIVED from the URI (ui://margince/create-followups.html is
+// served at /mcp-apps/create-followups.html) rather than listed beside it, so there
 // is no second list to keep true.
 func (f *Fetcher) documentURL(uri string) (*url.URL, error) {
 	if f.base == nil {

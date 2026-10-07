@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { NAV, RAIL_LESS_SCREENS, railTrail } from "./nav";
+import {
+  NAV,
+  RAIL_LESS_SCREENS,
+  railTrail,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import { parseHash, routeHash } from "./router";
 
 describe("the rail and a composed unit", () => {
@@ -130,6 +136,46 @@ describe("a row that leads to a record instead of being one", () => {
   it("is the page again on the list that record was opened from", () => {
     const [primary] = railTrail({ screen: "contacts" });
     expect(primary.ancestor).toBe(false);
+  });
+
+  it("steps back on the import page, which is a page below the list", () => {
+    const [primary] = railTrail(parseHash("#/contacts/import"));
+    expect(primary.activeId).toBe("contacts");
+    expect(primary.ancestor).toBe(true);
+  });
+
+  it("is the page on the deal list with its create form open", () => {
+    const [primary] = railTrail(parseHash("#/deals/new"));
+    expect(primary.activeId).toBe("deals");
+    expect(primary.ancestor).toBe(false);
+  });
+});
+
+// A reserved segment read as an id is a fetch for a contact called "import"
+// and a trail reporting that its name could not load.
+describe("the segments a screen reserves", () => {
+  it.each([
+    ["#/contacts/import", undefined],
+    ["#/contacts/import/overview", undefined],
+    ["#/deals/new", undefined],
+    ["#/contacts/c-1", "contact"],
+    ["#/deals/d-1", "deal"],
+    // Each word is reserved on its own screen only.
+    ["#/leads/import", "lead"],
+    ["#/leads/new", "lead"],
+    ["#/contacts/new", "contact"],
+    ["#/deals/import", "deal"],
+  ])("reads %s as record kind %s", (hash, kind) => {
+    expect(recordKindOf(parseHash(hash))).toBe(kind);
+  });
+
+  it.each([
+    ["#/contacts/import", "vcardImport.title"],
+    ["#/deals/new", undefined],
+    ["#/contacts/c-1", undefined],
+    ["#/leads/import", undefined],
+  ])("names %s's own page as %s", (hash, key) => {
+    expect(reservedPageTitle(parseHash(hash))).toBe(key);
   });
 });
 

@@ -20,6 +20,7 @@ const (
 	pgLockNotAvailable    = "55P03"
 	pgProgramLimitExceed  = "54000"
 	pgDeadlockDetected    = "40P01"
+	pgSerialization       = "40001"
 
 	// 0A000 is "the server will not do that", and almost every member of it is
 	// a defect in the statement WE sent — an unsupported clause, a write to a
@@ -37,6 +38,9 @@ const (
 	pgStringDataRightTruncation = "22001"
 	pgInvalidDatetimeFormat     = "22007"
 	pgDatetimeFieldOverflow     = "22008"
+	// 22021 is the one NUL and malformed UTF-8 raise: text Postgres cannot
+	// store, so the caller's string is what to change.
+	pgCharacterNotInRepertoire = "22021"
 )
 
 // pgViolation names the violated constraint when err is the given
@@ -64,6 +68,14 @@ func IsLockTimeout(err error) bool {
 func IsDeadlock(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == pgDeadlockDetected
+}
+
+// IsLockCycle reports the two refusals a whole-transaction retry clears:
+// 40P01, a broken deadlock, and 40001, a serialization failure. Neither says
+// anything about the request.
+func IsLockCycle(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && (pgErr.Code == pgDeadlockDetected || pgErr.Code == pgSerialization)
 }
 
 // IsUniqueViolation detects the 23505 dedupe path (409 + existing id).
@@ -171,17 +183,36 @@ func IsProgramLimitExceeded(err error) bool {
 // advice was to retry — advice that can never work, since the same text is the
 // same non-uuid forever.
 func IsInvalidValueForType(err error) bool {
+	if isIntegerOverflowOnEncode(err) {
+		return true
+	}
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) {
 		return false
 	}
 	switch pgErr.Code {
 	case pgInvalidTextRepresentation, pgNumericValueOutOfRange,
-		pgStringDataRightTruncation, pgInvalidDatetimeFormat, pgDatetimeFieldOverflow:
+		pgStringDataRightTruncation, pgInvalidDatetimeFormat, pgDatetimeFieldOverflow,
+		pgCharacterNotInRepertoire:
 		return true
 	default:
 		return false
 	}
+}
+
+// isIntegerOverflowOnEncode reads pgx's refusal to bind a Go integer into a
+// narrower column (int2/int4) as the caller's number being too large. pgx
+// raises it before the statement is sent, as an untyped error, so there is no
+// SQLSTATE to read; TestIsInvalidValueForType_pgxOverflowWording pins the
+// wording against the pgx this tree builds with.
+func isIntegerOverflowOnEncode(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "failed to encode args[") &&
+		(strings.Contains(msg, "is greater than maximum value for") ||
+			strings.Contains(msg, "is less than minimum value for"))
 }
 
 // staleStatementCacheRoutine is the backend function that raises the one 0A000

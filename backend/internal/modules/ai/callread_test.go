@@ -14,7 +14,7 @@ import (
 // both methods refuse an actor-less request at admission first.
 func TestCallReadRefusesBeforeStorage(t *testing.T) {
 	store := NewCallReadStore(nil)
-	if _, err := store.ListCalls(context.Background(), nil, nil, nil); err == nil {
+	if _, err := store.ListCalls(context.Background(), nil, nil, CallListFilter{}); err == nil {
 		t.Fatal("ListCalls: want refusal on an actor-less context, got nil")
 	}
 	if _, err := store.GetCall(context.Background(), ids.NewV7()); err == nil {

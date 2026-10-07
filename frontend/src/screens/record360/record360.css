@@ -53,7 +53,7 @@
 }
 
 .r360-standing-calm {
-  color: var(--success);
+  color: var(--successText);
 }
 
 .r360-standing-accent {
@@ -61,11 +61,11 @@
 }
 
 .r360-standing-warning {
-  color: var(--warning);
+  color: var(--warningText);
 }
 
 .r360-standing-danger {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The call in words, and the loudest type on the record. It is the sentence

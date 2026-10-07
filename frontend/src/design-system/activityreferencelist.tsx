@@ -13,10 +13,10 @@ import "./activityreferencelist.css";
 // remember, and they cannot open any of it. This is the same list with each row
 // named.
 //
-// An email takes the product's one email citation, so a receipt behind a score
-// and a citation under a brief lead to the same drawer. Every other kind is
-// prose: a note and a call have no page of their own, and a row that looked
-// pressable and opened nothing would teach a reader that the list does not work.
+// An email takes the product's one email citation, so a receipt opens in the
+// same drawer as any other cited message. Every other kind is prose: a note
+// and a call have no page of their own, and a row that looked pressable and
+// opened nothing would teach a reader that the list does not work.
 //
 // A row this reader may know about but not read says so in the same words the
 // message components use, and offers nothing to press.

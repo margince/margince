@@ -33,7 +33,7 @@ import {
 } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { listQueryParams } from "./tagfilter";
-import { VCardImport } from "./vcard-import";
+import { VCardImportAction, VCardImportPage } from "./vcard-import";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the
@@ -164,7 +164,15 @@ function profileUrlOrUndefined(raw: string | undefined) {
   return stated ? normalizeProfileUrl(stated) : undefined;
 }
 
-export function ContactsScreen() {
+// `#/contacts/import` is this screen's reserved segment (app/nav.ts), so the
+// list's reads never start for the import page.
+export function ContactsScreen({
+  importing = false,
+}: Readonly<{ importing?: boolean }>) {
+  return importing ? <VCardImportPage /> : <ContactsList />;
+}
+
+function ContactsList() {
   const t = useT();
   const pageName = usePageName("contacts");
   const { locale } = useLocale();
@@ -229,7 +237,7 @@ export function ContactsScreen() {
                 one contact. Beside the others all the same: a handed-over card
                 is a way a contact comes to exist, and every one of those
                 belongs on this list. */}
-            <VCardImport />
+            <VCardImportAction />
           </>
         }
         columns={[

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { ProvidersStat, SpendStat } from "./ai-settings";
+import { ProvidersStat, SpendEstimate } from "./ai-settings";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /** The pair, composed here because no single page carries both any more. */
 const AiReadings = () => (
   <>
-    <SpendStat />
+    <SpendEstimate />
     <ProvidersStat />
   </>
 );
@@ -106,14 +106,25 @@ function story(
       "GET /ai/provider-keys": () =>
         jsonResponse({
           providers: [
-            { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-            { provider: "openai", configured: true, env_var: "OPENAI_API_KEY" },
+            {
+              provider: "gemini",
+              configured: true,
+              env_var: "GEMINI_API_KEY",
+              usable: true,
+            },
+            {
+              provider: "openai",
+              configured: true,
+              env_var: "OPENAI_API_KEY",
+              usable: true,
+            },
             // Bound by the premium lane and holding nothing — the join the
             // header's second line reports and the lane row's pill repeats.
             {
               provider: "anthropic",
               configured: false,
               env_var: "ANTHROPIC_API_KEY",
+              usable: false,
             },
           ],
         }),
@@ -155,7 +166,7 @@ function story(
 }
 
 // Across pages, not on one: `ProvidersStat` renders on Models & routing and
-// `SpendStat` on AI usage. The pair is the point — the two readings an operator
+// `SpendEstimate` in the allowance card. The pair is the point — the two readings an operator
 // opens AI settings for — so the title says across rather than picking one and
 // misplacing the other.
 const meta: Meta<typeof AiReadings> = {

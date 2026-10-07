@@ -1,9 +1,8 @@
-/* Meter — a proportion as a bar. Shared by StrengthPanel
- * (screens/strength.tsx), onboarding (screens/onboarding.tsx) and the
- * company page's completeness readings. */
+/* Meter — a proportion as a bar. */
 .meterbar {
   height: 8px;
   background: var(--bgChip);
+  color: var(--textPrimary);
   border-radius: var(--r-full);
   corner-shape: round;
   overflow: hidden;
@@ -137,17 +136,14 @@
 }
 .barlist-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 2fr) auto;
   align-items: center;
   gap: var(--space-3);
 }
-/* The label may be longer than its column — a stage name, a company. It
-   ellipsizes rather than wrapping, because a row that grows to two lines
-   breaks the horizontal scan the list exists for. */
 .barlist-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 /* Right-aligned so the digits form a column the eye can run down, which is
    the same reason the figures take tabular digits through `.t-num`. */
@@ -179,13 +175,16 @@
 .segbar:first-child {
   margin-top: 0;
 }
-.segbar-step-0 {
+.segbar-step-0,
+.btn.btn-link.segbar-step-0 {
   background: var(--accentText);
 }
-.segbar-step-1 {
+.segbar-step-1,
+.btn.btn-link.segbar-step-1 {
   background: color-mix(in srgb, var(--accentText) 55%, var(--bgElevated));
 }
-.segbar-step-2 {
+.segbar-step-2,
+.btn.btn-link.segbar-step-2 {
   background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated));
 }
 .segbar-track {
@@ -193,6 +192,7 @@
   display: flex;
   height: 12px;
   background: var(--bgChip);
+  color: var(--textPrimary);
   border-radius: 0 var(--r-xs) var(--r-xs) 0;
 }
 /* Parts meet on a 2px rule of the ground rather than a stroke: the gap is what
@@ -250,4 +250,21 @@
   background: var(--textPrimary);
   border-radius: var(--r-full);
   corner-shape: round;
+}
+
+.btn.btn-link.barlist-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: start;
+  color: inherit;
+  text-decoration: none;
+}
+.btn.btn-link.segbar-action {
+  min-width: 0;
+  padding: 0;
+  height: 100%;
+  border-radius: 0;
 }

@@ -75,7 +75,6 @@ function Chronology({
     undefined,
     undefined,
     names ? { nameOf: (_type, id) => names[id], t, locale } : undefined,
-    about,
   );
   return (
     <Card style={{ maxWidth: 640 }}>

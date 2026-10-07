@@ -277,6 +277,36 @@
         "read": true,
         "update": true
       },
+      "report_definition": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "report_edition": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
+      "report_schedule": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "reporting_credit": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "reporting_framework": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "retention_policy": {
         "create": true,
         "delete": true,
@@ -286,6 +316,12 @@
       "role_admin": {
         "create": true,
         "delete": true,
+        "read": true,
+        "update": true
+      },
+      "sales_target": {
+        "create": true,
+        "delete": false,
         "read": true,
         "update": true
       },
@@ -642,6 +678,36 @@
         "read": true,
         "update": true
       },
+      "report_definition": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "report_edition": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
+      "report_schedule": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "reporting_credit": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "reporting_framework": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "retention_policy": {
         "create": false,
         "delete": false,
@@ -653,6 +719,12 @@
         "delete": false,
         "read": false,
         "update": false
+      },
+      "sales_target": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
       },
       "saved_view": {
         "create": true,
@@ -1007,6 +1079,36 @@
         "read": true,
         "update": true
       },
+      "report_definition": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "report_edition": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
+      "report_schedule": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "reporting_credit": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "reporting_framework": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "retention_policy": {
         "create": false,
         "delete": false,
@@ -1018,6 +1120,12 @@
         "delete": false,
         "read": false,
         "update": false
+      },
+      "sales_target": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
       },
       "saved_view": {
         "create": true,
@@ -1372,6 +1480,36 @@
         "read": true,
         "update": true
       },
+      "report_definition": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "report_edition": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "report_schedule": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "reporting_credit": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "reporting_framework": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "retention_policy": {
         "create": true,
         "delete": true,
@@ -1379,6 +1517,12 @@
         "update": true
       },
       "role_admin": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "sales_target": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1737,6 +1881,36 @@
         "read": true,
         "update": false
       },
+      "report_definition": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "report_edition": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "report_schedule": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "reporting_credit": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "reporting_framework": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "retention_policy": {
         "create": false,
         "delete": false,
@@ -1747,6 +1921,12 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "sales_target": {
+        "create": false,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "saved_view": {
@@ -2102,6 +2282,36 @@
         "read": true,
         "update": true
       },
+      "report_definition": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "report_edition": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
+      "report_schedule": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "reporting_credit": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "reporting_framework": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "retention_policy": {
         "create": false,
         "delete": false,
@@ -2112,6 +2322,12 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "sales_target": {
+        "create": false,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "saved_view": {

@@ -42,7 +42,12 @@ type Result struct {
 	Findings      int
 	// Cleared counts formerly open findings this pass closed because their
 	// condition is no longer present.
-	Cleared   int64
+	Cleared int64
+	// Departed counts formerly open findings this pass closed because their
+	// subject left the eligible set — won, lost or archived. Counted apart
+	// from Cleared because the two say different things about the same row:
+	// one that the condition went, one that the record did.
+	Departed  int64
 	Readiness string
 	Status    string
 }
@@ -177,6 +182,18 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return err
 		}
 		out.Cleared = cleared
+		// And the findings whose SUBJECT went, which the clearing above
+		// deliberately leaves alone: it speaks only about deals it walked, and
+		// a departed deal was never walked. Unbounded by rule type, unlike the
+		// clearing — a source being unread tonight says nothing about a deal
+		// that is won, lost or archived — and it asks the deal rather than
+		// taking the complement of tonight's set, so a short read closes
+		// nothing it should not.
+		departed, err := s.store.CloseDeparted(ctx, tx)
+		if err != nil {
+			return err
+		}
+		out.Departed = departed
 		out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
 		out.Status = StatusComplete
 		if out.Readiness == ReadinessChecksIncomplete {

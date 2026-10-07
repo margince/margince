@@ -237,15 +237,7 @@ function FirstResponseCard({
   }
   const clock = firstResponseClock(lead);
   if (!clock) {
-    // Nobody has answered and the installation runs no clock: owed, without
-    // a deadline to be late against.
-    return (
-      <StatCard
-        label={label}
-        value={t("lead.readings.owed")}
-        detail={t("lead.readings.noClock")}
-      />
-    );
+    return null;
   }
   const breached = clock.state === "breached";
   const atRisk = clock.state === "at_risk";

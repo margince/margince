@@ -5,7 +5,7 @@
 
 package gates
 
-// The weekly message's labels are the weekly PANEL's labels.
+// The weekly message's labels are the weekly panel's labels.
 //
 // The message is a summary of numbers the reader can also see on screen, and
 // its whole subject is their own week. Two translations of "Promised,

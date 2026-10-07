@@ -64,6 +64,7 @@ type fakeAPI struct {
 	deltaRemoved []string // ids Graph tombstoned in the round
 	folders      []connector.NamedContainer
 	foldersErr   error
+	foldersCut   bool
 	deltaIDs     []string
 	deltaLink    string
 	deltaErr     error
@@ -254,8 +255,8 @@ const (
 	inboxFolderID = "folder-inbox"
 )
 
-func (f *fakeAPI) ListFolders(context.Context, string) ([]connector.NamedContainer, error) {
-	return f.folders, f.foldersErr
+func (f *fakeAPI) ListFolders(context.Context, string) ([]connector.NamedContainer, bool, error) {
+	return f.folders, f.foldersCut, f.foldersErr
 }
 
 func (f *fakeAPI) SentFolderID(context.Context, string) (string, error) {

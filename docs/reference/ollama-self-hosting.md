@@ -2,8 +2,7 @@
 
 **Tested 2026-09-23 to 2026-09-24** on one machine (below), with Ollama 0.34.3,
 through this tree's own certification lane. Every figure is a measurement from
-those two days, not an estimate; the verdicts in section 4 were re-taken on
-2026-09-28/29. Models, Ollama and this product all move:
+those two days; the verdicts in section 4 were re-taken on 2026-09-28/29. Models, Ollama and this product all move:
 re-measure before trusting a number here for a purchase.
 
 Related: [certify-an-ai-model.md](../how-to/certify-an-ai-model.md) for how to
@@ -16,24 +15,25 @@ for the binding this page recommends. The same machine serving models through vL
 
 ## The short answer
 
-On a 24GB Apple-silicon machine, **use `gemma4:12b` on every tier.**
+On a 24GB Apple-silicon machine, use **`gemma4:12b`** on every tier.
 
 - It is the only model we tested that passed every `capture_classify` run (15 of
   15), and the only one we ran on the whole corpus: 8 tasks at a 100% pass rate,
   8 more at 80% or better, out of 28 scored (table in section 4). Under the
   current grading rule it certifies 8 of 28 and 6 more are usable with care.
-- A call takes **about 14 seconds** (the median of the per-task medians in
+- A call takes about 14 seconds (the median of the per-task medians in
   section 4). It generates 12 tokens a second.
-- It is the largest Gemma 4 that runs **entirely on the GPU** here. The 26B
-  spills to the CPU and is slower, not better.
+- It is the largest Gemma 4 that runs entirely on the GPU here. The 26B
+  spills to the CPU and is slower without being better.
 - The tasks it does badly are the ones that ask a small model to return the
-  right 36-character id, and the ones that write long text. Section 6 lists why, so
-  nobody re-discovers it.
+  right 36-character id, and the ones that write long text. Section 6 lists
+  why.
 
-Two things will bite you before quality does, both fixed in the adapter now:
-Gemma 4 **thinks by default** (10 to 20 times slower, and an empty answer when
-the output budget runs out), and `gpt-oss` **breaks if you tell it not to
-think**. Section 6 has both.
+Two model behaviours cause failures before answer quality matters, and the
+adapter handles both.
+Gemma 4 thinks by default (10 to 20 times slower, and an empty answer when the
+output budget runs out), and `gpt-oss` breaks if you tell it not to think.
+Section 6 has both.
 
 ## 1. The machine
 
@@ -55,8 +55,8 @@ We did not measure thermal throttling over the hours; the machine has a fan.
 
 Speed is generation speed from one direct call to Ollama: a ~480-token prompt, a
 JSON schema, thinking off (`gpt-oss` cannot turn it off; see section 6), nothing
-else loaded. It is the honest speed. The
-latencies in the certification records are slower, for a reason section 6 gives.
+else loaded. This is the raw generation speed. The latencies in the
+certification records are slower, for a reason section 6 gives.
 
 | model tag | on disk | in memory | where it ran | tokens/s | verdict for this machine |
 |---|---|---|---|---|---|
@@ -92,12 +92,11 @@ Two different measurements are on this page, and they are not comparable:
   accepted. Gathered hours *before* the certification grading rule was
   reworked, with a cloud judge (`openai/gpt-oss-120b` through OpenRouter). The
   validator half of this number does not depend on the judge, so it still
-  describes the model. The old `certified` / `not_supported` labels are left
-  out on purpose: that rule required every single run to pass, and it has been
-  replaced.
-- **Verdict** (section 4, last table): the labels the current rule gives, from the
-  28 records committed for the sovereign preset, re-taken on 2026-09-28/29 and
-  judged by the default cloud judge (Claude Sonnet 4.6).
+  describes the model. The labels from that older rule, which required every
+  run to pass, are left out.
+- **Verdict** (section 4, last table): the labels the current rule gives, from
+  the 28 records committed for the sovereign preset. They were re-taken on
+  2026-09-28/29 and judged by the default cloud judge (Claude Sonnet 4.6).
 
 The two are different runs with different judges, so a task can differ between
 them: `request_settlement` is 0.25 in the first table and 0.96 in the second.
@@ -151,10 +150,10 @@ What the latency column means in practice: a short verdict or classification is
 tokens (`summarize`, `deal_health`, `growth_fit`) is 45 to 86 seconds, because
 generation is 12 tokens a second and there is no way around it on this chip.
 
-**The verdicts the current grading rule gives**, from the committed `sovereign`
-records (2026-09-28/29, cloud judge, a borderline scenario re-run before it is
-decided, so the run counts vary). Latency here includes the judge's turn off the
-GPU but not a second model on it; read it beside the table above.
+The verdicts the current grading rule gives, from the committed `sovereign`
+records (2026-09-28/29, cloud judge). A borderline scenario is re-run before it
+is decided, so the run counts vary. Latency here includes the judge's turn off
+the GPU but not a second model on it; read it beside the table above.
 
 | task | verdict | pass rate | runs | median s | 95th pct s | output tokens |
 |---|---|---|---|---|---|---|
@@ -196,15 +195,15 @@ own validator, and the judge scored a scenario below its bar.
 
 Five tasks each, three runs, same cloud judge (`gpt-oss:20b` was judged by
 `mistral-medium-3.1` so it did not grade its own family). Pass rate, then median
-call time in seconds. A dash means not run.
+call time in seconds. "n/r" means not run.
 
 | task | gemma4:12b | gpt-oss:20b | qwen3:14b | qwen3.5:9b | lfm2:24b-a2b | qwen3.8:27b |
 |---|---|---|---|---|---|---|
 | capture_classify | **1.00** · 11 | 0.53 · 5 | 0.73 · 10 | 0.40 · 8 | 0.00 · 2 | 0.80 · 80 |
 | enrich | **1.00** · 26 | **1.00** · 14 | **1.00** · 24 | **1.00** · 18 | 1.00, but the judge scored it 60 · 7 | **1.00** · 128 |
 | summarize | 0.52 · 55 | 0.52 · 18 | 0.52 · 42 | 0.30 · 30 | 0.04 · 9 | failed |
-| site_extract | 0.60 · 23 | 0.53 · 11 | 0.60 · 18 | 0.60 · 13 | 0.20 · 6 | — |
-| corpus_ask | 0.87 · 18 | **1.00** · 8 | 0.87 · 17 | 0.67 · 16 | 0.40 · 6 | — |
+| site_extract | 0.60 · 23 | 0.53 · 11 | 0.60 · 18 | 0.60 · 13 | 0.20 · 6 | n/r |
+| corpus_ask | 0.87 · 18 | **1.00** · 8 | 0.87 · 17 | 0.67 · 16 | 0.40 · 6 | n/r |
 
 - **`gpt-oss:20b`** is the one to try if you want speed and grounded answering:
   better on `corpus_ask` (15 of 15) at less than half the time. Its classification
@@ -216,86 +215,80 @@ call time in seconds. A dash means not run.
 - **`qwen3.8:27b`** is the article's "maximum quality, tight fit". On this
   machine it is too tight: 22% of it ran on the CPU and it was still the slowest by far.
 
-## 6. What went wrong, and what we changed
+## 6. Adapter behaviour and known problems
 
-This is the post-mortem: each item cost real time, and each is why the adapter
+Each item below explains why the adapter
 (`backend/internal/modules/ai/ollama.go`, `ollamathink.go`) behaves as it does.
 
-**Gemma 4 thinks by default, and nothing told you.** Ollama leaves the model's
-own default when a request says nothing, and Gemma 4's default is to think. The
-reasoning is generated first, it counts against the output budget, and it comes
-back in a field the adapter did not read. Direct calls with the same JSON schema: `gemma4:e4b` took 0.55 s with
-thinking off and 15.5 s with it on (429 thinking tokens); `gemma4:12b` took 1.8 s
-off and 87 s on, and with a 1,024-token budget it used all of it thinking and
-returned an **empty answer** (`done_reason: length`). One
-certification task (`capture_classify` on `e4b`) went from 3 minutes to 12.
+**Gemma 4 thinks by default.** Ollama keeps the model's own default when a
+request says nothing, and Gemma 4's default is to think. The reasoning is
+generated first, counts against the output budget, and comes back in a separate
+field. Direct calls with the same JSON schema: `gemma4:e4b` took 0.55 s with
+thinking off and 15.5 s with it on (429 thinking tokens). `gemma4:12b` took
+1.8 s off and 87 s on, and with a 1,024-token budget it used all of it thinking
+and returned an empty answer (`done_reason: length`). One certification task
+(`capture_classify` on `e4b`) went from 3 minutes to 12.
 
-**Turning thinking off for everything broke `gpt-oss`.** Our first fix sent
-`think: false` on every call. `gpt-oss` accepts only a level (`low`, `medium`,
-`high`); given `false` beside a JSON schema it returns empty content with a clean
-`stop`. Its first certification scored 0 of 15 for exactly that reason. The
-adapter now asks Ollama once per model what it accepts (`/api/show`) and sends
+**`gpt-oss` breaks on `think: false`.** `gpt-oss` accepts only a level (`low`,
+`medium`, `high`). Given `false` beside a JSON schema it returns empty content
+with a clean `stop`, and a certification run with it scored 0 of 15. So the
+adapter asks Ollama once per model what it accepts (`/api/show`). It sends
 `false` where the model can turn thinking off, the lowest level where it cannot,
-and nothing for a model that does not think. A server with no `/api/show` (a proxy
-in front of Ollama) gets nothing, which is what the adapter sent before.
+and nothing for a model that does not think. A server with no `/api/show` (a
+proxy in front of Ollama) gets nothing.
 
-**The adapter dropped `done_reason`.** The router retries a cut-off answer with
-"answer more briefly" only when the response says it was cut off. Ollama says so,
-and the adapter threw it away. (The certification rework that landed the same
-day fixed this too; both changes are in.)
+**The adapter reads `done_reason`.** The router retries a cut-off answer with
+"answer more briefly" only when the response says it was cut off. Ollama
+reports a cut-off answer in `done_reason`, and the adapter passes it on so the
+router can retry.
 
-**A thinking floor turned Gemma 4's thinking on, with no bound.** Two
-onboarding sites (`cold_start`'s `company_message` and `sitereadmessage`) ask
-for `low` thinking. Gemma 4 through Ollama can only switch thinking on or off, so
-the adapter sent `think: true`: one turn then thought for about 4,300 tokens and
-7 minutes, against 110 tokens and 15 seconds with it off, and every `cold_start`
-run timed out before the answer. A floor now leaves an on/off-only model off
+**Thinking floors and on/off models.** Two onboarding sites
+(`cold_start`'s `company_message` and `sitereadmessage`) ask for `low`
+thinking. Gemma 4 through Ollama can only switch thinking on or off. With
+`think: true`, one turn thought for about 4,300 tokens and 7 minutes, against
+110 tokens and 15 seconds with it off, and every `cold_start` run timed out
+before the answer. So a floor leaves such a model off
 ([ai-thinking.md](ai-thinking.md)).
 
-**A cloud judge was refused under `sovereign`.** The profile was checked against
-every binding a run makes, the judge included, so a sovereign run needed a local
-judge from a different family. It is no longer: the profile binds the candidate
-only (see [vllm-self-hosting.md](vllm-self-hosting.md)), and what follows is why
-these records were taken the harder way. A 7B local judge (`mistral`) was unreliable: one
-call scored a correct answer 0 and pushed two tasks down a band. `gpt-oss:20b` is
-the better local judge but shares the GPU with the candidate, which is why the
-committed sovereign records show 14 to 34 seconds at the median. The same twelve
-tasks measured with the judge in the cloud (section 4) are 4 to 9 seconds faster
-per call, 7.6 at the median. The records overstate serving time by about that
-much; section 4 is the serving time.
+**A local judge is slower and less reliable.** The `sovereign` profile binds
+the candidate only, so the default cloud judge is allowed (see
+[vllm-self-hosting.md](vllm-self-hosting.md)). An earlier run with local judges
+found two problems. A 7B local judge (`mistral`) was unreliable: one call scored
+a correct answer 0 and pushed two tasks down a band. `gpt-oss:20b` is the better
+local judge, but it shares the GPU with the candidate. Across twelve tasks it
+added 4 to 9 seconds per call (7.6 at the median) to the recorded latency.
 
 **Ollama hangs.** In the ~490 `gemma4:12b` calls, one returned HTTP 500 after
-exactly 5 minutes, Ollama restarted its runner, and the router's retry succeeded.
-It is the reason `site_fact_extract` shows 309 s in section 4. The other models'
-runs logged five more, mostly on `qwen3.8:27b` while the machine was short of
-memory. Rare, and each recovered, but a local box has a tail that a cloud API
-does not. The server log is
-`~/.ollama/logs/server.log`.
+5 minutes, Ollama restarted its runner, and the router's retry succeeded. It is
+the reason `site_fact_extract` shows 309 s in section 4. The other models' runs
+logged five more, mostly on `qwen3.8:27b` while the machine was short of
+memory. Each recovered, but a local box has a tail that a cloud API does not.
+The server log is `~/.ollama/logs/server.log`.
 
 **Small models return the wrong id.** Nine of the Gemma 4 12B failures, in four
-tasks, were an answer about an id nobody asked for. Two were visibly malformed (a
-dropped dash, an extra group); the other seven were well-formed UUIDs that were not
-the one given. The site rejects the whole answer rather than apply a verdict to it
-([#6111](https://github.com/margince/margince/issues/6111)).
+tasks, were an answer about an id nobody asked for. Two were visibly malformed
+(a dropped dash, an extra group); the other seven were well-formed UUIDs that
+were not the one given. The site rejects the whole answer instead of applying a
+verdict to it ([#6111](https://github.com/margince/margince/issues/6111)).
 
 **The first `agent_loop` call is slow.** Every call carries a prompt of about
 23,300 tokens. Prefill runs at about 100 to 130 tokens a second here, so a call
 with a cold prompt cache took about 230 seconds (twice in the run); calls that
-reused Ollama's cache took 6 to 8. Anything that changes the start of that prompt puts every turn
-back at minutes ([#6112](https://github.com/margince/margince/issues/6112)).
+reused Ollama's cache took 6 to 8. Anything that changes the start of that
+prompt puts every turn back at minutes
+([#6112](https://github.com/margince/margince/issues/6112)).
 
-**Numeric bounds are not enforced by Ollama's schema.** A `confidence` of 100 where
-the schema says 0 to 1 came back four times. The site's validator catches it
-after the fact; do not rely on the format constraint to hold it.
+**Ollama's schema does not enforce numeric bounds.** A `confidence` of 100
+where the schema says 0 to 1 came back four times. The site's validator catches
+it after the fact; do not rely on the format constraint to hold it.
 
 ## 7. What we did not test
 
-So the next reader knows where the gaps are, rather than assuming coverage.
-
 - **Thinking turned on.** Everything above ran with thinking off (or `low` for
   `gpt-oss`). Whether it lifts the weakest Gemma 4 tasks (`request_settlement`,
-  `growth_fit`, `stage_evidence_extract`) is untested. The direct test spent 429 tokens thinking on `e4b`, and used the whole
-  1,024-token budget on `12b` without answering.
+  `growth_fit`, `stage_evidence_extract`) is untested. The direct test spent
+  429 tokens thinking on `e4b`, and used the whole 1,024-token budget on `12b`
+  without answering.
 - **More memory.** The 26B and 31B Gemma 4, and `qwen3.8:27b`, may be excellent on
   a machine with 32GB or more. We only know they do not fit 24GB.
 - **MLX builds.** Ollama publishes `-mlx` and `-nvfp4` tags. Whether they run, and
@@ -310,14 +303,15 @@ So the next reader knows where the gaps are, rather than assuming coverage.
 
 ```bash
 ollama pull gemma4:12b && ollama pull gpt-oss:20b
-# The committed records were judged locally; the default cloud judge is allowed too:
+# The committed records used the default cloud judge; a local judge works too:
 make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
   JUDGE=ollama:gpt-oss:20b TASK=capture_classify
 ```
 
 `make e2e-ai-report` prints what is already committed. With the default cloud
-judge (omit `JUDGE=`) the run is faster, though it pays for judge tokens where a
-local judge costs nothing, and its recorded latency is the candidate's alone.
+judge (omit `JUDGE=`) the run is faster and its recorded latency is the
+candidate's alone, but it pays for judge tokens where a local judge costs
+nothing.
 
 To time a model without the judge in the way, call it directly:
 `curl localhost:11434/api/chat` with `"stream": false` and read

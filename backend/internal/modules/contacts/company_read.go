@@ -146,7 +146,6 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var id ids.UUID
 	var ownerID, parentID, mergedInto *ids.UUID
 	var lifecycle string
-	var relevance *int16
 	var addr crmcontracts.Address
 	var logoObjectKey *string
 	var linkedinURL *string
@@ -158,7 +157,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	dests := []any{
 		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
-		&lifecycle, &relevance, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
+		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
 		&o.LastActivityAt, &o.LegalHold,

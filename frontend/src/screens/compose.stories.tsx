@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ComposeModal, RelinkModal } from "./compose";
+import { ComposeModal } from "./compose";
+import { RelinkModal } from "./composerelink";
 import type { Transport } from "./contacttransports";
 import {
   installFetchStub,

@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -26,6 +27,7 @@ const ownerIDColumn = "owner_id"
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	clock func() time.Time
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means
@@ -83,7 +85,7 @@ type ConsumerMailReader func(context.Context, pgx.Tx) (*freemail.Matcher, error)
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
 func NewStore(db *database.DB) *Store {
-	return &Store{db: db}
+	return &Store{db: db, clock: time.Now}
 }
 
 // WithConsumerMail wires the reader for the workspace's own consumer-mail
@@ -159,6 +161,12 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
 }
 
+// txRetryingLockCycles is tx for a write that files under shared records and
+// has no effect outside its transaction, so a deadlock victim is run again.
+func (s *Store) txRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) error {
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) })
+}
+
 // txSnapshot is tx for a read whose answer is COMPOSED from more than one
 // statement — here, a list page and the total that labels it.
 //
@@ -207,3 +215,6 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 func workspaceID(ctx context.Context) ids.WorkspaceID {
 	return ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
 }
+
+// WithClock keeps event timestamps reproducible for reporting attribution.
+func (s *Store) WithClock(clock func() time.Time) *Store { s.clock = clock; return s }

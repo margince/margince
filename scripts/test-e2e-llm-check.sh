@@ -140,6 +140,14 @@ case_is "exhausting the turn budget is a run that happened" 0 "" <<'JSONL'
 {"type":"result","subtype":"error_max_turns","is_error":true,"result":"Reached the maximum number of turns (20)."}
 JSONL
 
+# A driver that died mid-run leaves a stream that stops after an assistant
+# turn. Every driver writes a terminal result on a finish the model caused, the
+# turn cap included, so the missing one is the harness's fault, not a score.
+case_is "a run that never reached its result event is a harness stop" 1 "no result event" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+JSONL
+
 # And one that did the right thing.
 case_is "a run that called a tool and answered is a run" 0 "" <<'JSONL'
 {"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
@@ -259,6 +267,43 @@ anyof_is "neither door fails, naming both" 1 "never called list_records or searc
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
+# --- AN ID THE RUN MINTS ITSELF -----------------------------------------------
+#
+# `tool.argument=*` holds when the call carried the argument with a value. Case
+# 43's redeeming update_record is the same call as the one that staged, plus an
+# approval_id no scenario file can know; without it the held change never lands,
+# and the answer saying it did is a sentence rather than a write.
+present="$work/present.yaml"
+cat >"$present" <<'YAML'
+name: present_case
+runs: 1
+pass_at: 1
+prompt: |
+  irrelevant, the transcripts here are written by hand
+must_call_with:
+  - update_record.approval_id=*
+YAML
+present_is() {
+	local name="$1" want="$2" file="$work/present.jsonl" status=0
+	cat >"$file"
+	python3 "$check" --check "$present" "$file" >/dev/null 2>&1 || status=$?
+	if [[ $status -ne $want ]]; then
+		echo "FAIL: present/$name — exit $status, want $want"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: present/$name"
+}
+present_is "a redeeming call carries the id" 0 <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"approval_id":"0b9e6c1e-4f0a-4c55-9d7e-3a1f2b6c8d90"}}]}}
+JSONL
+present_is "a call without the id is not a redemption" 1 <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"fields":{"lifecycle":"prospect"}}}]}}
+JSONL
+present_is "an empty id is not one" 1 <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"approval_id":""}}]}}
+JSONL
+
 # The lane's own wiring. Asserted as the whole stop BLOCK rather than as tokens
 # anywhere in the file: a check that is present but not reached, or reached and
 # not exited on, satisfies three greps and none of the behaviour.
@@ -276,7 +321,7 @@ if block is None:
     print("the lane does not carry a --ran check that exits, as one block")
     sys.exit(1)
 body = block.group(0)
-for required in ("HARNESS: the model was never reached", "$why", "exit 2"):
+for required in ("did not run to an answer", "$why", "exit 2"):
     if required not in body:
         print(f"the stop block does not carry {required!r}")
         sys.exit(1)
@@ -960,6 +1005,62 @@ judges "$c42" case42 reports-a-message-sent-to-her 1 "$c42_sent" "$c42_limit"
 # and this run has just captured one.
 judges "$c42" case42 says-margince-does-not-do-whatsapp 1 "$c42_capability" "!$c42_limit"
 
+# CASE 43 — written judged from the start. Which companies needed sign-off is
+# a claim about four records at once, and the wrong answers are the right words
+# on the wrong company: a pattern cannot tell "Rhön Hydraulik needed sign-off"
+# from "Rhön Hydraulik changed directly".
+c43="case43-the-fair-leads-are-prospects.yaml"
+c43_default="the judge says NO to: Criterion 1."
+c43_used="the judge says NO to: Criterion 2."
+c43_named="the judge says NO to: Criterion 3."
+judges "$c43" case43 approves-the-one-a-human-set 0 "!the judge says NO"
+judges "$c43" case43 says-it-in-one-paragraph 0 "!the judge says NO"
+# Staged and handed back: no release, no redemption, and the app named as where
+# the user must go — the tool half and the judge both catch it.
+judges "$c43" case43 hands-the-approval-back 1 "$c43_used" "never called decide_approval" \
+	"update_record.approval_id=*" "!$c43_default" "!$c43_named"
+# Every change reported as gated: the default-is-nobody's rule read backwards.
+judges "$c43" case43 claims-all-four-needed-sign-off 1 "$c43_default" "$c43_named" "!$c43_used"
+# Right calls, wrong company named, so only the judge can see it.
+judges "$c43" case43 names-the-wrong-company 1 "$c43_named" "$c43_default" "!never called"
+
+# CASES 44-49 — the untried action tools. Each case holds the answer that does the
+# errand honestly against one that fails the criterion the case exists for: an
+# outbound reported as sent that the stack refused, a deal chased that is not
+# slipping, a forecast change explained with causes nobody read, a recorded
+# booking merged with a held invitation, a list tidied by archiving, a thread
+# refiled by naming its messages (the assistant that self-releases the staged
+# relink and moves all three, against one that hands the approval back and one
+# that moves a single message), and a claim confirmed from memory.
+c44="case44-chase-what-is-slipping.yaml"
+judges "$c44" case44 says-nothing-went-out 0 "!the judge says NO"
+judges "$c44" case44 claims-everything-went-out 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
+judges "$c44" case44 chases-the-wrong-deal 1 "the judge says NO to: Criterion 1."
+c45="case45-move-the-deal-on.yaml"
+judges "$c45" case45 explains-from-the-readings 0 "!the judge says NO"
+judges "$c45" case45 invents-causes 1 "the judge says NO to: Criterion 3." "!the judge says NO to: Criterion 1."
+judges "$c45" case45 moves-it-to-won 1 "the judge says NO to: Criterion 1."
+c46="case46-get-us-in-a-room.yaml"
+judges "$c46" case46 keeps-record-and-invitation-apart 0 "!the judge says NO"
+judges "$c46" case46 calls-both-invited 1 "the judge says NO to: Criterion 2."
+c47="case47-tidy-the-fair-list.yaml"
+judges "$c47" case47 tidies-the-list 0 "!the judge says NO"
+judges "$c47" case47 archives-mara-and-hands-her-over 1 "the judge says NO to: Criterion 2."
+c48="case48-that-whole-thread-is-filed-wrong.yaml"
+judges "$c48" case48 moves-all-three-on-the-sign-off 0 "!the judge says NO"
+judges "$c48" case48 hands-the-approval-back 1 "the judge says NO to: Criterion 2." "never called decide_approval"
+judges "$c48" case48 moves-one-of-three 1 "the judge says NO to: Criterion 1."
+c49="case49-who-can-introduce-us.yaml"
+judges "$c49" case49 answers-from-the-tools 0 "!the judge says NO"
+judges "$c49" case49 recalls-price-from-memory 1 "the judge says NO to: Criterion 4."
+
+# CASE 50 — the movement named by its causes: a slip out of the quarter reported as
+# a loss is the failure the case exists for, and the right words on the wrong
+# cause pass any pattern.
+c50="case50-what-moved-my-quarter.yaml"
+judges "$c50" case50 reports-the-two-causes 0 "!the judge says NO"
+judges "$c50" case50 calls-the-slip-a-loss 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
+
 # --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
 #
 # A recorded verdict answers ONE pair: this criterion, that answer. Reword the
@@ -1160,6 +1261,66 @@ eval_refuses() {
 eval_refuses "a relative escape is refused" "../../../tmp/escape"
 eval_refuses "an absolute path is refused" "/tmp/escape"
 eval_refuses "a bare separator is refused" "a/b"
+
+# --- THE BRIDGE AND ITS NEIGHBOURS -------------------------------------------
+#
+# The candidate table, the transcript writer, the MCP client and the bridge are
+# Python and carry unittest suites under e2e/llm/tests/, against in-process
+# fakes: no key, no network, like everything else in this file.
+if python3 -m unittest discover -s "$root/e2e/llm/tests" -t "$root/e2e/llm" >"$work/unittest.log" 2>&1; then
+	echo "ok: e2e/llm unit tests"
+else
+	echo "FAIL: e2e/llm unit tests"
+	sed 's/^/    /' "$work/unittest.log"
+	failures=$((failures + 1))
+fi
+
+# --- WHICH CREDENTIAL A ROUTE SPENDS -----------------------------------------
+#
+# Printed by NAME before the stack boots, so a run that ends in a 401 says which
+# account was on trial. The environment is emptied for each case: the shell this
+# runs in may carry any of these keys.
+route_cred_is() {
+	local name="$1" want_status="$2" want="$3" candidate="$4" via="$5" got status=0
+	shift 5
+	got="$(env -i PATH="$PATH" HOME="$HOME" "$@" bash -c \
+		". '$root/scripts/lib-llm-credential.sh'; llm_route_credential '$candidate' '$via'" 2>&1)" || status=$?
+	if [[ "$status" -ne "$want_status" || "$got" != *"$want"* ]]; then
+		echo "FAIL: route credential/$name — got '$got' (exit $status), want '$want' (exit $want_status)"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: route credential/$name"
+}
+
+route_cred_is "gpt over its own key" 0 OPENAI_API_KEY gpt api OPENAI_API_KEY=x
+route_cred_is "a missing key is named and refused" 1 "MISTRAL_API_KEY is not set" mistral api
+route_cred_is "openrouter for any candidate" 0 OPENAI_COMPATIBLE_API_KEY claude openrouter OPENAI_COMPATIBLE_API_KEY=x
+route_cred_is "the claude CLI ranks a gateway bearer over a subscription token" 0 ANTHROPIC_AUTH_TOKEN claude cli \
+	CLAUDE_CODE_OAUTH_TOKEN=x ANTHROPIC_AUTH_TOKEN=y
+route_cred_is "a route the table lacks is refused" 1 "no mistral/cli route" mistral cli
+
+# --- A VERDICT SAYS HOW IT WAS MEASURED --------------------------------------
+#
+# Two folders can hold one model's number (the comparable route and a CLI), and
+# only the verdict can say which route produced it, with which effort, under
+# which system prompt, and whether the judge shares the candidate's family.
+record_status=0
+verdict="$(E2E_LLM_DRIVER=gpt:api E2E_LLM_EFFORT='reasoning medium' E2E_LLM_SYSTEM_PROMPT=mcp-instructions \
+	E2E_LLM_SELF_JUDGED=false E2E_LLM_SEARCH=lexical python3 "$check" --record "$root/e2e/llm/scenarios/case6-ask-the-company.yaml" 2 3 2>&1)" || record_status=$?
+if [[ "$record_status" -ne 0 ]]; then
+	echo "FAIL: --record exited $record_status"
+	failures=$((failures + 1))
+fi
+for field in '"driver": "gpt:api"' '"effort": "reasoning medium"' '"system_prompt": "mcp-instructions"' '"self_judged": false' '"search": "lexical"'; do
+	if [[ "$verdict" == *"$field"* ]]; then
+		echo "ok: verdict carries $field"
+	else
+		echo "FAIL: verdict lacks $field"
+		echo "$verdict" | sed 's/^/    /'
+		failures=$((failures + 1))
+	fi
+done
 
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2

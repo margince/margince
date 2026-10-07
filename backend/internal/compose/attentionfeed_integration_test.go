@@ -329,6 +329,35 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 	}
 }
 
+// A handled receipt names the record it acted on, read under the reader's
+// grants through the shipped wiring, so the Worklist's Record column can link it.
+func TestAHandledReceiptNamesItsRecord(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Now().UTC()
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
+	if err != nil {
+		t.Fatalf("creating the target: %v", err)
+	}
+	svc := approvals.NewService(e.DB())
+	id := stageFor(t, e, svc, contact, "Sent the follow-up")
+	e.WsExec(t, `UPDATE approval
+		    SET status = 'approved', decided_by_system = true, decided_at = now()
+		  WHERE id = $1`, id)
+
+	feed := newAttentionService(e.Pool, svc, func() time.Time { return now })
+	handled, err := feed.HandledForYou(e.Admin())
+	if err != nil {
+		t.Fatalf("reading the handled receipts: %v", err)
+	}
+	if len(handled.Receipts) != 1 {
+		t.Fatalf("handled %d receipts, want the one act", len(handled.Receipts))
+	}
+	subject := handled.Receipts[0].Subject
+	if subject == nil || subject.Label == nil || *subject.Label != "Anna Weber" {
+		t.Errorf("the receipt's subject = %+v, want the contact named Anna Weber", subject)
+	}
+}
+
 // stageFor stages one proposal against a contact through the real service.
 func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
 	contact crmcontracts.Contact, summary string,

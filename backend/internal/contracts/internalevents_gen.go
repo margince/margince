@@ -118,6 +118,12 @@ type InternalEventMeetingProposalUpdated struct {
 	Status string `json:"status"`
 }
 
+// InternalEventReportingChanged Reporting configuration or publication changed; consumers re-read authorized state.
+type InternalEventReportingChanged struct {
+	Action string `json:"action"`
+	Object string `json:"object"`
+}
+
 func (InternalEventAiBudgetUpdated) EventType() string { return "ai_budget.updated" }
 
 func (InternalEventAiBudgetUpdated) EntityType() string { return "ai_budget" }
@@ -157,3 +163,7 @@ func (InternalEventMeetingInvitationUpdated) EntityType() string { return "activ
 func (InternalEventMeetingProposalUpdated) EventType() string { return "meeting_proposal.updated" }
 
 func (InternalEventMeetingProposalUpdated) EntityType() string { return "activity" }
+
+func (InternalEventReportingChanged) EventType() string { return "reporting.changed" }
+
+func (InternalEventReportingChanged) EntityType() string { return "dynamic" }

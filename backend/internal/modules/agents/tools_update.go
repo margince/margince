@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,6 +62,10 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),
 		OutputSchema:     schemaFor[UpdateWithStagedApprovalResult](),
+		// Both audiences: the card redeems an approved overwrite by sending this
+		// tool the replay the result carried, which is why apps/actions.json
+		// names it for the field-conflict view.
+		UI: &mcp.ToolUI{ResourceURI: apps.FieldConflictURI},
 	}
 }
 
@@ -139,13 +144,11 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		if err != nil {
 			return nil, err
 		}
-		id, alreadyApproved, summary, err := t.stageConflicts(ctx, args, split, canonical, hash)
+		staged, err := t.stageConflicts(ctx, args, split, canonical, hash)
 		if err != nil {
 			return nil, err
 		}
-		return nil, &workflow.StagedApprovalError{
-			ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: summary,
-		}
+		return nil, staged
 	}
 	return t.applySplit(ctx, args, split)
 }
@@ -175,7 +178,7 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 	}
 	// The summary is dropped here and not repeated: this path answers with a
 	// structured note that already names the staged fields.
-	id, alreadyApproved, _, err := t.stageConflicts(ctx, args, split, canonical, hash)
+	staged, err := t.stageConflicts(ctx, args, split, canonical, hash)
 	if err != nil {
 		return nil, fmt.Errorf("the other fields were updated, but staging the human-edited fields (%s) failed: %w",
 			strings.Join(split.Conflicts, ", "), err)
@@ -183,13 +186,17 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 	return json.Marshal(UpdateWithStagedApprovalResult{
 		wireRecord: applied,
 		StagedApproval: &stagedApprovalNote{
-			ApprovalID: id,
+			ApprovalID: staged.ApprovalID,
 			Fields:     split.Conflicts,
 			Replay:     canonical,
-			Message:    splitStagingNote(split.Conflicts, id, alreadyApproved),
+			Message:    splitStagingNote(split.Conflicts, staged.ApprovalID, stagedState{AlreadyApproved: staged.AlreadyApproved, Releasable: staged.ReleasableByCaller}),
 		},
 	})
 }
+
+// stagedState is what the note needs to know about the approval it names: whether
+// a human has already answered it, and whether this credential may release it.
+type stagedState struct{ AlreadyApproved, Releasable bool }
 
 // splitStagingNote is what the agent reads about the fields that were withheld.
 //
@@ -197,29 +204,33 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 // who has already answered re-sends the call, and each re-send is another
 // approval for the same withheld fields — so the line that says which of the two
 // happened is what keeps one act to one authority object.
-func splitStagingNote(conflicts []string, id ids.ApprovalID, alreadyApproved bool) string {
+func splitStagingNote(conflicts []string, id ids.ApprovalID, state stagedState) string {
 	fields := strings.Join(conflicts, ", ")
-	if alreadyApproved {
+	if state.AlreadyApproved {
 		return fmt.Sprintf(
 			"fields %s were last edited by a human and were NOT applied; a human has already approved this exact overwrite as approval %s — call update_record with exactly the replay arguments plus \"approval_id\": %q",
 			fields, id, id.String())
 	}
+	who := "once a human approves it"
+	if state.Releasable {
+		who = "once the user says yes, release it with decide_approval (or they approve it in the CRM)"
+	}
 	return fmt.Sprintf(
-		"fields %s were last edited by a human and were NOT applied; staged as approval %s — once a human approves it, call update_record with exactly the replay arguments plus \"approval_id\": %q",
-		fields, id, id.String())
+		"fields %s were last edited by a human and were NOT applied; staged as approval %s — %s, call update_record with exactly the replay arguments plus \"approval_id\": %q",
+		fields, id, who, id.String())
 }
 
 // stageConflicts records the 🟡 residue of one split update. The read
 // here runs AFTER any auto-execute remainder landed, so the pinned version
 // (ADR-0036 §2) is the state the approving human will actually judge —
 // this call's own auto-execute half cannot invalidate its staged half.
-func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) (ids.ApprovalID, bool, string, error) {
+func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) (*workflow.StagedApprovalError, error) {
 	rec, err := t.p.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
 	if err != nil {
-		return ids.ApprovalID{}, false, "", err
+		return nil, err
 	}
 	if err := refuseStagingElsewhere(rec); err != nil {
-		return ids.ApprovalID{}, false, "", err
+		return nil, err
 	}
 	// Composed once and answered twice: the human's card and the caller's
 	// refusal describe one staged change, and a second wording of it would let
@@ -227,7 +238,7 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 	said := summaryIn(ctx, t.language)
 	summary := fmt.Sprintf(said.overwriteHuman,
 		said.noun(args.RecordType), recordLabel(rec), strings.Join(split.Conflicts, ", "))
-	id, alreadyApproved, err := t.staging.StageCall(ctx, StageRequest{
+	req := StageRequest{
 		Tool:           "update_record",
 		ProposedChange: canonical,
 		DiffHash:       hash,
@@ -235,8 +246,15 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 		TargetID:       args.ID,
 		TargetVersion:  &rec.Version,
 		Summary:        summary,
-	})
-	return id, alreadyApproved, summary, err
+	}
+	id, alreadyApproved, err := t.staging.StageCall(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &workflow.StagedApprovalError{
+		ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: summary,
+		ReleasableByCaller: t.staging.ReleasableByCaller(ctx, req),
+	}, nil
 }
 
 // apply writes the patch and answers with the post-write record.

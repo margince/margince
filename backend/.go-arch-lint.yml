@@ -120,6 +120,7 @@ components:
   introductions: { in: internal/modules/introductions }
   weeklyplan:  { in: internal/modules/weeklyplan }
   forecasting: { in: internal/modules/forecasting }
+  reporting:   { in: internal/modules/reporting }
   assurance:   { in: internal/modules/assurance }
   compose:     { in: [internal/compose, internal/compose/**] }
   migrations:  { in: migrations }
@@ -268,11 +269,14 @@ deps:
   forecasting:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
+  reporting:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
   assurance:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -352,9 +356,24 @@ deps:
     # holds it to the layout keys the offer-template form writes: the PDF reads
     # a free jsonb bag, so a spelling on one side only is typed and never
     # printed, and deals must not depend on a TypeScript file to notice.
+    # contractadmission_test.go reads identity.AdmittedWithoutSession and holds it to
+    # every operation api/crm.yaml declares `security: []`: the same "only gates may
+    # hold both halves" shape. A route the contract says needs no credential and the
+    # middleware refuses is unreachable in production while its handler test passes,
+    # because the test drives the handler and only the middleware decides what arrives
+    # there — and identity must not gain a YAML dependency to check a document it does
+    # not own.
+    # openintrostatuses_test.go reads introductions.Open and
+    # privacy.OpenIntroStatuses: the Art. 17 erasure closes an introduction
+    # naming an erased contact, and WHICH statuses are still open belongs to
+    # the lifecycle that owns them. privacy may not import a sibling to ask,
+    # so it carries a declared mirror and only gates can see both halves —
+    # the same shape as aitaskparity_test.go above, and failing in both
+    # directions because fewer lets the prose return and more rewrites a
+    # completed outcome into "cancelled".
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

@@ -37,6 +37,7 @@ export const RETENTION_SCOPES: readonly RetentionScope[] = [
   "ai_call_payload/content",
   "raw_capture",
   "deal_risk_day",
+  "report_edition",
 ];
 
 // Ordered by how much they take away — archive keeps the record, erase does
@@ -51,6 +52,7 @@ export const RETENTION_ACTIONS: readonly RetentionAction[] = [
 // a widened enum fails to compile here rather than rendering a raw slug at a
 // reader who has no way to know what it selects.
 export const SCOPE_LABEL_KEYS: Record<RetentionScope, MessageKey> = {
+  report_edition: "retention.scopeReportEdition",
   "lead/unconverted": "retention.scopeLeadUnconverted",
   activity: "retention.scopeActivity",
   "activity/transcript": "retention.scopeActivityTranscript",

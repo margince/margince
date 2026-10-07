@@ -104,7 +104,7 @@ func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "assign", "user", userID.UUID,
-			map[string]any{"roles": fromRoles}, map[string]any{"roles": []string{toRole}})
+			map[string]any{roleAuditKey: fromRoles}, map[string]any{roleAuditKey: []string{toRole}})
 		if err != nil {
 			return err
 		}

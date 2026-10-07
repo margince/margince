@@ -18,40 +18,38 @@ import "./atoms.css";
 //
 // `atoms` re-exports it, so nothing that imports it had to change.
 
+// Each intent is one shape and one width token in tokens.css. Pick by what the
+// reader does there; the README's Overlays table says which is which.
+export const MODAL_INTENTS = [
+  "confirm",
+  "form",
+  "drawer",
+  "drawer-reading",
+  "full",
+] as const;
+export type ModalIntent = (typeof MODAL_INTENTS)[number];
+
+// A form with more fields than this is worked through in a drawer.
+export const FORM_DIALOG_MAX_FIELDS = 6;
+export function intentForFieldCount(fields: number): "form" | "drawer" {
+  return fields <= FORM_DIALOG_MAX_FIELDS ? "form" : "drawer";
+}
+
 export function Modal({
   open,
   onClose,
   labelledBy,
-  size = "default",
-  placement = "center",
+  intent,
   returnFocusTo,
   initialFocusTo,
   closeReason,
+  closeDisabled,
   children,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   labelledBy: string;
-  // "wide" roomier variant for content-dense dialogs (code/YAML previews);
-  // "default" keeps the compact form width every confirm/create modal uses.
-  // "split" is a drawer holding TWO columns rather than one — the conversation
-  // being answered beside the reply being written. It is a width because that
-  // is what a second column costs; a drawer at the wide clamp splits into two
-  // unreadable halves.
-  size?: "default" | "wide" | "split";
-  // "right" anchors the dialog to the right edge, full height — the drawer
-  // form the composer and the evidence receipt use, where the record behind
-  // stays visible as context rather than being covered by a centred box.
-  // With size="wide" it takes the roomier clamp and a sticky header/footer,
-  // for the surfaces a rep works IN rather than glances at.
-  //
-  // "full" is the lightbox: the box takes the screen it is on, inset far
-  // enough that the darkened page still frames it, for content READ rather
-  // than answered — a contract, a scan. It is a placement rather than a
-  // `size` because what it decides is where the dialog sits, and it decides
-  // that completely: `size` names widths for a centred box and there is
-  // nothing left for one to vary here.
-  placement?: "center" | "right" | "full";
+  intent: ModalIntent;
   // Resolve at close time when a mutation replaces the opener (for example,
   // Deactivate becoming Reactivate). A callback can find the newly mounted control.
   returnFocusTo?: () => HTMLElement | null;
@@ -69,6 +67,8 @@ export function Modal({
    * of a surface covering their page.
    */
   closeReason?: string;
+  /** Holds the corner X while a write the dialog started is still out. */
+  closeDisabled?: boolean;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -95,6 +95,7 @@ export function Modal({
     return null;
   }
   const leaving = state === "closing";
+  const box = modalClass(intent);
   // Portalled to the document body rather than rendered in place: a dialog
   // opened from inside a collapsed container — the record header's overflow
   // menu — would otherwise be hidden along with it, and the click that opened
@@ -106,7 +107,11 @@ export function Modal({
     // the backdrop click no longer fire on it. Escape is still the keyboard
     // path, and it is `useDialogFocus`'s, not this element's.
     <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) handled by the effect above
-      className={placement === "right" ? "overlay overlay-right" : "overlay"}
+      className={
+        box?.split(" ").includes("modal-drawer")
+          ? "overlay overlay-right"
+          : "overlay"
+      }
       data-state={state}
       // A dialog on its way out is a picture of a dialog. `inert` takes it out
       // of the tab order and out of hit testing, so the fifth of a second it is
@@ -137,7 +142,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={modalClass(size, placement)}
+        className={box}
         ref={dialog}
         // Focusable so a dialog whose body is pure text still receives focus
         // when it opens, rather than leaving it on the page behind.
@@ -158,6 +163,7 @@ export function Modal({
             label={t("common.close")}
             icon={<X aria-hidden="true" />}
             reason={closeReason}
+            disabled={closeDisabled}
             onClick={onClose}
           />
         </div>
@@ -167,35 +173,13 @@ export function Modal({
   );
 }
 
-// A right-anchored dialog draws its width from the viewport, so the `size`
-// variants — which exist to widen a centred box — do not apply to it.
-function modalClass(
-  size: "default" | "wide" | "split",
-  placement: "center" | "right" | "full",
-) {
-  // The lightbox answers before either branch below, because neither has
-  // anything to say about it: it is as wide as the screen allows, so no width
-  // varies it, and it is centred, so no edge anchors it.
-  if (placement === "full") {
-    return "modal modal-full";
+// Written as branches because dialoglayout.ts runs them to learn each box.
+function modalClass(intent: ModalIntent) {
+  if (intent === "confirm") return "modal modal-confirm";
+  if (intent === "form") return "modal modal-form";
+  if (intent === "drawer") return "modal modal-drawer";
+  if (intent === "drawer-reading") {
+    return "modal modal-drawer modal-drawer-wide";
   }
-  if (placement === "right") {
-    // A drawer's width normally comes from the viewport, but a surface a rep
-    // WORKS in — a numbered claim list, a message being written — wraps into an
-    // unreadable column at the default clamp. `size` is what asks for the
-    // roomier one, and it brings sticky header and footer with it.
-    //
-    // A split drawer is the wide one plus the room its second column needs, so
-    // it keeps the wide band behaviour rather than restating it.
-    if (size === "split") {
-      return "modal modal-drawer modal-drawer-wide modal-drawer-split";
-    }
-    return size === "wide"
-      ? "modal modal-drawer modal-drawer-wide"
-      : "modal modal-drawer";
-  }
-  // Centred, a split has no second column to hold — the layout that earns the
-  // extra width is the drawer's — so it falls back to the roomy box rather
-  // than to a width nothing on screen uses.
-  return size === "default" ? "modal" : "modal modal-wide";
+  if (intent === "full") return "modal modal-full";
 }

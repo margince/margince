@@ -65,7 +65,7 @@ const vcardIngestMaxCards = 5
 const vcardIngestMaxAttempts = 5
 
 // vcardIngestInsertOpts is the trigger's insert, spelled here beside the worker
-// whose queue and attempt cap it names.
+// whose attempt cap it names.
 //
 // Built directly rather than through oneOffChildOpts: that helper reads the
 // fan-out declaration, and this kind is inserted by a CONSUMER naming one
@@ -78,11 +78,10 @@ const vcardIngestMaxAttempts = 5
 // of one capture event collapse onto a single import while two messages each get
 // their own.
 func vcardIngestInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue:       aiCaptureQueue,
+	return jobs.QueuedAs[VCardIngestArgs](&river.InsertOpts{
 		MaxAttempts: vcardIngestMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}
+	})
 }
 
 // VCardIngestArgs is one captured message's cards.
@@ -331,7 +330,7 @@ func (w *vcardIngestWorker) liveCardKeys(ctx context.Context, activity ids.UUID)
 		rows, err := tx.Query(ctx, `
 			SELECT storage_key FROM attachment
 			 WHERE entity_type = 'activity' AND entity_id = $1
-			   AND archived_at IS NULL
+			   AND archived_at IS NULL AND NOT bytes_withheld
 			   AND (lower(content_type) IN ('text/vcard', 'text/x-vcard', 'text/directory')
 			        OR lower(filename) LIKE '%.vcf')
 			 ORDER BY created_at`, activity)
