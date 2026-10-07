@@ -525,8 +525,12 @@ bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record writte
 # second time, to the nanosecond, having measured nothing. A benchmark that can
 # answer from cache reports the past as the present, which is worse than not
 # running: the number looks fresh and is not.
+# A private database like bench-perf's: the harness resets whatever it is given,
+# and the default DSN is the template every integration clone is copied from.
 bench-record: composition ## PERF-1/PERF-4 record open + save budgets, measured over HTTP (needs db-up)
-	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestRecordOpenAndSaveBudgets -count=1 -v -timeout 15m ./internal/compose/integration
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     $(GO) test -tags "integration bench" -run TestRecordOpenAndSaveBudgets -count=1 -v -timeout 15m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
 
 bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (needs db-up)
