@@ -9493,6 +9493,10 @@ export const de = {
     "Wartet gerade: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
   "aiTasks.deferral.nowInteractive":
     "Schlägt gerade fehl: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
+  "aiTasks.deferral.degrades":
+    "Wenn jedes Modell dieser Aufgabe ausgefallen, ohne Guthaben oder mit abgelehntem Schlüssel ist, antwortet sie trotzdem ohne Modell aus ihren eigenen Fakten, statt zu scheitern.",
+  "aiTasks.deferral.nowDegrades":
+    "Antwortet gerade aus eigenen Fakten: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
   "aiTasks.deferral.skipping":
     "Ein gesperrter Anbieter wird übersprungen, und das nächste Modell antwortet.",
   "aiTasks.embeddingsEdit":
@@ -9699,6 +9703,8 @@ export const de = {
   "capturePurge.done": "Schließen",
   "capturePurge.failed":
     "Die Löschung wurde nicht abgeschlossen. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
+  "capturePurge.refused":
+    "Das Löschen wurde abgelehnt, daher wurde nichts vernichtet.",
   "capturePurge.wouldDestroy_one": "{count} Nachricht würde vernichtet.",
   "capturePurge.wouldDestroy_other": "{count} Nachrichten würden vernichtet.",
   "capturePurge.destroyed_one": "{count} Nachricht vernichtet.",
@@ -10202,6 +10208,7 @@ export const de = {
   "contact.action.call": "Anrufen",
   "contact.action.meetings": "Termine",
   "contact.action.workAsLead": "Als Lead bearbeiten",
+  "contact.action.openLead": "Lead öffnen",
   "contact.action.addTask": "Aufgabe hinzufügen",
   "contact.action.research": "Recherche",
 

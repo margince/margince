@@ -42,7 +42,7 @@ func (s *Store) ResumeBudgetReads(ctx context.Context, resume BudgetReadResume) 
 			return nil, err
 		}
 		return pgx.CollectRows(rows, pgx.RowToStructByPos[BudgetRead])
-	}, func(row BudgetRead) ids.UUID { return row.ID }, func(tx pgx.Tx, row BudgetRead) error {
+	}, func(row BudgetRead) ids.UUID { return row.ID }, func(ctx context.Context, tx pgx.Tx, row BudgetRead) error {
 		// The recovery caller and the original requester are separate principals;
 		// the callback checks the latter before it advances the job.
 		if err := RequireSiteReadAuthority(ctx, tx, row.CompanyID, row.TargetKind); err != nil {

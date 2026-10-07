@@ -9396,6 +9396,10 @@ export const vi = {
     "Đang chờ: mọi mô hình tác vụ này dùng được đều bị chặn.",
   "aiTasks.deferral.nowInteractive":
     "Đang lỗi: mọi mô hình tác vụ này dùng được đều bị chặn.",
+  "aiTasks.deferral.degrades":
+    "Khi mọi mô hình của tác vụ này ngừng hoạt động, hết hạn mức hoặc bị từ chối khóa, tác vụ vẫn trả lời từ dữ kiện của chính nó mà không cần mô hình, thay vì thất bại.",
+  "aiTasks.deferral.nowDegrades":
+    "Đang trả lời từ dữ kiện của chính nó: mọi mô hình tác vụ này dùng được đều bị chặn.",
   "aiTasks.deferral.skipping":
     "Nhà cung cấp bị chặn sẽ được bỏ qua, và mô hình kế tiếp sẽ trả lời.",
   "aiTasks.embeddingsEdit":
@@ -9605,6 +9609,7 @@ export const vi = {
   "capturePurge.done": "Đóng",
   "capturePurge.failed":
     "Việc xóa chưa hoàn tất. Một số thư có thể đã bị xóa vĩnh viễn. Hãy kiểm tra lại xem còn lại những gì.",
+  "capturePurge.refused": "Việc xóa bị từ chối nên chưa có gì bị hủy.",
   "capturePurge.wouldDestroy_one": "{count} thư sẽ bị xóa vĩnh viễn.",
   "capturePurge.wouldDestroy_other": "{count} thư sẽ bị xóa vĩnh viễn.",
   "capturePurge.destroyed_one": "Đã xóa vĩnh viễn {count} thư.",
@@ -10081,6 +10086,7 @@ export const vi = {
   "contact.action.call": "Gọi",
   "contact.action.meetings": "Lịch hẹn",
   "contact.action.workAsLead": "Theo dõi như lead",
+  "contact.action.openLead": "Mở lead",
   "contact.action.addTask": "Thêm việc",
   "contact.action.research": "Nghiên cứu",
 

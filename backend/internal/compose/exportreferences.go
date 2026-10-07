@@ -55,6 +55,7 @@ const (
 	refColCompany           = "company_id"
 	refColPartnerCompany    = "partner_company_id"
 	refColProject           = "project_id"
+	refColFromContact       = "from_contact_id"
 	refColPromotedContact   = "promoted_contact_id"
 	refColQualifiedDeal     = "qualified_deal_id"
 	refColConvertedFromLead = "converted_from_lead_id"
@@ -81,6 +82,7 @@ var referencesByTable = map[string][]exportedReference{
 		{column: refColProject, target: tableProject},
 	},
 	tableLead: {
+		{column: refColFromContact, target: tableContact},
 		{column: refColMergedInto, target: tableLead},
 		{column: refColProject, target: tableProject},
 		{column: refColPromotedContact, target: tableContact},

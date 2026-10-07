@@ -21651,6 +21651,8 @@ export interface components {
             /** @description What the task does, in plain words. */
             summary?: string;
             execution_mode: string;
+            /** @description An interactive task that answers from the record's own facts once no model can, and says so in generated_by, rather than failing. False for a task that fails fast and for a background task, which waits. */
+            degrades_on_outage?: boolean;
             leading_tier: string;
             normal_candidates: components["schemas"]["AiRouteCandidate"][];
             effective_candidates: components["schemas"]["AiRouteCandidate"][];
@@ -30862,6 +30864,11 @@ export interface components {
             promoted_contact_id?: string | null;
             /**
              * Format: uuid
+             * @description The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. While this lead is live, a second create from the same contact answers 409 `duplicate_contact_lead` naming this lead.
+             */
+            readonly from_contact_id?: string | null;
+            /**
+             * Format: uuid
              * @description Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_contact_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `contact` and `company` already carry the same field for the same reason.
              */
             readonly merged_into_id?: string | null;
@@ -30959,7 +30966,7 @@ export interface components {
             project_id?: string | null;
             /**
              * Format: uuid
-             * @description An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise); it is not linked to the lead or changed. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+             * @description An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise). The lead records it as `from_contact_id`, and the contact itself is not changed. A contact already worked through a live lead answers 409 `duplicate_contact_lead` with that lead's id. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
              */
             contact_id?: string | null;
             /**
@@ -53010,6 +53017,11 @@ export interface operations {
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
                 tag_mode?: "any" | "all" | "none";
+                /**
+                 * @description Only the leads worked from this contact (`from_contact_id` on the lead). The contact
+                 *     page asks it to find the open lead a contact is already worked through.
+                 */
+                from_contact_id?: string;
             };
             header?: never;
             path?: never;

@@ -9619,6 +9619,10 @@ export const en = {
     "Waiting now: every model this task can use is blocked.",
   "aiTasks.deferral.nowInteractive":
     "Failing now: every model this task can use is blocked.",
+  "aiTasks.deferral.degrades":
+    "When every model this task can use is down, out of credit or refusing its key, it still answers from its own facts, without a model, instead of failing.",
+  "aiTasks.deferral.nowDegrades":
+    "Answering from its own facts now: every model this task can use is blocked.",
   "aiTasks.deferral.skipping":
     "A blocked provider is skipped, and the next model in line answers.",
   "aiTasks.embeddingsEdit":
@@ -9824,6 +9828,7 @@ export const en = {
   "capturePurge.done": "Close",
   "capturePurge.failed":
     "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
+  "capturePurge.refused": "The deletion was refused, so nothing was destroyed.",
   "capturePurge.wouldDestroy_one": "{count} message would be destroyed.",
   "capturePurge.wouldDestroy_other": "{count} messages would be destroyed.",
   "capturePurge.destroyed_one": "{count} message destroyed.",
@@ -10329,6 +10334,7 @@ export const en = {
   "contact.action.call": "Call",
   "contact.action.meetings": "Meetings",
   "contact.action.workAsLead": "Work as a lead",
+  "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
 

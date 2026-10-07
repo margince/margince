@@ -55,9 +55,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 82 | 1900 | 1298 | 3784 | 11% | 19426 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 82 | 2746 | 1824 | 5156 | 15% | 18054 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 29117 |  |  | 88% |  |  |  |
+| `morning_brief` | 5 | 5 of 82 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 82 | 2760 | 1837 | 5183 | 15% | 18027 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 29130 |  |  | 88% |  |  |  |
 
 ### `morning_brief`
 
@@ -73,8 +73,8 @@ existing order. If there are no items, finish without inventing a brief. A tool 
 findings were not saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 3784 tokens on every step (1900 listing, 1298 step schema), leaving
-19426 of its budget and 28984 tokens of the
+Attaches 5 tools and pays 3810 tokens on every step (1913 listing, 1311 step schema), leaving
+19400 of its budget and 28958 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -94,8 +94,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 5156 tokens on every step (2746 listing, 1824 step schema), leaving
-18054 of its budget and 27612 tokens of the
+Attaches 7 tools and pays 5183 tokens on every step (2760 listing, 1837 step schema), leaving
+18027 of its budget and 27585 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -156,8 +156,8 @@ listing once. Read a row as what that tool costs a menu.
 |---|---:|---:|
 | `run_report` | 1023 |  |
 | `send_company_email` | 823 |  |
+| `list_records` | 817 | 2 scenarios |
 | `bulk_update_records` | 809 |  |
-| `list_records` | 803 | 2 scenarios |
 | `compose_analytics_report` | 772 |  |
 | `send_email` | 754 |  |
 | `read_lists` | 744 |  |

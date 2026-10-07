@@ -1078,7 +1078,7 @@
    flex row: the dates line up in a column of their own, which is how a
    chronology is actually read — down the left edge for "what happened in
    August" rather than along every line to its end. */
-.timeline li {
+.timeline > li {
   display: grid;
   /* A fixed date gutter, the rail, then everything else. Fixed rather than
      `auto`, so the dates and the rail hold one line down the whole list
@@ -1092,7 +1092,7 @@
      date column is the axis. */
   border-block-end: 1px solid var(--borderSubtle);
 }
-.timeline li:last-child {
+.timeline > li:last-child {
   border-block-end: 0;
 }
 
@@ -1106,7 +1106,7 @@
    verbs drop below the entry — pinned to the entry's own column, so they keep
    the gutter and the rail rather than sliding under the date. */
 @container chronology (max-width: 38rem) {
-  .timeline li {
+  .timeline > li {
     grid-template-columns: 76px 20px minmax(0, 1fr);
   }
   .timeline .tl-actions {
@@ -1116,13 +1116,6 @@
     padding-bottom: var(--space-3);
     flex-wrap: wrap;
   }
-}
-
-/* A record's CHANGE history carries its date inside the body, under the
-   sentence, and draws no rail: its rows are the body alone, across the whole
-   grid, rather than a body squeezed into the date gutter. */
-.timeline li > .tl-body:first-child {
-  grid-column: 1 / -1;
 }
 
 /* Set on the first line's own baseline, so the date reads level with the kind
@@ -1157,10 +1150,10 @@
 }
 /* The first and last rows are open-ended: the thread starts and stops at a
    mark rather than at a line running off into the padding. */
-.timeline li:first-child .tl-rail::before {
+.timeline > li:first-child > .tl-rail::before {
   inset-block-start: 0.85rem;
 }
-.timeline li:last-child .tl-rail::before {
+.timeline > li:last-child > .tl-rail::before {
   inset-block-end: calc(100% - 1.35rem);
 }
 .timeline .tl-dot {
@@ -1290,14 +1283,15 @@
 /* A timeline list whose rows carry no date gutter or rail of their own —
    the change history and the consent log, whose date rides inline in each
    row's meta line. Without this the chronicle's four-column grid auto-places
-   their single body cell into the 4.5rem date gutter and every sentence
+   their single body cell into the date gutter and every sentence
    wraps one word per line. */
-.timeline.timeline-plain li {
+.timeline.timeline-plain > li {
   display: block;
   padding: var(--space-3) 0;
+  border-block-end: 0;
 }
 
-.timeline.timeline-plain li + li {
+.timeline.timeline-plain > li + li {
   border-top: 1px solid var(--borderSubtle);
 }
 
@@ -1459,18 +1453,12 @@
   margin-left: auto;
 }
 
-/* The messages, newest first, each under a hairline of its own. Their list
-   items are NOT rows of the chronology: the grid the timeline gives every li
-   — date gutter, rail, body — is not theirs, and inherited it put each
-   message in the gutter. */
 .tl-thread-messages {
   list-style: none;
   margin: var(--space-2) 0 0;
   padding: 0;
 }
-.timeline .tl-thread-messages > li {
-  display: block;
-  border-block-end: 0;
+.tl-thread-messages > li {
   border-top: 1px solid var(--borderSubtle);
 }
 
