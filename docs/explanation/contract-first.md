@@ -1,10 +1,9 @@
 # Contract-first
 
-This repository is not built from a specification that outranks it. What the
-product exposes is defined by `backend/api/crm.yaml` and the Go generated from
-it — see [the record is the code](../principles/the-record-is-the-code.md) for
-the precedence order that replaced the older arrangement. This page is how that
-contract becomes Go, and why drift is merge-blocking.
+What the product exposes is defined by `backend/api/crm.yaml` and the Go
+generated from it; no separate specification outranks them. The precedence
+order is in [the record is the code](../principles/the-record-is-the-code.md).
+Below: how that contract becomes Go, and why drift blocks a merge.
 
 ## The contract is the source of truth
 
@@ -15,21 +14,21 @@ runtime from day one:
 1. `make gen` downgrades the 3.1 contract to a 3.0 overlay
    (`tools/contract-overlay`) and runs oapi-codegen over it, producing
    the request/response types and the chi `ServerInterface`
-   (`internal/contracts/` — generated, never hand-edited).
+   (`internal/contracts/`, generated and never hand-edited).
 2. `tools/gen-stubs` derives one explicit **501 stub** per contract
    operation (`internal/compose/stubs_gen.go`). Module handlers shadow
    the operations they implement; an unimplemented operation answers a
    loud 501, never a silent 404.
 3. `tools/gen-agentpolicy` derives the agent admission table from the
-   contract's `x-mcp-tool` / `x-agent-access` annotations — and **fails
+   contract's `x-mcp-tool` / `x-agent-access` annotations, and **fails
    generation** for any mutating operation carrying neither, so an
    un-tiered endpoint cannot ship.
 4. `tools/gen-aitasks` compiles the **AI task contract**
-   (`backend/api/ai-tasks.yaml` — the task/tier/ladder table) into
-   `internal/modules/ai/tasks_gen.go`; `tools/gen-configschema` reads the tier
+   (`backend/api/ai-tasks.yaml`, the task/tier/ladder table) into
+   `internal/modules/ai/tasks_gen.go`. `tools/gen-configschema` reads the tier
    names from there into the routing shape in `config/margince.schema.json`, so
    the runtime's task registry and the operator's config validation both derive
-   from the one contract.
+   from that contract.
 
 ## Drift is merge-blocking
 

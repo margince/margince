@@ -50,10 +50,12 @@ func (h Handlers) CreateOfferTemplate(w http.ResponseWriter, r *http.Request, _ 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Name == "" {
-		writeStoreErr(w, r, &RequiredFieldError{Field: offerTemplateNameField})
+	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
+	if err != nil {
+		writeStoreErr(w, r, err)
 		return
 	}
+	req.Name = name
 	if req.Layout == nil {
 		writeStoreErr(w, r, &RequiredFieldError{Field: "layout"})
 		return
@@ -95,10 +97,12 @@ func (h Handlers) UpdateOfferTemplate(w http.ResponseWriter, r *http.Request, id
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Name == "" {
-		writeStoreErr(w, r, &RequiredFieldError{Field: offerTemplateNameField})
+	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
+	if err != nil {
+		writeStoreErr(w, r, err)
 		return
 	}
+	req.Name = name
 	if req.Layout == nil {
 		writeStoreErr(w, r, &RequiredFieldError{Field: "layout"})
 		return
@@ -170,6 +174,13 @@ func (h Handlers) RenderOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		preparedVersion = *ingredients.Offer.Version
 	}
 	key := fmt.Sprintf("offers/%s/%s/%d/%s.pdf", storekit.MustWorkspace(r.Context()), ids.UUID(id), revision, ids.NewV7())
+	// Declared before the bytes exist. The reclaim below covers the refusals the
+	// store raises itself; this covers the ones it cannot classify, where the
+	// comment there is explicit that an orphan is the safer answer than deleting.
+	if err := h.store.RecordOfferPdfIntent(r.Context(), key); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if err := h.blob.Put(r.Context(), key, bytes.NewReader(pdfBytes), int64(len(pdfBytes)), "application/pdf"); err != nil {
 		httperr.Write(w, r, err)
 		return

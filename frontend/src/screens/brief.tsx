@@ -5,10 +5,12 @@ import { useId, useState } from "react";
 import { PageAsideToggle } from "../app/pageaside";
 import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
-import { Button, Modal } from "../design-system/atoms";
+import { Modal } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { PageZones } from "../design-system/pagezones";
 import { formatDateTime } from "../format/format";
+import { greetingNameOf } from "../format/greetingname";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -78,7 +80,7 @@ export function BriefScreen() {
   );
   const queuedDay = briefDay(queued.data?.pages);
   const review = useWeeklyReview(address.week);
-  const firstName = me.data?.user?.display_name?.trim().split(/\s+/)[0] ?? null;
+  const firstName = greetingNameOf(me.data?.user);
   return (
     <div className="wrap brief-wrap">
       {/* THE HEAD ON THE PAGE GROUND, the way a record's head stands: the
@@ -294,19 +296,14 @@ function PersonalMorning({
           open={Boolean(context)}
           onClose={() => setSelected("")}
           labelledBy={titleId}
-          placement="right"
+          intent="drawer"
         >
-          <div className="drawer-head brief-queue-head">
+          <DrawerHead>
             <Heading size="large" id={titleId} className="t-h2">
               {t("brief.focus.context")}
             </Heading>
-            <Button variant="ghost" onClick={() => setSelected("")}>
-              {t("brief.focus.back")}
-            </Button>
-          </div>
-          <div className="drawer-body">
-            {context && <WorklistPane item={context} />}
-          </div>
+          </DrawerHead>
+          <DrawerBody>{context && <WorklistPane item={context} />}</DrawerBody>
         </Modal>
       )}
     </>

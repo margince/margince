@@ -106,14 +106,20 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
 }
 
-function drawer(transports: readonly Transport[], initial?: string) {
+function drawer(
+  transports: readonly Transport[],
+  initial?: string,
+  open = true,
+) {
   return (
     <ComposeModal
       entityType="contact"
@@ -122,7 +128,7 @@ function drawer(transports: readonly Transport[], initial?: string) {
       recordAddress="dana@brandt.example"
       transports={transports}
       initialTransportId={initial}
-      open
+      open={open}
       onClose={vi.fn()}
     />
   );
@@ -213,6 +219,65 @@ describe("the composer's transport dial", () => {
     // And never the mail door, which would send a channel message as an
     // account email — wrong transport, wrong body shape.
     expect(sent.some((r) => r.key === "POST /emails")).toBe(false);
+  });
+
+  // The box is what the composer opened as: the dial changes how the draft
+  // travels, never the dialog around a writer mid-draft.
+  it.each([
+    ["a channel reply as a form", "dispact", "Email", ".modal-form", true],
+    [
+      "mail as a reading drawer",
+      undefined,
+      "Dispact",
+      ".modal-drawer-wide",
+      false,
+    ],
+  ] as const)(
+    "opens %s and keeps it when the dial moves",
+    async (_, opened, next, box, mailAfter) => {
+      const user = userEvent.setup();
+      stubRoutes();
+      render(drawer([MAIL, CHAT], opened));
+
+      const dial = await screen.findByLabelText("Send via");
+      expect(screen.getByRole("dialog").matches(box)).toBe(true);
+      await pickOption(user, dial, next);
+
+      await waitFor(() =>
+        expect(screen.queryByLabelText("Subject") !== null).toBe(mailAfter),
+      );
+      expect(screen.getByRole("dialog").matches(box)).toBe(true);
+    },
+  );
+
+  // The contact page keeps its composer mounted between openings, so the dial
+  // still holds the last channel when the caller opens on mail.
+  it("starts each opening on the transport the caller opens it on", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(ACTIVITY, 202),
+    });
+    const view = render(drawer([MAIL, CHAT], "dispact"));
+    await screen.findByLabelText("Send via");
+    view.rerender(drawer([MAIL, CHAT], "dispact", false));
+    view.rerender(drawer([MAIL, CHAT]));
+
+    await user.type(await screen.findByLabelText("Subject"), "Hello");
+    expect(screen.getByRole("dialog").matches(".modal-drawer-wide")).toBe(true);
+    writeMessage("Body", "Body content");
+    await pickOption(
+      user,
+      screen.getByLabelText("Reason for contact"),
+      "Active deal",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(sent.some((r) => r.key === "POST /emails")).toBe(true),
+    );
+    expect(
+      sent.some((r) => r.key === "POST /activities/a-chat/send-message"),
+    ).toBe(false);
   });
 
   // The named conversation cannot be answered any more — disconnected, removed,

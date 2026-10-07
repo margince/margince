@@ -138,16 +138,6 @@ type Handlers struct {
 	// decision must not depend on.
 	mcpResource string
 
-	// oauthAccessTokenTTL is the operator's lifetime for an OAuth-minted
-	// passport, from --oauth-access-token-ttl. Zero means unset, and an
-	// unset TTL keeps the mint's own default: a connector's access token
-	// is a 30-day passport unless an operator shortens it, which is the
-	// posture every deployment had before the flag existed. It applies to
-	// BOTH mints of a connection's life — the code exchange and every
-	// rotation — because a short-lived access token an hour-old rotation
-	// re-issues for 30 days is not short-lived.
-	oauthAccessTokenTTL time.Duration
-
 	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
 	// and /callback (WithOIDCProviders). Absent from oidcProviders means the
 	// deployment never composed the provider, and a source that answers "no
@@ -262,27 +252,6 @@ func (h Handlers) WithAgentGrants(store agentgrant.Store, agents []string) Handl
 func (h Handlers) WithMCPResource(resource string) Handlers {
 	h.mcpResource = resource
 	return h
-}
-
-// WithOAuthAccessTokenTTL sets how long a passport minted through the OAuth
-// handshake lives. Connector norms are minutes plus refresh, while a passport
-// defaults to 30 days; this is the knob that lets an operator take that to
-// 15m without a code change, now that the refresh machinery makes a short
-// lifetime cheap. Zero leaves the default alone.
-func (h Handlers) WithOAuthAccessTokenTTL(ttl time.Duration) Handlers {
-	h.oauthAccessTokenTTL = ttl
-	return h
-}
-
-// accessTokenTTL is what the two OAuth mints pass to mintPassport: nil when no
-// operator TTL is configured, so the mint applies its own default rather than
-// this package deciding the number twice.
-func (h Handlers) accessTokenTTL() *time.Duration {
-	if h.oauthAccessTokenTTL == 0 {
-		return nil
-	}
-	ttl := h.oauthAccessTokenTTL
-	return &ttl
 }
 
 // Login implements (POST /auth/login). The route is public; the singleton

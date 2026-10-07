@@ -91,7 +91,14 @@ func (s *RoutingStore) TestProviderKey(ctx context.Context, provider string) (Ke
 	if err != nil {
 		return KeyTest{}, err
 	}
-	return probeProviderKey(ctx, cfg, provider, s.resolvedKeys(ctx), keyProbes{SelectBrain, selectDecider}), nil
+	tested := probeProviderKey(ctx, cfg, provider, s.resolvedKeys(ctx), keyProbes{SelectBrain, selectDecider})
+	if tested.OK && !tested.Unconfirmed {
+		// The vendor just answered with this key: whatever the tracker holds
+		// against the provider is out of date, and waiting for the next call to
+		// find that out would keep a fixed provider reported down.
+		sharedProviderHealth.forget(provider) //nolint:contextcheck // the clear is queued and written by the drain goroutine, which owns its own deadline by design
+	}
+	return tested, nil
 }
 
 // probeProviderKey is the test itself, over a routing document already read.
@@ -152,10 +159,6 @@ func probeDecisionKey(
 ) KeyTest {
 	out := KeyTest{Provider: provider}
 	lane := boundDecisionLane(cfg, provider)
-	if decisionLaneForbidden(cfg.Profile, lane) {
-		out.Reason = KeyTestProfileForbids
-		return out
-	}
 	client, err := build(lane, keys)
 	if err != nil {
 		out.Reason = keyTestRefusal(unavailableFor(err))

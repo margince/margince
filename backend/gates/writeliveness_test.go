@@ -5,9 +5,9 @@
 
 package gates
 
-// The LIVENESS obligation as a fitness function: a write that targets one
-// standing row of a table which can be archived either REFUSES an archived row,
-// DECLARES that it deliberately reaches one, or is ratified with a reason.
+// A write that targets one standing row of a table which can be archived either
+// refuses an archived row, declares that it reaches one by design, or is
+// ratified with a reason.
 //
 // It is the fourth of the four obligations a write in this tree owes, and it was
 // the only one with no gate. The other three each have theirs — tableownership
@@ -126,9 +126,10 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
-	"internal/modules/contacts:RestoreContactTx": "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
-	"internal/modules/contacts:RestoreCompanyTx": "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
-	"internal/modules/deals:RestoreDealTx":       "the deal un-archive, which brings back exactly the relationships the deal's archive retired, matched on that archive's own stamp",
+	"internal/modules/contacts:RestoreContactTx":        "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
+	"internal/modules/contacts:RestoreCompanyTx":        "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
+	"internal/modules/activities:WithholdStoredFilesTx": "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
+	"internal/modules/deals:RestoreDealTx":              "the deal un-archive, which brings back exactly the relationships the deal's archive retired, matched on that archive's own stamp",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that

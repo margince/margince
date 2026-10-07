@@ -1,5 +1,6 @@
 import { createServer, type Plugin, type ViteDevServer } from "vite";
 import { afterAll, beforeAll, expect, it } from "vitest";
+import actions from "../src/mcp-apps/actions.json";
 import spaConfig from "../vite.config";
 import {
   inspectDocument,
@@ -64,13 +65,13 @@ afterAll(async () => {
 });
 
 it("serves a document the admission check would accept", async () => {
-  const res = await fetch(`${base}/mcp-apps/company-brief.html`);
+  const res = await fetch(`${base}/mcp-apps/create-followups.html`);
   expect(res.status).toBe(200);
   expect(res.headers.get("content-type")).toMatch(/text\/html/);
   const doc = await res.text();
-  expect(validateDocument(doc)).toEqual([]);
+  expect(validateDocument(doc, actions["create-followups"])).toEqual([]);
   expect(inspectDocument(doc)).toEqual([]);
-  expect(doc).toContain("<title>Morning brief</title>");
+  expect(doc).toContain("<title>Next steps for this record</title>");
   expect(doc).toContain("SPDX-License-Identifier: BUSL-1.1");
 }, 30_000);
 
@@ -86,7 +87,7 @@ it("is wired into the dev server `make dev` actually starts", () => {
   // Without this the middleware above is a facility nothing reaches: `make dev`
   // runs vite.config.ts, not the mcp-apps build config, so a request for a view
   // would fall through the SPA fallback to a dev index.html carrying `src=`
-  // module scripts and /@vite/client — both refused by name, leaving both views
+  // module scripts and /@vite/client — both refused by name, leaving every view
   // permanently unadvertised in every dev stack.
   expect(pluginNames(spaConfig.plugins)).toContain("mcp-apps:serve-views");
 });
@@ -110,7 +111,7 @@ it("lets a second server stand beside the first", async () => {
     await second.listen();
     const other = servedAt(second);
     expect(other).not.toBe(base);
-    const res = await fetch(`${other}/mcp-apps/company-brief.html`);
+    const res = await fetch(`${other}/mcp-apps/create-followups.html`);
     expect(res.status).toBe(200);
   } finally {
     await second.close();

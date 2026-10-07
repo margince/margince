@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { DealRoomPage } from "./dealroompage";
 import {
@@ -113,4 +114,21 @@ export const Live: Story = { render: served([ROOM]) };
  *  now — and the banner saying what a buyer arriving would meet. */
 export const Paused: Story = {
   render: served([{ ...ROOM, state: "paused" }]),
+};
+
+/** The end date, set from the room's access menu. */
+export const SettingTheEndDate: Story = {
+  render: served([ROOM]),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Room access" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Set end date/ }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Set end date" });
+    await expect(within(dialog).getByLabelText(/Access ends on/)).toHaveValue(
+      "2026-11-30",
+    );
+  },
 };

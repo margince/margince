@@ -19,6 +19,10 @@ import (
 // BudgetDeferredScans identifies the saved scans whose retry clock recovery owns.
 const BudgetDeferredScans = "status = 'queued' AND degrade_reason = 'budget_deferred' AND next_attempt_at IS NOT NULL"
 
+// ProviderDeferredScans identifies the saved scans waiting for the provider's
+// next probe; recovery leaves them to it.
+const ProviderDeferredScans = "status = 'queued' AND degrade_reason = 'provider_deferred' AND next_attempt_at IS NOT NULL"
+
 // BudgetScanResume preserves the original queued request while advancing its job clock.
 type BudgetScanResume func(context.Context, pgx.Tx, ids.UUID, ids.UUID, ids.UUID) (bool, error)
 

@@ -71,7 +71,7 @@ an old total. Saved editions read frozen contributions instead of live records.
 
 The common evaluator serves HTTP, `read_reporting`, exports and typed report
 references. `compose_analytics_report` cells may name `metric_ref` (selection plus metric) or
-`edition_ref` (edition ID plus metric), or a legacy saved-query cell; exactly one
+`edition_ref` (edition ID plus metric), or a legacy saved-query cell; one
 reference is required. Metric references carry definition, unit, context and
 coverage with the resolved value. Keep partial/withheld metadata when rendering them.
 
@@ -97,14 +97,13 @@ identify editions and revisions without copying their complete frozen payloads.
 Run `IT_ARGS='-tags=integration,bench' make test-it DIR=backend/internal/compose RUN=TestReportingEvaluationPilotBudget`
 against the disposable integration database. It creates 10,000 deals through the
 production writer, warms the evaluator and measures twenty complete four-chart
-evaluations. The pilot ceiling is 300 ms at the 95th percentile. The initial local
-run measured 81 ms median and 88 ms at the 95th percentile. This is a bounded
-pilot fixture, not certification of the full mid-market workload; rerun on the
+evaluations. The pilot ceiling is 300 ms at the 95th percentile. The fixture is bounded and
+does not certify the full mid-market workload; rerun on the
 deployment's hardware and representative owner/target cardinality.
 
 ## Disclosure and comparison boundaries
 
-Frozen editions preserve the captured figures, not a permanent grant to them.
+Frozen editions preserve the captured figures but grant no lasting access to them.
 Current membership, source visibility and field masks intersect the published
 population on every read. Losing access to a former team can therefore narrow
 an old edition. A restricted reader receives neither peer target allocations
@@ -113,6 +112,6 @@ nor synthesized zero-value peer rows, even when the edition has no contributions
 A live evidence or CSV request carries the evaluation receipt. If source changes
 invalidate it, refresh the reading before exporting; serving newly changed rows
 under the old total would not reconcile. Frozen editions provide the durable
-alternative for repeatable review. Comparisons deliberately require matching
+alternative for repeatable review. Comparisons require matching
 population fingerprints and framework revisions, including company views;
 roster or framework changes are shown as a reason a comparison is unavailable.

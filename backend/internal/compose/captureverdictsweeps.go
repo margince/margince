@@ -38,8 +38,7 @@ import (
 // question that has already been answered.
 func (e *CounterpartyVerdictEngine) ReconcileLedgerWorkspace(ctx context.Context) error {
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
-		retired, err := e.pending.RetireExhausted(wsCtx,
-			"no usable verdict within the attempt bound")
+		retired, err := e.pending.RetireExhausted(wsCtx, capture.ExhaustedReason)
 		if err != nil {
 			return err
 		}

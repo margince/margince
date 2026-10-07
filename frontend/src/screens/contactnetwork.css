@@ -295,6 +295,7 @@
   border-radius: var(--r-control);
   corner-shape: round;
   background: var(--bgChip);
+  color: var(--textPrimary);
 }
 .pn-relay-due {
   margin-left: auto;

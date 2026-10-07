@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from "@playwright/test";
+import type { components } from "../src/api/schema";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
 import { bookingInvitation, bookingProfile } from "../src/screens/book.testkit";
 import {
@@ -7,6 +8,7 @@ import {
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
+import { defaultOperations } from "../src/screens/operationsettings.fixtures";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -276,6 +278,9 @@ export const deals = [
     pipeline_id: "pl",
     stage_id: "s2",
     company_id: "o-brandt",
+    // The seeded seat carries it, so the card's owner mark and the table's
+    // owner column both have a colleague to name.
+    owner_id: "u1",
     project_id: null as string | null,
     status: "open",
     // The reason a win carries when no signed agreement backs it. Declared on
@@ -685,6 +690,20 @@ export const aiProviderKeys = {
       env_var: "ANTHROPIC_API_KEY",
       optional: false,
       credential_kind: "api_key",
+    },
+  ],
+};
+
+// One blocked provider, so the sweeps visit the health badge and the System
+// health card in their failing state rather than only the empty one.
+// `retry_after` is omitted for a degraded provider only.
+export const aiProviderHealth = {
+  providers: [
+    {
+      provider: "gemini",
+      health: "out_of_credit",
+      since: "2026-10-05T08:00:00Z",
+      retry_after: "2026-10-05T08:15:00Z",
     },
   ],
 };
@@ -1196,11 +1215,14 @@ export async function mockApi(
   // The mailbox-privacy fixtures, per page for the same reason as the rest:
   // a posture change, a sender overrule and a hold all have to be readable
   // back within one test.
-  const captureSettings: Record<string, boolean> = {
+  const captureSettings: components["schemas"]["CaptureSettings"] = {
     auto_enrich: true,
     mail_sharing: true,
     shared_posture_allowed: false,
     signature_enrich: true,
+    auto_enrich_daily_cap: 500,
+    site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+    mail_sync_interval_seconds: 120,
   };
   const captureConnections = [
     {
@@ -1434,6 +1456,8 @@ export async function mockApi(
         base_language: "de",
         base_currency_locked: false,
         max_upload_bytes: 25_000_000,
+        oauth_access_token_ttl_minutes: 43_200,
+        operations: defaultOperations,
         // Two providers, one of each state, so the sign-in methods card renders
         // both an offered and a withheld row rather than only the empty case.
         sign_in_providers: [
@@ -2786,6 +2810,9 @@ export async function mockApi(
     if (path === "/ai/provider-keys" && method === "GET") {
       return json(aiProviderKeys);
     }
+    if (path === "/ai/provider-health") {
+      return json(aiProviderHealth);
+    }
     if (path === "/ai/calls" && method === "GET") {
       return json(aiCalls);
     }
@@ -2816,7 +2843,23 @@ export async function mockApi(
     // untouched value, which passes while doing nothing.
     if (path === "/capture/settings") {
       if (method === "PATCH") {
-        Object.assign(captureSettings, route.request().postDataJSON());
+        // The request is flat and the record nests the per-read limits, so
+        // each wire field is filed where a read-back finds it.
+        const {
+          site_read_max_pages,
+          site_read_max_mib,
+          site_read_wall_seconds,
+          ...flat
+        } = route
+          .request()
+          .postDataJSON() as components["schemas"]["UpdateCaptureSettingsRequest"];
+        Object.assign(captureSettings, flat);
+        captureSettings.site_read = {
+          max_pages: site_read_max_pages ?? captureSettings.site_read.max_pages,
+          max_mib: site_read_max_mib ?? captureSettings.site_read.max_mib,
+          wall_seconds:
+            site_read_wall_seconds ?? captureSettings.site_read.wall_seconds,
+        };
       }
       return json(captureSettings);
     }

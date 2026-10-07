@@ -77,7 +77,7 @@ func (h Handlers) SetFxRate(w http.ResponseWriter, r *http.Request) {
 	}
 	// Leave EffectiveDate zero when the request omits it — the store resolves
 	// "today" from its in-transaction clock sample, so an omitted-date write that
-	// waits for the pool across UTC midnight isn't rejected as past against a
+	// waits for the pool across the installation's midnight isn't rejected as past against a
 	// stale pre-transaction now().
 	var effective time.Time
 	if req.EffectiveDate != nil {

@@ -855,6 +855,9 @@
                     "archived": {
                       "type": "boolean"
                     },
+                    "done": {
+                      "type": "boolean"
+                    },
                     "listed": {
                       "type": "boolean"
                     },
@@ -878,6 +881,9 @@
                   "type": "object",
                   "properties": {
                     "archived": {
+                      "type": "boolean"
+                    },
+                    "done": {
                       "type": "boolean"
                     },
                     "listed": {
@@ -1820,6 +1826,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "candidate_id": {
+                  "type": "string"
+                },
                 "confidence": {
                   "type": "number"
                 },
@@ -1854,6 +1863,7 @@
                 }
               },
               "required": [
+                "candidate_id",
                 "confidence",
                 "evidence",
                 "other_record_id"
@@ -1869,6 +1879,29 @@
           },
           "record_type": {
             "type": "string"
+          },
+          "tag_offer": {
+            "type": "object",
+            "properties": {
+              "exists": {
+                "type": "boolean"
+              },
+              "may_create": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "tag_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "exists",
+              "may_create",
+              "name"
+            ]
           },
           "trust_tier": {
             "type": "string"
@@ -2618,6 +2651,101 @@
       "warnings"
     ]
   },
+  "decide_duplicate": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "disposition": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "disposition"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "demote_lead": {
     "type": "object",
     "properties": {
@@ -3266,6 +3394,12 @@
       "data": {
         "type": "object",
         "properties": {
+          "ai_disclosure": {
+            "type": "string"
+          },
+          "ai_generated": {
+            "type": "boolean"
+          },
           "body": {
             "type": "string"
           },
@@ -3292,8 +3426,21 @@
               ]
             }
           },
+          "not_saved": {
+            "type": "string"
+          },
+          "saved_draft_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "subject": {
             "type": "string"
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [

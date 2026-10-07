@@ -1,15 +1,13 @@
-# Final report — due 14 days after a corrective measure is available
+# Final report: due 14 days after a corrective measure is available
 
-The last filing, under Article 14(2)(c). Its deadline hangs off the **fix**,
-not off awareness: 14 days after a corrective or mitigating measure is
+The last filing, under Article 14(2)(c). Its deadline is measured from the **fix**:
+14 days after a corrective or mitigating measure is
 available. For a severe incident under Article 14(3) it is instead one month
 after the 72-hour notification.
 
-This is the report that can be complete, and where the question "how did this
-get here" is answered honestly. It is also the one most likely to be read
-later by somebody deciding whether the next report from us is credible.
+This report can be complete. It answers how the defect was introduced.
 
-Recipients and route: as the earlier two — see [README.md](README.md).
+Recipients and route: as the earlier two. See [README.md](README.md).
 
 ---
 
@@ -18,11 +16,11 @@ Recipients and route: as the earlier two — see [README.md](README.md).
 | Field | Value |
 | --- | --- |
 | Name | Gradion |
-| Product | Margince — customer relationship management software |
+| Product | Margince, customer relationship management software |
 | Contact for this report | security@gradion.com |
 | Reference of the 24-hour early warning | `[the platform's reference]` |
 | Reference of the 72-hour notification | `[the platform's reference]` |
-| T₀ — when we became aware | `[YYYY-MM-DD HH:MM UTC]` |
+| T₀: when we became aware | `[YYYY-MM-DD HH:MM UTC]` |
 | Corrective measure available since | `[YYYY-MM-DD]` |
 | This report filed at | `[YYYY-MM-DD HH:MM UTC]` |
 
@@ -30,8 +28,8 @@ Recipients and route: as the earlier two — see [README.md](README.md).
 
 `[The complete account now that it is understood: the weakness, the surface,
 the affected versions, and how it was introduced. Include what the earlier
-reports got wrong, and say so plainly — a correction in a final report is a
-normal thing and an uncorrected earlier error is not.]`
+reports got wrong. A correction in a final report is normal; an uncorrected
+earlier error is not.]`
 
 | Field | Value |
 | --- | --- |
@@ -45,7 +43,7 @@ normal thing and an uncorrected earlier error is not.]`
 
 `[What an exploitation actually cost, at the level the regulation asks: what
 kinds of data or capability were reachable, and over what window. Where the
-answer is "unknown", say what was checked to reach that answer — an audit
+answer is "unknown", say what was checked to reach that answer: an audit
 trail examined, a log range held, a range not retained.]`
 
 ## 4. The malicious actor, where information is available
@@ -57,7 +55,7 @@ with one.]`
 
 | Field | Value |
 | --- | --- |
-| Indicators | `[addresses, user agents, request shapes — or: none retained]` |
+| Indicators | `[addresses, user agents, request shapes, or: none retained]` |
 | Attribution | `[or: none]` |
 | Exploitation window | `[first observed → last observed, or: unknown]` |
 
@@ -70,17 +68,14 @@ with one.]`
 | Distribution | `[how operators get it]` |
 | Uptake | `[what is known about how many installations have applied it]` |
 
-`[Describe the fix at the level of the invariant restored, not the diff: "the
-export path now goes through the one workspace-transaction helper, and a gate
-fails any path that leaves it" is the sentence that tells a reader this will
-not recur.]`
+`[Describe the fix as the invariant it restores, not the diff. Example: the
+export path now runs through the workspace-transaction helper, and a test
+fails any export path that bypasses it.]`
 
 ## 6. What stops it recurring
 
 `[Not asked for by Article 14. It belongs here anyway: the test, gate or
-structural change that makes this class of defect fail loudly next time. A
-final report whose last section is "we fixed the bug" invites the same report
-again.]`
+structural change that makes this class of defect fail loudly next time.]`
 
 ## 7. Users informed
 

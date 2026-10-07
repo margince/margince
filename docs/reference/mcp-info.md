@@ -2,7 +2,7 @@
 
 <!-- Generated together with mcp-info.json; do not edit by hand. -->
 
-Generated from the served MCP surface by `go test ./internal/compose/ -run TestPublishedMCPSurface -update-mcp-info`; do not edit by hand. This is the ALL-SCOPE view: tools/list and resources/list are both filtered per caller, so a passport holding fewer scopes is served less than this. It is the CORE catalog: extension units register onto the same registry and are not composed here. It is captured as an Apps-capable host sees it, so a tool bound to a view carries `_meta.ui.resourceUri`; only a MODERN request that declined the UI extension is served no such member — the handshake era, which has no way to declare one, is served views. The `ui://` view descriptors ARE included, and a deployment publishes each only once its boot has fetched and admitted that document, so an api serving neither advertises neither.
+Generated from the served MCP surface by `go test ./internal/compose/ -run TestPublishedMCPSurface -update-mcp-info`; do not edit by hand. It shows every tool and resource across all scopes. tools/list and resources/list are filtered per caller, so a passport holding fewer scopes is served less. Extension tools are left out. The surface is captured as a client that supports MCP Apps sees it, so a tool bound to a view carries `_meta.ui.resourceUri`. A client that declines the UI extension is served no such member, and a client on the older handshake protocol, which cannot declare the extension, is served views. The `ui://` view descriptors are included; a deployment publishes each only after its boot has fetched and admitted that document.
 
 `mcp-info.json` beside this page is the same surface byte for byte, as a client
 receives it. This page is rendered from that file.
@@ -11,55 +11,48 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 81 |
-| Resources | 11 |
-| Tool catalog | 244.8 KB |
-| Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63704 |
-| Largest tool | `prep_for_meeting` (9.0 KB) |
+| Tools | 82 |
+| Resources | 9 |
+| Tool catalog | 251.6 KB |
+| Resource catalog | 3.5 KB |
+| Approx. wire tokens | 65289 |
+| Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
-Those are the WIRE bytes: they carry each tool's output schema and the governance
-clause the transport appends. The Surface-B listing a run re-sends every step is
-smaller — name, description and input schema only — and is held against its own
-budget in `agenttooldescriptions_test.go`. What that listing costs each SCHEDULED
+Those are the bytes on the wire: they carry each tool's output schema and the
+governance clause the transport appends. The listing a run re-sends every step is
+smaller (name, description and input schema only) and is held against its own
+budget in `agenttooldescriptions_test.go`. What that listing costs each scheduled
 agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 ### What the tool catalog is made of
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 108.2 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 63.9 KB | 26% | Yes, every step |
-| Input schemas | 55.7 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
-| **Description + input schema** | **119.6 KB** | **48%** | **the recurring cost** |
+| Output schemas | 109.6 KB | 43% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 65.5 KB | 26% | Yes, every step |
+| Input schemas | 56.7 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 19.8 KB | 7% | Partly |
+| **Description + input schema** | **122.2 KB** | **48%** | **the recurring cost** |
 
-So the headline total is dominated by the part a model is never charged for, and
-descriptions are a minority of it. Trimming the copy to shrink the total trades a
-MEASURED gain — the same copy took gemini's tool selection from 0.80 to 0.87, and
-one restraint scenario from 0/3 to 3/3 on a single sentence — for bytes that were
-not the cost. `agenttooldescriptions_test.go` records that argument and the
-budget decision it produced; the room is bought by publishing a vocabulary as a
-resource, the way `margince://schema/record-fields` did, not by writing less.
+Output schemas are the largest part of the total and are never sent to a model;
+descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (11)
+### Resources (9)
 
-- [`margince://capabilities`](#capabilities) — What this installation can do
-- [`margince://schema/query`](#query_vocabulary) — Workspace query vocabulary
-- [`margince://schema/record-fields`](#record_fields) — Record write vocabulary
-- [`margince://schema/reports`](#report_vocabulary) — Report plan vocabulary
-- [`margince://schema/report-blocks`](#report_blocks) — Report block grammar
-- [`margince://schema/analytics`](#analytics-schema) — Analytics query vocabulary
-- [`ui://margince/company-brief.html`](#company_brief_view) — Morning brief
-- [`ui://margince/relationship-map.html`](#relationship_map_view) — Who knows this contact
-- [`ui://margince/commitments.html`](#commitments_view) — Open commitments
-- [`ui://margince/handoff.html`](#handoff_view) — Delivery handoff
-- [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
+- [`margince://capabilities`](#capabilities): What this installation can do
+- [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
+- [`margince://schema/record-fields`](#record_fields): Record write vocabulary
+- [`margince://schema/reports`](#report_vocabulary): Report plan vocabulary
+- [`margince://schema/report-blocks`](#report_blocks): Report block grammar
+- [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
+- [`ui://margince/create-followups.html`](#create_followups_view): Next steps for this record
+- [`ui://margince/approval.html`](#approval_view): Waiting for a decision
+- [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (81)
+### Tools (82)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -67,32 +60,33 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.8 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
-| [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
-| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
+| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.7 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 5.5 KB |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.2 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
-| [`create_record`](#create_record) | Create a record |  |  | 4.0 KB |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
-| [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.0 KB |
+| [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.1 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
-| [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
+| [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 3.0 KB |
+| [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
 | [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.4 KB |
 | [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes |  | 2.2 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
 | [`describe_record_fields`](#describe_record_fields) | Describe the record write vocabulary | yes |  | 2.4 KB |
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
-| [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
+| [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.5 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
-| [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
+| [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
-| [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.6 KB |
+| [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
 | [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.2 KB |
@@ -100,55 +94,55 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.6 KB |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 3.0 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
-| [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
-| [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.3 KB |
+| [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.5 KB |
+| [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.4 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.6 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 4.0 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
-| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 4.3 KB |
-| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
+| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes |  | 3.9 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 4.4 KB |
+| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.5 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a contact |  |  | 2.6 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
-| [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/company-brief.html`](#company_brief_view) | 3.2 KB |
+| [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
+| [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.2 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 3.0 KB |
-| [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
+| [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.5 KB |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.8 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
-| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
-| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
-| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
+| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
+| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
+| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
-| [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
-| [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
+| [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.6 KB |
+| [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.4 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
-| [`search_records`](#search_records) | Search records | yes |  | 3.2 KB |
+| [`search_records`](#search_records) | Search records | yes |  | 3.3 KB |
 | [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 3.9 KB |
 | [`send_company_email`](#send_company_email) | Start an email conversation from a record |  |  | 4.6 KB |
-| [`send_email`](#send_email) | Send an email |  |  | 4.2 KB |
+| [`send_email`](#send_email) | Send an email |  |  | 4.3 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.6 KB |
-| [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
-| [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
-| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
-| [`who_knows`](#who_knows) | Who knows this contact | yes | [`ui://margince/relationship-map.html`](#relationship_map_view) | 2.3 KB |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 3.9 KB |
+| [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.1 KB |
+| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.3 KB |
+| [`who_knows`](#who_knows) | Who knows this contact | yes |  | 2.2 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
 
 ## Resources
 
 A resource takes no arguments and changes nothing, so it carries no autonomy
-tier — but it is scope-filtered exactly as a tool is, so a passport holding
+tier. It is scope-filtered as a tool is, so a passport holding
 fewer scopes is served fewer documents.
 
 ### capabilities
@@ -157,7 +151,11 @@ fewer scopes is served fewer documents.
 
 **What this installation can do**
 
-The verbs this passport may call, which of them execute directly and which stage for a human decision, and the scopes it holds. Names and governance only — the input schemas live in tools/list.
+```text
+The verbs this passport may call, which of them execute directly and which stage for a human
+decision, and the scopes it holds. Names and governance only — the input schemas live in
+tools/list.
+```
 
 ### query_vocabulary
 
@@ -165,7 +163,11 @@ The verbs this passport may call, which of them execute directly and which stage
 
 **Workspace query vocabulary**
 
-Everything a query plan may say, for you: the record types you can ask about, the fields you can name on each, the operators each field admits, and the single relationship hop a plan may take. A plan naming anything outside it is refused rather than approximated.
+```text
+Everything a query plan may say, for you: the record types you can ask about, the fields you can
+name on each, the operators each field admits, and the single relationship hop a plan may take. A
+plan naming anything outside it is refused rather than approximated.
+```
 
 ### record_fields
 
@@ -173,7 +175,11 @@ Everything a query plan may say, for you: the record types you can ask about, th
 
 **Record write vocabulary**
 
-The fields create_record and update_record accept for each record_type: which are required, what shape each takes, and the values the closed ones admit. The two tools name this document instead of carrying it.
+```text
+The fields create_record and update_record accept for each record_type: which are required, what
+shape each takes, and the values the closed ones admit. The two tools name this document instead of
+carrying it.
+```
 
 ### report_vocabulary
 
@@ -181,7 +187,11 @@ The fields create_record and update_record accept for each record_type: which ar
 
 **Report plan vocabulary**
 
-What each prebuilt report accepts in a run_report plan: the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a filter means when its name alone does not say. run_report names this document instead of carrying it.
+```text
+What each prebuilt report accepts in a run_report plan: the names its group_by, filters and
+aggregates admit, what it answers with no plan at all, and what a filter means when its name alone
+does not say. run_report names this document instead of carrying it.
+```
 
 ### report_blocks
 
@@ -189,7 +199,10 @@ What each prebuilt report accepts in a run_report plan: the names its group_by, 
 
 **Report block grammar**
 
-The blocks a report may carry: each kind, whether it renders figures, words or both, and the severities a callout may state. compose_analytics_report names this document instead of carrying it.
+```text
+The blocks a report may carry: each kind, whether it renders figures, words or both, and the
+severities a callout may state. compose_analytics_report names this document instead of carrying it.
+```
 
 ### analytics-schema
 
@@ -197,15 +210,21 @@ The blocks a report may carry: each kind, whether it renders figures, words or b
 
 **Analytics query vocabulary**
 
-The populations a run_analytics_query plan may name, each with its group_by dimensions and its measures, derived for this seat. run_analytics_query names this document instead of carrying it.
+```text
+The populations a run_analytics_query plan may name, each with its group_by dimensions and its
+measures, derived for this seat. run_analytics_query names this document instead of carrying it.
+```
 
-### company_brief_view
+### create_followups_view
 
-`ui://margince/company-brief.html` · text/html;profile=mcp-app
+`ui://margince/create-followups.html` · text/html;profile=mcp-app
 
-**Morning brief**
+**Next steps for this record**
 
-The ranked brief queue, with the factor decomposition each item ranked on.
+```text
+What a new record leaves to decide: a possible duplicate with the choice to merge it or keep it
+apart, and a tag word offered for it.
+```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
 
@@ -225,13 +244,15 @@ The ranked brief queue, with the factor decomposition each item ranked on.
 
 </details>
 
-### relationship_map_view
+### approval_view
 
-`ui://margince/relationship-map.html` · text/html;profile=mcp-app
+`ui://margince/approval.html` · text/html;profile=mcp-app
 
-**Who knows this contact**
+**Waiting for a decision**
 
-The colleagues who know a contact, warmest first, with the interactions behind each warmth band.
+```text
+A change an assistant proposed, what it would do, and the choice to approve or reject it.
+```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
 
@@ -251,65 +272,16 @@ The colleagues who know a contact, warmest first, with the interactions behind e
 
 </details>
 
-### commitments_view
+### field_conflict_view
 
-`ui://margince/commitments.html` · text/html;profile=mcp-app
+`ui://margince/field-conflict.html` · text/html;profile=mcp-app
 
-**Open commitments**
+**Edited by hand**
 
-The promises still outstanding, oldest first, with who owes each one and how far past due it is.
-
-<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
-
-```json
-{
-  "ui": {
-    "csp": {
-      "baseUriDomains": [],
-      "connectDomains": [],
-      "frameDomains": [],
-      "resourceDomains": []
-    },
-    "prefersBorder": true
-  }
-}
+```text
+Fields last edited by hand that an update would overwrite, with the value on the record beside the
+one proposed and the choice to keep or replace it.
 ```
-
-</details>
-
-### handoff_view
-
-`ui://margince/handoff.html` · text/html;profile=mcp-app
-
-**Delivery handoff**
-
-What the delivery side is being given for one project, with each gap beside the fact it is about.
-
-<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
-
-```json
-{
-  "ui": {
-    "csp": {
-      "baseUriDomains": [],
-      "connectDomains": [],
-      "frameDomains": [],
-      "resourceDomains": []
-    },
-    "prefersBorder": true
-  }
-}
-```
-
-</details>
-
-### pipeline_review_view
-
-`ui://margince/pipeline-review.html` · text/html;profile=mcp-app
-
-**Pipeline review**
-
-The deals at risk this week, worst first, with the evidence each risk claim rests on.
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
 
@@ -335,7 +307,16 @@ The deals at risk this week, worst first, with the evidence each risk claim rest
 
 **Advance a deal to a stage**
 
-Move a deal to a different stage of its pipeline. The stage is named by id from list_pipelines — call it first; a deal you read carries only its current stage. Moving onto or off a won/lost stage is a human's decision: staged for approval, with a lost_reason for a losing stage. Read the target stage's semantic rather than guessing from its name. Use progress_deal when the move should also leave a note explaining it, which is almost always what a human means by moving a deal on. Send if_version with the version you read of the deal, and keep the staged approval id when a closing move comes back for approval. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+```text
+Move a deal to a different stage of its pipeline. The stage is named by id from list_pipelines —
+call it first; a deal you read carries only its current stage. Moving onto or off a won/lost stage
+is a human's decision: staged for approval, with a lost_reason for a losing stage. Read the target
+stage's semantic rather than guessing from its name. Use progress_deal when the move should also
+leave a note explaining it, which is almost always what a human means by moving a deal on. Send
+if_version with the version you read of the deal, and keep the staged approval id when a closing
+move comes back for approval. (Governance: some calls run immediately and others a human approves
+first, decided per call from its arguments; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -513,7 +494,20 @@ Move a deal to a different stage of its pipeline. The stage is named by id from 
 
 **Move a project to a phase**
 
-Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Closing does not complete, cancel or hide anything open on the project: its tasks and commitments stay open on their own records. When the user has asked for the close, report what is still open and close — an open commitment is something to tell them, not a reason to hold back a close they asked for. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read. By default the phase moves when this call answers. Where an installation has raised this verb to confirm first, the answer is a staged approval and the phase has NOT moved — keep its id and do not report the project as advanced until the retry that carries the approval has answered. (Governance: runs immediately; requires passport scope "write".)
+```text
+Move a project to another phase — initiative, pursuing, delivering, closed. The four names are
+fixed but the order is not enforced: a project may go back a phase, and a closed one may be
+reopened. Closing requires a reason, which is recorded on the phase history either way. Closing does
+not complete, cancel or hide anything open on the project: its tasks and commitments stay open on
+their own records. When the user has asked for the close, report what is still open and close — an
+open commitment is something to tell them, not a reason to hold back a close they asked for. Use
+advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a
+different record. Send if_version with the version you read. By default the phase moves when this
+call answers. Where an installation has raised this verb to confirm first, the answer is a staged
+approval and the phase has NOT moved — keep its id and do not report the project as advanced until
+the retry that carries the approval has answered. (Governance: runs immediately; requires passport
+scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -666,7 +660,18 @@ Move a project to another phase — initiative, pursuing, delivering, closed. Th
 
 **Write findings onto the morning brief**
 
-Write what you found onto the morning brief you just read: one sentence about the night as a whole, and for each deal you looked at, why it is on the list, what changed, and the one next move you would make. It writes onto that user's own brief for today and nothing else — it cannot be pointed at another user, another day, or a deal that is not already in their queue, and it cannot change the ranking. Every evidence id you cite must be one the brief already recorded for that item; citing anything else refuses the whole write, so cite from what read_brief gave you rather than from memory. Use log_activity to record something that happened on a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces what you wrote before, so a second pass is a correction rather than an addition. (Governance: runs immediately; requires passport scope "write".)
+```text
+Write what you found onto the morning brief you just read: one sentence about the night as a whole,
+and for each deal you looked at, why it is on the list, what changed, and the one next move you
+would make. It writes onto that user's own brief for today and nothing else — it cannot be pointed
+at another user, another day, or a deal that is not already in their queue, and it cannot change the
+ranking. Every evidence id you cite must be one the brief already recorded for that item; citing
+anything else refuses the whole write, so cite from what read_brief gave you rather than from
+memory. Use log_activity to record something that happened on a deal, which belongs on the record
+itself and outlives today's brief. Calling it again replaces what you wrote before, so a second pass
+is a correction rather than an addition. (Governance: runs immediately; requires passport scope
+"write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -828,7 +833,13 @@ Write what you found onto the morning brief you just read: one sentence about th
 
 **Apply a tag to a record**
 
-Tag a contact, company, deal, lead or project by tag_id, or by tag_name, which must name a tag the workspace already has. This tool never creates a tag: an unknown name is refused, and only an admin or ops seat can add a word to the vocabulary. A name matches case-insensitively; an archived word is refused as archived rather than as unknown. Prefer a tag_id from list_tags. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope "write".)
+```text
+Tag a contact, company, deal, lead or project by tag_id, or by tag_name, which must name a tag the
+workspace already has. This tool never creates a tag: an unknown name is refused, and only an admin
+or ops seat can add a word to the vocabulary. A name matches case-insensitively; an archived word is
+refused as archived rather than as unknown. Prefer a tag_id from list_tags. The same tag twice is a
+conflict. (Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -991,7 +1002,17 @@ Tag a contact, company, deal, lead or project by tag_id, or by tag_name, which m
 
 **Archive a record**
 
-Retire a record that should no longer be worked — a duplicate, a dead company, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. By default the record is archived when this call answers; where an installation has raised this verb to confirm first, the answer is a staged approval and you must not report the record as archived until the retry that carries their approval has answered. (Governance: runs immediately; requires passport scope "write".)
+```text
+Retire a record that should no longer be worked — a duplicate, a dead company, a project that
+ended. Archiving hides the record from day-to-day work; it does not delete it and does not move
+anything attached to it, so an archived duplicate still holds the activities and deals that were
+logged against it. Use merge_records when a duplicate's history should end up on the record that
+survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the
+reason where archiving would not. By default the record is archived when this call answers; where an
+installation has raised this verb to confirm first, the answer is a staged approval and you must not
+report the record as archived until the retry that carries their approval has answered. (Governance:
+runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -1146,7 +1167,17 @@ Retire a record that should no longer be worked — a duplicate, a dead company,
 
 **Relationships going cold**
 
-Answer "where are our relationships thin?": across the caller's OPEN deals, the ones resting on a single contact, missing an engaged champion, or carried almost entirely by one colleague on our side. It sweeps open deals — a deal already won or lost is not at risk and is left out — and it takes no arguments, because the caller's own visibility already decides which deals these are. It is about the shape of the relationships around a deal, not about the deal's own momentum. Use whats_slipping_this_week when the question is about deals losing momentum, and company_coverage when the question is about one deal rather than the whole book. Each finding names its deal_id and the contacts it is about; those are what intro_path_to and who_knows take next. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer "where are our relationships thin?": across the caller's OPEN deals, the ones resting on a
+single contact, missing an engaged champion, or carried almost entirely by one colleague on our
+side. It sweeps open deals — a deal already won or lost is not at risk and is left out — and it
+takes no arguments, because the caller's own visibility already decides which deals these are. It is
+about the shape of the relationships around a deal, not about the deal's own momentum. Use
+whats_slipping_this_week when the question is about deals losing momentum, and company_coverage when
+the question is about one deal rather than the whole book. Each finding names its deal_id and the
+contacts it is about; those are what intro_path_to and who_knows take next. (Governance: runs
+immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -1345,7 +1376,13 @@ Answer "where are our relationships thin?": across the caller's OPEN deals, the 
 
 **Book a meeting**
 
-Record a meeting against linked CRM records without sending an invitation. Reserves the recorded interval locally. It does not create a calendar event or notify attendees. Needs at least one record link. Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past meeting. Keep the recorded activity id. Do not describe a record-only booking as an invitation sent. (Governance: runs immediately; requires passport scope "send".)
+```text
+Record a meeting against linked CRM records without sending an invitation. Reserves the recorded
+interval locally. It does not create a calendar event or notify attendees. Needs at least one record
+link. Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past
+meeting. Keep the recorded activity id. Do not describe a record-only booking as an invitation sent.
+(Governance: runs immediately; requires passport scope "send".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -1525,7 +1562,20 @@ Record a meeting against linked CRM records without sending an invitation. Reser
 
 **Change many records at once**
 
-Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take them off a Shortlist, put a tag on or take it off, or file one task under each, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope "write".)
+```text
+Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take
+them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; or
+mark up to 500 of the user's Worklist tasks done (record_type worklist_item, verb complete) — or
+undo such a change. A Worklist commitment is not yours to mark done: it is skipped as
+commitment_needs_the_user. Call mode preview first and show the user what it says: how many records
+change, which are left alone and why, and the sample rows. Execute only after they agree. Each
+record is changed only if it still has the version you sent and you may change it. To undo, pass the
+batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is
+undone once, and records changed since are left alone. update_record and archive_record change one
+record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
+once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately;
+requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -1610,12 +1660,13 @@ Hand up to 500 contacts, companies, deals or leads to one owner, archive them, a
       "type": "string"
     },
     "record_type": {
-      "description": "A lead takes every verb but archive",
+      "description": "A lead takes every verb but archive and complete. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done",
       "enum": [
         "contact",
         "company",
         "deal",
-        "lead"
+        "lead",
+        "worklist_item"
       ],
       "type": "string"
     },
@@ -1657,7 +1708,8 @@ Hand up to 500 contacts, companies, deals or leads to one owner, archive them, a
         "remove_from_list",
         "add_tag",
         "remove_tag",
-        "create_task"
+        "create_task",
+        "complete"
       ],
       "type": "string"
     }
@@ -1768,6 +1820,9 @@ Hand up to 500 contacts, companies, deals or leads to one owner, archive them, a
                   "archived": {
                     "type": "boolean"
                   },
+                  "done": {
+                    "type": "boolean"
+                  },
                   "listed": {
                     "type": "boolean"
                   },
@@ -1791,6 +1846,9 @@ Hand up to 500 contacts, companies, deals or leads to one owner, archive them, a
               "before": {
                 "properties": {
                   "archived": {
+                    "type": "boolean"
+                  },
+                  "done": {
                     "type": "boolean"
                   },
                   "listed": {
@@ -1949,7 +2007,16 @@ Hand up to 500 contacts, companies, deals or leads to one owner, archive them, a
 
 **Catch me up on a record**
 
-Answer "what has been going on with this?" for one contact, company, deal, lead, project or meeting: the recent activity and related records in one picture, with the evidence each part rests on. Built around ONE record you name; everything it reports carries a source, and what cannot be evidenced is absent rather than inferred. prep_for_meeting when a meeting is about to happen, read_record for the record's own stored fields, search_records when you do not yet know which record you mean. Each item carries the record_type and record_id a follow-up call acts on. occurred_at is when an item happened, in UTC — prefer it over a date the prose recalls, and convert before naming a day. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer "what has been going on with this?" for one contact, company, deal, lead, project or meeting:
+the recent activity and related records in one picture, with the evidence each part rests on. Built
+around ONE record you name; everything it reports carries a source, and what cannot be evidenced is
+absent rather than inferred. prep_for_meeting when a meeting is about to happen, read_record for the
+record's own stored fields, search_records when you do not yet know which record you mean. Each item
+carries the record_type and record_id a follow-up call acts on. occurred_at is when an item
+happened, in UTC — prefer it over a date the prose recalls, and convert before naming a day.
+(Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -2173,7 +2240,16 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
 
 **Make and change lists**
 
-Make a Live List from a filter or a Shortlist of chosen records, change its name, purpose, filter, sharing or steward, archive or restore it, and add or remove one Shortlist member with a note on why. Only the steward of a list or a list admin may change it. A change must carry the version you read; a list changed since is refused. An archived list is read-only. A Live List's members follow its filter and cannot be added or removed by hand. Preview a filter with read_lists before saving it. bulk_update_records adds or removes many records at once, with a confirmation. Keep the list id and its new version from the answer. (Governance: runs immediately; requires passport scope "write".)
+```text
+Make a Live List from a filter or a Shortlist of chosen records, change its name, purpose, filter,
+sharing or steward, archive or restore it, and add or remove one Shortlist member with a note on
+why. Only the steward of a list or a list admin may change it. A change must carry the version you
+read; a list changed since is refused. An archived list is read-only. A Live List's members follow
+its filter and cannot be added or removed by hand. Preview a filter with read_lists before saving
+it. bulk_update_records adds or removes many records at once, with a confirmation. Keep the list id
+and its new version from the answer. (Governance: runs immediately; requires passport scope
+"write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -2441,7 +2517,16 @@ Make a Live List from a filter or a Shortlist of chosen records, change its name
 
 **Check calendar availability**
 
-Find candidate times for a host without booking or sending anything. Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability. Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. prep_for_meeting prepares for an existing meeting. Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time. (Governance: runs immediately; requires passport scope "read".)
+```text
+Find candidate times for a host without booking or sending anything. Set reliable=true to check the
+acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only
+meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live
+occupancy was checked. This never checks invitees' availability. Use invite_meeting to request an
+approved calendar invitation after a time is agreed. book_meeting only records a meeting.
+prep_for_meeting prepares for an existing meeting. Keep the exact start and end, the
+calendar_backing value, and the truncated flag. Availability is checked again when reserving the
+time. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -2610,7 +2695,16 @@ Find candidate times for a host without booking or sending anything. Set reliabl
 
 **Commit an import**
 
-Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. read_import_report first: numbers nobody read are not a check. Report what landed from read_import_report once this answers — the counts and the mapping the run used, each column by the field it went to. (Governance: runs immediately; requires passport scope "write".)
+```text
+Write a checked import into the workspace. The dry run is the check; this commits when it answers.
+Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is
+always a report first. This cannot be undone from here — undoing an import needs the web app. A
+request to get a file in is not a review of it: unless the asker says they have already been through
+these rows, show the counts and the mapping and wait for their go-ahead. read_import_report first:
+numbers nobody read are not a check. Report what landed from read_import_report once this answers
+— the counts and the mapping the run used, each column by the field it went to. (Governance: runs
+immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -2759,7 +2853,17 @@ Write a checked import into the workspace. The dry run is the check; this commit
 
 **Relationship coverage on a deal**
 
-Answer "is this deal covered?": which roles at the company we have a relationship with, and where the deal is exposed to a single contact. It assesses the relationships recorded against one deal's company, not the deal's commercial health — nothing here says whether the deal will close. Use whats_slipping_this_week for deals at risk of stalling, and intro_path_to when the answer is that a gap needs a warm route filling it. Keep the deal_id and the named gaps; they are what a follow-up plan is built from. Each stakeholder carries `contact_name` beside its role — say WHO the uncovered seat is rather than reporting the role alone, because the answer a rep acts on is a contact to bring into the room. A seat with no name is one this caller may not read: report the gap, and do not guess who fills it. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer "is this deal covered?": which roles at the company we have a relationship with, and where
+the deal is exposed to a single contact. It assesses the relationships recorded against one deal's
+company, not the deal's commercial health — nothing here says whether the deal will close. Use
+whats_slipping_this_week for deals at risk of stalling, and intro_path_to when the answer is that a
+gap needs a warm route filling it. Keep the deal_id and the named gaps; they are what a follow-up
+plan is built from. Each stakeholder carries `contact_name` beside its role — say WHO the
+uncovered seat is rather than reporting the role alone, because the answer a rep acts on is a
+contact to bring into the room. A seat with no name is one this caller may not read: report the gap,
+and do not guess who fills it. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -3005,7 +3109,25 @@ Answer "is this deal covered?": which roles at the company we have a relationshi
 
 **Compose an analytics report**
 
-WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting — whose numbers come from governed queries, standard metrics or frozen editions instead of being typed. Not for answering with a figure: a number in the reply is run_analytics_query's or run_report's. A query-cell figure comes from run_analytics_query with save; a run_report answer has no run id and cannot be cited. The document carries the STRUCTURE and the WORDS; each figure names a query cell, metric_ref or edition_ref, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Preserve returned coverage, units and capture context. For a query cell, run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
+```text
+WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting —
+whose numbers come from governed queries, standard metrics or frozen editions instead of being
+typed. Not for answering with a figure: a number in the reply is run_analytics_query's or
+run_report's. A query-cell figure comes from run_analytics_query with save; a run_report answer has
+no run id and cannot be cited. The document carries the STRUCTURE and the WORDS; each figure names a
+query cell, metric_ref or edition_ref, and the server resolves those handles under the reader's own
+authority. It writes no number of its own and refuses any document that does. A block carrying a
+literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the
+two can disagree, and no reader could tell the page shows a figure the database never computed.
+Preserve returned coverage, units and capture context. For a query cell, run an analytics query with
+save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is
+what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the
+answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for
+a caller that wants them before composing. Never put a number in a block — cite the cell that
+holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt
+costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope
+"read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -3271,7 +3393,26 @@ WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary fo
 
 **Create a record**
 
-Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs merge_records to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate: create it — the create files the pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope "write".)
+```text
+Create a contact, company, deal, lead, project, activity or relationship that does not exist yet.
+Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a
+deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted,
+and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here
+is visible to the human you are acting for and to nobody else, until they publish it or
+correspondence with that address earns a widening verdict — attending a meeting together does not
+earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search
+first when the record might already exist — a second copy of a contact or company is a problem
+that then needs merge_records to undo. A record that shares only a name, with a different email,
+phone or employer, is not proof of a duplicate: create it — the create files the pair for review,
+and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies
+or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and
+writes nothing; creating them one by one skips that check. The new record's id comes back in the
+result; keep it for anything that links to it. When the user says where they met the contact, pass
+that word as offer_tag: it only offers the tag, and apply_tag still needs their yes. (Governance:
+runs immediately; requires passport scope "write".)
+```
+
+Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -3291,6 +3432,11 @@ Create a contact, company, deal, lead, project, activity or relationship that do
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
+      "type": "string"
+    },
+    "offer_tag": {
+      "description": "A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing.",
+      "maxLength": 64,
       "type": "string"
     },
     "record_type": {
@@ -3326,6 +3472,9 @@ Create a contact, company, deal, lead, project, activity or relationship that do
         "duplicate_candidates": {
           "items": {
             "properties": {
+              "candidate_id": {
+                "type": "string"
+              },
               "confidence": {
                 "type": "number"
               },
@@ -3360,6 +3509,7 @@ Create a contact, company, deal, lead, project, activity or relationship that do
               }
             },
             "required": [
+              "candidate_id",
               "confidence",
               "evidence",
               "other_record_id"
@@ -3377,6 +3527,29 @@ Create a contact, company, deal, lead, project, activity or relationship that do
         },
         "record_type": {
           "type": "string"
+        },
+        "tag_offer": {
+          "properties": {
+            "exists": {
+              "type": "boolean"
+            },
+            "may_create": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "tag_id": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "exists",
+            "may_create",
+            "name"
+          ],
+          "type": "object"
         },
         "trust_tier": {
           "type": "string"
@@ -3478,7 +3651,14 @@ Create a contact, company, deal, lead, project, activity or relationship that do
 
 **Create a tag**
 
-Coin a new word in the workspace vocabulary, so records can be grouped by it. list_tags FIRST: a workspace with "Key Account" does not want "key accounts" beside it, and the two then split the records that belong together. A name already taken is a conflict, matched case-insensitively — including a RETIRED word holding it, which a contact restores in Settings; no tool does. Needs the tag.create grant, which an ordinary seat does not hold. (Governance: runs immediately; requires passport scope "write".)
+```text
+Coin a new word in the workspace vocabulary, so records can be grouped by it. list_tags FIRST: a
+workspace with "Key Account" does not want "key accounts" beside it, and the two then split the
+records that belong together. A name already taken is a conflict, matched case-insensitively —
+including a RETIRED word holding it, which a contact restores in Settings; no tool does. Needs the
+tag.create grant, which an ordinary seat does not hold. (Governance: runs immediately; requires
+passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -3632,7 +3812,11 @@ Coin a new word in the workspace vocabulary, so records can be grouped by it. li
 
 **Create a task**
 
-Put a to-do on someone's list: what is owed, by whom, on which records. Creates the task only — no reminder, no deal move; unlinked, it sits on no timeline. log_activity is for what already happened. (Governance: runs immediately; requires passport scope "write".)
+```text
+Put a to-do on someone's list: what is owed, by whom, on which records. Creates the task only — no
+reminder, no deal move; unlinked, it sits on no timeline. log_activity is for what already happened.
+(Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -3815,7 +3999,16 @@ Put a to-do on someone's list: what is owed, by whom, on which records. Creates 
 
 **How current the sources are**
 
-Answer how much of what is going on this workspace can actually SEE — which connectors the nightly check could read, and how far back each reaches. Needs the data_coverage grant, which operators hold and sellers do not — a refusal here is a seat boundary, not a missing run. Only a `checked` source carries a date; on any other state nothing was read, and a quiet week is indistinguishable from a broken connector until somebody looks. forecast_input_checks and list_input_checks answer what the check FOUND, and both are silent on whether it could look — a clean set of findings over sources nobody opened reads as good news and is not. Ask this one when the question is whether to trust the other two. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer how much of what is going on this workspace can actually SEE — which connectors the nightly
+check could read, and how far back each reaches. Needs the data_coverage grant, which operators hold
+and sellers do not — a refusal here is a seat boundary, not a missing run. Only a `checked` source
+carries a date; on any other state nothing was read, and a quiet week is indistinguishable from a
+broken connector until somebody looks. forecast_input_checks and list_input_checks answer what the
+check FOUND, and both are silent on whether it could look — a clean set of findings over sources
+nobody opened reads as good news and is not. Ask this one when the question is whether to trust the
+other two. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -3957,7 +4150,18 @@ Answer how much of what is going on this workspace can actually SEE — which co
 
 **Approve or reject one staged action**
 
-Answer one staged action for the colleague asking you: approve it, which lets it happen, or reject it, which discards it. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving is what makes the change real, including sending a message that was only drafted; a rejection cannot be taken back. You may approve your own proposal only when it is a change that would have gone straight through but for a human's earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing is written. read_approval when they have not seen what it holds; decide_approval_bundle for every proposal one act staged. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Governance: runs immediately; requires passport scope "write".)
+```text
+Answer one staged action for the colleague asking you: approve it, which lets it happen, or reject
+it, which discards it. The verdict is theirs — take an explicit approve or reject rather than
+deciding what they would have wanted. Approving is what makes the change real, including sending a
+message that was only drafted; a rejection cannot be taken back. You may approve your own proposal
+only when it is a change that would have gone straight through but for a human's earlier edit — no
+deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the
+CRM. An item already answered, or lapsed, is reported as such and nothing is written. read_approval
+when they have not seen what it holds; decide_approval_bundle for every proposal one act staged. If
+the proposal is your OWN refused call, approving does not perform it — re-issue that same call
+with approval_id set. (Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -4167,7 +4371,15 @@ Answer one staged action for the colleague asking you: approve it, which lets it
 
 **Approve or reject one act's proposals together**
 
-Answer every still-waiting proposal that one act staged together — the overnight run that proposed six corrections is six proposals under one bundle_id. Each member is answered on its own terms and reported on its own; one already decided, or lapsed, is left as it is. Members the colleague could not decide alone are not decided here, and a bundle holding none of theirs reads as not found. decide_approval answers a single item; list_approvals is where a bundle_id comes from. Each member carries its own outcome — decided here, already decided, or expired. (Governance: runs immediately; requires passport scope "write".)
+```text
+Answer every still-waiting proposal that one act staged together — the overnight run that proposed
+six corrections is six proposals under one bundle_id. Each member is answered on its own terms and
+reported on its own; one already decided, or lapsed, is left as it is. Members the colleague could
+not decide alone are not decided here, and a bundle holding none of theirs reads as not found.
+decide_approval answers a single item; list_approvals is where a bundle_id comes from. Each member
+carries its own outcome — decided here, already decided, or expired. (Governance: runs
+immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -4387,11 +4599,170 @@ Answer every still-waiting proposal that one act staged together — the overnig
 
 </details>
 
+### decide_duplicate
+
+**Decide a flagged duplicate pair**
+
+```text
+Settle a pair the review queue flagged: not_the_same says they are two different contacts or
+companies, so the pair is not flagged again; reopen takes that back. Only for a pair create_record
+reported in duplicate_candidates, by its candidate_id; neither record changes, and a merged pair
+cannot be re-opened. Use merge_records when they are the same one, never this. (Governance: runs
+immediately; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "description": "The pair's candidate_id, from the duplicate_candidates a create answered with",
+      "format": "uuid",
+      "type": "string"
+    },
+    "decision": {
+      "description": "not_the_same dismisses the pair; reopen takes a dismissal back",
+      "enum": [
+        "not_the_same",
+        "reopen"
+      ],
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    }
+  },
+  "required": [
+    "candidate_id",
+    "decision"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "disposition": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "disposition"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### demote_lead
 
 **Reverse a lead promotion**
 
-Reverse a promotion that should not have happened, putting the lead back on the open ladder. It blocks rather than orphans: a promotion whose contact now owns a deal is refused, and activities captured since the promotion stay on the contact's timeline — they are real history. A promotion that merged into an existing contact leaves that contact untouched and only clears the lineage. Use disqualify_lead when the lead is real but going nowhere; demotion says the promotion itself was wrong. The lead is demoted when this call answers. Where an installation has raised this verb to confirm first, the answer is a staged approval instead — keep its id, and do not report the demotion until the retry carrying it has answered. (Governance: runs immediately; requires passport scope "write".)
+```text
+Reverse a promotion that should not have happened, putting the lead back on the open ladder. It
+blocks rather than orphans: a promotion whose contact now owns a deal is refused, and activities
+captured since the promotion stay on the contact's timeline — they are real history. A promotion
+that merged into an existing contact leaves that contact untouched and only clears the lineage. Use
+disqualify_lead when the lead is real but going nowhere; demotion says the promotion itself was
+wrong. The lead is demoted when this call answers. Where an installation has raised this verb to
+confirm first, the answer is a staged approval instead — keep its id, and do not report the
+demotion until the retry carrying it has answered. (Governance: runs immediately; requires passport
+scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -4536,7 +4907,20 @@ Reverse a promotion that should not have happened, putting the lead back on the 
 
 **Describe the analytics vocabulary**
 
-Answer what an analytics query may SAY for THIS seat: the populations that can be measured, the group_by dimensions and measures each carries, and the aggregate functions and filter operators the grammar takes. It is the vocabulary run_analytics_query refuses against, so it holds the spelling of a population or field a query got wrong. It describes the vocabulary; it computes nothing — run_analytics_query does that. The document is derived per caller and narrowed to what this seat may already see, so a withheld field is simply absent rather than marked. It answers the same document as the margince://schema/analytics resource, for a caller that reads tools rather than resources. Call run_analytics_query directly when the names are already known — an unknown population is refused with the allowed set, so a near-miss costs one round trip rather than a lookup. Take population, dimension and measure names verbatim — a name outside the document is refused rather than approximated. The version line is the schema_version a saved run answers with. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer what an analytics query may SAY for THIS seat: the populations that can be measured, the
+group_by dimensions and measures each carries, and the aggregate functions and filter operators the
+grammar takes. It is the vocabulary run_analytics_query refuses against, so it holds the spelling of
+a population or field a query got wrong. It describes the vocabulary; it computes nothing —
+run_analytics_query does that. The document is derived per caller and narrowed to what this seat may
+already see, so a withheld field is simply absent rather than marked. It answers the same document
+as the margince://schema/analytics resource, for a caller that reads tools rather than resources.
+Call run_analytics_query directly when the names are already known — an unknown population is
+refused with the allowed set, so a near-miss costs one round trip rather than a lookup. Take
+population, dimension and measure names verbatim — a name outside the document is refused rather
+than approximated. The version line is the schema_version a saved run answers with. (Governance:
+runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -4652,7 +5036,19 @@ Answer what an analytics query may SAY for THIS seat: the populations that can b
 
 **Describe the query vocabulary**
 
-Answer what a query plan may SAY in this workspace: the record types that can be asked about, the fields nameable on each, the operators each field admits, and the one relationship hop a plan may take. It is the vocabulary query_workspace refuses against, so it holds the spelling of a field whose name a plan got wrong. It describes the vocabulary; it returns no records — query_workspace does that. What comes back is narrowed to what you may already read, so it names nothing you could not otherwise reach. Call query_workspace once you know the names. This tool answers the same document as the margince://schema/query resource, for a client that reads tools rather than resources. Take the field and operator names from `targets` verbatim — a plan naming anything outside them is refused rather than approximated, so guessing at a spelling costs a round trip. `grammar` says how the clauses are assembled, and `version` is the value a plan's own `version` member must carry. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer what a query plan may SAY in this workspace: the record types that can be asked about, the
+fields nameable on each, the operators each field admits, and the one relationship hop a plan may
+take. It is the vocabulary query_workspace refuses against, so it holds the spelling of a field
+whose name a plan got wrong. It describes the vocabulary; it returns no records — query_workspace
+does that. What comes back is narrowed to what you may already read, so it names nothing you could
+not otherwise reach. Call query_workspace once you know the names. This tool answers the same
+document as the margince://schema/query resource, for a client that reads tools rather than
+resources. Take the field and operator names from `targets` verbatim — a plan naming anything
+outside them is refused rather than approximated, so guessing at a spelling costs a round trip.
+`grammar` says how the clauses are assembled, and `version` is the value a plan's own `version`
+member must carry. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -4768,7 +5164,22 @@ Answer what a query plan may SAY in this workspace: the record types that can be
 
 **Describe the record write vocabulary**
 
-Answer what a create_record or update_record `fields` body may SAY: for each record_type, the fields that write accepts, which of them are REQUIRED, the shape each takes, and the things a field list cannot show — where a deal's pipeline ids come from, which endpoints a relationship kind needs, which types carry no custom fields. It is the vocabulary the two write tools refuse against, so it holds the spelling of a field a write got wrong. It describes the writes; it creates and changes nothing — create_record and update_record do that. It is NOT a prerequisite: an unknown field is refused BY NAME with that record_type's whole accepted list, so a first attempt costs one refusal rather than a lookup. Create and update are separate sections because they disagree: a field one accepts the other may not. Call create_record or update_record directly when the names are already known, and read the refusal when one is wrong. This tool answers the same document as the margince://schema/record-fields resource, for a caller that reads tools rather than resources. Take the field names verbatim — a name outside the document is refused rather than approximated — and mind the notation: a key with no `?` is REQUIRED. An extra key must be spelled cf_<slug> or it is not a custom field at all. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer what a create_record or update_record `fields` body may SAY: for each record_type, the fields
+that write accepts, which of them are REQUIRED, the shape each takes, and the things a field list
+cannot show — where a deal's pipeline ids come from, which endpoints a relationship kind needs,
+which types carry no custom fields. It is the vocabulary the two write tools refuse against, so it
+holds the spelling of a field a write got wrong. It describes the writes; it creates and changes
+nothing — create_record and update_record do that. It is NOT a prerequisite: an unknown field is
+refused BY NAME with that record_type's whole accepted list, so a first attempt costs one refusal
+rather than a lookup. Create and update are separate sections because they disagree: a field one
+accepts the other may not. Call create_record or update_record directly when the names are already
+known, and read the refusal when one is wrong. This tool answers the same document as the
+margince://schema/record-fields resource, for a caller that reads tools rather than resources. Take
+the field names verbatim — a name outside the document is refused rather than approximated — and
+mind the notation: a key with no `?` is REQUIRED. An extra key must be spelled cf_<slug> or it is
+not a custom field at all. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -4884,7 +5295,18 @@ Answer what a create_record or update_record `fields` body may SAY: for each rec
 
 **Describe the report block grammar**
 
-Answer what a compose_analytics_report document may CONTAIN: every block kind, whether it renders figures or words, and the severities a callout may state. It describes the grammar; it composes nothing and returns no numbers. It is NOT a prerequisite — an unknown block kind is refused by name with the whole set, so a first attempt costs one refusal. The grammar is the same for every caller, because it is the engine's and not a workspace's. Compose directly when the blocks needed are the obvious ones, and read the refusal when a kind is wrong — it carries the accepted set. This tool answers the same document as the margince://schema/report-blocks resource, for a caller that reads tools rather than resources. A figure is never written into a block, only cited: every number names a saved run and a cell inside it. A block carrying a literal number is refused even beside a valid citation. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer what a compose_analytics_report document may CONTAIN: every block kind, whether it renders
+figures or words, and the severities a callout may state. It describes the grammar; it composes
+nothing and returns no numbers. It is NOT a prerequisite — an unknown block kind is refused by
+name with the whole set, so a first attempt costs one refusal. The grammar is the same for every
+caller, because it is the engine's and not a workspace's. Compose directly when the blocks needed
+are the obvious ones, and read the refusal when a kind is wrong — it carries the accepted set.
+This tool answers the same document as the margince://schema/report-blocks resource, for a caller
+that reads tools rather than resources. A figure is never written into a block, only cited: every
+number names a saved run and a cell inside it. A block carrying a literal number is refused even
+beside a valid citation. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -5000,7 +5422,23 @@ Answer what a compose_analytics_report document may CONTAIN: every block kind, w
 
 **Describe the report vocabulary**
 
-Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a name means when the name alone does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does that. It is NOT a prerequisite: run_report with `report` alone answers that report's default question and needs nothing from here, so reach for this only when a plan has to name a grouping, a filter or a measure. The names are the same for every caller, because a report's vocabulary is the engine's and not a workspace's. Call run_report directly when the report's default answer is the answer wanted, and read its refusal when a name is wrong — it carries that argument's accepted list. This tool answers the same document as the margince://schema/reports resource, for a caller that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and `aggregates` verbatim — a plan naming anything outside them is refused rather than approximated. `filters` is one object holding both equality predicates and numeric thresholds, so a threshold key goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and
+aggregates admit, what it answers with no plan at all, and what a name means when the name alone
+does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a
+plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does
+that. It is NOT a prerequisite: run_report with `report` alone answers that report's default
+question and needs nothing from here, so reach for this only when a plan has to name a grouping, a
+filter or a measure. The names are the same for every caller, because a report's vocabulary is the
+engine's and not a workspace's. Call run_report directly when the report's default answer is the
+answer wanted, and read its refusal when a name is wrong — it carries that argument's accepted
+list. This tool answers the same document as the margince://schema/reports resource, for a caller
+that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and
+`aggregates` verbatim — a plan naming anything outside them is refused rather than approximated.
+`filters` is one object holding both equality predicates and numeric thresholds, so a threshold key
+goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope
+"read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -5116,7 +5554,14 @@ Answer what a run_report plan may SAY: for each prebuilt report, the names its g
 
 **Disqualify a lead**
 
-Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. By default the lead is disqualified when this call answers; where an installation has raised this verb to confirm first, do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope "write".)
+```text
+Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's
+own terminal state and keeps the record and its history; it is not a deletion and not an archive.
+Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing
+information. By default the lead is disqualified when this call answers; where an installation has
+raised this verb to confirm first, do not report the lead as disqualified until the retry carrying
+their approval has answered. (Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -5252,7 +5697,19 @@ Close out a lead that is not going anywhere, so it stops appearing as live work.
 
 **Draft an email**
 
-Compose an email: a reply to a recorded thread (activity_id), or a FIRST message to a record (links). It writes the message and stops: nothing is sent. With no drafting model configured the text is a short deterministic note rather than a composed one. draft_follow_ups_for drafts across a set of slipping deals at once; send_email sends a reply, send_company_email a first message. Keep what comes back — subject, body, and the activity_id or links echoed with it; the send takes them. Re-writing the text in between means a human approves one message and another goes out. (Governance: runs immediately; requires passport scope "draft".)
+```text
+Compose an email: a reply to a recorded thread (activity_id), or a FIRST message to a contact or
+lead (links naming that recipient; with a contact, also the company, its deal or a project the
+message is about), written from that recipient's record. Nothing is sent. A first message is saved
+in Margince for the human you act for: it waits on the contact's or lead's page, marked as drafted
+by an agent, until they review, edit and send it there. It is not saved when they already keep an
+unsent draft of their own for that recipient (not_saved says so), and a reply is never saved: show
+those in full. With no drafting model configured the text is a short deterministic note.
+draft_follow_ups_for drafts across a set of slipping deals at once; send_email sends a reply,
+send_company_email a first message. Keep what comes back — subject, body, to, and the activity_id
+or links echoed with it; the send takes them. Re-writing the text in between means a human approves
+one message and another goes out. (Governance: runs immediately; requires passport scope "draft".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -5316,6 +5773,12 @@ Compose an email: a reply to a recorded thread (activity_id), or a FIRST message
   "properties": {
     "data": {
       "properties": {
+        "ai_disclosure": {
+          "type": "string"
+        },
+        "ai_generated": {
+          "type": "boolean"
+        },
         "body": {
           "type": "string"
         },
@@ -5342,8 +5805,21 @@ Compose an email: a reply to a recorded thread (activity_id), or a FIRST message
           },
           "type": "array"
         },
+        "not_saved": {
+          "type": "string"
+        },
+        "saved_draft_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "subject": {
           "type": "string"
+        },
+        "to": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -5438,7 +5914,15 @@ Compose an email: a reply to a recorded thread (activity_id), or a FIRST message
 
 **Draft follow-ups**
 
-Draft a follow-up for each deal in a segment at once — today only the slipping deals — and leave each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft comes back with its deal_id and draft_activity_id — those are how a human finds the drafts to review. (Governance: runs immediately; requires passport scope "draft".)
+```text
+Draft a follow-up for each deal in a segment at once — today only the slipping deals — and leave
+each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only
+for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One
+call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific
+conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft
+comes back with its deal_id and draft_activity_id — those are how a human finds the drafts to
+review. (Governance: runs immediately; requires passport scope "draft".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -5620,7 +6104,18 @@ Draft a follow-up for each deal in a segment at once — today only the slipping
 
 **Enrich a company from its website**
 
-Learn about a company by reading its public website, and propose what was found for a human to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a human approves every call before it runs; requires passport scope "enrich".)
+```text
+Learn about a company by reading its public website, and propose what was found for a human to
+accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL —
+nothing lands on the record until someone accepts it, which is the review that guards this, not an
+approval on the call. Reading one page answers immediately; reading a whole site is queued and
+answers with a read id rather than the content. What it finds is captured text from a third party,
+not a fact this workspace has verified. Use qualify_lead when the missing values are already
+derivable from the record itself, which costs no external read and needs no approval. Keep the
+company_id you enriched, and the read id when a whole-site read was queued — the result is
+collected against it later. (Governance: a human approves every call before it runs; requires
+passport scope "enrich".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -5762,7 +6257,21 @@ Learn about a company by reading its public website, and propose what was found 
 
 **What the forecast's inputs were checked against**
 
-Answer whether the forecast's inputs are sound enough to quote — a verdict, and how much of the pipeline last night's check reached. A forecast is only as good as its inputs, and the failures are mundane: a close date that went by, an amount that disagrees with the offer that was sent, a deal nobody has heard from in ninety days. `checks_incomplete` is NOT a worse `needs_review` — one says the pipeline has problems, the other says we could not look, and reporting the first when the second is true tells somebody their pipeline is sound when nobody read the mailbox. This is the VERDICT. list_input_checks is the findings themselves, one row per problem, when the question is what to go and fix. data_coverage is the third question and the one this cannot answer: whether the CONNECTORS were readable at all, which is what makes a clean verdict trustworthy rather than merely clean. Read `readiness` before quoting any forecast figure. `sources` says why: each carries the state the run reached, and only a `checked` source has a date — an absent or unread source means the run could not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how much there was to check. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer whether the forecast's inputs are sound enough to quote — a verdict, and how much of the
+pipeline last night's check reached. A forecast is only as good as its inputs, and the failures are
+mundane: a close date that went by, an amount that disagrees with the offer that was sent, a deal
+nobody has heard from in ninety days. `checks_incomplete` is NOT a worse `needs_review` — one says
+the pipeline has problems, the other says we could not look, and reporting the first when the second
+is true tells somebody their pipeline is sound when nobody read the mailbox. This is the VERDICT.
+list_input_checks is the findings themselves, one row per problem, when the question is what to go
+and fix. data_coverage is the third question and the one this cannot answer: whether the CONNECTORS
+were readable at all, which is what makes a clean verdict trustworthy rather than merely clean. Read
+`readiness` before quoting any forecast figure. `sources` says why: each carries the state the run
+reached, and only a `checked` source has a date — an absent or unread source means the run could
+not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how
+much there was to check. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -5918,7 +6427,22 @@ Answer whether the forecast's inputs are sound enough to quote — a verdict, an
 
 **What moved the forecast**
 
-Explain why a forecast changed between two points, as named causes that account for the whole difference. Opening plus every bucket equals closing, exactly, so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent: `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket; `model` means a probability the product re-scored. IT NEEDS TWO SNAPSHOT IDS, `from` then `to`, both from ONE forecast_readings read's `snapshots` so they share a period; none listed means nothing was frozen yet. Reading forecast_readings twice and subtracting is NOT the same answer and must not be reported as one: the difference between two reads is a number with no account of where it went. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. (Governance: runs immediately; requires passport scope "read".)
+```text
+Explain why a forecast changed between two points, as named causes that account for the whole
+difference. Opening plus every bucket equals closing, exactly, so the buckets are a complete account
+of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both
+slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it
+left. Two buckets are about the machinery rather than the business, and quoting them as sales
+movement is the mistake this classification exists to prevent: `definition` means the two snapshots
+were computed under different rules, and then the WHOLE difference is in that bucket; `model` means
+a probability the product re-scored. IT NEEDS TWO SNAPSHOT IDS, `from` then `to`, both from ONE
+forecast_readings read's `snapshots` so they share a period; none listed means nothing was frozen
+yet. Reading forecast_readings twice and subtracting is NOT the same answer and must not be reported
+as one: the difference between two reads is a number with no account of where it went.
+`reopened_or_archived` carries a deal that left the population entirely — archived, or no longer
+visible to this caller — with its whole prior contribution, so no money disappears without a row
+that says where it went. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -6125,7 +6649,24 @@ Explain why a forecast changed between two points, as named causes that account 
 
 **Read the forecast**
 
-Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask forecast_input_checks whether the inputs behind these numbers were read. `snapshots` lists this period's frozen states, newest first: the ids forecast_movement takes. Empty means nothing was frozen for this population, which includes managed teams. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus
+`weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by
+the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline
+whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`.
+`coverage_note` says what the totals do not cover and is absent only when they cover every eligible
+deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's
+forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the
+forecast: only this applies the fiscal calendar, the base currency conversion and the weighting.
+These figures also cannot be cited in a composed document — for a board-pack section or anything a
+reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask
+forecast_input_checks whether the inputs behind these numbers were read. `snapshots` lists this
+period's frozen states, newest first: the ids forecast_movement takes. Empty means nothing was
+frozen for this population, which includes managed teams. Quote `as_of`, `timezone` and
+`base_currency` with the number — a total placed in the reader's own zone is a different total —
+and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is
+written from. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -6361,7 +6902,13 @@ Answer what a period is expected to close — `won`, `evidence`, `best_case` and
 
 **Get a record's tags**
 
-Read the tags on one contact, company or deal, with who applied each and when. Those three record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope "read".)
+```text
+Read the tags on one contact, company or deal, with who applied each and when. Those three record
+types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty
+for that reason — NOT because the record carries no tags, and it must not be reported as none. An
+archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope
+"read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -6527,7 +7074,11 @@ Read the tags on one contact, company or deal, with who applied each and when. T
 
 **Get a tag**
 
-Read one tag and how many contacts, companies and deals carry it. The counts cover those three record types only. They say how much retiring or merging the word would touch; the records themselves come from list_records. (Governance: runs immediately; requires passport scope "read".)
+```text
+Read one tag and how many contacts, companies and deals carry it. The counts cover those three
+record types only. They say how much retiring or merging the word would touch; the records
+themselves come from list_records. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -6674,7 +7225,15 @@ Read one tag and how many contacts, companies and deals carry it. The counts cov
 
 **Find a warm introduction path**
 
-Find a warm route into a company: who we already know there, and which colleague could make the introduction. It walks the relationships this workspace has recorded. A company nobody here has ever spoken to has no warm path, and saying so is the correct answer rather than a failure. Use who_knows when you already have the specific contact and want the colleagues who know THEM, and search_records when you are still looking for the company itself. The path names the colleague and the contact by id; both are needed to ask anyone for the introduction. (Governance: runs immediately; requires passport scope "read".)
+```text
+Find a warm route into a company: who we already know there, and which colleague could make the
+introduction. It walks the relationships this workspace has recorded. A company nobody here has ever
+spoken to has no warm path, and saying so is the correct answer rather than a failure. Use who_knows
+when you already have the specific contact and want the colleagues who know THEM, and search_records
+when you are still looking for the company itself. The path names the colleague and the contact by
+id; both are needed to ask anyone for the introduction. (Governance: runs immediately; requires
+passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -6844,7 +7403,16 @@ Find a warm route into a company: who we already know there, and which colleague
 
 **Send a calendar invitation**
 
-Create a real calendar invitation for one contact and notify their chosen address. Requires a connected writable calendar and a contact email the acting host may use. It checks actual busy time and returns pending until the provider confirms. Does not prove the guest agreed or received the notification. Use book_meeting only to record a meeting without inviting anyone. Use check_availability with reliable=true to propose calendar-checked times. Keep the invitation id and inspect its status before claiming it is booked. Retrying an uncertain delivery must use the existing invitation. (Governance: a human approves every call before it runs; requires passport scope "send".)
+```text
+Create a real calendar invitation for one contact and notify their chosen address. Requires a
+connected writable calendar and a contact email the acting host may use. It checks actual busy time
+and returns pending until the provider confirms. Does not prove the guest agreed or received the
+notification. Use book_meeting only to record a meeting without inviting anyone. Use
+check_availability with reliable=true to propose calendar-checked times. Keep the invitation id and
+inspect its status before claiming it is booked. Retrying an uncertain delivery must use the
+existing invitation. (Governance: a human approves every call before it runs; requires passport
+scope "send".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -7042,7 +7610,16 @@ Create a real calendar invitation for one contact and notify their chosen addres
 
 **List what is waiting for a decision**
 
-The staged actions waiting for a human's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approval answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor. (Governance: runs immediately; requires passport scope "read".)
+```text
+The staged actions waiting for a human's decision: what was proposed and what each would do. It is
+where a proposal that is already waiting turns up — a message staged and unsent is not one that
+needs writing again. It lists what the colleague you act for could decide themselves; anything else
+is absent rather than refused. A proposal past its expiry reads as expired and can no longer be
+answered. Each item carries its one-line summary, not the change itself. read_approval opens one and
+shows what it holds; decide_approval answers it. Keep the staged_action_id you mean to act on, the
+bundle_id when one act staged several, and next_cursor. (Governance: runs immediately; requires
+passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -7263,7 +7840,16 @@ The staged actions waiting for a human's decision: what was proposed and what ea
 
 **List messaging transports**
 
-Find out which messaging transports exist in THIS installation, and what each is called. It reports what the installation composed, not what this workspace has connected. supplies_transport=false means the transport cannot carry an outbound message at all, so a reply on it will be refused however the conversation was captured. To read the messages themselves, use search_records on activities and filter by channel_provider. Carry the `provider` value verbatim: log_activity requires it as channel_provider whenever kind is "message", and a value not in this list fails a foreign key. Use `label` only for display. (Governance: runs immediately; requires passport scope "read".)
+```text
+Find out which messaging transports exist in THIS installation, and what each is called. It reports
+what the installation composed, not what this workspace has connected. supplies_transport=false
+means the transport cannot carry an outbound message at all, so a reply on it will be refused
+however the conversation was captured. To read the messages themselves, use search_records on
+activities and filter by channel_provider. Carry the `provider` value verbatim: log_activity
+requires it as channel_provider whenever kind is "message", and a value not in this list fails a
+foreign key. Use `label` only for display. (Governance: runs immediately; requires passport scope
+"read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -7402,7 +7988,15 @@ Find out which messaging transports exist in THIS installation, and what each is
 
 **List colleagues**
 
-List who works HERE — colleagues holding a seat, not the contacts stored as contact records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so read the warning before concluding a colleague has no seat. search_records/contact finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
+```text
+List who works HERE — colleagues holding a seat, not the contacts stored as contact records. Reads
+only, and lists seats that can actually receive work — archived, suspended and locked-out ones are
+absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a
+warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so
+read the warning before concluding a colleague has no seat. search_records/contact finds a CUSTOMER
+contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an
+is_agent seat. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -7588,7 +8182,17 @@ List who works HERE — colleagues holding a seat, not the contacts stored as co
 
 **What the forecast's inputs still need**
 
-List the open input problems behind the forecast, most material first, so they can be fixed. A close date that went by, or an amount that disagrees with the offer that was sent, makes a total wrong without making the arithmetic wrong. Scoped to what this caller can open, with no count of what was withheld — a count of what somebody may not read is itself a statement about how much there is. forecast_input_checks answers the VERDICT — whether the numbers are quotable at all — which is the question before this one and the cheaper call. data_coverage answers whether the sources were readable, which an empty list here cannot distinguish from a clean pipeline. `affected_minor` absent means the money at stake cannot be said, not that nothing is at stake. (Governance: runs immediately; requires passport scope "read".)
+```text
+List the open input problems behind the forecast, most material first, so they can be fixed. A close
+date that went by, or an amount that disagrees with the offer that was sent, makes a total wrong
+without making the arithmetic wrong. Scoped to what this caller can open, with no count of what was
+withheld — a count of what somebody may not read is itself a statement about how much there is.
+forecast_input_checks answers the VERDICT — whether the numbers are quotable at all — which is
+the question before this one and the cheaper call. data_coverage answers whether the sources were
+readable, which an empty list here cannot distinguish from a clean pipeline. `affected_minor` absent
+means the money at stake cannot be said, not that nothing is at stake. (Governance: runs
+immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -7753,7 +8357,16 @@ List the open input problems behind the forecast, most material first, so they c
 
 **List pipelines and their stages**
 
-List every pipeline this workspace has with its live stages — the configuration the deal-shaped writes are named against. It is where the id of a stage a deal could move TO comes from, so a deal cannot be created, or moved anywhere new, without calling this first — a deal you have already read carries only the stage it is in. Each stage carries a semantic — open, won or lost — and that, not its name, is what decides whether moving onto it needs a human's approval; a stage called "Closed" may be either. Keep the pipeline_id and the stage_id of the stage you mean: create_record for a deal requires both, and advance_deal and progress_deal take that stage_id as their to_stage_id. (Governance: runs immediately; requires passport scope "read".)
+```text
+List every pipeline this workspace has with its live stages — the configuration the deal-shaped
+writes are named against. It is where the id of a stage a deal could move TO comes from, so a deal
+cannot be created, or moved anywhere new, without calling this first — a deal you have already
+read carries only the stage it is in. Each stage carries a semantic — open, won or lost — and
+that, not its name, is what decides whether moving onto it needs a human's approval; a stage called
+"Closed" may be either. Keep the pipeline_id and the stage_id of the stage you mean: create_record
+for a deal requires both, and advance_deal and progress_deal take that stage_id as their
+to_stage_id. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -7925,7 +8538,19 @@ List every pipeline this workspace has with its live stages — the configuratio
 
 **List records**
 
-Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. A result's `owner` says who holds it. When `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
+```text
+Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every
+deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by
+the filters this workspace publishes for that record_type, which the schema lists per type, and it
+answers ONE page: the set continues past it. Use search_records when the question is what a record
+is called rather than which records meet a condition, and run_report when the answer is a count or a
+total rather than the records themselves. Keep next_cursor and pass it back to read the next page
+— a second call without it re-reads the first one. A result's `owner` says who holds it. When
+`owner.is_you` is false, say whose it is when you report the record (or that its owner could not be
+named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than
+advising an approach as though the record were unowned. (Governance: runs immediately; requires
+passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -8185,7 +8810,11 @@ Enumerate the contacts, companies, deals, leads or projects that meet exact cond
 
 **List tags**
 
-The workspace's words for grouping records, with the tag_id apply_tag takes. Archived words come only on request and cannot be applied. `truncated` means the list was cut, so a word missing from it may still exist. (Governance: runs immediately; requires passport scope "read".)
+```text
+The workspace's words for grouping records, with the tag_id apply_tag takes. Archived words come
+only on request and cannot be applied. `truncated` means the list was cut, so a word missing from it
+may still exist. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -8331,7 +8960,16 @@ The workspace's words for grouping records, with the tag_id apply_tag takes. Arc
 
 **Log an activity**
 
-Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a contact, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which a human has to approve when it files under a project. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope "write".)
+```text
+Record something that happened — a call, a meeting, a note, a message — on the records it was
+about: name every one of them in this call. A meeting is with a contact, and also concerns their
+company and the deal it is for. It writes history and changes nothing else: no deal moves, no field
+updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a
+second call — relink_activity — which waits for the user's yes when it files under a project.
+Use progress_deal when the same event also moves a deal, so move and note are one act; create_task
+for something still owed. Keep the activity id — draft_email, send_email and send_message identify
+a conversation by it. (Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -8376,7 +9014,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made through relink_activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -8545,7 +9183,15 @@ Record something that happened — a call, a meeting, a note, a message — on t
 
 **Merge two records**
 
-Collapse two records for the same real contact or company into one, moving the source's activities, deals and links onto the record that survives. Contacts merge with contacts and companies with companies; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing: the fold cannot be called back, and by default nothing holds it. (Governance: runs immediately; requires passport scope "write".)
+```text
+Collapse two records for the same real contact or company into one, moving the source's activities,
+deals and links onto the record that survives. Contacts merge with contacts and companies with
+companies; the source is archived and redirected to the target, and the direction is not reversible
+by calling this again the other way round. Use archive_record when the extra record has nothing
+worth keeping, rather than merging to make it disappear. target_id is the record that survives and
+source_id the one merged away — read both records before choosing: the fold cannot be called back,
+and by default nothing holds it. (Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -8703,7 +9349,13 @@ Collapse two records for the same real contact or company into one, moving the s
 
 **Fold one tag into another**
 
-Fold a duplicate word into the one the workspace keeps, moving every record that carries it. NOT UNDOABLE once approved: the source is retired, its name is released — links to it stop working and someone may coin it again — and no pointer home is kept, unlike a contact or company merge. The TARGET is the word that survives; read both with get_tag first. Needs the tag.update grant. (Governance: a human approves every call before it runs; requires passport scope "write".)
+```text
+Fold a duplicate word into the one the workspace keeps, moving every record that carries it. NOT
+UNDOABLE once approved: the source is retired, its name is released — links to it stop working and
+someone may coin it again — and no pointer home is kept, unlike a contact or company merge. The
+TARGET is the word that survives; read both with get_tag first. Needs the tag.update grant.
+(Governance: a human approves every call before it runs; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -8848,7 +9500,18 @@ Fold a duplicate word into the one the workspace keeps, moving every record that
 
 **Prepare for a meeting**
 
-Get ready for a specific meeting: given the meeting, the same written brief a human reads; given any other record, the assembled picture a catch-up gives, plus the open items pulled out as the things to raise. It is built around ONE record you name, and everything it reports carries a source; what cannot be evidenced is absent rather than inferred. Given a meeting it works out which record that meeting is about and names the others alongside. Use catch_me_up_on when there is no meeting and the question is simply what has been happening, and check_availability when the goal is finding a time rather than preparing for one. The focus list names the open items by record_id; those are what to act on after the meeting. prepared_for names the record the prep was built around. occurred_at is when an item happened, in UTC — prefer it over a date the prose recalls. (Governance: runs immediately; requires passport scope "read".)
+```text
+Get ready for a specific meeting: given the meeting, the same written brief a human reads; given any
+other record, the assembled picture a catch-up gives, plus the open items pulled out as the things
+to raise. It is built around ONE record you name, and everything it reports carries a source; what
+cannot be evidenced is absent rather than inferred. Given a meeting it works out which record that
+meeting is about and names the others alongside. Use catch_me_up_on when there is no meeting and the
+question is simply what has been happening, and check_availability when the goal is finding a time
+rather than preparing for one. The focus list names the open items by record_id; those are what to
+act on after the meeting. prepared_for names the record the prep was built around. occurred_at is
+when an item happened, in UTC — prefer it over a date the prose recalls. (Governance: runs
+immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -9710,9 +10373,18 @@ Get ready for a specific meeting: given the meeting, the same written brief a hu
 
 **Prepare a delivery handoff**
 
-Assemble what the delivery side of one project needs from the sales side: who owns it, who to call at the client, what was sold, by when, and what is already promised — with a named gap for each of those the records do not answer. It reports what the records say and reads nothing outside them; each gap names the field it was read off. It is scoped to the records the caller may see, so a gap means the field is empty as far as THEY can see, and a bounded list withholds the gaps that claim something is absent rather than guessing them. It changes nothing — preparing a handover is not performing one. Use catch_me_up_on when the question is what has been happening on the company rather than what a handover is missing, and read_record for the project's own stored fields alone. The project_id, and each gap's source field — the gaps are what a follow-up fills in. (Governance: runs immediately; requires passport scope "read".)
-
-Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to `model`, `app`.
+```text
+Assemble what the delivery side of one project needs from the sales side: who owns it, who to call
+at the client, what was sold, by when, and what is already promised — with a named gap for each of
+those the records do not answer. It reports what the records say and reads nothing outside them;
+each gap names the field it was read off. It is scoped to the records the caller may see, so a gap
+means the field is empty as far as THEY can see, and a bounded list withholds the gaps that claim
+something is absent rather than guessing them. It changes nothing — preparing a handover is not
+performing one. Use catch_me_up_on when the question is what has been happening on the company
+rather than what a handover is missing, and read_record for the project's own stored fields alone.
+The project_id, and each gap's source field — the gaps are what a follow-up fills in. (Governance:
+runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -10022,7 +10694,24 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
+```text
+Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this
+checks every row against the workspace and reports what importing it would do. Writes nothing.
+`object` is company, contact or lead. Use `contact` for a file the business already knows — a
+migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list
+nobody has worked yet; those land unworked and a human promotes them. A row naming a record already
+here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose
+email is already held, which is always refused, because an email is a real key. A company's Website
+or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops
+guessing from names. To link contacts to their employers, map the company column to `company_name`
+— import the companies FIRST, because a name that matches nothing links nothing and says so. To
+CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company
+it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may
+both correct and add. create_record for one record you already know. Keep the run_id. The counts it
+answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs,
+so report both: a column this placed by a name they did not write is a decision they did not make.
+(Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -10218,7 +10907,18 @@ Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each c
 
 **Progress a deal with a note**
 
-Move a deal to a new stage and leave a note on its timeline saying why, in one call. The move commits first and the note follows it, so a note that fails to write does not put the deal back — the answer says so, and the note is then log_activity's to retry. The note itself is optional. Same rules as the bare move otherwise: call list_pipelines for the id of the stage you are moving to, and moving onto or off a stage that closes a deal as won or lost is staged for a human to approve. Use advance_deal when there is genuinely nothing to say about the move, and log_activity when something happened but the deal did not move. Send if_version with the version you read of the deal; keep the staged approval id if a closing move is sent for approval. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+```text
+Move a deal to a new stage and leave a note on its timeline saying why, in one call. The move
+commits first and the note follows it, so a note that fails to write does not put the deal back —
+the answer says so, and the note is then log_activity's to retry. The note itself is optional. Same
+rules as the bare move otherwise: call list_pipelines for the id of the stage you are moving to, and
+moving onto or off a stage that closes a deal as won or lost is staged for a human to approve. Use
+advance_deal when there is genuinely nothing to say about the move, and log_activity when something
+happened but the deal did not move. Send if_version with the version you read of the deal; keep the
+staged approval id if a closing move is sent for approval. (Governance: some calls run immediately
+and others a human approves first, decided per call from its arguments; requires passport scope
+"write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -10412,7 +11112,16 @@ Move a deal to a new stage and leave a note on its timeline saying why, in one c
 
 **Promote a lead to a contact**
 
-Turn a lead who has genuinely engaged into a contact record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. By default the lead is promoted when this call answers and the promoted contact's id comes back with it. Where an installation has raised this verb to confirm first, the answer is a staged approval instead and the id arrives only from the retry that carries it. (Governance: runs immediately; requires passport scope "write".)
+```text
+Turn a lead who has genuinely engaged into a contact record, carrying their history across. It
+requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or
+a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger
+for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead
+when the engagement says the opposite. By default the lead is promoted when this call answers and
+the promoted contact's id comes back with it. Where an installation has raised this verb to confirm
+first, the answer is a staged approval instead and the id arrives only from the retry that carries
+it. (Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -10587,7 +11296,16 @@ Turn a lead who has genuinely engaged into a contact record, carrying their hist
 
 **Qualify a lead**
 
-Fill in what a lead's own data already implies — today the company name, from the domain of its email address — and report which qualification fields are still empty. It fills only a field that is currently EMPTY and derivable from the lead itself. It never overwrites a value, never invents one, and reaches nothing outside the record, so a lead with nothing to derive from comes back unchanged with its gaps named. Use enrich to learn about a company from its website, and promote_lead once a real engagement means the lead should become a contact. The gaps in the result are what a human still has to supply; they are the honest answer to "is this lead ready", not a failure of the call. (Governance: runs immediately; requires passport scope "write".)
+```text
+Fill in what a lead's own data already implies — today the company name, from the domain of its
+email address — and report which qualification fields are still empty. It fills only a field that
+is currently EMPTY and derivable from the lead itself. It never overwrites a value, never invents
+one, and reaches nothing outside the record, so a lead with nothing to derive from comes back
+unchanged with its gaps named. Use enrich to learn about a company from its website, and
+promote_lead once a real engagement means the lead should become a contact. The gaps in the result
+are what a human still has to supply; they are the honest answer to "is this lead ready", not a
+failure of the call. (Governance: runs immediately; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -10759,7 +11477,27 @@ Fill in what a lead's own data already implies — today the company name, from 
 
 **Query the workspace**
 
-Answer a question that has STRUCTURE — a record type, conditions on its fields, a hop to a related record, or a likeness to describe — by sending a plan and reading back the records that satisfy it, together with what kind of answer it is. It also finds where records are: an address is filtered by its city (address.city) or by distance (within_radius). Every name in a plan comes from the published vocabulary; one outside it is refused by name. The margince://schema/query resource — not this description — says which record types, fields, operators and relationships can be asked about. At most one similarity clause and one hop. It cannot group, count or total, and has no cursor: an answer that hit its limit says so. Use search_records when you only have a name or a phrase and no conditions to apply, and run_report when the answer wanted is a count, a total or a breakdown rather than the records themselves. Read `coverage` before you use the rows: `complete_exact` means every record matching the plan is here, `ranked_semantic` means these ranked highest and others may match, and `partial_degraded` means something in the plan could not be answered as asked — `notes` says which. Keep each row's record_type and id for any follow-up call, and its `evidence` for the related record that admitted it. A row's `owner` is the colleague who holds that company: rows come back from across the whole workspace, so most of them belong to someone other than the contact asking. When `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer a question that has STRUCTURE — a record type, conditions on its fields, a hop to a related
+record, or a likeness to describe — by sending a plan and reading back the records that satisfy
+it, together with what kind of answer it is. It also finds where records are: an address is filtered
+by its city (address.city) or by distance (within_radius). Every name in a plan comes from the
+published vocabulary; one outside it is refused by name. The margince://schema/query resource —
+not this description — says which record types, fields, operators and relationships can be asked
+about. At most one similarity clause and one hop. It cannot group, count or total, and has no
+cursor: an answer that hit its limit says so. Use search_records when you only have a name or a
+phrase and no conditions to apply, and run_report when the answer wanted is a count, a total or a
+breakdown rather than the records themselves. Read `coverage` before you use the rows:
+`complete_exact` means every record matching the plan is here, `ranked_semantic` means these ranked
+highest and others may match, and `partial_degraded` means something in the plan could not be
+answered as asked — `notes` says which. Keep each row's record_type and id for any follow-up call,
+and its `evidence` for the related record that admitted it. A row's `owner` is the colleague who
+holds that company: rows come back from across the whole workspace, so most of them belong to
+someone other than the contact asking. When `owner.is_you` is false, say whose it is when you report
+the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting
+it as theirs to decide rather than advising an approach as though the record were unowned.
+(Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -11007,7 +11745,15 @@ Answer a question that has STRUCTURE — a record type, conditions on its fields
 
 **Read one staged action in full**
 
-Read one staged action in full: the exact change proposed, the record it acts on, and the evidence it was formed on — enough to answer it without opening the app. Reading performs nothing. An id the colleague you act for could not decide answers as not found, exactly as an id naming nothing does. list_approvals yields the id; decide_approval answers it. Keep the staged_action_id, and the bundle_id if the item names one. (Governance: runs immediately; requires passport scope "read".)
+```text
+Read one staged action in full: the exact change proposed, the record it acts on, and the evidence
+it was formed on — enough to answer it without opening the app. Reading performs nothing. An id
+the colleague you act for could not decide answers as not found, exactly as an id naming nothing
+does. list_approvals yields the id; decide_approval answers it. Keep the staged_action_id, and the
+bundle_id if the item names one. (Governance: runs immediately; requires passport scope "read".)
+```
+
+Renders its result in [`ui://margince/approval.html`](#approval_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -11200,9 +11946,17 @@ Read one staged action in full: the exact change proposed, the record it acts on
 
 **Read the morning brief**
 
-Read the ranked queue the user you act for sees when they open their morning brief — the deals the workspace decided are worth their attention today, in order, with the rows behind each ranking. It re-reads the last assembled run rather than building a new one, so its as_of says how current it is, and it is that user's own queue: it cannot be asked for anyone else's. Acting on, dismissing or snoozing an item is theirs alone. Use whats_slipping_this_week when the question is which deals are losing momentum regardless of what today's brief chose, and read_record for what one of these deals currently says. Each item names a deal_id and its evidence_ids; read those to cite what the ranking rested on rather than restating the item's own summary. (Governance: runs immediately; requires passport scope "read".)
-
-Renders its result in [`ui://margince/company-brief.html`](#company_brief_view), visible to `model`, `app`.
+```text
+Read the ranked queue the user you act for sees when they open their morning brief — the deals the
+workspace decided are worth their attention today, in order, with the rows behind each ranking. It
+re-reads the last assembled run rather than building a new one, so its as_of says how current it is,
+and it is that user's own queue: it cannot be asked for anyone else's. Acting on, dismissing or
+snoozing an item is theirs alone. Use whats_slipping_this_week when the question is which deals are
+losing momentum regardless of what today's brief chose, and read_record for what one of these deals
+currently says. Each item names a deal_id and its evidence_ids; read those to cite what the ranking
+rested on rather than restating the item's own summary. (Governance: runs immediately; requires
+passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -11445,7 +12199,11 @@ Renders its result in [`ui://margince/company-brief.html`](#company_brief_view),
 
 **Read an import report**
 
-What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what the user weighs before committing. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
+```text
+What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts
+are what the user weighs before committing. Same shape before and after. (Governance: runs
+immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -11749,7 +12507,10 @@ What an import will do, or did: rows created, updated, failed, unusable, duplica
 
 **Read an import run**
 
-Where one import got to: awaiting approval, running, done, or stopped. A stopped run names the row it stopped at and can resume there. (Governance: runs immediately; requires passport scope "read".)
+```text
+Where one import got to: awaiting approval, running, done, or stopped. A stopped run names the row
+it stopped at and can resume there. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -11888,7 +12649,21 @@ Where one import got to: awaiting approval, running, done, or stopped. A stopped
 
 **Find and read lists**
 
-Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it — including which records a Live List was seen to gain and lose, and how many since the user last opened it — or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. Live Lists are checked every 15 minutes, longest-unchecked first, so with very many lists one can wait longer (last_check says when); a record that joined and left between two checks is not recorded. A preview is logged as a read of those records. A list with health retired_field still works but filters on a retired custom field, named in retired_fields; its steward should replace that clause. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope "read".)
+```text
+Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists
+(records chosen by hand), read one, page through its members, say why a record is or is not on it,
+read what changed on it — including which records a Live List was seen to gain and lose, and how
+many since the user last opened it — or preview what a filter would select before a Live List is
+saved. Every count, member and reason is what the user you act for may see: a list shared with them
+never shows a member record they cannot read, so two users may see different counts for one list.
+Live Lists are checked every 15 minutes, longest-unchecked first, so with very many lists one can
+wait longer (last_check says when); a record that joined and left between two checks is not
+recorded. A preview is logged as a read of those records. A list with health retired_field still
+works but filters on a retired custom field, named in retired_fields; its steward should replace
+that clause. search_records finds records by name; tags are applied with apply_tag, not lists. Keep
+list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs
+immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -12137,7 +12912,14 @@ Find the team's Live Lists (saved filters whose members join and leave on their 
 
 **Read a project's page**
 
-Read one project's whole page: company, phase history with time per phase, deals, stakeholders, contracts, documents, open commitments, timeline, filing coverage, totals. Each section is cut at 25 rows and carries a truncated flag; sections_omitted names what your grants withhold. prepare_handoff for the delivery gaps, read_record for the project's stored fields alone. The project_id, and the deal, contact and task ids a follow-up acts on. (Governance: runs immediately; requires passport scope "read".)
+```text
+Read one project's whole page: company, phase history with time per phase, deals, stakeholders,
+contracts, documents, open commitments, timeline, filing coverage, totals. Each section is cut at 25
+rows and carries a truncated flag; sections_omitted names what your grants withhold. prepare_handoff
+for the delivery gaps, read_record for the project's stored fields alone. The project_id, and the
+deal, contact and task ids a follow-up acts on. (Governance: runs immediately; requires passport
+scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -12750,7 +13532,17 @@ Read one project's whole page: company, phase history with time per phase, deals
 
 **Read a record**
 
-Read one record's own stored fields — the values a reader would see on its detail page — when you already know which record you mean. It returns that record and nothing around it: no timeline, no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been happening on the record rather than what it currently says. Keep the version from the result and pass it back as if_version on a later update, so a write is refused rather than silently overwriting a change made in between. Its `owner` says who holds it. When `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
+```text
+Read one record's own stored fields — the values a reader would see on its detail page — when
+you already know which record you mean. It returns that record and nothing around it: no timeline,
+no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been
+happening on the record rather than what it currently says. Keep the version from the result and
+pass it back as if_version on a later update, so a write is refused rather than silently overwriting
+a change made in between. Its `owner` says who holds it. When `owner.is_you` is false, say whose it
+is when you report the record (or that its owner could not be named, when `owner.name` is absent),
+and treat contacting it as theirs to decide rather than advising an approach as though the record
+were unowned. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -12922,7 +13714,16 @@ Read one record's own stored fields — the values a reader would see on its det
 
 **Read sales reporting**
 
-Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions. Read only. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers. Use list_pipelines to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics. (Governance: runs immediately; requires passport scope "read".)
+```text
+Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report
+definitions and frozen editions. Read only. Catalog returns permitted metric IDs and blocks.
+Evaluate requires a selection. Report and editions require a report id; edition requires an edition
+id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact
+reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting
+numbers. Use list_pipelines to discover pipeline and stage IDs. Use run_analytics_query for custom
+groupings and compose_analytics_report for a document. Configure targets, report sharing and
+schedules in Analytics. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -13182,7 +13983,15 @@ Discover standard sales metrics, evaluate the same graphs as Analytics, or reope
 
 **Re-associate a set of activities to a record**
 
-Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. A project destination needs a human. relink_thread moves one conversation. The answer lists the ids moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+```text
+Move up to 500 named activities onto one record, all or nothing. Each id must be visible and
+writable to you. A project destination, or any move the installation's policy raises, is staged for
+confirmation and the retry moves exactly these ids; once the user says yes, relay it with
+decide_approval. A filing under a project can be undone by a member from the activity.
+relink_activity moves one message. The answer is the count moved. (Governance: some calls run
+immediately and others a human approves first, decided per call from its arguments; requires
+passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -13342,7 +14151,15 @@ Move up to 500 named activities onto one record, all or nothing. Each id must be
 
 **Re-associate an activity to a record**
 
-Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. log_activity records an event not recorded yet; relink_thread moves a whole conversation; relink_activities a picked set. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+```text
+Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or
+on none. Changes only the association; content is untouched. By default the new link is ADDED beside
+existing ones. Onto a project it waits for the user's yes; the answer says whether you may relay it
+with decide_approval. log_activity records an event not recorded yet; relink_activities moves a
+picked set, such as a whole thread's activities. Set replace_existing_of_type to move rather than
+associate. (Governance: some calls run immediately and others a human approves first, decided per
+call from its arguments; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -13500,7 +14317,14 @@ Fix what a recorded activity is about, when a captured mail or meeting landed on
 
 **Re-associate a whole conversation to a record**
 
-Move one whole conversation (by thread_key) onto a record, in one transaction. Moves only activities you may write; the rest stay, uncounted. A project destination needs a human. relink_activity moves one message. The answer lists the ids moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+```text
+Move one whole conversation (by thread_key) onto a record, in one transaction. Refused for an
+assistant, at every destination and however it is called: a thread key cannot be confirmed because
+the conversation may grow before the retry. List the thread's activities and call relink_activities
+with exactly those ids. relink_activities moves a named set; relink_activity moves one message.
+(Governance: some calls run immediately and others a human approves first, decided per call from its
+arguments; requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -13509,7 +14333,7 @@ Move one whole conversation (by thread_key) onto a record, in one transaction. M
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on approved retry",
+      "description": "Cannot authorize a thread move; use relink_activities",
       "format": "uuid",
       "type": "string"
     },
@@ -13655,7 +14479,11 @@ Move one whole conversation (by thread_key) onto a record, in one transaction. M
 
 **Take a tag off a record**
 
-Take one tag off one record — by tag_id or tag_name — leaving the word itself. Removing one that is not there succeeds. archive_record on a tag retires it for all. (Governance: runs immediately; requires passport scope "write".)
+```text
+Take one tag off one record — by tag_id or tag_name — leaving the word itself. Removing one that
+is not there succeeds. archive_record on a tag retires it for all. (Governance: runs immediately;
+requires passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -13818,7 +14646,16 @@ Take one tag off one record — by tag_id or tag_name — leaving the word itsel
 
 **Resolve contacts and companies**
 
-Find out whether the contacts and companies named in something you are holding already exist here, matched on addresses, phone numbers and company domains rather than on text. It reads only. Nothing is created, changed or merged, and it answers contact and company, never leads. A near match comes back `ambiguous` however close it is. Use search_records to find a record you know exists, and merge_records once a contact has decided that two records are one. Call this BEFORE creating a contact or company from anything you did not type. Act on `matched`; on `ambiguous` ask which is meant; on `unresolved` say what you will create — a miss is not proof nothing exists. (Governance: runs immediately; requires passport scope "read".)
+```text
+Find out whether the contacts and companies named in something you are holding already exist here,
+matched on addresses, phone numbers and company domains rather than on text. It reads only. Nothing
+is created, changed or merged, and it answers contact and company, never leads. A near match comes
+back `ambiguous` however close it is. Use search_records to find a record you know exists, and
+merge_records once a contact has decided that two records are one. Call this BEFORE creating a
+contact or company from anything you did not type. Act on `matched`; on `ambiguous` ask which is
+meant; on `unresolved` say what you will create — a miss is not proof nothing exists. (Governance:
+runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -14056,9 +14893,21 @@ Find out whether the contacts and companies named in something you are holding a
 
 **Review open commitments**
 
-Answer "what have we promised and not delivered?": the open promises across the workspace, most overdue first, from BOTH places a promise is recorded — a task somebody filed, and a commitment read out of a captured conversation, which carries the sentence it was read from. Each names when it came due and the record it was made about. It reads what the workspace captured: a promise made in an uncaptured call, or in a thread nobody filed, is absent. The two sources are not linked, so a promise both said and typed can appear twice. Narrowing by assignee or project returns recorded TASKS alone — a conversation commitment carries neither — so a narrowed answer is a smaller question than the unnarrowed one. It is scoped to the records the caller may see. Use whats_slipping_this_week when the question is which DEALS are at risk rather than which promises are outstanding, and catch_me_up_on for everything that has happened on one record. Each item carries source (task | conversation) and the id for that source — task_id or claim_id — plus assignee_id where a task has one. Every state is judged against as_of, so carry that too if you report the answer later. (Governance: runs immediately; requires passport scope "read".)
-
-Renders its result in [`ui://margince/commitments.html`](#commitments_view), visible to `model`, `app`.
+```text
+Answer "what have we promised and not delivered?": the open promises across the workspace, most
+overdue first, from BOTH places a promise is recorded — a task somebody filed, and a commitment
+read out of a captured conversation, which carries the sentence it was read from. Each names when it
+came due and the record it was made about. It reads what the workspace captured: a promise made in
+an uncaptured call, or in a thread nobody filed, is absent. The two sources are not linked, so a
+promise both said and typed can appear twice. Narrowing by assignee or project returns recorded
+TASKS alone — a conversation commitment carries neither — so a narrowed answer is a smaller
+question than the unnarrowed one. It is scoped to the records the caller may see. Use
+whats_slipping_this_week when the question is which DEALS are at risk rather than which promises are
+outstanding, and catch_me_up_on for everything that has happened on one record. Each item carries
+source (task | conversation) and the id for that source — task_id or claim_id — plus assignee_id
+where a task has one. Every state is judged against as_of, so carry that too if you report the
+answer later. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -14265,7 +15114,19 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
 
 **Run an analytics query**
 
-Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in the database. The answer carries its columns, rows and schema version; groups too small to disclose are withheld, never estimated. Populations, dimensions and measures come from margince://schema/analytics, derived for this seat and answered by describe_analytics_vocabulary; a name outside it is refused with what would work. Money measures are minor units. An omitted scope is this seat's own default population, never the workspace. run_report answers a prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast readings and movement. This one is for a novel aggregate no prebuilt report shapes, and for an ad-hoc figure a compose_analytics_report document will cite as a query cell: only a saved run can be cited. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
+```text
+Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in
+the database. The answer carries its columns, rows and schema version; groups too small to disclose
+are withheld, never estimated. Populations, dimensions and measures come from
+margince://schema/analytics, derived for this seat and answered by describe_analytics_vocabulary; a
+name outside it is refused with what would work. Money measures are minor units. An omitted scope is
+this seat's own default population, never the workspace. run_report answers a prebuilt report by
+key; query_workspace lists exact records; the forecast tools answer forecast readings and movement.
+This one is for a novel aggregate no prebuilt report shapes, and for an ad-hoc figure a
+compose_analytics_report document will cite as a query cell: only a saved run can be cited. Set save
+to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once
+and not stored. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -14502,7 +15363,17 @@ Compute a grouped aggregate — counts, sums, averages, medians — over a gover
 
 **Run a report**
 
-Answer a question about totals, counts or breakdowns by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer is the records rather than a number over them. Reach for run_analytics_query only when NO prebuilt report answers the question — a report is one call, a query is a lookup and a call — or when the figures go into a written document: a report's answer has no run_id, so compose_analytics_report cannot cite it. Call a report with no plan first for its default answer, then narrow with the names describe_report_vocabulary gives. (Governance: runs immediately; requires passport scope "read".)
+```text
+Answer a question about totals, counts or breakdowns by running one of this workspace's prebuilt
+reports. Only the named reports exist, each with its own filter, grouping and measure names;
+anything else is refused. It aggregates: how many and how much, never which record. Use
+search_records or whats_slipping_this_week when the answer is the records rather than a number over
+them. Reach for run_analytics_query only when NO prebuilt report answers the question — a report
+is one call, a query is a lookup and a call — or when the figures go into a written document: a
+report's answer has no run_id, so compose_analytics_report cannot cite it. Call a report with no
+plan first for its default answer, then narrow with the names describe_report_vocabulary gives.
+(Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -14736,7 +15607,17 @@ Answer a question about totals, counts or breakdowns by running one of this work
 
 **Search for relevant material**
 
-Find the records most relevant to a description, ranked by meaning as well as by wording, each with the excerpt that ranked it. Ranked, never exhaustive: records that also match may be absent, and no count of them exists. You can narrow it to particular record types, but not by field, date or owner, and it does not group or total. It cannot be narrowed to a project either: the index carries no project column. Use catch_me_up_on with project_id for one project, query_workspace when the question has conditions, a date bound or a related record to reach through, and search_records when you have the exact name or phrase. Read `coverage`: `partial_degraded` means `notes` matters, and `semantic_ranking_degraded_to_lexical` there means the ranking fell back to word overlap. Keep each hit's record_type and id. (Governance: runs immediately; requires passport scope "read".)
+```text
+Find the records most relevant to a description, ranked by meaning as well as by wording, each with
+the excerpt that ranked it. Ranked, never exhaustive: records that also match may be absent, and no
+count of them exists. You can narrow it to particular record types, but not by field, date or owner,
+and it does not group or total. It cannot be narrowed to a project either: the index carries no
+project column. Use catch_me_up_on with project_id for one project, query_workspace when the
+question has conditions, a date bound or a related record to reach through, and search_records when
+you have the exact name or phrase. Read `coverage`: `partial_degraded` means `notes` matters, and
+`semantic_ranking_degraded_to_lexical` there means the ranking fell back to word overlap. Keep each
+hit's record_type and id. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -14963,7 +15844,20 @@ Find the records most relevant to a description, ranked by meaning as well as by
 
 **Search records**
 
-Find contacts, companies, deals, leads and projects when you know roughly what they are called but not which record they are. It matches text stored ON the record. It does not read a timeline: message bodies, call notes and meeting content are not searched, so a query describing what someone said or did will not find them. Use list_records when the question is which records meet a condition rather than what one is called, read_record when you already hold the record's id, and run_report when the question is a count, a total or a breakdown rather than a set of records. Keep each result's record_type and id together: every other tool identifies a record by both, and an id alone does not say which type it belongs to. A result's `owner` says who holds it. When `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
+```text
+Find contacts, companies, deals, leads and projects when you know roughly what they are called but
+not which record they are. It matches text stored ON the record. It does not read a timeline:
+message bodies, call notes and meeting content are not searched, so a query describing what someone
+said or did will not find them. Use list_records when the question is which records meet a condition
+rather than what one is called, read_record when you already hold the record's id, and run_report
+when the question is a count, a total or a breakdown rather than a set of records. Keep each
+result's record_type and id together: every other tool identifies a record by both, and an id alone
+does not say which type it belongs to. A result's `owner` says who holds it. When `owner.is_you` is
+false, say whose it is when you report the record (or that its owner could not be named, when
+`owner.name` is absent), and treat contacting it as theirs to decide rather than advising an
+approach as though the record were unowned. (Governance: runs immediately; requires passport scope
+"read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -15153,7 +16047,17 @@ Find contacts, companies, deals, leads and projects when you know roughly what t
 
 **Search the evidence behind a saved run**
 
-Check a claim against the records behind a saved analytics run — or one cell of it — by searching their text: records that carry the words are citations, records that do not are counterexamples, and records with no text to judge are abstentions. It searches only the run's own records that this seat can read today, and every figure counts those — never records hidden from this seat. It states a prevalence only when coverage is complete_exact; otherwise prevalence is null and the notes say why. search_context sweeps the whole workspace by meaning; run_analytics_query counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires passport scope "read".)
+```text
+Check a claim against the records behind a saved analytics run — or one cell of it — by
+searching their text: records that carry the words are citations, records that do not are
+counterexamples, and records with no text to judge are abstentions. It searches only the run's own
+records that this seat can read today, and every figure counts those — never records hidden from
+this seat. It states a prevalence only when coverage is complete_exact; otherwise prevalence is null
+and the notes say why. search_context sweeps the whole workspace by meaning; run_analytics_query
+counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a
+share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires
+passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -15467,7 +16371,17 @@ Check a claim against the records behind a saved analytics run — or one cell o
 
 **Start an email conversation from a record**
 
-Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose. A sent mail cannot be recalled, and by default nothing holds it: where an installation has raised this verb to confirm first, the answer is a staged approval instead of a send. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: runs immediately; requires passport scope "send".)
+```text
+Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather
+than answering one, and file it on the records it is about. Sends EXACTLY the subject and body
+given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient
+must have granted the named consent purpose. A sent mail cannot be recalled, and by default nothing
+holds it: where an installation has raised this verb to confirm first, the answer is a staged
+approval instead of a send. Use send_email to answer a conversation already recorded here; this
+starts a separate thread beside it. Keep the staged approval id and re-send the identical text and
+links: the approval is bound to that exact message. The activity_id that comes back is the new
+conversation. (Governance: runs immediately; requires passport scope "send".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -15718,7 +16632,18 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
 
 **Send an email**
 
-Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names. A message leaving the workspace cannot be recalled, and by default nothing holds it: where an installation has raised this verb to confirm first, the answer is a staged approval instead of a send. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: runs immediately; requires passport scope "send".)
+```text
+Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it
+belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the
+tool to reach for when the message does not exist yet. Every recipient must have granted the consent
+purpose the call names. A message leaving the workspace cannot be recalled, and by default nothing
+holds it: where an installation has raised this verb to confirm first, the answer is a staged
+approval instead of a send. Use draft_email first to produce the message and let it be read, and
+send_message when the conversation is on a chat channel rather than mail. Send the same activity_id,
+subject and body the draft produced, and keep the staged approval id: the approval is bound to that
+exact message, so changed text needs a new approval. (Governance: runs immediately; requires
+passport scope "send".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -15943,7 +16868,17 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
 
 **Reply on a channel conversation**
 
-Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names. By default the message leaves when this call answers; where an installation has raised this verb to confirm first, the answer is a staged approval instead. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: runs immediately; requires passport scope "send".)
+```text
+Reply on a captured chat conversation — the channels this workspace has connected — on the
+thread it was captured from. It replies to an existing conversation named by activity_id; it cannot
+start one, and it cannot choose a channel. The recipient must have granted the consent purpose the
+call names. By default the message leaves when this call answers; where an installation has raised
+this verb to confirm first, the answer is a staged approval instead. Use send_email when the thread
+is a mail thread, and log_activity when the point is to record that something was said rather than
+to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds
+the exact text, so changed text needs a new approval. (Governance: runs immediately; requires
+passport scope "send".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -16135,7 +17070,21 @@ Reply on a captured chat conversation — the channels this workspace has connec
 
 **Update a record**
 
-Change stored field values on a record that already exists — a corrected title, an amount, an expected close date. Only the fields you send change, and only the fields the record type stores (a contact's email addresses are not among them). A field a HUMAN last set is not overwritten: that part is staged for a human and named in the result, and that part of the write has not happened. It names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning moves the record onto someone else's book and can take it off the owner's. Use advance_deal or progress_deal to move a deal between stages, and relink_activity to change what an activity is about; neither is a field edit. Send if_version with the version you read, and keep the staged approval id from the result if you intend to retry the same change once a human has released it. (Governance: runs immediately; requires passport scope "write".)
+```text
+Change stored field values on a record that already exists — a corrected title, an amount, an
+expected close date. Only the fields you send change, and only the fields the record type stores (a
+contact's email addresses are not among them). A field a HUMAN last set is not overwritten: that
+part is staged for a human and named in the result, and that part of the write has not happened. It
+names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral —
+ownership decides visibility, so reassigning moves the record onto someone else's book and can take
+it off the owner's. Use advance_deal or progress_deal to move a deal between stages, and
+relink_activity to change what an activity is about; neither is a field edit. Send if_version with
+the version you read, and keep the staged approval id from the result if you intend to retry the
+same change once a human has released it. (Governance: runs immediately; requires passport scope
+"write".)
+```
+
+Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view), visible to `model`, `app`.
 
 <details><summary>Input schema</summary>
 
@@ -16333,7 +17282,14 @@ Change stored field values on a record that already exists — a corrected title
 
 **Rename or recolour a tag**
 
-Rename, recolour or describe a word that already exists. Fields left out are unchanged, so a recolour need not restate the name. The word keeps every record carrying it — this changes what it is CALLED, not what it is on. LAST WRITE WINS: this tool sends no version, so an edit made between your read and your write is overwritten without a conflict. Read with get_tag immediately before editing. A name another word already holds is a conflict. (Governance: runs immediately; requires passport scope "write".)
+```text
+Rename, recolour or describe a word that already exists. Fields left out are unchanged, so a
+recolour need not restate the name. The word keeps every record carrying it — this changes what it
+is CALLED, not what it is on. LAST WRITE WINS: this tool sends no version, so an edit made between
+your read and your write is overwritten without a conflict. Read with get_tag immediately before
+editing. A name another word already holds is a conflict. (Governance: runs immediately; requires
+passport scope "write".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -16495,9 +17451,16 @@ Rename, recolour or describe a word that already exists. Fields left out are unc
 
 **What's slipping this week**
 
-Answer "what is slipping?": the deals going quiet or running past their expected close date, ranked worst first, each with the evidence that says so. It reports only deals whose risk can be evidenced from their own fields — a deal nobody can point at a reason for is absent rather than guessed — and it is scoped to the deals the caller may see. Use run_report for the pipeline as a whole (totals, counts, breakdowns), and at_risk_relationships when the question is who a deal rests on rather than whether it is moving. Keep each deal_id if you intend to act; draft_follow_ups_for works over this same ranked set without you re-deriving it. (Governance: runs immediately; requires passport scope "read".)
-
-Renders its result in [`ui://margince/pipeline-review.html`](#pipeline_review_view), visible to `model`, `app`.
+```text
+Answer "what is slipping?": the deals going quiet or running past their expected close date, ranked
+worst first, each with the evidence that says so. It reports only deals whose risk can be evidenced
+from their own fields — a deal nobody can point at a reason for is absent rather than guessed —
+and it is scoped to the deals the caller may see. Use run_report for the pipeline as a whole
+(totals, counts, breakdowns), and at_risk_relationships when the question is who a deal rests on
+rather than whether it is moving. Keep each deal_id if you intend to act; draft_follow_ups_for works
+over this same ranked set without you re-deriving it. (Governance: runs immediately; requires
+passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -16665,9 +17628,15 @@ Renders its result in [`ui://margince/pipeline-review.html`](#pipeline_review_vi
 
 **Who knows this contact**
 
-Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest first, with the interaction counts that ground the warmth. It reports relationships this workspace can evidence from its own recorded interactions, so a genuine relationship nobody has logged does not appear. Never spoken is reported as no relationship rather than a score of zero. Use intro_path_to when you want a route into a COMPANY rather than the colleagues who know one contact. Each colleague comes back with a user_id; the strength bucket, not the raw score, is what a colleague should be asked about. (Governance: runs immediately; requires passport scope "read".)
-
-Renders its result in [`ui://margince/relationship-map.html`](#relationship_map_view), visible to `model`, `app`.
+```text
+Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest
+first, with the interaction counts that ground the warmth. It reports relationships this workspace
+can evidence from its own recorded interactions, so a genuine relationship nobody has logged does
+not appear. Never spoken is reported as no relationship rather than a score of zero. Use
+intro_path_to when you want a route into a COMPANY rather than the colleagues who know one contact.
+Each colleague comes back with a user_id; the strength bucket, not the raw score, is what a
+colleague should be asked about. (Governance: runs immediately; requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 
@@ -16827,7 +17796,14 @@ Renders its result in [`ui://margince/relationship-map.html`](#relationship_map_
 
 **Who this passport acts for**
 
-Name the human this passport acts for: their id, display name, email and language. It reads only, and answers this call's acting user — not a directory. acting_user_id is what owner_id and assignee_id take for "me". prose_language is the language every stored sentence is written in — a note, a description, a summary — whatever language the conversation itself is in; it is always answered, where locale is absent until this contact chooses one. (Governance: runs immediately; requires passport scope "read".)
+```text
+Name the human this passport acts for: their id, display name, email and language. It reads only,
+and answers this call's acting user — not a directory. acting_user_id is what owner_id and
+assignee_id take for "me". prose_language is the language every stored sentence is written in — a
+note, a description, a summary — whatever language the conversation itself is in; it is always
+answered, where locale is absent until this contact chooses one. (Governance: runs immediately;
+requires passport scope "read".)
+```
 
 <details><summary>Input schema</summary>
 

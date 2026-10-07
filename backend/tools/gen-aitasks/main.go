@@ -35,6 +35,7 @@ var (
 	contractPath = flag.String("contract", "../api/ai-tasks.yaml", "the AI task contract to compile")
 	outGoPath    = flag.String("out-go", "../internal/modules/ai/tasks_gen.go", "generated Go table destination")
 	outEgressDoc = flag.String("out-egress", "../docs/reference/ai-egress.md", "generated egress table destination")
+	outOutageDoc = flag.String("out-outage", "../docs/reference/ai-provider-outages.md", "generated outage table destination")
 )
 
 func main() {
@@ -65,6 +66,10 @@ func main() {
 	// in the direction of claiming more privacy than the product delivers.
 	if err := os.WriteFile(*outEgressDoc, emitEgressDoc(c), 0o600); err != nil {
 		log.Fatalf("gen-aitasks: writing %s: %v", *outEgressDoc, err)
+	}
+
+	if err := os.WriteFile(*outOutageDoc, emitOutageDoc(c), 0o600); err != nil {
+		log.Fatalf("gen-aitasks: writing %s: %v", *outOutageDoc, err)
 	}
 
 	fmt.Printf("%d tasks, %d tiers generated\n", len(c.Tasks), len(c.Tiers))

@@ -127,7 +127,7 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		"capture_counterparty": true, "company_name_promotion": true, "linkedin_match": true,
 		"vcard_create":     true,
 		"lifecycle_change": true, "assign_owner": true, "close_date_correction": true,
-		"deal_follow_up": true, "transcript_proposal": true, "commitment_task": true,
+		"deal_follow_up": true, "commitment_task": true,
 		// A proposed stage move: approving it advances the deal and writes the
 		// history row. Nothing leaves the installation.
 		"stage_progression": true,

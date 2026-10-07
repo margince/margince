@@ -9,6 +9,8 @@ package privacy
 // mail — captured and sent alike — the link-walk cannot see. Kept in one file
 // so the selectors read as one concept.
 
+import "github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
+
 // notTransitivelyHeld excludes an activity frozen by a legal hold reached
 // through its own links — the same transitive freeze the retention engine
 // applies (retention.go: "a hold on the subject must cover the evidence about
@@ -32,16 +34,7 @@ package privacy
 // subject itself is proven unheld before the cascade runs (EraseContact's
 // own-hold check).
 func notTransitivelyHeld(activityID string) string {
-	return `
-	  AND NOT EXISTS (
-	    SELECT 1 FROM activity_link h
-	    LEFT JOIN company company ON company.id = h.company_id
-	    LEFT JOIN deal dl ON dl.id = h.deal_id
-	    LEFT JOIN lead ld ON ld.id = h.lead_id
-	    LEFT JOIN project pj ON pj.id = h.project_id
-	    WHERE h.activity_id = ` + activityID + `
-	      AND (coalesce(company.legal_hold, false) OR coalesce(dl.legal_hold, false)
-	           OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))`
+	return "\n\t  AND NOT " + retentionscope.HeldThroughRecordLinks(activityID)
 }
 
 // subjectOnlyActivities selects timeline rows linked to the erased

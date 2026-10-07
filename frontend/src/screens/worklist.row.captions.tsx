@@ -3,11 +3,13 @@
 
 import { ENTITY } from "../app/entity";
 import { routeHash } from "../app/router";
+import type { UrlParams } from "../app/urlstate";
 import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { subjectHref } from "./worklist.copy";
 import { employerOf } from "./worklist.meetingparties";
 import type { WorklistItem } from "./worklist.queries";
+import { withWorklistReturn } from "./worklist.return";
 import type { RowReadings } from "./worklist.row.compact";
 
 // Everything a row says about itself UNDER its title: whose row it is, which
@@ -63,19 +65,26 @@ export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
 export function aboutRecord(
   item: WorklistItem,
   named: boolean,
+  drawer: UrlParams | null,
 ): RowReadings["about"] {
   const contact = item.contact;
   if (contact?.label && (named || contact.id !== item.subject?.id)) {
+    const employer = employerOf(contact);
     return {
-      href: contactHref(contact),
+      href: withWorklistReturn(contactHref(contact), drawer),
       label: contact.label,
-      company: employerOf(contact),
+      company: employer && {
+        ...employer,
+        href: withWorklistReturn(employer.href, drawer),
+      },
     };
   }
   if (!named) return undefined;
   const label = item.subject?.label;
   const href = subjectHref(item);
-  return label && href ? { href, label } : undefined;
+  return label && href
+    ? { href: withWorklistReturn(href, drawer), label }
+    : undefined;
 }
 
 /**

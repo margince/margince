@@ -5,7 +5,7 @@
 
 package gates
 
-// A message's AUDIENCE says who may read its content. Every reader that serves
+// A message's audience says who may read its content. Every reader that serves
 // subject, body, attachments, participants or anything derived from them owes
 // the audience test, and the obligation is invisible in the code that forgets
 // it: a reader that never composed the clause looks exactly like one that

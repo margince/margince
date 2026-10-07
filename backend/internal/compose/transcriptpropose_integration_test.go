@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -99,8 +98,6 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	e := &transcriptEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t)}
 	e.ctx = e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms)
 	e.svc = approvals.NewService(e.DB())
-	e.svc.WithEffect(TranscriptProposalKind,
-		transcriptProposalEffect(e.svc, e.Activities, identity.NewService(e.Pool)))
 	e.svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(e.svc, e.Activities, e.Contacts))
 
 	subject := "Rollout call"
@@ -881,7 +878,7 @@ func (b erasingBrain) Complete(context.Context, model.Request) (model.Response, 
 // a transcript that is gone gets the same answer.
 func TestAReadingWhoseTranscriptWasErasedMidCallStagesNothing(t *testing.T) {
 	e := setupTranscript(t)
-	before := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, TranscriptProposalKind)
+	before := e.WsCount(t, `SELECT count(*) FROM approval`)
 
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
@@ -909,7 +906,7 @@ func TestAReadingWhoseTranscriptWasErasedMidCallStagesNothing(t *testing.T) {
 			"for the job to retry against the same absence", err)
 	}
 
-	after := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, TranscriptProposalKind)
+	after := e.WsCount(t, `SELECT count(*) FROM approval`)
 	if after != before {
 		t.Errorf("%d transcript proposals were staged over an erased body; the approvals inbox now "+
 			"quotes words a tombstone says were destroyed", after-before)

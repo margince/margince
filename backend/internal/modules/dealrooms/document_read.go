@@ -70,7 +70,7 @@ const documentFrom = `deal_room_document d
 // imports a sibling, and
 // TestRoomDocumentMembershipIsSpelledOnce holds this module's three readers to
 // this one constant.
-const inTheDealsFilesArea = `a.archived_at IS NULL
+const inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	AND ((a.entity_type = 'deal' AND a.entity_id = r.deal_id)
 	  OR (a.entity_type = 'activity' AND EXISTS (
 	        SELECT 1 FROM activity_link l

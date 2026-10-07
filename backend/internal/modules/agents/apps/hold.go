@@ -290,7 +290,7 @@ func (p *Provider) read(ctx context.Context, v view) (string, error) {
 		p.fetchFailures.Add(1)
 		return "", err
 	}
-	findings, titleMismatch := admit(doc, v.title)
+	findings, titleMismatch := admit(doc, v.title, len(v.actions()) > 0)
 	if len(findings) > 0 {
 		p.admissionFailures.Add(1)
 		return "", fmt.Errorf("%w: the document reaches beyond what a view may: %v", ErrPermanent, findings)

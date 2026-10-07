@@ -6,7 +6,7 @@
 # carries derives-from: and the chapter owns the number.
 #
 # No entry carries a derives-from today: every cadence below is either this
-# repo's own operational choice or an operator's dial, and neither is a number
+# repo's own operational choice or an admin's setting, and neither is a number
 # a spec chapter owns. The field is here so the first one that is can say so.
 #
 # Every kind River persists in river_job.kind is declared here. A kind that is
@@ -20,7 +20,7 @@
 # gmail_watch_renew_connection is GmailWatchRenewArgs — the names are crossed
 # relative to the types, and that is not a defect to fix here.)
 #
-# timeout takes exactly one of four forms:
+# timeout takes exactly one of three forms:
 #   2m                                a literal wall clock
 #   {derived: c, value: 4h, reason:}  computed from a Go constant elsewhere in
 #                                     the tree; value is what Govern hands
@@ -36,8 +36,6 @@
 #                                     literal above. reason: is optional and
 #                                     states the arithmetic where the kind's
 #                                     own reason: does not.
-#   {operator: Field}                 computed at registration from a config
-#                                     field; not knowable here at all
 #   {none: true, reason:}             a deliberate absence — the pass is bounded
 #                                     by a backlog rather than a wall clock, and
 #                                     a negative River timeout takes the row out
@@ -236,7 +234,7 @@ kinds:
         RunWallClock, plus the seed/claim/finish round trips between them.
     max_attempts: 1
     opts_owner: args
-    cadence: {operator: AgentScheduler.Interval, schedule_when_positive: AgentScheduler.Interval}
+    cadence: {setting: installation.agent_runner_interval_seconds}
     registration: {when: [AgentScheduler.Service], absent: registers_nothing}
     reason: >-
       One attempt, not three: this pass's retry is its own next tick, which is
@@ -572,7 +570,7 @@ kinds:
     queue: default
     timeout: 5m
     opts_owner: caller
-    cadence: {operator: CloseDateInterval}
+    cadence: {setting: installation.close_date_sweep_interval_seconds}
 
 
   comms_send_email:
@@ -863,7 +861,7 @@ kinds:
     queue: default
     timeout: 5m
     opts_owner: caller
-    cadence: {operator: ReconcileInterval}
+    cadence: {setting: installation.follow_up_reconcile_interval_seconds}
 
 
   fx_rate_refresh:
@@ -901,7 +899,7 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: {operator: GmailWatch.Interval}
+    cadence: {setting: installation.gmail_watch_scan_interval_seconds}
     registration: {when: [GmailRegistry, GmailWatch.Topic], absent: registers_nothing}
     fans_out_to: gmail_watch_renew_connection
     fan_out_unit: connection
@@ -927,7 +925,7 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: {operator: GraphWatch.Interval, schedule_when_positive: GraphWatch.Interval}
+    cadence: {setting: installation.graph_watch_scan_interval_seconds}
     registration: {when: [GmailRegistry.OffersGraph, GraphWatch.NotificationURL], absent: registers_nothing}
     fans_out_to: graph_watch_renew_connection
     fan_out_unit: connection
@@ -1322,7 +1320,7 @@ kinds:
         covers the policy read and the per-stage due-list reads between records.
     max_attempts: 3
     opts_owner: args
-    cadence: {operator: PrivacyRetention.Interval, schedule_when_positive: PrivacyRetention.Interval}
+    cadence: {setting: installation.retention_sweep_interval_seconds}
 
   provider_run_submit:
     role: worker
@@ -1447,7 +1445,7 @@ kinds:
     role: worker
     go_type: SiteDeepReadArgs
     queue: deep_read
-    timeout: {operator: DeepReadCaps}
+    timeout: {derived: deepReadTimeout, value: 13m50s}
     opts_owner: caller
     registration: {when: [DeepReadBrain], absent: registers_anyway}
     args:
@@ -1458,16 +1456,15 @@ kinds:
       MaxPages:
         scalar: true
         reason: >-
-          this run's page ceiling, or zero for the deployment's own. The
-          worker clamps it against the configured cap, so it can only ever
-          narrow what an operator set, and a crawl budget states nothing
-          about a subject.
+          this run's page ceiling, or zero for the installation's own. The
+          worker clamps it against the page limit an admin set, so it can only
+          ever narrow it, and a crawl budget states nothing about a subject.
     reason: >-
-      The crawl wall an operator configured, plus the parallel extraction
+      The longest crawl wall an admin may choose, plus the parallel extraction
       budget, plus the logo lane's own bounded spend, plus a minute for the
-      staging and dossier writes — floored so a tightened cap never squeezes the
-      terminal writes. Not knowable here: it is computed from CrawlCaps at
-      registration.
+      staging and dossier writes. Sized for the ceiling rather than the chosen
+      wall, because the wall is a setting read when the read starts and this is
+      fixed when the worker registers.
 
   check_company_vat:
     role: worker
@@ -1542,7 +1539,7 @@ kinds:
     timeout: 2m
     max_attempts: 3
     opts_owner: args
-    cadence: {operator: Geocoding.BackfillInterval, schedule_when_positive: Geocoding.BackfillInterval}
+    cadence: {setting: installation.geocode_backfill_interval_seconds, off_at_zero: true}
     registration: {when: [Geocoder], absent: registers_nothing}
     reason: >-
       One indexed read and up to GeocodeBackfillBatch (50) enqueues, no
@@ -1586,7 +1583,7 @@ kinds:
     timeout: 2m
     max_attempts: 3
     opts_owner: args
-    cadence: {operator: TechnicalEnrichment.BackfillInterval, schedule_when_positive: TechnicalEnrichment.BackfillInterval}
+    cadence: {setting: installation.technical_backfill_interval_seconds, off_at_zero: true}
     registration: {when: [TechnicalEnricher], absent: registers_nothing}
     reason: >-
       One indexed read and up to TechnicalEnrichBatch enqueues, with no
@@ -1736,7 +1733,7 @@ kinds:
     queue: default
     timeout: 10m
     opts_owner: caller
-    cadence: {operator: TimeScanInterval}
+    cadence: {setting: installation.time_scan_interval_seconds}
 
 
   voice_build:
@@ -1823,7 +1820,7 @@ kinds:
         database round trips between attempts.
     max_attempts: 3
     opts_owner: args
-    cadence: {operator: WebhookRetry.Interval, schedule_when_positive: WebhookRetry.Interval}
+    cadence: {setting: installation.webhook_retry_interval_seconds}
     registration: {when: [WebhookRetry.Deliverer], absent: registers_nothing}
 
   meeting_delivery:

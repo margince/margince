@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -162,9 +163,11 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 	if err != nil {
 		return savedViewRow{}, err
 	}
-	if strings.TrimSpace(in.Name) == "" {
-		return savedViewRow{}, &BadInputError{Field: "name", Reason: "must not be empty"}
+	name, err := httperr.RequireNonBlank("name", in.Name)
+	if err != nil {
+		return savedViewRow{}, err
 	}
+	in.Name = name
 	if in.Query == nil {
 		return savedViewRow{}, &BadInputError{Field: viewQueryField, Reason: "must not be null"}
 	}
@@ -312,7 +315,11 @@ func (s *Store) UpdateSavedView(ctx context.Context, id ids.SavedViewID, in Upda
 		}
 		p := storekit.NewPatch()
 		if in.Name != nil {
-			p.Set("name", current.Name, *in.Name)
+			name, err := httperr.RequireNonBlank("name", *in.Name)
+			if err != nil {
+				return err
+			}
+			p.Set("name", current.Name, name)
 		}
 		if in.Query != nil {
 			p.Set("query", current.Query, *in.Query)

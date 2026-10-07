@@ -13,23 +13,6 @@
   text-wrap: balance;
 }
 
-/* What the close-confirmation dialog asks for before a terminal stage is
-   allowed: the lost reason, or the won vocabulary and its detail. A stack of
-   its own, because the `Field` carries no interval outside itself and the
-   dialog's other children are prose paragraphs on the paragraph rhythm — so
-   without this the reasons sat flush against the sentence above them. */
-.advance-reasons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* The terminal-stage warning sits closer to the question it qualifies than the
-   paragraph rhythm would put it. */
-.advance-terminal {
-  margin-top: var(--space-2);
-}
-
 /* Outcome review — what a closed deal recorded about how it went. One block per
    review, the question above its answer, because a reader scans the questions
    to find the one they came for. */
@@ -62,9 +45,8 @@
 /* The stages a closed deal can be reopened into, one button each. */
 .d360-reopen-stages {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   flex-wrap: wrap;
-  margin: var(--space-3) 0;
 }
 
 /* The collapsed brief. The line count stays with the render, which also

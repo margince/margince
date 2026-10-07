@@ -77,7 +77,8 @@ type bulkChange struct {
 	pendingLinks []storekit.LeftBehind
 }
 
-// bulkEngine runs bulk changes over the four record types.
+// bulkEngine runs bulk changes over the four record types and the Worklist's
+// tasks and promises.
 type bulkEngine struct {
 	db      *database.DB
 	targets map[crmcontracts.BulkRecordType]bulkTarget
@@ -231,20 +232,24 @@ func (e *bulkEngine) admit(ctx context.Context, change *bulkChange) (bulkRecords
 	target, ok := e.targets[change.recordType]
 	if !ok {
 		return bulkRecords{}, httperr.Validation("record_type", "unknown_record_type",
-			fmt.Sprintf("record_type %q is none of contact, company, deal or lead", change.recordType))
+			fmt.Sprintf("record_type %q is none of contact, company, deal, lead or worklist_item", change.recordType))
 	}
 	if change.undo == nil {
 		if err := validateBulkChange(*change); err != nil {
 			return bulkRecords{}, err
 		}
 	}
-	if _, archives := target.(bulkArchiver); change.verb == crmcontracts.BulkVerbArchive && !archives {
-		return bulkRecords{}, httperr.Validation("verb", "verb_not_for_record_type",
-			fmt.Sprintf("a %s has no archive; archive is none of its verbs", change.recordType))
+	if err := admitKind(target, *change); err != nil {
+		return bulkRecords{}, err
 	}
 	action, err := e.admitVerb(ctx, change)
 	if err != nil {
 		return bulkRecords{}, err
+	}
+	// A Worklist item is a task or a promise, two objects; each row's own
+	// writer asks the grant of the one it is.
+	if _, worklist := target.(worklistBulkTarget); worklist {
+		return bulkRecords{target: target}, nil
 	}
 	if err := auth.Require(ctx, string(change.recordType), action); err != nil {
 		return bulkRecords{}, err
@@ -352,6 +357,9 @@ func applyOne(
 	if change.previewed != nil && !change.previewed[item.Id] {
 		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNotPreviewed), nil
 	}
+	if change.verb == crmcontracts.BulkVerbComplete {
+		return applyCompletion(ctx, tx, target, change, item)
+	}
 	if change.undo != nil {
 		return undoOne(ctx, tx, target, change, item)
 	}
@@ -383,7 +391,10 @@ func applyOne(
 			return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
 		}
 		sample.After.OwnerId = wireOwner(change.ownerID)
-		err = target.reassign(ctx, tx, id, ids.From[ids.UserKind](*change.ownerID), item.Version)
+		var reassigner bulkReassigner
+		if reassigner, err = reassignerOf(target); err == nil {
+			err = reassigner.reassign(ctx, tx, id, ids.From[ids.UserKind](*change.ownerID), item.Version)
+		}
 	case crmcontracts.BulkVerbArchive:
 		sample.After.Archived = true
 		var archiver bulkArchiver

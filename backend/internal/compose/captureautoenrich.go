@@ -22,10 +22,7 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -34,85 +31,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// defaultAutoEnrichDailyCap is the installation-wide ceiling on auto deep reads
-// started in one UTC day — the counter (capture_auto_enrich_budget) is keyed on
-// the date alone, so every workspace pass spends from the one pot. Reserved
-// atomically, so two replicas never both slip past it.
-//
-// It is the THIRD bound on this fan-out, not the only one, and knowing what the
-// other two already do is what sets the number:
-//
-//   - Concurrency is bounded by deepReadMaxWorkers: a burst never occupies
-//     more than that pool however long the queue is.
-//   - Money is bounded by the ADR-0020 AI budget: background model calls defer
-//     to the next window at the monthly cap, whatever this counter says.
-//   - And a read only ever happens for a company the workspace CREATED, which
-//     the tiered gate allows only for an address the owner has corresponded with
-//     or already has a contact for. A stranger's mail defers to the ledger and
-//     mints nothing, so an outsider cannot aim this at a domain of their choosing.
-//
-// What is left for this counter is PACING, and 500 is sized for the moment that
-// decides whether the product is believed: a first backfill mints hundreds of
-// companies at once, and what it is demonstrating is that the CRM fills itself
-// (P5). A ceiling below that arrival rate turns the demonstration into a trickle
-// and teaches the opposite, while a ceiling above it buys nothing the three
-// bounds above do not already give. A backfill can still outrun the number — a
-// mailbox that meets more than this many new domains in one UTC day leaves the
-// excess pending until the next day's budget — which is what
-// AutoEnrichDailyCapEnv exists for.
-const defaultAutoEnrichDailyCap = 500
-
-// AutoEnrichDailyCapEnv overrides defaultAutoEnrichDailyCap for a deployment
-// whose backfills outrun it. Exported so the composition roots can declare it
-// as part of their configurable surface without spelling the string a second
-// time. Read by BOTH roles: the worker spends the budget in its sweeps, and the
-// api spends it when an approval accept queues a triage read — a split value
-// would let one role spend what the other believes is left.
-const AutoEnrichDailyCapEnv = "MARGINCE_AUTO_ENRICH_DAILY_CAP"
-
-// AutoEnrichDailyCapFromEnv resolves the daily cap: unset or 0 takes the
-// compiled default, a positive integer replaces it, anything else is an error.
-// Both cmd roles call this at boot so a typo refuses the boot rather than
-// silently pacing at the wrong rate; the constructors below resolve through the
-// same spelling, which is what keeps the two reads one rule.
-func AutoEnrichDailyCapFromEnv(env config.Lookup) (int, error) {
-	v := strings.TrimSpace(env(AutoEnrichDailyCapEnv))
-	if v == "" {
-		return defaultAutoEnrichDailyCap, nil
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil || n < 0 {
-		return 0, fmt.Errorf("invalid %s %q: want a whole number >= 0 (0 takes the compiled default)", AutoEnrichDailyCapEnv, v)
-	}
-	if n == 0 {
-		return defaultAutoEnrichDailyCap, nil
-	}
-	return n, nil
-}
-
-// autoEnrichDailyCap resolves the cap for a constructor that cannot refuse to
-// boot. A booted role never reaches the error branch — both cmd roles refuse
-// an invalid value before any constructor runs, and a process environment is
-// fixed at exec — but entry points that dispatch before that refusal (the
-// worker's siteread debug subcommand) construct through here too, so an
-// unreadable value is reported and paced at the compiled default, the
-// direction that spends less.
-func autoEnrichDailyCap(log *slog.Logger) int {
-	n, err := AutoEnrichDailyCapFromEnv(config.FromOS)
-	if err != nil {
-		log.Warn("auto-enrich: unreadable daily cap, pacing at the compiled default",
-			"err", err, "default", defaultAutoEnrichDailyCap)
-		return defaultAutoEnrichDailyCap
-	}
-	return n
-}
 
 // autoEnrichRetryBackoff is how long a triggered read's cursor is armed before
 // the sweep may reconsider the company: long enough that an in-flight or
@@ -135,7 +58,6 @@ type captureAutoEnrichSweepWorker struct {
 	contacts   *contacts.Store
 	settings   *capture.SettingsStore
 	autoEnrich *capture.AutoEnrichStore
-	dailyCap   int
 	log        *slog.Logger
 }
 
@@ -146,7 +68,6 @@ func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *capt
 		contacts:   contacts.NewStore(InstallationDB(pool)),
 		settings:   capture.NewSettings(NewSettingsStore(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
-		dailyCap:   autoEnrichDailyCap(log),
 		log:        log,
 	}
 }
@@ -164,8 +85,8 @@ func (w *captureAutoEnrichSweepWorker) Work(ctx context.Context, _ *river.Job[Ca
 }
 
 // sweepWorkspace enriches the due companies of one workspace, respecting the flag
-// and the daily cap. The flag is re-read at the top of every pass, so toggling
-// it off stops new reads on the next sweep even for already-queued work.
+// and the daily cap. Both are re-read at the top of every pass, so an admin's
+// change reaches the next sweep without a restart.
 func (w *captureAutoEnrichSweepWorker) sweepWorkspace(ctx context.Context, ws ids.WorkspaceID) error {
 	wsCtx := w.workspaceCtx(ctx, ws)
 	settings, err := w.settings.Get(wsCtx)
@@ -176,7 +97,7 @@ func (w *captureAutoEnrichSweepWorker) sweepWorkspace(ctx context.Context, ws id
 	// crawling off the worker settles each one from what the workspace already
 	// knows; skipping them would leave every contact captured under that setting
 	// without a company, permanently.
-	if err := w.sweepDomainTriage(wsCtx, w.dailyCap); err != nil {
+	if err := w.sweepDomainTriage(wsCtx, settings.AutoEnrichDailyCap); err != nil {
 		return err
 	}
 	if !settings.AutoEnrich {
@@ -187,12 +108,12 @@ func (w *captureAutoEnrichSweepWorker) sweepWorkspace(ctx context.Context, ws id
 	if err := w.autoEnrich.ExpireExhausted(wsCtx); err != nil {
 		return err
 	}
-	due, err := w.autoEnrich.ListDueCompanies(wsCtx, w.dailyCap)
+	due, err := w.autoEnrich.ListDueCompanies(wsCtx, settings.AutoEnrichDailyCap)
 	if err != nil {
 		return err
 	}
 	for _, company := range due {
-		slot, err := w.autoEnrich.ReserveBudget(wsCtx, w.dailyCap)
+		slot, err := w.autoEnrich.ReserveBudget(wsCtx, settings.AutoEnrichDailyCap)
 		if err != nil {
 			return err
 		}

@@ -35,11 +35,10 @@ const ownerMovedAway = "the deal changed owner; a message drafted for the previo
 // Per kind:
 //   - deal_follow_up: every pending card on the deal moves. Its text is the
 //     product describing the deal, so it reads the same for any owner.
-//   - transcript_proposal: every card whose task would land on the deal
-//     moves, including one a colleague asked for — the next step is the
-//     deal's, and so is the owner who acts on it.
-//   - commitment_task: the same, for a promise nobody could be named for. A
-//     promise a named colleague made stays theirs, whoever owns the deal.
+//   - commitment_task: a promise nobody could be named for moves when its
+//     task would land on the deal — the promise is the deal's, and so is the
+//     owner who acts on it. A promise a named colleague made stays theirs,
+//     whoever owns the deal.
 //   - held_draft: a reply drafted for the previous owner is withdrawn. It was
 //     composed under their authority, to be sent from their mailbox, so it is
 //     not handed on; the next sweep drafts one for the new owner.
@@ -78,10 +77,7 @@ type followingProposal struct {
 func lockProposalsFollowingDeal(
 	ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID,
 ) ([]followingProposal, error) {
-	onDeal, err := transcriptLinksDeal(dealID)
-	if err != nil {
-		return nil, err
-	}
+	onDeal := proposalLinksDeal(dealID)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	deal, prev, next := arg(dealID), arg(from), arg(to)
@@ -91,7 +87,7 @@ func lockProposalsFollowingDeal(
 		   AND (
 		     (kind = $%[4]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
 		        AND on_behalf_of IS DISTINCT FROM $%[3]d)
-		  OR ((kind = $%[5]d OR (kind = $%[8]d AND NOT proposed_change ? 'seat_id'))
+		  OR (kind = $%[5]d AND NOT proposed_change ? 'seat_id'
 		        AND proposed_change->'links' @> $%[6]d
 		        AND on_behalf_of IS DISTINCT FROM $%[3]d)
 		  OR (kind = $%[7]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
@@ -99,8 +95,7 @@ func lockProposalsFollowingDeal(
 		   )
 		 `+lockOrder+`
 		 FOR UPDATE`,
-		deal, prev, next, arg(kindDealFollowUp), arg(kindTranscriptProposal), arg(onDeal), arg(kindHeldDraft),
-		arg(kindCommitmentTask)),
+		deal, prev, next, arg(kindDealFollowUp), arg(kindCommitmentTask), arg(onDeal), arg(kindHeldDraft)),
 		args...)
 	if err != nil {
 		return nil, fmt.Errorf("lock the proposals following the deal's owner: %w", err)
@@ -112,19 +107,17 @@ func lockProposalsFollowingDeal(
 	})
 }
 
-// transcriptLinksDeal is the containment document matching a transcript
-// proposal whose task lands on this deal. The keys are the Go field names of
+// proposalLinksDeal is the containment document matching a commitment proposal
+// whose task lands on this deal. The keys are the Go field names of
 // activities.ActivityLinkInput, which the payload's links carry untagged.
 //
 // Held by: TestEveryTranscriptCardOnTheDealFollowsIt
 // (backend/internal/compose/proposalsfollowdeal_integration_test.go), which
 // stages through the real transcript reader.
-func transcriptLinksDeal(dealID ids.UUID) (json.RawMessage, error) {
-	doc, err := json.Marshal([]map[string]string{{"EntityType": "deal", "EntityID": dealID.String()}})
-	if err != nil {
-		return nil, fmt.Errorf("encode the transcript link match: %w", err)
-	}
-	return doc, nil
+func proposalLinksDeal(dealID ids.UUID) json.RawMessage {
+	// Spelled rather than marshalled: a uuid's text needs no escaping, so the
+	// document has one possible shape and no encoding step that could fail.
+	return json.RawMessage(`[{"EntityType":"deal","EntityID":"` + dealID.String() + `"}]`)
 }
 
 // retargetInTx names the new owner as the seat one proposal is for. The row is

@@ -33,6 +33,8 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivertest"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -120,8 +122,13 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
 
 	// A cap of its own, not the shipped 500: filling the real one costs 500
 	// round trips to demonstrate a bound that behaves identically at three, and
-	// the number under test is "the cap", not its value.
-	const testCap = 3
+	// the number under test is "the cap", not its value. Set through the admin's
+	// own write.
+	testCap := 3
+	if _, err := capture.NewSettings(NewSettingsStore(e.Pool)).Update(e.Admin(),
+		capture.SettingsPatch{AutoEnrichDailyCap: &testCap}); err != nil {
+		t.Fatal(err)
+	}
 	store := capture.NewAutoEnrichStore(e.DB())
 	for i := 0; i < testCap; i++ {
 		slot, err := store.ReserveBudget(e.Admin(), testCap)
@@ -133,10 +140,14 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
 		}
 	}
 
+	// With a working queue, so a trigger that ignored the admin's cap would
+	// START a read here rather than fail to and refund — the two outcomes this
+	// test has to tell apart would otherwise look the same.
+	ctx := rivertest.WorkContext(e.Admin(), workClient(t, e))
 	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler))
-	trigger.dailyCap = testCap
-	trigger.domainPending(e.Admin(), "capped.example")
+	trigger.domainPending(ctx, "capped.example")
 
+	rivertest.RequireNotInserted(ctx, t, riverpgxv5.New(e.Pool), SiteDeepReadArgs{}, nil)
 	if n := budgetSpent(t, e); n != testCap {
 		t.Fatalf("budget spent = %d, want the cap %d — the trigger must not spend past it", n, testCap)
 	}

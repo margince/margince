@@ -64,8 +64,10 @@ type ListActivitiesInput struct {
 	// personal queue it arrives as though already theirs, which is how one
 	// automation's follow-up came to sit on every colleague's page.
 	UnassignedQueue bool
-	// Worklist excludes automatic response escalations unsupported by an inquiry.
-	Worklist bool
+	// WorklistAsOf marks the read as the Worklist's, judged at this instant. It
+	// drops automatic response escalations unsupported by an inquiry, and open
+	// tasks aged out of the Worklist (worklistageout.go) the reader did not pin.
+	WorklistAsOf *time.Time
 
 	// The three meeting narrowings the brief lanes ask with.
 	//

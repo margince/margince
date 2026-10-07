@@ -602,7 +602,11 @@ describe("WebhooksCard — archive", () => {
 
     await openRowActions(user);
     await user.click(await screen.findByTestId("archive-record"));
-    await user.click(screen.getByTestId("archive-confirm"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
 
     await waitFor(() => expect(deleted).toBe(true));
   });

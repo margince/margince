@@ -125,7 +125,12 @@ func validateEventTypes(types []string) error {
 		return &BadInputError{Field: fieldEventTypes, Reason: "must name at least one event type"}
 	}
 	catalog := kevents.Types()
+	seen := make(map[string]struct{}, len(types))
 	for _, t := range types {
+		if _, dup := seen[t]; dup {
+			return &BadInputError{Field: fieldEventTypes, Reason: fmt.Sprintf("%q is listed more than once", t)}
+		}
+		seen[t] = struct{}{}
 		if !slices.Contains(catalog, t) {
 			return &BadInputError{Field: fieldEventTypes, Reason: fmt.Sprintf("%q is not a published event type", t)}
 		}

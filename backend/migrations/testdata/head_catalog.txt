@@ -113,6 +113,19 @@ public.activity_audience_member.created_by text NOT NULL gen=- def=-
 public.activity_audience_member.subject_id uuid NOT NULL gen=- def=-
 public.activity_audience_member.subject_type text NOT NULL gen=- def=-
 public.activity_audience_member_pkey CREATE UNIQUE INDEX activity_audience_member_pkey ON public.activity_audience_member USING btree (activity_id, subject_type, subject_id)
+public.activity_class_needs_evidence() secdef=false cfg=- acl=- 
+BEGIN
+  IF EXISTS (SELECT 1 FROM activity a
+              WHERE a.id = OLD.activity_id AND a.retention_class IS NOT NULL)
+     AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
+                      WHERE e.activity_id = OLD.activity_id) THEN
+    RAISE EXCEPTION 'activity % carries a retention class with no evidence recording what qualified it', OLD.activity_id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_class_needs_evidence';
+  END IF;
+  RETURN NULL;
+END;
+
 public.activity_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_identity.activity_id uuid NOT NULL gen=- def=-
 public.activity_identity.activity_identity_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -220,7 +233,7 @@ public.activity_mail_reference_referenced_idx CREATE INDEX activity_mail_referen
 public.activity_meeting_attendee_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_attendee_repair.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'capped'::text, 'unreadable'::text])))
+public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'capped'::text, 'capped_seats'::text, 'unreadable'::text])))
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_pkey PRIMARY KEY (activity_id)
 public.activity_meeting_attendee_repair.outcome text NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.repaired_at timestamp with time zone NOT NULL gen=- def=now()
@@ -318,9 +331,36 @@ BEGIN
   -- when it was earned. Leaving the timestamp mutable would let a writer keep
   -- the class and move the date: the same rewriting of history with an extra
   -- step, on the field a supervisory authority would be shown.
+  --
+  -- The one exception is the declared undo of a project filing: the class
+  -- clears whole from an unrestricted row that nothing still qualifies, and the
+  -- declaration names this one activity.
   IF OLD.retention_class IS NOT NULL
      AND (NEW.retention_class IS DISTINCT FROM OLD.retention_class
-          OR NEW.retention_class_at IS DISTINCT FROM OLD.retention_class_at) THEN
+          OR NEW.retention_class_at IS DISTINCT FROM OLD.retention_class_at)
+     AND NOT (coalesce(current_setting('margince.project_filing_undo', true), '') = OLD.id::text
+              AND NEW.retention_class IS NULL AND NEW.retention_class_at IS NULL
+              AND OLD.restricted_at IS NULL AND NEW.restricted_at IS NULL
+              AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
+                               WHERE e.activity_id = OLD.id)
+              AND NOT EXISTS (SELECT 1 FROM activity_link l
+                               WHERE l.activity_id = OLD.id AND l.entity_type = 'project')
+              AND NOT EXISTS (SELECT 1 FROM activity_link hl
+                               JOIN deal hd ON hd.id = hl.deal_id
+                               WHERE hl.activity_id = OLD.id AND hl.entity_type = 'deal'
+                                 AND (hd.status = 'won'
+                                      OR EXISTS (SELECT 1 FROM offer o
+                                                  WHERE o.deal_id = hd.id AND o.status <> 'draft')))
+              AND NOT EXISTS (SELECT 1 FROM activity_link h
+                               LEFT JOIN contact hp ON hp.id = h.contact_id
+                               LEFT JOIN company hc ON hc.id = h.company_id
+                               LEFT JOIN deal hdl ON hdl.id = h.deal_id
+                               LEFT JOIN lead hld ON hld.id = h.lead_id
+                               LEFT JOIN project hpj ON hpj.id = h.project_id
+                               WHERE h.activity_id = OLD.id
+                                 AND (coalesce(hp.legal_hold, false) OR coalesce(hc.legal_hold, false)
+                                      OR coalesce(hdl.legal_hold, false) OR coalesce(hld.legal_hold, false)
+                                      OR coalesce(hpj.legal_hold, false)))) THEN
     RAISE EXCEPTION 'activity % carries retention class % earned at %, which is stamped once and never re-derived', OLD.id, OLD.retention_class, OLD.retention_class_at
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'activity_retention_class_monotonic';
@@ -434,6 +474,8 @@ public.activity_request_settlement.request_activity_id uuid NOT NULL gen=- def=-
 public.activity_request_settlement.verdict text NOT NULL gen=- def=-
 public.activity_request_settlement_pkey CREATE UNIQUE INDEX activity_request_settlement_pkey ON public.activity_request_settlement USING btree (request_activity_id)
 public.activity_retention_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_retention_evidence.activity_class_needs_evidence CREATE CONSTRAINT TRIGGER activity_class_needs_evidence AFTER DELETE ON public.activity_retention_evidence DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION activity_class_needs_evidence()
+public.activity_retention_evidence.activity_class_needs_evidence TRIGGER DEFERRABLE INITIALLY DEFERRED
 public.activity_retention_evidence.activity_id uuid NOT NULL gen=- def=-
 public.activity_retention_evidence.activity_retention_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_retention_evidence.activity_retention_evidence_basis_check CHECK ((basis = ANY (ARRAY['deal_won'::text, 'offer_beyond_draft'::text, 'project_linked'::text, 'controller_pin'::text])))
@@ -470,6 +512,28 @@ BEGIN
   -- activity is gone exactly when the delete is legitimate.
   IF TG_OP = 'DELETE' THEN
     IF EXISTS (SELECT 1 FROM activity a WHERE a.id = OLD.activity_id) THEN
+      -- Project-filing evidence only, from an activity no statutory or legal
+      -- hold has reached: every other row stays under the freeze.
+      IF OLD.basis = 'project_linked'
+         AND coalesce(current_setting('margince.project_filing_undo', true), '') = OLD.activity_id::text
+         AND NOT EXISTS (SELECT 1 FROM activity a
+                          WHERE a.id = OLD.activity_id AND a.restricted_at IS NOT NULL)
+         AND NOT EXISTS (SELECT 1 FROM activity_link pl
+                          WHERE pl.activity_id = OLD.activity_id AND pl.entity_type = 'project')
+         AND NOT EXISTS (SELECT 1 FROM project fp
+                          WHERE fp.id = OLD.project_id AND fp.legal_hold)
+         AND NOT EXISTS (SELECT 1 FROM activity_link h
+                          LEFT JOIN contact hp ON hp.id = h.contact_id
+                          LEFT JOIN company hc ON hc.id = h.company_id
+                          LEFT JOIN deal hdl ON hdl.id = h.deal_id
+                          LEFT JOIN lead hld ON hld.id = h.lead_id
+                          LEFT JOIN project hpj ON hpj.id = h.project_id
+                          WHERE h.activity_id = OLD.activity_id
+                            AND (coalesce(hp.legal_hold, false) OR coalesce(hc.legal_hold, false)
+                                 OR coalesce(hdl.legal_hold, false) OR coalesce(hld.legal_hold, false)
+                                 OR coalesce(hpj.legal_hold, false))) THEN
+        RETURN OLD;
+      END IF;
       RAISE EXCEPTION 'retention evidence % is frozen and is removed only with the activity it substantiates', OLD.id
         USING ERRCODE = 'check_violation',
               CONSTRAINT = 'activity_retention_evidence_frozen';
@@ -897,6 +961,7 @@ public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NUL
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
 public.app_user.app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL))))
 public.app_user.app_user_forget_weekly_plan_responses CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()
+public.app_user.app_user_greeting_name_length CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))
 public.app_user.app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text])))
 public.app_user.app_user_morning_brief_delivery_check CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
 public.app_user.app_user_pkey PRIMARY KEY (id)
@@ -913,6 +978,8 @@ public.app_user.delivery_hour_local integer gen=- def=-
 public.app_user.display_name text NOT NULL gen=- def=-
 public.app_user.email text NOT NULL gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
+public.app_user.greeting_name text gen=- def=-
+public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
 public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
 public.app_user.locale text gen=- def=-
@@ -1168,6 +1235,7 @@ public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
 public.attachment.attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
 public.attachment.byte_size bigint gen=- def=-
+public.attachment.bytes_withheld boolean NOT NULL gen=- def=false
 public.attachment.captured_by text NOT NULL gen=- def=-
 public.attachment.category text NOT NULL gen=- def='other'::text
 public.attachment.checksum text gen=- def=-
@@ -1376,8 +1444,8 @@ public.bulk_confirmation_pkey CREATE UNIQUE INDEX bulk_confirmation_pkey ON publ
 public.bulk_operation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.bulk_operation.bulk_operation_counts_check CHECK (((changed_count >= 0) AND (skipped_count >= 0)))
 public.bulk_operation.bulk_operation_pkey PRIMARY KEY (id)
-public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text])))
-public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text, 'add_tag'::text, 'remove_tag'::text, 'create_task'::text])))
+public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'worklist_item'::text])))
+public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text, 'add_tag'::text, 'remove_tag'::text, 'create_task'::text, 'complete'::text])))
 public.bulk_operation.changed_count integer NOT NULL gen=- def=-
 public.bulk_operation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.bulk_operation.id uuid NOT NULL gen=- def=uuidv7()
@@ -2050,6 +2118,30 @@ BEGIN
   RETURN NEW;
 END 
 public.communication_instruction_review_id_key CREATE UNIQUE INDEX communication_instruction_review_id_key ON public.communication_instruction USING btree (review_id)
+public.communication_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_override.captured_by text NOT NULL gen=- def=-
+public.communication_override.carried_from uuid gen=- def=-
+public.communication_override.category text NOT NULL gen=- def=-
+public.communication_override.communication_override_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_override(id) ON DELETE SET NULL
+public.communication_override.communication_override_category CHECK ((category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
+public.communication_override.communication_override_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.communication_override.communication_override_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['user'::text, 'admin'::text])))
+public.communication_override.communication_override_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.communication_override.communication_override_names_a_target CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+public.communication_override.communication_override_pkey PRIMARY KEY (id)
+public.communication_override.contact_id uuid gen=- def=-
+public.communication_override.decided_by_level text NOT NULL gen=- def=-
+public.communication_override.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_override.lead_id uuid gen=- def=-
+public.communication_override.reason text NOT NULL gen=- def=-
+public.communication_override.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_override.revoked_at timestamp with time zone gen=- def=-
+public.communication_override_carried_from CREATE INDEX communication_override_carried_from ON public.communication_override USING btree (carried_from) WHERE (carried_from IS NOT NULL)
+public.communication_override_contact_cascade CREATE INDEX communication_override_contact_cascade ON public.communication_override USING btree (contact_id) WHERE (contact_id IS NOT NULL)
+public.communication_override_lead_cascade CREATE INDEX communication_override_lead_cascade ON public.communication_override USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.communication_override_live_contact CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_live_lead CREATE INDEX communication_override_live_lead ON public.communication_override USING btree (lead_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_pkey CREATE UNIQUE INDEX communication_override_pkey ON public.communication_override USING btree (id)
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.approval_id uuid gen=- def=-
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
@@ -4526,7 +4618,7 @@ public.knowledge_corpus.knowledge_corpus_min_similarity_range CHECK (((min_simil
 public.knowledge_corpus.knowledge_corpus_pkey PRIMARY KEY (id)
 public.knowledge_corpus.knowledge_corpus_touch CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.knowledge_corpus.managed_source text gen=- def=-
-public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
+public.knowledge_corpus.min_similarity double precision gen=- def=-
 public.knowledge_corpus.name text NOT NULL gen=- def=-
 public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
 public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-
@@ -4921,6 +5013,7 @@ BEGIN
 END;
 
 public.mail_draft acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.mail_draft.agent_drafted boolean NOT NULL gen=- def=false
 public.mail_draft.anchor_id uuid NOT NULL gen=- def=-
 public.mail_draft.anchor_type text NOT NULL gen=- def=-
 public.mail_draft.author_id uuid NOT NULL gen=- def=-
@@ -6545,6 +6638,7 @@ public.stage_progression_policy.window_days integer NOT NULL gen=- def=30
 public.stage_progression_policy_pkey CREATE UNIQUE INDEX stage_progression_policy_pkey ON public.stage_progression_policy USING btree (id)
 public.stage_progression_policy_transition_key CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id)
 public.stored_object_intent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stored_object_intent.kind text NOT NULL gen=- def=-
 public.stored_object_intent.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.stored_object_intent.storage_key text NOT NULL gen=- def=-
 public.stored_object_intent.stored_object_intent_pkey PRIMARY KEY (storage_key)

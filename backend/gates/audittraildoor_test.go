@@ -5,7 +5,7 @@
 
 package gates
 
-// The audit trail is a SECOND door onto an activity's content, and every reader
+// The audit trail is a second door onto an activity's content, and every reader
 // of it says what it does about a held one.
 //
 // audit_log.before / .after carry a row's columns verbatim — an activity's

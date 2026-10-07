@@ -75,11 +75,8 @@ func validateStoredRouting(cfg RoutingConfig) error {
 	if cfg.zero() {
 		return cfg.validateProviderEntries()
 	}
-	resolved, err := cfg.finalize()
-	if err != nil {
-		return err
-	}
-	return resolved.ResidencyGap()
+	_, err := cfg.finalize()
+	return err
 }
 
 // Unconfigured reports whether this config binds nothing at all — the state an

@@ -143,6 +143,7 @@ func (w attentionWaiting) asWaitingCustomers(
 			OwnerID:           row.OwnerID,
 			EarlierRequests:   row.EarlierRequests,
 			FirstAskedAt:      row.FirstAskedAt,
+			MeetingBookedAt:   row.MeetingBookedAt,
 		})
 	}
 	return out

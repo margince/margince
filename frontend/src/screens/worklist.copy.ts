@@ -44,14 +44,15 @@ type T = ReturnType<typeof useT>;
 // reader in English, so what travels is `{kind, value}` and the phrase is the
 // client's to write.
 
-// Which record an item points at, as an address the router understands.
-//
-// Through `recordRoute`, which is the one place the product decides whether a
+// Which record an item or a receipt points at, as a router address. Through
+// `recordRoute`, which is the one place the product decides whether a
 // typed reference off the wire may be linked at all — the approval undo and the
 // notification centre ask it too. A switch written here would be a second
 // spelling of the record types, and the reader it sent to a page that does not
 // exist would have no way of telling which copy was wrong.
-export function subjectHref(item: WorklistItem): string | undefined {
+export function subjectHref(
+  item: Pick<WorklistItem, "subject">,
+): string | undefined {
   const route = recordRoute(item.subject?.type, item.subject?.id);
   return route === undefined ? undefined : routeHash(route);
 }
@@ -174,8 +175,8 @@ const VALUED_REASONS = {
   // MOMENTS rather than figures: valueText renders a date in the reader's zone.
   response_due_soon: true,
   first_asked: true,
+  meeting_booked: true,
 } as const;
-
 type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {

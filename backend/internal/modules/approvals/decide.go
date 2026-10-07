@@ -19,10 +19,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AlreadyDecidedError maps to 409.
+// AlreadyDecidedError answers 409 already_decided on every surface: it
+// unwraps to ErrConflict for the status and carries the code through the
+// shared taxonomy, so the REST and MCP doors cannot word it differently.
 type AlreadyDecidedError struct{ Status string }
 
 func (e *AlreadyDecidedError) Error() string { return "approval is already " + e.Status }
+
+// MessageFault names the standing verdict so a caller can branch on the code.
+func (e *AlreadyDecidedError) MessageFault() (code, message string) {
+	return "already_decided", e.Error()
+}
+
+func (e *AlreadyDecidedError) Unwrap() error { return apperrors.ErrConflict }
 
 // InvalidEditError maps to 422: an edited payload that is not a JSON
 // object cannot be canonicalized, so it cannot become an authority.
@@ -233,8 +242,15 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// this module keeps everywhere. Before the status check, because what a
 	// credential may release is a question about the credential and not about
 	// how far this particular proposal has got.
-	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, a)); err != nil {
+	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)); err != nil {
 		return row{}, err
+	}
+	// An agent never edits what it releases, whoever staged it: what a credential
+	// may release is judged on the staged payload, so an edit would release
+	// something that was never classified. The contact edits in the CRM.
+	if p.Type == principal.PrincipalAgent && edited != nil {
+		return row{}, fmt.Errorf("an agent never edits what it releases; the contact edits and "+
+			"releases it in the CRM: %w", apperrors.ErrPermissionDenied)
 	}
 	if st := a.effectiveStatus(s.now()); st != "pending" {
 		// The ROW travels with the refusal. recordDecision has to tell an
@@ -244,6 +260,12 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		// is the answer that decides whether a human's yes is honoured or
 		// refused.
 		return a, &AlreadyDecidedError{Status: st}
+	}
+	// A retired kind is governed only so its decided cards stay readable;
+	// nothing applies it, so a yes would be recorded and do nothing.
+	if approve && retiredKinds[a.Kind] {
+		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
+			a.Kind, apperrors.ErrConflict)
 	}
 
 	status, action, verdict := approvalStatusRejected, "reject", approvalStatusRejected

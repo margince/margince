@@ -274,6 +274,17 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 				"value against this operation's schema; do not retry unchanged.",
 		},
 		{
+			// A NUL byte or malformed UTF-8 in a pasted string: Postgres cannot
+			// store it, so the string is the thing to change.
+			name:     "text the database cannot store",
+			sqlstate: "22021", table: "tag", constraint: "",
+			pgMessage: `invalid byte sequence for encoding "UTF8": 0x00`,
+			wantCode:  "value_wrong_type",
+			wantDetail: "a value in this request is not of the type the field it names holds — a " +
+				"malformed id, a number where text was sent, a date that is not one. Check each " +
+				"value against this operation's schema; do not retry unchanged.",
+		},
+		{
 			name:     "a number the column cannot hold",
 			sqlstate: "22003", table: "deal", constraint: "",
 			pgMessage: "numeric field overflow",

@@ -54,11 +54,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 
 	integration.ApplyRiverSchema(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-	})
+	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)
 	}
@@ -104,7 +100,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 
 	// ...at the housekeeping priority (River's lowest tier) — a boot-time fan-out
 	// across every due company must never queue ahead of a live, human-started read
-	// sharing deep_read's two workers. Scoped to THIS dossier's own job by
+	// sharing deep_read's workers. Scoped to THIS dossier's own job by
 	// site_read_id: sweepWorkspace also runs sweepDomainTriage unconditionally
 	// before the auto-enrich loop, which can enqueue its own site_deep_read row
 	// for an unrelated domain in the same pass — an unscoped query naming only
@@ -171,11 +167,7 @@ func TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo(t *te
 
 	integration.ApplyRiverSchema(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-	})
+	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)
 	}

@@ -154,12 +154,20 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
   },
   {
+    file: "screens/companyhealthreason.test.tsx",
+    why: "Asserts that a booked meeting's day is named in the record's zone; the day boundary is only checkable against zones the test chose.",
+  },
+  {
     file: "screens/booking-guest-month.test.ts",
     why: "A month is read in the guest's zone, and only a zone with a fall-back clock change makes it longer than the server's 31-day bound.",
   },
   {
     file: "screens/booking-picker.test.ts",
     why: "The week grid's empty working days depend on the host's zone against the reader's, so the test pins both to make them disagree.",
+  },
+  {
+    file: "screens/companies.thread.test.tsx",
+    why: "The account page's email drawer must date a message in the record zone, so the test pins one fourteen hours off UTC that a drawer dated in the viewer's zone cannot match.",
   },
   {
     file: "screens/contactmeetings.test.tsx",
@@ -318,8 +326,20 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same prop, asserted: the row's rendered time is only checkable against a zone the test chose.",
   },
   {
+    file: "design-system/composed.timelinetext.test.tsx",
+    why: "RecordView requires its zone prop; these suites assert a body's links, and a fixed zone keeps the rows they render identical on every runner.",
+  },
+  {
     file: "design-system/dealcard.stories.tsx",
     why: "DealCard takes the record's zone as a required prop for its close date; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
+  },
+  {
+    file: "screens/dealpipelineboard.stories.tsx",
+    why: "DealPipelineBoard passes the record's zone through to PipelineBoard for its cards' close dates; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
+  },
+  {
+    file: "screens/dealpipelineboard.test.tsx",
+    why: "Same prop, satisfied rather than asserted: the suite is about the cards' verbs, and the zone only fills the board's required signature.",
   },
   {
     file: "design-system/select.stories.tsx",

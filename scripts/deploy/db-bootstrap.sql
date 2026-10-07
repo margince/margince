@@ -15,8 +15,8 @@
 --   * margince_owner — owns the database + tables, runs migrations (DDL). Not a
 --     superuser, no BYPASSRLS.
 --   * margince_app   — the runtime role the api/worker connect as. Its table
---     grants are applied by migration 0015_app_role_grants, which is a no-op
---     unless the role already exists — hence it is created here, first.
+--     grants are applied by the core baseline migration (0001_baseline), which
+--     skips them unless the role already exists — hence it is created here, first.
 --
 -- Idempotent: safe to re-run (each step guards on existence).
 
@@ -54,7 +54,7 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'margince')
 \gexec
 
 -- The app role must be able to reach the database; object-level grants come from
--- migration 0015 (run by the api entrypoint as margince_owner).
+-- the core baseline migration (run by the api entrypoint as margince_owner).
 GRANT CONNECT ON DATABASE margince TO margince_app;
 
 -- Extensions the migrations expect. `vector` (pgvector) is NOT a trusted

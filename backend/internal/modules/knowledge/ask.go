@@ -237,7 +237,7 @@ func groundedIn(
 	if err != nil {
 		return state, nil, err
 	}
-	floor, err := groundingFloorIn(ctx, tx, corpusID)
+	floor, err := groundingFloorIn(ctx, tx, corpusID, identity)
 	if err != nil {
 		return state, nil, err
 	}
@@ -287,7 +287,7 @@ func readinessIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, identity str
 	if err != nil {
 		return state, err
 	}
-	corpus := row.wire()
+	corpus := row.wire(identity)
 	state.Coverage = corpus.Coverage
 	state.Corpus = crmcontracts.KnowledgeAnswerCorpus{
 		Id:             corpus.Id,
@@ -385,13 +385,14 @@ func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, id
 }
 
 // groundingFloorIn reads the similarity a passage must reach to be citable,
-// inside the transaction the caller holds.
-func groundingFloorIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID) (float64, error) {
-	var floor float64
+// inside the transaction the caller holds: the corpus's override when it has
+// one, else the floor measured for the binding that embedded the question.
+func groundingFloorIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, identity string) (float64, error) {
+	var override *float64
 	if err := tx.QueryRow(ctx,
 		`SELECT min_similarity FROM knowledge_corpus WHERE id = $1 AND archived_at IS NULL`,
-		corpusID).Scan(&floor); err != nil {
+		corpusID).Scan(&override); err != nil {
 		return 0, notFoundOr(err, "read the corpus's grounding floor")
 	}
-	return floor, nil
+	return EffectiveFloor(override, identity), nil
 }

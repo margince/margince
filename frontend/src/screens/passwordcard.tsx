@@ -51,6 +51,7 @@ export function PasswordSettingRow({
 }> = {}) {
   const t = useT();
   const titleId = useId();
+  const formId = useId();
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState<ChangeFields>(EMPTY);
   const [done, setDone] = useState(false);
@@ -148,22 +149,19 @@ export function PasswordSettingRow({
           {t("password.done")}
         </Callout>
       )}
-      <Modal open={open} onClose={close} labelledBy={titleId}>
-        {/* A real form, so Enter submits it. Three password fields that could
-              only be committed by reaching for the button is not how anyone
-              types a credential, and the button carried no `type` at all —
-              Button defaults to `type="button"`, so even inside a form it would
-              not have. */}
+      <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          {t("password.title")}
+        </Heading>
+        {/* A real form, so Enter in any of the three fields submits it. */}
         <form
+          id={formId}
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             if (ready && !change.isPending) change.mutate(fields);
           }}
         >
-          <Heading size="large" className="t-h3" id={titleId}>
-            {t("password.title")}
-          </Heading>
           {change.isError && (
             <Callout
               kind="outcome"
@@ -236,33 +234,34 @@ export function PasswordSettingRow({
               />
             )}
           </Field>
-          <div className="form-actions">
-            <Button variant="ghost" onClick={close}>
-              {t("password.cancel")}
-            </Button>
-            {/* Two facts, two props. `!ready` is a form that is not filled in
-                  yet and `change.isPending` is a write already on its way, and
-                  folding them into one `disabled` drew them the same: the reader
-                  could not tell "I still have to type something" from "it is
-                  going".
-
-                  The precondition stops applying once the write is out, and that
-                  guard is load bearing rather than tidy: these fields stay
-                  editable during the request, so clearing one mid-flight would
-                  otherwise flip `ready` false, hand the button `disabled` on top
-                  of `pending`, and — since refusal outranks busy — drop both the
-                  focus and the busy state in the middle of the change. */}
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!change.isPending && !ready}
-              pending={change.isPending}
-              busyLabel={t("password.changing")}
-            >
-              {t("password.submit")}
-            </Button>
-          </div>
         </form>
+        <div className="actions">
+          <Button variant="ghost" onClick={close}>
+            {t("password.cancel")}
+          </Button>
+          {/* Two facts, two props. `!ready` is a form that is not filled in
+                yet and `change.isPending` is a write already on its way, and
+                folding them into one `disabled` drew them the same: the reader
+                could not tell "I still have to type something" from "it is
+                going".
+
+                The precondition stops applying once the write is out, and that
+                guard is load bearing rather than tidy: these fields stay
+                editable during the request, so clearing one mid-flight would
+                otherwise flip `ready` false, hand the button `disabled` on top
+                of `pending`, and — since refusal outranks busy — drop both the
+                focus and the busy state in the middle of the change. */}
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            disabled={!change.isPending && !ready}
+            pending={change.isPending}
+            busyLabel={t("password.changing")}
+          >
+            {t("password.submit")}
+          </Button>
+        </div>
       </Modal>
     </>
   );

@@ -9,6 +9,11 @@ import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProviderCallsLine, ProviderRecentCalls } from "./ai-call-figures";
+import { useProviderHealth } from "./ai-provider-health";
+import {
+  type ProviderHealthEntry,
+  ProviderHealthNotice,
+} from "./ai-provider-health-notice";
 import {
   credentialKindOf,
   KeyEntry,
@@ -71,6 +76,13 @@ export function AiProviderKeysCard() {
   const canManage = useCanWrite("ai_routing", "update");
   const query = useProviderKeys(canSee);
   const routing = useRouting(canSee);
+  // A separate grant from the list's: health is a diagnostic, so a reader who
+  // may see the keys but not diagnostics gets the rows without the notice.
+  const canDiagnose = useCan("ai_diagnostics", "read");
+  // Gated again at the read: a revoked grant disables the query but leaves its
+  // cached answer, which would keep drawing a diagnostic the reader may no
+  // longer see.
+  const health = useProviderHealth(canDiagnose).data;
   const usage = routing.data ? providerUsage(routing.data.routing) : null;
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
@@ -115,6 +127,11 @@ export function AiProviderKeysCard() {
                   key={p.provider}
                   status={p}
                   usage={usage?.get(p.provider)}
+                  health={
+                    canDiagnose
+                      ? health?.providers.find((h) => h.provider === p.provider)
+                      : undefined
+                  }
                   onOpen={() => {
                     setDraftHost(null);
                     setOpened(p.provider);
@@ -180,10 +197,12 @@ export function AiProviderKeysCard() {
 function ProviderRow({
   status,
   usage,
+  health,
   onOpen,
 }: {
   status: ProviderStatus;
   usage: ProviderUsage | undefined;
+  health: ProviderHealthEntry | undefined;
   onOpen: () => void;
 }) {
   const t = useT();
@@ -212,6 +231,7 @@ function ProviderRow({
           <span className="sr-only"> {providerName(status.provider, t)}</span>
         </Button>
       </div>
+      {health && <ProviderHealthNotice entry={health} />}
     </PanelRow>
   );
 }
@@ -354,7 +374,10 @@ function ProviderConnection({
 
   return (
     <div>
-      <div data-testid={`ai-provider-key-${status.provider}`}>
+      <div
+        className="form-stack"
+        data-testid={`ai-provider-key-${status.provider}`}
+      >
         <div className="ai-provider">
           <span className="ai-provider-who">
             {/* The variable is the only thing that says HOW a key reached the

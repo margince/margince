@@ -121,7 +121,7 @@ func TestTheLinksArgumentSaysWhatAMeetingIsAbout(t *testing.T) {
 		// destination that still waits on a contact — said as what it does to
 		// the link, not only that somebody is asked.
 		"a second write",
-		"stages an approval a human must decide before it takes effect",
+		"stages an approval that waits for the user's yes before it takes effect",
 	} {
 		if !strings.Contains(schema, want) {
 			t.Errorf("the links argument no longer says %q:\n%s", want, schema)

@@ -5,7 +5,8 @@
 
 package gates
 
-// Contract $ref pre-flight as a fitness function. It resolves every local
+// Every local $ref in api/crm.yaml resolves, and a dangling one fails with a
+// readable message. It resolves every local
 // $ref in api/crm.yaml and
 // fails on a dangling pointer with a precise message. This catches the
 // dangling-ref class of bug — a typo'd component name like `ProblemDetail`

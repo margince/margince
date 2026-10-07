@@ -51,6 +51,7 @@ import {
 } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
 import { replyTarget, WaitingReply } from "./worklist.reply";
+import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import {
   aboutRecord,
   REASONS_BEFORE_THE_FOLD,
@@ -108,8 +109,12 @@ export function WorklistRow({
   context,
   acts,
   framed = false,
+  pick,
 }: Readonly<{
   item: WorklistItem;
+  /** The row's selection checkbox, drawn beside its rank where the list
+   *  offers a bulk verb over the row. */
+  pick?: ReactNode;
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
@@ -155,7 +160,10 @@ export function WorklistRow({
   // A task's deadline is the record's day; everything else on this row is a
   // moment the reader is racing on their own clock.
   const recordZone = useRecordZone();
-  const href = rowHref(item);
+  // Inside the drawer a row's record links carry the way back to it.
+  const drawer = useDrawerDials();
+  const target = rowHref(item);
+  const href = target && withWorklistReturn(target, drawer);
   const viewer = useMe(false).data?.user;
   const title = itemTitle(readerTask(item, viewer, t), t, locale);
   const facts =
@@ -201,7 +209,7 @@ export function WorklistRow({
   // its rows and this line is the only place those facts are said there.
   const about = framed
     ? undefined
-    : aboutRecord(item, emailOpener !== undefined);
+    : aboutRecord(item, emailOpener !== undefined, drawer);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   // Whether the day put a state on this row — overdue, or a meeting with
@@ -260,14 +268,16 @@ export function WorklistRow({
             that claim — so a digit per row spends a column saying again what
             the page says once. `position` is refused in compact rather than
             ignored: see RowDensity. */}
-        {position !== undefined && (
-          <Rank
-            position={position}
-            title={title}
-            selected={selected}
-            onSelect={onSelect}
-          />
-        )}
+        <RowLead pick={pick}>
+          {position !== undefined && (
+            <Rank
+              position={position}
+              title={title}
+              selected={selected}
+              onSelect={onSelect}
+            />
+          )}
+        </RowLead>
         {/* WHAT KIND of work, in its own column at a width that has one, so a
             reader running down the queue reads the kinds as a list without
             reading a title first — and in the warning tone on the rows the day
@@ -632,6 +642,7 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
             onSuccess: () =>
               toast.show(t("worklist.verb.dismissed"), {
                 action: {
+                  kind: "undo",
                   label: t("worklist.verb.dismissUndo"),
                   // The toast dismisses itself the moment the action is
                   // pressed, so a failed undo leaves the contact set aside
@@ -661,6 +672,23 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
     >
       {t("worklist.verb.dismiss")}
     </Button>
+  );
+}
+
+// The rank, with the row's selection checkbox before it where the list offers
+// one; without a checkbox a row lays out exactly as before.
+function RowLead({
+  pick,
+  children,
+}: Readonly<{ pick?: ReactNode; children: ReactNode }>) {
+  if (!pick) {
+    return <>{children}</>;
+  }
+  return (
+    <span className="worklist-row-lead">
+      {pick}
+      {children}
+    </span>
   );
 }
 
@@ -836,6 +864,7 @@ function TaskComplete({
             onSuccess: (completedAt) =>
               toast.show(t("worklist.verb.completed"), {
                 action: {
+                  kind: "undo",
                   label: t("worklist.verb.completeUndo"),
                   // The toast dismisses itself the moment the action is
                   // pressed, so a failed undo leaves the task done with the

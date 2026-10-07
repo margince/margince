@@ -365,6 +365,14 @@ func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger
 		if embedder == nil {
 			embedder = unboundEmbedder{}
 		}
+		if log != nil {
+			identity, _ := embedder.EmbedIdentity()
+			knowledge.WarnIfUngated(log, identity)
+		}
+		s.module = s.module.WithEmbedIdentity(func() string {
+			identity, _ := embedder.EmbedIdentity()
+			return identity
+		})
 		engine := &corpusAskEngine{
 			store:    knowledge.NewStore(InstallationDB(pool)),
 			embedder: embedder,

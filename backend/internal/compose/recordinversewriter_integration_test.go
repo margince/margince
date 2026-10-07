@@ -49,7 +49,7 @@ func TestTheArchiveAnUndoWritesRefusesAColleaguesWorkByItself(t *testing.T) {
 	row := auditRowOf(t, e, latestAuditRowID(t, e, "contact", contact, actionCreate))
 	taggedAndListed(t, e, "contact", contact)
 
-	err = restoreSeamFor(e).inverses.perform(e.Admin(), e.Pool, row, inverseArchive, currentVersion(t, e, "contact", contact))
+	_, err = restoreSeamFor(e).inverses.perform(e.Admin(), e.Pool, row, inverseArchive, currentVersion(t, e, "contact", contact))
 	if reason := refusedFor(t, inverseWriteRefusal(err)); reason != ReasonSuperseded {
 		t.Errorf("the archive refused %q, want %q", reason, ReasonSuperseded)
 	}

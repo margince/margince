@@ -23,7 +23,6 @@ import { CaptureChip } from "./capture-chip";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { LicenseBanner } from "./licensebanner";
 import {
@@ -36,6 +35,7 @@ import {
   type NavSection,
   navEntryHref,
   RAIL_LESS_SCREENS,
+  recordKindOf,
 } from "./nav";
 import {
   NavLevelView,
@@ -606,7 +606,7 @@ function SectionSwitcher({
         <span>{label}</span>
         <ChevronDown size={16} aria-hidden />
       </button>
-      <Modal open={open} onClose={close} labelledBy={titleId}>
+      <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
         {/* Named by the SECTION: the list is everything Settings holds, and the
             entry the reader came from is marked inside it. */}
         <Heading size="large" id={titleId} className="t-h2 modal-title">
@@ -675,8 +675,7 @@ export function PageTitle({
   // screen's own state — the settings tab, for one — and the page is still the
   // screen. Printing that slug as the page's name gave Settings an h1 reading
   // "privacy".
-  const recordNamesPage =
-    route.id !== undefined && SCREEN_ENTITY[route.screen] !== undefined;
+  const recordNamesPage = recordKindOf(route) !== undefined;
   // Conditioned on the DESCRIPTOR resolving, not on the screen slug alone. A
   // unit route is deliberately absent from both the NAV rail and
   // OFF_RAIL_TITLE_KEYS, so resolveTitle falls through to shell.unknownPage —

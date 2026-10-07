@@ -49,7 +49,13 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), registryFeatures{})
 }
 
-type registryFeatures struct{ lists bool }
+// registryFeatures are what a server role adds to the tool surface. firstDrafts
+// is a pointer to the server's own engines, so options binding a model lane
+// after the registry is built still reach draft_email.
+type registryFeatures struct {
+	lists       bool
+	firstDrafts *firstMessageEngines
+}
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
 	db := InstallationDB(pool)
@@ -85,7 +91,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
 	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
-		openDuplicatesFor(pool))
+		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
@@ -130,7 +136,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterResolveTool(registry, provider, entityResolver(pool))
 	agents.RegisterWhoamiTool(registry, actingIdentity(pool))
 	agents.RegisterColleaguesTool(registry, colleagueLister(pool))
-	agents.RegisterTagTools(registry, tagSeam(pool))
+	agents.RegisterTagTools(registry, tagSeamFor(db))
+	agents.RegisterDuplicateTools(registry, duplicateQueueSeam(db))
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
 	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider))
@@ -140,7 +147,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, contacts.NewStore(InstallationDB(pool))), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
 		introPathLister(pool),
 		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
-	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
+	comms := newCommsAdapter(pool, drafter, send)
+	comms.firstDrafts = features.firstDrafts
+	agents.RegisterCommsTools(registry, comms, provider)
 	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
 	registerComposedTools(registry)
 	return registry

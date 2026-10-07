@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { invalidateProviderHealth } from "./ai-provider-health";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Whether a stored key works, asked of the vendor that issued it.
@@ -20,6 +21,7 @@ import { problemMessageOf, throwProblem } from "./common";
 type KeyTestResult = components["schemas"]["AiProviderKeyTestResult"];
 
 export function useTestProviderKey() {
+  const queryClient = useQueryClient();
   return useMutation({
     // Short-lived like the key save beside it: the result describes a moment,
     // and a stale "connected" kept in cache would outlive a revoked key.
@@ -35,6 +37,7 @@ export function useTestProviderKey() {
       if (!data) throw new Error("Provider key test unavailable");
       return data;
     },
+    onSuccess: () => invalidateProviderHealth(queryClient),
   });
 }
 

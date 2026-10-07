@@ -37,6 +37,6 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 		// The SERVER's brief service, not a second one built from the pool: the
 		// model lane is bound to that instance, so a fresh service here would
 		// serve agents the deterministic floor while the contact page got prose.
-		meetingBriefReader(s.meetingBriefSvc), s.log, registryFeatures{lists: s.listsEnabled},
+		meetingBriefReader(s.meetingBriefSvc), s.log, registryFeatures{lists: s.listsEnabled, firstDrafts: &s.firstDrafts},
 		agents.WithVolumeCharger(s.volumeMeter), agents.WithCostShare(s.volumeMeter))
 }

@@ -26,12 +26,15 @@
 //   ask again. There is no token here to leak, which is a stronger property
 //   than a token handled carefully.
 //
-//   It calls no tool. The protocol permits it; nothing here needs it, and it is
-//   the widest part of the extension's surface. A view that stays a renderer
-//   cannot become a second door onto a record.
+//   It calls no tool of its own accord. A view that must act on the user's
+//   click imports actions.ts, which may ask the HOST to run a tool the view
+//   declared in actions.json and nothing else; a view that does not import it
+//   carries no code that sends a request. The host routes the call through the
+//   same passport and approval checks as any other.
 
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
 import { followContentSize } from "./size";
+import { applyTheme, followHostChange } from "./theme";
 import {
   asFiniteNumber,
   asRecord,
@@ -49,6 +52,12 @@ export const ABSENT = "—";
 type ResultHandler = (data: unknown, warnings: Warning[]) => void;
 
 let nextID = 1;
+
+/** nextRequestID mints the id of an outbound request, shared with the handshake's
+ *  so no two requests of one view carry the same one. */
+export function nextRequestID(): number {
+  return nextID++;
+}
 let resultHandler: ResultHandler | null = null;
 // The id our own ui/initialize was sent under, cleared as it is consumed.
 let initializeID: number | null = null;
@@ -70,6 +79,38 @@ let sizing = false;
 // itself as the STRING "null", which is not a usable postMessage target, so a
 // host in one keeps the wildcard — the sender check below is what holds there.
 let hostOrigin: string | null = null;
+
+/** What a view that acts on its host registers: the host's response to a
+ *  request the view sent, and the capabilities the host announced. */
+type ResponseHandler = (message: Record<string, unknown>) => void;
+type CapabilityHandler = (hostCapabilities: unknown) => void;
+let responseHandler: ResponseHandler | null = null;
+let capabilityHandler: CapabilityHandler | null = null;
+
+/** onResponse registers the one handler for responses to this view's own
+ *  requests. Only actions.ts calls it, so a view that declares no action
+ *  never carries the code that sends one. */
+export function onResponse(
+  fn: ResponseHandler,
+  capabilities: CapabilityHandler,
+): void {
+  responseHandler = fn;
+  capabilityHandler = capabilities;
+}
+
+// The tools this view declared in actions.json. The transport itself refuses a
+// tool call naming anything else, so no code path of the view, whatever calls
+// sendToHost, can ask the host to run a tool the view did not declare.
+let permittedTools: ReadonlySet<string> = new Set();
+
+/** permitTools replaces the set of tools this view may ask its host to run. */
+export function permitTools(names: readonly string[]): void {
+  permittedTools = new Set(names);
+}
+
+function callIsPermitted(params: unknown): boolean {
+  return permittedTools.has(asText(asRecord(params).name));
+}
 
 /**
  * fromHost checks every inbound message on TWO things: it came from the frame
@@ -93,12 +134,13 @@ function fromHost(event: MessageEvent): boolean {
  * and '*' only for the opening message, which is sent before there is anything
  * to learn it from.
  *
- * Nothing sensitive travels outward on either path: what this view sends is a
- * handshake — an initialise request naming the protocol revision, and its
- * confirmation. No record, no credential, no customer text ever leaves here,
- * because a view is given an answer and never the means to ask again.
+ * Nothing sensitive travels outward on either path: a handshake, and for a
+ * view with actions, a named tool call with its arguments. No credential
+ * ever leaves here, because a view holds none.
  */
-function send(message: Record<string, unknown>): void {
+export function sendToHost(message: Record<string, unknown>): void {
+  if (message.method === "tools/call" && !callIsPermitted(message.params))
+    return;
   const target =
     hostOrigin === null || hostOrigin === "null" ? "*" : hostOrigin;
   window.parent.postMessage({ jsonrpc: "2.0", ...message }, target);
@@ -122,8 +164,8 @@ function send(message: Record<string, unknown>): void {
  * part of this extension's surface is the part where it stops being one.
  */
 function announce(): number {
-  const id = nextID++;
-  send({
+  const id = nextRequestID();
+  sendToHost({
     id,
     method: "ui/initialize",
     params: {
@@ -133,62 +175,6 @@ function announce(): number {
     },
   });
   return id;
-}
-
-/**
- * applyTheme follows the way round the host says it is drawn. Following it is
- * the whole reason a view looks embedded rather than pasted in.
- *
- * A HOST THAT STATES NOTHING IS NOT A HOST THAT IS LIGHT — and it is not this
- * module's question either. `hostContext.theme` is optional (SEP-1865), and the
- * unstated case is answered in the canon: tokens.css carries a
- * `prefers-color-scheme: dark` arm for any document that has not been stamped
- * light, so an unstamped view inside a dark host renders dark, and follows a
- * reader who changes their system appearance mid-session for free.
- *
- * So this stamps ONLY what the host stated. Resolving the platform preference
- * here instead would put the answer to "what does dark look like when nobody
- * said" in a TypeScript module the next non-SPA surface cannot find, and would
- * freeze it at whatever the preference was when the panel opened.
- */
-function applyTheme(hostContext: unknown): void {
-  const stated = asText(asRecord(hostContext).theme);
-  if (stated !== "") {
-    stateTheme(stated);
-  }
-}
-
-/**
- * followHostChange applies a host-context change notification.
- *
- * ITS PARAMS ARE THE CONTEXT ITSELF, not a `hostContext` member — unlike the
- * initialize RESULT, which nests one. Reading it the same way as the result is
- * the mistake this function exists to not make: the theme then never resolves,
- * and every notification looks like a host that stated nothing.
- *
- * AND A PARTIAL UPDATE IS PARTIAL. The host sends one of these whenever
- * anything about the frame changes — a resize notification carrying only
- * `containerDimensions` arrives right after every open — so "no theme stated"
- * here means "not mentioned", NOT "delegated to the stylesheet". Treating the
- * two the same is worse than ignoring the notification altogether: it undoes
- * the theme the handshake correctly resolved, moments after it resolved it.
- */
-function followHostChange(context: unknown): void {
-  const stated = asText(asRecord(context).theme);
-  if (stated === "") return;
-  stateTheme(stated);
-}
-
-/**
- * stateTheme applies a theme the host has DECIDED.
- *
- * The attribute is how a decision beats the platform in BOTH directions: the
- * canon's media arm excludes `[data-theme="light"]`, so a host that states light
- * on a dark platform is honoured, and a host that states dark on a light one has
- * no media query to wait for.
- */
-function stateTheme(theme: string): void {
-  document.documentElement.dataset.theme = theme;
 }
 
 /**
@@ -211,7 +197,8 @@ function completeHandshake(
   // proven to be the embedding frame.
   hostOrigin = event.origin;
   applyTheme(asRecord(message.result).hostContext);
-  send({ method: "ui/notifications/initialized", params: {} });
+  capabilityHandler?.(asRecord(message.result).hostCapabilities);
+  sendToHost({ method: "ui/notifications/initialized", params: {} });
 }
 
 /**
@@ -235,7 +222,7 @@ function deliverResult(message: Record<string, unknown>): void {
   // and a host told that height shrinks the frame just to grow it again.
   if (!sizing) {
     sizing = true;
-    followContentSize(send);
+    followContentSize(sendToHost);
   }
 }
 
@@ -253,6 +240,15 @@ function handle(event: MessageEvent): void {
     "result" in message
   ) {
     completeHandshake(event, message);
+    return;
+  }
+  if (
+    responseHandler !== null &&
+    initialized &&
+    typeof message.id === "number" &&
+    ("result" in message || "error" in message)
+  ) {
+    responseHandler(message);
     return;
   }
   // The host telling us something about the frame changed — a theme switch, a

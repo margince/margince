@@ -77,6 +77,7 @@ var (
 	RuleWellbeingOpener = Rule{"wellbeing-opener", Style}
 	RuleMixedRegister   = Rule{"mixed-register", Style}
 	RuleUnbrokenBlock   = Rule{"unbroken-block", Style}
+	RuleMissingGreeting = Rule{"missing-greeting", Style}
 	RuleEmptySubject    = Rule{"empty-subject", Style}
 	RuleLongSubject     = Rule{"long-subject", Style}
 )

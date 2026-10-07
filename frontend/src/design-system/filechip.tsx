@@ -23,20 +23,42 @@ import "./filechip.css";
 // and an image, which is what a photo, a scan or a mail signature's logo
 // arrives as — because those are the two a reader most wants to tell apart
 // from each other and from everything else before the click.
-export function FileChip({
+export function FileChip(
+  props: Readonly<
+    {
+      filename: string;
+      // Already formatted for the reader's locale. A size is what tells a
+      // 400 KB scan from a 40 MB one before the click; a file whose size was
+      // never recorded simply says nothing rather than "0".
+      size?: string;
+    } & (
+      | {
+          // Same-origin path to the bytes. This control is for OUR files;
+          // anything pointing off the origin is a link, not a file.
+          href: string;
+          withheld?: never;
+        }
+      | {
+          // The sentence saying why there is nothing to open: a file recorded
+          // by name only, whose bytes were never kept. The card is drawn the
+          // same, so the list still says what arrived, but it is not a link.
+          href?: never;
+          withheld: string;
+        }
+    )
+  >,
+) {
+  if (props.withheld !== undefined) {
+    return <WithheldFileChip {...props} withheld={props.withheld} />;
+  }
+  return <StoredFileChip {...props} href={props.href} />;
+}
+
+function StoredFileChip({
   href,
   filename,
   size,
-}: Readonly<{
-  // Same-origin path to the bytes. This control is for OUR files; anything
-  // pointing off the origin is a link, not a file.
-  href: string;
-  filename: string;
-  // Already formatted for the reader's locale. A size is what tells a 400 KB
-  // scan from a 40 MB one before the click; a file whose size was never
-  // recorded simply says nothing rather than "0".
-  size?: string;
-}>) {
+}: Readonly<{ href: string; filename: string; size?: string }>) {
   const preview = useFilePreview();
   const kind = fileKind(filename);
   const { glyph: Glyph, preview: mediaType } = factsFor(kind);
@@ -66,6 +88,28 @@ export function FileChip({
       <span className="file-chip-name">{filename}</span>
       {size && <span className="file-chip-size">{size}</span>}
     </a>
+  );
+}
+
+function WithheldFileChip({
+  withheld,
+  filename,
+  size,
+}: Readonly<{ withheld: string; filename: string; size?: string }>) {
+  const kind = fileKind(filename);
+  const { glyph: Glyph } = factsFor(kind);
+  return (
+    <span className="file-chip file-chip-withheld">
+      <Glyph size={14} aria-hidden="true" />
+      {kind && (
+        <span className="file-chip-kind" aria-hidden="true">
+          {kind}
+        </span>
+      )}
+      <span className="file-chip-name">{filename}</span>
+      {size && <span className="file-chip-size">{size}</span>}
+      <span className="file-chip-note">{withheld}</span>
+    </span>
   );
 }
 

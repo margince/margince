@@ -121,7 +121,12 @@ export function ManageViewsButton({
   return (
     <>
       <Button onClick={() => setOpen(true)}>{t("views.manage")}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={headingId}>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={headingId}
+        intent="form"
+      >
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("views.rail")}
         </Heading>

@@ -5,10 +5,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
-import { useT } from "../i18n";
+import { formatNumber, identifierNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
@@ -38,6 +38,15 @@ type ImapConnectRequest = {
 const DEFAULT_PORT = "993";
 const DEFAULT_MAILBOX = "INBOX";
 const DEFAULT_MAX_MESSAGES = "50";
+
+type Range = { min: number; max: number };
+const PORT_RANGE: Range = { min: 1, max: 65535 };
+// The server clamps a larger count rather than refusing it; the form asks first.
+const MAX_MESSAGES_RANGE: Range = { min: 1, max: 200 };
+
+function inRange(value: number, { min, max }: Range): boolean {
+  return Number.isInteger(value) && value >= min && value <= max;
+}
 
 // The two IMAP-specific server conditions get their own honest sentence;
 // every other failure reads the way failures read everywhere else. Neither
@@ -91,6 +100,8 @@ export function ImapMailboxForm({
   renderActions?: (actions: ReactNode) => ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [host, setHost] = useState("");
   const [port, setPort] = useState(DEFAULT_PORT);
@@ -146,16 +157,33 @@ export function ImapMailboxForm({
   ]
     .filter((need): need is [true, string] => need[0] === true)
     .map(([, label]) => label);
-  const ready =
-    missing.length === 0 &&
-    Number.isInteger(parsedPort) &&
-    parsedPort >= 1 &&
-    parsedPort <= 65535 &&
-    Number.isInteger(parsedMax) &&
-    parsedMax >= 1 &&
-    parsedMax <= 200;
+  const portInRange = inRange(parsedPort, PORT_RANGE);
+  const maxInRange = inRange(parsedMax, MAX_MESSAGES_RANGE);
+  // Filled in but unusable: named like the missing fields, never a silent no-op.
+  const outOfRange = [
+    [!portInRange, t("connectors.imapPort")],
+    [!maxInRange, t("connectors.imapMaxMessages")],
+  ]
+    .filter((bad): bad is [true, string] => bad[0] === true)
+    .map(([, label]) => label);
+  const ready = missing.length === 0 && outOfRange.length === 0;
   const needed = (absent: boolean) =>
     attempted && absent ? t("connectors.imapNeeded") : undefined;
+  const ranged = (
+    fits: boolean,
+    range: Range,
+    written: (bound: number) => string,
+  ) =>
+    attempted && !fits
+      ? t("connectors.imapRange", {
+          min: written(range.min),
+          max: written(range.max),
+        })
+      : undefined;
+  const refusal =
+    missing.length > 0
+      ? t("connectors.imapStillNeeded", { fields: missing.join(", ") })
+      : t("connectors.imapOutOfRange", { fields: outOfRange.join(", ") });
 
   const errorMessage = connect.isError
     ? imapErrorMessage(connect.error, t)
@@ -188,18 +216,14 @@ export function ImapMailboxForm({
 
   const actions = (
     <>
-      {attempted && missing.length > 0 && (
-        <ErrorLine inline>
-          {t("connectors.imapStillNeeded", { fields: missing.join(", ") })}
-        </ErrorLine>
-      )}
+      {attempted && !ready && <ErrorLine inline>{refusal}</ErrorLine>}
       <Button type="button" onClick={onDismiss} disabled={connect.isPending}>
         {dismissLabel}
       </Button>
       <Button
         variant="primary"
-        type="button"
-        onClick={submit}
+        type="submit"
+        form={formId}
         pending={connect.isPending}
         busyLabel={t("create.saving")}
       >
@@ -209,113 +233,118 @@ export function ImapMailboxForm({
   );
 
   return (
-    <form
-      className="imap-mailbox-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        submit();
-      }}
-    >
-      {/* Before the fields, not after: a contact connecting a mailbox from
-          Settings is told the same thing onboarding tells them, and reading
-          it after typing a password is reading it too late. */}
-      <div className="imap-mailbox-span">
-        <CaptureNotice />
-      </div>
-      <Field
-        label={t("connectors.imapHost")}
-        required
-        error={needed(host.trim() === "")}
+    <>
+      <form
+        id={formId}
+        className="form-stack"
+        // The press names what is missing itself; a native bubble would pre-empt it.
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
       >
-        {(control) => (
-          <TextInput
-            {...control}
-            value={host}
-            onChange={(event) => setHost(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("connectors.imapPort")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            type="number"
-            min={1}
-            max={65535}
-            value={port}
-            onChange={(event) => setPort(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field
-        label={t("connectors.imapUsername")}
-        required
-        error={needed(username.trim() === "")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            type="email"
-            autoComplete="email"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field
-        label={t("connectors.imapSecret")}
-        required
-        error={needed(secret === "")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            type="password"
-            autoComplete="off"
-            value={secret}
-            onChange={(event) => setSecret(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("connectors.imapMailbox")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={mailbox}
-            onChange={(event) => setMailbox(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("connectors.imapMaxMessages")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            type="number"
-            min={1}
-            max={200}
-            value={maxMessages}
-            onChange={(event) => setMaxMessages(event.target.value)}
-          />
-        )}
-      </Field>
-      <p className="t-caption imap-mailbox-span">
-        {t("connectors.imapSecretHint")}
-      </p>
-      {errorMessage && (
-        <div className="imap-mailbox-span">
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("connectors.imapConnectFailed")}
+        <div className="imap-mailbox-form">
+          {/* Before the fields: read after typing a password, it comes too late. */}
+          <div className="imap-mailbox-span">
+            <CaptureNotice />
+          </div>
+          <Field
+            label={t("connectors.imapHost")}
+            required
+            error={needed(host.trim() === "")}
           >
-            {errorMessage}
-          </Callout>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={host}
+                onChange={(event) => setHost(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("connectors.imapPort")}
+            error={ranged(portInRange, PORT_RANGE, identifierNumber)}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                type="number"
+                min={PORT_RANGE.min}
+                max={PORT_RANGE.max}
+                value={port}
+                onChange={(event) => setPort(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("connectors.imapUsername")}
+            required
+            error={needed(username.trim() === "")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                type="email"
+                autoComplete="email"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("connectors.imapSecret")}
+            required
+            error={needed(secret === "")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                type="password"
+                autoComplete="off"
+                value={secret}
+                onChange={(event) => setSecret(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("connectors.imapMailbox")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={mailbox}
+                onChange={(event) => setMailbox(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("connectors.imapMaxMessages")}
+            error={ranged(maxInRange, MAX_MESSAGES_RANGE, (count) =>
+              formatNumber(count, locale),
+            )}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                type="number"
+                min={MAX_MESSAGES_RANGE.min}
+                max={MAX_MESSAGES_RANGE.max}
+                value={maxMessages}
+                onChange={(event) => setMaxMessages(event.target.value)}
+              />
+            )}
+          </Field>
+          <p className="t-caption imap-mailbox-span">
+            {t("connectors.imapSecretHint")}
+          </p>
+          {errorMessage && (
+            <div className="imap-mailbox-span">
+              <ErrorLine>{errorMessage}</ErrorLine>
+            </div>
+          )}
         </div>
-      )}
-      {renderActions(
-        <div className="actions imap-mailbox-span">{actions}</div>,
-      )}
-    </form>
+      </form>
+      {renderActions(<div className="actions">{actions}</div>)}
+    </>
   );
 }
 
@@ -332,7 +361,7 @@ export function ImapConnectForm({
   const t = useT();
   const headingId = useId();
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("connectors.imapModalTitle")}
       </Heading>

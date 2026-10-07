@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -195,11 +196,7 @@ func TestWebhookRetryRecordsAFailedPassAsAFailedRow(t *testing.T) {
 	failDueScans(t, owner)
 
 	_, completed, failed := jobtest.StartTestJobRunner(t, we.pool, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
 		WebhookRetry: compose.WebhookRetryConfig{
-			Interval: time.Hour,
 			Deliverer: func(db *database.DB) *webhooks.Deliverer {
 				return newTestDelivererOn(we, db, &now, rcv.server.Client())
 			},
@@ -220,11 +217,11 @@ func TestWebhookRetryRecordsAFailedPassAsAFailedRow(t *testing.T) {
 
 // TestWebhookRetryDispatchRepeatsOnItsConfiguredInterval pins the half of the
 // schedule a boot pass hides. RunOnStart fires once whatever the cadence is, so
-// a dispatcher wired to a constant instead of the operator's
-// --webhook-retry-interval looks identical at boot and then never runs again —
+// a dispatcher wired to a constant instead of the admin's webhook retry
+// setting looks identical at boot and then never runs again —
 // every parked delivery in the fleet stranded, with every gate green. Two
 // dispatches less than jobtest.DispatchGapBound apart can only happen if a
-// cadence far shorter than that flag's own default is what River is scheduling
+// cadence far shorter than that setting's own default is what River is scheduling
 // on.
 func TestWebhookRetryDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
 	we := setupWebhooks(t)
@@ -232,11 +229,11 @@ func TestWebhookRetryDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
 	rcv := newReceiver(t, http.StatusInternalServerError)
 
 	_, completed, _ := jobtest.StartTestJobRunner(t, we.pool, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
+		Schedules: compose.SchedulesForTest(map[string]time.Duration{
+			identity.WebhookRetryIntervalSeconds.Key(): jobtest.DispatchInterval,
+		}),
 		WebhookRetry: compose.WebhookRetryConfig{
-			Interval: jobtest.DispatchInterval, Deliverer: func(*database.DB) *webhooks.Deliverer { return newTestDeliverer(we, &now, rcv.server.Client()) },
+			Deliverer: func(*database.DB) *webhooks.Deliverer { return newTestDeliverer(we, &now, rcv.server.Client()) },
 		},
 	})
 	// Generous compared with the gap bound: a run this slow is a sick machine,
@@ -246,59 +243,7 @@ func TestWebhookRetryDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
 	kind := compose.WebhookRetryArgs{}.Kind()
 	first, second := jobtest.AwaitTwoDispatchArrivals(waitCtx, t, completed, kind)
 	if gap := second.Sub(first); gap > jobtest.DispatchGapBound {
-		t.Fatalf("the two %s dispatches were %s apart, over the %s bound — the schedule is not the configured %s interval but some larger constant, and --webhook-retry-interval's own 30s default is the one that would look exactly like this",
+		t.Fatalf("the two %s dispatches were %s apart, over the %s bound — the schedule is not the configured %s interval but some larger constant, and the setting's own 30s default is the one that would look exactly like this",
 			kind, gap, jobtest.DispatchGapBound, jobtest.DispatchInterval)
-	}
-}
-
-// TestWebhookRetryWithoutAnIntervalSchedulesNothingButStillWorksAQueuedRow pins
-// the omission. River accepts PeriodicInterval(0) and turns it into a schedule
-// whose next run time never advances, so a runner assembled by a caller that
-// never meant to sweep would fan the whole fleet out as fast as Postgres
-// accepts an insert. Registering no schedule is the honest reading; the WORKERS
-// still register, so a row an earlier boot queued is still worked rather than
-// stranded.
-func TestWebhookRetryWithoutAnIntervalSchedulesNothingButStillWorksAQueuedRow(t *testing.T) {
-	we := setupWebhooks(t)
-	now := time.Now().UTC()
-	rcv := newReceiver(t, http.StatusInternalServerError)
-	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
-
-	runner, completed, _ := jobtest.StartTestJobRunner(t, we.pool, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		WebhookRetry:      compose.WebhookRetryConfig{Interval: 0, Deliverer: func(*database.DB) *webhooks.Deliverer { return deliverer }},
-	})
-	if err := runner.Enqueue(context.Background(), compose.WebhookRetryArgs{}, nil); err != nil {
-		t.Fatalf("enqueueing the pass an earlier boot would have left: %v", err)
-	}
-
-	// The close-date sweep is the FENCE, and it has to be: River inserts every
-	// RunOnStart periodic job in one round after Start returns, so a run that
-	// only waited on the hand-queued row could read the count before that round
-	// had happened at all — and would then report zero however the schedule was
-	// wired. Waiting for a sibling RunOnStart dispatcher to complete puts the
-	// round provably in the past. The workspace pass is waited on for the other
-	// half of the claim: a queued row is still worked with no schedule present.
-	waitCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	jobtest.AwaitKindsCompleted(waitCtx, t, completed,
-		compose.CloseDateSweepArgs{}.Kind(), compose.WebhookRetryArgs{}.Kind())
-
-	// Exactly the one row this test queued by hand. The count used to be zero
-	// because the schedule and the work were different kinds — the dispatcher's
-	// absence was countable on its own. One kind does both now, so the shape of
-	// a spinning schedule is not "a row exists" but "rows keep arriving", and
-	// the hand-queued row is the floor a spin would rise above.
-	var dispatched int
-	if err := we.pool.QueryRow(context.Background(),
-		`SELECT count(*) FROM river_job WHERE kind = $1`,
-		compose.WebhookRetryArgs{}.Kind()).Scan(&dispatched); err != nil {
-		t.Fatalf("counting the dispatched retry passes: %v", err)
-	}
-	if dispatched != 1 {
-		t.Errorf("%d %s rows exist after a runner was given no retry interval, want only the one queued here — a zero duration is not a cadence, and River spins on it rather than refusing it",
-			dispatched, compose.WebhookRetryArgs{}.Kind())
 	}
 }

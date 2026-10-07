@@ -1,9 +1,9 @@
 # Adopt the design: the record pages
 
-Sections §3–§7 of the plan in [adopt-the-design.md](adopt-the-design.md):
+Sections 3–7 of the plan in [adopt-the-design.md](adopt-the-design.md):
 the five record pages, each with every state it already handles. Read the
 gates table and the design-system steps there first; the sub pages, the
-Deal Room and the responsive ladder (§8–§9) are in
+Deal Room and the responsive ladder (sections 8–9) are in
 [adopt-the-design-surfaces.md](adopt-the-design-surfaces.md).
 
 ## 3. Company — the reference implementation
@@ -23,7 +23,8 @@ and the tightest e2e. Every later page copies its decisions. Files:
   refusal caption first. The `PageAsideToggle` leaves `actions` for the tab
   strip's trailing slot.
 - Facts line: domain · industry · size · owner · **way in** (restore the
-  known loss noted in `companyheader.tsx:891`) · last contact. The
+  contact the relationship runs through, drawn by the `WithWayIn` story in
+  `companyheader.stories.tsx`) · last contact. The
   lifecycle control stays a control on the name line (`CompanyLifecycleControl`),
   the relationship badges beside it.
 - The live dot: "In conversation" from the 360's pulse; absent when the
@@ -37,7 +38,7 @@ and the tightest e2e. Every later page copies its decisions. Files:
 |---|---|---|---|
 | Readings row (5) | `StateStrip` → `StatStrip` of `PipelineCard`, `MoneyStat`, conversation (from `pulse`), last touch, next (`view.next`); **each card carries an evidence chip** (`EvidenceMark` with the hover popover, opening `EvidenceModal` on click: the rows summed, the read date, the connection) **and is a link to its tab** (`companyTabRoute`); the chip stops the click | `state_strip`, `useFinanceSummary`, the citations already on the strip | `co.strip.notAssessed`; finance `notACustomer / noConnection / unmapped / syncing / withheld / staleFigure / errorFigure / nothingBilled / error / loading`; `co.strip.unpriced`, `pricedPartly`, `convertedAsOf`; `co.section.restricted`; a slot that cannot be read is absent or says so, never €0 or "—" without a reason |
 | The 360 | `TodayOnThisAccount` + `VerdictHead` (`HealthStat`/`AccountHealthStat` as the word and dims) + `RecordSpine` + the thread from `useChronologySlots` folded behind "Read the thread · N" | 360 sections, chronology | `today.quiet` (nothing to say draws a calm 360, not an empty pane); `today.failed`; `co.section.unavailable`; withheld sections drop their row and say so once; `since_last_visit` with a withheld baseline never becomes a claim; "Write it again" only when the reader may |
-| Deep-read offer | `DeepReadPanel` **leads the column** instead of the 360 when `nothingOnFile(view)` | | the two honest scan phases; `SiteReadPanel` pages read/skipped and why; 422 no website; 501 seam unwired; `SiteReadDeferral` |
+| Deep-read offer | `DeepReadPanel` **leads the column** instead of the 360 when `nothingOnFile(view)` | | the two scan phases; `SiteReadPanel` pages read/skipped and why; 422 no website; 501 seam unwired; `SiteReadDeferral` |
 | What needs you | one list: the moment as the lead row, `co.suggest.*` rows (`draftReply / openDeal / addTask` verbs; `add_task` has no surface, so dismiss only), tasks from `CompanyTasksTab`'s source, the next meeting (`onPrepareMeeting`) | 360 suggestions, tasks, meetings | `co.next.empty`; `co.suggest.more` on the cap; withheld suggestions remove the row, not the verb; `DecisionsChip` count stays in the menu |
 | Commercial (the money) | One pane, the `DESIGN.md` zone: `CompanyContractState` and won/lost on one line, then `CompanyWorkCard`'s open deals with their status clause (`workVerbs`), then the project. `CompanyLastOffer` and the full table live on the Deals tab; the details panel repeats the contract line | `view.deals`, `view.projects` | `contracts.state.none`; `co.work.statusesWithheld`; `co.work.countAtLeast`; `leadingDeal` refuses to pick on a truncated page or mixed currencies |
 | Ask (prepared questions) | `AssistantPanel` as full-width rows, no free field; the three questions are the ones the server answers (`CompanyQuestion`), so no new keys — a fourth is a server change first | | `co.ask.nothing` |
@@ -54,15 +55,23 @@ sentence; version skew banners unchanged.
 Present in the mock: 360 with sources, spine, folded thread, needs list with
 suggestions and tasks, deals, about with sources and staleness, contacts,
 details, tags, history rail, Contacts map, Profile, Finance, Documents,
-Partner, ⌘K, compose. **Not in the mock, must be built in this step:**
-evidence receipts (`EvidenceModal` with steps) behind every source chip; fact
-contradictions (`co.factSuspect`); the deep-read card and site-read panel;
-the full-history modal with restore; the decisions panel from the menu;
-counterparty hold row; VAT mark; custom fields in their own Details section; document extraction
-staging on the Documents tab (three states); the meeting brief drawer;
-hierarchy rollup with the FX 422; provenance line (`captured_by`, "agent:
-deepread") restored under the facts; since-last-visit acknowledgement with
-its 5 s dwell.
+Partner, ⌘K, compose.
+
+**Built in this step** (not in the mock):
+
+- evidence receipts (`EvidenceModal` with steps) behind every source chip
+- fact contradictions (`co.factSuspect`)
+- the deep-read card and site-read panel
+- the full-history modal with restore
+- the decisions panel from the menu
+- counterparty hold row
+- VAT mark
+- custom fields in their own Details section
+- document extraction staging on the Documents tab (three states)
+- the meeting brief drawer
+- hierarchy rollup with the FX 422
+- provenance line (`captured_by`, "agent: deepread") restored under the facts
+- since-last-visit acknowledgement with its 5 s dwell
 
 ### 3.4 Tests
 
@@ -71,7 +80,7 @@ Rewrite the shape assertions in `company-record.spec.ts` in the same commit
 right, closed, one pane of named sections). Update `company360.test.tsx`,
 `companyheader.test.tsx`, `companyrail.test.tsx` for markup, not behaviour.
 `history.spec.ts` unchanged. Storybook: the `Records/Company 360/` stories for
-every state row in §3.2 (this is where "empty", "withheld", "never read" and
+every state row in section 3.2 (this is where "empty", "withheld", "never read" and
 "stale" get their pictures).
 
 ## 4. Contact
@@ -108,7 +117,7 @@ Files: `contactpage.tsx`, `contact360.ts`, `contactrail.tsx`,
 - **Details (right, closed).** `ContactRail` stays **one pane with hairline
   slices** (its documented anatomy), plus `ContactEmailPanel` under it.
 - **States to keep:** `contact.page.loading` becomes a skeleton (the one page
-  without one); `contact.page.notOpened`; `withheldSections`
+  without one). Also keep `contact.page.notOpened`; `withheldSections`
   read once; consent verdict from the server key; `provider.profile.neverRun`
   mark on the Research tab (and a cancelled run reads as never run);
   `contact.graph.*` incompleteness on the map; archived verb removal.
@@ -171,7 +180,7 @@ Files: `leads.tsx` (over the cap: the record moves to `screens/lead/`),
   override badge / top factor / `scoreNoSignals`), status, source, company,
   first response (SLA line, only when the target is on). "Next" (the booked
   meeting) and "Your move" are added only once the lead's 360 carries them
-  (§11). Every slot states its absence in words.
+  (section 11). Every slot states its absence in words.
 - **The 360.** Assembled, not written: the standing word from
   `statusReading`, a sentence from the ladder explanation
   (`ladderExplanation`: who moved it and what it read), the ladder

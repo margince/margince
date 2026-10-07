@@ -93,7 +93,15 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	// writers of one company's mark must never write the same object, or the
 	// stored image and the record's provenance end up describing different
 	// pictures.
-	key, err := contacts.PutLogo(r.Context(), h.blob, companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID), png)
+	markKey := companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID)
+	// Declared before the bytes exist, because a failed persist below leaves them
+	// deliberately: deleting an object the row may already name would show a broken
+	// image, so the ledger collects it instead.
+	if err := h.store.RecordLogoIntent(r.Context(), markKey); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	key, err := contacts.PutLogo(r.Context(), h.blob, markKey, png)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

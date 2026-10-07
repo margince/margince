@@ -385,13 +385,6 @@
   align-items: center;
   gap: var(--gapActions);
 }
-/* The way into the whole queue: a button with its arrow, the glyph and the
-   word one flow. */
-.brief-focus-open {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
 
 @media (max-width: 720px) {
   .brief-triage {
@@ -416,18 +409,13 @@
   .brief-triage-lead .worklist-row > * {
     order: 3;
   }
-  /* The panel's own head has room for its title or for the way into the
-     queue, not both; the page head's primary control already opens it. */
-  .brief-focus-open {
-    display: none;
-  }
   /* ds:ignore the phone rung of the same one headline */
   .brief-triage-lead .worklist-row-title,
   .brief-triage-lead .emailentry__subject {
     font: var(--fontHeadingSmall);
   }
-  /* The way into the queue takes its own line under the title on a phone:
-     the head is one band, and a title beside a two-word button was neither. */
+  /* The badges take their own line under the title on a phone rather than
+     squeezing it. */
   .brief-focus-actions {
     flex-wrap: wrap;
   }

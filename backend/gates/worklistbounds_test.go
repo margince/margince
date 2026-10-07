@@ -6,7 +6,7 @@
 package gates
 
 // The worklist reports a source as possibly having more work behind it when its
-// lane came back exactly at its bound. Two of those bounds live behind a seam
+// lane came back at its bound. Two of those bounds live behind a seam
 // the attention package cannot import, so it keeps its own copy — and a copy
 // nobody checks is a wrong number waiting.
 //

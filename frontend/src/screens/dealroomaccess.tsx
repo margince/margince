@@ -291,7 +291,7 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
     remedy: t("access.issued.copyFailed"),
   });
   return (
-    <div className="access-issued">
+    <div className="form-stack">
       <IssuedNotice queued={issued.queued} email={issued.participant.email} />
       <Field label={t("access.issued.linkLabel")}>
         {(control) => <TextInput {...control} readOnly value={link} />}
@@ -302,9 +302,8 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
           {copy.label}
         </Button>
       </div>
-      {/* Below the row rather than inside it: the actions band lays controls
-          out side by side, and a notice squeezed in beside the button it is
-          about loses the line it needs to say what to do instead. */}
+      {/* Below the row, not in it: beside its button the notice loses the
+          line it needs to say what to do instead. */}
       {copy.notice}
       <p className="t-caption">{t("access.issued.oneTime")}</p>
     </div>
@@ -379,12 +378,12 @@ function InviteDialog({
               capability,
             })
       }
-      placement="right"
+      intent="form"
     >
       {issued ? (
         <IssuedLink issued={issued} />
       ) : (
-        <div className="form-stack">
+        <>
           <Field label={t("access.nameLabel")} required>
             {(control) => (
               <TextInput
@@ -415,7 +414,7 @@ function InviteDialog({
             }))}
           />
           <p>{t("access.inviteNote")}</p>
-        </div>
+        </>
       )}
     </ConfirmModal>
   );
@@ -570,6 +569,7 @@ function CapabilityDialog({
       open={open}
       onClose={onClose}
       title={t("access.changeCapabilityTitle", { name: participant.full_name })}
+      intent="form"
       confirmLabel={t("access.save")}
       confirmDisabled={capability === participant.capability}
       pending={change.isPending}

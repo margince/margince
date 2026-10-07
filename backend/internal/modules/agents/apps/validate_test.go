@@ -35,7 +35,7 @@ function render(root, data) { root.replaceChildren(); }
 </body></html>`
 
 func TestAdmitAcceptsATrueSelfContainedDocument(t *testing.T) {
-	findings, mismatch := admit(cleanDocument, "Morning brief")
+	findings, mismatch := admit(cleanDocument, "Morning brief", false)
 	if len(findings) != 0 {
 		t.Fatalf("admit refused a clean document: %v", findings)
 	}
@@ -60,7 +60,7 @@ func TestAdmitRefusesADocumentThatReachesOffOrigin(t *testing.T) {
 		{"a meta refresh", `<meta http-equiv="refresh" content="0;url=/x">`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if findings, _ := admit(cleanDocument+tc.doc, "Morning brief"); len(findings) == 0 {
+			if findings, _ := admit(cleanDocument+tc.doc, "Morning brief", false); len(findings) == 0 {
 				t.Fatalf("admit accepted a document that reaches off-origin: %s", tc.doc)
 			}
 		})
@@ -77,7 +77,7 @@ func TestAdmitRefusesADocumentThatCallsAToolOrCarriesACredential(t *testing.T) {
 		{"a stashed access token", `<script>const t=answer.access_token</script>`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if findings, _ := admit(cleanDocument+tc.doc, "Morning brief"); len(findings) == 0 {
+			if findings, _ := admit(cleanDocument+tc.doc, "Morning brief", false); len(findings) == 0 {
 				t.Fatalf("admit accepted %q", tc.doc)
 			}
 		})
@@ -91,7 +91,7 @@ func TestAdmitRefusesADocumentThatBuildsMarkupFromData(t *testing.T) {
 	// is testing when the whole tree is swept.
 	for _, sink := range []string{"inner" + "HTML", "insertAdjacent" + "HTML", "eval("} {
 		doc := cleanDocument + `<script>node.` + sink + `= x</script>`
-		if findings, _ := admit(doc, "Morning brief"); len(findings) == 0 {
+		if findings, _ := admit(doc, "Morning brief", false); len(findings) == 0 {
 			t.Errorf("admit accepted a document using %s", sink)
 		}
 	}
@@ -99,7 +99,7 @@ func TestAdmitRefusesADocumentThatBuildsMarkupFromData(t *testing.T) {
 
 func TestAdmitNamesEveryReasonRatherThanTheFirst(t *testing.T) {
 	// An operator reading one refusal at a time re-deploys once per finding.
-	findings, _ := admit(cleanDocument+`<link href="https://cdn.example/a.css">`, "Morning brief")
+	findings, _ := admit(cleanDocument+`<link href="https://cdn.example/a.css">`, "Morning brief", false)
 	if len(findings) < 2 {
 		t.Fatalf("admit reported %v; a document with a link AND an absolute origin has two reasons", findings)
 	}
@@ -108,7 +108,7 @@ func TestAdmitNamesEveryReasonRatherThanTheFirst(t *testing.T) {
 func TestAdmitReportsATitleMismatchWithoutRefusing(t *testing.T) {
 	// A copy edit on one side of a language boundary must not take a view down.
 	doc := strings.Replace(cleanDocument, "<title>Morning brief</title>", "<title>Mornning brief</title>", 1)
-	findings, mismatch := admit(doc, "Morning brief")
+	findings, mismatch := admit(doc, "Morning brief", false)
 	if len(findings) != 0 {
 		t.Fatalf("a title mismatch refused the document: %v", findings)
 	}
@@ -119,7 +119,7 @@ func TestAdmitReportsATitleMismatchWithoutRefusing(t *testing.T) {
 
 func TestAdmitReportsAMissingTitleWithoutRefusing(t *testing.T) {
 	doc := strings.Replace(cleanDocument, "<title>Morning brief</title>", "", 1)
-	findings, mismatch := admit(doc, "Morning brief")
+	findings, mismatch := admit(doc, "Morning brief", false)
 	if len(findings) != 0 {
 		t.Fatalf("a missing title refused the document: %v", findings)
 	}
@@ -133,7 +133,7 @@ func TestAdmitReadsATitleThroughItsAttributesAndEntities(t *testing.T) {
 	// so neither the attribute nor the entity form is hypothetical.
 	doc := strings.Replace(cleanDocument, "<title>Morning brief</title>",
 		`<title dir="ltr">Who knows &amp; who does not</title>`, 1)
-	if _, mismatch := admit(doc, "Who knows & who does not"); mismatch {
+	if _, mismatch := admit(doc, "Who knows & who does not", false); mismatch {
 		t.Fatal("admit reported a mismatch against a title it should have read")
 	}
 }
@@ -194,7 +194,7 @@ func TestAdmitEnforcesEveryClassTheVocabularyDeclares(t *testing.T) {
 	}
 	for name, tokens := range rules {
 		doc := cleanDocument + "<!-- " + tokens[0] + " -->"
-		if findings, _ := admit(doc, "Morning brief"); len(findings) == 0 {
+		if findings, _ := admit(doc, "Morning brief", false); len(findings) == 0 {
 			t.Errorf("a document carrying %q from the %s class was admitted", tokens[0], name)
 		}
 	}
@@ -216,7 +216,7 @@ func TestAdmitRefusesAnUppercasedHTMLConstruct(t *testing.T) {
 		`<meta HTTP-EQUIV="refresh" content="0">`,
 		`<a href="JAVASCRIPT:alert(1)">x</a>`,
 	} {
-		if findings, _ := admit(cleanDocument+doc, "Morning brief"); len(findings) == 0 {
+		if findings, _ := admit(cleanDocument+doc, "Morning brief", false); len(findings) == 0 {
 			t.Errorf("admit accepted the uppercased construct %q", doc)
 		}
 	}
@@ -226,7 +226,7 @@ func TestAdmitRefusesAnUppercasedHTMLConstruct(t *testing.T) {
 // fire on prose that merely reads like it, and this check false-positives
 // readily enough already.
 func TestAdmitDoesNotCaseFoldAJavaScriptIdentifier(t *testing.T) {
-	if findings, _ := admit(cleanDocument+"<!-- the xmlhttprequest era is over -->", "Morning brief"); len(findings) != 0 {
+	if findings, _ := admit(cleanDocument+"<!-- the xmlhttprequest era is over -->", "Morning brief", false); len(findings) != 0 {
 		t.Errorf("admit refused prose that merely resembles an identifier: %v", findings)
 	}
 }
@@ -237,7 +237,7 @@ func TestAdmitDoesNotCaseFoldAJavaScriptIdentifier(t *testing.T) {
 // this build produces.
 func TestAdmitAcceptsAnOrdinaryFunctionDeclaration(t *testing.T) {
 	doc := cleanDocument + `<script>const f = function (x) { return x; };</script>`
-	if findings, _ := admit(doc, "Morning brief"); len(findings) != 0 {
+	if findings, _ := admit(doc, "Morning brief", false); len(findings) != 0 {
 		t.Fatalf("admit refused a document for declaring a function: %v", findings)
 	}
 }

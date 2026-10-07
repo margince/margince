@@ -6,7 +6,7 @@
 package gates
 
 // A contract change owes three regenerations, and the one that strands the
-// FRONTEND types is enforced in two different places for two different readers.
+// frontend types is enforced in two different places for two different readers.
 //
 // Locally it is scripts/check-contract-frontend-drift.sh, wired into
 // check-backend, because a backend-only author has no reason to run the lane
