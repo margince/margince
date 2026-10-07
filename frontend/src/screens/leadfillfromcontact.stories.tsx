@@ -12,7 +12,7 @@ import {
 } from "./story-utils";
 
 // "Fill from a contact" under a lead's Details: the way an unnamed lead,
-// created against a company, gets its person from a contact the CRM holds.
+// created against a company, gets its name from a contact the CRM holds.
 const meta: Meta = {
   title: "Records/Leads/Fill from a contact",
   parameters: { layout: "padded" },

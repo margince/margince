@@ -87,7 +87,7 @@ export function OfferedNameControl({
 /**
  * The picked record's values for the fields it may write: the blank ones, and
  * the ones an EARLIER pick filled and nobody has typed over since. A second
- * pick replaces the first person rather than leaving half of them behind;
+ * pick replaces the first record rather than leaving half of them behind;
  * what the reader typed is never touched.
  */
 function refilled(

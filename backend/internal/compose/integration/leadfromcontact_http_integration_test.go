@@ -46,7 +46,7 @@ func TestALeadFromAContactTakesWhatTheContactKnows(t *testing.T) {
 	}, nil, &lead); status != http.StatusCreated {
 		t.Fatalf("create lead from contact = %d", status)
 	}
-	// The same person asked for twice is the lead already held, named in the
+	// The same contact asked for twice is the lead already held, named in the
 	// refusal so the screen that asked can open it.
 	var duplicate struct {
 		Details struct {

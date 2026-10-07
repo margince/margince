@@ -3,7 +3,7 @@
 
 // A lead's identity, offered from the contacts the CRM already holds. A seller
 // writing a lead for somebody they know types the start of the name or the
-// address and picks them, rather than retyping a person and risking a typo that
+// address and picks them, rather than retyping a contact and risking a typo that
 // splits them in two.
 import { api } from "../api/client";
 import type { components } from "../api/schema";

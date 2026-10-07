@@ -19,7 +19,7 @@ const contactIDField = "contact_id"
 
 // fillLeadFromContact completes a lead from the contact it is worked from: the
 // name, address, title, profile and employer the contact already holds fill
-// whichever of those the caller left out, so a seller never retypes a person
+// whichever of those the caller left out, so a seller never retypes a contact
 // the CRM knows and a lead created against a company is not left unnamed.
 //
 // The contact is read through GetContact, so it carries that read's gates: a

@@ -18,7 +18,7 @@ type Contact = components["schemas"]["Contact"];
 /**
  * "Fill from a contact": the lead's name, address, title and company taken
  * from a contact the CRM already holds, in one save. It is how a lead created
- * against a company — drawn as "Unnamed lead" — gets its person without the
+ * against a company — drawn as "Unnamed lead" — gets its name without the
  * seller retyping somebody the CRM knows. Picking IS the act, so the picker
  * writes; what the contact does not hold is left as the lead has it.
  */

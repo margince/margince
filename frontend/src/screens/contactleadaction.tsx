@@ -19,11 +19,11 @@ import {
 type Lead = components["schemas"]["Lead"];
 
 /**
- * "Work as a lead": a contact the CRM already holds becomes the person an
+ * "Work as a lead": a contact the CRM already holds becomes the one an
  * opportunity is worked through, without retyping them. The lead is filled
  * from the contact on the server (`contact_id`), owned by the reader who asked,
  * and opened. A lead already holding the contact's address is that same
- * person's lead, so the refusal that says so opens it rather than failing.
+ * contact's lead, so the refusal that says so opens it rather than failing.
  */
 export function WorkAsLeadAction({
   contactId,

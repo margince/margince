@@ -354,7 +354,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	if err != nil {
 		return CreateLeadInput{}, err
 	}
-	// A lead filled from a contact is the CRM's own person, not an import: the
+	// A lead filled from a contact is the CRM's own contact, not an import: the
 	// replay an importer's namespace promises could not survive the contact
 	// changing between the two runs.
 	if req.ContactId != nil && req.SourceSystem != nil {

@@ -161,7 +161,7 @@ describe("a lead's identity, offered from the contacts", () => {
     });
   });
 
-  it("replaces the first person when a second is picked, leaving nothing of them behind", async () => {
+  it("replaces the first contact when a second is picked, leaving nothing of them behind", async () => {
     const writes: { method: string; body: unknown }[] = [];
     stubBackend(writes);
     const user = userEvent.setup();
