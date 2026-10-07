@@ -1,203 +1,197 @@
-# The installable app: manifest, service worker, offline page
+<!-- prose:plain -->
+# The app you can install: manifest, service worker, offline page
 
-Margince can be installed from the browser as an app: it gets its own window,
-its own icon and its own place in the launcher or on the home screen. It is the
-same web app from the same origin. Below: what the pieces are, what the service
-worker is allowed to do, and why it is allowed so little.
+Margince can be installed from the browser as an app. It gets its own window, its own icon and its
+own place in the launcher or on the home screen. It is the same web app from the same origin. Below:
+what the parts are, what the service worker may do, and why its job is so small.
 
 ## What ships today
 
-| Piece | Where | What it does |
+| Part | Where | What it does |
 |---|---|---|
-| Manifest | `frontend/public/manifest.webmanifest` | names the app, its colours, `start_url` and `display: standalone`, which is what makes it installable |
-| Icons | `frontend/public/`: `icon.svg`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, `web-app-manifest-192x192.png` and `-512x512.png` | the icons the browser tab, iOS and the manifest name; `frontend/src/app/sharepreview.test.ts` holds each to the size it declares |
-| Service worker | source `frontend/src/offline/serviceworker.js`, emitted as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a navigation the network could not complete with the offline page, and the offline page's own script; nothing else |
-| Offline page | `frontend/src/offline/page.ts` (markup), `present.ts` (block, retry, reload on reconnect), `entry.ts`, `offline.css`; emitted as `/assets/offline-<hash>.html` | tells the reader the device cannot reach Margince, in their language, with a retry |
-| Registration and install state | `frontend/src/app/pwa.ts` | registers the worker in a production build; keeps the browser's install offer for the app to present |
+| Manifest | `frontend/public/manifest.webmanifest` | names the app, its colors, `start_url` and `display: standalone`, which makes it something you can install |
+| Icons | `frontend/public/`: `icon.svg`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, `web-app-manifest-192x192.png` and `-512x512.png` | the icons the browser tab, iOS and the manifest name; `frontend/src/app/sharepreview.test.ts` holds each one to what it declares |
+| Service worker | source `frontend/src/offline/serviceworker.js`, written out as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a page request the network could not complete with the offline page, and the offline page's own script; nothing else |
+| Offline page | `frontend/src/offline/page.ts` (the HTML), `present.ts` (block, retry, load again when the network is back), `entry.ts`, `offline.css`; written out as `/assets/offline-<hash>.html` | tells the reader the device cannot reach Margince, in their language, with a retry |
+| Sign-up and install state | `frontend/src/app/pwa.ts` | signs up the worker in a production build; keeps the browser's install offer for the app to show |
 
-Client storage (the reader's language, theme and the rest) lives behind
-`frontend/src/app/storage.ts`; the offline page reads the stored language
-through it like every other reader does.
+What the client stores (the language, theme and the rest) lives behind
+`frontend/src/app/storage.ts`. The offline page reads the stored language through it, the same way
+every other reader does.
 
-## The worker answers two requests, and neither is the app
+## The worker answers two requests, and none is the app
 
-The rule is short: **the worker answers two requests from Cache Storage and
-no others.** A page navigation whose network fetch failed outright gets the
-offline page. A request for the offline page's own script gets that script,
-from the cache first. Every other request gets no `respondWith` at all and
-takes the browser's own path. A navigation that reaches the server and comes
-back with a 404 or a 500 is passed through untouched; only a fetch that
-rejects (no network, no route to the host) gets the offline page.
+The rule is short: the worker answers **two requests from `Cache Storage`, and no others.** A page
+request (a `navigation`) whose network fetch fails gets the offline page. A request for the offline
+page's own script gets that script, from the cache first. Every other request gets no `respondWith`
+at all and takes the browser's own path. A page request that reaches the server and comes back with
+a 404 or a 500 passes through as it is. Only a fetch that is refused (no network, no route to the
+host) gets the offline page.
 
-That is narrower than a typical PWA. A worker that answers the app shell from a
-cache can pin a browser to an old build: the browser keeps serving that build's
-`index.html`, and the content-hashed bundle it names, past every later deploy.
-This one answers only the failure case, so it cannot. The offline script does not change
-that: its name carries a hash of its content and nothing in the app loads it,
-so serving it from the cache can pin no build. When the network works, the app
-always comes from the server.
+That is a smaller job than most service workers take on. A worker that answers the app shell from a
+cache can pin a browser to an old build. The browser keeps serving that build's `index.html`, and
+the JavaScript file it names by hash, past every later deploy.
 
-Navigations into what the api owns on this origin are not intercepted at all,
-not even offline, so an OAuth consent, an MCP discovery document or a
-webhook URL opened in a tab fails the way the browser fails it. The plugin
-reads the list from the keys of the dev server's proxy in
-`frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`, `/.well-known`,
-`/webhooks`, `/healthz`, `/readyz`, `/metrics`). It matches them by whole path
-segment, the way the served app routes them rather than the way the dev server
-does. `/mcp` and `/mcp/…` go to the network untouched, while `/mcp-apps/…`
-is shipped files, and a failed navigation there gets the offline page. The
-desktop launcher keeps its own copy of the list (`apiPrefixes` in
-`desktop/launcher/web.go`), and `frontend/vite-proxy.test.ts` fails when that
-copy and the proxy keys disagree.
+This one answers only the case where the fetch fails, so it cannot. The offline script does not
+change that. Its name carries a hash of its content and nothing in the app loads it, so serving it
+from the cache can pin no build. When the network works, the app always comes from the server.
 
-The worker does **not** use navigation preload. With it on, the browser
-requests every navigation in scope before the worker decides, including the
-ones the worker then leaves alone. A navigation left alone is then fetched a
-second time: two GETs of an address that may carry a single-use token, such as
-an email confirmation or an OAuth callback. The app routes by hash, so the
-worker sees a navigation only when the app launches or reloads, and the
-start-up time preload would hide is paid rarely.
+Page requests into what the API owns on this origin are never answered by the worker, not even
+offline. So an OAuth consent, an MCP `/.well-known` document or a webhook URL opened in a tab fails
+the way the browser fails it. `vite-pwa.ts` reads the list from the keys of the dev server's proxy
+in `frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`, `/.well-known`, `/webhooks`,
+`/healthz`, `/readyz`, `/metrics`). It matches them by whole path part: the way the served app
+routes them, rather than the way the dev server does. `/mcp` and `/mcp/…` go to the network as they
+are. `/mcp-apps/…` is shipped files, so a failed page request there gets the offline page.
+
+The desktop launcher keeps its own copy of the list (`apiPrefixes` in `desktop/launcher/web.go`).
+`frontend/vite-proxy.test.ts` fails when that copy and the proxy keys disagree.
+
+The worker does **not** use `navigation preload`. With it on, the browser requests every page in
+scope before the worker decides, including the ones the worker then leaves alone. A page request
+left alone is then fetched a second time. That is two GETs of an address that may carry a one-use
+token, such as an email confirm link or an OAuth return. The app routes by hash, so the worker sees
+a page request only when the app starts or loads again. The start time that `preload` would cut is a
+cost only now and then.
 
 ## How a build changes the worker
 
-`frontend/scripts/vite-pwa.ts` runs inside `vite build` and emits three
-files: `sw.js` at the site root, and under `assets/` the offline page
-(`offline-<hash>.html`) and its one script (`offline-<hash>.js`), each named
-for its content. The page lives under `assets/` for a rolling deploy. A
-replica still on the previous build answers a name it lacks with 404 (nginx's
-`/assets/` location is `try_files $uri =404`). The new worker's install then
-fails and is retried instead of caching the app shell as the offline page.
-The worker's source is plain JavaScript, emitted untouched after one line that
-sets `self.__MARGINCE_SW_SETTINGS__` to this build's settings:
+`frontend/scripts/vite-pwa.ts` runs inside `vite build` and writes out three files. One is `sw.js`
+at the site root. Under `assets/` are the offline page (`offline-<hash>.html`) and its one script
+(`offline-<hash>.js`). Each is named for its content.
+
+The page lives under `assets/` for a deploy that updates one server at a time. A copy of the server
+still on the last build answers a name it does not have with 404 (in nginx, `/assets/` has
+`try_files $uri =404`). The install of the new worker then fails and runs again, instead of storing
+the app shell in its cache as the offline page.
+
+The source of the worker is JavaScript with no build step. It is written out as it is, after one
+line that sets `self.__MARGINCE_SW_SETTINGS__` to this build's settings:
 
 - **the cache name**, `margince-offline-<release>-<digest>`. The release is
-  `MARGINCE_RELEASE_VERSION` (`dev` when unset) and the digest is a hash of
-  the offline page, the worker's source and the pass-through list.
-  `workerCacheName` in `vite-pwa.ts` builds it. `vite-pwa.test.ts` holds that an
-  identical build keeps the name and that any change to those inputs, or to the
-  release, renames it;
-- the offline page's address and its script's content-hashed address;
-- the pass-through prefixes.
+  `MARGINCE_RELEASE_VERSION` (`dev` when not set). `<digest>` is a hash of the offline page, the
+  source of the worker and the list of paths it passes through. `workerCacheName` in `vite-pwa.ts`
+  builds it. `vite-pwa.test.ts` holds that the same build keeps the name. It also holds that any
+  change to those inputs, or to the release, renames it;
+- the offline page's address and the address of its script, named by hash;
+- the start of each path the worker passes through.
 
-A new release or a changed page gives `sw.js` new bytes. The browser checks
-`/sw.js` on navigation, finds it changed and installs the new worker, which
-precaches the offline page and its script under its own cache name (both or
-the install fails) and calls `skipWaiting()`.
-On `activate` it deletes **every** cache whose name is not its own (the old
-`margince-shell-v1` included) and calls `clients.claim()`.
+A new release or a changed page gives `sw.js` new bytes. The browser checks `/sw.js` on a page
+request, finds it changed and installs the new worker. That worker stores the offline page and its
+script under its own cache name (both, or the install fails) and calls `skipWaiting()`. On
+`activate` it deletes **every** cache whose name is not its own (the old `margince-shell-v1`
+included) and calls `clients.claim()`.
 
-The browser fetches the worker script past its HTTP cache. `pwa.ts` registers
-with `updateViaCache: "none"`, and browsers cap a worker script's HTTP freshness
-at a day in any case. nginx still sends `Cache-Control: no-cache` for `/sw.js`
-and `/manifest.webmanifest`, for any shared cache in front of it. It answers a
-missing one with 404 rather than the app shell, because a browser refuses an
-HTML page as a worker script and keeps the worker it had. The offline page and its
-script are cached for a year as immutable, which their content-hashed names
-make safe. The desktop launcher (`desktop/launcher/web.go`) serves these files
-with no cache headers of its own and needs none, for the same reason.
+The browser fetches the worker script past its HTTP cache. `pwa.ts` signs it up with
+`updateViaCache: "none"`. Browsers also keep a worker script in the HTTP cache for a day at most, in
+any case.
 
-The build's own tests load the emitted worker into a stand-in for its global
-scope and drive it: `frontend/scripts/vite-pwa.test.ts`.
+The nginx server still sends `Cache-Control: no-cache` for `/sw.js` and `/manifest.webmanifest`, for
+any shared cache between it and the browser. It answers a missing one with 404 rather than the app
+shell. A browser refuses an HTML page as a worker script, and keeps the worker it has. The offline
+page and its script stay in the cache for a year as files that never change, which their names by
+hash make safe. The desktop launcher (`desktop/launcher/web.go`) serves these files with no cache
+headers of its own and needs none, for the same reason.
+
+The build's own tests load the worker it writes into a stand-in for the scope it runs in, and run
+it: `frontend/scripts/vite-pwa.test.ts`.
 
 ## The offline page
 
-The page is shown when the device cannot reach Margince at all. It carries one
-block per locale the app ships, with the copy from the `offline.*` keys of the
-catalogs. Its styles are inline: `tokens.css` and `base.css` compiled into the
-document, so its colours, type and button are the product's own in both
-themes.
+The page shows when the device cannot reach Margince at all. It carries one block per language the
+app ships, with the text from the `offline.*` keys of the catalogs. Its CSS is part of the page,
+with `tokens.css` and `base.css` built in. So its colors, type and button are the product's own in
+both themes.
 
-Its script is the one thing it loads. The site's content-security policy
-allows no inline script, so the script is a file of its own under `/assets/`,
-and the worker answers it from the cache it installed it into. The browser's
-HTTP cache is not enough: `vite preview` and the desktop launcher send no
-caching headers, and any browser may drop an entry.
+Its script is the one thing it loads. The site's content security policy allows no script written
+inside the page, so the script is a file of its own under `/assets/`. The worker answers it from the
+cache it installed it into. The browser's HTTP cache is not enough: `vite preview` and the desktop
+launcher send no cache headers, and any browser may drop an entry.
 
 The script shares the app's code rather than copying it. `startTheme()` from
-`frontend/src/app/theme.ts` sets the stored theme, so an explicit light or dark
-choice holds offline too and "system" follows the device. `preferredLocale()`
-from `frontend/src/i18n/locale.ts`, a module that carries no catalog, picks the
-block: the stored pick, then the browser's language, then English, the same
-answer the app gives before the account says otherwise. The script sets the
-title, makes "Retry" reload the address the reader asked for (route included),
-and reloads by itself on the browser's `online` event, which is what the
-page's sentence promises. Should the script still fail to load, the page reads
-in English and its retry is a plain link that reloads the page without the
-route.
+`frontend/src/app/theme.ts` sets the stored theme, so a `light` or `dark` theme the reader set holds
+offline too, and `system` follows the device. `preferredLocale()` from `frontend/src/i18n/locale.ts`
+chooses the block. That module carries no catalog. It takes the stored language, then the browser's
+language, then English: the same answer the app gives before the account sets a language.
 
-## Registration and the install offer
+The script sets the title, and makes "Retry" load the address the reader asked for (route included).
+It also loads the page again by itself on the browser's `online` event, which is what the page's
+text promises. If the script still fails to load, the page reads in English. Its retry is then a
+normal link that loads the page again without the route.
 
-`registerServiceWorker()` in `frontend/src/app/pwa.ts` registers `/sw.js` with
-scope `/`, only in a production build, only where the browser has service
-workers, and only after the window's `load` event, so installing the worker
-never competes with the app's first load. A failed registration is logged with
-`console.warn` and changes nothing else.
-`frontend/src/app/serviceworker-registrar.test.ts` fails any shipped module but
-`pwa.ts` that names `navigator.serviceWorker` in code, in any script dialect
-under `frontend/src` or an extension's frontend, so a second registrar cannot
-appear unnoticed.
+## Sign-up and the install offer
 
-`listenForInstall()` runs from `main.tsx` before the first render, because the
-browser can make its offer before React mounts. It returns the function that
-removes its listeners. `useInstallState()` answers one of:
+`registerServiceWorker()` in `frontend/src/app/pwa.ts` signs up `/sw.js` with scope `/`. It does so
+only in a production build, and only where the browser has service workers. It also waits for the
+window's `load` event, so installing the worker never slows the app's first load. A failed sign-up
+is logged with `console.warn` and changes nothing else.
+
+`frontend/src/app/serviceworker-registrar.test.ts` fails any shipped module but `pwa.ts` that names
+`navigator.serviceWorker` in code. It reads every kind of script under `frontend/src` or the
+frontend of an extension. So a second module that signs up a worker cannot come in without notice.
+
+`listenForInstall()` runs from `main.tsx` before React shows the first screen, because the browser
+can make its offer before React starts. It returns the function that undoes it. `useInstallState()`
+answers one of:
 
 | State | Meaning |
 |---|---|
-| `installed` | running as the installed app (`display-mode: standalone`, or iOS's `navigator.standalone`; a browser without `matchMedia` reads as not installed), or accepted or installed during this visit |
-| `available` | the browser offered to install; `prompt()` asks it once and answers `accepted` or `dismissed`. A browser that refuses to show its dialog (a spent offer) answers `dismissed` and logs a warning, so the row never keeps offering a press that cannot work |
+| `installed` | running as the installed app (`display-mode: standalone`, or `navigator.standalone` on iOS; a browser without `matchMedia` reads as not installed), or accepted or installed in this session |
+| `available` | the browser offered to install; `prompt()` asks it once and answers `accepted` or `dismissed`. A browser that refuses to show its window (an offer already used) answers `dismissed` and logs it, so the row never keeps offering a button that cannot work |
 | `dismissed` | the reader turned the offer down; it holds until the browser offers again (`available`) or the app is installed |
-| `manual-ios` | an iPhone or iPad browser, where Add to Home Screen is done by hand |
+| `manual-ios` | an iPhone or iPad browser, where Add to Home Screen is a step by hand |
 | `unavailable` | nothing this page can offer |
 
-## Connectivity
+## Network state
 
-`frontend/src/app/connectivity.ts` holds one of three states, and the shell's
-banner (`app/connectivitybanner.tsx`) says which outage holds:
+`frontend/src/app/connectivity.ts` holds one of three states. The shell's banner
+(`app/connectivitybanner.tsx`) says which problem holds:
 
-- **offline**: the browser reports no network (`navigator.onLine` and the
-  `online`/`offline` events). Reads pause on every surface, as they always did.
-- **unreachable**: a request to the api rejected at the network level, outlived
-  its client deadline, or got a bare 502, 503 or 504. (A bare 5xx is a proxy
-  saying the api is down; the api's own 5xx carries a problem body.) A
-  `/healthz` probe sent at once failed too. One refused path on a working server declares nothing.
-  None of it counts on a model route, where a long wait is the work.
+- `offline`: the browser reports no network (`navigator.onLine` and the `online`/`offline` events).
+  Reads pause on every screen, as they always have.
+- `unreachable`: a request to the API is refused at the network level, runs past its client time
+  limit, or gets a 502, 503 or 504 with no body. (A `5xx` with no body is a proxy saying the API is
+  down; the API itself sends a `5xx` with a problem body.) A `/healthz` check sent at once fails
+  too. One refused path on a working server declares nothing. None of it counts on a model route,
+  where a long wait is the work.
 
-Only a surface that states the outage holds it open, because a pause nothing
-explains is a page that never loads. Two surfaces do: the shell's banner, and
-the connection screen a failed first session check draws. That screen checks
-once more as it opens, so the probe can let the reader in unaided. A public page (unsubscribe,
-preferences, booking, a buyer room) states none: a failure there is its own.
+Only a screen that states the problem holds it open, because a pause that nothing explains is a page
+that never loads. Two screens do: the shell's banner, and the connection screen that a failed first
+session check shows. That screen checks once more as it opens, so the check can let the reader in
+without help. A public page (unsubscribe, settings, booking, a `buyer room`) states none: an error
+there is its own.
 
-Once declared, `/healthz` is asked again after 2 seconds, doubling to a
-30-second ceiling, never while the tab is hidden and at once when the tab or
-network comes back; a 2xx or any api answer clears it. Writes never wait
-(`networkMode: "always"`). One the offline device never sent says it was not
-saved; one cut off in flight may have landed, so it says so and asks the reader
-to check before retrying. A proxy's 5xx keeps the shared failure line.
+Once the problem is declared, `/healthz` is asked again after 2 seconds, then after twice as long
+each time, up to 30 seconds. It is never asked while the tab is not shown, and it is asked at once
+when the tab or network comes back. A `2xx` or any API answer ends it. Writes never wait
+(`networkMode: "always"`).
+
+A write the offline device never sent says it is not saved. A write cut off on the way may have
+reached the server, so it says so. It asks the reader to check before sending it again. A `5xx` from
+a proxy keeps the shared error line.
 
 ## Install on this device
 
-Settings → Account has a "This device" panel with one row,
-`frontend/src/screens/thisdevice.tsx`, drawn from `useInstallState()` alone:
+Settings → Account has a "This device" section with one row, `frontend/src/screens/thisdevice.tsx`,
+built from `useInstallState()` alone:
 
-- `available`: Install asks the browser and pends while its dialog is open.
-- `dismissed`: a sentence naming the browser's menu and its address-bar
-  install icon. Chromium does not offer again in this page session.
-- `manual-ios`: one sentence, Share and then Add to Home Screen.
-- `installed`: the row says so, with nothing to press.
-- `unavailable`: no row and no panel, since a browser that cannot install is a
-  capability this device lacks, not a refusal.
+- `available`: Install asks the browser, and waits while its install window is open.
+- `dismissed`: a line of text naming the browser's menu and the install icon in its address line.
+  Chromium does not offer again in this page session.
+- `manual-ios`: one line: Share, then Add to Home Screen.
+- `installed`: the row says so, with nothing to click.
+- `unavailable`: no row and no section. A browser that cannot install is missing a part on this
+  device; it has not refused.
 
-Focus that falls with the button moves to the sentence or the "Installed" that
-replaces it; focus anywhere else stays put. macOS Safari's File › Add to Dock
-gets no row: it needs macOS 14, and Safari reports every macOS as 10.15.7.
+When the button is removed and takes focus with it, focus moves to the text or to the "Installed"
+that takes its place. Focus in any other place stays where it is. On macOS, the Safari menu entry
+File › Add to Dock gets no row: it needs macOS 14, and Safari reports every macOS as 10.15.7.
 
-## Turning the worker off in an emergency
+## Turning the worker off when it goes wrong
 
-If a shipped worker ever misbehaves, ship a `sw.js` at the same address that
-removes itself. Every browser that holds the bad worker fetches `/sw.js` on
-its next navigation, installs this one, and this one takes itself and every
-cache away:
+If a shipped worker does harm, ship a `sw.js` at the same address that removes itself. Every browser
+that holds the wrong worker fetches `/sw.js` on its next page request and installs this one. This
+one then removes itself and every cache:
 
 ```js
 self.addEventListener("install", () => self.skipWaiting());
@@ -214,32 +208,29 @@ self.addEventListener("activate", (event) => {
 });
 ```
 
-Keep it at `/sw.js` for as long as any browser might still hold the old
-worker. Deleting `sw.js` instead is not a removal: nginx answers 404, the
-browser's update check fails, and what a browser does with the worker it
-already holds is then up to the browser.
+Keep it at `/sw.js` for as long as any browser may still hold the old worker. Deleting `sw.js`
+instead does not remove the worker. The nginx server answers 404 and the browser's update check
+fails. What a browser does with the worker it already holds is then up to the browser.
 
 ## Left for later
 
-None of these ships today, and each needs its own decision before it lands:
+None of these ships today, and each needs its own decision before it ships:
 
-- **Push notifications.** A `push` handler in the worker and a subscription
-  the api stores per seat.
-- **App badging.** `navigator.setAppBadge()` from the app for the worklist
-  count; no worker change needed while the app is open.
-- **Share target.** A `share_target` entry in the manifest, so a shared link
-  or file can land in a capture flow.
-- **Shortcuts.** `shortcuts` in the manifest for the launcher's jump list.
-- **Screenshots.** `screenshots` in the manifest for the richer install
-  dialog.
-- **Offline data.** Reading records without a connection. This is the one that
-  would change the rule above, and it needs a design for staleness and for
-  writes made offline before any response is cached.
+- **Push messages.** A `push` handler in the worker, and a push sign-up the API stores per seat.
+- **Count on the app icon.** `navigator.setAppBadge()` from the app for the Worklist count; no
+  worker change needed while the app is open.
+- **Share target.** A `share_target` entry in the manifest, so a shared link or file can land in
+  capture.
+- **Links for the launcher.** `shortcuts` in the manifest, for the list of links the launcher shows.
+- **Install images.** `screenshots` in the manifest, for the fuller install window.
+- **Offline data.** Reading records without a connection. This is the one that would change the rule
+  above. It needs a design for data that is out of date and for writes made offline, before any
+  response goes into the cache.
 
 ## Where to go next
 
-[frontend-architecture.md](frontend-architecture.md) (the app this worker
-serves, and the gates that hold it) ·
-[desktop-distribution.md](desktop-distribution.md) (the other way Margince is
-served, on loopback) · [../deployment.md](../deployment.md) (the nginx and
-ingress setup the headers above live in).
+- [frontend-architecture.md](frontend-architecture.md): the app this worker serves, and the gates
+  that hold it.
+- [desktop-distribution.md](desktop-distribution.md): the other way Margince is served, on the local
+  machine.
+- [../deployment.md](../deployment.md): the nginx and ingress setup the headers above live in.

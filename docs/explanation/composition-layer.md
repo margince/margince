@@ -115,8 +115,8 @@ The adapter meets that interface from the store of the module that owns the data
 An `Option func(*Server, *pgxpool.Pool)` changes the wiring for one process role. Everything that no
 option touches keeps its safe default. To list the options, run `grep` for `func With` in `internal/compose/`.
 
-A role may lack the option that gives a part a feature needs, such as a blob store. Then that feature's
-endpoints answer 501, and the process never follows a `nil` value at request time. No
+Say no option gives a role a part that a feature needs, such as a blob store. Then that feature's
+endpoints stay the generated 501 stub, and the process never follows a `nil` value at request time. No
 `WithBlobstore` → the `/attachments` endpoints answer 501: a role that stores no objects says so by
 leaving the option out. A role that
 can capture must pass `WithKeyvault` or fail to boot. `/readyz` checks the dependencies the role wired and

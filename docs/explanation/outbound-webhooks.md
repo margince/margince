@@ -1,27 +1,33 @@
-# Outbound webhooks: the governed egress surface and delivery engine
+<!-- prose:plain -->
+# Outbound webhooks: the governed outbound surface and delivery engine
 
-`internal/modules/webhooks` is Margince's **first-party** outbound integration surface. A workspace
-registers an HTTPS target and a subset of the published event catalog. A delivery worker then fans
-matching domain events to it as [Standard Webhooks](https://www.standardwebhooks.com/)-signed HTTP
-POSTs, retried with exponential backoff, parked in a dead-letter store, and replayable on demand.
-Subscriptions live in the workspace; there is no third-party app marketplace. The surface is
-**outbound only** and receives nothing inbound.
+`internal/modules/webhooks` is the outbound integration surface **built into** Margince. A workspace
+registers an HTTPS target and a part of the published event catalog. A delivery worker then sends
+each matching domain event to it as an HTTP POST signed by [Standard
+Webhooks](https://www.standardwebhooks.com/). A failed POST is tried again, with a wait that doubles
+each time. In the end it is parked in a dead-letter store, and a human can replay it at any time.
 
-Every payload on the wire is generated from a dedicated public OpenAPI contract
-(`api/public-events.yaml`, §3 below) instead of being hand-shaped at each emit site. Every entry point in
-`store.go`/`delivery.go` is reachable from `internal/compose`'s HTTP surface **and** from the Settings →
-Integrations tab in the frontend (§9). A subscription can be created, re-targeted, paused, archived and
-rotated, and its deliveries inspected and replayed, without leaving the UI.
+Subscriptions live in the workspace, and there is no store of apps from third parties. The surface
+is **outbound only** and takes in nothing inbound.
 
-For the one-paragraph version see [reference/modules.md](../reference/modules.md). To *register* one,
-see [how-to/register-a-webhook.md](../how-to/register-a-webhook.md). For the write shape every mutation
-commits through and the bus the delivery worker rides, see [write-backbone.md](write-backbone.md).
+Every payload on the wire is generated from its own public OpenAPI contract
+(`api/public-events.yaml`, §3 below), instead of being shaped by hand at each emit site. Every entry
+point in `store.go`/`delivery.go` can be reached from the HTTP surface of `internal/compose` **and**
+from the Settings → Integrations tab in the frontend (§9). A subscription can be created, moved to a
+new target, paused, archived and rotated, and its deliveries looked at and replayed, without leaving
+the UI.
 
-## The shape at a glance
+For the short version see [reference/modules.md](../reference/modules.md). To *register* one, see
+[how-to/register-a-webhook.md](../how-to/register-a-webhook.md). For the write shape every write
+commits through, and the bus the delivery worker reads from, see
+[write-backbone.md](write-backbone.md).
 
-Two halves: a **config surface** (CRUD on `webhook_subscription`, the RBAC-gated API) and a **delivery
-engine** (a bus consumer and a retry sweeper that drive `webhook_delivery` through a state machine).
-They meet at the event bus: a subscription is only a row until a matching event arrives.
+## The whole shape
+
+Two parts: a **config surface** (CRUD on `webhook_subscription`, the API gated by RBAC) and a
+**delivery engine**. The engine is a bus consumer and a retry sweep that move `webhook_delivery`
+through a state machine. They meet at the event bus: a subscription is only a row until a matching
+event comes.
 
 ```text
 CONFIG SURFACE (api, RBAC-gated)              DELIVERY ENGINE (worker, or api under --inline-relay)
@@ -46,46 +52,46 @@ POST /webhook-subscriptions                   domain write → outbox → relay 
                             claims due rows, re-attempts             resets budget, re-attempts
 ```
 
-**Why the two halves are separate.** The config surface keeps its read paths alive even when no
-signing key is configured (§8); the delivery engine exists only where a key is present. So a
-subscription can be listed and inspected on any api process, while *delivery* is a capability a
-process opts into by holding the deployment key.
+**Why the two parts are separate.** The config surface keeps its read paths live even when no
+signing key is set up (§8). The delivery engine exists only where a key is there. So any API process
+can list a subscription and show it. *Delivery* is a capability that a process opts into by holding
+the installation key.
 
 ---
 
 ## 1. The subscription: the config surface
 
 A `webhook_subscription` is integration config, not record data. Managing it is governed by the
-`webhook_subscription` RBAC object (admin/ops-owned config, like custom fields), and every entry point
-in `store.go` gates on it (`auth.Require` on create/read/update/delete). The store is the
-**Handlers→Store** CRUD spine: it owns the transactional write shape and the RBAC gate.
+`webhook_subscription` RBAC object (config that admins and operators own, such as custom fields).
+Every entry point in `store.go` gates on it (`auth.Require` on create/read/update/delete). The store
+has the **Handlers→Store** CRUD shape: it owns the write shape in one transaction and the RBAC gate.
 
 | Field | Rule |
 |---|---|
-| `target_url` | **HTTPS-only**: `http://` is rejected at create, because a cleartext callback is never a safe fan-out target. Enforced in three places: the contract `pattern: ^https://`, the store's `strings.HasPrefix`, and a DB `CHECK`. |
-| `event_types` | A **non-empty subset of the published catalog** (`events.Types()`). An unknown type is a 422, so no rule is stored that could never deliver. Entity-less pipeline events (`capture.*`) are rejected, because they name no subject to scope the fan-out by (§5). It is a true *set* (`uniqueItems`). |
-| `owner_id` | **Server-derived** from the authenticated principal (the acting human, or the human an agent acts on behalf of), never a request field. A principal with no human identity cannot own integration config. The fan-out is scoped to this owner (§5). |
+| `target_url` | **HTTPS only**: `http://` is refused at create, because a target in clear text is never safe to send to. Held in three places: the contract `pattern: ^https://`, the store's `strings.HasPrefix`, and a database `CHECK`. |
+| `event_types` | A part of the published catalog, **never empty** (`events.Types()`). An unknown type is a 422, so no rule is stored that could never deliver. Pipeline events with no entity (`capture.*`) are refused, because they name no subject to scope the fan-out by (§5). It is a true *set* (`uniqueItems`). |
+| `owner_id` | **Set by the server** from the signed-in principal (the human who acts, or the human an agent acts for), never a request field. A principal with no human identity cannot own integration config. The fan-out is scoped to this owner (§5). |
 | `state` | `active` / `paused`. Pausing stops delivery (and holds retries) without archiving. |
-| `signing_secret_ref` | The **sealed** secret (§2). Never the plaintext, and never in any read view. |
+| `signing_secret_ref` | The **sealed** secret (§2). Never the clear text, and never in anything a read returns. |
 
-Updates run under an optimistic-concurrency guard (`If-Match` → `version`) and audit the before/after
-image. An empty patch is rejected at runtime (422): the contract advertises `minProperties: 1` and the
-REST path enforces it instead of committing a no-op mutation. Archive is a soft delete. An archived,
-absent or out-of-workspace subscription reads as `404` everywhere (existence-hiding), and delivery
-stops at archive.
+Updates run under a version check (`If-Match` → `version`) and audit the before and after image. An
+empty `PATCH` is refused at run time (422). The contract states `minProperties: 1`, and the REST
+path enforces it instead of committing a write that changes nothing. Archive marks the row, and does
+not delete it. A subscription that is archived, missing or in another workspace reads as `404` on
+every path, so no one learns it exists. Delivery stops at archive.
 
-**Agent access is 🟡.** A human on a session registers directly. An *agent* principal's create/update
-is a 🟡 governed tool (`x-mcp-tool` tier confirmation_required). Registering or widening outbound
-egress is staged for human approval and redeemed with an `X-Approval-Token`. Rotate, replay and all
-reads are human-only.
+**Agent access is 🟡.** A human in a session registers it directly. Create or update by an *agent*
+principal is a 🟡 governed tool (`x-mcp-tool` tier `confirmation_required`). Registering or growing
+an outbound target is staged for human approval, then carried out with an `X-Approval-Token`.
+Rotate, replay and all reads are for humans only.
 
 ## 2. The signing secret: sealed at rest, shown once
 
-Each subscription carries its own signing secret, used to HMAC-SHA256 each delivery attempt. The secret
-is `whsec_` + 32 random bytes as **standard** base64, which Standard Webhooks compatibility requires.
-The data model requires it is **never stored plaintext** and names the column a "vault ref". There is
-no separate vault, so **the deployment key serves as the vault**: an AES-256-GCM envelope over the
-secret, keyed by `MARGINCE_WEBHOOK_KEY` (`cipher.go`).
+Each subscription carries its own signing secret, used to sign each delivery attempt with
+`HMAC-SHA256`. The secret is `whsec_` plus 32 random bytes as **standard** `base64`, which Standard
+Webhooks needs. The data model says it is **never stored as clear text** and names the column a
+`vault ref`. There is no separate vault, so **the installation key serves as the vault**: an
+`AES-256-GCM` envelope over the secret, keyed by `MARGINCE_WEBHOOK_KEY` (`cipher.go`).
 
 ```text
 create/rotate:  generateSecret() → "whsec_…"  ──seal(key)──▶  signing_secret_ref (base64 nonce‖ciphertext)
@@ -95,58 +101,69 @@ create/rotate:  generateSecret() → "whsec_…"  ──seal(key)──▶  sign
 delivery:       Sign(open(ref), id, ts, body) ──▶  webhook-signature: v1,<base64 HMAC>
 ```
 
-The plaintext exists in two places only: the create/rotate HTTP response, and transiently in the
-delivery signer (`open`ed per attempt). A wrong-length key is a **boot error**, never silently padded,
-because a secret sealed under a guessable key is a security defect. A ciphertext that fails to open
-(wrong key, tamper) is surfaced, never treated as an empty secret; signing with an empty secret would
-ship an attacker-forgeable signature. An undecodable secret (corrupt base64) is likewise a surfaced
-`error` from `Sign`, never silently keyed with the raw prefixed string.
+The clear text exists in two places only. One is the create or rotate HTTP response. The other is
+the delivery signer, for a short time (it is opened per attempt).
 
-**Rotation is immediate.** `RotateSecret` mints and seals a new secret and returns the plaintext once.
-The prior secret stops verifying at once, so a receiver must adopt the new value. The rotation is
-audited **without recording either secret value**. A secret encoded as URL-safe base64 cannot decode
-under the standard alphabet, so it stops signing; the fix is a fresh subscription or a rotation (see the
-note in `how-to/register-a-webhook.md` §2). The wire signing scheme itself (headers, HMAC construction)
-is documented once, in §3b below.
+A key of the wrong length is an **error at start**. It is never filled out without a word, because a
+secret sealed under a key an attacker could work out is a security bug.
+
+A sealed secret that fails to open (wrong key, or changed by an attacker) is shown as an error. It
+never counts as an empty secret: signing with an empty secret would ship a signature an attacker can
+forge. A secret that cannot decode (wrong `base64`) is also an `error` from `Sign`. It is never
+keyed with the raw text, `whsec_` and all.
+
+**A rotate takes effect at once.** `RotateSecret` makes a new secret, seals it, and returns the
+clear text once. The old secret stops checking out at once, so a receiver must switch to the new
+value.
+
+The rotate is audited **without recording either secret value**. A secret encoded as `base64` that
+is safe for a URL cannot decode as standard `base64`, so it stops signing. The fix is a new
+subscription or a rotate (see the note in `how-to/register-a-webhook.md` §2). The wire signing rules
+(headers, how the HMAC is built) are written down once, in §3.2 below.
 
 ## 3. The contract-first payload pipeline
 
-Every event a subscriber can receive is defined once, as data, and compiled. No emit site shapes a
+Every event a subscriber can receive is written once, as data, and compiled. No emit site shapes a
 payload by hand.
 
-**Why a separate file.** `backend/api/crm.yaml` is the REST contract, and OpenAPI 3.1's native
-`webhooks:` block would be the obvious place for this. But `kin-openapi`, the validator the rest of the
-contract pipeline runs on, silently prunes a `webhooks:` block on load. Enabling its global skip-prune
-option trips an existing `ApprovalToken` schema-name collision elsewhere in `crm.yaml`. So the public
-event contract lives in its own file, **`backend/api/public-events.yaml`**. It is components-only (no
-paths, no `webhooks:` block), so nothing in it needs pruning:
+**Why a separate file.** `backend/api/crm.yaml` is the REST contract, and the `webhooks:` block
+built into OpenAPI 3.1 would be the clear place for this. But `kin-openapi`, the checker the rest of
+the contract pipeline runs on, drops a `webhooks:` block on load without a word. Turning on its
+`skip-prune` setting runs into a conflict of `ApprovalToken` schema names in another part of
+`crm.yaml`. So the public event contract lives in its own file,
+**`backend/api/public-events.yaml`**. It holds only `components` (no paths, no `webhooks:` block),
+so nothing in it gets dropped:
 
-- **`SubscribableEventType`**: the enum naming every event type a subscription may select. It matches
-  the runtime catalog. `validateEventTypes` (`store.go`) gates a create/update against `events.Types()`
-  minus the pipeline class, and the enum carries those values, including the
-  `approval.*`/`coldstart.*` family and `audit.appended`. The fitness gate pins them together: every
-  `SubscribableEventType` value is a key of the generated `PublicEventVersions` map. The frontend's
-  event-type picker (§9) is generated from the same enum, so it offers the set the API accepts, and a
-  catalog change cannot drift the enum and the validator apart.
-- **`PublicEventEnvelope`**: the public wire wrapper (§3c below).
-- One **`PublicEvent<Event>`** schema per subscribable event (`PublicEventDealStageChanged`,
+- **`SubscribableEventType`**: the enum naming every event type a subscription may choose. It
+  matches the runtime catalog. `validateEventTypes` (`store.go`) gates a create or update against
+  `events.Types()` without the pipeline class, and the enum carries those values. That includes the
+  `approval.*`/`coldstart.*` group and `audit.appended`.
+
+  The fitness gate pins them together: every `SubscribableEventType` value is a key of the generated
+  `PublicEventVersions` map. The list of event types in the frontend (§9) is generated from the same
+  enum. So it offers the set the API accepts, and a catalog change cannot put the enum and the check
+  out of step.
+- **`PublicEventEnvelope`**: the public wire envelope (§3.3 below).
+- One **`PublicEvent<Event>`** schema per event you can subscribe to (`PublicEventDealStageChanged`,
   `PublicEventContactMerged`, …), each carrying `x-event-type` / `x-entity-type` / `x-version`
   extensions.
 
-**The generator.** `backend/tools/gen-payloads` runs the `oapi-codegen` *library* (not its CLI) over
-this isolated file and writes `internal/contracts/publicevents_gen.go` (package `crmcontracts`). The
-output is plain generated structs plus two additions a stock schema-to-struct generator lacks:
+**The code that generates it.** `backend/tools/gen-payloads` runs `oapi-codegen` as a Go package
+(not its CLI) over this separate file, and writes `internal/contracts/publicevents_gen.go` (package
+`crmcontracts`). What it writes is generated Go `struct` types, plus two more parts that a normal
+schema-to-`struct` tool does not have:
 
-- an `EventType()` / `EntityType()` method pair for every schema carrying
-  `x-event-type`/`x-entity-type`, and
-- a package-level `PublicEventVersions` registry mapping every such event type to its `x-version`.
+- an `EventType()` and an `EntityType()` for every schema carrying `x-event-type`/`x-entity-type`,
+  and
+- a package-level `PublicEventVersions` register that maps every such event type to its `x-version`.
 
-The generator is config-driven (`gen-payloads/config.go`). A "group" is one source file → one output
-package, and nothing in the generator is webhooks-specific, so a second isolated contract could reuse
-it. Regenerate with `make gen`. The frontend gets its own typed projection via `openapi-typescript` into
-`frontend/src/api/public-events.ts` (`pnpm gen:events`, chained after `pnpm gen:api`).
+`gen-payloads` runs from config (`gen-payloads/config.go`). A "group" is one source file → one
+package it writes, and nothing in `gen-payloads` is only for webhooks. So a second separate contract
+could use it too. Generate again with `make gen`. The frontend gets its own typed copy through
+`openapi-typescript` into `frontend/src/api/public-events.ts` (`pnpm gen:events`, run after
+`pnpm gen:api`).
 
-**The compile-time guarantee.** Every emit site calls a typed seam, never `events.Emit` with a raw
+**The compile-time promise.** Every emit site calls a typed seam, never `events.Emit` with a raw
 `map[string]any`:
 
 ```text
@@ -154,65 +171,71 @@ storekit.EmitEvent(ctx, tx, auditID, entityID, payload)              // payload'
 storekit.EmitEventForEntity(ctx, tx, auditID, entityType, entityID, payload)  // dynamic-entity events
 ```
 
-`EmitEvent` derives the event type and entity type from the payload struct (`payload.EventType()`,
-`payload.EntityType()`). A call site that pairs `PublicEventDealCreated` with `contact.created` fails to
-*compile*, before any test runs. `EmitEventForEntity` gives the same guarantee for the dynamic-entity
-types (`consent.changed`, `retention.applied`), whose subject is a runtime value the caller resolves.
-Renaming a schema field breaks the Go build, because the generated struct's field disappears from every
-call site that references it. The codebase has two emit paths:
+`EmitEvent` takes the event type and entity type from the payload `struct` (`payload.EventType()`,
+`payload.EntityType()`). A call site that puts `PublicEventDealCreated` with `contact.created` fails
+to *compile*, before any test runs. `EmitEventForEntity` gives the same promise for the event types
+whose entity is set at run time (`consent.changed`, `retention.applied`). Their subject is a value
+the caller resolves. Renaming a schema field breaks the Go build, because the field of the generated
+`struct` is removed from every call site that uses it. The code has two emit paths:
 
 - `storekit`, used by every CRUD module, and
-- `approvals.Service.emit`, for the approval/coldstart family. It stages `entity_type: "approval"`
-  unconditionally instead of deriving it, since a staged approval's entity is always itself.
+- `approvals.Service.emit`, for the approval and `coldstart` group. It always stages
+  `entity_type: "approval"` instead of working it out, since the entity of a staged approval is
+  always itself.
 
-### 3a. Versioning: additive-only, or a new name
+### 3.1 Versions: add only, or a new name
 
-A payload's `x-version` may only grow by **addition**: a new optional field, never a renamed, removed
-or re-typed one. `PublicEventVersions` and `events.VersionOf` are the two ends of one fact, pinned equal
-by the fitness gate `backend/gates/publicevents_test.go`. The golden wire snapshots in
-`payload_version_test.go` (`testdata/wire/<type>.v<n>.json`) pin the shape byte for byte. A field
-rename or removal changes the marshalled bytes and fails the snapshot comparison, which forces a
-reviewed regeneration (`UPDATE_SNAPSHOTS=1`).
+The `x-version` of a payload may only grow by **adding**: a new field that need not be there. Never
+a field that is renamed, removed or changed to a new type. `PublicEventVersions` and
+`events.VersionOf` are the two ends of one fact, pinned to match by the fitness gate
+`backend/gates/publicevents_test.go`. The stored wire copies in `payload_version_test.go`
+(`testdata/wire/<type>.v<n>.json`) pin the shape byte for byte. A renamed or removed field changes
+the written bytes and fails the check. That makes someone generate the copies again and review them
+(`UPDATE_SNAPSHOTS=1`).
 
-A breaking change (a field's *meaning* changes, beyond its presence) ships as a **new event type
-name**, never an in-place schema change to an existing one. `deal.updated` and `deal.owner_changed`
-already follow this: owner reassignment gets its own event instead of riding inside `deal.updated`'s
-open `changed_fields`. A subscriber opts in by adding the new type to `event_types`; nothing changes
-underneath an existing subscription.
+A change that breaks receivers (the *meaning* of a field changes, not only whether it is there)
+ships as a **new event type name**. It is never a schema change in place on an existing one.
+`deal.updated` and `deal.owner_changed` already follow this: a new owner gets its own event, instead
+of being part of the open `changed_fields` of `deal.updated`. A subscriber opts in by adding the new
+type to `event_types`; nothing changes under an existing subscription.
 
-**A replay carries its original version verbatim.** A `webhook_delivery` row stores its marshalled wire
-body at enqueue time. Retry and replay re-send that *stored* body and never re-render it against the
-payload schema's current version. So a delivery enqueued under `deal.stage_changed` v1 replays as v1
-even after the schema has (additively) grown to v2, and the receiver verifies the same bytes again.
+**A replay keeps its original version.** A `webhook_delivery` row stores its written wire body when
+it joins the queue. Retry and replay send that *stored* body again, and never build it again against
+the current version of the payload schema. So a delivery queued under `deal.stage_changed` `v1`
+replays as `v1`, even after the schema adds fields for `v2`. The receiver checks the same bytes
+again.
 
-### 3b. The wire contract
+### 3.2 The wire contract
 
-Delivery follows [Standard Webhooks](https://www.standardwebhooks.com/), the scheme Anthropic, OpenAI,
-Stripe and Svix share. A receiver verifies `webhook-signature` against
-`{webhook-id}.{webhook-timestamp}.{raw request body}`, using its stored secret's **decoded bytes** as the
-HMAC key, and dedupes on `webhook-id`:
+Delivery follows [Standard Webhooks](https://www.standardwebhooks.com/), the signing rules that
+Anthropic, OpenAI, Stripe and Svix share. A receiver checks `webhook-signature` against
+`{webhook-id}.{webhook-timestamp}.{raw request body}`. It uses the **decoded bytes** of its stored
+secret as the HMAC key, and uses `webhook-id` as its dedupe key:
 
 | Header | Value |
 |---|---|
-| `X-Margince-Event` | convenience only: the event type (e.g. `deal.stage_changed`) |
-| `webhook-id` | the delivery id, stable across retries; the receiver's dedupe key |
-| `webhook-timestamp` | unix seconds the current attempt was signed at; fresh every attempt, never reused across retries |
-| `webhook-signature` | `v1,` + base64 HMAC-SHA256 of `{webhook-id}.{webhook-timestamp}.{body}` |
+| `X-Margince-Event` | a help only: the event type (such as `deal.stage_changed`) |
+| `webhook-id` | the delivery id, the same across retries; the dedupe key of the receiver |
+| `webhook-timestamp` | the Unix second when the current attempt is signed; new on every attempt, never used again across retries |
+| `webhook-signature` | `v1,` + `base64` `HMAC-SHA256` of `{webhook-id}.{webhook-timestamp}.{body}` |
 
-The fresh-per-attempt timestamp is the replay defence. A receiver enforcing a tolerance window rejects a
-captured signature replayed later, even though `webhook-id` and the body stay identical across retries
-and replay. The Standard Webhooks spec suggests about 5 minutes. Margince enforces no window itself;
-that is the *receiver's* obligation. `v1,` names the scheme version, so a future move to another MAC is
-distinguishable on the wire. Today it is always a single-entry list, because multi-secret rotation grace
-is not built. `whsec_` marks the secret so a leaked string is identifiable, as the passport-token
-convention does. See [how-to/register-a-webhook.md §3](../how-to/register-a-webhook.md) for a
-verification snippet.
+The new timestamp on each attempt is the guard against replay. A receiver that enforces a time
+window refuses a captured signature that someone replays later. It does so even when `webhook-id`
+and the body stay the same across retries and replay. The Standard Webhooks rules say about 5
+minutes. Margince enforces no window itself; that is the duty of the *receiver*.
 
-### 3c. The public envelope: what a subscriber receives
+`v1,` names the version of the signing rules, so a later move to another MAC shows on the wire.
+Today it is always a list with a single entry. Accepting an old and a new secret side by side at a
+rotate is not built. `whsec_` marks the secret, so a leaked secret shows what it is, as the passport
+token does. See §3 of [how-to/register-a-webhook.md](../how-to/register-a-webhook.md) for code that
+checks a signature.
 
-`toWireEnvelope` (`internal/modules/webhooks/wireenvelope.go`) maps the internal bus envelope onto the
-public `PublicEventEnvelope` a subscriber receives. The internal envelope is the shape every module
-publishes to the outbox, with full governance metadata; the two shapes differ by design:
+### 3.3 The public envelope: what a subscriber receives
+
+`toWireEnvelope` (`internal/modules/webhooks/wireenvelope.go`) maps the internal bus envelope to the
+public `PublicEventEnvelope` that a subscriber receives. The internal envelope is the shape every
+module publishes to the outbox, with full data for audit and tracing. The two shapes are different
+by design:
 
 ```json
 {
@@ -225,20 +248,20 @@ publishes to the outbox, with full governance metadata; the two shapes differ by
 }
 ```
 
-Internal-only fields are **dropped**, not just omitted when empty: `audit_log_id`, `causation_id`,
-`passport_id`, `on_behalf_of` and `workspace_id` never leave the process. A subscriber cannot learn the
-workspace's internal id, which agent passport (if any) drove the change, or the causation chain.
-`actor` is reduced from the internal envelope's full principal (type + id + passport + on-behalf-of) to
-`type` alone (`human` / `agent` / `system` / …). That says who acted without identifying them. This
-mapping runs once, at enqueue time, against a freshly observed bus event; a delivery's stored body is
-never re-mapped on replay (§3a).
+Internal-only fields are **dropped**, not only left out when empty: `audit_log_id`, `causation_id`,
+`passport_id`, `on_behalf_of` and `workspace_id` never leave the process. A subscriber cannot learn
+the internal id of the workspace, which agent passport (if any) made the change, or the causation
+links. `actor` comes down from the full principal of the internal envelope (type + id + passport +
+the human it acts for) to `type` alone (`human` / `agent` / `system` / …). That says who acted
+without naming them. This mapping runs once, when the delivery joins the queue, against the bus
+event as it is read. The stored body of a delivery is never mapped again on replay (§3.1).
 
 ## 4. The delivery state machine
 
-One `webhook_delivery` row is created per `(workspace, subscription, event)`. That is a unique key, so a
-redelivered bus event (the bus is at-least-once) conflicts and yields no new row: **it never
-double-POSTs**. The signed body is kept verbatim on the row (`payload`), so a parked delivery can be
-replayed after the bus stream has trimmed the source event.
+One `webhook_delivery` row is created per `(workspace, subscription, event)`. That key can hold only
+one row. The bus may deliver an event more than once. A second copy meets a conflict and adds no new
+row: **it never sends the POST twice**. The signed body is kept as it is on the row (`payload`). So
+a parked delivery can be replayed after the bus stream has cut the source event.
 
 ```text
  pending ──attempt──▶ delivered           (2xx)
@@ -255,219 +278,248 @@ replayed after the bus stream has trimmed the source event.
                                            (terminal; no replay, and no writer overwrites it)
 ```
 
-- **Budget and backoff** (`delivery.go`): 6 total attempts. The gap after `n` failures is exponential,
-  `1s, 2s, 4s, 8s, 16s`, capped at 32s. The cap never binds within the budget; it guards a future
-  budget increase. Timestamps come from an **injected clock**, so the schedule is deterministic under
-  test (no sleeps).
-- **The sweeper** (`SweepOnce`): one workspace's pass, taking its tenant from the context its caller
-  bound. It claims a bounded batch (128) of `retrying` rows whose `next_retry_at` has elapsed **and
-  whose subscription is still active**; a paused subscription's retries wait until it resumes. The fleet
-  is covered by fanning the pass out, one job row per live workspace (§6). A tenant whose due-scan
-  fails **fails its own row**, and the rest of the fleet is untouched. The failure is recorded as that
-  job's outcome. Per-delivery failures stay on the delivery row and never fail the
-  tenant's pass. `SweepOnce` takes an injected clock, so a test can step the schedule with no sleeps.
-- **`deliverOnce` never returns an error**: the outcome is the record. A failure to *persist* the
-  outcome is logged, with one known limit. An initial attempt whose outcome-write fails leaves the row
-  `pending`, and the sweeper scans only `retrying` rows. That delivery is **not** re-scanned
-  automatically and needs a manual **replay**; there is no pending-row recovery path. A row that did
-  reach `retrying` is safe, because the sweep re-scans it.
-- **Replay** (`POST …/replay`): a human action, RBAC-gated, existence-hiding, and audited to the acting
-  human *before* the re-attempt. It resets attempts to a fresh budget: the operator is asserting the
-  endpoint is fixed, so the exponential clock restarts. It **refuses with a 503 up front** when no
-  signing key is configured, so it never resets a row it cannot then send.
+- **Budget and wait** (`delivery.go`): 6 attempts in all. The wait after `n` failed attempts doubles
+  each time, `1s, 2s, 4s, 8s, 16s`, with a cap of `32s`. The cap never binds within the budget; it
+  guards a budget that grows later. Times come from an **injected clock**, so the schedule is the
+  same on every test run (no sleeps).
+- **The sweep** (`SweepOnce`): one pass over one workspace, taking its tenant from the context its
+  caller set. It claims at most 128 `retrying` rows at a time, whose `next_retry_at` has passed
+  **and whose subscription is still `active`**. The retries of a paused subscription wait until it
+  resumes.
 
-`loadTarget` rehydrates a delivery from the *subscription's current* target URL and sealed secret, so a
-rotation or re-target between attempts takes effect on the next try.
+  All workspaces are covered by fanning the pass out, one job row per live workspace (§6). If a
+  tenant fails its scan for rows whose time has come, **it fails its own row**, and the other
+  workspaces do not notice. That job records the fail as its result. A fail for one delivery stays
+  on the delivery row, and never fails the pass of the tenant. `SweepOnce` takes an injected clock,
+  so a test can step the schedule with no sleeps.
+- **`deliverOnce` never returns an error**: the result is the record. If it fails to *store* the
+  result, it logs that, with one limit we know of. A first attempt whose result write fails leaves
+  the row `pending`, and the sweep scans only `retrying` rows. That delivery is **not** scanned
+  again by itself, and needs a **replay** by hand; nothing returns `pending` rows to the queue. A
+  row that does reach `retrying` is safe, because the sweep scans it again.
+- **Replay** (`POST …/replay`): a human action, gated by RBAC. It does not show whether the row
+  exists, and it is audited to the acting human *before* the new attempt. It sets the attempts back
+  to a new budget: the operator is stating that the endpoint is fixed, so the doubling clock starts
+  again. It **refuses with a 503 at the start** when no signing key is set up. So it never sets back
+  a row it cannot then send.
+
+`loadTarget` loads the target URL and sealed secret of a delivery from the *current* subscription.
+So a rotate or a new target between attempts takes effect on the next try.
 
 ## 5. The fan-out and the owner-scope gate
 
-**A webhook must never become a privilege-escalation channel.** A subscription owned by a rep who can
-see only their own deals must not receive an event about a deal they could never read in the UI.
+**A webhook must never grow what you see.** Say a rep can see only their own deals. A subscription
+the rep owns must not receive an event about a deal they could never read in the UI.
 
 `HandleEvent` runs three steps, in the event's workspace under the tenant GUC:
 
-1. **`matchingSubscriptions(event.type)`**: active, non-archived subscriptions whose `event_types`
-   contain this type. This is the candidate set, *before* any visibility filter.
-2. **`ownerCanSee(event, owner)`**: for each candidate, resolve the owner's **live** RBAC through the
-   `authz.Resolver` seam. Then check whether the event's subject entity is one the owner may read. The
-   check is the same admission the record read path applies (the object-level read grant and the row
-   scope), never row scope alone. This is the gate at **enqueue time**: revoking either the read grant
-   or the row scope before the event stops delivery. One owner's *transient* resolver/visibility failure
-   is logged and skipped for that pass (fail-closed for that subscription). `HandleEvent` then **returns
-   an error**, so the at-least-once bus redelivers and re-evaluates the skipped owner. Nothing is
-   dropped silently, and the idempotent enqueue makes the already-delivered candidates a no-op.
-3. **`enqueueForSubscriptions(visible)`**: create a pending delivery per visible subscription
-   (idempotent), then attempt each immediately.
+1. **`matchingSubscriptions(event.type)`**: `active` subscriptions, not archived, whose
+   `event_types` hold this type. This is the first set, *before* any visibility check.
+2. **`ownerCanSee(event, owner)`**: for each one, resolve the **live** RBAC of the owner through the
+   `authz.Resolver` seam. Then check that the owner may read the subject entity of the event. This
+   is the same check the record read path makes: the read grant on the object, and the row scope. It
+   is never row scope alone. This gate runs **when the delivery joins the queue**. If the owner no
+   longer has the read grant or the row scope at the event, delivery stops.
+3. **`enqueueForSubscriptions(visible)`**: create a `pending` delivery for each subscription that
+   passed. Doing it twice adds nothing. Then make the first attempt for each one at once.
 
-**The visibility map is an allow-list, fail-closed** (`entityVisibleTo`, `deliveryvisibility.go`). It
-classifies by event type first, then by entity type. Event type goes first because a deferred-delivery
-subject's runtime `object_class` would otherwise collide with a row-scoped entity name below.
+In step 2, say a resolver or visibility check fails for one owner for a short time. That owner is
+logged and skipped for that pass, so the subscription fails closed. `HandleEvent` then **returns an
+error**, so the bus delivers again and checks the skipped owner again. Nothing is dropped without a
+word. Adding to the queue twice does nothing, so the ones already delivered are not sent again.
 
-| Subject class | How it's scoped |
+**The visibility map is an allow-list**, and it fails closed (`entityVisibleTo`,
+`deliveryvisibility.go`). It looks at the event type first, then at the entity type. Event type goes
+first, because without that order the run time `object_class` of a deferred-delivery subject would
+conflict with a row-scoped entity name below.
+
+| Subject class | How it is scoped |
 |---|---|
-| self-only events (`selfOnlyEvents`: LinkedIn account and match events, notices, weekly plans, …) | delivered only to the owner whose own user the event names. A notice or a weekly plan belongs to one user, and fanning it out would tell colleagues about it |
-| `contact`, `company`, `deal`, `lead`, `project`, `voice_profile`, `list` | admitted only with the owner's live **object read grant and row scope** (`auth.Require` + `auth.EnsureVisible`), the two halves the record read path enforces. A lingering row scope with no current read grant does not leak the payload |
-| `activity`, `signal` | the same object read grant, then their own link-walk / resolver row-scope gates |
-| `offer`, `contract`, `commission`, `deal_room` | the record's own read grant, then the row scope of what it hangs off. None carries an owner: an offer, a commission and a Deal Room inherit their deal's row scope, and a contract its deal's (or its company's when it has no deal) |
-| `approval` (and the `coldstart.*` echoes, entity `approval`) | **target-visibility gated** (`approvalVisibleTo`, `approvalvisibility.go`), not ownerless. The envelope carries staged-change detail, so it delivers only to an owner who can see the approval's target record under that record's row scope, as the approvals inbox does (`approvals.targetVisible`). Row-scoped target types scope by row; the workspace-shared `product`/`custom_field` config scopes by existence. A **target-less** approval is fail-closed (not delivered) |
-| workspace-level facts (`workspaceLevelEntities`: `pipeline`, `stage`, `audit`, `user`, `team`, `passport`, …) | ownerless workspace/admin-level facts. The payload is a bare entity ref the receiver re-reads under its own scope, so it delivers to any live owner. `role.changed` and the `user.*` lifecycle both name entity `user`; there is no separate `role` or `coldstart` key |
-| a ratified **deferred-delivery** subject (below) | ratified **not delivered**: an explicit decision, distinct from the fail-closed default |
-| **anything else** | **denied** (the `default` branch), fail-closed |
+| events for one user only (`selfOnlyEvents`: LinkedIn account and match events, notices, plans for the week, …) | delivered only to the owner whose own user the event names. A notice or a plan for the week is for one user, and sending it to others would tell other users about it |
+| `contact`, `company`, `deal`, `lead`, `project`, `voice_profile`, `list` | let through only with the owner's live **object read grant and row scope** (`auth.Require` + `auth.EnsureVisible`), the two parts the record read path enforces. A row scope that is still there with no current read grant does not leak the payload |
+| `activity`, `signal` | the same object read grant, then their own link-walk or resolver row-scope gates |
+| `offer`, `contract`, `commission`, `deal_room` | the record's own read grant, then the row scope of the deal or company it links to. None of them carries an owner: an offer, a commission and a Deal Room take the row scope of their deal, and a contract takes its deal's (or its company's, when it has no deal) |
+| `approval` (and the `coldstart.*` events, entity `approval`) | **gated on the target's visibility** (`approvalVisibleTo`, `approvalvisibility.go`), not free of an owner. The envelope carries data about the staged change. So it delivers only to an owner who can see the approval's target record under that record's row scope, as the approvals list does (`approvals.targetVisible`). Row-scoped target types scope by row; the workspace-shared `product`/`custom_field` config scopes by whether the record exists. An approval **with no target** fails closed (it is not delivered) |
+| workspace-level facts (`workspaceLevelEntities`: `pipeline`, `stage`, `audit`, `user`, `team`, `passport`, …) | facts with no owner, at workspace or admin level. The payload is only a reference to the entity, which the receiver reads again under its own scope, so it delivers to any live owner. `role.changed` and the `user.*` events for each step of a user account both name entity `user`; there is no separate `role` or `coldstart` key |
+| a **deferred-delivery** subject that is signed off (below) | signed off as **not delivered**: a stated decision, separate from the default that fails closed |
+| **anything else** | **refused** (the `default` branch), fails closed |
 
-The explicit deny default forces a choice. Adding a subscribable event whose subject is row-scoped
-requires a probe, so it cannot inherit fan-out-to-everyone. Adding an ownerless one requires an
-allow-list entry.
+The stated default of refusal makes someone decide. Adding an event you can subscribe to, whose
+subject is row-scoped, needs a check, so it cannot take on fan-out to everyone. Adding one with no
+owner needs an allow-list entry.
 
-**Ratified deferred delivery: subscribable, not delivered.** One family is catalogued, is a valid
-subscription target and matches `matchingSubscriptions`, yet `entityVisibleTo` returns "not visible"
-for it **unconditionally**. It has no ownership model the fan-out gate can bound delivery by:
+**Deferred delivery, signed off.** You can subscribe, but nothing is delivered. One group is in the
+catalog, is an allowed subscription target and matches `matchingSubscriptions`. Yet
+`entityVisibleTo` returns `not visible` for it **in every case**. It has no owner model that the
+fan-out gate can limit delivery by:
 
-- **Three `retention.applied` telemetry subjects**, keyed by entity type (`deferredDeliveryEntities`):
-  `ai_call` (the embed-call sweep's traces), `ai_call_payload` (retained call content), and
-  `voice_learning_signal` (aged voice-learning telemetry). Most `retention.applied` subjects (`contact`,
-  `lead`, `deal`, `activity`) resolve through the normal row-scope probes and are delivered. These three
-  are engine telemetry with no owner and no visibility probe. Delivering them workspace-wide would leak
-  which telemetry rows a retention sweep purged.
+- **Three `retention.applied` telemetry subjects**, keyed by entity type
+  (`deferredDeliveryEntities`). `ai_call` holds the traces of the sweep that calls the embed model.
+  `ai_call_payload` holds stored call content. `voice_learning_signal` holds old telemetry about
+  learning how a rep writes.
 
-A subscriber can select `retention.applied` and will receive nothing for these subjects. Delivering
-them needs an ownership model these subjects do not have.
+  Most `retention.applied` subjects (`contact`, `lead`, `deal`, `activity`) resolve through the
+  normal row-scope checks and are delivered. These three are engine telemetry with no owner and no
+  visibility check. Delivering them to the whole workspace would leak which telemetry rows a
+  retention sweep removed.
 
-**Catalogued, never emitted.** `audit.appended` has a schema for whole-catalog coverage
-(`events.Types()` is fully covered by `PublicEvent<Event>` schemas) but no emit site, so nothing is ever
-delivered for it regardless of the visibility gate. The audit ledger's own row is workspace-level and
-resolved under the receiver's own scope, so an empty payload would tell a receiver nothing new. The
-schema's description in `public-events.yaml` says so; selecting it is valid but delivers nothing yet.
+A subscriber can choose `retention.applied` and will receive nothing for these subjects. Delivering
+them needs an owner model that these subjects do not have.
 
-**Two identities, kept straight.** A delivery runs under a synthesized `PrincipalSystem` context: the
-delivery worker acts as the system over the whole workspace, not as any human. That is the
-*attribution*. The fan-out is *authorized* against the **owner's** live RBAC; that is the security
-subject.
+**In the catalog, never emitted.** `audit.appended` has a schema so the whole catalog is covered
+(`events.Types()` is covered in full by `PublicEvent<Event>` schemas). But it has no emit site, so
+nothing is delivered for it, even when the visibility gate allows it. The row in the audit log is at
+workspace level, and a receiver resolves it under its own scope. So an empty payload would tell a
+receiver nothing new.
 
-**The authorization is re-asked, not carried.** The payload is frozen once enqueued; the answer to "may
-this owner read this record" is not. A delivery parked on a failing endpoint comes due minutes or hours
-later. Both the retry sweep and an operator's replay resolve the owner's RBAC again from the subject
-the row records (`entity_type` / `entity_id`, written at enqueue). They refuse a delivery whose record
-has since left that owner's sight. A refused delivery lands in the fifth status, `visibility_revoked`.
-It is terminal, and separate from `dead_lettered`, which is the store an operator replays *from*. A row
-with no recorded subject cannot be re-checked, so it is refused instead of sent.
+The schema text in `public-events.yaml` says so. Choosing it is allowed, but delivers nothing yet.
 
-The re-check runs before the attempt, not around it, so a narrowing that commits during the outbound
-POST still ships that one delivery. Closing that window would mean holding a lock across a network call
-to a third party. That trades a bounded one-delivery exposure for an unbounded stall of the delivery
-table. Either way, the next event on the same record fans out again under the new audience.
+**Two identities, kept separate.** A delivery runs under a `PrincipalSystem` context made for it:
+the delivery worker acts as the system over the whole workspace, not as any human. That is *who the
+work is booked to*. The fan-out is *checked* against the live RBAC of the **owner**; that is the
+security subject.
+
+**The authorization is asked again, not carried.** The payload is fixed once it joins the queue; the
+answer to "may this owner read this record" is not. A delivery parked on a failing endpoint is tried
+again minutes or hours later. Both the retry sweep and a replay by an operator resolve the RBAC of
+the owner again. They read it from the subject the row records (`entity_type` / `entity_id`, written
+when it joined the queue). They refuse a delivery whose record the owner can no longer see.
+
+A refused delivery goes to a status of its own, `visibility_revoked`. It is an end status, and
+separate from `dead_lettered`, which is the store an operator replays *from*. A row with no recorded
+subject cannot be checked again, so it is refused instead of sent.
+
+The check runs before the attempt, not while it runs. So a change that narrows access, and commits
+while the outbound POST runs, still ships that one delivery. Ending that window would mean holding a
+lock across a network call to a third party. That gives up a risk of one delivery for holding up the
+delivery table with no end. Either way, the next event on the same record fans out again to the
+users who can now see it.
 
 ## 6. The two runtime lanes and where they run
 
-Delivery is a background capability, gated on the deployment signing key:
+Delivery is a background capability, gated on the installation signing key:
 
-- **`cmd/worker`** runs the `cg:webhooks` consumer and the retry sweep whenever `--webhook-key` /
-  `MARGINCE_WEBHOOK_KEY` is set. Unset, the delivery worker stays off entirely. One deliverer serves
-  both lanes, so the role holds one signing cipher and one outbound transport.
-- **`cmd/api` under `--inline-relay`** (the default single-process dev/small-deploy shape) runs the
-  same consumer inline, on the in-process relay group, when the key is set, **but not the sweep**. The
-  sweep is a River periodic job and `cmd/api` runs no River runner. Re-attempting a parked delivery
-  therefore needs the worker role (`cmd/worker`), and the api's boot line says so. An installation
-  running only the api makes each delivery's first attempt and never retries what failed. A failed
-  delivery sits `retrying` indefinitely, never spends its 6-attempt budget, and never reaches
-  `dead_lettered`.
-- Either lane carries the identity-backed `authz.Resolver` for the owner-scope gate. The HTTP-transport
-  deliverer that serves **replay only** needs no resolver: replay re-sends an already-authorized
-  delivery and never fans out.
+- **`cmd/worker`** runs the `cg:webhooks` consumer and the retry sweep when `--webhook-key` /
+  `MARGINCE_WEBHOOK_KEY` is set. When it is not set, the delivery worker stays off. One deliverer
+  serves both lanes, so the role holds one signing key and one outbound transport.
+- **`cmd/api` under `--inline-relay`** is the default shape for dev and small installs, all in one
+  process. When the key is set, it runs the same consumer in its own process, on the relay group
+  there. It does **not** run the sweep. The sweep is a River job on a timer, and `cmd/api` runs no
+  River runner. So trying a parked delivery again needs the worker role (`cmd/worker`), and the line
+  the API logs at start says so.
 
-The retry dispatcher's cadence is the **Webhook retries (seconds)** setting on Settings → System health
-(default 30 seconds). Each tick
-enqueues one `webhook_retry_workspace` job per live workspace. It paces the fleet fan-out, not one
-delivery's backoff. The per-delivery schedule is the exponential ladder above, and the dial only decides
-how promptly an elapsed backoff is noticed. Archived workspaces are skipped, since nobody listens for a
-delivery parked there. See [reference/configuration.md](../reference/configuration.md) for the full
-flag/env table.
+  An installation that runs only the API makes the first attempt of each delivery and never tries
+  again what failed. A failed delivery stays `retrying` with no end, never uses up its budget of 6
+  attempts, and never reaches `dead_lettered`.
+- Either lane carries the `authz.Resolver`, backed by identity, for the owner-scope gate. One
+  deliverer, with the HTTP transport, serves **replay only**. It needs no resolver: replay sends
+  again a delivery that is already checked, and never fans out.
 
-## 7. The SSRF guard on the dialer
+The time between runs of the retry dispatcher is the **Webhook retries (seconds)** setting on
+Settings → `System health` (default 30 seconds). Each run adds one `webhook_retry_workspace` job per
+live workspace. It times the fan-out across all workspaces, not the wait of one delivery. The
+schedule per delivery is the doubling wait above; this setting only decides how soon a wait that has
+run out is noticed. Archived workspaces are skipped, since nobody waits for a delivery parked there.
+See [reference/configuration.md](../reference/configuration.md) for the full table of flags and
+settings.
 
-A `target_url` is tenant-supplied, so delivery is a classic SSRF surface. The production client
-(`NewGuardedClient`, `client.go`) dials a target **only if it resolves to a public address**. The check
-runs post-DNS on the concrete IP, so a DNS rebind cannot bypass the guard (`netguard.RefusePrivate`).
-Every redirect hop re-enters the same guarded dialer, and the chain is capped (5 hops). One attempt is
-bounded end to end (10s), and the receiver's response body is read only up to a cap (8 KiB, discarded).
-A hostile endpoint cannot exhaust memory by streaming forever, nor pin a worker goroutine.
+## 7. The SSRF guard on outbound calls
 
-`HTTPDoer` is the transport seam. Production wires the guarded client; tests inject a
-loopback-permitting one, because netguard refuses the `127.0.0.1` an `httptest` receiver listens on. A
-dedicated SSRF test on `NewGuardedClient` pins the guard itself. The seam exists for testability and
-cannot disable the guard in production.
+A `target_url` comes from the tenant, so delivery is an SSRF risk. The production client
+(`NewGuardedClient`, `client.go`) connects to a target **only if it resolves to a public address**.
+The check runs after DNS, on the real IP. So a DNS answer that changes later cannot get past the
+guard (`netguard.RefusePrivate`). Every redirect goes through the same guarded `dialer` again, and
+the redirect count has a cap (5).
 
-## 8. The 503 key-gate: the unconfigured state
+One attempt has a time limit from end to end (`10s`). The response body from the receiver is read
+only up to a cap (8 KiB, then dropped). An endpoint run by an attacker cannot use up RAM by
+streaming with no end, and cannot pin a worker `goroutine`.
 
-Without `MARGINCE_WEBHOOK_KEY` there is no way to seal or open a signing secret, so the surface
-degrades visibly:
+`HTTPDoer` is the transport seam. Production connects the guarded client. Tests inject one that
+allows `127.0.0.1`, because `netguard` refuses the `127.0.0.1` that an `httptest` receiver serves
+on. A separate SSRF test on `NewGuardedClient` pins the guard itself. The seam exists so the code
+can be tested, and it cannot turn off the guard in production.
 
-- **Read paths still work.** List/get/deliveries return metadata, which never includes a secret.
+## 8. The 503 key-gate: the state with no key
+
+Without `MARGINCE_WEBHOOK_KEY` there is no way to seal or open a signing secret. So the surface
+works only in part, and shows that it does:
+
+- **Read paths still work.** List, get and deliveries return their data, which never includes a
+  secret.
 - **Create, rotate and replay return `503 webhooks_not_configured`**, since each must seal or use a
-  secret. There is no unsigned fallback, no guessable-key seal, and no silent no-op.
-- **No delivery runs.** The consumer and sweep do not start.
+  secret. There is no send without a signature, no seal with a key an attacker could work out, and
+  nothing that does nothing without a word.
+- **No delivery runs.** The consumer and the sweep do not start.
 
-This is the `ErrNotConfigured` posture the rest of the codebase uses for a capability that needs a
-deployment secret: a mapped 503 that names the missing capability.
+The rest of the code acts the same way, through `ErrNotConfigured`, when a capability needs an
+installation secret. It answers a mapped 503 that names the missing capability.
 
 ## 9. The Settings → Integrations UI
 
-The whole config surface and the delivery-inspection surface are reachable from the SPA, not only by
-curl. Settings → **Integrations** (`frontend/src/screens/webhooks.tsx`) mounts `WebhooksCard`, which
-drives every REST verb the config surface (§1) and the delivery-inspection surface (§4) expose:
+The whole config surface, and the surface for looking at deliveries, can be reached from the web
+app, not only by `curl`. Settings → **Integrations** (`frontend/src/screens/webhooks.tsx`) shows
+`WebhooksCard`. It makes every REST call that the config surface (§1) and the delivery surface (§4)
+offer:
 
-- **List**: the subscription table, rendering `state`, the subscribed `event_types` set and
-  last-updated. Event types show as their raw wire values (`deal.stage_changed`), because there is no
-  per-type translated label. The event-type checklist options come from
-  `subscribableEventTypeValues`, the runtime array `pnpm gen:events` generates from
-  `public-events.yaml`'s `SubscribableEventType` enum. There is no hand-maintained list in the frontend,
-  so a catalog change cannot drift away from what a subscription may select.
-- **Create**: a form (`target_url` + a multiselect over the event-type catalog). It shows the
-  `signing_secret` from the `201` response in a **one-time reveal modal**, the same "shown once" contract
-  as the API (§2). Closing the modal is the only way past it, so a user cannot create a subscription and
-  lose the secret by accident.
-- **Pause/resume, re-target, archive, rotate**: pause/resume and re-targeting the `event_types` set run
-  through the same edit form (an `If-Match` PATCH). Archive and rotate are confirm-gated actions
-  (`ConfirmModal`) that call `DELETE` and `POST …/rotate-secret`. Rotate shows the new secret in the
-  same one-time reveal as create.
-- **Deliveries and dead-letter panel**: a per-subscription deliveries list, grouped so dead-lettered rows
-  stand apart from the rest. Each row has a **replay** action (confirm-gated, audited) that calls
-  `POST …/replay` and invalidates the query, so the row's refreshed status renders immediately.
+- **List**: the subscription table, showing `state`, the `event_types` set and when it last changed.
+  Event types show as their raw wire values (`deal.stage_changed`), because there is no label per
+  type in the language of the user. The entries in the event type check list come from
+  `subscribableEventTypeValues`. That is the runtime list that `pnpm gen:events` generates from the
+  `SubscribableEventType` enum in `public-events.yaml`. There is no list kept by hand in the
+  frontend, so a catalog change cannot get out of step with what a subscription may choose.
+- **Create**: a form (`target_url`, and a list of event types from the catalog to choose from). It
+  shows the `signing_secret` from the `201` response in a window that **shows it one time only**.
+  That is the same "shown once" contract as the API (§2). The user must dismiss the window to get
+  past it, so a user cannot create a subscription and miss the secret.
+- **Pause and resume, new target, archive, rotate**: pause and resume, and a new `event_types` set,
+  go through the same edit form (an `If-Match` `PATCH`). Archive and rotate are actions behind a
+  confirm step (`ConfirmModal`) that call `DELETE` and `POST …/rotate-secret`. Rotate shows the new
+  secret in the same one-time window as create.
+- **Deliveries and the dead-letter section**: a list of deliveries per subscription, grouped so
+  dead-lettered rows stand out from the rest. Each row has a **replay** action (behind a confirm
+  step, and audited) that calls `POST …/replay` and loads the query again. So the new status of the
+  row shows at once.
 
 **The 503 is a UI state.** `useWebhookSubscriptions` reads the response status directly
-(`response.status === 503`) instead of the generic error channel. The card renders a "not enabled on
-this deployment" empty state instead of a generic failure, the same feature-off posture §8 describes for
-the API. `WebhooksCard` also gates create/rotate/replay controls behind the RBAC the API enforces. Each
-control asks for the `webhook_subscription` grant its endpoint checks: create for registration; update
-for edit, rotate and delivery replay; delete for archive. The grants are read from the `/me`
-authorization snapshot, so a read-only viewer sees the list and deliveries but no mutating controls.
+(`response.status === 503`), instead of the shared error channel. The card shows a
+`not enabled on this deployment` empty state, instead of an error. That is the same feature-off way
+that §8 sets out for the API.
 
-## Rules of thumb
+`WebhooksCard` also gates the create, rotate and replay buttons behind the RBAC the API enforces.
+Each button asks for the `webhook_subscription` grant that its endpoint checks: create for
+registering; update for edit, rotate and delivery replay; delete for archive. The grants are read
+from the `/me` authorization snapshot. So a user with read access only sees the list and deliveries,
+but no buttons that change data.
+
+## Short rules
 
 - **The wire payload is generated.** `api/public-events.yaml` → `gen-payloads` →
-  `crmcontracts.PublicEvent<Event>`, with `EventType()`/`EntityType()` methods that make an emit-site
-  mismatch a compile error. Two emit paths only: `storekit.EmitEvent`/`EmitEventForEntity`, and
+  `crmcontracts.PublicEvent<Event>`, with `EventType()`/`EntityType()`, which make a wrong match at
+  an emit site a compile error. Two emit paths only: `storekit.EmitEvent`/`EmitEventForEntity`, and
   `approvals.Service.emit`.
-- **Versions grow by addition, never by mutation.** A breaking change is a new event-type name, opted
-  into by adding it to a subscription's `event_types`. A replayed delivery re-sends its originally
-  enqueued body, at the version it was stamped with.
-- **The signing secret leaves the system once**, at create/rotate. There is no "show secret" read; a
-  lost secret is rotated, not recovered.
-- **The event-type catalog is the contract.** An unknown type is a 422. Pipeline (`capture.*`) events
-  are not subscribable, because they name no subject to scope by.
-- **Fan-out never escalates.** Delivery is gated at enqueue against the owner's *live* read grant and
-  row scope (the record read path's own admission). The visibility map is fail-closed: an unclassified
-  subject type is denied. Three `retention.applied` telemetry entities (`ai_call`, `ai_call_payload`,
-  `voice_learning_signal`) are *ratified* as not delivered until an ownership model exists. They are
-  subscribable and catalogued, and they never leak.
-- **`audit.appended` is catalogued but never emitted**: published for whole-catalog coverage, with no
-  code path firing it.
-- **The owner is server-derived**, never a request field. A principal with no human identity cannot own
-  a subscription.
-- `deliverOnce` **records the outcome**; the sweeper recovers `retrying` rows. A persist failure is
-  safe for a row already in `retrying`, since the next scan re-attempts it. An initial attempt whose
-  outcome-write fails leaves the row in `pending`, which the sweep does not scan. That row needs a
-  manual replay (there is no pending-row recovery path).
-- **Delivery is a keyed capability.** No key → read-only surface, 503 on secret paths, no worker lane.
+- **Versions grow by adding, never by change.** A change that breaks receivers is a new event type
+  name, opted into by adding it to a subscription's `event_types`. A replayed delivery sends again
+  the body it stored when it first joined the queue, at the version it carries.
+- **The signing secret leaves the system once**, at create or rotate. There is no "show secret"
+  read; a secret that goes missing is rotated, since it cannot be shown again.
+- **The event type catalog is the contract.** An unknown type is a 422. Pipeline (`capture.*`)
+  events cannot be subscribed to, because they name no subject to scope by.
+- **Fan-out never grows access.** Delivery is gated, when it joins the queue, on the owner's *live*
+  read grant and row scope (the same check the record read path makes). The visibility map fails
+  closed: a subject type with no class is refused. Three `retention.applied` telemetry entities
+  (`ai_call`, `ai_call_payload`, `voice_learning_signal`) are *signed off* as not delivered until an
+  owner model exists. You can subscribe to them and they are in the catalog, and they never leak.
+- **`audit.appended` is in the catalog but never emitted**: published so the whole catalog is
+  covered, with no code path that sends it.
+- **The owner is set by the server**, never a request field. A principal with no human identity
+  cannot own a subscription.
+- `deliverOnce` **records the result**; the sweep takes up `retrying` rows again. A fail to store is
+  safe for a row already in `retrying`, since the next scan tries it again. A first attempt whose
+  result write fails leaves the row in `pending`, which the sweep does not scan. That row needs a
+  replay by hand (nothing returns `pending` rows to the queue).
+- **Delivery is a capability that needs a key.** No key → a read-only surface, 503 on the secret
+  paths, no worker lane.
 
 ## Where the code lives
 
@@ -475,30 +527,35 @@ authorization snapshot, so a read-only viewer sees the list and deliveries but n
 |---|---|
 | Subscription CRUD + write shape + RBAC gate | `internal/modules/webhooks/store.go` |
 | Delivery state machine + fan-out queries | `internal/modules/webhooks/deliverystore.go` |
-| Visibility map + deferred-delivery classification | `internal/modules/webhooks/deliveryvisibility.go`, `approvalvisibility.go` |
+| Visibility map + which subjects are deferred | `internal/modules/webhooks/deliveryvisibility.go`, `approvalvisibility.go` |
 | The delivery engine (fan-out, retry sweep, replay, one attempt) | `internal/modules/webhooks/delivery.go` |
-| Internal → public envelope mapping (the field-dropping in §3c) | `internal/modules/webhooks/wireenvelope.go` |
-| Secret sealing (AES-256-GCM) | `internal/modules/webhooks/cipher.go` |
-| Secret minting + HMAC signing + the wire headers | `internal/modules/webhooks/signing.go` |
-| The SSRF-guarded delivery client | `internal/modules/webhooks/client.go` |
-| HTTP transport (shadows the generated stubs) + error mapping | `internal/modules/webhooks/handlers.go`, `mapping.go` |
-| The tables + indexes | `backend/migrations/core/0001_baseline.up.sql` (`webhook_subscription`, `webhook_delivery`) |
-| Compose wiring (key-gate options, the two deliverers) | `internal/compose/webhooks.go` |
-| Process-role wiring (consumer + sweep) | `backend/cmd/worker/main.go`, `backend/cmd/api/main.go` |
+| Internal → public envelope mapping (the dropped fields in §3.3) | `internal/modules/webhooks/wireenvelope.go` |
+| Secret sealing (`AES-256-GCM`) | `internal/modules/webhooks/cipher.go` |
+| Making secrets + HMAC signing + the wire headers | `internal/modules/webhooks/signing.go` |
+| The delivery client with the SSRF guard | `internal/modules/webhooks/client.go` |
+| HTTP transport (replaces the generated handlers) + error mapping | `internal/modules/webhooks/handlers.go`, `mapping.go` |
+| The tables + their index | `backend/migrations/core/0001_baseline.up.sql` (`webhook_subscription`, `webhook_delivery`) |
+| Compose setup (key-gate settings, the two deliverers) | `internal/compose/webhooks.go` |
+| Process-role setup (consumer + sweep) | `backend/cmd/worker/main.go`, `backend/cmd/api/main.go` |
 | The `cg:webhooks` consumer group | `internal/shared/kernel/events/catalog.go` |
 | The REST contract | `backend/api/crm.yaml` (`/webhook-subscriptions`) |
 | The public payload contract (§3) | `backend/api/public-events.yaml` |
-| The payload generator | `backend/tools/gen-payloads/` → `internal/contracts/publicevents_gen.go` |
+| The code that generates the payloads | `backend/tools/gen-payloads/` → `internal/contracts/publicevents_gen.go` |
 | The typed emit seam (compile-time payload↔event binding) | `internal/platform/database/storekit/storekit.go` (`EmitEvent`, `EmitEventForEntity`) |
-| The whole-catalog fitness gate (coverage, no orphans, versions, delivery resolvability) | `backend/gates/publicevents_test.go` |
+| The whole-catalog fitness gate (full cover, nothing left over, versions, delivery can resolve) | `backend/gates/publicevents_test.go` |
 | The Settings → Integrations UI (§9) | `frontend/src/screens/webhooks.tsx` |
-| The generated frontend event-type projection | `frontend/src/api/public-events.ts` |
+| The generated frontend event type copy | `frontend/src/api/public-events.ts` |
 
 ## Where to go next
 
-- Registering, verifying and inspecting a webhook end to end: [how-to/register-a-webhook.md](../how-to/register-a-webhook.md).
-- What every module owns, including `webhooks`' tables and HTTP surface: [reference/modules.md](../reference/modules.md).
-- The outbox → relay → consumer-group bus the delivery worker rides: [write-backbone.md](write-backbone.md).
-- Why the owner-scope gate reads *live* RBAC and what row scope means: [authorization.md](authorization.md), [rbac-roles-and-teams.md](rbac-roles-and-teams.md).
-- How the REST contract (`crm.yaml`) is generated; `public-events.yaml` follows a variant of the same contract-first pattern: [contract-first.md](contract-first.md).
-- Every flag and env var (`--webhook-key`): [reference/configuration.md](../reference/configuration.md).
+- Registering, checking and looking at a webhook from end to end:
+  [how-to/register-a-webhook.md](../how-to/register-a-webhook.md).
+- What every module owns, including the tables and HTTP surface of `webhooks`:
+  [reference/modules.md](../reference/modules.md).
+- The outbox → relay → consumer group bus that the delivery worker uses:
+  [write-backbone.md](write-backbone.md).
+- Why the owner-scope gate reads *live* RBAC, and what row scope means:
+  [authorization.md](authorization.md), [rbac-roles-and-teams.md](rbac-roles-and-teams.md).
+- How the REST contract (`crm.yaml`) is generated; `public-events.yaml` follows much the
+  same contract-first design: [contract-first.md](contract-first.md).
+- Every flag and setting (`--webhook-key`): [reference/configuration.md](../reference/configuration.md).

@@ -338,13 +338,9 @@ since the sender has no record yet. **Accept** creates the contact. **Reject** d
 the mail stays where it is. Proposals can only add, so an old proposal, or one rejected in error,
 can never delete anything.
 
-**Noise: hide first, delete later.** The engine hides the mail at once. After the undo window it erases
-the content and keeps the activity row. A model verdict alone only hides: the content is erased only
-when the message also carries its own `List-Unsubscribe` header.
-
-The scope is small. It covers only
-inbound mail that links to no contact, except a contact who was only copied on it. The mail must come
-from an address we have never written to, which no live contact holds as two-way mail. An address that a channel connector
+**Noise: hide first, delete later.** The engine hides the mail at once, and erases its content after
+the undo window. The scope is small. It covers only inbound mail with no links, from an address we have
+never written to, which no live contact holds as two-way mail. An address that a channel connector
 only stands behind does not keep it safe.
 
 **What runs each hour, in order:**
@@ -354,7 +350,7 @@ only stands behind does not keep it safe.
 3. Create review proposals for `unsure` rows.
 4. End proposals that stayed open too long.
 5. Hide new mail from senders already marked as noise.
-6. Erase the content of noise whose undo window has passed.
+6. Erase noise whose undo window has passed.
 
 Steps 2–6 run even with AI switched off. Turning off AI does not mean keeping the content of messages
 the workspace already decided were noise.

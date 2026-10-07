@@ -3,7 +3,7 @@
 
 Connecting a mailbox starts *standing sync*: from then on, new mail comes in. A new connection is also
 offered one **capped scan back in time**, the history import, so the CRM does not start with an empty
-history. The import spends model budget on old mail the CRM has not seen yet. So it is built around an
+history. The import spends model budget on mail the user has not read yet. So it is built around an
 estimate the user accepts *before* anything runs.
 
 The sections below follow one import from start to end. They cover what the user sees and where that

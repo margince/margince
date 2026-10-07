@@ -307,13 +307,13 @@ The core stays free of any one jurisdiction. A fitness gate (`check-no-jurisdict
 source written by hand for names that belong to one jurisdiction, and fails the build on a match. Germany
 lives in `extensions/de`, which declares the legal **retention floors** of GoBD and AO:
 
-- business mail, calls, meetings and messages with outside parties, 6 years;
+- business mail and messages, 6 years;
 - accounting records (*Buchungsbelege*), the 8-year class of §147 AO, as changed in 2025.
 
 The 10-year class for account ledgers and records is not there, because a CRM holds no such record. Each
 floor starts at the end of a calendar year, because §147(4) AO counts every limit from the end of the
 calendar year of the record. The engine takes a floor as the *shortest* time: a workspace may keep a
-record longer, but never erase it earlier. Only the floor for business communication binds a record today.
+record longer, but never erase it earlier. Only the floor for business mail binds a record today.
 
 The class for accounting records is declared but **does nothing yet**, because the product makes no
 invoice that derives into it. The seam gives the pack types a second name in the core that points to the

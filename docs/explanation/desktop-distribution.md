@@ -101,7 +101,7 @@ The two lanes check the same claim in the way each platform can. macOS reads
 the link table. Windows runs each third-party binary out of the built folder.
 A missing DLL cannot show on the build machine, where the file is on `PATH` in
 any case. On the machine of the user, it stops the app. So the check runs
-where the user's copy will be, instead of where the compiler was.
+where the copy of the user will be, instead of where the compiler was.
 
 ## The folder, and the update contract
 
@@ -335,7 +335,7 @@ below.
   `Start Margince.command` clears the mark from the
   launcher, whose own prompt the user has answered. The launcher clears
   `runtime/` before it starts anything. `data/` is never touched: the records
-  of the user still show where they came from. A live socket there would fail the
+  of the user keep their source mark, and a live socket there would fail the
   call in any case.
 
   This code works around the missing signature. A build with
