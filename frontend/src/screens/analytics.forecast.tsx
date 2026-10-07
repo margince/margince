@@ -12,6 +12,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
+import { FilterBar } from "../design-system/filterbar";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SegmentBar } from "../design-system/readings";
@@ -69,7 +70,21 @@ export function ForecastView({
           call about it. Above the readings rather than beside them, because
           every number on this page changes when the window moves — a control
           nested among them would read as filtering one. */}
-      <div className="analytics-toolbar">
+      <FilterBar
+        label={t("analytics.filters")}
+        actions={
+          canCall && !editing ? (
+            <Button onClick={() => setEditing(true)}>
+              {t("forecast.updateCall")}
+            </Button>
+          ) : null
+        }
+        caption={
+          readings.data?.period_start && readings.data.period_end
+            ? `${formatDateAbbrev(readings.data.period_start, locale, readings.data.timezone)} – ${formatDateAbbrev(readings.data.period_end, locale, readings.data.timezone)}`
+            : undefined
+        }
+      >
         {scopeControl}
         <SegmentedControl
           label={t("forecast.period")}
@@ -82,14 +97,7 @@ export function ForecastView({
             week: t("forecast.period.week"),
           }}
         />
-        {canCall && !editing ? (
-          <div className="analytics-toolbar-end">
-            <Button onClick={() => setEditing(true)}>
-              {t("forecast.updateCall")}
-            </Button>
-          </div>
-        ) : null}
-      </div>
+      </FilterBar>
       <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
         {(data) => (
           <>
@@ -103,12 +111,6 @@ export function ForecastView({
                 onClose={() => setEditing(false)}
               />
             ) : null}
-            {data.period_start && data.period_end && (
-              <p className="t-caption">
-                {formatDateAbbrev(data.period_start, locale, data.timezone)} –{" "}
-                {formatDateAbbrev(data.period_end, locale, data.timezone)}
-              </p>
-            )}
             <ForecastAnswer readings={data} locale={locale} />
             {period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />

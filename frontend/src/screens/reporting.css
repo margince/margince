@@ -102,18 +102,10 @@
   gap: var(--space-3);
 }
 
-.reporting-controlbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: var(--space-4);
-  margin-bottom: var(--space-5);
-}
-.reporting-controlbar .reporting-toolbar {
+/* Inside the filter card the card brings the air; the toolbar's own margin
+   would open a second gap under the dials. */
+.filter-bar .reporting-toolbar {
   margin: 0;
-}
-.reporting-controlbar .reporting-header-actions {
-  margin-inline-start: auto;
 }
 
 .reporting-results {

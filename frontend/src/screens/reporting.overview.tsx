@@ -9,6 +9,7 @@ import { replaceDial, useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { type ISODate, isISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
+import { FilterBar } from "../design-system/filterbar";
 import { formatDateTime } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -224,7 +225,37 @@ function OverviewBody({
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
     <>
-      <div className="reporting-controlbar">
+      <FilterBar
+        label={t("analytics.filters")}
+        actions={
+          <>
+            {query.data && <ReportingExportButton evaluation={query.data} />}
+            {canSave && (
+              <Button
+                onClick={() => setSaving(true)}
+                disabled={!query.isSuccess}
+              >
+                {t("reporting.save")}
+              </Button>
+            )}
+          </>
+        }
+        caption={
+          !validPeriod
+            ? t("reporting.chooseDates")
+            : query.data &&
+                query.data.context.interval.end_at ===
+                  query.data.context.evaluated_at
+              ? t("reporting.resultsThrough", {
+                  at: formatDateTime(
+                    query.data.context.interval.end_at,
+                    locale,
+                    query.data.context.timezone,
+                  ),
+                })
+              : undefined
+        }
+      >
         {scopeControl}
         <SegmentedControl
           label={t("reporting.view")}
@@ -270,16 +301,7 @@ function OverviewBody({
             setEvidence(null);
           }}
         />
-        <div className="reporting-header-actions">
-          {query.data && <ReportingExportButton evaluation={query.data} />}
-          {canSave && (
-            <Button onClick={() => setSaving(true)} disabled={!query.isSuccess}>
-              {t("reporting.save")}
-            </Button>
-          )}
-        </div>
-      </div>
-      {!validPeriod && <p role="status">{t("reporting.chooseDates")}</p>}
+      </FilterBar>
       {invalidSelection && <ErrorLine error={query.error} />}
       {/* Its sources are its own, so a failed or unasked evaluation does not
           take the list down with it. */}
@@ -288,18 +310,6 @@ function OverviewBody({
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
             <>
-              {evaluation.context.interval.end_at ===
-                evaluation.context.evaluated_at && (
-                <p className="t-caption" role="status">
-                  {t("reporting.resultsThrough", {
-                    at: formatDateTime(
-                      evaluation.context.interval.end_at,
-                      locale,
-                      evaluation.context.timezone,
-                    ),
-                  })}
-                </p>
-              )}
               <ReportingCharts
                 evaluation={evaluation}
                 afterSummary={<AnalyticsAttention scope={scope} />}
