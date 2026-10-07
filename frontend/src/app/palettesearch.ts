@@ -12,6 +12,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import {
+  problemFieldErrors,
+  problemMessageOf,
+  throwProblem,
+} from "../screens/common";
 import type { Command } from "./palette";
 import { useRecordZone } from "./recordzone";
 import {
@@ -22,6 +27,9 @@ import {
 } from "./searchkinds";
 
 type SearchResult = components["schemas"]["SearchResult"];
+
+// The code the server answers a search it could not rank in time under.
+const TOO_BROAD = "query_too_broad";
 
 // How long a palette search may take before the wait is worth reporting. Below
 // this the answer is quicker than a keystroke and a placeholder would flash on
@@ -43,6 +51,9 @@ type SearchArm = Readonly<{
   commands: Command[];
   pending: boolean;
   failed: boolean;
+  // What to tell the reader when it failed: the server's advice for a search
+  // that was too broad, otherwise the shared line.
+  failure: string;
 }>;
 
 // Live record hits for the palette (RS-1): debounced via useDeferredValue
@@ -61,8 +72,11 @@ export function useSearchCommands(query: string): SearchArm {
   const result = useQuery({
     queryKey: ["palette-search", deferred],
     enabled,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const { data, error } = await api.GET("/search", {
+        // So a keystroke the reader has typed past stops costing the server a
+        // ranking that would otherwise run to its ceiling.
+        signal,
         params: {
           query: {
             q: deferred,
@@ -77,6 +91,14 @@ export function useSearchCommands(query: string): SearchArm {
         // reporting an empty workspace. The builtin commands keep working
         // beside it, which is the degradation that was wanted — losing the
         // sentence was not.
+        //
+        // A search refused as too broad carries its own advice (type another
+        // word, narrow by kind), which is the one thing the reader can act on.
+        if (
+          problemFieldErrors(error).some((fault) => fault.code === TOO_BROAD)
+        ) {
+          throwProblem(error, t);
+        }
         throw new Error(t("palette.searchFailed"));
       }
       return data.data;
@@ -146,5 +168,6 @@ export function useSearchCommands(query: string): SearchArm {
     // forever, and the palette opens with an empty box every time.
     pending: enabled && result.isFetching,
     failed: enabled && result.isError,
+    failure: problemMessageOf(result.error, t, t("palette.searchFailed")),
   };
 }

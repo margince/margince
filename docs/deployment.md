@@ -42,6 +42,10 @@ an exempt runtime role. Two such roles are required:
   grants are applied by the `0001_baseline` migration, which skips them unless
   the role already exists, so create the role *before* the first migration runs.
 
+The worker does not schedule River's nightly index rebuild, which needs the
+index owner. If queue fetches slow down, reindex as `margince_owner`, for example
+`REINDEX INDEX CONCURRENTLY river_job_pkey`.
+
 Create the roles + database + extensions **once**, as a Postgres superuser
 (pgvector is not a "trusted" extension, so a non-superuser cannot install it from
 a migration):
