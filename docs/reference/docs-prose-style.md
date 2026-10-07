@@ -114,6 +114,15 @@ most common words, and shows that plain words expose a fuzzy explanation. Both l
 length of a page. The README's own length limit follows what well-run projects do: the READMEs of
 Kubernetes, React, Go and Terraform each stay under 1,000 words.
 
+## Comments in code
+
+A comment line that a change adds to Go or TypeScript has no em dashes, none
+of the banned words, no capitals for emphasis, no "X is not Y. It is Z." and no change history.
+`make comment-prose` checks the diff against `origin/main` in the pre-push hook and in CI. Comments a change
+does not touch are left alone, so the tree improves file by file. Directives such as `//go:build` and
+`//nolint` are not judged, and a line that must keep a form carries `prose:allow <rule> <reason>`. The word
+pool does not apply to comments, which are full of identifiers.
+
 ## Renaming a term
 
 A domain rename changes identifiers, schema and UI copy, but not ordinary English. Before you run a tree-wide
