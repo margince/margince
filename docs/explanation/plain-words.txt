@@ -1,0 +1,1 @@
+# General words a plain page under docs/explanation/ may use; base forms, sorted. See docs/reference/docs-prose-style.md#plain-pages. Cap: 999.
