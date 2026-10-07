@@ -160,8 +160,8 @@ function accountTask(
   });
 }
 
-// A row about an account says which side went last in the same two terms a
-// contact's row does.
+// A row about an account says which side went last, in terms that name the
+// account rather than a contact the row does not have.
 it("says which side wrote last on a row about an account", async () => {
   stub(
     accountTask({
@@ -176,8 +176,9 @@ it("says which side wrote last on a row about an account", async () => {
 
   await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
   const touch = document.querySelector(".worklist-row-touch");
-  expect(touch?.textContent).toContain("Last inbound Never");
-  expect(touch?.textContent).toContain("Last outbound");
+  expect(touch?.textContent).toContain("Last from this company Never");
+  expect(touch?.textContent).toContain("Last to this company");
+  expect(touch?.textContent).not.toContain("this contact");
   expect(touch?.textContent).toContain("28/08/2026");
 });
 
@@ -216,7 +217,8 @@ it("prefers the contact's moments to the account's on a row naming both", async 
   await screen.findByText(/Send the renewal terms/);
   const touch = document.querySelector(".worklist-row-touch")?.textContent;
   expect(touch).toContain("03/09/2026");
-  expect(touch).toContain("Last outbound Never");
+  expect(touch).toContain("Last to this contact Never");
+  expect(touch).not.toContain("this company");
   expect(touch).not.toContain("14/07/2026");
   expect(touch).not.toContain("28/08/2026");
 });

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../api/schema";
 import { ENTITY } from "../app/entity";
 import { routeHash } from "../app/router";
 import type { UrlParams } from "../app/urlstate";
@@ -9,11 +8,10 @@ import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { subjectHref } from "./worklist.copy";
 import { employerOf } from "./worklist.meetingparties";
+import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 import { withWorklistReturn } from "./worklist.return";
 import type { RowReadings } from "./worklist.row.compact";
-
-type WorklistTouch = components["schemas"]["WorklistContactTouch"];
 
 // Everything a row says about itself UNDER its title: whose row it is, which
 // side wrote last, when it is due, what it is worth, why it is here and what
@@ -97,8 +95,10 @@ export function aboutRecord(
  * record is present rather than on which pair is, so a contact whose moments
  * were withheld never borrows the account's.
  */
-export function rowTouch(item: WorklistItem): WorklistTouch | undefined {
-  return item.contact ? item.contact.touch : item.company?.touch;
+export function rowTouch(item: WorklistItem): HeldTouch {
+  return item.contact
+    ? { holder: "contact", moments: item.contact.touch }
+    : { holder: "company", moments: item.company?.touch };
 }
 
 /**
@@ -109,7 +109,7 @@ export function rowTouch(item: WorklistItem): WorklistTouch | undefined {
 export function touchOf(
   item: WorklistItem,
   framed: boolean,
-): WorklistTouch | undefined {
+): HeldTouch | undefined {
   return framed ? undefined : rowTouch(item);
 }
 

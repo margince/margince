@@ -16,10 +16,10 @@ import "./worklist.css";
 // What to check in each frame:
 //   · the contact is linked in the facts line only where the title does not
 //     already name them;
-//   · "Last inbound / Last outbound" stand on a line of their own, the dates
+//   · "Last from / Last to this contact" stand on a line of their own, the dates
 //     in the reading ink, "Never" where a side never wrote;
 //   · a row whose moments the server withheld draws no line at all;
-//   · a row about an account draws the account's pair in the same words.
+//   · a row about an account draws the account's pair, naming the company.
 
 type WorklistItem = components["schemas"]["WorklistItem"];
 

@@ -151,7 +151,12 @@ function ContactFacts({
   // record with nothing withheld rather than as one with nothing to say.
   const withheld = (view.sections_omitted ?? []).includes("last_touch");
   const facts: Fact[] = [
-    ...lastTouch(withheld ? undefined : view, t, locale, zone).map((fact) => ({
+    ...lastTouch(
+      { holder: "contact", moments: withheld ? undefined : view },
+      t,
+      locale,
+      zone,
+    ).map((fact) => ({
       key: fact.term,
       term: fact.term,
       value: fact.value,
@@ -209,6 +214,21 @@ export type TouchMoments = Readonly<{
   last_outbound_at?: string | null;
 }>;
 
+/** Whose moments they are, which is what the two terms name: a company row
+ *  printing "this contact" would claim a person the row does not have. */
+export type TouchHolder = "contact" | "company";
+
+/** The moments with the record they belong to. Absent moments are withheld. */
+export type HeldTouch = Readonly<{
+  holder: TouchHolder;
+  moments: TouchMoments | undefined;
+}>;
+
+const TOUCH_TERMS = {
+  contact: ["worklist.pane.lastInbound", "worklist.pane.lastOutbound"],
+  company: ["worklist.pane.lastFromCompany", "worklist.pane.lastToCompany"],
+} as const satisfies Record<TouchHolder, readonly [string, string]>;
+
 /**
  * When they last wrote and when we did, as the two facts every surface that
  * answers a row prints — the pane beside the queue, the Brief's row in hand
@@ -221,20 +241,22 @@ export type TouchMoments = Readonly<{
  * as "Never" would be the wrong fact rather than no fact.
  */
 export function lastTouch(
-  touch: TouchMoments | undefined,
+  touch: HeldTouch | undefined,
   t: Translator,
   locale: Locale,
   zone: string,
 ): readonly { term: string; value: string }[] {
-  if (!touch) return [];
+  const moments = touch?.moments;
+  if (!touch || !moments) return [];
+  const [inbound, outbound] = TOUCH_TERMS[touch.holder];
   return [
     {
-      term: t("worklist.pane.lastInbound"),
-      value: spoken(touch.last_inbound_at, t, locale, zone),
+      term: t(inbound),
+      value: spoken(moments.last_inbound_at, t, locale, zone),
     },
     {
-      term: t("worklist.pane.lastOutbound"),
-      value: spoken(touch.last_outbound_at, t, locale, zone),
+      term: t(outbound),
+      value: spoken(moments.last_outbound_at, t, locale, zone),
     },
   ];
 }

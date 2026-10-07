@@ -11163,6 +11163,8 @@ export const de = {
   "worklist.pane.nothing": "Noch nichts erfasst.",
   "worklist.pane.lastInbound": "Letzte Nachricht von diesem Kontakt",
   "worklist.pane.lastOutbound": "Letzte Nachricht an diesen Kontakt",
+  "worklist.pane.lastFromCompany": "Letzte Nachricht von diesem Unternehmen",
+  "worklist.pane.lastToCompany": "Letzte Nachricht an dieses Unternehmen",
   "worklist.pane.never": "Nie",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
