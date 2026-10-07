@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Badge, Button } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
@@ -19,9 +18,15 @@ import {
   unbandedRows,
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
-import { clearSentence } from "./worklist.clear";
-import { sourceUnavailableText } from "./worklist.copy";
 import {
+  pickFor,
+  useWorklistPicks,
+  WorklistBulkBar,
+  type WorklistPicks,
+} from "./worklist.bulkdone";
+import { clearSentence } from "./worklist.clear";
+import {
+  reviewFilter,
   reviewShortfall,
   reviewWork,
   sellerWork,
@@ -46,6 +51,8 @@ import {
 import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
+import { rowIdentity } from "./worklist.rowidentity";
+import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { LoadMoreOfTheDay, WalkNotice } from "./worklist.walknotice";
 import "./worklist.css";
 
@@ -65,28 +72,6 @@ import "./worklist.css";
 // the SCREEN because another surface names one of this screen's lanes to open
 // it — a reading in the Brief. One spelling of the parameter, two ways in.
 export { WORKLIST_FILTER_PARAM };
-
-// Which narrowing actually CONTAINS this group's members.
-//
-// Every group used to send the reader to `decisions`, which excludes system
-// rows — so pressing Review on a broken automation filtered its own failures
-// out of view and drew an empty page. A verb that hides what it promises to
-// show is worse than no verb.
-function reviewFilter(item: WorklistItem): WorklistFilter {
-  return item.category === "system" ? "system" : "decisions";
-}
-
-// What identifies one row on this page.
-//
-// The SOURCE and the id together, because `id` alone is not unique across the
-// queue: a task and a waiting message may carry the same underlying record's
-// id, and the lanes mint ids independently. The React key has always spelled
-// it this way; the selected-row state used the bare id, so two rows sharing one
-// could both light up pressed while the pane resolved to whichever came first.
-// One function now, read by both, so they cannot drift apart again.
-function rowIdentity(item: WorklistItem): string {
-  return `${item.source}-${item.id}`;
-}
 
 /**
  * The reader has put every row down.
@@ -160,6 +145,7 @@ type RowContext = Readonly<{
   onSelect: (next: string) => void;
   onOpenEmail: (activityId: string) => void;
   onFilter: (next: WorklistFilter) => void;
+  picks: WorklistPicks;
 }>;
 
 // A run of rows under one heading, or the unbanded tail.
@@ -175,6 +161,7 @@ function QueueRows({
   onSelect,
   onOpenEmail,
   onFilter,
+  picks,
 }: RowContext & Readonly<{ items: readonly WorklistItem[] }>) {
   return (
     <ol className="worklist-list">
@@ -200,6 +187,7 @@ function QueueRows({
                 : undefined
             }
             onOpenEmail={onOpenEmail}
+            pick={pickFor(item, picks)}
             onReview={() => onFilter(reviewFilter(item))}
             // The ORDER the Brief's card reads in, on every row of the queue:
             // the set-asides lead, the prepared move closes. The queue is a
@@ -262,7 +250,6 @@ function WorklistBody({
   onMore: () => void;
 }>) {
   const t = useT();
-  const missing = day.sources_unavailable;
   // Whose day this is, named by id, asking nothing on the reader's own day
   // (`owner` is then ""). `rosterOwnerNaming` answers null for nobody and for
   // an unnamed id alike, which is the one wording this sentence needs.
@@ -286,6 +273,7 @@ function WorklistBody({
     review.length,
     day.summary.buckets?.review,
   );
+  const selection = useWorklistPicks(queue, `${scope}/${filter}/${owner}`);
 
   const rowProps: RowContext = {
     // Numbered WITHIN the panel each row is drawn in, not across the day.
@@ -309,6 +297,7 @@ function WorklistBody({
     onSelect,
     onOpenEmail,
     onFilter,
+    picks: selection.picks,
   };
   return (
     <>
@@ -361,21 +350,9 @@ function WorklistBody({
           longer complete. */}
           <WalkNotice walk={walk} onRefresh={onRefresh} />
           {/* A day cannot read as clear while something that would have filled it
-          was never read. This is the surface speaking about ITSELF, which is
-          what Callout is for. */}
-          {missing.length > 0 && (
-            <Callout
-              tone="warning"
-              kind="standing"
-              title={t("worklist.partialTitle")}
-            >
-              {t("worklist.partial", {
-                sources: missing
-                  .map((source) => sourceUnavailableText(source, t))
-                  .join(", "),
-              })}
-            </Callout>
-          )}
+          was never read. */}
+          <DayUnread day={day} />
+          <WorklistBulkBar selection={selection} />
           {queue.length === 0 ? (
             // One line, not a panel. No card is drawn to report a zero.
             //
@@ -393,7 +370,7 @@ function WorklistBody({
             // three tasks on the company beside it, and the page offered nothing
             // to reconcile the two.
             <p className="t-body worklist-clear">
-              {clearSentence(missing.length > 0, filter, colleague, t)}
+              {clearSentence(dayPartlyRead(day), filter, colleague, t)}
             </p>
           ) : (
             // The queue, and beside it what the SELECTED row is about.

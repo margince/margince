@@ -79,9 +79,10 @@ func (s *Dispatcher) explain(tool string, err error) string {
 			overQuota.Error() + ")"
 	case errors.As(err, &staged):
 		// A 🟡 call that reached the inbox, and the branch that says WHAT is
-		// waiting there. It is not this credential's to release — the one that
-		// proposed an action does not answer it — so the caller's job is to
-		// relay, and it can only relay a description it was given: an agent sent
+		// waiting there. The contact answers it — in the CRM, or through this
+		// credential when the change can be undone and the call is attended
+		// (stagedReleasePath) — so the caller's job is to relay, and it can only
+		// relay a description it was given: an agent sent
 		// to read_approval for the sentence tells the user a change is pending
 		// and cannot say which.
 		//
@@ -356,14 +357,25 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 			" Do not stage another: repeat this call with \"approval_id\": \"" +
 			staged.ApprovalID.String() + "\"."
 	}
-	return "Confirm-first (🟡): a contact answers this before it runs, and it is not yours to answer. " +
+	return "Confirm-first (🟡): a contact answers this before it runs. " +
 		what +
-		" Put what it would do in front of them and wait for their word. They can release it in the " +
-		"CRM, or you can relay the answer they give you with decide_approval — list_approvals is the " +
-		"same queue either way. Once released, this exact call repeats with \"approval_id\": \"" +
+		" Put what it would do in front of them and wait for their word. " +
+		stagedReleasePath(staged) +
+		" Once released, this exact call repeats with \"approval_id\": \"" +
 		staged.ApprovalID.String() + "\". " +
 		"Blocks THIS call only — do the rest of what you were asked that does not depend on it, " +
 		"and report what you DID alongside what is waiting."
+}
+
+// stagedReleasePath says who answers a staged call, and offers decide_approval
+// only to a credential that can use it: a relay offered where the engine would
+// refuse is a dead end the caller finds out about one call later.
+func stagedReleasePath(staged *workflow.StagedApprovalError) string {
+	if staged.ReleasableByCaller {
+		return "This change can be undone, so once the user says yes you can release it yourself with " +
+			"decide_approval (list_approvals is the same queue), or they can release it in the CRM."
+	}
+	return "It is not yours to answer: the contact releases it in the CRM (list_approvals shows the same queue)."
 }
 
 // faultReferenceSuffix names what a refusal left behind, in the one place an

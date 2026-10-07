@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -62,10 +63,10 @@ type StageResolver interface {
 // Every verb the contract declares with `x-mcp-tool` is registered by one of
 // those functions. A declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
-func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor) {
-	r.Register(searchRecords{p: p})
-	r.Register(readRecord{p: p})
-	r.Register(createRecord{p: p, duplicates: duplicates, language: r.language})
+func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
+	r.Register(searchRecords{p: p, name: r.seats})
+	r.Register(readRecord{p: p, name: r.seats})
+	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language})
 	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language})
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
@@ -110,7 +111,8 @@ func schema(s string) json.RawMessage {
 // --- search_records (🟢 read) ---
 
 type searchRecords struct {
-	p datasource.SystemOfRecordProvider
+	p    datasource.SystemOfRecordProvider
+	name SeatNamer
 }
 
 func (t searchRecords) Spec() mcp.ToolSpec {
@@ -151,7 +153,7 @@ func (t searchRecords) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(searchResult(ctx, res))
+	return json.Marshal(searchResult(ctx, t.name, res))
 }
 
 type wireRecord struct {
@@ -191,18 +193,19 @@ func newWireRecord(ctx context.Context, rec datasource.Record) wireRecord {
 	return w
 }
 
-func searchResult(ctx context.Context, res datasource.SearchResult) SearchRecordsResult {
+func searchResult(ctx context.Context, name SeatNamer, res datasource.SearchResult) SearchRecordsResult {
 	records := make([]wireRecord, 0, len(res.Records))
 	for _, r := range res.Records {
 		records = append(records, newWireRecord(ctx, r))
 	}
-	return SearchRecordsResult{Records: records, NextCursor: res.NextCursor}
+	return SearchRecordsResult{Records: withOwners(ctx, name, records), NextCursor: res.NextCursor}
 }
 
 // --- read_record (🟢 read) ---
 
 type readRecord struct {
-	p datasource.SystemOfRecordProvider
+	p    datasource.SystemOfRecordProvider
+	name SeatNamer
 }
 
 func (t readRecord) Spec() mcp.ToolSpec {
@@ -216,7 +219,7 @@ func (t readRecord) Spec() mcp.ToolSpec {
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[wireRecord](),
+		OutputSchema: schemaFor[recordWithOwner](),
 	}
 }
 
@@ -232,7 +235,7 @@ func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(newWireRecord(ctx, rec))
+	return json.Marshal(withOwners(ctx, t.name, []wireRecord{newWireRecord(ctx, rec)})[0])
 }
 
 // --- create_record (🟢 write, reversible) ---
@@ -245,7 +248,10 @@ type createRecord struct {
 	// failing: silence is what this surface did before, so it is the safe
 	// degradation.
 	duplicates OpenDuplicatesFor
-	language   baselanguage.Resolver
+	// tagOffer says what accepting a proposed tag word would take. Nil where no
+	// vocabulary is bound, and a nil seam offers nothing.
+	tagOffer TagOfferFor
+	language baselanguage.Resolver
 }
 
 func (t createRecord) Spec() mcp.ToolSpec {
@@ -258,10 +264,16 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
+			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),
 		OutputSchema:     schemaFor[createdRecord](),
+		// The card's choice is a decision about the pair this create filed, so
+		// the card is the second renderer of an answer the text already gives.
+		// Model-only: a view acts through the tools apps/actions.json names,
+		// and creating a record is not one of them.
+		UI: &mcp.ToolUI{ResourceURI: apps.CreateFollowupsURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
@@ -269,6 +281,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	var args struct {
 		RecordType string          `json:"record_type"`
 		Fields     json.RawMessage `json:"fields"`
+		OfferTag   string          `json:"offer_tag"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
@@ -291,6 +304,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
 		DuplicateCandidates: t.reportDuplicates(ctx, args.RecordType, ref.ID),
+		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)
 }
 
@@ -328,6 +342,7 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	var args struct {
 		RecordType string          `json:"record_type"`
 		Fields     json.RawMessage `json:"fields"`
+		OfferTag   string          `json:"offer_tag"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
@@ -340,8 +355,13 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	// This door's wire shape IS the command's field set (same reasoning as
 	// archiveRecord.StageInfo, command.go), so it converts rather than
 	// restating the fields: a field CreateCommand grows fails to compile here
-	// instead of quietly leaving it unset.
-	return StageSubject(ctx, NewCreateCall(t.language, CreateCommand(args)))
+	// instead of quietly leaving it unset. offer_tag is accepted here and left
+	// out of the command, yet the staging path still stores the full arguments
+	// and hashes every member, so an approval binds the offer too.
+	return StageSubject(ctx, NewCreateCall(t.language, CreateCommand(struct {
+		RecordType string          `json:"record_type"`
+		Fields     json.RawMessage `json:"fields"`
+	}{args.RecordType, args.Fields})))
 }
 
 // --- log_activity (🟢 write) ---
@@ -380,7 +400,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect."},
+				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made through relink_activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

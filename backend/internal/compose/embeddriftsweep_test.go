@@ -49,5 +49,5 @@ func TestAddEmbedDriftSweepJobRegistersWorkerAndTick(t *testing.T) {
 			t.Fatalf("re-registering the sweep worker did not panic — the first registration never happened")
 		}
 	}()
-	addGovernedWorker[EmbedDriftSweepArgs](reg, &embedDriftSweepWorker{}, 0)
+	addGovernedWorker[EmbedDriftSweepArgs](reg, &embedDriftSweepWorker{})
 }

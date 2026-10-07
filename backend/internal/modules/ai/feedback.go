@@ -304,11 +304,8 @@ func (s *FeedbackStore) Record(ctx context.Context, in RecordInput) error {
 // admitVerdict refuses what must never reach the ledger, naming the field the
 // caller has to fix rather than letting a column CHECK answer for it.
 func admitVerdict(ctx context.Context, in RecordInput) error {
-	if !feedbackSubjects[in.SubjectType] {
-		return &values.ParseError{
-			Field: fieldSubjectType, Code: "invalid_subject_type",
-			Message: "a claim is about a company, contact, deal or lead",
-		}
+	if err := admitSubject(in.SubjectType); err != nil {
+		return err
 	}
 	if strings.TrimSpace(in.ClaimPath) == "" {
 		return &values.ParseError{
@@ -410,11 +407,8 @@ var ErrValueMovedOn = fmt.Errorf("the value this verdict is about has been super
 // about the same subject, and asking the ledger per line would be a query per
 // rendered sentence.
 func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectType string, subjectID ids.UUID) (map[string]Verdict, error) {
-	if !feedbackSubjects[subjectType] {
-		return nil, &values.ParseError{
-			Field: fieldSubjectType, Code: "invalid_subject_type",
-			Message: "a claim is about a company, contact, deal or lead",
-		}
+	if err := admitSubject(subjectType); err != nil {
+		return nil, err
 	}
 	// A read grant on the subject, matching the read this consult decorates.
 	// The caller has already resolved the subject's row scope by the time it
@@ -435,22 +429,10 @@ func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectTyp
 	defer rows.Close()
 
 	out := map[string]Verdict{}
-	for rows.Next() {
-		var claimKind, claimKey, verdict string
-		var correctedValue, note *string
-		var recordedAt time.Time
-		var valueCapturedAt *time.Time
-		var valueShown *string
-		if err := rows.Scan(&claimKind, &claimKey, &verdict, &correctedValue, &note,
-			&recordedAt, &valueCapturedAt, &valueShown); err != nil {
-			return nil, fmt.Errorf("ai: reading a recorded verdict: %w", err)
-		}
-		out[VerdictLookupKey(claimKind, claimKey)] = NewVerdict(
-			claimKind, claimKey, verdict, correctedValue, note, recordedAt, valueCapturedAt, valueShown,
-		)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("ai: reading the recorded verdicts: %w", err)
+	if err := scanVerdicts(rows, withoutSubject, func(_ ids.UUID, v Verdict) {
+		out[VerdictLookupKey(v.ClaimKind, v.ClaimKey)] = v
+	}); err != nil {
+		return nil, err
 	}
 	return out, nil
 }

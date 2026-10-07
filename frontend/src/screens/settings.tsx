@@ -67,7 +67,9 @@ import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { AgentConnectionsCard } from "./agent-token-settings";
 import { AiBudgetCard } from "./ai-admin";
+import { ModelPricesCard } from "./ai-price-sync";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiTasksCard } from "./ai-tasks";
@@ -81,8 +83,11 @@ import { BriefDeliveryRows } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSendersCard } from "./capture-senders";
-import { CaptureSettingsCard } from "./capture-settings";
-import { CaptureHealthCard } from "./capturehealth";
+import {
+  CaptureSettingsCard,
+  MailSyncCard,
+  WebsiteReadingCard,
+} from "./capture-settings";
 import {
   LoadMoreButton,
   problemMessageOf,
@@ -98,16 +103,13 @@ import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
-import { EmbedReindexCard } from "./embedreindex";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
-import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
-import { JobHealthCard } from "./jobhealth";
 import { KnowledgeCard } from "./knowledge";
 import {
   LeadDisqualifyReasonsCard,
@@ -134,6 +136,11 @@ import { RolesSettings } from "./roles-settings";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
+import { SystemHealthPage } from "./settings.systemhealth";
+import {
+  DisplayNameSettingRow,
+  GreetingNameSettingRow,
+} from "./settings-names";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
 import { ThisDevicePanel } from "./thisdevice";
@@ -146,11 +153,6 @@ import "./settings.css";
 import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-// The catalog, the addresses and the visibility predicate moved to
-// ./settingsnav so `src/app/**` can read them without pulling in every card.
-// Re-exported here because this module's own consumers — the tests, the stories,
-// the testkit — ask for both halves, and splitting their imports would be churn
-// that proves nothing.
 import {
   ADMIN_SEGMENT,
   SETTINGS_SCREEN,
@@ -162,6 +164,7 @@ import {
   useVisibleSettingsPages,
 } from "./settingsnav";
 import { settingsHref, settingsRouteTarget } from "./settingsrouting";
+import { useSaveSignature } from "./settingssignature";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -184,7 +187,7 @@ export {
 // and the automations the installation runs unattended. EP09 renders
 // governance; it never authors policy.
 
-export function tabContent(id: SettingsPageId): ReactNode {
+export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
@@ -237,6 +240,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           <SignInMethodsCard />
+          <AgentConnectionsCard />
           <OAuthAppCard provider="google" />
           <OAuthAppCard provider="microsoft" />
         </>
@@ -296,11 +300,15 @@ export function tabContent(id: SettingsPageId): ReactNode {
               used to sit on the reader's own Connections page, where "Only you"
               was written over a switch that binds everybody. */}
           <MailSharingCard />
+          {/* How often the mailboxes under that rule are read, before what is
+              done with what they bring in. */}
+          <MailSyncCard />
           {/* Then which domains are OURS, then what to do with mail from the
               rest, then which of the rest are consumer mailboxes — the posture,
               then the two judgements that read it. */}
           <OwnDomainsCard />
           <CaptureSettingsCard />
+          <WebsiteReadingCard />
           <ConsumerMailDomainsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether
@@ -313,7 +321,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "knowledge":
       return <KnowledgeCard />;
     case "import":
-      return <ImportCard />;
+      return <ImportCard subpage={route?.id2} />;
 
     // ---- ai ----
     // The five-tab strip that used to hold these is gone. Its tabs shared ONE
@@ -330,6 +338,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
               the thing an operator came here to fix. */}
           <ProvidersStat />
           <AiProviderKeysCard />
+          {/* The prices those vendors charge, below the keys that decide which vendors are priced. */}
+          <ModelPricesCard />
           <AiRoutingCard />
           <AiTasksCard />
         </>
@@ -359,20 +369,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       // could hold the audit grant and be refused the page carrying it.
       return <AuditLogCard />;
     case "system-health":
-      return (
-        <>
-          {/* A reindex that costs tokens, then a read of what the background
-              system is holding. They hid beside the custom-field editor before,
-              which put "define a field" and "watch a stalled queue" on one
-              page. */}
-          <EmbedReindexCard />
-          <JobHealthCard />
-          {/* Beside the queue reading, not under Capture or Extensions: each
-              answers "is something broken in the background". */}
-          <CaptureHealthCard />
-          <ExtensionIngestHealthCard />
-        </>
-      );
+      return <SystemHealthPage />;
     case "extensions":
       return <ExtensionAccessCard />;
     case "reset":
@@ -575,7 +572,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
             {t("settings.readOnlyPage")}
           </Callout>
         )}
-        {tabContent(active.id)}
+        {tabContent(active.id, route)}
       </div>
     </div>
   );
@@ -676,6 +673,7 @@ function AccountCard() {
               three-field form live in passwordcard.tsx, exported as a ROW
               precisely so this page can place it among its own. */}
           <DisplayNameSettingRow toast={toast} />
+          <GreetingNameSettingRow toast={toast} />
           <PasswordSettingRow />
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
@@ -701,8 +699,8 @@ function AccountCard() {
 // line, which is the part a reader recognises their own signature by.
 function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
-  const queryClient = useQueryClient();
   const titleId = useId();
+  const formId = useId();
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState<string | null>(null);
   const signature = useQuery({
@@ -715,29 +713,17 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       return data ?? { body: "" };
     },
   });
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/email-signature", {
-        body: { body: next },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // Hand the edit back to the server's answer. It trims what it stores, so
-      // a member who typed trailing spaces would otherwise keep seeing them
-      // over a row that no longer has them — with Save still lit, offering to
-      // save a difference that exists only in the browser.
-      setBody(saved?.body ?? "");
-      queryClient.invalidateQueries({ queryKey: ["me-email-signature"] });
-      // Committing the edit is what the dialog was opened for, so a save closes
-      // it — and the toast is what says the write landed, on the page the
-      // reader is handed back to.
-      setOpen(false);
-      toast.show(t("settings.saved"));
-    },
+  const save = useSaveSignature((saved) => {
+    // Hand the edit back to the server's answer. It trims what it stores, so
+    // a member who typed trailing spaces would otherwise keep seeing them
+    // over a row that no longer has them — with Save still lit, offering to
+    // save a difference that exists only in the browser.
+    setBody(saved?.body ?? "");
+    // Committing the edit is what the dialog was opened for, so a save closes
+    // it — and the toast is what says the write landed, on the page the
+    // reader is handed back to.
+    setOpen(false);
+    toast.show(t("settings.saved"));
   });
 
   // The saved value until the member types; theirs from then on. Reading state
@@ -791,20 +777,19 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           </Button>
         }
       />
-      <Modal open={open} onClose={close} labelledBy={titleId}>
-        {/* A real form, so Enter from the field commits it — and the Save
-              button keeps the semantics it had as a card action: nothing is
-              written until it is pressed. */}
+      <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          {t("settings.signature")}
+        </Heading>
+        {/* A real form: nothing is written until Save is pressed. */}
         <form
+          id={formId}
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             if (dirty && !save.isPending) save.mutate(shown);
           }}
         >
-          <Heading size="large" className="t-h3" id={titleId}>
-            {t("settings.signature")}
-          </Heading>
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />
           <Field label={t("settings.signatureLabel")}>
             {(control) => (
@@ -818,21 +803,22 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             )}
           </Field>
           <p className="t-caption">{t("settings.signatureHint")}</p>
-          <div className="form-actions">
-            <Button variant="ghost" onClick={close}>
-              {t("settings.signatureCancel")}
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!save.isPending && !dirty}
-              pending={save.isPending}
-              busyLabel={t("settings.signatureSaving")}
-            >
-              {t("record.save")}
-            </Button>
-          </div>
         </form>
+        <div className="actions">
+          <Button variant="ghost" onClick={close}>
+            {t("settings.signatureCancel")}
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            disabled={!save.isPending && !dirty}
+            pending={save.isPending}
+            busyLabel={t("settings.signatureSaving")}
+          >
+            {t("record.save")}
+          </Button>
+        </div>
       </Modal>
     </>
   );
@@ -884,83 +870,6 @@ function AppearanceSettingRow() {
             label: t(THEME_LABEL_KEYS[option]),
           }))}
         />
-      )}
-    />
-  );
-}
-
-/**
- * The name colleagues see you by.
- *
- * The saved answer is read back from `/me` rather than kept here, so the shell's
- * account chip and the roster agree with this row the moment it lands.
- */
-function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
-  const t = useT();
-  const me = useMe();
-  const queryClient = useQueryClient();
-  const stored = me.data?.user.display_name ?? "";
-  // null means "not editing" — the row shows the stored name until the reader
-  // types, so a `/me` refetch cannot overwrite what they are in the middle of.
-  const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? stored;
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/display-name", {
-        body: { display_name: next },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // Keep the saved name visible if the account refetch is delayed or fails.
-      setDraft(saved?.display_name ?? null);
-      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
-      toast.show(t("settings.saved"));
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
-    },
-  });
-  // Trimmed for the comparison as well as for the send, or a name with a
-  // trailing space reads as a change and the server answers that it is not one.
-  const trimmed = shown.trim();
-  const dirty = trimmed !== stored;
-  // Counted in CHARACTERS, which is what the contract's `maxLength` means and
-  // what the server checks with `utf8.RuneCountInString`. `String.length` would
-  // count UTF-16 units and refuse a name the server admits.
-  const tooLong = [...trimmed].length > 255;
-  const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
-  return (
-    <SettingRow
-      label={t("settings.displayName")}
-      description={t("settings.displayNameHelp")}
-      layout="stack"
-      control={(row) => (
-        // The catalogued pairing of field and verb, as the pipeline rows use.
-        <div className="form-stack settingrow-measure">
-          <Field label={t("settings.displayName")} labelHidden error={refusal}>
-            {(field) => (
-              <TextInput
-                {...field}
-                aria-labelledby={row["aria-labelledby"]}
-                aria-describedby={[field, row]
-                  .map((owner) => owner["aria-describedby"])
-                  .filter(Boolean)
-                  .join(" ")}
-                value={shown}
-                // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
-                onChange={(event) => setDraft(event.target.value)}
-              />
-            )}
-          </Field>
-          <Button
-            disabled={!dirty || trimmed === "" || tooLong || save.isPending}
-            onClick={() => save.mutate(trimmed)}
-          >
-            {t("settings.displayNameSave")}
-          </Button>
-        </div>
       )}
     />
   );
@@ -1045,12 +954,9 @@ function PassportCard() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const revokingRow = useRef<HTMLElement | null>(null);
-  // Where the minted token lands. It is a live region that is ALWAYS mounted
-  // for the drawer's whole life rather than one that appears with the token in
-  // it: a region inserted at the same moment as its content is not reliably
-  // announced, and this token is shown exactly once in its life.
   const tokenRegion = useRef<HTMLDivElement | null>(null);
   const mintTitleId = useId();
+  const mintFormId = useId();
   const mintScopeHintId = useId();
 
   // Metadata only — the wire schema carries no token (PassportSummary),
@@ -1150,15 +1056,12 @@ function PassportCard() {
 
   // Closing resets the whole attempt, so re-opening starts clean rather than
   // showing the previous mint's token or its refusal. The scope defaults come
-  // back with it — the drawer is not a form somebody left half-filled, it is a
-  // new passport each time.
+  // back with it: each opening is a new passport.
   const closeMint = useCallback(() => {
     // Refused while the request is outstanding, and this is about losing a
     // credential rather than about tidiness. `mint.reset()` detaches the
-    // observer; it does not cancel the POST. A drawer closed mid-flight
-    // therefore still creates a passport on the server, and its token — shown
-    // exactly once, never re-served — goes with the drawer. There is no way
-    // back: the list carries metadata only.
+    // observer; it does not cancel the POST, so a dialog closed mid-flight
+    // still creates a passport whose token, never re-served, goes with it.
     if (mint.isPending) {
       return;
     }
@@ -1169,19 +1072,14 @@ function PassportCard() {
   }, [mint]);
 
   return (
-    // The card LISTS what exists; minting is a drawer. It used to be one flex
-    // row holding a label, a name field, five scope ticks and the submit — eight
-    // controls on one line with a single 8px gap between all of them, so nothing
-    // said where the field ended and the choices began. A form that wide is not
-    // a row in a settings card; it is a form, and the product already has the
-    // surface for one.
+    // The card LISTS what exists; minting is a dialog of its own.
     <Panel
       title={t("settings.passports")}
       // The card's one create verb, in the header band beside the title rather
       // than as a trailing row: a row whose label reads "Mint a new passport"
       // beside a button reading "New passport" says the same thing twice, and it made
       // a third interval out of what is not a decision the list holds. The verb
-      // names the THING it creates and the drawer's submit names the act —
+      // names the THING it creates and the dialog's submit names the act —
       // two buttons reading "Mint passport" are one name for two acts, for a
       // reader and for a name-based query alike.
       //
@@ -1239,13 +1137,14 @@ function PassportCard() {
       <Modal
         open={minting}
         onClose={closeMint}
+        closeDisabled={mint.isPending}
         labelledBy={mintTitleId}
-        placement="right"
+        intent="confirm"
       >
         <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
           {t("settings.mint")}
         </Heading>
-        {/* The token region is mounted for the whole life of the drawer rather
+        {/* The token region is mounted for the whole life of the dialog rather
             than appearing with the token in it: a live region inserted at the
             same moment as its content is not reliably announced, and this token
             is shown exactly once. */}
@@ -1262,18 +1161,9 @@ function PassportCard() {
             </PanelPlate>
           )}
         </div>
-        {mint.isSuccess ? (
-          // The drawer does NOT close itself on success. Closing would take the
-          // one and only sight of the credential with it, and a reader who was
-          // still reading has no way back — the list carries metadata and the
-          // server will not re-disclose a token.
-          <div className="form-actions">
-            <Button variant="primary" onClick={closeMint}>
-              {t("settings.mintDone")}
-            </Button>
-          </div>
-        ) : (
+        {!mint.isSuccess && (
           <form
+            id={mintFormId}
             className="form-stack"
             onSubmit={(event) => {
               event.preventDefault();
@@ -1289,12 +1179,6 @@ function PassportCard() {
                 />
               )}
             </Field>
-            {/* A fieldset with a legend, which is what five checkboxes that
-                belong together ARE. Loose siblings beside a text input said
-                nothing about what they were choices FOR, and the accessible
-                group had no name at all. `.field-multiselect` is the house
-                spelling — `create.tsx` has used it for exactly this since it
-                was written. */}
             <fieldset
               className="field-multiselect"
               aria-describedby={mintScopeHintId}
@@ -1322,23 +1206,26 @@ function PassportCard() {
             </fieldset>
             {/* Beside the button that produced it, not below the tokens. */}
             <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
-            <div className="form-actions">
+          </form>
+        )}
+        <div className="actions">
+          {mint.isSuccess ? (
+            // It stays open on success: closing would take the one sight of a
+            // credential the server never re-discloses.
+            <Button variant="primary" onClick={closeMint}>
+              {t("settings.mintDone")}
+            </Button>
+          ) : (
+            <>
               <Button disabled={mint.isPending} onClick={closeMint}>
                 {t("settings.mintCancel")}
               </Button>
               <Button
                 type="submit"
+                form={mintFormId}
                 variant="primary"
-                // A passport with no scope is a credential that can do nothing,
-                // so the button says why it is refused rather than sitting pale
-                // with nothing to offer. The sentence refuses the press on its
-                // own, so there is no `disabled` beside it saying the same
-                // thing in a spelling that carries no explanation.
-                // And only while nobody is minting: `reason` outranks `pending`
-                // in Button, so a scope cleared after the press would take the
-                // spinner and `aria-busy` off a request still in flight — the
-                // reader would be told the press was refused while the write
-                // they made is running.
+                // A scopeless passport can do nothing, so the press is refused
+                // with a sentence; never mid-mint, as `reason` outranks `pending`.
                 reason={
                   scopes.size === 0 && !mint.isPending
                     ? t("settings.passportScopesRequired")
@@ -1349,9 +1236,9 @@ function PassportCard() {
               >
                 {t("settings.mint")}
               </Button>
-            </div>
-          </form>
-        )}
+            </>
+          )}
+        </div>
       </Modal>
       <ConfirmModal
         open={confirmId != null}
@@ -1361,6 +1248,7 @@ function PassportCard() {
         }}
         title={t("settings.revoke")}
         confirmLabel={t("settings.revoke")}
+        confirmVariant="danger"
         onConfirm={() => confirmId && revoke.mutate(confirmId)}
         pending={revoke.isPending}
         error={revoke.error ? problemMessageOf(revoke.error, t) : null}
@@ -1783,13 +1671,6 @@ function ResetDataCard() {
       <ConfirmModal
         open={open}
         onClose={() => {
-          // Don't let Escape/backdrop dismiss the dialog mid-request: closing
-          // re-enables the outer button while the first destructive POST is
-          // still in flight (reset.reset() clears mutation state but cannot
-          // abort the sent request), which would allow a second reset.
-          if (reset.isPending) {
-            return;
-          }
           setOpen(false);
           setTyped("");
           reset.reset();

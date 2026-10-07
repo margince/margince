@@ -11,29 +11,29 @@ corrected.
 Two rules that bind every step:
 
 - **Nothing the pages say today is lost.** Every state, refusal and feature
-  in §3–§7 has a home in the new layout before the old one is removed. A
+  in sections 3–7 has a home in the new layout before the old one is removed. A
   restyle that drops a "hidden from you" sentence has failed even if it
   looks right.
-- **The head shows base verbs, never the task of the day.** `Write email ·
+- **The head shows base verbs** and never the task of the day. `Write email ·
   Log activity · Add task · more` on every company; the move the call names
   lives inside *What needs you* with its reason. Ask is a pane of prepared
   questions, not a free-text field.
 
 ## 1. What the gates require of a restyle
 
-Read before touching a stylesheet. Each gate is exact, not fuzzy.
+Read before touching a stylesheet. Each gate checks a precise condition.
 
 | Gate | What it holds | What the restyle must do |
-|---|---|---|
+|---|---|---|---|
 | `tokens.test.ts` | Pins ~40 token values (`canonical`), the surface-luminance ladders in both themes, AA contrast of five inks on five grounds, chip composites, `--accent` = `#0b7a53`, `--bgRail` = `#13231d` and absent from dark, the dark `@media` arm byte-equal to `[data-theme="dark"]`, `brand.css` derivation-only | Change `tokens.css` and the `canonical` table in one commit; keep both ladders monotone; re-run the contrast math on the new grounds; keep the two dark arms identical; keep `--bgRail` declared (the rail stops using it, the pin stays) |
 | `check-ds-purity.sh` + `conformance.test.ts` | No colour literal outside `tokens.css` (one exemption: `provider-mark.tsx`) | Every new colour is a token; glows and panes included |
-| `check-font-lock.sh` + `conformance.test.ts` + `mono.test.ts` | Exactly three families: Outfit, Geist, Geist Mono (Outfit kept by decision after the mock's display face was tried in Step 1); Geist Mono only on `pre`, `code`, `samp` and `.code-block`, refused anywhere else by `frontend/scripts/check-font-lock.sh` and `frontend/src/design-system/mono.test.ts` | Change the family in **four** places in one PR: the script's strip list, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), the Google Fonts link in `index.html` |
+| `check-font-lock.sh` + `conformance.test.ts` + `mono.test.ts` | Three families only: Outfit, Geist, Geist Mono (Outfit kept by decision after the mock's display face was tried in Step 1); Geist Mono only on `pre`, `code`, `samp` and `.code-block`, refused anywhere else by `frontend/scripts/check-font-lock.sh` and `frontend/src/design-system/mono.test.ts` | Change the family in **four** places in one PR: the script's strip list, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), the Google Fonts link in `index.html` |
 | `check-ds-spacing.sh` | No new raw px in padding/margin/gap under `screens/` and `app/` | Screen sheets use `--space-*`; design-system sheets may keep optical px |
-| `check-ds-spacing-roles.sh` | No screen rule re-spaces a design-system primitive the design system spaces, or re-sizes one it sizes (`font-size`, `line-height`, `letter-spacing`), and the three named contexts take their role token: `*-actions` gap → `--gapActions`, `*-cards` gap → `--gapCards`, `*-card`/`*-panel` padding → `--padCard`/`--padPanel`. Whole-tree | Retune a role in `tokens.css`, where every screen moves with it; a screen that needs its own interval or size spaces or sizes its OWN element, varies the primitive with a role token, or waives in line with a reason |
+| `check-ds-spacing-roles.sh` | No screen rule re-spaces a design-system primitive the design system spaces, or re-sizes one it sizes (`font-size`, `line-height`, `letter-spacing`), and the three named contexts take their role token: `*-actions` gap → `--gapActions`, `*-cards` gap → `--gapCards`, `*-card`/`*-panel` padding → `--padCard`/`--padPanel`. Whole-tree | Retune a role in `tokens.css`, where every screen moves with it; a screen that needs its own interval or size spaces or sizes its own element, varies the primitive with a role token, or waives in line with a reason |
 | `check-space-tokens.sh` | Every `var(--x)` is declared somewhere | Rename a token only with all its consumers |
 | `actionrow.test.ts` | Two or more sibling buttons sit in a container that gets `gap: var(--gapActions)` | Give a verb row its own class with that gap, or reach for `.form-actions` / `.actions` / `.card-actions`; a class no stylesheet defines is the failure this one exists for |
 | `onecard.test.ts` | No second rule declares `.card`'s full chrome | When `Panel` becomes the pane, `.card` must not end up identical to it |
-| `type-source.test.ts` | No size, leading, tracking or weight declared by VALUE outside `tokens.css`: `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`, `font` reads a `--font*` token and `font-weight` a `--fontWeight*` one. Capitals are refused by every road, including a rendered `.toUpperCase()` | Delete the declaration and let the element inherit, or name the token the role wants — a heading takes `Heading size=`, a caption `.t-caption`, a control's name `.t-label` |
+| `type-source.test.ts` | No size, leading, tracking or weight declared by value outside `tokens.css`: `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`, `font` reads a `--font*` token and `font-weight` a `--fontWeight*` one. Capitals are refused by every road, including a rendered `.toUpperCase()` | Delete the declaration and let the element inherit, or name the token the role wants: a heading takes `Heading size=`, a caption `.t-caption`, a control's name `.t-label` |
 | `catalog.test.ts` | Every exported primitive named in the README table with a story | A new or renamed primitive ships with its row and story |
 | `native-controls.test.ts` | No `<select>` | Keep `Select` |
 | `table-scroll-coverage.test.ts` | Every table inside `TableScroll` | Keep it |
@@ -41,7 +41,7 @@ Read before touching a stylesheet. Each gate is exact, not fuzzy.
 | e2e `ac.spec.ts` | WCAG 2.2 AA with axe on every core screen; 390px no horizontal scroll; the rail's ten items in order | Run it in both themes after the token PR |
 | e2e `company-record.spec.ts` | "KPI strip above the tab strip", "one Company 360 card", "left rail carries the account's context as one panel of named sections", "lifecycle control is a control, not a tag", "logo not favicon" | These assertions describe the old shape. Rewrite them **in the company PR**, in the same commit as the layout, to the new shape (readings under the tab strip, the 360 as the first pane, the context panel on the right) |
 | e2e `perf-mobile.spec.ts` | The record's `<h1>` renders from the router before any record read returns, p95 under 300 ms on Fast 3G | The head keeps drawing from route state; nothing in the head may wait on the 360 |
-| `history.spec.ts` | A record's tab is an address | Keep tabs in the URL; the deal's tabs move there (§5) |
+| `history.spec.ts` | A record's tab is an address | Keep tabs in the URL; the deal's tabs move there (section 5) |
 | 500-line file cap | `companies.tsx`, `company360.tsx`, `companyheader.tsx`, `deals.tsx`, `leads.tsx` are already over | New code goes in new files; do not grow these |
 | `i18n.test.ts` | `en.ts`, `de.ts`, `vi.ts` carry the same keys | Every new key lands in all three |
 
@@ -51,7 +51,7 @@ Order matters: tokens first, because every later PR is measured against
 them; the shell last in this phase, because it is the most visible and the
 least risky once the tokens hold.
 
-### Step 1 — Tokens and type (`tokens.css`, `tokens.test.ts`, `base.css`, `app.css`, `index.html`)
+### Step 1: Tokens and type (`tokens.css`, `tokens.test.ts`, `base.css`, `app.css`, `index.html`)
 
 1. **Grounds.** Move the light ladder to the lit ground: `--bgPage` → the
    pale green `#f1f5f2`, `--bgElevated` → the pane's solid fallback,
@@ -62,7 +62,7 @@ least risky once the tokens hold.
    it, not values that look right in isolation.
 2. **Inks.** `--textPrimary/--textContent/--textTertiary/--textMuted/
    --textMeta` take the `--ink…--ink4` values from `DESIGN.md`
-   §3. All five must clear 4.5:1 on all five grounds in both themes.
+   section 3. All five must clear 4.5:1 on all five grounds in both themes.
 3. **Accent and agent.** `--accent` stays `#0b7a53` (pinned). `--ai` family
    stays; add `--aiBg` (the row tint) and `--aiLine` if the existing
    `--aiLight`/`--aiMed` do not match the mock's values, or map the mock to
@@ -83,21 +83,21 @@ least risky once the tokens hold.
    their own px (they diverge today). Set `--fs-body` 13.5px, `--lh-normal`
    1.55, `--fs-display` 32px with `--tracking-display` -0.03em. `body` in
    `app.css` reads the tokens rather than `14px/1.5`.
-7. **Radius and depth.** Radius is by ROLE, and the ladder in `tokens.css` is
-   the contract: `--r-lg` 20px for a pane, the details panel and a reading
-   card; `--r-md` 16px for a board card and the agent's row; `--r-control`
-   12px; `--r-sm` 8px for a chip; `--r-xs` 4px for a keycap; `--r-full` for a
-   pill or a monogram (DESIGN.md §5). Where an engine has `corner-shape:
+7. **Radius and depth.** Radius is by role, and the ladder in `tokens.css` is
+   the contract. `--r-lg` is 20px for a pane, the details panel and a
+   reading card; `--r-md` 16px for a board card and the agent's row. Then
+   `--r-control` 12px, `--r-sm` 8px for a chip, `--r-xs` 4px for a keycap, and
+   `--r-full` for a pill or a monogram (DESIGN.md section 5). Where an engine has `corner-shape:
    squircle` every rung except `--r-full` doubles, because a superellipse of
-   radius R reads about as round as a circular corner of R/2 — one `@supports`
-   block in `tokens.css`, and no call site's business. Three depth tokens and
-   no more: `--shadow-rest`, one tight 1px/2px layer worn by every resting
-   surface and filled control; `--shadow-well`, the same layer turned `inset`,
-   worn by every field, because a field has a floor rather than a top side; and
-   `--shadow-pop` for popovers and the drawer. A control drops its layer on
+   radius R reads about as round as a circular corner of R/2. One `@supports`
+   block in `tokens.css` does this, and no call site touches it. There are three
+   depth tokens. `--shadow-rest` is one tight 1px/2px layer worn by every resting
+   surface and filled control. `--shadow-well` is the same layer turned `inset`,
+   worn by every field, because a field has a floor instead of a top side.
+   `--shadow-pop` is for popovers and the drawer. A control drops its layer on
    hover, active and focus.
 8. **Dark.** Add the new tokens to both dark arms with the dark values from
-   `DESIGN.md` §3; the two arms must stay byte-identical to each other (the
+   `DESIGN.md` section 3; the two arms must stay byte-identical to each other (the
    gate holds that), not to the light block.
 
 Done when: `make fe-unit` green with the updated `canonical` table,
@@ -105,22 +105,22 @@ Done when: `make fe-unit` green with the updated `canonical` table,
 shows every existing story on the new ground with no visual regression a
 reader would call broken.
 
-### Step 2 — Atoms (`atoms.tsx`, `atoms.css`, `base.css`)
+### Step 2: Atoms (`atoms.tsx`, `atoms.css`, `base.css`)
 
 | Primitive | Change |
 |---|---|
 | `Button` | Flat. Primary: `--accent` fill, `--textOnAccent`, 36px, 10px radius, weight 500. Ghost: `--pane` fill, `--line2` outline. Small: 32px. Icon-only: 36×36 square (the more button). The agent's fill for Accept on a staged row is the existing `variant="ai"`. No gradients, no 3D. |
-| `Badge` | One component, one size (20px: an 18px line inside a 1px edge) — no uppercase, no dot by default. `soft` is the default: the tone's tint with its Text ink and a hairline in the tone, for a status beside prose and down a column. `primary` is the solid fill with a transparent edge, for a count and the one status that must not be missed. Six tones (`default`, `accent`, `success`, `warn`, `danger`, `ai`); `ai` always draws Sparkles; otherwise an optional icon left of the label, or `live` for a breathing dot in the same place. |
+| `Badge` | One component, one size (20px: an 18px line inside a 1px edge), no uppercase, no dot by default. `soft` is the default: the tone's tint with its Text ink and a hairline in the tone, for a status beside prose and down a column. `primary` is the solid fill with a transparent edge, for a count and the one status that must not be missed. Six tones (`default`, `accent`, `success`, `warn`, `danger`, `ai`); `ai` always draws Sparkles; otherwise an optional icon left of the label, or `live` for a breathing dot in the same place. |
 | `Card` | Keep as is (`onecard.test.ts`); the pane is `Panel`, not `Card`. |
 | `StatCard` | The reading card: the eyebrow as its label, 26px figure in the display face, tabular (down to 20px where five share a narrow row), 12.5px basis, `--pane` ground, 18px radius, 138px min height. `numeric` for figures. |
 | `Skeleton`, `PendingBody`, `EmptyState` | Recolour to tokens; `EmptyState` left-aligned in its pane, one sentence and one verb. |
-| `SegmentedControl`, `TextInput`, `Select`, `ComboBox`, `Kbd`, `Modal`, `Callout`, `Switch` | Token and radius pass only. `Modal placement="right"` becomes the compose drawer's surface (560px, `--paneSolid`). |
+| `SegmentedControl`, `TextInput`, `Select`, `ComboBox`, `Kbd`, `Modal`, `Callout`, `Switch` | Token and radius pass only. The compose drawer becomes `Modal intent="drawer-reading"` (880px, `--bgElevated`). |
 | `.t-eyebrow` | The one uppercase micro-type: 10.5px, `.08em`. Lower the eyebrow baseline where the restyle removes restatements. |
 
 Stories: update every changed story; the catalog test needs no new rows
 unless a primitive is added (`variant="agent"` is a prop, not a primitive).
 
-### Step 3 — Composed and record primitives
+### Step 3: Composed and record primitives
 
 | Primitive | Change |
 |---|---|
@@ -128,18 +128,18 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
 | `StatStrip` | Becomes the readings row: five `StatCard`s in a grid, 16px gap, no plate. Slots that cannot be read stay absent or say so (the strip's current rule). |
 | `RecordView` (`composed.tsx`, `composed.css`) | The head: 56px mark and 32px name **centred on one axis**; facts line 13px, wraps in rows, carries the live dot and the way in; verbs right-aligned, wrap under at narrow widths; the `more` icon button last. Remove `PageAsideToggle` from `actions`; render it at the right end of the tab strip. The `controls` slot (deal only) is dropped: the deal's worth/stage/owner move to the facts line. `nameBadge` stays on the name line. |
 | `RecordTabs` | Quiet: no rule under the strip, 13px, 2px `--accent` under the current tab, counts at 11px `--ink4`; a `trailing` slot for the Details control. The strip runs the full width above the columns, so the details pane opens under it. |
-| `PageAside` | The details pane: `RecordView`'s aside slot, 300px, under the tab row beside the work, one pane, **closed by default**, remembers its state per reader. A screen claims it with `usePageAside` and hands `RecordView` its content only while open. The pane's own children decide their inner anatomy (§3.4: five subjects vs one story). |
+| `PageAside` | The details pane: `RecordView`'s aside slot, 300px, under the tab row beside the work, one pane, **closed by default**, remembers its state per reader. A screen claims it with `usePageAside` and hands `RecordView` its content only while open. The pane's own children decide their inner anatomy (section 3.4: five subjects vs one story). |
 | `PageZones` | `.page-zones-aside` becomes `minmax(0,1fr) 300px`; `both` and `rail` shapes stay for pages that use them. |
 | `GroupedTimelineList` / `TimelineRow` (`composed.css .timeline`) | Already the rail. Restyle only: 76px date column in tabular figures, marks by kind (solid, hollow for `change`, indigo for an agent change, dashed indigo for staged, circled glyph for a thread group), kind eyebrow, direction words, title 13.5/600, text clamped to three lines, meta line; a thread group as a card on the body side. |
 | `record360/spine.css` | Keep the geometry (it is the product's); take the mock's sizes: gap day count 26px display amber, today bar 2×15px, dotted grey ahead. Nothing structural. |
 | `record360/verdict.tsx` + `brieftitle.tsx` + `citations.tsx` | The 360 pane: `BriefTitle` becomes the indigo tile + "{name} · 360" + "read this record {when}" + "Write it again"; `VerdictHead` puts the standing word at 34px display left of the because-sentence; `Citations` render inline in the sentence as source chips. |
-| `EvidenceMark` | Add hover/focus preview: the popover (`--paneSolid`, `--shadow-pop`, 300px) with the quote in a left-ruled indigo block and the origin line; click keeps opening the full receipt (`EvidenceModal`). |
+| `EvidenceMark` | Add hover/focus preview: the popover (`--bgElevated`, `--shadow-pop`, 300px) with the quote in a left-ruled indigo block and the origin line; click keeps opening the full receipt (`EvidenceModal`). |
 | `trust.tsx` (`StagingCard`, `FieldDiff`) | The agent's row: `--aiBg` ground, 14px radius, eyebrow in `--aiText`, headline 16px display, sentence, "Rests on" chips, verbs. Staged: dashed `--aiLine` edge, Accept in the agent fill. |
 | `DecisionCard`, `BriefItemCard`, `Callout` | Token pass; `Callout` is a row with a tone dot, never a filled box. |
 | `RelationshipMap` (`relationshipmap.css`) | Colours only: node boxes on `--pane`, gap node dashed amber, edges banded (strong 2.5px accent, developing dashed, cold dotted), selection lights in ink and fades the rest to 35%, panel as a pane. Geometry is untouched (`relationshipmap.layout.ts` is pure and tested). |
 | `ListTable` / `DataTable` | Headers 11.5px `--ink3`, 44px rows, hairlines, figures right-aligned and tabular (`.t-num`), selected row on `--accentBg`. |
 
-### Step 4 — The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
+### Step 4: The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
 1. **Ground and glows.** `.app` paints `--bgPage` with the two radial glows
    (`--glowA` top-left, `--glowB` top-right) as a background, not an
@@ -156,11 +156,11 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
    that belongs to a record sits in it.**
 4. **Settings second level.** On a settings route the sidebar itself becomes
    the 210px column that carries the level (`SettingsRail`/`navlevel.tsx`),
-   on the same glass. It still shows one level at a time — the ten
-   destinations step aside for the section's entries, with Back above them —
-   because `rail.test.tsx` and `ac.spec.ts` hold exactly one level in the
-   sidebar; the mock's two columns side by side would be a navigation change,
-   not a restyle.
+   on the same glass. It still shows one level at a time: the rail's
+   destinations step aside for the section's entries, with Back above them.
+   `rail.test.tsx` and `ac.spec.ts` hold one level in the sidebar, and the
+   mock's two columns side by side would be a navigation change and so out of
+   scope for a restyle.
 5. **Agent chrome.** `agentrail` and `agent-edge` take the tokens; the orb
    stays where it is.
 
@@ -170,27 +170,27 @@ in both themes, and the 390px sweep.
 ## 3–9. The pages
 
 The record pages, each with every state it handles today, are in
-[adopt-the-design-records.md](adopt-the-design-records.md) (§3 company as
-the reference, §4 contact, §5 deal, §6 lead, §7 project). The sub pages and
+[adopt-the-design-records.md](adopt-the-design-records.md) (section 3 company as
+the reference, section 4 contact, section 5 deal, section 6 lead, section 7 project). The sub pages and
 maps, both sides of the Deal Room, the responsive ladder, thin and rich
 records and the remaining screens are in
-[adopt-the-design-surfaces.md](adopt-the-design-surfaces.md) (§8, §8a–c,
-§9). The section numbers below refer to those pages.
+[adopt-the-design-surfaces.md](adopt-the-design-surfaces.md) (section 8, sections 8a–c,
+section 9). The section numbers below refer to those pages.
 
 ## 10. Sequencing and PR list
 
-| PR | Scope | Gate to watch |
-|---|---|---|
-| 1 | Step 1: tokens, fonts (four places), type scale, base | `tokens.test.ts`, font lock, `ac.spec.ts` both themes |
-| 2 | Step 2: atoms + stories | `catalog.test.ts`, `onecard`, eyebrow baseline |
-| 3 | Step 3: Panel, StatCard/StatStrip, RecordView head, RecordTabs trailing slot, PageAside right/closed, timeline, spine, 360 kit, EvidenceMark hover, trust rows, map colours, the responsive ladder (§8a) | `company-record.spec.ts` will go red here; keep the old assertions until PR 4 by feature-flagging the head layout, or land 3 and 4 together |
-| 4 | Step 4: shell, top bar, settings second level, agent chrome | `rail.test.tsx`, `ac.spec.ts`, 390px sweep |
-| 5 | §3 Company, with its e2e rewrite and state stories | `company-record.spec.ts`, `history.spec.ts`, `perf-mobile` |
-| 6 | §4 Contact | `contact-network.spec.ts`, `contactpage.test.tsx` |
-| 7 | §5 Deal, tabs into the URL | `deals.test.tsx`, `history.spec.ts` |
-| 8 | §6 Lead + §7 Project | `leads.spec.ts`, `projects.spec.ts` |
-| 9 | §8 sub pages and maps | `recordtabs.spec.ts` |
-| 10+ | §9, one screen each | |
+| PR | Scope | Gate to watch | Status |
+|---|---|---|---|
+| 1 | Step 1: tokens, fonts (four places), type scale, base | `tokens.test.ts`, font lock, `ac.spec.ts` both themes | Landed in [#3835](https://github.com/margince/margince/pull/3835) |
+| 2 | Step 2: atoms + stories | `catalog.test.ts`, `onecard`, eyebrow baseline | Landed in [#3842](https://github.com/margince/margince/pull/3842) |
+| 3 | Step 3: Panel, StatCard/StatStrip, RecordView head, RecordTabs trailing slot, PageAside right/closed, timeline, spine, 360 kit, EvidenceMark hover, trust rows, map colours, the responsive ladder (section 8a) | `company-record.spec.ts` will go red here; keep the old assertions until PR 4 by feature-flagging the head layout, or land 3 and 4 together | Landed in [#3872](https://github.com/margince/margince/pull/3872) |
+| 4 | Step 4: shell, top bar, settings second level, agent chrome | `rail.test.tsx`, `ac.spec.ts`, 390px sweep | Landed in [#3889](https://github.com/margince/margince/pull/3889) |
+| 5 | Section 3 Company, with its e2e rewrite and state stories | `company-record.spec.ts`, `history.spec.ts`, `perf-mobile` | Landed in [#3929](https://github.com/margince/margince/pull/3929) |
+| 6 | Section 4 Contact | `contact-network.spec.ts`, `contactpage.test.tsx` | Open |
+| 7 | Section 5 Deal, tabs into the URL | `deals.test.tsx`, `history.spec.ts` | Open |
+| 8 | Section 6 Lead + section 7 Project | `leads.spec.ts`, `projects.spec.ts` | Open |
+| 9 | Section 8 sub pages and maps | `recordtabs.spec.ts` | Open |
+| 10+ | Section 9, one screen each | | Open |
 
 Every PR: `make check` (both halves), Storybook in both themes, the axe
 suite, a screenshot pair (light, dark) in the PR body, and the i18n keys in
@@ -211,6 +211,6 @@ and `DESIGN.md` before PR 5:
 - The lead's readings in the product are score, status, source, company and
   first response; "Your move" and "Next" are derived in the mock. Keep the
   product's slots and add the two derived ones only if the 360 carries them.
-- The contact's primary verb names the transport when there is exactly
+- The contact's primary verb names the transport when there is only
   one; the mock's fixed "Write email" is the base word for the plan, with
   the transport name allowed as the label when it is the only one.

@@ -21,6 +21,8 @@ import (
 // so a sentence added to the struct with no row here fails.
 var summaryVerbs = map[string][]string{
 	"archive":             {"%s", "%s"},
+	"dismissDuplicate":    {"%s"},
+	"reopenDuplicate":     {"%s"},
 	"createHead":          {"%s"},
 	"updateHead":          {"%s"},
 	"logHead":             {"%s"},
@@ -70,7 +72,6 @@ var summaryVerbs = map[string][]string{
 	"bookingLinks":        {"%d"},
 	"noSubject":           nil,
 	"relinkActivity":      {"%s", "%s", "%s"},
-	"relinkThread":        {"%q", "%s", "%s"},
 	"relinkActivities":    {"%d", "%s", "%s"},
 	"importPreview":       {"%s"},
 	"importCommit":        {"%d", "%s", "%s"},
@@ -230,7 +231,7 @@ func germanInstallation(context.Context) textlang.Lang { return textlang.German 
 // option reaches the tool, and the tool hands it to the resolver.
 func TestTheToolDoorDescribesInTheComposedLanguage(t *testing.T) {
 	r := NewRegistry(nil, nil, WithBaseLanguage(germanInstallation))
-	RegisterCoreTools(r, stubRecordProvider{}, nil, nil, nil, nil, nil)
+	RegisterCoreTools(r, stubRecordProvider{}, nil, nil, nil, nil, nil, nil)
 	tool, ok := r.tools["create_record"].(createRecord)
 	if !ok {
 		t.Fatalf("create_record is registered as %T, want createRecord", r.tools["create_record"])

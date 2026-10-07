@@ -7,6 +7,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 )
 
 const (
@@ -45,7 +47,7 @@ func NewPacer() *Pacer {
 		slots:    make(chan struct{}, pacerMaxConcurrent),
 		interval: pacerMinInterval,
 		now:      time.Now,
-		sleep:    sleepCtx,
+		sleep:    backoff.Sleep,
 	}
 }
 
@@ -95,17 +97,4 @@ func (p *Pacer) Wait(ctx context.Context) error {
 // Done releases the concurrency slot Wait acquired.
 func (p *Pacer) Done() {
 	<-p.slots
-}
-
-// sleepCtx is the production sleep: a timer that a context cancellation cuts
-// short.
-func sleepCtx(ctx context.Context, d time.Duration) error {
-	timer := time.NewTimer(d)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
 }

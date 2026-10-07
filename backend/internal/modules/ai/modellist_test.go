@@ -335,72 +335,54 @@ func TestAnUnknownProviderIsNotReportedAsUnreachable(t *testing.T) {
 	}
 }
 
-// Two lanes may name one vendor at two hosts, and Go randomises map iteration —
-// so the host this read picks has to be the same one every time, or the picker's
-// list changes under a reader who touched nothing.
-func TestTheHostAskedIsStableAcrossReads(t *testing.T) {
+// The host belongs to the provider, so which lane the picker was opened on
+// changes nothing: every tier is answered at the provider's host, and a
+// document still in the per-lane shape is read through the lift, whose first
+// tier by name decides — the same host on every read.
+func TestAvailableModels_IgnoresTierAndReadsProvider(t *testing.T) {
+	const broker = "https://openrouter.ai/api"
 	cfg := RoutingConfig{
+		Providers: map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker}},
 		Tiers: map[Tier]ProviderConfig{
-			TierPremium:    {Provider: providerOpenAICompatible, BaseURL: "https://b.example"},
-			TierCheapCloud: {Provider: providerOpenAICompatible, BaseURL: "https://a.example"},
-			TierFrontier:   {Provider: providerOpenAICompatible, BaseURL: "https://c.example"},
+			TierPremium:  {Provider: providerOpenAICompatible, Model: "a"},
+			TierFrontier: {Provider: providerOpenAICompatible, Model: "b"},
 		},
 	}
-	first := boundProviderConfig(cfg, providerOpenAICompatible, "").BaseURL
-	if first == "" {
-		t.Fatal("a bound vendor answered with no host")
-	}
-	// Repeated rather than asserted against one literal: WHICH host wins is
-	// arbitrary and may change; that the same one wins every time is the
-	// property.
-	for range 32 {
-		if got := boundProviderConfig(cfg, providerOpenAICompatible, "").BaseURL; got != first {
-			t.Fatalf("the host moved between reads: %q then %q", first, got)
+	for _, tier := range []string{"", string(TierPremium), string(TierFrontier), string(TierCheapCloud), "fast"} {
+		if got := providerConfigFor(cfg, providerOpenAICompatible, tier).BaseURL; got != broker {
+			t.Errorf("tier %q was asked at %q, want the provider's %q", tier, got, broker)
 		}
 	}
 
-	// And naming the lane is exact rather than stable-but-arbitrary: the picker
-	// opened on `premium` is answered for the host `premium` points at, which is
-	// the whole reason the lane travels with the request.
-	for tier, want := range map[Tier]string{
-		TierPremium:    "https://b.example",
-		TierCheapCloud: "https://a.example",
-		TierFrontier:   "https://c.example",
-	} {
-		got := boundProviderConfig(cfg, providerOpenAICompatible, string(tier)).BaseURL
-		if got != want {
-			t.Fatalf("lane %s was asked at %q, want its own %q", tier, got, want)
+	perLane := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierPremium:    {Provider: providerOpenAICompatible, BaseURL: "https://b.example"},
+		TierCheapCloud: {Provider: providerOpenAICompatible, BaseURL: "https://a.example"},
+	}}
+	for _, tier := range []string{"", string(TierPremium), string(TierCheapCloud)} {
+		if got := providerConfigFor(perLane, providerOpenAICompatible, tier).BaseURL; got != "https://a.example" {
+			t.Errorf("per-lane document, tier %q: asked at %q, want the lifted provider host", tier, got)
 		}
 	}
 }
 
-// A lane that names the vendor with NO host of its own means the adapter's
-// default, and that is an answer — not an absent binding to look past.
-//
-// Looking past it reached for a sibling lane's override and asked the wrong
-// host, which is the defect naming the lane exists to prevent, arrived at from
-// the other side.
-func TestALaneWithNoHostMeansTheAdapterDefaultRatherThanASibling(t *testing.T) {
+// The embeddings lane may sit on its own server — vLLM serves one model per
+// process — so a picker opened on that lane asks that server, and every other
+// lane, the key test included, still asks the provider.
+func TestAvailableModels_TheEmbeddingsLaneAsksItsOwnServer(t *testing.T) {
+	const broker, embedder = "https://openrouter.ai/api", "https://vllm.internal.test"
 	cfg := RoutingConfig{
-		Tiers: map[Tier]ProviderConfig{
-			// Reached wherever the adapter reaches this vendor by default.
-			TierPremium: {Provider: providerGemini},
-			// A sibling on the same vendor that DOES override the host.
-			TierFrontier: {Provider: providerGemini, BaseURL: "https://proxy.example"},
-		},
+		Providers:  map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker}},
+		Tiers:      map[Tier]ProviderConfig{TierPremium: {Provider: providerOpenAICompatible, Model: "m"}},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, Model: "e", BaseURL: embedder}},
 	}
-	if got := boundProviderConfig(cfg, providerGemini, string(TierPremium)).BaseURL; got != "" {
-		t.Fatalf("premium was asked at %q; its own binding names no host, so the answer is the adapter's default", got)
+	for tier, want := range map[string]string{string(LaneEmbeddings): embedder, string(TierPremium): broker, "": broker} {
+		if got := providerConfigFor(cfg, providerOpenAICompatible, tier).BaseURL; got != want {
+			t.Errorf("tier %q was asked at %q, want %q", tier, got, want)
+		}
 	}
-	// The sibling still gets its own, so this is not the guard being too wide.
-	if got := boundProviderConfig(cfg, providerGemini, string(TierFrontier)).BaseURL; got != "https://proxy.example" {
-		t.Fatalf("frontier was asked at %q, want its own override", got)
-	}
-	// And a lane naming a DIFFERENT vendor falls through, because the question
-	// is about the vendor rather than about that lane.
-	cfg.Tiers[TierCheapCloud] = ProviderConfig{Provider: providerAnthropic}
-	if got := boundProviderConfig(cfg, providerGemini, string(TierCheapCloud)).BaseURL; got != "https://proxy.example" {
-		t.Fatalf("a lane on another vendor should fall through to this vendor's own binding, got %q", got)
+	// An override on a lane bound to another provider is no answer for this one.
+	if got := providerConfigFor(cfg, providerOllama, string(LaneEmbeddings)).BaseURL; got != "" {
+		t.Errorf("ollama was asked at %q, want its compiled default", got)
 	}
 }
 
@@ -410,7 +392,7 @@ func TestAnUnboundVendorFallsBackToTheAdapterDefault(t *testing.T) {
 	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
 		TierPremium: {Provider: providerGemini, Model: "gemini-3.5-flash"},
 	}}
-	if got := boundProviderConfig(cfg, providerAnthropic, ""); got.BaseURL != "" {
+	if got := providerConfigFor(cfg, providerAnthropic, ""); got.BaseURL != "" {
 		t.Fatalf("an unbound vendor invented a host: %q", got.BaseURL)
 	}
 	// And the embeddings lane's host is found too — it binds separately, and a
@@ -418,7 +400,7 @@ func TestAnUnboundVendorFallsBackToTheAdapterDefault(t *testing.T) {
 	cfg.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{
 		Provider: providerOpenAICompatible, BaseURL: "https://embed.example",
 	}}
-	if got := boundProviderConfig(cfg, providerOpenAICompatible, ""); got.BaseURL != "https://embed.example" {
+	if got := providerConfigFor(cfg, providerOpenAICompatible, ""); got.BaseURL != "https://embed.example" {
 		t.Fatalf("the embeddings host was not found: %q", got.BaseURL)
 	}
 }
@@ -432,6 +414,24 @@ func TestOllamaObeysTheListCap(t *testing.T) {
 	}
 	lister := listerFor(t, ProviderConfig{Provider: providerOllama}, "/api/tags",
 		map[string]any{"models": many})
+	models, err := lister.ListModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != modelListLimit {
+		t.Fatalf("returned %d models, want the cap of %d", len(models), modelListLimit)
+	}
+}
+
+// A paginated vendor stops at the cap too, mid-page, rather than on the first
+// page boundary past it.
+func TestGeminiObeysTheListCapMidPage(t *testing.T) {
+	page := make([]map[string]any, 0, 99)
+	for i := range 99 {
+		page = append(page, map[string]any{"name": fmt.Sprintf("models/m%d", i)})
+	}
+	lister := listerFor(t, ProviderConfig{Provider: providerGemini}, "/models",
+		map[string]any{"models": page, "nextPageToken": "again"})
 	models, err := lister.ListModels(context.Background())
 	if err != nil {
 		t.Fatal(err)

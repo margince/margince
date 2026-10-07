@@ -487,3 +487,42 @@ it("hides the decision model's rates when no decision model is bound", async () 
   expect(screen.queryByText("site_triage")).toBeNull();
   expect(screen.queryByText("Decision model")).toBeNull();
 });
+
+// The decision table names its tasks the way the spend table does, so the
+// same name opens the same sentence about what the task does.
+it("opens a decision task's summary from its name", async () => {
+  const user = userEvent.setup();
+  mount(
+    {
+      ...decisionUsage,
+      days: [
+        {
+          date: "2026-07-20",
+          tasks: [
+            {
+              task: "site_triage",
+              task_display_name: "Website triage",
+              task_summary: "Decides what an email domain's website is.",
+              tier: "decide",
+              calls: 4,
+              tokens_in: 10,
+              tokens_out: 0,
+            },
+          ],
+        },
+      ],
+    },
+    200,
+    DECIDING_OPERATOR,
+    boundRouting,
+  );
+  const asked = await screen.findByRole("columnheader", { name: "Asked" });
+  const table = asked.closest("table");
+  if (!table) throw new Error("the decision summary is not a table");
+  await user.click(
+    within(table).getByRole("button", { name: "Website triage: what it does" }),
+  );
+  expect(
+    await screen.findByText("Decides what an email domain's website is."),
+  ).toBeTruthy();
+});

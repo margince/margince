@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -346,14 +347,18 @@ func foldCommitment(view crmcontracts.Company360) *TaskIn {
 }
 
 // ConversationState reads where this account's correspondence stands off the
-// view's own last-message stamps.
+// view's own last-message stamps and the notes and meetings logged on it.
 //
 // Both are absent when the caller holds no activity grant, which reads as a
 // first touch. That is the conservative end of the axis and the right answer
 // here: a caller who cannot see the history has no basis for a draft that
 // refers to it.
 func ConversationState(view crmcontracts.Company360, now time.Time) convstate.State {
-	return convstate.Classify(now, instant(view.LastInboundAt), instant(view.LastOutboundAt))
+	var activities []crmcontracts.Activity
+	if view.Activities != nil {
+		activities = view.Activities.Data
+	}
+	return draftcore.ClassifyWithLogged(now, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
 }
 
 // instant reads one optional stamp, treating an absent one as never.

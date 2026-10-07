@@ -8,11 +8,13 @@ import { navigate } from "../app/router";
 import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { type ISODate, isISODate } from "../design-system/dateinput";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
+import { formatDateTime } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { AnalyticsScope } from "./analytics.context";
-import { QueryGate, throwProblem } from "./common";
+import { problemCodeOf, QueryGate, throwProblem } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExportButton } from "./reporting.export";
@@ -144,6 +146,7 @@ function OverviewBody({
 }>) {
   const t = useT();
   const zone = useRecordZone();
+  const { locale } = useLocale();
   const {
     template,
     setTemplate,
@@ -217,6 +220,8 @@ function OverviewBody({
     },
   });
   const contextKey = JSON.stringify(selection);
+  const invalidSelection =
+    problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
     <>
       <div className="reporting-controlbar">
@@ -274,10 +279,23 @@ function OverviewBody({
         </div>
       </div>
       {!validPeriod && <p role="status">{t("reporting.chooseDates")}</p>}
-      {validPeriod && (
+      {invalidSelection && <ErrorLine error={query.error} />}
+      {validPeriod && !invalidSelection && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
             <>
+              {evaluation.context.interval.end_at ===
+                evaluation.context.evaluated_at && (
+                <p className="t-caption" role="status">
+                  {t("reporting.resultsThrough", {
+                    at: formatDateTime(
+                      evaluation.context.interval.end_at,
+                      locale,
+                      evaluation.context.timezone,
+                    ),
+                  })}
+                </p>
+              )}
               <ReportingCharts
                 evaluation={evaluation}
                 onEvidence={setEvidence}
@@ -337,5 +355,5 @@ function OverviewBody({
 }
 
 function validDateRange(period: string, start: string, end: string): boolean {
-  return period !== "custom" || !!(start && end && end >= start);
+  return period !== "custom" || !!(start && end);
 }

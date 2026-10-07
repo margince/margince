@@ -254,7 +254,14 @@ export function WorklistHeader({
           candidate it weighed rather than over the page it cut — so the
           sentence stays still as the reader pages. */}
         <p className="t-h3 worklist-lead">
-          {summarySentence(day.summary, t, locale)}
+          {/* The figures are always the whole day's. Under a filter the pills
+              carry the filtered counts, so the sentence says whose it is
+              rather than reading as the filtered population. */}
+          {filter === "all"
+            ? summarySentence(day.summary, t, locale)
+            : t("worklist.summary.wholeDay", {
+                sentence: summarySentence(day.summary, t, locale),
+              })}
         </p>
         {/* BOTH scope controls at the trailing end of the header's own line, in
             one group so they share the sentence's line rather than each
@@ -285,7 +292,7 @@ export function WorklistHeader({
               replaces the scope switch rather than sitting beside it: a named
               owner outranks the scope word, and the pair is a 422. */}
           {scopes.includes("team") && (
-            <OwnerPicker owner={owner} onOwner={onOwner} />
+            <OwnerPicker owner={owner} onOwner={onOwner} scope={scope} />
           )}
         </div>
       </div>

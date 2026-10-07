@@ -37,6 +37,11 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
+// MaxMarkBytes is what a company mark may arrive as. Generous because refusing a
+// contact's own file costs them image software, while accepting it costs one decode
+// of an image this server immediately shrinks.
+const MaxMarkBytes = 5_000_000
+
 // ContentType is the media type of every normalized image this package
 // produces. Callers store it beside the bytes rather than carrying the
 // source's own type: the source format is not what gets served.

@@ -11,6 +11,7 @@ import { SettingRow } from "../design-system/settingrow";
 import { formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { attemptReasonLabel } from "./ai-decision-labels";
+import { TaskName } from "./ai-task-name";
 
 type DecisionSummary = components["schemas"]["AiDecisionSummary"];
 
@@ -77,9 +78,11 @@ function rate(part: number, whole: number, locale: Locale): string {
 export function DecisionSummaryRow({
   decisions,
   taskName,
+  taskSummary,
 }: Readonly<{
   decisions: DecisionSummary[];
   taskName: (task: string) => string;
+  taskSummary: (task: string) => string | undefined;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -87,7 +90,9 @@ export function DecisionSummaryRow({
     {
       key: "task",
       header: t("aiusage.col.task"),
-      render: (r: DecisionSummary) => taskName(r.task),
+      render: (r: DecisionSummary) => (
+        <TaskName name={taskName(r.task)} summary={taskSummary(r.task)} />
+      ),
     },
     {
       key: "asked",

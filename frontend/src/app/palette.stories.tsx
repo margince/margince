@@ -81,21 +81,52 @@ export const Default: Story = {
   render: () => palette(noHits),
 };
 
-// Live record hits under the commands. The second line names the KIND, in the
-// reader's language — this row printed the raw wire word until #4026, so a
-// German reader met "company" here.
+// Live record hits under the commands, grouped under the kind each one is, in
+// the reader's language. The mail about the account sits below the account
+// however much higher it ranked: relevance does not compare across kinds, and
+// a short list ranked across them used to be all mail and no company. A
+// contact found only through the account says so, under the record's mark.
 export const WithRecordHits: Story = {
   render: () =>
     palette(() =>
       jsonResponse({
         data: [
+          {
+            type: "activity",
+            id: "a1",
+            title: "Re: Acme renewal terms",
+            email_summary: {
+              activity_id: "a1",
+              subject: "Re: Acme renewal terms",
+              occurred_at: "2026-09-01T09:15:00Z",
+              counterparty: "Dana Buyer",
+            },
+          },
           { type: "contact", id: "p1", title: "Dana Buyer" },
-          { type: "company", id: "o1", title: "Acme GmbH" },
+          {
+            type: "contact",
+            id: "p2",
+            title: "Jonas Weiß",
+            works_at: { company_id: "o1", company_name: "Acme GmbH" },
+          },
+          {
+            type: "company",
+            id: "o1",
+            title: "Acme GmbH",
+            logo_url:
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%230e7490'/%3E%3C/svg%3E",
+          },
           { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
-          { type: "product", id: "pr1", title: "Kärcher floor scrubber" },
+          {
+            type: "product",
+            id: "pr1",
+            title: "Kärcher floor scrubber",
+            snippet: "KAR-9910",
+          },
           { type: "tag", id: "t1", title: "Key account" },
         ],
         page: { next_cursor: null, has_more: false },
+        types_with_more: ["activity"],
       }),
     ),
   play: type("acme"),

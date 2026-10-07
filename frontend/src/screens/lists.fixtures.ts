@@ -5,7 +5,12 @@
 // list stories and tests so both draw the same lists.
 
 import { meFixture } from "../app/mefixture";
-import type { List, ListExplanation, ListHistoryEntry } from "./lists.queries";
+import type {
+  List,
+  ListExplanation,
+  ListHistoryEntry,
+  ListMember,
+} from "./lists.queries";
 import { jsonResponse } from "./story-utils";
 
 export const LIVE_ID = "01a0f000-0000-7000-8000-000000000001";
@@ -101,16 +106,64 @@ export const liveWhy: ListExplanation = {
   },
 };
 
-export const chosenWhy: ListExplanation = {
-  list_id: SHORTLIST_ID,
+/** A record the Live List does not select: its industry fails the filter. */
+export const notOnLiveWhy: ListExplanation = {
+  list_id: LIVE_ID,
   entity_id: MEMBER_ID,
-  list_type: "static",
-  member: true,
+  list_type: "dynamic",
+  member: false,
+  eligible: true,
+  clauses: {
+    join: "and",
+    result: false,
+    children: [
+      {
+        field: "industry",
+        op: "eq",
+        operand: "Manufacturing",
+        result: false,
+        value: "Logistics",
+      },
+      {
+        field: "cf_last_touch",
+        op: "lt",
+        operand: { days_ago: 45 },
+        result: true,
+        hidden: true,
+      },
+    ],
+  },
+};
+
+/** What the Live List's members read says of MiTek: one value shown, one hidden. */
+export const liveListing: ListMember = {
+  id: MEMBER_ID,
+  list_id: LIVE_ID,
+  entity_type: "company",
+  entity_id: MEMBER_ID,
+  added_by: "dynamic",
+  values: {
+    industry: { value: "Manufacturing", hidden: false },
+    cf_last_touch: { hidden: true },
+  },
+};
+
+/** What the Shortlist's members read says of MiTek: who chose it, when, why. */
+export const chosenListing: ListMember = {
+  id: "01a0f000-0000-7000-8000-000000000030",
+  list_id: SHORTLIST_ID,
+  entity_type: "company",
+  entity_id: MEMBER_ID,
   added_by: "human:00000000-0000-4000-8000-000000000001",
   added_by_name: "Lena Vogt",
-  added_at: "2026-09-20T09:30:00Z",
+  created_at: "2026-09-20T09:30:00Z",
   note: "Signed the quote for the launch deck",
 };
+
+/** One members answer, as the list page reads it for the rows it shows. */
+export function listingAnswer(listing: ListMember) {
+  return () => jsonResponse({ data: [listing], page: { has_more: false } });
+}
 
 export const history: ListHistoryEntry[] = [
   {

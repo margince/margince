@@ -18,6 +18,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	// The composed extension set: build/composition/ in a composed build,
 	// the committed vanilla stub otherwise. This role must wire it —
@@ -48,7 +49,7 @@ func main() {
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>]")
+		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>] [--statement-timeout <duration>]")
 	}
 	direction := args[0]
 
@@ -65,6 +66,29 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	email := fs.String("email", "", "user email (reset-password only)")
 	name := fs.String("name", "", "database name (recreate-db, drop-db, db-exists only)")
 	template := fs.String("template", "", "template database to copy (recreate-db only)")
+	// Bounds how long a single migration statement may HOLD its lock. Every
+	// migration file already bounds ACQUISITION with `SET LOCAL lock_timeout`
+	// (migrations/locktimeout_test.go requires it), and that is a different
+	// question: lock_timeout decides how long to queue, this decides how long the
+	// queue behind us may grow. Without it an ADD CONSTRAINT scanning a mature
+	// table holds ACCESS EXCLUSIVE for as long as the scan takes, and every write
+	// to that table waits — the stall this product cannot see coming.
+	//
+	// A flag rather than a constant because the right ceiling is a property of the
+	// installation, not of the code: a database large enough that a legitimate
+	// backfill needs longer should raise it for that run rather than have the
+	// default picked for it. Finite by default is the protection; the number is a
+	// starting point.
+	//
+	// It also bounds the WAIT for the cluster-wide migration lock, which dbmigrate
+	// takes with pg_advisory_lock on this connection outside any transaction —
+	// Postgres counts lock-wait against statement_timeout. So two deploys racing no
+	// longer have the second one queue indefinitely behind the first: it fails and
+	// is retried, which is the same trade this ceiling makes everywhere else. An
+	// installation whose migrations legitimately run longer than one deploy window
+	// should raise this rather than discover it as a failed deploy.
+	statementTimeout := fs.Duration("statement-timeout", defaultStatementCeiling,
+		"ceiling on a single migration statement, and on the wait for the migration lock; 0 removes it")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -91,12 +115,22 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 
 	switch direction {
 	case "up":
+		// Only the verbs that APPLY migrations take the ceiling. recreate-db copies
+		// a template and drop-db waits for sessions to end; both are legitimately
+		// long and neither holds a lock a product write queues behind, so a
+		// migration budget would refuse them for no gain.
+		if err := boundStatementHold(ctx, conn, *statementTimeout); err != nil {
+			return err
+		}
 		exts, err := dbmigrate.ExtensionNamespaces(composition.Extensions())
 		if err != nil {
 			return err
 		}
-		return up(ctx, conn, resolved, core, custom, exts, stdout)
+		return up(ctx, conn, resolved, core, custom, exts, *statementTimeout, stdout)
 	case "down":
+		if err := boundStatementHold(ctx, conn, *statementTimeout); err != nil {
+			return err
+		}
 		return down(ctx, conn, core, custom, *steps, stdout)
 	case "reset-password":
 		return resetPassword(ctx, conn, *email, os.Stdin, stdout)
@@ -153,7 +187,7 @@ func down(ctx context.Context, conn *pgx.Conn, core, custom dbmigrate.Namespace,
 	return nil
 }
 
-func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.Namespace, exts []dbmigrate.Namespace, stdout io.Writer) error {
+func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.Namespace, exts []dbmigrate.Namespace, ceiling time.Duration, stdout io.Writer) error {
 	if err := reportExtensionNamespaces(exts, stdout); err != nil {
 		return err
 	}
@@ -161,9 +195,14 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 	if err != nil {
 		return err
 	}
-	// No request ceiling: River's own migrator and the index below are DDL,
-	// and this is the role that runs it.
-	riverPool, err := database.NewPool(ctx, database.WithoutRequestCeilings(dsn))
+	// No REQUEST ceiling — River's own migrator and the index below are DDL, and
+	// this is the role that runs it — but the MIGRATION ceiling still applies.
+	// WithoutRequestCeilings lifts statement_timeout to 0, which is right for
+	// escaping the 30s a request gets and wrong as a final answer: River's migrator
+	// takes the same kind of lock on the same tables as the files above, so leaving
+	// this pool unbounded would bound the half of the deploy that happens to run
+	// through conn and not the half that runs through here.
+	riverPool, err := database.NewPool(ctx, riverMigrationDSN(dsn, ceiling))
 	if err != nil {
 		return fmt.Errorf("migrate: opening river pool: %w", err)
 	}
@@ -202,14 +241,17 @@ const upSummaryFormat = "applied %d core+custom+extension + %d river migration(s
 // It lives here rather than in a migration file for two reasons that both
 // come from river_job not being ours: the table does not exist while the
 // core lane runs (River's own migrator creates it, on the pool opened
-// above), and dbmigrate.Up wraps every migration in a transaction.
+// above), and dbmigrate.Up wraps every migration in a transaction unless the
+// file asks otherwise with dbmigrate.NoTransactionMarker.
 //
 // Deliberately NOT CONCURRENTLY. This runs outside dbmigrate's
 // per-migration transaction but alongside boot, and a plain CREATE INDEX
 // on a fresh river_job is trivial. If that table ever grows large enough
-// for the write lock to matter, the answer is an explicit
-// non-transactional lane in the migrator — a separate change, not a flag
-// on this one.
+// for the write lock to matter, the answer is a concurrent build HERE and
+// not a migration: river_job does not exist while the core lane runs, which
+// is the first reason above, and this step already runs outside any
+// transaction. dbmigrate.NoTransactionMarker is for a migration that needs
+// the same freedom on a table the core lane can see.
 const riverWorkspaceArgIndex = `
 CREATE INDEX IF NOT EXISTS river_job_workspace_arg
     ON river_job ((args ->> 'workspace_id'))`

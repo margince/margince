@@ -218,14 +218,31 @@
 }
 
 /* Whose software this is and what it costs sit at the two ends of the band, and
-   the second of those is a control the reader can open. */
+   the second of those is a control the reader can open. Content wider than its
+   third wraps inside it rather than running past the card: a German chip label
+   alone outgrows the slot at a laptop width. `safe`: a line that still outgrows
+   it spills past its end, never off the start. */
 .ob-stage-end {
   grid-column: 3;
   justify-self: end;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: safe flex-end;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   min-width: 0;
+}
+/* An aside wider than a line narrows to it and wraps its own words. */
+.ob-stage-tools,
+.ob-stage-tools > :not(.ob-stage-pref) {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.ob-stage-tools {
+  display: flex;
+  align-items: center;
+  gap: inherit;
 }
 
 /* The product's mark, which is what makes the band a masthead rather than a
@@ -461,6 +478,17 @@
      paragraph set large rather than as a title. */
   max-width: 20ch;
 }
+/* Focusable only so a step can hand the reader here. After a click the ring
+   would mark a control that is not one; after a key press it is the only sign
+   of where focus went, so the house ring stays. */
+.ob-stage-title:focus:not(:focus-visible) {
+  outline: none;
+}
+.ob-stage-title:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
 
 .ob-stage-sub {
   margin: 0;
@@ -653,6 +681,24 @@
   .ob-stage-where {
     display: none;
   }
+  /* The room is exactly the window here, so its height can be asked of it in
+     the reader's own text size — see the short-room rule below. */
+  .ob-stage {
+    container: ob-stage / size;
+  }
+}
+
+/* A room short against its own text — a phone on its side, or any phone read
+   at large text — folds the Core, whose row does not shrink with the text and
+   would leave the question a slot to scroll through. The band and the foot stay:
+   they say where the reader is and carry the way onward, and the orb is
+   decoration whose state the band states in words. `rem` follows the root, so
+   the larger the text, the taller the window this reaches. Hidden, never
+   unmounted, for the WebGL reason at `.ob-stage-core[data-hidden]`. */
+@container ob-stage (height < 30rem) {
+  .ob-stage-core {
+    display: none;
+  }
 }
 
 @media (width < 64rem) {
@@ -662,22 +708,22 @@
     grid-template-columns: 1fr auto;
     row-gap: var(--space-2);
   }
-  /* `safe`: what outgrows the row spills past its end, never off the start. */
   .ob-stage-end {
     grid-column: 1 / -1;
     grid-row: 2;
     justify-self: stretch;
-    flex-wrap: wrap;
-    justify-content: safe flex-end;
     gap: var(--space-2);
   }
-  .ob-stage-corestate {
-    margin-inline-end: auto;
+  /* The step's name, held to its separator, takes the next line whole. */
+  .ob-stage-who {
+    flex-wrap: wrap;
+    row-gap: 0;
   }
-  /* An aside wider than the row narrows to it and wraps its own words. */
-  .ob-stage-end > :not(.ob-stage-corestate, .ob-stage-pref) {
-    flex: 0 1 auto;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+  /* The state wraps its own words rather than pushing the theme toggle onto a
+     row of its own: at large text the unbroken label is the whole row. */
+  .ob-stage-corestate {
+    flex: 1 1 0;
+    min-inline-size: min(100%, 6rem);
+    white-space: normal;
   }
 }

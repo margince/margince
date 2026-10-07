@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Mail, Send } from "lucide-react";
+import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDayMonth,
   formatDuration,
-  formatMoneyOrAbsent,
+  formatMoneyCompact,
+  MONEY_ABSENT,
 } from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { formatElapsed } from "../format/now";
 import { useLocale, useT } from "../i18n";
 import { Avatar, Badge } from "./atoms";
 import type { BoardDeal } from "./composed";
+import { IconAction } from "./iconaction";
 import { Popover } from "./popover";
 import { FieldGuard } from "./rbac";
 import { Chip } from "./readings";
@@ -27,6 +30,25 @@ export type BoardDealMail = {
   /** Null on a logged email that named no direction. */
   direction: "inbound" | "outbound" | null;
 };
+
+/**
+ * The verbs a rep reaches for on a card without opening the deal. Each one the
+ * caller passes is drawn, and one it leaves out is absent rather than refused:
+ * whether a reader may write mail or file a task is the screen's to decide.
+ */
+export type DealCardActions = Readonly<{
+  onSummary?: () => void;
+  onEmail?: () => void;
+  onAddTask?: () => void;
+}>;
+
+/** What a caller hangs on every card of a board, keyed by the deal. */
+export type DealCardHooks = Readonly<{
+  /** Each card's mail flyout — see `DealCard`'s `mailAside`. */
+  mailAside?: (deal: BoardDeal) => ReactNode;
+  /** Each card's verbs — see `DealCard`'s `actions`. */
+  cardActions?: (deal: BoardDeal) => DealCardActions | undefined;
+}>;
 
 /**
  * The company slot on a deal card, in the four readings a company has.
@@ -206,6 +228,110 @@ export function DealMailChip({
 }
 
 /**
+ * The card's last line: how the deal is moving, and the verbs a rep reaches
+ * for without opening it.
+ *
+ * What is wrong with a deal lands HERE rather than in a line above the name,
+ * so a card that needs the reader keeps its name and its figure level with the
+ * cards beside it — a column is read down, and a flag line that came and went
+ * moved every slot under it.
+ */
+function DealCardFoot({
+  deal,
+  mailAside,
+  actions,
+}: Readonly<{
+  deal: BoardDeal;
+  mailAside?: (deal: BoardDeal) => ReactNode;
+  actions?: DealCardActions;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const verbs =
+    actions !== undefined &&
+    [actions.onSummary, actions.onEmail, actions.onAddTask].some(Boolean);
+  if (!deal.stalled && !deal.lastEmail && !deal.singleThreaded && !verbs) {
+    return null;
+  }
+  return (
+    <span className="deal-foot">
+      {/* The facts wrap inside their own box, so a card with every alarm at
+          once still holds its verbs at the trailing edge of the first line. */}
+      <span className="deal-foot-facts">
+        {deal.stalled && (
+          <span className="deal-stall">
+            <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
+            {/* How long it has sat is the size of the stall, and only then: on
+                a healthy card the number is a fact nobody acts on. */}
+            <span className="deal-age">
+              {formatDuration(deal.ageMs, locale)}
+            </span>
+          </span>
+        )}
+        {deal.lastEmail && (
+          <DealMailChip mail={deal.lastEmail} aside={mailAside?.(deal)} />
+        )}
+        {deal.singleThreaded && (
+          <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
+        )}
+      </span>
+      {verbs && <DealCardVerbs actions={actions} dealName={deal.name} />}
+    </span>
+  );
+}
+
+/**
+ * The card's verbs, as named glyphs at the trailing end of its last line.
+ *
+ * On every card and at rest, not revealed by a hover: a verb that kept its
+ * room while hidden left a blank band under the hairline of every card with
+ * nothing else to say, and a screen with no pointer could never reveal it.
+ */
+function DealCardVerbs({
+  actions,
+  dealName,
+}: Readonly<{ actions: DealCardActions; dealName: string }>) {
+  const t = useT();
+  // Each verb names its deal: a board repeats these three on every card, and a
+  // screen reader's list of buttons is otherwise twenty identical triples.
+  const name = { name: dealName };
+  return (
+    <span className="deal-actions">
+      {actions.onSummary && (
+        <IconAction
+          inline
+          variant="ghost"
+          label={t("deal.card.summary", name)}
+          icon={<Sparkles aria-hidden="true" />}
+          onClick={actions.onSummary}
+        />
+      )}
+      {actions.onEmail && (
+        <IconAction
+          inline
+          variant="ghost"
+          label={t("deal.card.email", name)}
+          // Not the bare envelope: the mail chip beside it draws that glyph
+          // for mail RECEIVED, and one glyph on one line for two things is a
+          // reader pressing the wrong one.
+          icon={<MailPlus aria-hidden="true" />}
+          onClick={actions.onEmail}
+        />
+      )}
+      {actions.onAddTask && (
+        <IconAction
+          inline
+          variant="ghost"
+          label={t("deal.card.addTask", name)}
+          icon={<ListPlus aria-hidden="true" />}
+          onClick={actions.onAddTask}
+        />
+      )}
+    </span>
+  );
+}
+
+/**
  * One deal, as a card on the board.
  *
  * NO TAG STRIP. How a deal is filed is a fact about the record, not about the
@@ -222,6 +348,7 @@ export function DealCard({
   zone,
   onOpen,
   mailAside,
+  actions,
   dragHandlers,
 }: Readonly<{
   deal: BoardDeal;
@@ -259,6 +386,8 @@ export function DealCard({
    * trigger; absent, it stays a line of text. See `DealMailChip`.
    */
   mailAside?: (deal: BoardDeal) => ReactNode;
+  /** The verbs on the card's last line. See `DealCardActions`. */
+  actions?: DealCardActions;
   dragHandlers?: {
     draggable: true;
     onDragStart: (event: React.DragEvent) => void;
@@ -266,9 +395,9 @@ export function DealCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // No `stalled` class: the warning Badge below says it in words, and an edge
-  // stripe saying the same thing is one statement drawn twice — the reader who
-  // cannot see colour reads the badge, and the reader who can read both.
+  // No `stalled` class: the warning Badge in the foot says it in words, and an
+  // edge stripe saying the same thing is one statement drawn twice — the reader
+  // who cannot see colour reads the badge, and the reader who can read both.
   const classes = [
     "deal-card",
     deal.staged ? "staged" : "",
@@ -286,48 +415,19 @@ export function DealCard({
     // card is still the deal's click target, still opens in a new tab, still
     // middle-clicks, and is still one tab stop.
     <div className={classes} data-deal={deal.id} {...dragHandlers}>
-      {/* Read in the order a rep asks (composed.css says why): what needs
-          them, on this card, if anything; whose deal it is; what it is worth
-          and when it closes; and what it is called. */}
-      {(deal.staged ||
-        deal.stalled ||
-        deal.singleThreaded ||
-        deal.archived) && (
+      {/* Read in the order a rep asks (composed.css says why): who it is with
+          and whose it is; what it is called; what it is worth and when it
+          closes; and how it is moving. Staged and archived are about the CARD
+          rather than the deal's health, so they alone lead it. */}
+      {(deal.staged || deal.archived) && (
         <span className="deal-flags">
           {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
-          {deal.singleThreaded && (
-            <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
-          )}
-          {deal.stalled && (
-            <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
-          )}
-          {/* How long it has sat is the size of the stall, and only then: on a
-              healthy card the number is a fact nobody acts on. */}
-          {deal.stalled && (
-            <span className="deal-age">
-              {formatDuration(deal.ageMs, locale)}
-            </span>
-          )}
           {deal.archived && <Badge>{t("deal.archived")}</Badge>}
         </span>
       )}
-      <span className="deal-head">
+      <span className="deal-head t-caption">
         <DealCardCompany deal={deal} onOpen={onOpen} />
         {deal.owner && <DealOwner owner={deal.owner} />}
-      </span>
-      <span className="deal-figure">
-        <span className="deal-value">
-          {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
-        </span>
-        {deal.closeDate ? (
-          <DealCloses
-            day={deal.closeDate}
-            provisional={deal.closeDateProvisional ?? false}
-            zone={zone}
-          />
-        ) : (
-          <span className="deal-closes">{t("deal.undated")}</span>
-        )}
       </span>
       {/* The deal's own door, stretched over the card by CSS. It carries the
           NAME rather than sitting empty, so the accessible name of the link is
@@ -343,14 +443,29 @@ export function DealCard({
       >
         {deal.name}
       </a>
-      {/* Last of all, what happened last: it sits ABOVE the stretched link
-          the way the company does, so its hover and its press reach the
-          flyout rather than the deal's door. */}
-      {deal.lastEmail && (
-        <span className="deal-foot">
-          <DealMailChip mail={deal.lastEmail} aside={mailAside?.(deal)} />
+      <span className="deal-figure">
+        {/* Compact, because a card is compared at a glance: the column head
+            sums the stage exactly and the deal states its own figure whole. */}
+        <span className="deal-value">
+          {formatMoneyOrWord(
+            deal.valueMinor,
+            deal.currency,
+            locale,
+            MONEY_ABSENT,
+            formatMoneyCompact,
+          )}
         </span>
-      )}
+        {deal.closeDate ? (
+          <DealCloses
+            day={deal.closeDate}
+            provisional={deal.closeDateProvisional ?? false}
+            zone={zone}
+          />
+        ) : (
+          <span className="deal-closes">{t("deal.undated")}</span>
+        )}
+      </span>
+      <DealCardFoot deal={deal} mailAside={mailAside} actions={actions} />
     </div>
   );
 }

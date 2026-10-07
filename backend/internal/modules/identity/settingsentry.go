@@ -230,7 +230,7 @@ var Country = settings.Define[string](
 
 // Definitions is identity's contribution to the settings registry.
 func Definitions() []settings.Definition {
-	return []settings.Definition{
+	return append([]settings.Definition{
 		Name,
 		Timezone,
 		BaseCurrency,
@@ -240,6 +240,7 @@ func Definitions() []settings.Definition {
 		Country,
 		FiscalYearStartMonth,
 		DeadWorkBannerHours,
+		OAuthAccessTokenTTLMinutes,
 		ForecastForwardMeasure,
 		EnabledOidcProviders,
 		RequireSSO,
@@ -247,7 +248,7 @@ func Definitions() []settings.Definition {
 		OidcGroupRoleMap,
 		SMTPPasswordRef,
 		LicenseTokenRef,
-	}
+	}, append(scheduleDefinitions(), sendPacingDefinitions()...)...)
 }
 
 // BaseCurrencyOf resolves the installation's reporting currency inside a

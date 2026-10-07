@@ -145,16 +145,16 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// it needs no pool of its own. Nil lane here for the same reason as the
 	// brief's: WithContactDraft binds the api role's, and without it the endpoint
 	// answers from its deterministic floor rather than 501-ing.
-	s.contactDraftHandlers = contactdraft.NewHandlers(
-		contactdraft.NewService(s.contact360Svc, nil).
-			WithEmailSummaries(emailRows(pool)).
-			WithEnvelope(draftEnvelope(pool, s.log)))
+	s.firstDrafts.contact = contactdraft.NewService(s.contact360Svc, nil).
+		WithEmailSummaries(emailRows(pool)).
+		WithEnvelope(draftEnvelope(pool, s.log))
+	s.contactDraftHandlers = contactdraft.NewHandlers(s.firstDrafts.contact)
 	// The lead-side draft, on the same terms: nil lane, so a deployment with no
 	// model answers from contactdraft's deterministic floor rather than 501-ing,
 	// and WithLeadDraft binds the api role's lane.
-	s.leadDraftHandlers = leaddraft.NewHandlers(
-		leaddraft.NewService(s.contactsStore, leadCorrespondence{activities.NewStore(InstallationDB(pool))}, nil).
-			WithEnvelope(draftEnvelope(pool, s.log)))
+	s.firstDrafts.lead = leaddraft.NewService(s.contactsStore, leadCorrespondence{activities.NewStore(InstallationDB(pool))}, nil).
+		WithEnvelope(draftEnvelope(pool, s.log))
+	s.leadDraftHandlers = leaddraft.NewHandlers(s.firstDrafts.lead)
 }
 
 // wireProject360 assembles the project page from the module stores the

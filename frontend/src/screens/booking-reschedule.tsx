@@ -100,7 +100,8 @@ export function BookingReschedule({
       </QueryGate>
       <Button
         variant="primary"
-        disabled={!selected || pending}
+        disabled={!selected}
+        pending={pending}
         onClick={() => {
           if (selected) onSelect(selected);
         }}

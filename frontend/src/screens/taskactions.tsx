@@ -1,7 +1,6 @@
 import {
   type QueryKey,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -18,15 +17,19 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { CLAIM_SETTLED_KEYS } from "./activitykeys";
+import { problemCodeOf, provenanceOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
+import { useActivity } from "./activityread";
+import { refetchAfterWrite } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -66,14 +69,18 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
       // skew by the very write it is undoing.
       return data?.version;
     },
-    onSuccess: (_data, input) => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
+    // Returned, so the mutation stays pending until the reads have landed. The
+    // row the press came from stays drawn at the version it was fetched at
+    // until then, and a second press in that window re-sends it and is
+    // refused as skew by the write that has just succeeded.
+    onSuccess: (_data, input) =>
+      refetchAfterWrite(queryClient, invalidateKeys, input.id),
+    // A stale press is not a failed one: the task moved on under it, so the
+    // reads are refreshed to show where it is now.
+    onError: (error, input) => {
+      if (problemCodeOf(error) === "version_skew") {
+        return refetchAfterWrite(queryClient, invalidateKeys, input.id);
       }
-      // The task's own detail read too, always: a modal open on the task that
-      // was just completed would otherwise keep showing the old due date and
-      // offering the verbs that no longer apply.
-      queryClient.invalidateQueries({ queryKey: ["activity", input.id] });
     },
   });
 }
@@ -315,29 +322,16 @@ export function TaskDetailModal({
   const titleId = useId();
   // Keep the task open while reading its original evidence.
   const [openSource, setOpenSource] = useState<string | null>(null);
-  const query = useQuery({
-    queryKey: ["activity", activityId],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
+  const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} placement="right">
-      <div className="drawer-head task-detail-head">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
         </Heading>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
         <ErrorLine error={query.error} />
         {task && (
@@ -369,6 +363,11 @@ export function TaskDetailModal({
               {task.assignee_id && (
                 <EntityRef kind="user" id={task.assignee_id} />
               )}
+              {/* A task an agent wrote says so, so a reader knows it was
+                  read out of a conversation rather than typed by a colleague. */}
+              {provenanceOf(task.captured_by).kind === "agent" && (
+                <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+              )}
             </div>
             {!task.is_done && !readOnly && (
               <div className="form-actions task-detail-actions">
@@ -392,7 +391,7 @@ export function TaskDetailModal({
             )}
           </div>
         )}
-      </div>
+      </DrawerBody>
       {openSource && (
         <SourceActivity
           activityId={openSource}
@@ -418,49 +417,32 @@ function SourceActivity({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
-  const query = useQuery({
-    queryKey: ["activity", activityId],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
-  // The CURRENT read decides what is shown, never the cache alone. A refused
-  // read leaves the last answer in `data`: this reader shares its query key
-  // with `SourceEvidence`, whose observer outlives the drawer, so an eviction
-  // that `gcTime: 0` would otherwise perform does not happen while a task is
-  // open. Rendering `data` beside the error paragraph would then show a
-  // transcript whose access had just been revoked.
-  const meeting: Activity | undefined = query.isError ? undefined : query.data;
+  const query = useActivity(activityId);
+  const meeting: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {meeting?.subject ?? t("tasks.source")}
-      </Heading>
-      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-      <ErrorLine error={query.error} />
-      {meeting && (
-        <div className="form-stack">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {meeting?.subject ?? t("tasks.source")}
+        </Heading>
+        {meeting && (
           <p className="t-caption">
             {formatDateTime(meeting.occurred_at, locale, recordZone)}
           </p>
-          {/* The transcript, as it was captured. `pre-wrap` because a
-              transcript is line-per-turn and reflowing it into a paragraph
-              takes away the one structure it has. */}
-          {meeting.body && (
-            <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-              {meeting.body}
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </DrawerHead>
+      <DrawerBody>
+        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+        <ErrorLine error={query.error} />
+        {/* The transcript, as it was captured. `pre-wrap` because a
+            transcript is line-per-turn and reflowing it into a paragraph
+            takes away the one structure it has. */}
+        {meeting?.body && (
+          <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
+            {meeting.body}
+          </p>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }
@@ -591,9 +573,9 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The contact's own card lists the same open claims, so a drawer standing
-      // on them would keep showing a promise that has just been settled.
-      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      for (const queryKey of CLAIM_SETTLED_KEYS) {
+        queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }

@@ -96,6 +96,12 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	if err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
+	// The converted figure is the SAME money under another column: Compute sums
+	// it, so leaving it unmasked would print the withheld amount in every total.
+	baseValue, err = auth.MaskedExpressionSQL(ctx, tableDeal, "amount_minor", "d", baseValue, arg)
+	if err != nil {
+		return nil, forecasting.Scope{}, false, err
+	}
 	if pipeline != nil {
 		populationClause += fmt.Sprintf(" AND d.pipeline_id=$%d", arg(*pipeline))
 	}

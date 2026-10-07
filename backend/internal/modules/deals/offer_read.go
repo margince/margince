@@ -169,11 +169,13 @@ const offerColumns = `id, deal_id, offer_number, revision, status, currency,
 // company read would refuse, which is the existence oracle
 // unreadableReferences closes on the deal itself.
 //
-// TWO fields, and the second is the sharper one. buyer_company_id is an id.
-// buyer_snapshot is the buyer's legal block frozen at send time — display name,
-// and where the record carries one, legal name. Withholding the id and leaving
-// the snapshot would hand back the name of a company whose id was judged
-// too much to disclose.
+// THREE fields go together. buyer_company_id is an id. buyer_snapshot is the
+// buyer's legal block frozen at send time — display name, and where the record
+// carries one, legal name. pdf_asset_ref names the stored rendering, printed once
+// for every reader and silent on whether its renderer could open the buyer.
+// Leaving either of the last two beside a withheld id hands back the name of a
+// company whose id was judged too much to disclose. A new buyer retires the
+// rendering (retireRenderingOnBuyerChange), so the buyer judged here is its own.
 //
 // The write path has enforced this rule for the explicit case all along:
 // resolveBuyerCompany gates a client-supplied buyer_company_id with
@@ -201,6 +203,7 @@ func withholdUnreadableBuyer(ctx context.Context, tx pgx.Tx, offers []crmcontrac
 		}
 		offers[i].BuyerCompanyId = nil
 		offers[i].BuyerSnapshot = nil
+		offers[i].PdfAssetRef = nil
 	}
 	return nil
 }

@@ -217,7 +217,7 @@ func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
 	if *first.Items[0].RelationshipId == *second.Items[0].RelationshipId {
 		t.Fatal("different contacts shared an edge before merge")
 	}
-	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target)); err != nil {
+	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil); err != nil {
 		t.Fatal(err)
 	}
 	replay, err := store.ApplyEmploymentImport(e.Admin(), ids.From[ids.ContactKind](target), crmcontracts.EmploymentImportRequest{})

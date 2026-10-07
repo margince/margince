@@ -136,13 +136,13 @@ func ensureHandbookCorpus(ctx context.Context, tx pgx.Tx, by string) (ids.UUID, 
 		`INSERT INTO knowledge_corpus
 		   (id, name, description, topic_statement, min_similarity, default_ask, managed_source, captured_by)
 		 VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)`,
-		id, handbookName, handbookTopic, DefaultMinSimilarity, !defaultTaken, HandbookSource, by); err != nil {
+		id, handbookName, handbookTopic, nil, !defaultTaken, HandbookSource, by); err != nil {
 		return ids.Nil, fmt.Errorf("create the shipped handbook corpus: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "create", "knowledge_corpus", id, nil, map[string]any{
 		"name":            handbookName,
 		"topic_statement": handbookTopic,
-		"min_similarity":  DefaultMinSimilarity,
+		"min_similarity":  nil,
 		defaultAskColumn:  !defaultTaken,
 		managedSourceKey:  HandbookSource,
 	}); err != nil {

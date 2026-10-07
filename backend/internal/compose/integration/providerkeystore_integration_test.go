@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -67,7 +68,7 @@ func TestASealedKeyIsWhatTheRoutingLaneResolves(t *testing.T) {
 	store := providerKeyStore(t, e)
 
 	const key = "sk-a-real-looking-credential"
-	if err := store.Set(ctx, "gemini", key); err != nil {
+	if err := store.Set(ctx, "gemini", ai.ProviderCredential{APIKey: key}); err != nil {
 		t.Fatalf("sealing the gemini key: %v", err)
 	}
 	// The resolver, not the store: this is the value a client would be built
@@ -83,7 +84,7 @@ func TestTheStoredSettingHoldsARefAndNeverTheKey(t *testing.T) {
 	store := providerKeyStore(t, e)
 
 	const key = "sk-must-not-appear-in-the-setting"
-	if err := store.Set(ctx, "openai", key); err != nil {
+	if err := store.Set(ctx, "openai", ai.ProviderCredential{APIKey: key}); err != nil {
 		t.Fatal(err)
 	}
 	refs, err := settings.Get(ctx, compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
@@ -108,7 +109,7 @@ func TestRotatingAKeyServesTheNewOneAndRetiresTheOld(t *testing.T) {
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
 
-	if err := store.Set(ctx, "anthropic", "sk-first"); err != nil {
+	if err := store.Set(ctx, "anthropic", ai.ProviderCredential{APIKey: "sk-first"}); err != nil {
 		t.Fatal(err)
 	}
 	refs, err := settings.Get(ctx, compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
@@ -117,7 +118,7 @@ func TestRotatingAKeyServesTheNewOneAndRetiresTheOld(t *testing.T) {
 	}
 	firstRef := refs["anthropic"]
 
-	if err := store.Set(ctx, "anthropic", "sk-second"); err != nil {
+	if err := store.Set(ctx, "anthropic", ai.ProviderCredential{APIKey: "sk-second"}); err != nil {
 		t.Fatalf("rotating: %v", err)
 	}
 	if got := resolveKey(ctx, t, e, "anthropic"); got != "sk-second" {
@@ -171,7 +172,7 @@ func TestAConcurrentKeyWriteCannotDropAnotherProvidersRef(t *testing.T) {
 		if err := settings.LockForWrite(ctx, tx, ai.ProviderKeysKey); err != nil {
 			return err
 		}
-		go func() { setDone <- store.Set(ctx, "openai", "sk-openai") }()
+		go func() { setDone <- store.Set(ctx, "openai", ai.ProviderCredential{APIKey: "sk-openai"}) }()
 		waitForLockWaiter(ctx, t, e, ai.ProviderKeysKey)
 
 		// The other admin's write, through the real writer, while the Set is
@@ -282,7 +283,7 @@ func TestARotatedKeyReachesARunningRouterAndARemovedOneStopsBeingUsed(t *testing
 	if err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}
-	if err := keys.Set(ctx, "gemini", "sk-first"); err != nil {
+	if err := keys.Set(ctx, "gemini", ai.ProviderCredential{APIKey: "sk-first"}); err != nil {
 		t.Fatalf("sealing the first key: %v", err)
 	}
 
@@ -318,7 +319,7 @@ func TestARotatedKeyReachesARunningRouterAndARemovedOneStopsBeingUsed(t *testing
 
 	// Rotate. The BINDING is untouched, so the routing digest cannot move and
 	// the credential digest is the only thing that can carry this.
-	if err := keys.Set(ctx, "gemini", "sk-second"); err != nil {
+	if err := keys.Set(ctx, "gemini", ai.ProviderCredential{APIKey: "sk-second"}); err != nil {
 		t.Fatalf("rotating: %v", err)
 	}
 	watcher.Recheck(ctx)
@@ -355,7 +356,7 @@ func TestARotatedKeyReachesARunningRouterAndARemovedOneStopsBeingUsed(t *testing
 	// Re-keying makes the binding servable again, and the version moves — which
 	// is what shows the comparison above is live rather than the rebuild simply
 	// always failing from here on.
-	if err := keys.Set(ctx, "gemini", "sk-third"); err != nil {
+	if err := keys.Set(ctx, "gemini", ai.ProviderCredential{APIKey: "sk-third"}); err != nil {
 		t.Fatalf("re-keying: %v", err)
 	}
 	watcher.Recheck(ctx)
@@ -381,7 +382,7 @@ func TestTheAuditTrailOfAKeyChangeCarriesNoRef(t *testing.T) {
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
 
-	if err := store.Set(ctx, "gemini", "sk-audited"); err != nil {
+	if err := store.Set(ctx, "gemini", ai.ProviderCredential{APIKey: "sk-audited"}); err != nil {
 		t.Fatalf("sealing: %v", err)
 	}
 	refs, err := settings.Get(ctx, compose.NewSettingsStore(e.Pool), ai.ProviderKeys)
@@ -448,7 +449,7 @@ func TestRemovingAKeyLeavesTheProviderUnconfigured(t *testing.T) {
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
 
-	if err := store.Set(ctx, "gemini", "sk-to-be-removed"); err != nil {
+	if err := store.Set(ctx, "gemini", ai.ProviderCredential{APIKey: "sk-to-be-removed"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.Remove(ctx, "gemini"); err != nil {
@@ -468,7 +469,7 @@ func TestListNamesEveryServableProviderNotOnlyTheConfiguredOnes(t *testing.T) {
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
 
-	if err := store.Set(ctx, "gemini", "sk-only-one"); err != nil {
+	if err := store.Set(ctx, "gemini", ai.ProviderCredential{APIKey: "sk-only-one"}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := store.List(ctx)
@@ -501,8 +502,68 @@ func TestAProviderThisBuildCannotServeIsRefused(t *testing.T) {
 	store := providerKeyStore(t, e)
 	// A key sealed against a name nothing routes is a credential nobody can use
 	// and nobody will remember is there.
-	if err := store.Set(e.adminRoutingCtx(), "ollama", "sk-local-needs-none"); err == nil {
+	if err := store.Set(e.adminRoutingCtx(), "ollama", ai.ProviderCredential{APIKey: "sk-local-needs-none"}); err == nil {
 		t.Fatal("a provider that takes no api key accepted one")
+	}
+}
+
+// Each vendor takes one kind of credential, and the other kind — or both, or
+// neither — is refused as the caller's fault before anything is sealed or
+// sent to Google. A key file that is not a service account's is refused by
+// the field at fault, and nothing of what was sent comes back.
+func TestACredentialOfTheWrongKindIsRefusedBeforeItIsSealed(t *testing.T) {
+	e := SetupSearch(t)
+	store := providerKeyStore(t, e)
+	const notAKeyFile = `{"type":"authorized_user","client_secret":"GOCSPX-must-not-echo"}`
+	cases := map[string]struct {
+		provider string
+		sent     ai.ProviderCredential
+		want     string
+	}{
+		"an api key for vertex":        {"gemini_vertex", ai.ProviderCredential{APIKey: "sk-wrong-kind"}, "takes a service_account_json"},
+		"a key file for gemini":        {"gemini", ai.ProviderCredential{ServiceAccountJSON: "{}"}, "takes an api_key"},
+		"both":                         {"gemini_vertex", ai.ProviderCredential{APIKey: "sk-x", ServiceAccountJSON: "{}"}, "not both"},
+		"neither, for vertex":          {"gemini_vertex", ai.ProviderCredential{}, "service-account key is empty"},
+		"neither, for anthropic":       {"anthropic", ai.ProviderCredential{}, "api key is empty"},
+		"a user credential for vertex": {"gemini_vertex", ai.ProviderCredential{ServiceAccountJSON: notAKeyFile}, "type must be service_account"},
+	}
+	before := searchSealedBlobCount(t, e)
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			err := store.Set(e.adminRoutingCtx(), c.provider, c.sent)
+			var invalid settings.InvalidValue
+			if !errors.As(err, &invalid) {
+				t.Fatalf("want a 422-shaped refusal, got %v", err)
+			}
+			if !strings.Contains(invalid.Reason, c.want) {
+				t.Errorf("reason = %q, want it to say %q", invalid.Reason, c.want)
+			}
+			if strings.Contains(invalid.Reason, "GOCSPX") || strings.Contains(invalid.Reason, "sk-") {
+				t.Errorf("the refusal repeats what was sent: %q", invalid.Reason)
+			}
+		})
+	}
+	if after := searchSealedBlobCount(t, e); after != before {
+		t.Errorf("refused credentials sealed %d blob(s)", after-before)
+	}
+}
+
+// A screen asks List which field to offer, so the kind is stated for every
+// vendor, keyed or not.
+func TestListSaysWhichCredentialEachVendorTakes(t *testing.T) {
+	e := SetupSearch(t)
+	got, err := providerKeyStore(t, e).List(e.adminRoutingCtx())
+	if err != nil {
+		t.Fatalf("listing: %v", err)
+	}
+	for _, s := range got {
+		want := ai.CredentialKindAPIKey
+		if s.Provider == "gemini_vertex" {
+			want = ai.CredentialKindServiceAccount
+		}
+		if s.CredentialKind != want {
+			t.Errorf("%s takes %q, want %q", s.Provider, s.CredentialKind, want)
+		}
 	}
 }
 
@@ -517,7 +578,7 @@ func TestTheKeySurfaceIsAdminOnly(t *testing.T) {
 	if _, err := store.List(rep); err == nil {
 		t.Error("List admitted a seat without the ai_routing grant")
 	}
-	if err := store.Set(rep, "gemini", "sk-nope"); err == nil {
+	if err := store.Set(rep, "gemini", ai.ProviderCredential{APIKey: "sk-nope"}); err == nil {
 		t.Error("Set admitted a seat without the ai_routing grant")
 	}
 	if err := store.Remove(rep, "gemini"); err == nil {
@@ -572,7 +633,7 @@ func TestAReadOnlySeatCannotSealAKey(t *testing.T) {
 	}
 
 	before := searchSealedBlobCount(t, e)
-	if err := store.Set(reader, "gemini", "sk-read-only-seat"); err == nil {
+	if err := store.Set(reader, "gemini", ai.ProviderCredential{APIKey: "sk-read-only-seat"}); err == nil {
 		t.Error("a read-only seat sealed a provider key")
 	}
 	if after := searchSealedBlobCount(t, e); after != before {

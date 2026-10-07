@@ -34,8 +34,8 @@ export type SearchResult = Readonly<{ value: string; label: string }>;
  */
 export const SEARCH_DEBOUNCE_MS = 250;
 
-export type DebouncedSearch = Readonly<{
-  results: readonly SearchResult[];
+export type DebouncedSearch<R extends SearchResult = SearchResult> = Readonly<{
+  results: readonly R[];
   pending: boolean;
   failed: boolean;
 }>;
@@ -60,11 +60,11 @@ export type DebouncedSearch = Readonly<{
  * than shown — otherwise a slow response for "acme" lands on top of the results
  * for "acme corp" and the reader picks from the wrong list.
  */
-export function useDebouncedSearch(
-  search: ((query: string) => Promise<readonly SearchResult[]>) | undefined,
+export function useDebouncedSearch<R extends SearchResult = SearchResult>(
+  search: ((query: string) => Promise<readonly R[]>) | undefined,
   query: string,
-): DebouncedSearch {
-  const [results, setResults] = useState<readonly SearchResult[]>([]);
+): DebouncedSearch<R> {
+  const [results, setResults] = useState<readonly R[]>([]);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
 

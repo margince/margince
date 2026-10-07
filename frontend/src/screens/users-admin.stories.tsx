@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -149,4 +150,19 @@ export const Empty: Story = { render: story([], { roles: ["admin"] }) };
 // the card's own description that managing members is not theirs.
 export const NotAnAdmin: Story = {
   render: story([LARS, DANA, RETIRED, AGENT], { roles: ["ops"] }),
+};
+
+export const InviteDialog: Story = {
+  render: story(
+    [LARS, DANA],
+    { roles: ["admin"] },
+    { user_admin: ["read", "create"] },
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Invite user" }),
+    );
+    await within(document.body).findByRole("dialog");
+  },
 };

@@ -4,7 +4,6 @@
 package ai
 
 import (
-	"maps"
 	"reflect"
 	"slices"
 	"time"
@@ -59,10 +58,11 @@ type plannedBinding struct {
 	dimensions int
 }
 
-// The plan resolves the stored binding. A serving role can lag it until its
-// next rebind; in-flight calls retain their original installed snapshot.
+// The plan resolves the stored binding, whose lanes read their host and pins
+// from its providers. A serving role can lag it until its next rebind;
+// in-flight calls retain their original installed snapshot.
 func boundPlan(cfg RoutingConfig, task Task, band string) ([]plannedBinding, bool) {
-	cfg.Tiers = maps.Clone(cfg.Tiers)
+	cfg = cfg.canonical().resolveProviders()
 	cfg.applyUpstreamDefaults()
 	if cfg.Embeddings.Dimensions == 0 {
 		cfg.Embeddings.Dimensions = defaultEmbedDimensions
@@ -129,8 +129,10 @@ func withDecisionLeadChange(tierImpact string) string {
 func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	out := make([]crmcontracts.AiRouteCandidate, 0, len(plan))
 	for _, binding := range plan {
+		// A vendor's default spelled out dials its public cloud exactly as an
+		// empty host does, so it is not an endpoint the operator configured.
 		processing := "configured_endpoint"
-		if providerIsVendorHosted(binding.config.Provider) && binding.config.BaseURL == "" {
+		if providerIsVendorHosted(binding.config.Provider) && sameHost(binding.config.Provider, binding.config.BaseURL, "") {
 			processing = "cloud_provider"
 		}
 		out = append(out, crmcontracts.AiRouteCandidate{Tier: string(binding.tier), Provider: binding.config.Provider, Model: binding.config.Model, Processing: processing})
@@ -152,18 +154,24 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 		}
 		normal, normalBlocked := boundPlan(normalConfig, task, normalBand)
 		effective, blocked := boundPlan(effectiveConfig, task, band)
-		name := DisplayName(task)
+		name, summary := taskLabel(task)
 		mode := string(taskExecutionModes[task])
 		leading := string(LeadingTier(task))
 		if task == TaskEmbeddings {
-			name = "Search and retrieval"
 			mode = "embedding"
 			leading = "embeddings"
 		}
 		row := crmcontracts.AiFeatureRoute{
-			Task: string(task), DisplayName: name, ExecutionMode: mode, LeadingTier: leading,
+			Task: string(task), DisplayName: name, Summary: &summary, ExecutionMode: mode, LeadingTier: leading,
 			NormalCandidates: wireCandidates(normal), EffectiveCandidates: wireCandidates(effective),
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
+		}
+		if task != TaskEmbeddings {
+			decides, defaults := TaskDecides(task), TaskDefaults()
+			row.Decides = &decides
+			row.Defaults = &crmcontracts.AiTaskSettings{
+				DecisionTimeoutMs: int(defaults.DecisionTimeout.Milliseconds()), AttemptTimeoutMs: int(defaults.AttemptTimeout.Milliseconds()),
+			}
 		}
 		decisionRoute(&row, effectiveConfig, task, blocked)
 		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {

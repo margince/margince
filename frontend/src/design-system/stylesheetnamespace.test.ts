@@ -28,14 +28,11 @@ const sheets = appStylesheets(frontendRoot).map((file) => ({
 }));
 
 const namespaces = [
-  { prefix: "archive-", home: "screens/archive.css" },
   { prefix: "askai-", home: "screens/ai.css" },
   { prefix: "auth-", home: "screens/auth.css" },
   { prefix: "book-", home: "screens/book.css" },
   { prefix: "clientsurface-", home: "screens/client.css" },
-  { prefix: "commissiondecide-", home: "screens/commissiondecide.css" },
   { prefix: "companydeepread-", home: "screens/companydeepread.css" },
-  { prefix: "companyreject-", home: "screens/companyreject.css" },
   { prefix: "corrections-", home: "screens/contactcorrections.css" },
   { prefix: "create-", home: "screens/create.css" },
   { prefix: "datefield-", home: "screens/automations.datefield.css" },

@@ -102,6 +102,19 @@
 .reversal-toggle {
   margin-top: var(--space-2);
 }
+/* In a timeline row's body these blocks sit --space-3 below the line above,
+   and the body's own --space-1 gap already pays part of that. */
+.timeline
+  .tl-body
+  > :is(
+    .entry-fields,
+    .entry-undo,
+    .entry-edge,
+    .reversal-toggle,
+    .reversal-pair-body
+  ) {
+  margin-top: calc(var(--space-3) - var(--space-1));
+}
 /* An edge row's own block: the mark saying this row is a LINK rather than a
  * field edit, and the record at the other end. It carries the accent hairline
  * because telling the two apart at a glance is the whole reason it is drawn —

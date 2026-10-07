@@ -119,7 +119,9 @@ export const ReverseNeedsReason: Story = {
   }),
   play: async ({ canvasElement }) => {
     const page = await openDialog(canvasElement, "Reverse");
-    await userEvent.click(page.getByTestId("commission-void-confirm"));
+    await userEvent.click(
+      within(page.getByRole("dialog")).getByRole("button", { name: "Reverse" }),
+    );
     await page.findByText(en["commission.decide.reasonRequired"]);
   },
 };
@@ -129,7 +131,9 @@ export const ReverseNeedsReason: Story = {
 async function reverse(canvasElement: HTMLElement, reason: string) {
   const page = await openDialog(canvasElement, "Reverse");
   await userEvent.type(page.getByTestId("commission-void-reason"), reason);
-  await userEvent.click(page.getByTestId("commission-void-confirm"));
+  await userEvent.click(
+    within(page.getByRole("dialog")).getByRole("button", { name: "Reverse" }),
+  );
   return page;
 }
 

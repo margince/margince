@@ -100,8 +100,8 @@ type Rules struct {
 
 	// Disclosures are what a first message to somebody must carry.
 	//
-	// DECLARED, NOT YET APPLIED: no consumer renders a disclosure into a
-	// message body. Held by TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
+	// The send path renders them into the message footer. Held by
+	// TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
 	// (backend/gates/messagingruleapplied_test.go), which fails when a pack
 	// declares an obligation the engine does not discharge and no entry
 	// records why.
@@ -110,9 +110,8 @@ type Rules struct {
 	// SubjectPrefix is the marking an advertising message's subject must carry,
 	// exactly once. Empty means none.
 	//
-	// DECLARED, NOT YET APPLIED: nothing prepends it. No send path consults a
-	// pack's prefix before composing a subject. Held by the same gate as
-	// Disclosures.
+	// A message whose subject lacks it is held, not sent. Held by the same gate
+	// as Disclosures.
 	SubjectPrefix string
 
 	// FrequencyCap bounds advertising to one address in a window. Nil means
@@ -122,8 +121,7 @@ type Rules struct {
 	// OptOutAcknowledgement records whether an opt-out is owed a confirming
 	// message. False means none is owed, which is the default.
 	//
-	// DECLARED, NOT YET APPLIED: nothing sends the acknowledgement. Held by the
-	// same gate as Disclosures.
+	// Held by the same gate as Disclosures.
 	OptOutAcknowledgement bool
 }
 

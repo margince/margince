@@ -16,6 +16,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -56,6 +57,16 @@ func TestATechnicalCauseIsNamedWithoutBeingQuoted(t *testing.T) {
 			Err: syscall.ECONNREFUSED,
 		},
 		class: "connection_refused",
+	}, {
+		name:  "a job whose work context a stopping worker cancelled",
+		cause: fmt.Errorf("reading the mailbox: %w", context.Canceled),
+		class: "interrupted",
+	}, {
+		name: "a lookup cancelled mid-flight",
+		cause: &net.DNSError{
+			Err: "operation was canceled", Name: secretish[0], UnwrapErr: context.Canceled,
+		},
+		class: "interrupted",
 	}, {
 		name:  "a deadline the caller set",
 		cause: context.DeadlineExceeded,

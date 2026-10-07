@@ -3,7 +3,7 @@
 
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import type { EntityKind } from "../app/entity";
-import { dealRecordKeys } from "./activitykeys";
+import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
 import { leadWriteKeys } from "./leadkeys";
 
 // Which cached reads a write to ONE record makes stale, by record kind.
@@ -29,11 +29,13 @@ const RECORD_WRITE_KEYS: Record<EntityKind, (id: string) => QueryKey[]> = {
     ["contact", id],
     ["contact360", id],
     ["contactBrief", id],
+    ...derivedRecordKeys("contact", id),
   ],
   company: (id) => [
     ["company", id],
     ["company360", id],
     ["account-scan", id],
+    ...derivedRecordKeys("company", id),
   ],
   deal: (id) => dealRecordKeys(id),
   // The lead's set is already declared beside the lead's own reads, including

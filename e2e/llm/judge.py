@@ -303,16 +303,8 @@ def _empty_mcp_config():
 _MCP_CONFIG = None
 
 
-def _live(criterion, answer, model):
-    """One graded call, with certjudge.go's one retry on a reply that would not
-    parse — the second attempt is TOLD what was wrong with the first, which a
-    bare re-ask cannot do.
-
-    A second unparseable reply is NOT scored. certjudge scores such a run 0
-    because an aborted certification is worse than a lost point; here a 'no'
-    would be a false red on the product and a 'yes' would be a criterion nobody
-    checked, so the honest answer is that the judge could not be reached.
-    """
+def _cli_asker(model):
+    """Ask through the claude CLI, which spends what lib-llm-credential.sh names."""
     if shutil.which("claude") is None:
         raise JudgeUnavailable("the claude CLI is not on PATH, so no verdict can be reached")
     _credential()
@@ -331,20 +323,82 @@ def _live(criterion, answer, model):
         "--output-format",
         "text",
     ]
+    return lambda prompt: _run(argv, prompt, f"the judge ({model})")
+
+
+def _api_asker(via, model):
+    """Ask over a key, through the bridge's own provider client and no tools."""
+    import candidates
+    import providers
+
+    try:
+        route = candidates.judge_route(via, model)
+    except candidates.RouteError as err:
+        raise JudgeUnavailable(str(err)) from err
+    if via == "api" and os.environ.get("E2E_LLM_JUDGE_BASE_URL"):
+        route = route._replace(base_url=os.environ["E2E_LLM_JUDGE_BASE_URL"])
+    key = os.environ.get(route.key_env, "")
+    if not key:
+        raise JudgeUnavailable(f"the judge's {via} route spends {route.key_env}, which is not set")
+
+    def ask(prompt):
+        client = providers.adapter(route, key)
+        client.start("", prompt, [])
+        try:
+            return client.step(None).text
+        except providers.ProviderFault as fault:
+            raise JudgeUnavailable(f"the judge ({route.model}) could not be asked: {fault}") from fault
+
+    return ask
+
+
+def _via():
+    return os.environ.get("E2E_LLM_JUDGE_VIA", "").strip() or "cli"
+
+
+def _live(criterion, answer, model):
+    """One graded call, with certjudge.go's one retry on a reply that would not
+    parse — the second attempt is TOLD what was wrong with the first, which a
+    bare re-ask cannot do.
+
+    A second unparseable reply is NOT scored. certjudge scores such a run 0
+    because an aborted certification is worse than a lost point; here a 'no'
+    would be a false red on the product and a 'yes' would be a criterion nobody
+    checked, so the honest answer is that the judge could not be reached.
+
+    E2E_LLM_JUDGE_VIA picks the transport (cli, api, openrouter); the model the
+    verdict is filed under is `model` whichever one asked.
+    """
+    via = _via()
+    ask = _cli_asker(model) if via == "cli" else _api_asker(via, model)
     prompt = _fenced(criterion, answer)
     try:
-        return parse_verdict(_run(argv, prompt, f"the judge ({model})"))
+        return parse_verdict(ask(prompt))
     except ValueError as first:
         retry = prompt + (
             f"\n\nYour previous reply could not be read: {first}. Reply with the JSON "
             "object and nothing else."
         )
         try:
-            return parse_verdict(_run(argv, retry, f"the judge ({model})"))
+            return parse_verdict(ask(retry))
         except ValueError as second:
             raise JudgeUnavailable(
                 f"the judge's reply would not parse twice: {second}"
             ) from second
+
+
+def ready():
+    """Raise unless a verdict could be reached: the backend, and for a live
+    one the route and its credential — asked before the lane spends a token."""
+    kind, _argument = configured()
+    if kind not in ("live", "record"):
+        return
+    via = _via()
+    model = os.environ.get("E2E_LLM_JUDGE_MODEL", DEFAULT_MODEL)
+    if via == "cli":
+        _cli_asker(model)
+        return
+    _api_asker(via, model)
 
 
 def configured():

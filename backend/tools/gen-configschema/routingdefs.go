@@ -22,8 +22,8 @@ import (
 // generator uses: these descriptions are hand-tuned and the key order is
 // deliberate, and round-tripping them would churn the file on every
 // regeneration for no reader's benefit. What is NOT literal is the tier enum,
-// which comes from the task contract through ai.AllTiers, and the decisions
-// provider enum, which comes from the provider registry through
+// which comes from the task contract through ai.AllTiers, and the provider
+// enums, which come from the provider registry through ai.KnownProviders and
 // ai.DecisionProviders.
 const routingDefsTemplate = `{
   "aiRouting": {
@@ -51,8 +51,25 @@ const routingDefsTemplate = `{
   "decisions": {
     "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
     "$ref": "#/$defs/decisionsBinding"
+  },
+  "providers": {
+    "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",
+    "type": "object",
+    "propertyNames": { "enum": [__PROVIDERS__] },
+    "additionalProperties": { "$ref": "#/$defs/providerSettings" }
   }
 }
+  },
+
+  "providerSettings": {
+    "description": "One provider's configuration. An entry no lane binds is held to its shape only.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "base_url": { "type": "string", "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default." },
+      "upstream": { "description": "openai_compatible on an OpenRouter host only: which upstream hosts may read this provider's requests, and under what privacy — only, ignore, allow_fallbacks, zdr, data_collection, enforce_distillable_text. Every lane on the provider is served under them; how each tier is served (sort, quantizations, latency) stays on its own routing.", "$ref": "#/$defs/connectionUpstream" },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED while a lane binds it: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4." }
+    }
   },
 
   "binding": {
@@ -61,11 +78,12 @@ const routingDefsTemplate = `{
     "required": ["provider"],
     "properties": {
       "provider": {
-        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini. The only place vendor names appear.",
-        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini"]
+        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
+        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex"]
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
-      "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
+      "base_url": { "type": "string", "description": "Deprecated here: set the host on providers.<name>.base_url. Still accepted, and lifted onto the provider when it names none." },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "Deprecated here: set the location on providers.gemini_vertex.location. Still accepted, and lifted onto the provider when it names none." },
       "input": {
         "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
         "type": "array",
@@ -76,35 +94,206 @@ const routingDefsTemplate = `{
       },
       "routing": { "$ref": "#/$defs/upstreamRouting" },
       "thinking_level": {
-        "description": "How deeply a gemini tier thinks when the request names no level of its own. Omit it for the adapter's default: a structured request thinks at low, and a Flash-Lite keeps its own shallower default (minimal), which low RAISES. Gemini charges thinking to the same output ceiling as the answer. Gemini 3 or later only — a Gemini 2.5 answers the field with a 400, and gemini-3.1-pro-preview refuses minimal.",
+        "description": "How deeply a gemini or gemini_vertex tier thinks when the request names no level of its own. Omit it for the adapter's default: a structured request thinks at low, and a Flash-Lite keeps its own shallower default (minimal), which low RAISES. Gemini charges thinking to the same output ceiling as the answer. Gemini 3 or later only — a Gemini 2.5 answers the field with a 400, and gemini-3.1-pro-preview refuses minimal.",
         "enum": ["minimal", "low", "medium", "high"]
       }
     },
     "allOf": [
-      {
-        "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
-        "then": { "required": ["base_url"] }
-      },
       { "$ref": "#/$defs/routingNeedsOpenRouter" },
       {
+        "if":   { "properties": { "provider": { "const": "gemini_vertex" } } },
+        "then": { "not": { "required": ["base_url"] } }
+      },
+      {
+        "if":   { "required": ["location"] },
+        "then": { "properties": { "provider": { "const": "gemini_vertex" } } }
+      },
+      {
         "if":   { "required": ["thinking_level"] },
-        "then": { "properties": { "provider": { "const": "gemini" } } }
+        "then": { "properties": { "provider": { "enum": ["gemini", "gemini_vertex"] } } }
       }
     ]
   },
   "routingNeedsOpenRouter": {
-    "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding whose base_url is an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
+    "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding, and a base_url it still writes must be an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The host usually lives on providers.openai_compatible, which this schema cannot follow; the parser checks the resolved host. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
     "if": { "required": ["routing"] },
     "then": {
       "properties": {
         "provider": { "const": "openai_compatible" },
         "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
       },
-      "required": ["provider", "base_url"]
+      "required": ["provider"]
     }
   },
   "upstreamRouting": {
-    "description": "Which of a broker's upstream hosts may serve this tier. OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host; the parser refuses it anywhere else rather than send a vendor fields it never asked for. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. Measured 2026-09-02 — see docs/reference/openrouter.md.",
+    "description": "How OpenRouter serves this tier: OpenRouter's own request fields, provider (which hosts and how) and reasoning (how hard the model thinks). OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. The host filters and privacy keys (x-placement: connection) are set on providers.openai_compatible.upstream; a seed that writes them on a tier has them lifted there, and the settings API refuses them on a tier unless they repeat the connection's own. The older flat spelling (upstreamRoutingFlat) is still read.",
+    "anyOf": [
+      { "$ref": "#/$defs/upstreamRoutingNested" },
+      { "$ref": "#/$defs/upstreamRoutingFlat" }
+    ]
+  },
+  "upstreamRoutingNested": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "provider":  { "$ref": "#/$defs/openRouterProvider" },
+      "reasoning": { "$ref": "#/$defs/openRouterReasoning" }
+    }
+  },
+  "openRouterProvider": {
+    "description": "OpenRouter's provider request object. Each key is sent as written; an absent key leaves the broker's own behaviour.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "order": {
+        "description": "Host slugs to try first, in this order, before the broker's own ranking. Soft: with allow_fallbacks the rest are still tried.",
+        "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" },
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "tier"
+      },
+      "only": {
+        "description": "Allowlist of upstream host slugs; a base slug matches every region and variant, a full slug such as deepinfra/turbo pins one endpoint. A HARD filter, and the residency pin.",
+        "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" },
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "connection"
+      },
+      "ignore": {
+        "description": "Blocklist of upstream host slugs. A HARD filter, for excluding one endpoint measured bad rather than for choosing among the rest.",
+        "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" },
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "connection"
+      },
+      "allow_fallbacks": {
+        "description": "Whether the broker may switch hosts when the chosen one fails. Omit to keep its own default of true; false trades availability for the certainty of one host.",
+        "type": "boolean",
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "connection"
+      },
+      "require_parameters": {
+        "description": "Route only to hosts supporting every parameter the request carries, so a structured-output call never reaches a host that ignores response_format.",
+        "type": "boolean",
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "tier"
+      },
+      "data_collection": {
+        "description": "deny keeps the request off hosts that may store or train on prompts; allow (the broker's default) permits them.",
+        "enum": ["allow", "deny"],
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "connection"
+      },
+      "zdr": {
+        "description": "Zero data retention: only hosts that keep no copy of the prompt or the answer may serve the request.",
+        "type": "boolean",
+        "x-doc-url": "https://openrouter.ai/docs/guides/features/zdr", "x-placement": "connection"
+      },
+      "enforce_distillable_text": {
+        "description": "Only models whose licence allows their output to be used to train other models.",
+        "type": "boolean",
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "connection"
+      },
+      "quantizations": {
+        "description": "Serving precisions a host may use. A HARD filter, and what makes repeated calls comparable: two answers from one model id at fp4 and at bf16 are two different models for every purpose except billing.",
+        "type": "array", "minItems": 1, "uniqueItems": true,
+        "items": { "enum": ["int4", "int8", "fp4", "mxfp4", "nvfp4", "fp6", "fp8", "mxfp8", "fp16", "bf16", "fp32", "unknown"] },
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "tier"
+      },
+      "sort": {
+        "description": "Order candidate hosts by throughput, price or latency. The lever that collapses the latency tail, and it disables the broker's load balancing, which is the trade. Write {by, partition: none} to sort across every model of a fallback list at once.",
+        "oneOf": [
+          { "enum": ["throughput", "price", "latency"] },
+          {
+            "type": "object", "additionalProperties": false, "required": ["by"],
+            "properties": {
+              "by": { "enum": ["throughput", "price", "latency"] },
+              "partition": { "enum": ["model", "none"] }
+            }
+          }
+        ],
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "tier"
+      },
+      "max_price": {
+        "description": "The most a request may cost: USD per million prompt or completion tokens, or per request or image. Hosts above it are filtered out.",
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "prompt": { "type": "number", "minimum": 0 },
+          "completion": { "type": "number", "minimum": 0 },
+          "request": { "type": "number", "minimum": 0 },
+          "image": { "type": "number", "minimum": 0 }
+        },
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "tier"
+      },
+      "preferred_min_throughput": {
+        "description": "Prefer hosts producing at least this many tokens per second: one number for every percentile, or {p50, p75, p90, p99}. SOFT: a slower host is moved down the list, never removed.",
+        "$ref": "#/$defs/openRouterPercentiles",
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "tier"
+      },
+      "preferred_max_latency": {
+        "description": "Prefer hosts answering within this many seconds: one number for every percentile, or {p50, p75, p90, p99}. SOFT: it reorders and never excludes, so it cannot bound a tail on its own.",
+        "$ref": "#/$defs/openRouterPercentiles",
+        "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "tier"
+      }
+    }
+  },
+  "openRouterPercentiles": {
+    "oneOf": [
+      { "type": "number", "minimum": 0 },
+      {
+        "type": "object", "additionalProperties": false, "minProperties": 1,
+        "properties": {
+          "p50": { "type": "number", "minimum": 0 },
+          "p75": { "type": "number", "minimum": 0 },
+          "p90": { "type": "number", "minimum": 0 },
+          "p99": { "type": "number", "minimum": 0 }
+        }
+      }
+    ]
+  },
+  "openRouterReasoning": {
+    "description": "OpenRouter's reasoning request object: how hard a reasoning model thinks. Unset leaves each host its own default. effort and max_tokens are two ways to set one budget, so only one may be written.",
+    "type": "object",
+    "additionalProperties": false,
+    "not": { "required": ["effort", "max_tokens"] },
+    "properties": {
+      "effort": {
+        "description": "The thinking budget as a level. Halves latency and cost at low, and cost a fifth of the certification score on a drafting task, so set it where throughput dominates.",
+        "enum": ["max", "xhigh", "high", "medium", "low", "minimal", "none"],
+        "x-doc-url": "https://openrouter.ai/docs/use-cases/reasoning-tokens", "x-placement": "tier"
+      },
+      "max_tokens": {
+        "description": "The thinking budget in tokens, for models that take one.",
+        "type": "integer", "minimum": 1,
+        "x-doc-url": "https://openrouter.ai/docs/use-cases/reasoning-tokens", "x-placement": "tier"
+      },
+      "exclude": {
+        "description": "Think, but leave the reasoning text out of the answer.",
+        "type": "boolean",
+        "x-doc-url": "https://openrouter.ai/docs/use-cases/reasoning-tokens", "x-placement": "tier"
+      },
+      "enabled": {
+        "description": "Turn thinking on at the model's default budget, or off on a model that allows it.",
+        "type": "boolean",
+        "x-doc-url": "https://openrouter.ai/docs/use-cases/reasoning-tokens", "x-placement": "tier"
+      }
+    }
+  },
+  "connectionUpstream": {
+    "description": "Which upstream hosts may read every request on this provider, and under what privacy. Only the connection keys of openRouterProvider; how each tier is served stays on its routing. The flat spelling (only, ignore, allow_fallbacks at top level) is still read.",
+    "anyOf": [
+      {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "only":                     { "$ref": "#/$defs/openRouterProvider/properties/only" },
+              "ignore":                   { "$ref": "#/$defs/openRouterProvider/properties/ignore" },
+              "allow_fallbacks":          { "$ref": "#/$defs/openRouterProvider/properties/allow_fallbacks" },
+              "zdr":                      { "$ref": "#/$defs/openRouterProvider/properties/zdr" },
+              "data_collection":          { "$ref": "#/$defs/openRouterProvider/properties/data_collection" },
+              "enforce_distillable_text": { "$ref": "#/$defs/openRouterProvider/properties/enforce_distillable_text" }
+            }
+          }
+        }
+      },
+      { "$ref": "#/$defs/embeddingsRoutingFlat" }
+    ]
+  },
+  "upstreamRoutingFlat": {
+    "description": "The older flat spelling of upstreamRouting, still read at every door and written nested on the next save that needs a field it lacks. Which of a broker's upstream hosts may serve this tier. OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host; the parser refuses it anywhere else rather than send a vendor fields it never asked for. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. Measured 2026-09-02 — see docs/reference/openrouter.md.",
     "type": "object",
     "additionalProperties": false,
     "properties": {
@@ -159,20 +348,25 @@ const routingDefsTemplate = `{
     "required": ["provider"],
     "properties": {
       "provider": {
-        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini. The only place vendor names appear.",
-        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini"]
+        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
+        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex"]
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
-      "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
+      "base_url": { "type": "string", "description": "A separate embeddings server for this lane alone (vLLM serves one model per process). Empty ⇒ the provider's host (providers.<name>.base_url)." },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only: a location of this lane's own, since Vertex serves an embedding model at fewer locations than a chat model. Empty ⇒ the provider's (providers.gemini_vertex.location)." },
       "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." },
       "routing": { "$ref": "#/$defs/embeddingsRouting" }
     },
     "allOf": [
+      { "$ref": "#/$defs/routingNeedsOpenRouter" },
       {
-        "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
-        "then": { "required": ["base_url"] }
+        "if":   { "properties": { "provider": { "const": "gemini_vertex" } } },
+        "then": { "not": { "required": ["base_url"] } }
       },
-      { "$ref": "#/$defs/routingNeedsOpenRouter" }
+      {
+        "if":   { "required": ["location"] },
+        "then": { "properties": { "provider": { "const": "gemini_vertex" } } }
+      }
     ]
   },
   "decisionsBinding": {
@@ -186,29 +380,26 @@ const routingDefsTemplate = `{
         "enum": [__DECISION_PROVIDERS__]
       },
       "model":    { "type": "string", "minLength": 1, "description": "The decision model id, e.g. jev-1.13.0 on jev, or typesafe/jev-1.13 on OpenRouter." },
-      "base_url": { "type": "string", "description": "The FULL decision endpoint URL, posted to as written: nothing is appended. REQUIRED for jev_compatible (e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone). Empty on jev ⇒ TypeSafe's own endpoint." }
-    },
-    "allOf": [
-      {
-        "if":   { "properties": { "provider": { "const": "jev_compatible" } } },
-        "then": { "required": ["base_url"] }
-      }
-    ]
+      "base_url": { "type": "string", "description": "Deprecated here: set the endpoint on providers.<name>.base_url. Still accepted (the FULL decision endpoint URL, posted to as written) and lifted onto the provider when it names none." }
+    }
   },
   "embeddingsRouting": {
-    "description": "Which of a broker's upstream hosts may read the text this lane embeds. Only the host-selection fields: the lane embeds the same text the chat tiers send, so a residency pin must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",
+    "description": "Which of a broker's upstream hosts may read the text this lane embeds, and under what privacy: the connection keys, which the lane may state for itself. The other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to read the connection's.",
+    "$ref": "#/$defs/connectionUpstream"
+  },
+  "embeddingsRoutingFlat": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "only":            { "$ref": "#/$defs/upstreamRouting/properties/only" },
-      "ignore":          { "$ref": "#/$defs/upstreamRouting/properties/ignore" },
-      "allow_fallbacks": { "$ref": "#/$defs/upstreamRouting/properties/allow_fallbacks" }
+      "only":            { "$ref": "#/$defs/upstreamRoutingFlat/properties/only" },
+      "ignore":          { "$ref": "#/$defs/upstreamRoutingFlat/properties/ignore" },
+      "allow_fallbacks": { "$ref": "#/$defs/upstreamRoutingFlat/properties/allow_fallbacks" }
     }
   }
 }`
 
 // routingDefs renders the $defs block with the tier names the contract declares
-// and the decision providers the registry holds.
+// and the providers the registry holds.
 func routingDefs() json.RawMessage {
 	tiers := ai.AllTiers()
 	names := make([]string, len(tiers))
@@ -217,6 +408,7 @@ func routingDefs() json.RawMessage {
 	}
 	raw := strings.Replace(routingDefsTemplate, "__TIERS__", quotedList(names), 1)
 	raw = strings.Replace(raw, "__DECISION_PROVIDERS__", quotedList(ai.DecisionProviders()), 1)
+	raw = strings.Replace(raw, "__PROVIDERS__", quotedList(ai.KnownProviders()), 1)
 	// Validated here so a substitution bug fails generation rather than shipping
 	// a schema no editor can load.
 	var probe any

@@ -9,6 +9,7 @@ package compose
 // owns the mechanism and knows no domain; the modules own the meaning.
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"sync"
@@ -88,6 +89,9 @@ type SettingSpec struct {
 	AuditVerb  string
 	DefaultErr error
 	HasFreeze  bool
+	// Admits is the entry's own validator, so a gate can hold a bound some
+	// other document states to the code that actually refuses past it.
+	Admits func(json.RawMessage) error
 }
 
 // SettingsCatalogForTest flattens the assembled catalog for
@@ -99,7 +103,7 @@ func SettingsCatalogForTest() []SettingSpec {
 		_, err := d.DefaultJSON()
 		out = append(out, SettingSpec{
 			Key: d.Key(), Object: d.Object(), AuditVerb: d.AuditVerb(), DefaultErr: err,
-			HasFreeze: d.HasFreezeProbe(),
+			HasFreeze: d.HasFreezeProbe(), Admits: d.ValidateJSON,
 		})
 	}
 	return out

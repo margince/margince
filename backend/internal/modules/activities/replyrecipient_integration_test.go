@@ -16,6 +16,7 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -516,5 +517,185 @@ func TestAContactAtTheSameDomainIsStillGreetedByName(t *testing.T) {
 	if got.FirstName != "Anna" {
 		t.Errorf("first name = %q, want Anna — the domain appears in this name, "+
 			"but not as the word a greeting would take", got.FirstName)
+	}
+}
+
+// seedNamedContact writes a contact the way the contacts surface leaves one, with no
+// conversation attached: a note is filed on them afterwards.
+func (e *sendEnv) seedNamedContact(t *testing.T, name string) ids.UUID {
+	t.Helper()
+	contact := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		 VALUES ($1, $2, $3, 'manual', 'human:x')`, contact, name, e.rep); err != nil {
+		t.Fatalf("seeding the contact: %v", err)
+	}
+	return contact
+}
+
+// noteFiledOn logs a note through the store's own writer, linked to the given
+// records. A note carries no participants, which is the shape under test.
+func (e *sendEnv) noteFiledOn(ctx context.Context, t *testing.T, links ...ActivityLinkInput) ids.ActivityID {
+	t.Helper()
+	subject, body := "Call notes", "Asked for the revised quote."
+	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
+		Kind: "note", Subject: &subject, Body: &body, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("LogActivityInputFrom: %v", err)
+	}
+	in.Links = links
+	note, _, err := e.store(nil).LogActivity(ctx, in)
+	if err != nil {
+		t.Fatalf("logging the note: %v", err)
+	}
+	return ids.From[ids.ActivityKind](ids.UUID(note.Id))
+}
+
+func TestReplyingToANoteIsAddressedToTheContactItIsFiledOn(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	buyer := e.seedNamedContact(t, "Dietmar Rietsch")
+	e.seedContactEmail(t, buyer, "dietmar@buyer.test")
+	note := e.noteFiledOn(ctx, t, ActivityLinkInput{EntityType: "contact", EntityID: buyer})
+
+	got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), note)
+	if got.Address != "dietmar@buyer.test" {
+		t.Errorf("address = %q, want dietmar@buyer.test — the note sits on him and the composer left To empty", got.Address)
+	}
+	if got.FullName != "Dietmar Rietsch" {
+		t.Errorf("full name = %q, want Dietmar Rietsch", got.FullName)
+	}
+}
+
+func TestReplyingToANoteFiledOnlyOnACompanyOffersNoAddress(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	company := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO company (id, display_name, source, captured_by)
+		 VALUES ($1, 'Buyer GmbH', 'manual', 'human:x')`, company); err != nil {
+		t.Fatalf("seeding the company: %v", err)
+	}
+	note := e.noteFiledOn(ctx, t, ActivityLinkInput{EntityType: "company", EntityID: company})
+
+	got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), note)
+	if got.Address != "" {
+		t.Errorf("address = %q, want empty — a company is nobody to write to", got.Address)
+	}
+}
+
+func TestAnAutomationDraftingFromANoteStillHasNoReplyAddress(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	buyer := e.seedNamedContact(t, "Dietmar Rietsch")
+	e.seedContactEmail(t, buyer, "dietmar@buyer.test")
+	note := e.noteFiledOn(ctx, t, ActivityLinkInput{EntityType: "contact", EntityID: buyer})
+
+	// ReplyAddressFor is the call the automation adapter makes. It stages a
+	// draft nobody reads before it is queued, so a note stays unanswerable.
+	covers, err := ourDomain{suffix: "@demo.test"}.Covers(ctx)
+	if err != nil {
+		t.Fatalf("reading the colleague predicate: %v", err)
+	}
+	_, err = e.store(nil).ReplyAddressFor(ctx, note, covers)
+	var none *NoReplyAddressError
+	if !errors.As(err, &none) {
+		t.Fatalf("ReplyAddressFor on a note → %v, want NoReplyAddressError", err)
+	}
+}
+
+func TestANoteOffersNoAddressOfAContactTheCallerCannotRead(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	readable := e.seedNamedContact(t, "Anne Wiegert")
+	note := e.noteFiledOn(ctx, t, ActivityLinkInput{EntityType: "contact", EntityID: readable})
+
+	// Captured privately by somebody else and filed on the note EARLIER than
+	// the readable contact, so the ranking prefers them and only the row
+	// scope keeps their address out of the To field.
+	private := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
+		 VALUES ($1, 'Dietmar Rietsch', $2, 'owner', 'manual', 'human:x')`,
+		private, e.other); err != nil {
+		t.Fatalf("seeding the owner-private contact: %v", err)
+	}
+	e.seedContactEmail(t, private, "dietmar@buyer.test")
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO activity_link (activity_id, entity_type, contact_id, created_at)
+		 VALUES ($1, 'contact', $2, now() - interval '1 hour')`, note, private); err != nil {
+		t.Fatalf("filing the note on the private contact: %v", err)
+	}
+
+	got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), note)
+	if got.Address == "dietmar@buyer.test" || got.FullName == "Dietmar Rietsch" {
+		t.Fatalf("got name %q address %q — the privately captured contact leaked through a note",
+			got.FullName, got.Address)
+	}
+	if got.Address != "" {
+		t.Errorf("address = %q, want empty — the readable contact has no address on file", got.Address)
+	}
+}
+
+func TestANoteFiledOnAColleaguesAddressOffersNone(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	// The rep's own login address, off the registered domain, so only the
+	// seat check can tell this contact is one of us.
+	colleague := e.seedNamedContact(t, "Sofia Meier")
+	e.seedContactEmail(t, colleague, "rep-"+e.rep.String()+"@send.test")
+	note := e.noteFiledOn(ctx, t, ActivityLinkInput{EntityType: "contact", EntityID: colleague})
+
+	got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), note)
+	if got.Address != "" {
+		t.Errorf("address = %q, want empty — the note sits on a colleague's seat address", got.Address)
+	}
+}
+
+func TestAnEmailWithNoParticipantsIsNotAddressedToItsLinkedContact(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	anchor := e.seedAnchor(t, "", "")
+	about := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.seedContactEmail(t, about, "dietmar@buyer.test")
+
+	// A link on a message says who it is about, not who it was with; only a
+	// note's link is read as the addressee.
+	got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), anchor)
+	if got.Address != "" {
+		t.Errorf("address = %q, want empty — only a note falls back to its linked contact", got.Address)
+	}
+}
+
+func TestANoteFiledOnTwoContactsLeavesTheChoiceToTheRep(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	buyer := e.seedNamedContact(t, "Dietmar Rietsch")
+	e.seedContactEmail(t, buyer, "dietmar@buyer.test")
+	champion := e.seedNamedContact(t, "Anne Wiegert")
+	e.seedContactEmail(t, champion, "anne@buyer.test")
+	note := e.noteFiledOn(ctx, t,
+		ActivityLinkInput{EntityType: "contact", EntityID: buyer},
+		ActivityLinkInput{EntityType: "contact", EntityID: champion})
+
+	got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), note)
+	if got.Address != "" {
+		t.Errorf("address = %q, want empty — two contacts on one note is not one addressee", got.Address)
+	}
+}
+
+func TestANoteFiledOnASharedMailboxOffersNoAddress(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	// One readable contact, so only the shared-mailbox verdict keeps the
+	// role address out of the To field.
+	mailbox := e.seedNamedContact(t, "Buyer Sales")
+	e.seedContactEmail(t, mailbox, "info@buyer.test")
+	note := e.noteFiledOn(ctx, t, ActivityLinkInput{EntityType: "contact", EntityID: mailbox})
+
+	got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), note)
+	if got.Address != "" {
+		t.Errorf("address = %q, want empty — a shared mailbox is nobody a rep replies to by default", got.Address)
 	}
 }

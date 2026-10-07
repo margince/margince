@@ -748,3 +748,135 @@ func TestStatsFailsLoudlyWhenTheJobTableIsUnreachable(t *testing.T) {
 			"must not be indistinguishable from an empty one")
 	}
 }
+
+// A tick that exhausted its attempts stays failed while the next one is merely
+// pending. This is the blind spot the gauge was reported with: a periodic pass has
+// an unfinished successor almost all the time, so reading the newest row as the
+// outcome let every discard read as healthy.
+func TestAPendingNextTickDoesNotMaskADiscardedStandalonePass(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour)
+
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "discarded",
+		Tags: []string{jobs.SweepTag}, CreatedAt: earlier,
+	})
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "available",
+		Tags: []string{jobs.SweepTag}, CreatedAt: later,
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift_sweep")
+	if !ok {
+		t.Fatal("no sweep reported for a tagged standalone Fleet kind")
+	}
+	if pass.Workspaces != 1 {
+		t.Errorf("Workspaces = %d, want 1: the pass is still covered — a queued tick is reach, "+
+			"and only the OUTCOME waits for a row that ended", pass.Workspaces)
+	}
+	if pass.Failed != 1 {
+		t.Errorf("Failed = %d, want 1: the last tick that ENDED was discarded, and the one after "+
+			"it has not run — an unfinished row is not evidence the pass recovered", pass.Failed)
+	}
+}
+
+// The same at workspace grain, because it is the same defect: one tenant's share
+// discarded, and a newer unfinished child of the next pass over it.
+func TestAPendingNextChildDoesNotMaskAWorkspacesDiscardedShare(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+	ws := ids.NewV7()
+	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour)
+
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift", State: "discarded", Workspace: ws,
+		Tags: []string{jobs.SweepTag}, CreatedAt: earlier,
+	})
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift", State: "running", Workspace: ws,
+		Tags: []string{jobs.SweepTag}, CreatedAt: later,
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift")
+	if !ok {
+		t.Fatal("no sweep reported for a tagged fan-out kind")
+	}
+	if pass.Workspaces != 1 {
+		t.Errorf("Workspaces = %d, want 1: the tenant was reached", pass.Workspaces)
+	}
+	if pass.Failed != 1 {
+		t.Errorf("Failed = %d, want 1: this tenant's last finished share was discarded, and a "+
+			"running retry is not yet evidence it recovered", pass.Failed)
+	}
+}
+
+// A pass with nothing finished yet reports no outcome either way, which is what
+// keeps the fix from inventing a failure out of silence.
+func TestAPassWithNothingEndedYetReportsNoFailure(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "running",
+		Tags: []string{jobs.SweepTag},
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift_sweep")
+	if !ok {
+		t.Fatal("no sweep reported for a tagged standalone Fleet kind — the counts below would " +
+			"both read 0 from a missing row and look like agreement")
+	}
+	if pass.Workspaces != 1 || pass.Failed != 0 {
+		t.Errorf("Workspaces = %d Failed = %d, want 1 and 0: a first tick still running has "+
+			"neither succeeded nor failed", pass.Workspaces, pass.Failed)
+	}
+}
+
+// The unit grain reads the last ENDED child too. statsBySweepUnit's doc says its
+// rule is the SAME as statsBySweep's, and one of the two being fixed is how that
+// sentence stops being true: a connection whose share was discarded kept reading
+// healthy while its retry was merely pending.
+func TestAPendingNextChildDoesNotMaskADiscardedUnit(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+	ws, conn := ids.NewV7(), ids.NewV7()
+	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour)
+
+	seedJob(ctx, t, pool, seed{
+		Kind: "telegram_poll", State: "discarded", Workspace: ws, Connection: conn,
+		Tags: []string{jobs.SweepTag}, CreatedAt: earlier,
+	})
+	seedJob(ctx, t, pool, seed{
+		Kind: "telegram_poll", State: "running", Workspace: ws, Connection: conn,
+		Tags: []string{jobs.SweepTag}, CreatedAt: later,
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	unit, ok := unitFor(snap, "telegram_poll")
+	if !ok {
+		t.Fatal("no per-unit sweep reported for a kind whose dispatcher fans out per connection")
+	}
+	if unit.Units != 1 {
+		t.Errorf("Units = %d, want 1: one connection was reached, pending retry included", unit.Units)
+	}
+	if unit.Failed != 1 {
+		t.Errorf("Failed = %d, want 1: this connection's last finished share was discarded, and a "+
+			"running retry is not yet evidence it recovered", unit.Failed)
+	}
+}

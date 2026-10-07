@@ -451,6 +451,67 @@ describe("silence on the relationship slot names which silence it is", () => {
     expect(card.textContent).not.toMatch(/inbound/i);
   });
 
+  // One verdict on the card. When the rating says a meeting keeps the account
+  // in touch, the headline must not call the same relationship quiet because
+  // the inbox alone is.
+  it.each([
+    ["old mail", 77],
+    ["no mail at all", null],
+  ])(
+    "follows the rating when a meeting keeps it in touch despite %s",
+    async (_, days) => {
+      stubFinance(NO_CONNECTION);
+      renderStrip(
+        view({
+          state_strip: spoken,
+          health: {
+            days_since_last_inbound: days,
+            relationship: {
+              rating: "strong",
+              reason: "Last met them 21 days ago.",
+              reason_code: "last_met",
+              reason_params: { days: 21 },
+            },
+          },
+        }),
+      );
+      const card = relationship((await readings()).plate);
+
+      expect(within(card).getByText(en["co.strip.healthActive"])).toBeTruthy();
+      expect(within(card).queryByText(en["co.strip.healthQuiet"])).toBeNull();
+      expect(within(card).queryByText(en["co.strip.noInboundEver"])).toBeNull();
+      expect(
+        within(card).getAllByText("Last met them 21 days ago.").length,
+      ).toBeGreaterThan(0);
+    },
+  );
+
+  // An at-risk rating keeps the quiet headline, and its detail is the rating's
+  // own reason, measured from the later of their last word and our last meeting.
+  it("says the rating's reason under a quiet headline", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: spoken,
+        health: {
+          days_since_last_inbound: 77,
+          relationship: {
+            rating: "at_risk",
+            reason: "No reply and no meeting for 40 days.",
+            reason_code: "quiet",
+            reason_params: { days: 40 },
+          },
+        },
+      }),
+    );
+    const card = relationship((await readings()).plate);
+
+    expect(within(card).getByText(en["co.strip.healthQuiet"])).toBeTruthy();
+    expect(
+      within(card).getAllByText("No reply and no meeting for 40 days.").length,
+    ).toBeGreaterThan(0);
+  });
+
   // The share belongs to the relationships that are still running: there the
   // dates say nothing a reader can act on and the balance does.
   it("keeps the share of the exchange for a live relationship", async () => {

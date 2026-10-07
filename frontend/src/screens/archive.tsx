@@ -2,13 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
-import { Button, Modal } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
+import { useState } from "react";
+import { Button } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import "./archive.css";
+import { problemMessageOf } from "./common";
 import "./common.css";
 
 // The shared archive/disqualify affordance (P-3): a human-direct DELETE that
@@ -104,7 +103,6 @@ export function ArchiveAction<Archived extends { id: string }>({
   disabledReasonId?: string;
 }>) {
   const t = useT();
-  const headingId = useId();
   const [confirming, setConfirming] = useState(false);
   const mutation = useArchiveRecord({
     archive,
@@ -127,33 +125,18 @@ export function ArchiveAction<Archived extends { id: string }>({
       >
         {label}
       </Button>
-      <Modal
+      <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
-        labelledBy={headingId}
+        title={label}
+        confirmLabel={label}
+        confirmVariant="danger"
+        onConfirm={() => mutation.mutate()}
+        pending={mutation.isPending}
+        error={mutation.error ? problemMessageOf(mutation.error, t) : null}
       >
-        <Heading size="large" id={headingId} className="t-h2 modal-title">
-          {label}
-        </Heading>
-        <p className="archive-confirm">{confirmText}</p>
-        <ErrorLine error={mutation.error} />
-        <div className="actions">
-          <Button
-            onClick={() => setConfirming(false)}
-            disabled={mutation.isPending}
-          >
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
-            data-testid="archive-confirm"
-          >
-            {label}
-          </Button>
-        </div>
-      </Modal>
+        <p>{confirmText}</p>
+      </ConfirmModal>
     </>
   );
 }

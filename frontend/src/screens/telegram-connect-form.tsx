@@ -43,6 +43,7 @@ export function TelegramConnectForm({
 }>) {
   const t = useT();
   const headingId = useId();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [botToken, setBotToken] = useState("");
 
@@ -106,23 +107,25 @@ export function TelegramConnectForm({
   const resolved = connect.isSuccess ? connect.data : null;
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {connection
           ? t("connectors.telegramEditTitle")
           : t("connectors.telegramModalTitle")}
       </Heading>
       {resolved ? (
-        <div className="form-stack">
-          <p className="t-body">
-            {t("connectors.telegramConnectedAs", {
-              username: resolved.channelLabel,
-            })}
-          </p>
-          <div>
-            <Badge tone={statusTone(resolved.status)}>
-              {t(statusLabel(resolved.status))}
-            </Badge>
+        <>
+          <div className="form-stack">
+            <p className="t-body">
+              {t("connectors.telegramConnectedAs", {
+                username: resolved.channelLabel,
+              })}
+            </p>
+            <div>
+              <Badge tone={statusTone(resolved.status)}>
+                {t(statusLabel(resolved.status))}
+              </Badge>
+            </div>
           </div>
           <div className="actions">
             <Button
@@ -135,53 +138,53 @@ export function TelegramConnectForm({
               {t("webhooks.secret.done")}
             </Button>
           </div>
-        </div>
+        </>
       ) : (
-        <form
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!ready) {
-              return;
-            }
-            connect.mutate(botToken.trim());
-          }}
-        >
-          {/* The connection's CURRENT status stays visible while replacing its
-              token — a binding ingress has parked (error / reauth_required)
-              must read that way here too, not silently as "connected" just
-              because an edit form opened on it. */}
-          {connection && (
-            <div>
-              <Badge tone={statusTone(connection.status)}>
-                {t(statusLabel(connection.status))}
-              </Badge>
-            </div>
-          )}
-          <Field
-            label={t("connectors.telegramBotToken")}
-            required
-            hint={t("connectors.telegramBotTokenHint")}
+        <>
+          <form
+            id={formId}
+            className="form-stack"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!ready || connect.isPending) {
+                return;
+              }
+              connect.mutate(botToken.trim());
+            }}
           >
-            {(control) => (
-              <TextInput
-                {...control}
-                type="password"
-                autoComplete="off"
-                value={botToken}
-                onChange={(event) => setBotToken(event.target.value)}
-              />
+            {/* A parked binding still reads as parked while its token is replaced. */}
+            {connection && (
+              <div>
+                <Badge tone={statusTone(connection.status)}>
+                  {t(statusLabel(connection.status))}
+                </Badge>
+              </div>
             )}
-          </Field>
-          {errorMessage && (
-            <Callout
-              tone="danger"
-              kind="outcome"
-              title={t("connectors.telegramConnectFailed")}
+            <Field
+              label={t("connectors.telegramBotToken")}
+              required
+              hint={t("connectors.telegramBotTokenHint")}
             >
-              {errorMessage}
-            </Callout>
-          )}
+              {(control) => (
+                <TextInput
+                  {...control}
+                  type="password"
+                  autoComplete="off"
+                  value={botToken}
+                  onChange={(event) => setBotToken(event.target.value)}
+                />
+              )}
+            </Field>
+            {errorMessage && (
+              <Callout
+                tone="danger"
+                kind="outcome"
+                title={t("connectors.telegramConnectFailed")}
+              >
+                {errorMessage}
+              </Callout>
+            )}
+          </form>
           <div className="actions">
             <Button
               type="button"
@@ -193,6 +196,7 @@ export function TelegramConnectForm({
             <Button
               variant="primary"
               type="submit"
+              form={formId}
               disabled={!connect.isPending && !ready}
               pending={connect.isPending}
               busyLabel={t("create.saving")}
@@ -202,7 +206,7 @@ export function TelegramConnectForm({
                 : t("connectors.telegramSubmitCta")}
             </Button>
           </div>
-        </form>
+        </>
       )}
     </Modal>
   );

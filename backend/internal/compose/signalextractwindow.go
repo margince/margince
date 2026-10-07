@@ -53,7 +53,7 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	if thread.ReadTo != nil && !thread.Newest.After(*thread.ReadTo) && thread.ReadFrom != nil {
 		olderThan, olderThanID = thread.ReadFrom, thread.ReadFromID
 	}
-	messages, err := threadWindow(ctx, tx, thread.Key, olderThan, olderThanID)
+	messages, err := threadWindow(ctx, tx, thread.Key, olderThan, olderThanID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	// window every time. Both fall back to the newest window, which is where
 	// the new content is.
 	if len(messages) == 0 && olderThan != nil {
-		messages, err = threadWindow(ctx, tx, thread.Key, nil, nil)
+		messages, err = threadWindow(ctx, tx, thread.Key, nil, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -72,9 +72,10 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 }
 
 // threadWindow reads one window, oldest first. olderThan bounds it above; nil
-// is the newest end.
+// is the newest end. through admits the one message at that bound as well, so
+// a window can END at a message rather than just before it.
 func threadWindow(
-	ctx context.Context, tx pgx.Tx, key string, olderThan *time.Time, olderThanID *ids.UUID,
+	ctx context.Context, tx pgx.Tx, key string, olderThan *time.Time, olderThanID, through *ids.UUID,
 ) ([]threadMessage, error) {
 	// The remainder is measured in the same statement that cuts the body:
 	// asked for afterwards it would be a second read of a row that may have
@@ -108,11 +109,11 @@ func threadWindow(
 		           -- drop the rest of that group unread — or, made inclusive,
 		           -- re-read it every pass and never get past it.
 		           AND ($4::timestamptz IS NULL
-		                OR (occurred_at, id) < ($4, $5::uuid))
+		                OR (occurred_at, id) < ($4, $5::uuid) OR id = $6::uuid)
 		         ORDER BY occurred_at DESC, id DESC
 		         LIMIT $3) tail
 		 ORDER BY occurred_at, id`, extractBodyLimit, key, extractThreadMessages,
-		olderThan, olderThanID)
+		olderThan, olderThanID, through)
 	if err != nil {
 		return nil, fmt.Errorf("read the conversation: %w", err)
 	}

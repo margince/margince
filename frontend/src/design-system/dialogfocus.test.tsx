@@ -23,7 +23,7 @@ beforeEach(() => {
 function DrawerWithConfirm({ onClose }: Readonly<{ onClose: () => void }>) {
   const [confirming, setConfirming] = useState(false);
   return (
-    <Modal open onClose={onClose} labelledBy="links" placement="right">
+    <Modal open onClose={onClose} labelledBy="links" intent="drawer">
       <Heading size="large" id="links">
         Shared links
       </Heading>

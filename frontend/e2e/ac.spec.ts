@@ -4,6 +4,7 @@ import { meFixture } from "../src/app/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
+import { copy } from "./copy";
 import { anna, mockApi } from "./seed";
 import { pageOverflow, textsOf } from "./waits";
 
@@ -429,7 +430,9 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
   ).toHaveAttribute("href", "#/settings");
-  await expect(menu.getByRole("menuitem", { name: de["scheduling.myLink"] })).toHaveAttribute("href", "#/book");
+  await expect(
+    menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
+  ).toHaveAttribute("href", "#/settings/meetings");
   await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
@@ -584,7 +587,7 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
  * grow-into-the-leftover-room sizing this replaced, and would have passed on
  * the defect it exists to catch.
  */
-const STAGE_WIDTH_PX = 240;
+const STAGE_WIDTH_PX = 300;
 
 /**
  * The stage geometry a reader is actually handed, read off the rendered board.
@@ -937,6 +940,20 @@ test("AC-pipeline-10: the bar under the pointer is the one that lights", async (
     });
 });
 
+// Whose deal it is reads the same in both views: the card's mark names the
+// owner on hover, and the table gives the owner a column of its own.
+test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
+  await page.goto("/#/deals");
+  const card = page.locator('[data-deal="d-fleet"]');
+  // Playwright refuses to hover an element another one covers, so this also
+  // holds the mark above the deal's link, which is stretched over the card.
+  await card.getByRole("img", { name: "Lena Fischer" }).hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Lena Fischer");
+  await page.getByRole("button", { name: "Tabelle" }).click();
+  const row = page.getByRole("row", { name: /Fleet retrofit/ });
+  await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
+});
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
@@ -946,6 +963,9 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   const card = page.locator('[data-deal="d-fleet"]');
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
+  // The board scrolls sideways and the terminal stage starts at this window's
+  // edge, so it is brought into view the way a rep scrolls to it before a drop.
+  await won.scrollIntoViewIfNeeded();
   await card.dragTo(won);
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 
@@ -995,11 +1015,17 @@ test("AC-inbox: the staged decision is on the day's queue", async ({
   ).toBeVisible();
 });
 
-test("AC-book: the reusable booking link is available for sharing and signatures", async ({ page }) => {
+test("AC-book: the reusable booking link is available for sharing and signatures", async ({
+  page,
+}) => {
   await page.goto("/#/book");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: de["scheduling.myLink"] })).toHaveValue("https://crm.example.test/#/book/host-1");
-  await expect(page.getByRole("button", { name: de["scheduling.copyLink"] })).toBeEnabled();
+  await expect(
+    page.getByRole("textbox", { name: de["scheduling.myLink"] }),
+  ).toHaveValue("https://crm.example.test/#/book/host-1");
+  await expect(
+    page.getByRole("button", { name: de["scheduling.copyLink"] }),
+  ).toBeEnabled();
 });
 
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
@@ -1134,20 +1160,39 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
   await expect(page.getByText(/mgp_/)).toHaveCount(0);
 });
 
-test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({ page }) => {
+// The public page opens on the current month, so these pin the clock to the
+// month the fixture's free times fall in.
+test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  const submit = page.getByRole("button", { name: de["scheduling.book"] });
+  await page.locator(".bookguest-times .meeting-slots button").first().click();
+  const submit = page.getByRole("button", {
+    name: copy(de["scheduling.confirmAt"]),
+  });
   await expect(submit).toBeDisabled();
-  await page.getByRole("button", { name: /06\.07\.2026/ }).first().click();
-  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
-  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await page
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
+    .fill("jonas@beispiel.example");
   await expect(submit).toBeDisabled();
-  const consent = page.getByRole("checkbox", { name: de["book.consentWording"] });
+  const consent = page.getByRole("checkbox", {
+    name: de["book.consentWording"],
+  });
   await consent.check();
   await expect(submit).toBeEnabled();
-  const shownWording = await page.getByText(de["book.consentWording"], { exact: true }).textContent();
-  const requestPromise = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/public/booking/host-1"));
+  const shownWording = await page
+    .getByText(de["book.consentWording"], { exact: true })
+    .textContent();
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().includes("/public/booking/host-1"),
+  );
   await submit.click();
   const request = await requestPromise;
   const body = request.postDataJSON();
@@ -1156,19 +1201,32 @@ test("AC-book-public: consent gates calendar invitation and its wording passes t
   expect(body.consent.purpose_id).toBeUndefined();
   expect(request.headers()["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
   await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
-  await expect(page.getByRole("heading", { name: de["scheduling.pending"] })).toBeVisible();
-  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText(
+    de["scheduling.pending"],
+  );
+  await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
-test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({ page }) => {
+test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
-  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
-  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await page.getByRole("button", { name: /^12:00$/ }).click();
+  await page
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
+    .fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: /12:00/ }).click();
-  await page.getByRole("button", { name: de["scheduling.book"] }).click();
+  await page
+    .getByRole("button", {
+      name: copy(de["scheduling.confirmAt"], { time: "12:00" }),
+    })
+    .click();
   await expect(page.getByText("slot no longer available")).toBeVisible();
-  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
+  await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
 test("AC-onboarding-1: onboarding is the rail-less conversational shell", async ({
@@ -1767,11 +1825,24 @@ test.describe("the cold start's board on a phone at 200% text", () => {
       document.documentElement.style.fontSize = "200%";
     });
     await expectBoardReachable(page);
+    // The Core's row is what a room this short against its text gives up —
+    // folded, never unmounted, or its WebGL loop restarts on the way back.
+    await expect(page.locator(".ob-stage-core")).toHaveCount(1);
+    await expect(page.locator(".ob-stage-core")).toBeHidden();
     // The ignition is the widest step: the sealed badge and the capability
     // lines are the lines that outgrew the board.
     await page.getByRole("button", { name: de["firstRun.continue"] }).click();
     await expect(page.locator(".ob-ig-can li")).toHaveCount(3);
     await expectBoardReachable(page);
+  });
+
+  // The same window at the text size it was built for keeps the Core: the fold
+  // is measured against the reader's text, not against the phone.
+  test("keeps the Core at the default text size", async ({ page }) => {
+    await mockApi(page, { journey: "unconfigured" });
+    await page.goto("/#/onboarding");
+    await expect(page.locator(".ob-stage-title")).toBeVisible();
+    await expect(page.locator(".ob-stage-core")).toBeVisible();
   });
 });
 
@@ -2063,8 +2134,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       .fill("brandt");
     // Wait on the hits, not on a duration: the live arm is what adds the rows
     // this sweep exists to judge.
+    // Exact: a contact found through the company carries its name too.
     await expect(
-      page.getByRole("button", { name: /Brandt Automotive/ }),
+      page.getByRole("button", { name: "Brandt Automotive", exact: true }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");
@@ -2075,7 +2147,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   test("no AA violations with a report row's explain drawer open", async ({
     page,
   }) => {
-    await page.goto("/#/analytics/performance");
+    await page.goto("/#/analytics/pipeline");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page
@@ -2631,17 +2703,18 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
 // means the same thing on an idle laptop and on a CI box running six other jobs,
 // which no reading of a clock does.
 //
-// This case bounds `GET /contacts/{id}`, and the title says so because that is the
-// read it holds. The heading itself comes from `/contacts/{id}/360` — a record
-// head that draws before ITS own read returns is the wider claim, and #2864
-// carries it, product half first.
+// This case holds the read the heading itself comes from. A record route carries
+// an id and not a name, so the head is seeded from the list row the open was
+// clicked from (`useCachedRecordName`) and draws before `/contacts/{id}/360`
+// answers. Holding the plain `/contacts/{id}` instead would leave the case green
+// over a page that waits, because that is not the request the heading depends on.
 //
 // The perceived BUDGET is not asserted here at all. One wall-clock sample says
 // how busy the runner was, and this lane shares its machine with six integration
 // shards. `make bench-mobile` owns the 300ms figure as a p95 over 20 samples on
 // a throttled Fast-3G profile — the harder of the two conditions, so a budget
 // that holds there holds unthrottled by construction.
-test("PERF-1: a record's heading does not wait on GET /contacts/{id}", async ({
+test("PERF-1: a record opens on its route's identity, not on its read", async ({
   page,
 }) => {
   // Held, not slowed: the read cannot have answered when the assertion below
@@ -2657,7 +2730,7 @@ test("PERF-1: a record's heading does not wait on GET /contacts/{id}", async ({
   // itself. `readStarted` is what tells the two apart.
   let readStarted = false;
   let readAnswered = false;
-  await page.route("**/contacts/p-anna", async (route) => {
+  await page.route("**/contacts/p-anna/360", async (route) => {
     readStarted = true;
     await new Promise((settle) => setTimeout(settle, READ_HELD_MS));
     readAnswered = true;

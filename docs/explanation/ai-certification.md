@@ -1,14 +1,14 @@
 # How AI certification works
 
 The [certification page](../reference/ai-certification.md) grades every AI feature
-under every preset. This page explains, in plain words, how one grade is made. To
+under every preset. Here, in plain words, is how one grade is made. To
 run the lane, see [certify-an-ai-model.md](../how-to/certify-an-ai-model.md); to
 write a case, see [write-a-certification-case.md](../how-to/write-a-certification-case.md).
 The exact rule and its numbers live in `backend/internal/compose/aicert/score.go`
 and `thresholds.go`, and the certification page prints them.
 
-A **scenario** (a test case) is one realistic situation — an email, an account, a
-web page — plus the answer we expect. It lives in
+A **scenario** (a test case) is one realistic situation (an email, an account, a
+web page) plus the answer we expect. It lives in
 `backend/internal/compose/aicert/corpus/<task>/*.yaml`.
 
 ## One try
@@ -40,15 +40,16 @@ web page — plus the answer we expect. It lives in
 ```
 
 1. The scenario's data goes through the **product's real prompt builder**, so the
-   model sees exactly what production sends. A scenario never carries a prompt of
-   its own — a copy would stay green while the real one broke.
+   model sees what production sends. A scenario never carries a prompt of
+   its own, because a copy would stay green while the real one broke.
 2. The model answers.
 3. **① Is it right?** The product's own validator and the expected answer decide
    pass or fail. Strict, and no AI involved.
 4. **② Is it good?** A second model, the judge, scores the answer 0–100 against
-   the scenario's rubric. It is asked **once**. A score within 10 points of one of
-   the scenario's bars, or under its lowest, is asked for a **second** time, and two readings more than 5
-   apart for a **third**; the middle one counts (the average, of two). So one odd
+   the scenario's rubric. The judge is asked once. If the score is within 10
+   points of one of the scenario's bars, or below the lowest bar, it is asked a
+   second time. If those two scores differ by more than 5, it is asked a third
+   time. The middle score counts; with two scores, the average counts. So one odd
    reading cannot swing a close call, and a clear one is not paid for three times.
    It sees the product's rules, so it
    never marks down what the product allows. It never sees ①'s verdict. Where the
@@ -60,7 +61,7 @@ or an empty list, the mechanical check already sees everything a rubric would
 ask for. Such a scenario declares `judge: none` and says why in
 `judge_none_reason`, and it carries no rubric and no quality bars. It counts
 toward the feature's right answers like any other and adds nothing to the
-quality average. A gate runs each one against the wrong answer its judge used to
+quality average. A gate runs each one against the wrong answer a judge would
 catch, and that answer must fail. The certification page marks these scenarios
 "checked mechanically".
 
@@ -87,12 +88,12 @@ single scenario always runs to 9, because 3 out of 3 is not yet enough evidence.
 ## What each scenario must clear
 
 - right in **at least half** of its tries;
-- **no single answer below its floor** (for example 40) — one very bad answer
+- **no single answer below its floor** (for example 40): one very bad answer
   blocks ✅;
 - not **consistently mediocre**: its quality must be able to reach its bar.
 
-A scenario that is clearly broken — wrong most of the time, or scoring under its
-floor even on its best reading — **vetoes** the whole feature: ❌, whatever its
+A scenario that is clearly broken (wrong most of the time, or scoring under its
+floor even on its best reading) **vetoes** the whole feature: ❌, whatever its
 siblings score. Averaging cannot hide it. One whose best reading stays under the
 lower bar shows ❌ on its own row and blocks ✅, but the pool may still reach ⚠️.
 
@@ -117,7 +118,7 @@ lower bar shows ❌ on its own row and blocks ✅, but the pool may still reach 
 ```
 
 Why pooled: requiring *every* scenario to pass on its own multiplies the chances of
-a stray miss — nine scenarios each right 90% of the time would reach ✅ only four
+a stray miss: nine scenarios each right 90% of the time would reach ✅ only four
 times in ten. Pooling allows a stray miss; the per-scenario gates and the veto still
 refuse a real weakness.
 
@@ -138,18 +139,18 @@ refuse a real weakness.
 
 ## When a feature fails: fix in this order
 
-1. **The case is wrong or not doable** — the expected answer is not the only right
+1. **The case is wrong or not doable.** The expected answer is not the only right
    one, a fact the answer needs is missing, or the check contradicts the rubric.
    Fix the case.
-2. **The prompt confuses the model** — rules that conflict, or the deciding rule
+2. **The prompt confuses the model.** Rules conflict, or the deciding rule is
    buried. Fix the prompt ([prompt-principles.md](prompt-principles.md)).
-3. **The model really cannot do it** — only then change its settings (thinking
+3. **The model really cannot do it.** Only then change its settings (thinking
    level) or move the feature to a stronger tier.
 
 ## What a run costs
 
-Every try costs one candidate call and one to three judge calls — about 1.4 on
-average, three only on a close and contested score — and an uncertain scenario can
+Every try costs one candidate call and one to three judge calls (about 1.4 on
+average, three only on a close and contested score). An uncertain scenario can
 run up to 9 tries, so the judge is still most of the cost. On the default
 `claude_cli` judge that is subscription usage rather than money, and the
 subscription's session limit is shared with everything else using it: keep a sweep

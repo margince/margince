@@ -18,7 +18,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -113,21 +115,29 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 	}
 
 	pageCtx, _ := withPageProgress(runCtx, r, backfillID, generation)
+	pageCtx = capturemetrics.ForProvider(pageCtx, name)
 	res, pageErr := bf.BackfillPage(pageCtx, auth, after, pageToken, r.sink)
+	capturemetrics.ObservePage(pageCtx, pageErr)
 	if pageErr != nil {
+		if pageToken != "" && classifySyncError(pageErr) == classHistoryGone {
+			return r.restartWindowWalk(ctx, backfillID, pageErr)
+		}
 		return r.recordPageFault(ctx, backfillID, pageErr)
 	}
 	done, completed, err = r.commitBackfillPage(ctx, backfillID, generation, res)
 	return done, completed, 0, err
 }
 
-// recordPageFault decides what a failed page means for the run. A rate limit or
-// an unreachable provider is the provider's weather: the run keeps its
+// recordPageFault decides what a failed page means for the run. A rate limit,
+// an unreachable provider or an internal fault is retried: the run keeps its
 // committed token, counts the failure, and the caller comes back after the
 // ladder's delay — a mailbox import that spans hours must survive the outages
-// that span minutes. Every other class is a fault no delay repairs (a rejected
-// credential needs its human, a vanished history needs a fresh window, an
-// internal error needs us), so the run ends and the class says why.
+// that span minutes. An internal fault is retried too because the connector
+// already walks past a message the capture refuses (BackfillPageResult.Failed);
+// what still fails a whole page is a run of them, and that is usually the
+// database coming back. Every other class is a fault no delay repairs (a
+// rejected credential needs its human, a vanished history needs a fresh
+// window), so the run ends and the class says why.
 //
 // The cap is the honest end of the ladder: a provider still refusing after
 // backfillMaxConsecutiveFailures consecutive pages is not going to relent
@@ -139,7 +149,7 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 // done without err must never page a run that has already ended.
 func (r *Registry) recordPageFault(ctx context.Context, backfillID ids.UUID, cause error) (done, completed bool, retryAfter time.Duration, err error) {
 	class := classifySyncError(cause)
-	if class != classRateLimited && class != classUnreachable {
+	if !retriesPage(class) {
 		return true, false, 0, errors.Join(cause, r.failBackfill(ctx, backfillID, cause))
 	}
 	failures, live, countErr := r.countBackfillFailure(ctx, backfillID, class)
@@ -160,6 +170,47 @@ func (r *Registry) recordPageFault(ctx context.Context, backfillID ids.UUID, cau
 		return true, false, 0, errors.Join(cause, r.failBackfill(ctx, backfillID, cause))
 	}
 	return false, false, backfillRetryDelay(failures, cause), cause
+}
+
+// retriesPage says which fault classes leave a run live for another try.
+func retriesPage(class errorClass) bool {
+	return class == classRateLimited || class == classUnreachable || class == classInternal
+}
+
+// restartWindowWalk answers a page token the provider no longer accepts by
+// walking the window again from its first page. Captured messages dedupe, so
+// nothing is stored twice. The message counts start again with the walk —
+// they measure progress through the window, and the second walk passes the
+// same messages again — while the contacts and companies the run created stay
+// counted, because they exist.
+//
+// It counts as a failure on the ladder, and a run without a token never comes
+// here, so a provider refusing the first page too ends the run normally. It
+// happens once per run (window_restarts): a provider that rejects the token
+// again after a fresh walk is not answered by walking forever, and the run
+// ends on history_gone for its human to decide.
+func (r *Registry) restartWindowWalk(ctx context.Context, backfillID ids.UUID, cause error) (done, completed bool, retryAfter time.Duration, err error) {
+	writeCtx, cancel := detachedWrite(ctx)
+	defer cancel()
+	var restarted bool
+	err = r.db.Tx(writeCtx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(writeCtx, `
+			UPDATE capture_backfill
+			   SET cursor = NULL, scanned = 0, captured = 0, skipped = 0, failed = 0,
+			       consecutive_failures = consecutive_failures + 1, last_error_class = $2,
+			       window_restarts = window_restarts + 1`+resetInflightProgress+`,
+			       status = CASE WHEN status = 'queued' THEN 'running' ELSE status END
+			 WHERE id = $1 AND status IN ('queued','running') AND window_restarts < $3`,
+			backfillID, string(classHistoryGone), maxWindowRestarts)
+		restarted = tag.RowsAffected() > 0
+		return err
+	})
+	if err != nil || !restarted {
+		// Either the write failed, or this run already walked its window again
+		// once (or ended under us — failBackfill then matches nothing).
+		return true, false, 0, errors.Join(cause, err, r.failBackfill(ctx, backfillID, cause))
+	}
+	return false, false, time.Second, cause
 }
 
 // countBackfillFailure adds one to the run's consecutive-failure ladder and
@@ -196,17 +247,36 @@ func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID
 	return failures, live, err
 }
 
-// backfillRetryDelay is the shared transient ladder, with the provider's own
+// backfillRetryDelay is the transient ladder, with the provider's own
 // Retry-After honoured whenever it asks for longer: coming back earlier than a
 // rate limiter told us to only spends the next refusal.
+//
+// A rate limit climbs a SHORT ladder of its own. It is the provider pacing a
+// mailbox for seconds or minutes, and the long ladder's minutes-to-hours steps
+// turned a long import that kept meeting it into one that mostly waited. The
+// provider's own wait still wins when it names a longer one.
 func backfillRetryDelay(failures int, cause error) time.Duration {
 	delay := backoffDelay(failures)
+	if errors.Is(cause, connector.ErrRateLimited) {
+		delay = backoff.Jittered(failures, backfillRateBackoffBase, backfillRateBackoffCap)
+	}
 	var limited *connector.RateLimitedError
 	if errors.As(cause, &limited) && limited.RetryAfter > delay {
 		return limited.RetryAfter
 	}
 	return delay
 }
+
+// maxWindowRestarts is how often one run may walk its window again after the
+// provider rejected its page token.
+const maxWindowRestarts = 1
+
+// backfillRateBackoffBase..backfillRateBackoffCap bound the rate-limit ladder:
+// ten consecutive limited pages, the give-up cap, span about an hour and a half.
+const (
+	backfillRateBackoffBase = 10 * time.Second
+	backfillRateBackoffCap  = 30 * time.Minute
+)
 
 // commitBackfillPage records one page's counters and the run's status
 // transition, returning whether the run is now terminal (done) and whether
@@ -246,12 +316,12 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 		tag, err := tx.Exec(ctx, `
 			UPDATE capture_backfill
 			SET cursor = $2, scanned = scanned + $3, captured = captured + $4, skipped = skipped + $5,
-			    consecutive_failures = 0`+resetInflightProgress+`,
+			    failed = failed + $7, consecutive_failures = 0`+resetInflightProgress+`,
 			    status = `+statusExpr+terminal+`
 			WHERE id = $1 AND status IN ('queued','running')
 			  AND EXISTS (SELECT 1 FROM capture_connection c
 			              WHERE c.id = capture_backfill.connection_id AND c.generation = $6)`,
-			backfillID, cur, res.Scanned, res.Captured, res.Skipped, generation)
+			backfillID, cur, res.Scanned, res.Captured, res.Skipped, generation, res.Failed)
 		if err != nil {
 			return err
 		}

@@ -35,6 +35,8 @@ type InstallationSettings struct {
 	// it calls dead work a problem. The full count stays a report figure; this
 	// bounds the one that is styled as an alarm.
 	DeadWorkBannerHours int
+	// OAuthAccessTokenTTLMinutes is how long a connector's access token lives.
+	OAuthAccessTokenTTLMinutes int
 	// ForecastForwardMeasure is which remaining-pipeline reading a projected
 	// landing is built from. A string here rather than a values.ForwardMeasure
 	// because this struct is what the setting STORED, and reporting it as the
@@ -51,6 +53,8 @@ type InstallationSettings struct {
 	// It is the STORED answer and not the effective one: the deployment decides
 	// what is possible, and compose intersects the two.
 	EnabledOidcProviders []string
+	// Operations is the worker's operating values (installationoperations.go).
+	Operations OperationSettings
 }
 
 // InstallationPatch is a sparse installation-settings write: a nil field is
@@ -58,15 +62,18 @@ type InstallationSettings struct {
 // them are *string and a transposed pair would write a language into the
 // currency row and pass the type checker.
 type InstallationPatch struct {
-	Name                   *string
-	Timezone               *string
-	BaseCurrency           *string
-	BaseLanguage           *string
-	DateFormat             *string
-	TimeFormat             *string
-	FiscalYearStartMonth   *int
-	DeadWorkBannerHours    *int
-	ForecastForwardMeasure *string
+	Name                 *string
+	Timezone             *string
+	BaseCurrency         *string
+	BaseLanguage         *string
+	DateFormat           *string
+	TimeFormat           *string
+	FiscalYearStartMonth *int
+	DeadWorkBannerHours  *int
+	// OAuthAccessTokenTTLMinutes reaches the next token minted, never one
+	// already issued.
+	OAuthAccessTokenTTLMinutes *int
+	ForecastForwardMeasure     *string
 	// EnabledOidcProviders replaces the whole list. A nil pointer leaves it
 	// unchanged; a pointer to an empty slice is a real choice — offer password
 	// only — so the two cannot be collapsed.
@@ -82,6 +89,9 @@ type InstallationPatch struct {
 	// group grants anything — so the two cannot be collapsed, exactly like
 	// EnabledOidcProviders above.
 	OidcGroupRoleMap *map[string]string
+	// Operations is the sparse patch of the worker's operating values; it
+	// checks its own completeness (installationoperations_test.go).
+	Operations OperationPatch
 }
 
 // pendingWrite is one field of a sparse patch, already reduced to the two
@@ -160,6 +170,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	tokenTTL, err := settings.Get(ctx, s.settings, OAuthAccessTokenTTLMinutes)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	measure, err := settings.Get(ctx, s.settings, ForecastForwardMeasure)
 	if err != nil {
 		return InstallationSettings{}, err
@@ -176,13 +190,19 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	operations, err := s.readOperations(ctx)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	return InstallationSettings{
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
-		FiscalYearStartMonth:   fiscalStart,
-		DeadWorkBannerHours:    bannerHours,
-		ForecastForwardMeasure: measure,
-		BaseCurrencyLocked:     locked, BaseCurrencyLockedReason: why,
+		FiscalYearStartMonth:       fiscalStart,
+		DeadWorkBannerHours:        bannerHours,
+		OAuthAccessTokenTTLMinutes: tokenTTL,
+		ForecastForwardMeasure:     measure,
+		BaseCurrencyLocked:         locked, BaseCurrencyLockedReason: why,
 		EnabledOidcProviders: providers,
+		Operations:           operations,
 	}, nil
 }
 
@@ -245,6 +265,10 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
+	tokenTTL, err := encodePatchField(OAuthAccessTokenTTLMinutes, in.OAuthAccessTokenTTLMinutes)
+	if err != nil {
+		return nil, err
+	}
 	measure, err := encodePatchField(ForecastForwardMeasure, in.ForecastForwardMeasure)
 	if err != nil {
 		return nil, err
@@ -273,7 +297,11 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap}, nil
+	operations, err := in.Operations.writes()
+	if err != nil {
+		return nil, err
+	}
+	return append([]pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap}, operations...), nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

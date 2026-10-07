@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"maps"
 	"mime/multipart"
 	"net/http"
 	"path"
@@ -89,6 +90,7 @@ type importReportDTO struct {
 	Disposition   importDispositionDTO `json:"disposition"`
 	Issues        []importIssueDTO     `json:"issues"`
 	SourceKeyUsed string               `json:"source_key_used"`
+	Mapping       map[string]string    `json:"mapping"`
 }
 
 type leadListDTO struct {
@@ -267,6 +269,13 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 	}
 	if got := leadCount(t, e); got != 3 {
 		t.Fatalf("leads after approval = %d, want 3", got)
+	}
+	var landed importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &landed); status != http.StatusOK {
+		t.Fatalf("report after approval → %d, want 200", status)
+	}
+	if !maps.Equal(landed.Mapping, profile.SuggestedMapping) {
+		t.Fatalf("finished report mapping = %v, want the %v the run was staged with", landed.Mapping, profile.SuggestedMapping)
 	}
 	if got := importedContactCount(t, e); got != contactsBefore {
 		t.Fatalf("contacts = %d, was %d — a `lead` run writes leads and does not reach the contact table", got, contactsBefore)

@@ -5,9 +5,8 @@
 
 package gates
 
-// The wiring invariant under the outbound-send reconcile, as a fitness function
-// rather than a habit: no role this repository assembles builds a delivery
-// store without the seam that re-keys a sent message's timeline row.
+// No role this repository assembles builds a delivery store without the seam
+// that re-keys a sent message's timeline row.
 //
 // comms.NewStore accepts a nil reconciler on purpose, so a role that only READS
 // deliveries can build one without dragging the activities module in. Nothing

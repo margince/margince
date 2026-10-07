@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { de } from "../i18n/de";
+import { AiRuntimeChip } from "./airuntimechip";
 import { Button, Field, TextInput } from "./atoms";
 import { OnboardingStage } from "./onboarding-stage";
 
@@ -54,6 +57,76 @@ export const OnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   args: { ...Lit.args, coreStateLabel: "Core · reading input" },
+};
+
+// A room short against its own text: a phone on its side here, and any phone
+// read at large text. The Core folds away so the question keeps the height, and
+// its state stays in words on the band.
+export const OnAShortPhone: Story = {
+  globals: { viewport: { value: "phoneOnItsSide" } },
+  tags: ["uat-phone-on-its-side"],
+  args: OnAPhone.args,
+};
+
+// The longest end slot a laptop meets: the German runtime chip outgrows its
+// third at 1024px, so the slot wraps after the state in words and the chip
+// keeps the theme toggle beside it. Pinned to that width here, as fe-uat pins
+// every non-phone story, so the play fails at a width where nothing wraps
+// rather than passing on a band that never had to.
+export const AGermanChipAtALaptopWidth: Story = {
+  parameters: {
+    viewport: {
+      options: {
+        laptop: {
+          name: "Laptop (1024px)",
+          styles: { width: "1024px", height: "720px" },
+        },
+      },
+    },
+  },
+  globals: { viewport: { value: "laptop" } },
+  args: {
+    ...Lit.args,
+    coreStateLabel: de["ob.core.warning"],
+    aside: (
+      <AiRuntimeChip
+        configured="deepseek-chat"
+        locale="de"
+        labels={{
+          configured: de["ob.ai.configured"],
+          used: de["ob.ai.modelsUsed"],
+          route: de["ob.ai.route"],
+          calls: de["ob.ai.calls"],
+          tokens: de["ob.ai.tokens"],
+          latency: de["ob.ai.latency"],
+          estimatedCost: de["ob.ai.estimatedCost"],
+          partial: de["ob.ai.partialEstimate"],
+          awaiting: de["ob.ai.awaitingModel"],
+          unavailable: de["ob.ai.notAvailableYet"],
+          chip: de["ob.ai.runtimeChip"],
+          answering: de["ob.ai.answeringNow"],
+          scope: de["ob.ai.runScope"],
+        }}
+      />
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const toggle = await within(canvasElement).findByRole("button", {
+      name: /theme/i,
+    });
+    const band = canvasElement.querySelector(".ob-stage-band");
+    const state = canvasElement.querySelector(".ob-stage-corestate");
+    const tools = canvasElement.querySelector(".ob-stage-tools");
+    if (band === null || state === null || tools === null) {
+      throw new Error("the band drew without its state or its tools");
+    }
+    await expect(tools.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      state.getBoundingClientRect().bottom,
+    );
+    await expect(toggle.getBoundingClientRect().right).toBeLessThanOrEqual(
+      band.getBoundingClientRect().right,
+    );
+  },
 };
 
 // The read theatre's anchor. A surface that gains a tile per page cannot be

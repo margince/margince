@@ -443,3 +443,46 @@ func mustEncodeOpaque(t *testing.T, c Cursor) string {
 	}
 	return token
 }
+
+// Only a single text value is cut to the key bound: an array column has no
+// left(), and every other kind keeps its own ordering.
+func TestListSort_OnlySingleTextValuesAreCutToTheKeyBound(t *testing.T) {
+	vocab := map[string]SortField{
+		"title":  Column(fieldcatalog.TypeText),
+		"stage":  Column(fieldcatalog.TypePicklist),
+		"tags":   Column(fieldcatalog.TypeMultiselect),
+		"score":  Column(fieldcatalog.TypeNumber),
+		"opened": Column(KindTimestamp),
+	}
+	cut := map[string]bool{"title": true, "stage": true}
+	for name := range vocab {
+		sorted, err := ParseListSort(context.Background(), sortSpec(name), vocab, noArgs)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+		if got := strings.Contains(sorted.OrderBy(), "left("); got != cut[name] {
+			t.Errorf("sorting by %s: cut to the key bound = %v, want %v (%s)", name, got, cut[name], sorted.OrderBy())
+		}
+	}
+}
+
+// A multiselect column holds an array, which a one-value keyset cursor cannot
+// continue, so the vocabulary refuses it as a sort rather than answering a
+// first page and failing the second.
+func TestSortVocabularyOmitsAnArrayColumn(t *testing.T) {
+	vocab := SortVocabulary(nil, []fieldcatalog.Column{
+		{Name: "cf_tags", Type: fieldcatalog.TypeMultiselect},
+		{Name: "cf_title", Type: fieldcatalog.TypeText},
+	})
+	if _, ok := vocab["cf_tags"]; ok {
+		t.Error("a multiselect column is offered as a sort, so its second page cannot be requested")
+	}
+	if _, ok := vocab["cf_title"]; !ok {
+		t.Error("a text column is missing from the sort vocabulary")
+	}
+	_, err := ParseListSort(context.Background(), sortSpec("cf_tags"), vocab, noArgs)
+	var refused *SortError
+	if !errors.As(err, &refused) || refused.Code != CodeSortFieldNotAllowed {
+		t.Errorf("sorting by a multiselect answered %v, want the %s refusal", err, CodeSortFieldNotAllowed)
+	}
+}

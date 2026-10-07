@@ -21,6 +21,32 @@ import { useRecordRestore } from "./recordrestore";
 
 type MagicUndo = components["schemas"]["MagicUndo"];
 
+/**
+ * The restore this change can be put back with, or null where it cannot be
+ * from here. The button and the line that decides where to say "why not" read
+ * this one answer, so the two never disagree about whether a press exists.
+ */
+export function undoPress(
+  undo: MagicUndo | undefined,
+  entityType: string,
+  entityId: string,
+) {
+  if (
+    !undo?.undoable ||
+    !undo.audit_id ||
+    undo.version === undefined ||
+    !isEntityKind(entityType)
+  ) {
+    return null;
+  }
+  return {
+    kind: entityType,
+    id: entityId,
+    auditId: undo.audit_id,
+    version: undo.version,
+  };
+}
+
 export function MagicUndoButton({
   undo,
   entityType,
@@ -48,18 +74,8 @@ export function MagicUndoButton({
   if (undone) {
     return <span role="status">{t("magic.undo.done")}</span>;
   }
-  if (
-    undo.undoable &&
-    undo.audit_id &&
-    undo.version !== undefined &&
-    isEntityKind(entityType)
-  ) {
-    const press = {
-      kind: entityType,
-      id: entityId,
-      auditId: undo.audit_id,
-      version: undo.version,
-    };
+  const press = undoPress(undo, entityType, entityId);
+  if (press) {
     return (
       <>
         <Button

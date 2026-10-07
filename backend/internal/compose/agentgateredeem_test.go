@@ -54,6 +54,8 @@ func (*countingRedeemer) StageVolumeRelease(context.Context, agents.VolumeReleas
 	return ids.ApprovalID{}, false, nil
 }
 
+func (*countingRedeemer) ReleasableByCaller(context.Context, agents.StageRequest) bool { return false }
+
 func (*countingRedeemer) StageCall(context.Context, agents.StageRequest) (ids.ApprovalID, bool, error) {
 	return ids.New[ids.ApprovalKind](), false, nil
 }
@@ -281,7 +283,7 @@ func TestAReleasedRetryOnAStaticTierIsPinnedAndNotResplit(t *testing.T) {
 	})
 	ownership := &probeCounter{}
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, seamRecord{}, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, seamRecord{}, nil, nil, nil, nil, nil, nil)
 	spec, _, ok := operationSpec(pol, reg)
 	if !ok {
 		t.Fatal("the registry serves no update_record spec for the REST twin to admit against")
@@ -348,7 +350,7 @@ func gateCallCharges(t *testing.T, sourceSemantic, token string, redeemErr error
 	charger := &countingCharges{spent: map[agentvolume.Counter]int{}}
 
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}), agents.WithVolumeCharger(charger))
-	agents.RegisterCoreTools(reg, records, stages, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, records, stages, nil, nil, nil, nil, nil)
 
 	r := httptest.NewRequest(http.MethodPost, "/v1/deals/"+deal.String()+"/advance",
 		strings.NewReader(`{"to_stage_id":"`+target.String()+`"}`))

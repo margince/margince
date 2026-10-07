@@ -5,10 +5,9 @@ package ai
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"log/slog"
+	"slices"
 	"sort"
 	"strings"
 
@@ -62,6 +61,9 @@ type RoutingConfig struct {
 	Tiers      map[Tier]ProviderConfig `yaml:"tiers" json:"tiers"`
 	Embeddings EmbeddingsConfig        `yaml:"embeddings" json:"embeddings"`
 	Profile    Profile                 `yaml:"profile" json:"profile"`
+	// Providers is each provider's host and upstream preferences, the authority
+	// every lane's BaseURL and Routing are resolved from (providersettings.go).
+	Providers map[string]ProviderSettings `yaml:"providers" json:"providers,omitempty"`
 	// Decisions is the optional decision-model lane (decisionlane.go). Last and
 	// omitempty, so a config binding none encodes and digests as it always did.
 	Decisions *DecisionsConfig `yaml:"decisions" json:"decisions,omitempty"`
@@ -154,9 +156,6 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 	if err != nil {
 		return RoutingConfig{}, err
 	}
-	if err := cfg.ResidencyGap(); err != nil {
-		return RoutingConfig{}, err
-	}
 	return cfg, nil
 }
 
@@ -170,6 +169,15 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 // over the DEFAULTED value, which is what makes an omitted width and an
 // explicitly-written default the same binding.
 func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
+	log := slog.New(slog.DiscardHandler)
+	if firstLiftOf(cfg.Revision()) {
+		log = slog.Default()
+	}
+	cfg = cfg.liftLaneProviderFields(log)
+	if err := cfg.validateProviderEntries(); err != nil {
+		return RoutingConfig{}, err
+	}
+	cfg = cfg.resolveProviders()
 	if d := cfg.Embeddings.Dimensions; d < 0 || d > maxEmbedDimensions {
 		return RoutingConfig{}, fmt.Errorf("ai: routing config: embeddings dimensions %d out of range [1,%d]", d, maxEmbedDimensions)
 	} else if d == 0 {
@@ -204,35 +212,6 @@ func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error)
 	return cfg.WithKeys(keys), nil
 }
 
-// bindingDigest is the routing half of the ai_call_config dimension key: a
-// digest of what this config BINDS, not of the bytes it arrived in.
-//
-// It is taken after defaulting and validation, over the canonical JSON
-// encoding, which makes two configs hash alike exactly when they route alike.
-// json.Marshal orders struct fields by declaration and sorts map keys, so the
-// encoding is deterministic across processes — the property this digest has to
-// have to be compared at all.
-//
-// The distinction is not academic. This value reaches contactbrief.Fingerprint
-// and its siblings, where it decides whether a stored brief may be reused; a
-// digest of raw bytes meant that ADDING A COMMENT to the routing file
-// invalidated every cached brief, dossier and growth-fit in the installation
-// and regenerated them through paid models. Reindenting did it too, and so did
-// writing `dimensions: 1536` where the default was already 1536.
-//
-// What must still change the digest is any change to the binding itself — a
-// re-pointed tier, a different base URL, a narrowed `input`. Those are exactly
-// the cases where content a model wrote must stop being attributed to a model
-// that no longer produces it.
-func (cfg RoutingConfig) bindingDigest() string {
-	// A plain struct of strings, ints and a string-keyed map — marshal cannot
-	// fail on it, and the same spelling guards the sibling fingerprints in
-	// compose/companybrief and compose/companydossier that this digest feeds.
-	encoded, _ := json.Marshal(cfg) //nolint:errchkjson // plain scalars and a string-keyed map; marshal cannot fail
-	sum := sha256.Sum256(encoded)
-	return hex.EncodeToString(sum[:])
-}
-
 // localProviders can serve the sovereign zero-egress profile.
 // It is a set of CHAT providers: the decisions lane asks DecisionsConfig.isLocal,
 // since a decision adapter is never a tier's answer.
@@ -252,18 +231,21 @@ func ProviderIsLocal(provider string) bool {
 	return localProviders[provider]
 }
 
+// declaredProfiles lists the environment classes Valid admits, and the schema
+// gate compares it with the config schema's enum.
+var declaredProfiles = []Profile{ProfileEUHosted, ProfileSovereign, ProfileCloudFrontier}
+
+// DeclaredProfiles is declaredProfiles as a copy, for the gate that holds the
+// routing form's own list against it.
+func DeclaredProfiles() []Profile { return slices.Clone(declaredProfiles) }
+
 // Valid reports whether p is one of the declared environment classes.
 //
 // Exported because the certification lane files a record under the profile it
-// measured and has to refuse an unknown one, and a second switch over the same
-// three constants there would go quietly stale the day a fourth is added.
+// measured and has to refuse an unknown one, and a second list of the same
+// constants there would go quietly stale the day another is added.
 func (p Profile) Valid() bool {
-	switch p {
-	case ProfileEUHosted, ProfileSovereign, ProfileCloudFrontier:
-		return true
-	default:
-		return false
-	}
+	return slices.Contains(declaredProfiles, p)
 }
 
 func (cfg RoutingConfig) validate() error {
@@ -276,19 +258,24 @@ func (cfg RoutingConfig) validate() error {
 	if len(cfg.Tiers) == 0 {
 		return fmt.Errorf("ai: routing config: no tiers bound")
 	}
-	for tier, binding := range cfg.Tiers {
+	// Every tier's routing faults are gathered before refusing, so an editor
+	// that sent several bad values hears about all of them at once.
+	var routingFaults []error
+	for _, tier := range cfg.sortedTiers() {
+		binding := cfg.Tiers[tier]
 		if !knownTiers[tier] {
 			return fmt.Errorf("ai: routing config: unknown tier %q", tier)
 		}
 		if err := ValidateTierBinding(cfg.Profile, tier, binding); err != nil {
 			return err
 		}
-		if err := validateUpstreamPreferences(string(tier), binding); err != nil {
-			return err
-		}
+		routingFaults = append(routingFaults, validateUpstreamPreferences(TierRoutingPath(tier), binding))
 		if err := validateThinkingLevel("tier "+string(tier), binding); err != nil {
 			return err
 		}
+	}
+	if err := joinFaults(routingFaults...); err != nil {
+		return err
 	}
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
@@ -322,6 +309,9 @@ func (cfg RoutingConfig) validate() error {
 			return err
 		}
 	}
+	if err := validateVertexPlacement("the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
+		return err
+	}
 	// The embed lane dials an operator-supplied host like any chat tier, so it
 	// carries the same egress rule on every profile.
 	if err := requireDialableEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
@@ -334,10 +324,10 @@ func (cfg RoutingConfig) validate() error {
 	//
 	// The rule itself is the chat tiers': SelectBrain builds this lane's client
 	// too, and refuses openai_compatible without a host.
-	if cfg.Embeddings.Provider == providerOpenAICompatible && strings.TrimSpace(cfg.Embeddings.BaseURL) == "" {
-		return fmt.Errorf("ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
+	if chatHostMissing(cfg.Embeddings.Provider, cfg.Embeddings.BaseURL) {
+		return missingHostError{provider: cfg.Embeddings.Provider, reason: "ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
 			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
-			"e.g. https://openrouter.ai/api")
+			"e.g. https://openrouter.ai/api"}
 	}
 	return cfg.validateDecisionsLane()
 }
@@ -389,6 +379,9 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 			return err
 		}
 	}
+	if err := validateVertexPlacement(fmt.Sprintf("tier %s", tier), binding); err != nil {
+		return err
+	}
 	// EVERY profile, not only sovereign. base_url is the address this server
 	// dials, and outside the sovereign branch above nothing looked at it at
 	// all: any string that parsed was persisted and later handed to the
@@ -404,10 +397,10 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	// declines to adopt it and goes on serving the binding it already had. The
 	// operator sees "saved" and no change, with the reason in a log they are not
 	// reading.
-	if binding.Provider == providerOpenAICompatible && strings.TrimSpace(binding.BaseURL) == "" {
-		return fmt.Errorf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
+	if chatHostMissing(binding.Provider, binding.BaseURL) {
+		return missingHostError{provider: binding.Provider, reason: fmt.Sprintf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
 			"give it the vendor host root, with no version segment (the adapter adds /v1), "+
-			"e.g. https://openrouter.ai/api", tier)
+			"e.g. https://openrouter.ai/api", tier)}
 	}
 	return validateInput(fmt.Sprintf("tier %s", tier), binding.Input)
 }

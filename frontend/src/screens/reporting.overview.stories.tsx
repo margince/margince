@@ -12,6 +12,13 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 const meta: Meta = {
   title: "Records/Reports/Analytics/Performance",
   parameters: { layout: "padded" },
+  beforeEach: () => {
+    const previousHash = globalThis.location.hash;
+    globalThis.location.hash = "#/analytics/performance";
+    return () => {
+      globalThis.location.hash = previousHash;
+    };
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -163,5 +170,68 @@ export const SDRWithoutTargetsDark: Story = {
 };
 export const TeamPerformanceDark: Story = {
   ...TeamPerformance,
+  globals: { theme: "dark" },
+};
+
+export const InvalidDateRange: Story = {
+  render: () => {
+    globalThis.location.hash =
+      "#/analytics/performance?period=custom&from=2025-01-01&through=2026-10-31";
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/evaluate": () =>
+        jsonResponse(
+          {
+            status: 400,
+            code: "reporting_interval_invalid",
+            detail: "choose an interval of no more than twelve months",
+          },
+          400,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <ReportingOverview scope={reportingStoryScope} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const CustomRangeThroughFutureMonthEnd: Story = {
+  render: () => {
+    globalThis.location.hash =
+      "#/analytics/performance?period=custom&from=2026-09-01&through=2026-10-31";
+    const evaluation: typeof reportingStoryEvaluation = {
+      ...reportingStoryEvaluation,
+      selection: {
+        ...reportingStoryEvaluation.selection,
+        period: "custom",
+        interval: {
+          start_at: reportingStoryEvaluation.context.interval.start_at,
+          end_at: "2026-10-31T23:00:00Z",
+        },
+      },
+      context: { ...reportingStoryEvaluation.context, period_kind: "custom" },
+      charts: reportingStoryEvaluation.charts.map((chart) => ({
+        ...chart,
+        points: chart.points.map((point) => ({ ...point, target: undefined })),
+        allocated_target: undefined,
+        allocation_difference: undefined,
+      })),
+    };
+    installFetchStub(reportingStoryRoutes(evaluation));
+    return (
+      <StoryProviders>
+        <ReportingOverview scope={reportingStoryScope} />
+      </StoryProviders>
+    );
+  },
+};
+export const CustomRangeThroughFutureMonthEndDark: Story = {
+  ...CustomRangeThroughFutureMonthEnd,
+  globals: { theme: "dark" },
+};
+export const InvalidDateRangeDark: Story = {
+  ...InvalidDateRange,
   globals: { theme: "dark" },
 };

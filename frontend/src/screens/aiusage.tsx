@@ -16,6 +16,7 @@ import { QueryGate, throwProblem, useMe } from "./common";
 import "./aiusage.css";
 import { calendarMonth } from "../format/calendarday";
 import { viewerZone } from "../format/timezone";
+import { TaskName } from "./ai-task-name";
 
 type AiUsage = components["schemas"]["AiUsage"];
 type UsageTask = AiUsage["days"][number]["tasks"][number];
@@ -115,7 +116,12 @@ function usageColumns(
     {
       key: "task",
       header: t("aiusage.col.task"),
-      render: (r: UsageTask) => r.task_display_name ?? r.task,
+      render: (r: UsageTask) => (
+        <TaskName
+          name={r.task_display_name ?? r.task}
+          summary={r.task_summary}
+        />
+      ),
     },
     {
       key: "tier",
@@ -199,6 +205,10 @@ function AiUsageBody({
     () => new Map(rows.map((row) => [row.task, row.task_display_name])),
     [rows],
   );
+  const taskSummaries = useMemo(
+    () => new Map(rows.map((row) => [row.task, row.task_summary])),
+    [rows],
+  );
   const unpricedCalls = useMemo(
     () => rows.reduce((sum, row) => sum + (row.unpriced_calls ?? 0), 0),
     [rows],
@@ -276,6 +286,7 @@ function AiUsageBody({
         <DecisionSummaryRow
           decisions={data.decisions ?? []}
           taskName={(task) => taskNames.get(task) ?? task}
+          taskSummary={(task) => taskSummaries.get(task)}
         />
       )}
       {/* The per-day breakdown is diagnostic — a reader reconciling one day's

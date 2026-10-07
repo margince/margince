@@ -274,3 +274,20 @@ func TestTheFragmentIsEscapedAsATsqueryNotASQLLiteral(t *testing.T) {
 		t.Fatal("the fragment is not sanitized into lexemes")
 	}
 }
+
+// The match parses the fragment only as a prefix, so a whole-word parse of it
+// in the score can only be the lift that puts Philip above every Philipp.
+func TestTheScoreLiftsTheFragmentAsAWholeWord(t *testing.T) {
+	t.Parallel()
+	wholeFragment := "websearch_to_tsquery('simple', f_unaccent($2))"
+	if score := scoreExpression(entityContact, "t", 1, 2, true); !strings.Contains(score, wholeFragment) {
+		t.Fatalf("the score carries no whole-word parse of the fragment, so Philip ties with every Philipp: %s", score)
+	}
+	if score := scoreExpression(entityContact, "t", 1, 0, false); strings.Contains(score, "::int") {
+		t.Fatalf("a query with no fragment is scored for one: %s", score)
+	}
+	bonus, _, _ := strings.Cut(scoreExpression(entityActivity, "t", 1, 2, true), "::int")
+	if strings.Contains(bonus, "english") || strings.Contains(bonus, "german") {
+		t.Fatalf("the activity bonus is stemmed, so \"studies\" earns it for \"study\": %s", bonus)
+	}
+}

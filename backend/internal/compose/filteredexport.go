@@ -9,7 +9,7 @@ package compose
 // pieces that already ship rather than growing a fourth filter/scope/format
 // path:
 //
-//   - the ONE predicate engine (storekit.Query.SelectIDs, resolved through
+//   - the ONE predicate engine (storekit.Query.SelectExportIDs, resolved through
 //     the collections store's SegmentEngine — the same method the list and
 //     the dynamic-list validator resolve it through) forces
 //     auth.ScopeClauseFor, so the slice is exactly the rows the caller could

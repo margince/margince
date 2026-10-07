@@ -266,6 +266,10 @@ type StagedApprovalError struct {
 	// Nothing new is disclosed. It describes THIS call, built from arguments
 	// this caller supplied, and the human sees the same text.
 	Summary string
+	// ReleasableByCaller says the credential that staged this can answer it
+	// itself, so the answer may offer decide_approval as a move that works.
+	// False sends the caller to the contact, who releases it in the CRM.
+	ReleasableByCaller bool
 }
 
 // MaxStagedSummary bounds the summary this answer repeats.

@@ -21,6 +21,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -249,6 +250,9 @@ type captureBackfillWorker struct {
 // starve the next of its deadline — and the meter climbs per page.
 const backfillPagesPerTick = 1
 
+// backfillPageYield is the snooze between two good pages.
+const backfillPageYield = time.Second
+
 func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[CaptureBackfillArgs]) error {
 	bfID, err := ids.Parse(job.Args.BackfillID)
 	if err != nil {
@@ -258,6 +262,7 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	wsCtx = capturemetrics.WithRun(wsCtx)
 	for i := 0; i < backfillPagesPerTick; i++ {
 		done, completed, retryAfter, err := w.registry.RunBackfillStep(wsCtx, bfID)
 		if retryAfter > 0 {
@@ -265,8 +270,9 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 			// cursor intact. The row classifies the fault and counts it toward its
 			// own give-up cap; River owns the redelivery, so a snooze — not a
 			// silent stop — is what keeps the import alive across an outage.
-			w.log.WarnContext(ctx, "capture backfill page deferred",
-				"backfill", job.Args.BackfillID, "retry_after", retryAfter, "err", err)
+			w.log.WarnContext(ctx, "capture backfill page deferred", "backfill", job.Args.BackfillID,
+				"retry_after", retryAfter, "err", err, rateLimitAttr(err))
+			capturemetrics.ObserveDeferral(wsCtx, retryAfter, err)
 			return river.JobSnooze(retryAfter)
 		}
 		if err != nil {
@@ -275,6 +281,10 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 			// from this job, because the job context dying mid-page is itself the
 			// commonest fault — and the log carries the detail.
 			w.log.WarnContext(ctx, "capture backfill page failed", "backfill", job.Args.BackfillID, "err", err)
+			if w.resumedMeanwhile(wsCtx, bfID) {
+				capturemetrics.ObserveResumed(wsCtx, backfillPageYield)
+				return river.JobSnooze(backfillPageYield)
+			}
 			return nil
 		}
 		if completed {
@@ -289,7 +299,22 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 			return nil
 		}
 	}
-	return river.JobSnooze(time.Second)
+	capturemetrics.ObservePacing(wsCtx, backfillPageYield)
+	return river.JobSnooze(backfillPageYield)
+}
+
+// resumedMeanwhile says the run this job just ended was reopened.
+//
+// A human pressing Continue reopens the same run, and its enqueue is unique
+// against this job while it is still running — so the start can land on a job
+// that is about to return, and the reopened run would wait for the nightly
+// reconcile with nothing paging it. The job comes back in a second for it
+// instead. Only a QUEUED run counts: a run left running because a write failed
+// is the reconcile's, and snoozing on it would loop every second. A read that
+// fails answers false and the job ends as before.
+func (w *captureBackfillWorker) resumedMeanwhile(ctx context.Context, bfID ids.UUID) bool {
+	reopened, err := w.registry.BackfillReopened(ctx, bfID)
+	return err == nil && reopened
 }
 
 // enqueueDigest offers a same-day digest build for THIS workspace through the
@@ -370,6 +395,9 @@ type counterpartyVerdictWorker struct {
 	// purger destroys personal mail past its window. Nil in a role with no
 	// object store, and the stage is then skipped rather than half-done.
 	purger *CapturePurger
+	// stripper withholds the files of personal-thread mail past the same
+	// window. Nil without an object store, for the same reason.
+	stripper *privateThreadStripper
 	// backlogNotice tells a seat their capture backlog stopped moving. Nil in a
 	// role composed without notices, and the stage is then skipped.
 	backlogNotice BacklogNotifier
@@ -445,6 +473,23 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	if destroyed > 0 && w.log != nil {
 		w.log.InfoContext(ctx, "counterparty verdict: destroyed personal mail past its window",
 			"workspace", workspace.String(), "messages", destroyed)
+	}
+	return w.stripPrivateThreads(ctx, wsCtx, workspace)
+}
+
+// stripPrivateThreads withholds the files of personal-thread mail past the
+// purge's window. After the purge, so mail it destroys is not stripped first.
+func (w *counterpartyVerdictWorker) stripPrivateThreads(ctx, wsCtx context.Context, workspace ids.UUID) error {
+	if w.stripper == nil {
+		return nil
+	}
+	stripped, err := w.stripper.StripWorkspace(wsCtx, capture.DefaultPersonalPurgeWindows())
+	if err != nil {
+		return err
+	}
+	if stripped > 0 && w.log != nil {
+		w.log.InfoContext(ctx, "counterparty verdict: withheld the files of personal-thread mail past its window",
+			"workspace", workspace.String(), "messages", stripped)
 	}
 	return nil
 }

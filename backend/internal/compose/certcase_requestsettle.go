@@ -24,9 +24,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -48,6 +50,21 @@ type settleFixtureMessage struct {
 	Direction string `json:"direction"`
 	Subject   string `json:"subject"`
 	Body      string `json:"body"`
+	// OffThread marks an answer of ours from outside the thread: email, call
+	// or meeting, as the evidence read hands them over. It is always outbound.
+	OffThread string `json:"off_thread,omitempty"`
+}
+
+// settleOffThreadKind reports whether kind is one the evidence read returns
+// for an answer off the thread.
+func settleOffThreadKind(kind string) bool {
+	switch kind {
+	case string(crmcontracts.ActivityKindEmail), string(crmcontracts.ActivityKindCall),
+		string(crmcontracts.ActivityKindMeeting):
+		return true
+	default:
+		return false
+	}
 }
 
 // settleExpectation is what one conversation's verdict must be, and where the
@@ -109,11 +126,11 @@ func (requestSettleCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		for j, m := range thread.Messages {
 			messages[j] = threadMessage{
 				ID: ids.NewV7(), Direction: m.Direction,
-				Subject: m.Subject, Body: m.Body,
+				Subject: m.Subject, Body: m.Body, OffThread: m.OffThread,
 			}
 		}
 		batch[i] = settleCandidate{
-			Request:  activities.RepliedRequest{RequestID: requestID, NewestOutboundID: ids.NewV7()},
+			Request:  activities.RepliedRequest{RequestID: requestID, NewestAnswerID: ids.NewV7()},
 			Messages: messages,
 		}
 	}
@@ -152,16 +169,28 @@ func refuseUnreadableSettleBatch(threads settleFixture) error {
 				i+1)
 		}
 		for j, m := range thread.Messages {
+			if m.OffThread != "" && (!settleOffThreadKind(m.OffThread) || m.Direction != fixtureOutbound || j == 0) {
+				return fmt.Errorf(
+					"request_settlement/request_settle: conversation %d message %d is off the thread as %q; an answer off the thread is an outbound email, call or meeting after the request",
+					i+1, j+1, m.OffThread)
+			}
+			if m.OffThread == string(crmcontracts.ActivityKindEmail) &&
+				(mailsubject.Normalized(m.Subject) == "" ||
+					mailsubject.Normalized(m.Subject) != mailsubject.Normalized(thread.Messages[0].Subject)) {
+				return fmt.Errorf(
+					"request_settlement/request_settle: conversation %d message %d is an email off the thread with subject %q, but the evidence read only offers our mail whose subject is the request's (%q)",
+					i+1, j+1, m.Subject, thread.Messages[0].Subject)
+			}
 			if n := utf8.RuneCountInString(m.Body); n > extractBodyLimit {
 				return fmt.Errorf(
 					"request_settlement/request_settle: conversation %d message %d carries a body of %d characters, but the window truncates every body to %d",
 					i+1, j+1, n, extractBodyLimit)
 			}
 		}
-		if len(thread.Messages) > extractThreadMessages {
+		if len(thread.Messages) > settleThreadMessages {
 			return fmt.Errorf(
 				"request_settlement/request_settle: conversation %d carries %d messages, but one window reads at most %d",
-				i+1, len(thread.Messages), extractThreadMessages)
+				i+1, len(thread.Messages), settleThreadMessages)
 		}
 	}
 	return nil

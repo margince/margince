@@ -33,7 +33,7 @@ const happyCatalogueBody = `{"data":[
 	 "benchmarks":{"artificial_analysis":{"intelligence_index":40.5}}}
 ]}`
 
-// fakeCatalogueFetcher is the injected catalogueFetcher: it never touches
+// fakeCatalogueFetcher is the injected CatalogueFetcher: it never touches
 // the network, counts how many times it was asked, and returns either a
 // fixed body or a fixed error.
 type fakeCatalogueFetcher struct {
@@ -57,7 +57,7 @@ type fixedClock struct{ now time.Time }
 func (c *fixedClock) Now() time.Time { return c.now }
 
 func newTestCatalogue(fetcher *fakeCatalogueFetcher, clock *fixedClock) *ModelCatalogue {
-	return &ModelCatalogue{fetcher: fetcher, clock: clock}
+	return NewModelCatalogueOver(fetcher, clock)
 }
 
 func TestModelCatalogueListRanksDedupesAndPrices(t *testing.T) {

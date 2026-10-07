@@ -18,7 +18,7 @@ import { SettingsScreen, settingsAddress } from "./settings";
 //
 // The flow issues a credential and discloses it EXACTLY ONCE, and it had no
 // test at all while it was a row of controls inside the card. What is held here
-// is what the drawer owes a reader: a named group of choices, a refusal it
+// is what the mint dialog owes a reader: a named group of choices, a refusal it
 // cannot submit past, the token surfaced where it cannot be missed, and a
 // dialog that never takes that token away by closing.
 
@@ -117,20 +117,22 @@ function mintBackend(
 //
 // The CARD's verb — in its header band, beside the title, since minting is what
 // the card is for rather than one of the credentials it lists — names the THING
-// it creates ("New passport") while the drawer's submit names the act ("Mint
+// it creates ("New passport") while the dialog's submit names the act ("Mint
 // passport"), so the two are never one name for two acts. That is what lets
 // every assertion below name the button it means.
-async function openDrawer(user: ReturnType<typeof userEvent.setup>) {
+async function openMintDialog(user: ReturnType<typeof userEvent.setup>) {
   render("agents");
   await user.click(await screen.findByRole("button", { name: "New passport" }));
   return screen.findByRole("dialog");
 }
 
 describe("PassportCard — minting", () => {
-  it("puts the form in a drawer, with the scopes as a named group", async () => {
+  it("puts the form in a confirm-width dialog, with the scopes as a named group", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
-    const dialog = await openDrawer(user);
+    const dialog = await openMintDialog(user);
+    // A secret reveal takes the confirm shape.
+    expect(dialog).toHaveClass("modal-confirm");
 
     // The name field is a real label, not a span pointed at by
     // aria-labelledby: clicking the words has to focus the control.
@@ -148,7 +150,7 @@ describe("PassportCard — minting", () => {
   it("refuses a passport with no scope, and says why", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
-    const dialog = await openDrawer(user);
+    const dialog = await openMintDialog(user);
     const group = within(dialog).getByRole("group", {
       name: /agent permissions/i,
     });
@@ -175,7 +177,7 @@ describe("PassportCard — minting", () => {
   it("shows the token once, moves focus to it, and does not close itself", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
-    const dialog = await openDrawer(user);
+    const dialog = await openMintDialog(user);
     await user.type(within(dialog).getByLabelText("Agent name"), "Scout");
     await user.click(
       within(dialog).getByRole("button", { name: "Mint passport" }),
@@ -196,7 +198,7 @@ describe("PassportCard — minting", () => {
   it("announces a refused mint beside the button that produced it", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend({ refuse: true }));
-    const dialog = await openDrawer(user);
+    const dialog = await openMintDialog(user);
     await user.click(
       within(dialog).getByRole("button", { name: "Mint passport" }),
     );
@@ -239,9 +241,9 @@ describe("PassportCard — minting", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    // The ROW's verb opens the drawer; the drawer's submit is the plain label
+    // The ROW's verb opens the dialog; the dialog's submit is the plain label
     // clicked further down. This case renders its own client rather than going
-    // through `openDrawer`, because it reads the cache the mint is supposed to
+    // through `openMintDialog`, because it reads the cache the mint is supposed to
     // drop.
     await user.click(
       await screen.findByRole("button", { name: "New passport" }),
@@ -281,12 +283,12 @@ describe("PassportCard — minting", () => {
   // The one that is about losing a credential rather than about layout.
   // `mint.reset()` detaches the observer; it does not cancel the request. A mint
   // closed mid-flight therefore still creates a passport on the server, and its
-  // token — disclosed once, never re-served — goes with the closed drawer. So
-  // the drawer refuses to close while the request is outstanding.
+  // token — disclosed once, never re-served — goes with the closed dialog. So
+  // the dialog refuses to close while the request is outstanding.
   it("cannot be closed while the mint is in flight", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend({ hang: true }));
-    const dialog = await openDrawer(user);
+    const dialog = await openMintDialog(user);
     await user.click(
       within(dialog).getByRole("button", { name: "Mint passport" }),
     );
@@ -295,6 +297,9 @@ describe("PassportCard — minting", () => {
       name: "Cancel",
     });
     expect(cancel).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "Close" }),
+    ).toBeDisabled();
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
@@ -302,7 +307,7 @@ describe("PassportCard — minting", () => {
   it("starts clean on re-open rather than showing the last mint's token", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
-    const dialog = await openDrawer(user);
+    const dialog = await openMintDialog(user);
     await user.click(
       within(dialog).getByRole("button", { name: "Mint passport" }),
     );

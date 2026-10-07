@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../screens/common";
 import { Button } from "./atoms";
@@ -12,7 +13,7 @@ import { ResolveSheet, type ResolveSheetLabels } from "./resolvesheet";
 const meta: Meta = {
   title: "Components/Overlays and layering/Resolve sheet",
   component: ResolveSheet,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <LocaleProvider initial="en">
@@ -93,6 +94,24 @@ function ResolveSheetDemo({
 
 export const Open: Story = {
   render: () => <ResolveSheetDemo />,
+  play: async () => {
+    await screen.findByRole("dialog");
+  },
+};
+
+// Each opened field sits one stack step under the last.
+export const SuppressingAnswer: Story = {
+  render: () => <ResolveSheetDemo />,
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(
+      dialog.getByRole("radio", { name: /Value is correct/ }),
+    );
+    await expect(await dialog.findByLabelText("Why")).toBeInTheDocument();
+    await expect(
+      await dialog.findByLabelText("Expires on"),
+    ).toBeInTheDocument();
+  },
 };
 
 // The state a save is in flight from: the control is out of reach rather than

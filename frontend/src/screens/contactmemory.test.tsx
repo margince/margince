@@ -352,11 +352,10 @@ describe("the contact page's memory card", () => {
 
     // The tab that holds the exchanges whole, which is also where the rail's
     // own glance leads: one record, one ledger to be sent to.
-    expect(navigate).toHaveBeenCalledWith({
-      screen: "contacts",
-      id: "p-1",
-      id2: "timeline",
-    });
+    expect(navigate).toHaveBeenCalledWith(
+      { screen: "contacts", id: "p-1", id2: "timeline" },
+      undefined,
+    );
   });
 
   // The cut is taken AFTER the filter. Taken before it, a reader who asked for
@@ -420,4 +419,34 @@ it("groups replies by conversation without clearing another request from the sam
   expect(screen.getByText("2 messages")).toBeTruthy();
   expect(screen.getByText("Please send the report")).toBeTruthy();
   expect(screen.queryByText("Replied")).toBeNull();
+});
+
+// The card's way to the Timeline tab sits outside the tab strip, and a record
+// opened from the Worklist drawer must keep its way back across it.
+describe("leaving the card for the Timeline tab", () => {
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("keeps the Worklist's way back on the address", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts/p-1?filter=tasks&from=worklist";
+    renderCard(viewWith(notes(1)));
+
+    await user.click(screen.getByRole("button", { name: /Show all activity/ }));
+
+    expect(window.location.hash).toBe(
+      "#/contacts/p-1/timeline?filter=tasks&from=worklist",
+    );
+  });
+
+  it("adds nothing for a contact opened any other way", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts/p-1";
+    renderCard(viewWith(notes(1)));
+
+    await user.click(screen.getByRole("button", { name: /Show all activity/ }));
+
+    expect(window.location.hash).toBe("#/contacts/p-1/timeline");
+  });
 });

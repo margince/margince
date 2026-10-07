@@ -4,8 +4,10 @@ import { useId, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import { useUrlParams } from "../app/urlstate";
+import { routeHash } from "../app/router";
+import { hashWithParams, useUrlParams } from "../app/urlstate";
 import { Badge, Button, EmptyState, TableScroll } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -15,6 +17,7 @@ import { useLocale, useT } from "../i18n";
 import { tierLabel } from "./ai-decision-labels";
 import { CallDetailPanel } from "./aicalls-detail";
 import { QueryGate, QueryStates, throwProblem, useMe } from "./common";
+import { settingsHref } from "./settingsrouting";
 import "./aicalls.css";
 
 // The trace's first page, as one query the card and the page header share.
@@ -24,15 +27,19 @@ import "./aicalls.css";
 // window under the same key rather than opening a second read of the same
 // endpoint. `task: ""` is the card's own no-filter state, which is why the two
 // coincide exactly when the reader has filtered nothing.
-function useCallTrace(task: string, enabled: boolean) {
+function useCallTrace(task: string, filter: CallFilter, enabled: boolean) {
   return useInfiniteQuery({
     enabled,
-    queryKey: ["ai-calls", task],
+    queryKey: ["ai-calls", task, filter],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/ai/calls", {
         params: {
-          query: { cursor: pageParam ?? undefined, task: task || undefined },
+          query: {
+            cursor: pageParam ?? undefined,
+            task: task || undefined,
+            ...filter,
+          },
         },
       });
       if (error) throwProblem(error);
@@ -108,6 +115,29 @@ export function useLastCallAt(): LastCall {
 /** The address dial the trace is narrowed by, so a task row can link to its calls. */
 export const CALL_TASK_PARAM = "task";
 
+/**
+ * The other dials a figure narrows the trace by — where a call ended — each
+ * the `/ai/calls` filter of the same name.
+ */
+export const CALL_FILTER_PARAMS = [
+  "provider",
+  "model",
+  "served_provider",
+  "tier",
+] as const;
+type CallFilterParam = (typeof CALL_FILTER_PARAMS)[number];
+export type CallFilter = Partial<
+  Record<CallFilterParam | typeof CALL_TASK_PARAM, string>
+>;
+
+/** The trace narrowed to the calls behind one figure. */
+export function callsHrefFor(filter: CallFilter): string {
+  return hashWithParams(
+    routeHash(settingsHref("model-calls")),
+    new Map(Object.entries(filter)),
+  );
+}
+
 export function AiCallsCard() {
   const t = useT();
   const { locale } = useLocale();
@@ -125,7 +155,18 @@ export function AiCallsCard() {
     setParams(dials);
   };
   const [expanded, setExpanded] = useState<string | null>(null);
-  const query = useCallTrace(task, canSee);
+  const filter: CallFilter = Object.fromEntries(
+    CALL_FILTER_PARAMS.flatMap((key) => {
+      const value = params.get(key);
+      return value ? [[key, value]] : [];
+    }),
+  );
+  const clearFilter = () => {
+    const dials = new Map(params);
+    for (const key of CALL_FILTER_PARAMS) dials.delete(key);
+    setParams(dials);
+  };
+  const query = useCallTrace(task, filter, canSee);
   const calls = query.data?.pages.flatMap((page) => page.data) ?? [];
   const captureEnabled = query.data?.pages[0]?.payload_capture_enabled ?? false;
   // The filter options are the server's complete task set (carried on every
@@ -179,6 +220,20 @@ export function AiCallsCard() {
                 />
               )}
             />
+            {Object.keys(filter).length > 0 ? (
+              <Callout
+                tone="info"
+                title={t("aicalls.filtered", {
+                  filter: Object.entries(filter)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(" · "),
+                })}
+              >
+                <Button variant="link" onClick={clearFilter}>
+                  {t("aicalls.filtered.clear")}
+                </Button>
+              </Callout>
+            ) : null}
             <SettingRow
               label={t("aicalls.callsLabel")}
               layout="stack"

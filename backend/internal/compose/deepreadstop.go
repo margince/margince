@@ -81,9 +81,8 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 // autoEnrichMaxPages is the page ceiling every AUTOMATIC read runs under
 // (ADR-0072 §9). A read nobody asked for should cost a fraction of one somebody
 // did: the setting is on by default and sweeps up to the auto-enrich daily cap
-// (defaultAutoEnrichDailyCap, or AutoEnrichDailyCapEnv where set)
-// companies a day per workspace, so the deployment-wide crawler budget is
-// the wrong unit here.
+// (capture.AutoEnrichDailyCap) companies a day, so the page limit an admin
+// sets for a read somebody asked for is the wrong unit here.
 const autoEnrichMaxPages = 12
 
 // pageCeiling is the page cap for one run: the automatic lane's own ceiling,
@@ -104,11 +103,7 @@ func (w *siteDeepReadWorker) pageCeiling(requestedBy string, askedFor int) int {
 
 // autoEnrichEnabled re-reads the workspace's auto-enrich setting.
 func (w *siteDeepReadWorker) autoEnrichEnabled(ctx context.Context) (bool, error) {
-	settings, err := w.settings.Get(ctx)
-	if err != nil {
-		return false, err
-	}
-	return settings.AutoEnrich, nil
+	return w.settings.AutoEnrichOn(ctx)
 }
 
 // abandon closes a read nobody wants any more. Distinct from fail: nothing went

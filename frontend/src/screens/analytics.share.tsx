@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { useCan, useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
-import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { type AnalyticsScope, writableScope } from "./analytics.context";
@@ -170,6 +170,7 @@ function ShareDialog({
           },
           {
             value: "snapshot",
+            disabled: !snapshotId,
             label: t("analytics.share.snapshotLabel"),
             description: snapshotId
               ? t("analytics.share.snapshotHelp")
@@ -248,9 +249,11 @@ function ShareLinkReveal({
       }
     >
       <p id={headingId}>{t("analytics.share.linkWarning")}</p>
-      <pre className="code-block" data-testid="forecast-share-link">
-        {url}
-      </pre>
+      <CopyableText
+        text={url}
+        label={t("analytics.share.linkTitle")}
+        testId="forecast-share-link"
+      />
       {copy.notice}
       {!copy.copied && <p>{t("analytics.share.leaveWarning")}</p>}
     </ConfirmModal>

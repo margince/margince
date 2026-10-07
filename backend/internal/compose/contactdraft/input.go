@@ -47,6 +47,11 @@ const draftInputClaims = 6
 // rather than repeats, and every rune of it is prompt cost on every draft.
 const draftInputSnippetRunes = 400
 
+// draftInputRecordRunes bounds the text of one logged note or meeting. Longer
+// than a snippet: a note is written for the rep, and the slots or the ask it
+// records sit anywhere in it rather than in an opening.
+const draftInputRecordRunes = 800
+
 // Input is the contact, narrowed to what an outbound message can honestly stand
 // on. It is a projection of the caller's own 360 — nothing here re-queries, so
 // anything absent is absent because that caller may not see it.
@@ -234,6 +239,10 @@ type ActIn struct {
 	// in its first lines and spends the rest on detail, and the detail is what
 	// a reply should ask about rather than repeat back.
 	Snippet string `json:"snippet,omitempty"`
+	// Record is what the rep logged on a note or meeting: our side's own
+	// account of contact that happened outside the mailbox, such as where they
+	// met and the slots offered. Fenced with the rest of the input.
+	Record string `json:"record,omitempty"`
 }
 
 // String is the debug rendering, never the prompt payload — the prompt sends

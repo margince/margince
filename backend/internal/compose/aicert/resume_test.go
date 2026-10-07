@@ -296,7 +296,7 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 			Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
 			TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
 			Degraded: true, HardPass: true, Score: 87, Ungraded: true, JudgeScores: []int{12, 87, 90},
-			Withheld: "SAFETY", Abandoned: true,
+			Withheld: "SAFETY", Abandoned: true, AnswerConfidence: &ConfidenceRange{Min: 0.6, Max: 0.9},
 		},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
@@ -578,7 +578,7 @@ func stampFor(t *testing.T, sc Scenario) string {
 func TestAJournaledRunIsNotReplayedUnderOtherUpstreamPreferences(t *testing.T) {
 	broker := ai.ProviderConfig{Provider: "openai_compatible", Model: "z-ai/glm-5.2", BaseURL: "https://openrouter.ai/api"}
 	pinned := broker
-	pinned.Routing = &ai.OpenRouterRouting{Only: []string{"deepinfra"}}
+	pinned.Routing = &ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"deepinfra"}}}
 	ownRouting := broker
 	ownRouting.Routing = &ai.OpenRouterRouting{}
 	spelledDefault := broker

@@ -125,11 +125,7 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
 }
 
 // The name a team confirmation says, off the roster this card already holds.
-// A team whose row has gone before the lookup runs falls back to its id rather
-// than to an empty quote, which reads as a team with no name at all.
-// Taken off the hook's own result rather than exported from `entityref`: the
-// roster's element type is that hook's to state, and a second name for it here
-// is a second thing to keep in step.
+// A team whose row has gone falls back to its id rather than an empty quote.
 type RosterEntry = NonNullable<ReturnType<typeof useRoster>["data"]>[number];
 
 function teamName(
@@ -214,12 +210,12 @@ export function TeamsCard() {
       if (error) throwProblem(error);
     },
     onSuccess: (_archived, id) => {
-      // The name is read BEFORE the roster refetch lands, or the row it comes
-      // from is already gone by the time the sentence is built.
+      // Read BEFORE the roster refetch lands, which takes the named row away.
       const name = teamName(teams.data, id);
       qc.invalidateQueries({ queryKey: ["teams"] });
       toast.show(t("users.teamArchived", { name }), {
         action: {
+          kind: "undo",
           label: t("common.undo"),
           onAct: () => restore.mutate({ id, name }),
         },
@@ -227,8 +223,6 @@ export function TeamsCard() {
     },
   });
   return (
-    // The create verb sits on the title's own line, which is where a card-level
-    // create verb goes — never as a row of a team list that is not a team.
     <Panel
       title={t("users.teamsTitle")}
       titleAction={canCreateTeam ? <NewTeamAction /> : undefined}
@@ -478,20 +472,17 @@ function TeamMembers({
   );
 }
 
-// Creating a team is one field, but it is the CARD's verb rather than one of the
-// card's rows — so it reads on the title line and the field it needs opens in a
-// dialog. The alternative kept a create form permanently open at the foot of a
-// list whose every other row was a team.
+// Creating a team is the CARD's verb, not one of its rows: it reads on the title
+// line and its one field opens in a dialog.
 function NewTeamAction() {
   const t = useT();
   const qc = useQueryClient();
   const titleId = useId();
+  const formId = useId();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
-  // The name rides as the mutation's variable rather than through the closure:
-  // react-query re-arms a mutation's options in a passive effect, so a submit
-  // landing in that window would otherwise create a team under the PREVIOUS
-  // name — which is the one thing a team is.
+  // The name rides as the mutation's variable: a closure could submit the
+  // PREVIOUS name in the window before react-query re-arms its options.
   const create = useMutation({
     mutationFn: async (name: string) => {
       const { data, error } = await api.POST("/teams", { body: { name } });
@@ -512,17 +503,23 @@ function NewTeamAction() {
       {/* Named for what it opens; the dialog's submit reads "Create team", so
           the two buttons on screen together are tellable apart. */}
       <Button onClick={() => setOpen(true)}>{t("users.newTeamOpen")}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        intent="form"
+      >
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          {t("users.newTeamLabel")}
+        </Heading>
         <form
+          id={formId}
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             if (ready) create.mutate(draft.trim());
           }}
         >
-          <Heading size="large" className="t-h3" id={titleId}>
-            {t("users.newTeamLabel")}
-          </Heading>
           <Field label={t("users.teamNameLabel")} required>
             {(control) => (
               <TextInput
@@ -534,20 +531,22 @@ function NewTeamAction() {
               />
             )}
           </Field>
-          {/* ABOVE the submit row, where the sibling dialogs put a refusal. */}
           {create.isError && (
             <Callout tone="danger" kind="outcome" title={t("users.notCreated")}>
               {problemMessageOf(create.error, t)}
             </Callout>
           )}
-          {/* `.form-stack` stretches its children, so the submit takes its own
-              trailing row rather than filling the dialog's width. */}
-          <div className="form-actions">
-            <Button type="submit" variant="primary" disabled={!ready}>
-              {t("users.createTeam")}
-            </Button>
-          </div>
         </form>
+        <div className="actions">
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            disabled={!ready}
+          >
+            {t("users.createTeam")}
+          </Button>
+        </div>
       </Modal>
     </>
   );

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -439,6 +440,26 @@ func TestToContractReportNeverSumsAPredictionWithAnOutcome(t *testing.T) {
 	})
 	if done.Disposition.Created != 3 {
 		t.Fatalf("completed created = %d, want the 3 that actually landed", done.Disposition.Created)
+	}
+}
+
+// A report says where each column went, not only how many rows landed: a
+// caller reporting a finished import from it alone can name the fields.
+func TestTheReportCarriesTheMappingTheRunUsed(t *testing.T) {
+	fields := map[string]string{"Company": "display_name", "Site": "domain"}
+	report := migration.Report{Objects: []migration.ObjectReport{{Object: migration.ObjectCompany}}}
+
+	done := toContractImportReport(migration.Run{
+		Status: migration.StatusComplete, Report: &report,
+		Mapping: &migration.RunMapping{Object: migration.ObjectCompany, Fields: fields},
+	})
+	if done.Mapping == nil || !maps.Equal(*done.Mapping, fields) {
+		t.Fatalf("report mapping = %v, want the %v the run was staged with", done.Mapping, fields)
+	}
+
+	unmapped := toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &report})
+	if unmapped.Mapping != nil {
+		t.Errorf("a run carrying no mapping reports one: %v", *unmapped.Mapping)
 	}
 }
 

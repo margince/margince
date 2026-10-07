@@ -31,7 +31,8 @@
     "sourceMappingURL",
     "/@vite/client"
   ],
-  "toolCall": ["tools/call", "ui/tool", "callTool"],
+  "toolCall": ["ui/tool", "callTool"],
+  "toolCallUndeclared": ["tools/call"],
   "credential": [
     "Authorization",
     "Bearer ",

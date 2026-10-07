@@ -57,7 +57,7 @@ func TestEveryProviderMapsOrRejectsAttachmentsNeverSilentlyDrops(t *testing.T) {
 	for name, tc := range mustRefuse {
 		for _, mime := range tc.mimes {
 			t.Run(name+"/"+mime, func(t *testing.T) {
-				client, err := selectLocalBrain(tc.cfg, allCloudKeys())
+				client, err := selectLocalBrain(tc.cfg, allCloudKeys(t))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -123,7 +123,7 @@ func TestAnthropicAndOllamaCarryAttachmentsInTheirOwnWireSpelling(t *testing.T) 
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			client, err := selectLocalBrain(tc.cfg, allCloudKeys())
+			client, err := selectLocalBrain(tc.cfg, allCloudKeys(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -156,7 +156,7 @@ func TestAnthropicAndOllamaAdvertiseWhatTheyCarry(t *testing.T) {
 		"ollama":    {cfg: ProviderConfig{Provider: "ollama", Model: "m"}, want: carriesImages},
 	} {
 		t.Run(name, func(t *testing.T) {
-			client, err := selectLocalBrain(tc.cfg, allCloudKeys())
+			client, err := selectLocalBrain(tc.cfg, allCloudKeys(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -193,7 +193,7 @@ func TestDeclaredImageCarriageAcceptsImagesAndStillRejectsPDFs(t *testing.T) {
 	}
 	for name, cfg := range declaresImages {
 		t.Run(name, func(t *testing.T) {
-			client, err := selectLocalBrain(cfg, allCloudKeys())
+			client, err := selectLocalBrain(cfg, allCloudKeys(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -258,7 +258,7 @@ func TestDeclaredCarriageIsWhatCapsAdvertises(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			client, err := SelectBrain(ProviderConfig{
 				Provider: "openai_compatible", BaseURL: "https://example.invalid", Model: "m", Input: tc.input,
-			}, allCloudKeys())
+			}, allCloudKeys(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -276,7 +276,7 @@ func TestAttachmentBytesXorURIEnforced(t *testing.T) {
 		writeFixture(t, w, `{"id":"r","status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]}`)
 	}))
 	defer srv.Close()
-	client, err := selectLocalBrain(ProviderConfig{Provider: "openai", BaseURL: srv.URL, Model: "m"}, allCloudKeys())
+	client, err := selectLocalBrain(ProviderConfig{Provider: "openai", BaseURL: srv.URL, Model: "m"}, allCloudKeys(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,7 +314,7 @@ func TestNativeCloudProvidersCarryPDFAttachments(t *testing.T) {
 	}
 	for name, cfg := range canCarryPDF {
 		t.Run(name, func(t *testing.T) {
-			client, err := selectLocalBrain(cfg, allCloudKeys())
+			client, err := selectLocalBrain(cfg, allCloudKeys(t))
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -113,11 +113,10 @@ func TestKnowledgeHandlersHTTPRoundTrip(t *testing.T) {
 	if createRec.Header().Get("Location") == "" {
 		t.Fatal("create answered no Location")
 	}
-	// The default floor is a SERVER decision and the wire reports it, so a
-	// screen showing "0.35" is showing what the row holds rather than a
-	// constant of its own.
-	if made.MinSimilarity != knowledge.DefaultMinSimilarity {
-		t.Fatalf("created floor = %v, want the default", made.MinSimilarity)
+	// Whether the floor is the corpus's own is a SERVER decision the wire
+	// reports, so a screen never presents a measured floor as the workspace's.
+	if made.MinSimilarityOverridden == nil || *made.MinSimilarityOverridden {
+		t.Fatalf("created overridden = %v, want false", made.MinSimilarityOverridden)
 	}
 
 	// List → 200 with the one set.
@@ -153,7 +152,7 @@ func TestKnowledgeHandlersHTTPRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(patchRec.Body.Bytes(), &patched); err != nil {
 		t.Fatalf("decode patch response: %v", err)
 	}
-	if patched.MinSimilarity != 0.62 {
+	if patched.MinSimilarity != 0.62 || patched.MinSimilarityOverridden == nil || !*patched.MinSimilarityOverridden {
 		t.Fatalf("patched floor = %v", patched.MinSimilarity)
 	}
 

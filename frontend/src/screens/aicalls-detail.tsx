@@ -87,6 +87,9 @@ export function CallDetailPanel({
                     rung, so a decision attempt that fell through names a model
                     nothing else on the page does. */}
                 {attempt.model_id ? `${attemptBinding(attempt)} · ` : ""}
+                {attempt.served_provider
+                  ? `${t("aicalls.detail.servedBy", { host: attempt.served_provider })} · `
+                  : ""}
                 {/* An ordinary first attempt and a decision that stood ran
                     for no reason worth naming, so they print none rather than
                     a placeholder between the binding and the latency. */}
@@ -115,6 +118,20 @@ export function CallDetailPanel({
               </li>
             ))}
           </ol>
+          {/* The request settings the attempts were configured with: the
+              broker's provider and reasoning blocks, the task's level and the
+              deadline, fixed per tier rather than per call. */}
+          {query.data.config?.provider_params &&
+          Object.keys(query.data.config.provider_params).length > 0 ? (
+            <div className="field">
+              <span className="code-label t-eyebrow">
+                {t("aicalls.detail.settings")}
+              </span>
+              <pre className="code-block">
+                {payloadText(query.data.config.provider_params)}
+              </pre>
+            </div>
+          ) : null}
           {!captureEnabled ? (
             <p>{t("aicalls.payload.off")}</p>
           ) : !query.data.payload_captured || !query.data.payload ? (

@@ -99,6 +99,18 @@ func archiverOf(target bulkTarget) (bulkArchiver, error) {
 	return archiver, nil
 }
 
+// reassignerOf answers the record type's reassignment. admit refuses
+// reassign_owner for a type without one, so a miss here is a bug.
+//
+//nolint:ireturn // the reassignment share of a target is exactly the thing asked for
+func reassignerOf(target bulkTarget) (bulkReassigner, error) {
+	reassigner, ok := target.(bulkReassigner)
+	if !ok {
+		return nil, fmt.Errorf("compose: a %T has no owner to hand on", target)
+	}
+	return reassigner, nil
+}
+
 // lockUnmoved locks one record for a forward change, holding it to the version
 // the caller was shown; an undo holds it to nothing, because a tag, a
 // membership or a task never moved the record's version.

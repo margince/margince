@@ -417,6 +417,11 @@ const (
 	sentinelRequestRejected = "request_rejected"
 )
 
+// sentinelTimeout is an attempt its deadline stopped: the model was asked and
+// did not answer in time. A failure like provider_error, named apart so an
+// admin can tell a slow host from a broken one and set the deadline by it.
+const sentinelTimeout = "timeout"
+
 // answeredSentinels are the sentinels the health read does not count as a
 // failure: metering_failed is an answer whose usage write failed, and the other
 // two are outcomes — the model was reached and decided.
@@ -438,6 +443,10 @@ func classifyError(err error) string {
 		return "budget_unavailable"
 	case errors.Is(err, errRequestFailed):
 		return "request_failed"
+	// A deadline, the attempt's own or one the caller set, and never the
+	// caller's own cancellation: a job shut down mid-call is not a slow model.
+	case isDeadline(err):
+		return sentinelTimeout
 	// A REFUSAL IS NOT A FAILURE TO ANSWER, and the three are ordered widest
 	// last because a volume budget and a throttle both wrap a refusal.
 	//
@@ -462,6 +471,16 @@ func classifyError(err error) string {
 	default:
 		return "provider_error"
 	}
+}
+
+// isDeadline reports whether err is a deadline firing. The HTTP client's own
+// timeout reports itself through Timeout() rather than as the context error.
+func isDeadline(err error) bool {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var timeout interface{ Timeout() bool }
+	return errors.As(err, &timeout) && timeout.Timeout()
 }
 
 // The two non-provider failure classes the trace store distinguishes so an

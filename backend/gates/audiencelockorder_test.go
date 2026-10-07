@@ -7,7 +7,7 @@
 
 package gates
 
-// Several activity audiences are recomputed in ONE agreed order, or two
+// Several activity audiences are recomputed in one agreed order, or two
 // transactions deadlock.
 //
 // RecomputeAudienceTx takes `FOR UPDATE` on the activity it derives, so a caller

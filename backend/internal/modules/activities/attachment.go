@@ -37,7 +37,7 @@ var ErrBlobstoreUnconfigured = errors.New("activities: no object store configure
 const attachmentColumns = `at.id, at.entity_type, at.entity_id, at.filename,
 	at.content_type, at.byte_size, at.checksum, at.source, at.captured_by, at.created_at,
 	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.company_id,
-	at.contract_id`
+	at.contract_id, at.bytes_withheld`
 
 // attachmentSource marks how the row was captured; a direct upload is "upload".
 const attachmentSource = "upload"
@@ -179,9 +179,6 @@ func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action
 // and opens its object for reading; the caller closes the reader. Archived
 // or invisible attachments read as ErrNotFound.
 func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.Attachment, io.ReadCloser, error) {
-	if s.blob == nil {
-		return crmcontracts.Attachment{}, nil, ErrBlobstoreUnconfigured
-	}
 	var (
 		meta crmcontracts.Attachment
 		key  string
@@ -189,9 +186,10 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var entityType, storageKey string
 		var entityID ids.UUID
-		row := tx.QueryRow(ctx,
-			`SELECT entity_type, entity_id, storage_key FROM attachment WHERE id = $1 AND archived_at IS NULL`, id)
-		switch err := row.Scan(&entityType, &entityID, &storageKey); {
+		var withheld bool
+		row := tx.QueryRow(ctx, `SELECT entity_type, entity_id, storage_key, bytes_withheld
+			   FROM attachment WHERE id = $1 AND archived_at IS NULL`, id)
+		switch err := row.Scan(&entityType, &entityID, &storageKey, &withheld); {
 		case errors.Is(err, pgx.ErrNoRows):
 			return apperrors.ErrNotFound
 		case err != nil:
@@ -202,6 +200,13 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 		}
 		if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
 			return err
+		}
+		// After the gates, so it tells an outsider nothing; cf. refuseWithheldBytes.
+		if withheld {
+			return ErrBytesWithheld
+		}
+		if s.blob == nil {
+			return ErrBlobstoreUnconfigured
 		}
 		att, err := readAttachment(ctx, tx, id)
 		if err != nil {
@@ -369,6 +374,8 @@ type attachmentScan struct {
 	supersedes  *ids.UUID
 	companyID   *ids.UUID
 	contractID  *ids.UUID
+
+	bytesWithheld bool
 }
 
 // targets are the Scan destinations, in attachmentColumns order.
@@ -377,6 +384,7 @@ func (c *attachmentScan) targets() []any {
 		&c.aid, &c.entityType, &c.entityID, &c.att.Filename,
 		&c.contentType, &c.byteSize, &c.checksum, &c.att.Source, &c.capturedBy, &c.att.CreatedAt,
 		&c.category, &c.att.Title, &c.docState, &c.att.Pinned, &c.supersedes, &c.companyID, &c.contractID,
+		&c.bytesWithheld,
 	}
 }
 
@@ -398,6 +406,8 @@ func (c *attachmentScan) attachment() crmcontracts.Attachment {
 	att.SupersedesId = uuidOrNil(c.supersedes)
 	att.CompanyId = uuidOrNil(c.companyID)
 	att.ContractId = uuidOrNil(c.contractID)
+	withheld := c.bytesWithheld
+	att.BytesWithheld = &withheld
 	return att
 }
 

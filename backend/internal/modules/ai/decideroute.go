@@ -9,6 +9,7 @@ package ai
 // exactly, row for row.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -106,7 +107,7 @@ func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, t
 		return decisionTry{}, budgetErr
 	case budgetErr != nil:
 		return decisionTry{}, nil //nolint:nilerr // the ladder walk reads the budget again and traces this failure
-	case r.cachedAnswerServes(b, task, wsID, req, ladder):
+	case r.cachedAnswerServes(b, task, wsID, r.withTaskThinking(lc, task, req), ladder):
 		// An entry that expires between this peek and the walk's own read
 		// costs one LLM call, never a wrong answer: the walk serves fresh.
 		return decisionTry{}, nil
@@ -142,6 +143,14 @@ func (r *Router) DecideProbe(ctx context.Context, task Task, site string, dreq d
 		return DecisionProbe{}, err
 	}
 	return DecisionProbe{Asked: try.asked, Decided: try.decided, Answer: try.answer, Reason: try.reason, ServedModel: try.servedModel}, nil
+}
+
+// withTaskThinking is req carrying the call's thinking override, the field the
+// result cache keys on beside the request's own; serveAttempt sets the same.
+// An unset override leaves a level the request already names.
+func (r *Router) withTaskThinking(lc *logicalCall, task Task, req model.Request) model.Request {
+	req.ThinkingLevel = cmp.Or(r.callSettings(lc, task).Thinking, req.ThinkingLevel)
+	return req
 }
 
 // cachedAnswerServes peeks the result cache the way serveAttempt reads it,
@@ -208,7 +217,7 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 	lc.renewRailLease(ctx)
 	trace := r.newDecisionTrace(ctx, task, b.decisions.meta)
 	start := r.now()
-	callCtx, cancel := context.WithTimeout(ctx, r.decisionTimeout)
+	callCtx, cancel := context.WithTimeout(ctx, r.callSettings(lc, task).DecisionTimeout)
 	resp, callErr := b.decisions.client.Decide(callCtx, dreq)
 	cancel()
 	var meterErr error

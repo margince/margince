@@ -656,7 +656,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-recordfields -in api/crm.yaml -out internal/modules/agents/recordshapes_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json -routing-go internal/modules/ai/routingschema_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
@@ -673,7 +673,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md
+	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/ai-provider-outages.md
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.
@@ -682,10 +682,10 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# Same blind spot, same guard: a handbook page copied in by handbook-embed
 	# and never `git add`ed is untracked, so the diff above sees nothing while
 	# the binary would ship a page no reviewer read.
-	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md')"; \
-		[ -z "$$u" ] || { echo "drift: uncommitted embedded handbook page(s):" >&2; echo "$$u" >&2; exit 1; }
+	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md' ../docs/reference/ai-provider-outages.md internal/modules/agents/apps/actions.json)"; \
+		[ -z "$$u" ] || { echo "drift: uncommitted generated page(s):" >&2; echo "$$u" >&2; exit 1; }
 
-# The MCP App admission vocabulary is AUTHORED in frontend/src/mcp-apps, where
+# The MCP App admission vocabulary and the per-view action lists are AUTHORED in frontend/src/mcp-apps, where
 # the build-time validator imports it, and copied here because go:embed cannot
 # reach outside its own package directory. Two validators in two languages are a
 # defect unless they cannot disagree: a document that passes the build check and
@@ -694,6 +694,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 # drifting, and `drift` fails a stale one.
 mcp-apps-vocab: ## Copy the MCP App admission vocabulary in from the frontend
 	cp ../frontend/src/mcp-apps/forbidden.json internal/modules/agents/apps/forbidden.json
+	cp ../frontend/src/mcp-apps/actions.json internal/modules/agents/apps/actions.json
 
 # The operator handbook is AUTHORED in docs/handbook and copied here for the
 # same reason as the vocabulary above: go:embed cannot reach outside its own

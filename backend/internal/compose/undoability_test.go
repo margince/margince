@@ -33,7 +33,7 @@ import (
 func evaluateWithoutTheTrail(t *testing.T, e Evaluator, row AuditRow) Undoability {
 	t.Helper()
 	var noTx pgx.Tx
-	answer, err := e.Evaluate(context.Background(), noTx, row, Advisory)
+	answer, err := e.Evaluate(systemSeatCtx(), noTx, row, Advisory)
 	if err != nil {
 		t.Fatalf("evaluate: %v", err)
 	}
@@ -55,14 +55,70 @@ func contactRow(before string) AuditRow {
 	}
 }
 
-// A verb outside {update, restore} is not reversed by replaying an image.
-// archive, promote and merge each have their own verb and their own undo.
-func TestAVerbThatIsNotAnImageReplayIsRefused(t *testing.T) {
-	row := contactRow(`{"full_name":"Greta"}`)
-	row.Action = "archive"
-	answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
-	if answer.Reason != ReasonNotAReplayableVerb {
-		t.Errorf("archive: reason = %q, want %q", answer.Reason, ReasonNotAReplayableVerb)
+// A verb with no undo is refused by name. update and restore replay an image,
+// and a create, an archive and a promotion are undone by their module's own
+// verb where it has one; a merge has none, and neither has a project's archive.
+func TestAVerbNoUndoReversesIsRefused(t *testing.T) {
+	merged := contactRow(`{"full_name":"Greta"}`)
+	merged.Action = "merge"
+	project := contactRow(`{"full_name":"Greta"}`)
+	project.EntityType, project.Action = "project", actionArchive
+	for _, row := range []AuditRow{merged, project} {
+		answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
+		if answer.Reason != ReasonNotAReplayableVerb {
+			t.Errorf("%s of a %s: reason = %q, want %q", row.Action, row.EntityType, answer.Reason, ReasonNotAReplayableVerb)
+		}
+	}
+}
+
+// Each verb is undone by the module verb that reverses it, and only where the
+// record type has one.
+func TestEachVerbIsUndoneByItsOwnModuleVerb(t *testing.T) {
+	cases := []struct {
+		entityType, action string
+		want               inverse
+	}{
+		{"contact", actionCreate, inverseArchive},
+		{entityTypeActivity, actionCreate, inverseArchive},
+		{entityTypeLead, actionCreate, inverseNone},
+		{"project", actionCreate, inverseNone},
+		{"company", actionArchive, inverseUnarchive},
+		{entityTypeDeal, actionArchive, inverseUnarchive},
+		{entityTypeActivity, actionArchive, inverseNone},
+		{entityTypeLead, actionPromote, inverseDemote},
+		{"contact", auditActionUpdate, inverseNone},
+	}
+	for _, c := range cases {
+		row := AuditRow{EntityType: c.entityType, Action: c.action}
+		if got := inverseOf(row); got != c.want {
+			t.Errorf("%s of a %s: inverse = %d, want %d", c.action, c.entityType, got, c.want)
+		}
+	}
+}
+
+// A signature that filled blanks is a fill the contacts module can take back; a
+// fill with no source it can find again, or one that replaced a value it did
+// not record, is an ordinary update.
+func TestAFillIsRecognisedOnlyWhenItsSourceCanBeFoundAgain(t *testing.T) {
+	fill := AuditRow{
+		EntityType: "contact", Action: auditActionUpdate,
+		Before:   json.RawMessage(`{"title":null,"phone":null}`),
+		After:    json.RawMessage(`{"title":"filled","phone":"filled"}`),
+		Evidence: json.RawMessage(`{"source":"capture_enrich","source_ref":"activity:x","fields":["title","phone"]}`),
+	}
+	if inverseOf(fill) != inverseRetractFill {
+		t.Fatalf("a signature fill is not recognised as one")
+	}
+	noRef := fill
+	noRef.Evidence = json.RawMessage(`{"source":"capture_enrich"}`)
+	typed := fill
+	typed.Evidence = json.RawMessage(`{"source":"manual","source_ref":"x"}`)
+	replaced := fill
+	replaced.Before = json.RawMessage(`{"title":"CTO","phone":null}`)
+	for name, row := range map[string]AuditRow{"no source_ref": noRef, "a human edit": typed, "a replacement": replaced} {
+		if inverseOf(row) != inverseNone {
+			t.Errorf("%s is read as a fill the module can take back", name)
+		}
 	}
 }
 
@@ -244,7 +300,7 @@ func TestAFailedWritabilityCheckIsAFaultAndNotARefusal(t *testing.T) {
 	e := Evaluator{Writable: func(context.Context, pgx.Tx, string, ids.UUID) error {
 		return errPortFailed
 	}}
-	_, err := e.Evaluate(context.Background(), nil, contactRow(`{"full_name":"Greta"}`), Binding)
+	_, err := e.Evaluate(systemSeatCtx(), nil, contactRow(`{"full_name":"Greta"}`), Binding)
 	if !errors.Is(err, errPortFailed) {
 		t.Errorf("err = %v, want the port's own failure to reach the caller", err)
 	}

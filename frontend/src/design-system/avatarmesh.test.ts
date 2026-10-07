@@ -27,11 +27,11 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-// The painter as atoms.css declares it: the background's colour layers top to
+// The painter as avatar.css declares it: the background's colour layers top to
 // bottom (every one but the last fades to nothing) and the ink. Read, not
 // restated, so a layer added to the sheet is a layer this suite measures.
 const painter = (() => {
-  const sheet = readFileSync(join(here, "atoms.css"), "utf8").replace(
+  const sheet = readFileSync(join(here, "avatar.css"), "utf8").replace(
     /\/\*[\s\S]*?\*\//g,
     "",
   );
@@ -42,7 +42,7 @@ const painter = (() => {
   );
   const ink = /(?:^|;)\s*color:\s*var\((--[\w-]+)\)/.exec(rule)?.[1];
   if (layers.length < 2 || !ink) {
-    throw new Error("atoms.css: .avatar-mesh no longer reads as layers + ink");
+    throw new Error("avatar.css: .avatar-mesh no longer reads as layers + ink");
   }
   return { layers, ink };
 })();

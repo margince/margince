@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -40,6 +41,9 @@ type CreateLeadInput struct {
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
 	CustomFields map[string]any
+	// FromContactID names a contact whose identity fills the fields left
+	// out (leadfromcontact.go).
+	FromContactID *ids.ContactID
 }
 
 // CreateLead inserts into the segregated lead table — never contact, never
@@ -48,6 +52,10 @@ type CreateLeadInput struct {
 // existing row instead of erroring, so bulk sourcing can re-run.
 func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontracts.Lead, bool, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionCreate); err != nil {
+		return crmcontracts.Lead{}, false, err
+	}
+	in, err := s.fillLeadFromContact(ctx, in)
+	if err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
 	in, by, err := s.readyLeadCreate(ctx, in)
@@ -87,6 +95,12 @@ func (s *Store) CreateLeadTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput)
 	}
 	if err := refuseCustomFields(in.CustomFields); err != nil {
 		return crmcontracts.Lead{}, false, err
+	}
+	// Reading the contact takes a connection of its own, which is what this
+	// seam exists not to do; a caller holding a transaction fills the lead itself.
+	if in.FromContactID != nil {
+		return crmcontracts.Lead{}, false, httperr.Validation(contactIDField, "unsupported",
+			"a lead created inside another write cannot be filled from a contact")
 	}
 	in, by, err := s.readyLeadCreate(ctx, in)
 	if err != nil {
@@ -182,7 +196,7 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	if err != nil {
 		return crmcontracts.Lead{}, false, fmt.Errorf("audit lead create: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadCreated{}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadCreated{SourceSystem: in.SourceSystem}); err != nil {
 		return crmcontracts.Lead{}, false, fmt.Errorf("emit lead.created: %w", err)
 	}
 	out, err := readLead(ctx, tx, id, storekit.LiveOnly, active)

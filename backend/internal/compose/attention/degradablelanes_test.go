@@ -24,6 +24,10 @@ import (
 // so the roster read it describes is keepTeams's own, and that one is degradable.
 const reportsWithoutReading = "withRosterRefusal"
 
+// degradableRosterRead is the roster read already wrapped in degradable, so a
+// producer reading through it reads through degradable.
+const degradableRosterRead = "degradableRoster"
+
 func TestEveryLaneReportedAsFailedReadsThroughDegradable(t *testing.T) {
 	t.Parallel()
 	entries, err := os.ReadDir(".")
@@ -47,7 +51,7 @@ func TestEveryLaneReportedAsFailedReadsThroughDegradable(t *testing.T) {
 				continue
 			}
 			producers++
-			if fn.Name.Name != reportsWithoutReading && !namesSelector(fn, "degradable") {
+			if fn.Name.Name != reportsWithoutReading && !namesSelector(fn, "degradable") && !namesSelector(fn, degradableRosterRead) {
 				t.Errorf("%s: %s reports a failed source without reading it through degradable — "+
 					"its error would abort the snapshot for every lane after it", name, fn.Name.Name)
 			}

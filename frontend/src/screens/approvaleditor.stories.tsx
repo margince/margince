@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   ApprovalDetailModal,
@@ -59,6 +60,10 @@ export const DetailModal: Story = {
         <ApprovalDetailModal approvalId="ap-1" open onClose={() => {}} />
       </StoryProviders>
     );
+  },
+  play: async () => {
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Send the follow-up to Anna Weber");
   },
 };
 

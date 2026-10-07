@@ -18,24 +18,24 @@ history, so a request remains reachable after newer messages fill the timeline.
 The deal's existing open-task read continues to supply the same tasks as the
 worklist, including on closed deals.
 
-A later email proves a reply was sent, not that a request was fulfilled. The
-existence of an outbound message settles nothing: "thanks, I will check" is a
+A later email proves a reply was sent; it does not prove the request was
+fulfilled. The existence of an outbound message settles nothing: "thanks, I will check" is a
 reply and discharges nothing, so acknowledgements, unrelated replies and newer
 inbound messages all leave a confirmed request standing.
 
-What a reply does earn is a READING. Once the workspace has written back on the
-thread, the request-settlement pass hands the conversation — the request and
-everything after it, each message marked as from them or from us — to a model
-and asks what our own words did: `settled`, `still_owed`, or `unsure` below the
-confidence floor. A request nobody has answered is never judged, and an
-installation with no model configured for the task behaves exactly as it did
-before: a request stays owed until somebody ticks its reminder.
+A reply does trigger a model reading of the thread. Once the workspace has
+written back, the request-settlement pass hands the conversation to a model: the
+request and everything after it, each message marked as from them or from us. It
+asks what our own words did: `settled`, `still_owed`, or `unsure` below the
+confidence floor. A request nobody has answered is never judged. With no model
+configured for the task, a request stays owed until somebody completes its
+reminder.
 
 A `settled` verdict completes the evidence-linked reminder through the ordinary
 activity writer, so it carries the audit row and the event a human ticking the
 box carries. `still_owed` may sharpen a machine-filed, undated reminder to name
-what is actually outstanding — "Send the quote" in place of the mail's subject
-line — and never touches a reminder a human accepted, dated or reopened. An open
+what is actually outstanding ("Send the quote" in place of the mail's subject
+line), and never touches a reminder a human accepted, dated or reopened. An open
 reminder always outranks the machine's verdict: somebody picking the work back
 up is the answer, and the request counts as outstanding again while their task
 stands. `unsure` records that the pass asked and would not commit, which leaves
@@ -102,15 +102,22 @@ normal activity writer, preserving record links and source evidence. Source row
 locks and the activity's natural key make retries and concurrent reviews idempotent.
 
 Automatic assignment is limited to requests from the last fourteen days with
-exactly one eligible importing seat directly addressed in the captured envelope.
+a single eligible importing seat directly addressed in the captured envelope.
 Mailbox delivery alone does not prove responsibility. The task is personal,
 undated, and does not invent a deadline.
 
-Older requests, conflicting labels, and ambiguous recipients remain reviewable.
-Age affects ranking, not whether a recognized obligation exists. Old scheduling
-and commitment candidates remain eligible for the classifier, which drains its
-bounded backlog across passes. This reconciles missed work without creating a
-task for every historical message.
+Conflicting labels and ambiguous recipients remain reviewable inside the horizon.
+Past the waiting horizon a request leaves the Worklist, whatever the classifier
+said and whether or not an open deal is linked. The queue holds current work, and
+old mail stays on the record's timeline. The one exception is
+a request a human holds, meaning an open reminder a human wrote, by taking the
+request or by editing the reminder the system filed. Each pass also archives the
+reminders it filed itself once their request passes the horizon untouched;
+archiving rather than completing, because an aged request is not an answered
+one. A request that aged out within the last year is counted under the
+past-horizon figure in `/worklist/hidden`, which counts conversations rather
+than single requests; older ones are not counted. Its record still offers
+**Create task** to take it back.
 
 The deal offers **Create task** for a request awaiting acceptance. Both task and
 activity creation accept `request_activity_id`: the server checks readable source
@@ -134,11 +141,12 @@ identity, owner or content; another reader is offered the source, not a task
 creation button that cannot succeed.
 The derived task's content remains subject to its source's visibility.
 
-The deal's status read refreshes on the record's one-minute cadence. The web read explicitly requests `facts_only`, so it cannot call a model even
-when facts change. It serves valid cached prose or a current deterministic card,
-updating the shared cache so worklist actions agree with the record. “Write it again” remains the explicit prose
-refresh. Empty-state wording reports what this
-view found rather than claiming that the reader has no work anywhere.
+The deal's status read refreshes on the record's one-minute cadence. The web
+read requests `facts_only`, so it cannot call a model even when facts change. It
+serves valid cached prose or a current deterministic card, updating the shared
+cache so worklist actions agree with the record. “Write it again” is the
+explicit prose refresh. Empty-state wording reports what this view found; it
+does not claim the reader has no work anywhere.
 
 Request identity is the source message, not its subject or thread. Two distinct
 asks in one conversation remain two obligations; a later ask cannot silently

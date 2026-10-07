@@ -92,10 +92,11 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	userID, rawToken, err := h.svc.InviteUser(r.Context(), actor, InviteUserInput{
-		Email:       email.String(),
-		DisplayName: name,
-		Role:        string(req.Role),
-		TeamIDs:     teams,
+		Email:        email.String(),
+		DisplayName:  name,
+		GreetingName: req.GreetingName,
+		Role:         string(req.Role),
+		TeamIDs:      teams,
 	})
 	if err != nil {
 		err = conflictIf(err, errEmailTaken, "email_taken",

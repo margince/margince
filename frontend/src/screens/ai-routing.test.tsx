@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
-import { reachableProviders } from "./ai-binding-editor";
+import { reachableProviders } from "./ai-provider-reach";
 import { AiRoutingCard } from "./ai-routing";
 import {
   BOUND,
@@ -97,11 +97,17 @@ describe("AiRoutingCard", () => {
   it("asks for a key first when no provider has one", async () => {
     const backend = backendFor(ROUTING_EDITOR, UNBOUND, {
       providerKeys: [
-        { provider: "gemini", configured: false, env_var: "GEMINI_API_KEY" },
+        {
+          provider: "gemini",
+          configured: false,
+          env_var: "GEMINI_API_KEY",
+          usable: false,
+        },
         {
           provider: "anthropic",
           configured: false,
           env_var: "ANTHROPIC_API_KEY",
+          usable: false,
         },
       ],
     });
@@ -269,7 +275,9 @@ describe("AiRoutingCard", () => {
   // without one. With no field for it, choosing that adapter produced a write
   // the running role could never adopt: saved cleanly, then declined at the
   // rebind, leaving the OLD models serving with the reason only in a log.
-  it("asks for a host when the adapter has no default, and only then", async () => {
+  // A tier names its provider and model; the host is the provider's. A tier
+  // re-pointed at a provider with no host yet says where to set it.
+  it("asks a tier for no host, and says where to set one the provider lacks", async () => {
     // An instance rather than the default export: pickOption drives a portalled
     // listbox and needs a session that keeps pointer state across the open.
     const user = userEvent.setup();
@@ -277,9 +285,6 @@ describe("AiRoutingCard", () => {
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
     await screen.findByText("gemini-3.5-flash");
-
-    // A native vendor addresses its own API, so no host is asked for.
-    expect(screen.queryByLabelText("Host")).toBeNull();
 
     const tier = await openEditor(user, "ai-routing-tier-premium");
     // Named, because the row now holds two comboboxes: the adapter, and the
@@ -289,12 +294,23 @@ describe("AiRoutingCard", () => {
       within(tier).getByRole("combobox", { name: "Provider" }),
       "openai_compatible",
     );
-    const host = await within(tier).findByLabelText("Host");
-    await user.type(host, "https://openrouter.ai/api");
+    // Emptied, and focused, so the list of what the new vendor serves opens.
+    const modelBox = within(tier).getByRole("combobox", { name: "Model" });
+    expect(modelBox).toHaveValue("");
+    await vi.waitFor(() => expect(modelBox).toHaveFocus());
+    // A provider change empties the model; the reader picks one.
+    await user.type(
+      within(tier).getByRole("combobox", { name: "Model" }),
+      "openai/gpt-oss-120b",
+    );
+    expect(within(tier).queryByLabelText("Host")).toBeNull();
+    expect(
+      within(tier).getByText(/openai_compatible has no host yet/),
+    ).toBeInTheDocument();
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut();
     expect(sent?.tiers.premium.provider).toBe("openai_compatible");
-    expect(sent?.tiers.premium.base_url).toBe("https://openrouter.ai/api");
+    expect(sent?.tiers.premium.base_url).toBeUndefined();
   });
   // Broker preferences belong to the OpenRouter binding they were written for,
   // and the server refuses them on any other. Carried onto a new vendor, they
@@ -323,10 +339,17 @@ describe("AiRoutingCard", () => {
       within(tier).getByRole("combobox", { name: "Provider" }),
       "gemini",
     );
+    // A provider change empties the model; the reader picks one.
+    await user.type(
+      within(tier).getByRole("combobox", { name: "Model" }),
+      "gemini-3.5-flash",
+    );
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut()?.tiers.premium;
     expect(sent?.provider).toBe("gemini");
     expect(sent).not.toHaveProperty("routing");
+    // The OpenRouter host it carried is not sent for gemini to take as its own.
+    expect(sent).not.toHaveProperty("base_url");
   });
   // The lane the operator reported as unreachable: it takes a provider of its
   // own, and re-pointing it has to carry the host and the width with it or the
@@ -344,15 +367,21 @@ describe("AiRoutingCard", () => {
       within(lane).getByRole("combobox", { name: "Provider" }),
       "openai_compatible",
     );
+    // A provider change empties the model; the reader picks one.
     await user.type(
-      await within(lane).findByLabelText("Host"),
-      "https://openrouter.ai/api",
+      within(lane).getByRole("combobox", { name: "Model" }),
+      "mistralai/mistral-embed-2312",
+    );
+    // Its own embeddings server, for this lane alone.
+    await user.type(
+      await within(lane).findByLabelText("Embeddings server"),
+      "http://gpu-box:8001",
     );
     await user.type(within(lane).getByLabelText("Vector width"), "1536");
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut()?.embeddings;
     expect(sent?.provider).toBe("openai_compatible");
-    expect(sent?.base_url).toBe("https://openrouter.ai/api");
+    expect(sent?.base_url).toBe("http://gpu-box:8001");
     expect(sent?.dimensions).toBe(1536);
   });
 
@@ -677,14 +706,31 @@ describe("rebind", () => {
 });
 
 describe("reachableProviders", () => {
+  const apiKey = "api_key" as const;
   const keys = [
-    { provider: "gemini", configured: true, env_var: "G", optional: false },
-    { provider: "openai", configured: false, env_var: "O", optional: false },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "G",
+      usable: true,
+      optional: false,
+      credential_kind: apiKey,
+    },
+    {
+      provider: "openai",
+      configured: false,
+      env_var: "O",
+      usable: false,
+      optional: false,
+      credential_kind: apiKey,
+    },
     {
       provider: "jev_compatible",
       configured: false,
       env_var: "J",
+      usable: true,
       optional: true,
+      credential_kind: apiKey,
     },
   ];
   const all = ["gemini", "openai", "jev_compatible", "ollama", "vllm", "fake"];

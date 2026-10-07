@@ -41,6 +41,7 @@ package ai
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -103,8 +104,10 @@ func (c *ollamaClient) think(ctx context.Context, model string, req model.Reques
 	if err != nil {
 		return nil, err
 	}
-	if req.ThinkingFloor != "" {
-		return floorThink(values, req.ThinkingFloor), nil
+	// An admin's level is met as closely as the model's listed values allow;
+	// Ollama names no exact mapping, so it is the least thinking that meets it.
+	if level := cmp.Or(req.ThinkingLevel, req.ThinkingFloor); level != "" {
+		return floorThink(values, level), nil
 	}
 	return cheapestThink(values), nil
 }

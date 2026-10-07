@@ -103,8 +103,45 @@ const VENDOR_LIST: Record<string, unknown> = {
     ],
   },
   ollama: { provider: "ollama", models: [{ id: "gemma3:latest" }] },
+  gemini_vertex: {
+    provider: "gemini_vertex",
+    models: [
+      { id: "gemini-3.5-flash", lane: "chat" },
+      { id: "gemini-embedding-001", lane: "embeddings" },
+    ],
+  },
   anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
   vllm: { provider: "vllm", models: [], unavailable: "unreachable" },
+};
+
+const VERTEX_LOCATIONS = {
+  provider: "gemini_vertex",
+  locations: [
+    {
+      id: "eu",
+      display_name: "EU (multi-region)",
+      jurisdiction: "eu",
+      resident: true,
+    },
+    {
+      id: "europe-west4",
+      display_name: "Netherlands",
+      jurisdiction: "eu",
+      resident: true,
+    },
+    {
+      id: "europe-west2",
+      display_name: "London",
+      jurisdiction: "other",
+      resident: false,
+    },
+    {
+      id: "us",
+      display_name: "US (multi-region)",
+      jurisdiction: "us",
+      resident: false,
+    },
+  ],
 };
 
 function story(
@@ -124,14 +161,31 @@ function story(
       "GET /ai/status": () => jsonResponse(aiStatus),
       "GET /ai/health": () => jsonResponse(HEALTH),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
+      "GET /ai/provider-locations/gemini_vertex": () =>
+        jsonResponse(VERTEX_LOCATIONS),
       "GET /ai/provider-keys": () =>
         jsonResponse({
           providers: [
-            { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
+            {
+              provider: "gemini",
+              configured: true,
+              env_var: "GEMINI_API_KEY",
+              usable: true,
+              credential_kind: "api_key",
+            },
             {
               provider: "anthropic",
               configured: false,
               env_var: "ANTHROPIC_API_KEY",
+              usable: false,
+              credential_kind: "api_key",
+            },
+            {
+              provider: "gemini_vertex",
+              configured: true,
+              env_var: "GEMINI_VERTEX_SA_JSON",
+              usable: true,
+              credential_kind: "service_account",
             },
           ],
         }),
@@ -228,6 +282,31 @@ export const EditingATier: Story = {
       (await canvas.findAllByRole("button", { name: /^edit$/i }))[0],
     );
   },
+};
+
+// Every lane on Gemini on Vertex at an EU location, under eu_hosted. Edit a
+// lane: the Location list refuses London and the US.
+export const VertexEuHosted: Story = {
+  render: story({
+    profile: "eu_hosted",
+    tiers: {
+      cheap_cloud: {
+        provider: "gemini_vertex",
+        model: "gemini-3.1-flash-lite",
+        location: "eu",
+      },
+      premium: {
+        provider: "gemini_vertex",
+        model: "gemini-3.5-flash",
+        location: "eu",
+      },
+    },
+    embeddings: {
+      provider: "gemini_vertex",
+      model: "gemini-embedding-001",
+      location: "europe-west4",
+    },
+  }),
 };
 
 // A decision model bound in front of the ladder. The row offers only the

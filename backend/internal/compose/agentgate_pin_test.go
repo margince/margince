@@ -29,6 +29,10 @@ func (c *capturingApprovals) StageVolumeRelease(_ context.Context, _ agents.Volu
 	return ids.ApprovalID{}, false, nil
 }
 
+func (c *capturingApprovals) ReleasableByCaller(context.Context, agents.StageRequest) bool {
+	return false
+}
+
 func (c *capturingApprovals) StageCall(_ context.Context, in agents.StageRequest) (ids.ApprovalID, bool, error) {
 	c.last = in
 	return ids.ApprovalID{}, false, nil
@@ -160,6 +164,8 @@ type pinningApprovals struct{ version int64 }
 func (pinningApprovals) StageVolumeRelease(_ context.Context, _ agents.VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }
+
+func (pinningApprovals) ReleasableByCaller(context.Context, agents.StageRequest) bool { return false }
 
 func (pinningApprovals) StageCall(_ context.Context, _ agents.StageRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil

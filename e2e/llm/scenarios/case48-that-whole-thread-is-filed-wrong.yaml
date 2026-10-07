@@ -1,0 +1,75 @@
+# CASE 48 — That whole thread is filed wrong.
+#
+# A conversation filed on the wrong account is moved by naming its messages: the
+# assistant reads the thread's activities and files exactly those on the right
+# company. relink_thread, which takes the thread KEY, is refused to an assistant on
+# purpose — a key can grow between the approval and the retry, so a message that
+# joins the thread meanwhile would be moved under an approval that never described
+# it — and its refusal points at relink_activities, which an approval binds to the
+# exact ids. The case is that the assistant follows that road and finishes.
+#
+# The thread key is not in the prompt and cannot be: capture stamps it, and the
+# only door to it is a read of the mails themselves.
+#
+# THE MOVE IS STAGED, AND THE PROMPT GIVES THE SIGN-OFF. A filing on a company is
+# undoable — relinking moves it back — so the credential that staged it may release
+# it on its own attended call: decide_approval to approve, then relink_activities
+# again carrying approval_id, which is the call that moves the mails. An assistant
+# that stages and hands the approval back has refused authority it was given.
+#
+# decide_approval_bundle HAS NO CASE, and this is its written ruling. A bundle_id
+# is minted only by two producers — a website read and a reading of a meeting
+# transcript — and both are model-backed and started by a human session, so the
+# lane could seed one only by spending a model call inside its own setup, and the
+# seed would have to add pending approvals that case 1 and case 8 count. The tool
+# stays untried by this lane until a bundle can be made without a model.
+name: case48_that_whole_thread_is_filed_wrong
+criteria: [1, 2]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  That KP-300 delivery-delay back-and-forth is sitting under Kieler Pumpenwerk,
+  but it is Rhön Hydraulik's order. Move the whole thread over — all of it, not
+  one mail — and get it off Kieler. If it needs my OK, you have it.
+
+must_call:
+  - relink_activities
+  - decide_approval
+may_call:
+  - relink_thread
+  - search_context
+  - search_records
+  - read_record
+  - list_records
+  - resolve_entities
+  - catch_me_up_on
+  - query_workspace
+  - list_approvals
+  - read_approval
+
+# entity_type pins the destination as a company; a project is a retention mark and
+# is not what was asked. replace_existing_of_type is the "get it off Kieler" half:
+# without it the mails are ADDED to Rhön and left on Kieler too. approval_id=* is
+# the redemption: approving releases the proposal and writes nothing, and the mails
+# move only when the call is made again carrying the approval's id.
+must_call_with:
+  - relink_activities.entity_type=company
+  - relink_activities.replace_existing_of_type=true
+  - decide_approval.decision=approve
+  - relink_activities.approval_id=*
+
+must_mention:
+  - "Rhön Hydraulik"
+
+judge:
+  - "Criterion 1. The answer reports the whole Kolbenpumpe KP-300 conversation — all three messages — as now filed under Rhön Hydraulik and no longer under Kieler Pumpenwerk. Answer no if it reports one or two messages moved, says the thread is still on Kieler as well, or says the move is still waiting."
+  - "Criterion 2. The answer says the move needed sign-off, that it was approved on the user's behalf as they had said, and then done. The user gave the sign-off in the prompt. Answer no if it hands the approval back — tells the user to approve it in the web app or in Margince, says it is pending their approval, or says the assistant cannot approve it."
+
+runs: 3
+pass_at: 2

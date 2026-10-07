@@ -6,6 +6,7 @@ package connector
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -101,5 +102,26 @@ func TestErrorKeepsAnOpWithinTheBound(t *testing.T) {
 	err := error(&ProviderError{Op: "/calendars/primary", Status: 403, Class: ErrAuthRejected})
 	if msg := err.Error(); !strings.Contains(msg, "/calendars/primary") || strings.Contains(msg, "…") {
 		t.Errorf("Error() = %q, want the op verbatim and no truncation marker", msg)
+	}
+}
+
+func TestARateLimitLogsItsReasonAndStatus(t *testing.T) {
+	attr := RateLimitLogAttr(fmt.Errorf("page: %w", &RateLimitedError{Reason: "userRateLimitExceeded", Status: 403}))
+	if attr.Key != "" || attr.Value.String() != "[reason=userRateLimitExceeded status=403]" {
+		t.Errorf("RateLimitLogAttr = %v, want an inlined reason and status", attr)
+	}
+	if got := RateLimitLogAttr(errors.New("not a limit")); !got.Equal(slog.Attr{}) {
+		t.Errorf("RateLimitLogAttr of another error = %v, want the empty attribute", got)
+	}
+}
+
+func TestARateLimitReasonStaysInTheClosedSet(t *testing.T) {
+	for in, want := range map[string]string{
+		"": RateLimitUnspecified, RateLimitUser: RateLimitUser, RateLimitConcurrent: RateLimitConcurrent,
+		"backendError": RateLimitOther, "unspecified": RateLimitUnspecified,
+	} {
+		if got := RateLimitReasonLabel(in); got != want {
+			t.Errorf("RateLimitReasonLabel(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

@@ -121,6 +121,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const [key, setKey] = useState("");
   const [label, setLabel] = useState("");
   const [requiresDoi, setRequiresDoi] = useState(false);
+  const formId = useId();
 
   const create = useMutation({
     mutationFn: async () => {
@@ -151,50 +152,63 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
     }
   }
 
+  const ready = key.trim() !== "" && label.trim() !== "";
   return (
-    <div className="form-stack">
-      <p>{t("privacy.purposeAppendOnly")}</p>
-      <Field label={t("privacy.purposeKey")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={key}
-            onChange={(event) => {
-              setKey(event.target.value);
-              dismissCreateError();
-            }}
-          />
-        )}
-      </Field>
-      <Field label={t("privacy.purposeLabel")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={label}
-            onChange={(event) => {
-              setLabel(event.target.value);
-              dismissCreateError();
-            }}
-          />
-        )}
-      </Field>
-      <Checkbox
-        label={t("privacy.purposeDoi")}
-        checked={requiresDoi}
-        onChange={(event) => {
-          setRequiresDoi(event.target.checked);
-          dismissCreateError();
+    <>
+      <form
+        id={formId}
+        className="form-stack"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (ready && !create.isPending) create.mutate();
         }}
-      />
-      <ErrorLine error={create.error} />
-      <Button
-        variant="primary"
-        disabled={!key.trim() || !label.trim() || create.isPending}
-        onClick={() => create.mutate()}
       >
-        {t("privacy.purposeCreate")}
-      </Button>
-    </div>
+        <p>{t("privacy.purposeAppendOnly")}</p>
+        <Field label={t("privacy.purposeKey")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={key}
+              onChange={(event) => {
+                setKey(event.target.value);
+                dismissCreateError();
+              }}
+            />
+          )}
+        </Field>
+        <Field label={t("privacy.purposeLabel")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={label}
+              onChange={(event) => {
+                setLabel(event.target.value);
+                dismissCreateError();
+              }}
+            />
+          )}
+        </Field>
+        <Checkbox
+          label={t("privacy.purposeDoi")}
+          checked={requiresDoi}
+          onChange={(event) => {
+            setRequiresDoi(event.target.checked);
+            dismissCreateError();
+          }}
+        />
+        <ErrorLine error={create.error} />
+      </form>
+      <div className="actions">
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={!ready || create.isPending}
+        >
+          {t("privacy.purposeCreate")}
+        </Button>
+      </div>
+    </>
   );
 }
 
@@ -229,18 +243,10 @@ export function ConsentPurposesCard() {
   return (
     <Panel
       title={t("settings.purposes")}
-      // The card's one write affordance rides in the header rather than in a
-      // row of its own. A row states a setting and its answer; a create verb is
-      // neither, and a row whose LABEL was the button's own words said "Add
-      // purpose" twice a hand apart. `titleAction` is the slot for exactly this
-      // (panel.tsx), and it keeps the verb above a registry that grows.
-      //
-      // Authoring a purpose is an admin/ops act, and the registry is on a page
-      // every seat opens — so the verb still asks. Rendered unconditionally it
-      // offered a form whose submit the server refuses, which is the one thing
-      // a governance surface must not do: promise an authority it does not
-      // carry. The registry row's own description is where that posture is
-      // stated instead.
+      // A create verb is not a setting, so it rides in the header. Authoring a
+      // purpose is an admin/ops act on a page every seat opens: a verb the
+      // server would refuse must not be offered, and the registry row's
+      // description states the read-only posture instead.
       titleAction={
         canAdminister ? (
           <Button onClick={() => setAdding(true)}>
@@ -252,15 +258,9 @@ export function ConsentPurposesCard() {
       <PanelBody>
         <PanelIntro>{t("settings.purposesSub")}</PanelIntro>
         <SettingList>
-          {/* The registry is the card's subject rather than an answer beside a
-              question, so it takes the full width under its naming.
-
-              The read-only posture is this row's DESCRIPTION rather than a
-              paragraph of its own between the card's line and the list: dropping
-              the write affordance without saying so leaves a rep looking at a
-              registry that has no way to grow, and the sentence belongs beside
-              the thing it is a posture about. Never a disabled button that
-              promises a click. */}
+          {/* The registry is the card's subject, so it takes the full width.
+              The read-only posture is its description: a dropped verb has to
+              be said, beside the thing it is a posture about. */}
           <SettingRow
             label={t("privacy.purposesRegistry")}
             description={
@@ -298,6 +298,7 @@ export function ConsentPurposesCard() {
           open={adding}
           onClose={() => setAdding(false)}
           labelledBy={addTitleId}
+          intent="form"
         >
           <Heading size="large" id={addTitleId} className="t-h2 modal-title">
             {t("privacy.addPurpose")}
@@ -354,6 +355,7 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const [subjectRef, setSubjectRef] = useState("");
   const [contact, setContact] = useState<RecordPickerCandidate | null>(null);
   const [dueAt, setDueAt] = useState("");
+  const formId = useId();
   // The statutory deadline is minted in the OPERATOR's own zone, the same
   // zone the row later renders it back in (PrivacyInboxCard's tz below) —
   // `new Date(dueAt).toISOString()` would instead read the date-only input
@@ -402,81 +404,93 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
     dismissCreateError();
   }
 
+  const ready = subjectRef.trim() !== "" && dueAt !== "";
   return (
-    <div className="form-stack">
-      <Field label={t("privacy.kind")}>
-        {(control) => (
-          <Select
-            {...control}
-            options={DSR_KINDS.map((value) => ({
-              value,
-              label: humanizeToken(value),
-            }))}
-            value={kind}
-            onChange={(value) => {
-              if (isOption(value, DSR_KINDS)) changeKind(value);
-            }}
-          />
-        )}
-      </Field>
+    <>
+      <form
+        id={formId}
+        className="form-stack"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (ready && !create.isPending) create.mutate();
+        }}
+      >
+        <Field label={t("privacy.kind")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={DSR_KINDS.map((value) => ({
+                value,
+                label: humanizeToken(value),
+              }))}
+              value={kind}
+              onChange={(value) => {
+                if (isOption(value, DSR_KINDS)) changeKind(value);
+              }}
+            />
+          )}
+        </Field>
 
-      {kind === "erasure" ? (
-        <div className="field">
-          <span className="t-label">{t("privacy.contact")}</span>
-          <RecordPicker
-            label={t("privacy.contact")}
-            searchTargets={searchContactCandidates}
-            selected={contact}
-            onPick={(candidate) => {
-              setContact(candidate);
-              setSubjectRef(candidate.id);
-              dismissCreateError();
-            }}
-          />
-          <p className="t-caption">{t("privacy.erasureNeedsContact")}</p>
-        </div>
-      ) : (
-        <Field
-          label={t("privacy.subjectRef")}
-          hint={kind === "access" ? t("privacy.accessManual") : undefined}
-        >
+        {kind === "erasure" ? (
+          <div className="field">
+            <span className="t-label">{t("privacy.contact")}</span>
+            <RecordPicker
+              label={t("privacy.contact")}
+              searchTargets={searchContactCandidates}
+              selected={contact}
+              onPick={(candidate) => {
+                setContact(candidate);
+                setSubjectRef(candidate.id);
+                dismissCreateError();
+              }}
+            />
+            <p className="t-caption">{t("privacy.erasureNeedsContact")}</p>
+          </div>
+        ) : (
+          <Field
+            label={t("privacy.subjectRef")}
+            hint={kind === "access" ? t("privacy.accessManual") : undefined}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                value={subjectRef}
+                onChange={(event) => {
+                  setSubjectRef(event.target.value);
+                  dismissCreateError();
+                }}
+              />
+            )}
+          </Field>
+        )}
+
+        <Field label={t("privacy.dueAt")}>
           {(control) => (
             <TextInput
               {...control}
-              value={subjectRef}
+              type="date"
+              value={dueAt}
               onChange={(event) => {
-                setSubjectRef(event.target.value);
+                setDueAt(event.target.value);
                 dismissCreateError();
               }}
             />
           )}
         </Field>
-      )}
 
-      <Field label={t("privacy.dueAt")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            type="date"
-            value={dueAt}
-            onChange={(event) => {
-              setDueAt(event.target.value);
-              dismissCreateError();
-            }}
-          />
-        )}
-      </Field>
-
-      <ErrorLine error={create.error} />
-
-      <Button
-        variant="primary"
-        disabled={!subjectRef.trim() || !dueAt || create.isPending}
-        onClick={() => create.mutate()}
-      >
-        {t("privacy.openRequest")}
-      </Button>
-    </div>
+        <ErrorLine error={create.error} />
+      </form>
+      <div className="actions">
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={!ready || create.isPending}
+        >
+          {t("privacy.openRequest")}
+        </Button>
+      </div>
+    </>
   );
 }
 
@@ -503,19 +517,15 @@ function transitionLabelKey(status: DsrStatus): MessageKey {
   return "privacy.reject";
 }
 
-// Who a request can be assigned to, led by the unassigned entry. That entry
-// is DISABLED but still an option rather than the placeholder: the server's
-// update coalesces an omitted assignee onto the stored one, so an empty
-// selection could not unassign anybody, and an entry a reader can aim at has
-// to be able to change something. It stays in the list because it is the
-// face an unassigned request shows. The em dash carries no words to translate.
+// Who a request can be assigned to, led by the unassigned entry. That entry is
+// a DISABLED option: the server coalesces an omitted assignee onto the stored
+// one, so no selection could unassign anybody, yet the state must stay legible.
 //
-// `current` is the request's own assignee when nobody this list offers holds
-// their id — deactivated, gone, or an agent seat this picker withholds.
-// Without it the select's value matches no option and paints as unassigned: a
-// DPO would read an assigned erasure request as free and reassign it off the
-// holder with a statutory clock running. It leads the list for the same
-// reason the unassigned entry does.
+// `current` is the request's own assignee when this list does not offer them
+// (deactivated, past the walk's bound, or a withheld agent seat). Without it the
+// select paints the unassigned em dash, and a DPO would reassign an erasure
+// request off its holder with a statutory clock running. It leads the list
+// because it is the state the field is in.
 function assigneeOptions(
   users: readonly User[],
   current: SelectOption | null,
@@ -563,13 +573,6 @@ function unofferedAssignee(
   };
 }
 
-// One DSR row: collapsed summary + (on click) the case-work panel — subject,
-// assignee, resolution, and only the transitions the server's closed status
-// machine (consent/dsr.go:58-61) would actually accept. Which row is open is
-// the CARD's state, not this row's own — a queue keeps every sibling row and
-// the facet bar visible while one case is worked, so `expanded` and its
-// toggle arrive as props; useRoster only fetches the workspace roster while
-// THIS row is the open one, not for every row on the page.
 /**
  * The verbs that move one request through its statuses.
  *
@@ -619,6 +622,9 @@ function DsrTransitions({
   );
 }
 
+// One DSR row: a summary that opens the case-work panel. Which row is open is
+// the CARD's state, because a queue keeps sibling rows visible while one case
+// is worked; `expanded` arrives as a prop, and only that row reads the roster.
 function DsrRow({
   dsr,
   expanded,
@@ -966,7 +972,7 @@ function FulfilErasureModal({
       returnFocusTo={returnFocusTo}
     >
       <p>{t("privacy.erasureIrreversible")}</p>
-      <Field className="dsr-erase-field" label={t("privacy.typeErase")}>
+      <Field label={t("privacy.typeErase")}>
         {(control) => (
           <TextInput
             {...control}
@@ -1137,16 +1143,9 @@ export function PrivacyInboxCard() {
   return (
     <Panel
       title={t("settings.privacy")}
-      // The verb rides in the header, above a queue that is as long as the queue
-      // is: as a row it moved every time a request arrived, and its label was
-      // the button's own words repeated. Opening a request is a kind, a subject
-      // and a statutory deadline committed together, so the header keeps the
-      // verb and the dialog keeps the form.
-      // Opening a request is a POST that asks for `contact:update`
-      // (consent/dsr.go CreateDSR) — a DIFFERENT object from the one that
-      // opened this queue, because recording a subject request writes the
-      // contact it names. A reader delegated only the inbox was offered the
-      // verb and refused it.
+      // The verb rides in the header so it stays put above a growing queue.
+      // Opening a request asks for `contact:update` (consent/dsr.go CreateDSR),
+      // not the inbox's grant: recording a request writes the contact it names.
       titleAction={
         !canOpenRequest ? null : (
           <Button onClick={() => setCreating(true)}>
@@ -1193,6 +1192,7 @@ export function PrivacyInboxCard() {
             open={creating}
             onClose={() => setCreating(false)}
             labelledBy={createTitleId}
+            intent="form"
           >
             <Heading
               size="large"

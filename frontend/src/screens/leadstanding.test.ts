@@ -55,44 +55,25 @@ describe("leadStanding", () => {
     );
   });
 
-  it("is our move on an unanswered lead, as loud as the first-response clock", () => {
-    const breached = leadStanding(
-      lead({ sla_state: "breached", sla_deadline_at: "2026-08-19T08:14:00Z" }),
-      t,
-      "en",
-      zone,
-    );
-    expect(breached.label).toBe("lead.standing.yourMove");
-    expect(breached.tone).toBe("danger");
-    expect(breached.because).toContain("lead.standing.overdueSince");
-
-    const soon = leadStanding(
-      lead({ sla_state: "at_risk", sla_deadline_at: "2026-08-19T08:14:00Z" }),
-      t,
-      "en",
-      zone,
-    );
-    expect(soon.tone).toBe("warning");
-    expect(soon.because).toContain("lead.standing.dueBy");
-  });
-
-  it("carries no alarm when the installation runs no first-response clock", () => {
-    const standing = leadStanding(lead({}), t, "en", zone);
-    expect(standing.label).toBe("lead.standing.yourMove");
-    expect(standing.tone).toBe("accent");
-    expect(standing.because).toBe("lead.standing.noResponse");
-  });
-
-  it("reads a deadline the server has not judged as no clock at all", () => {
-    const standing = leadStanding(
-      lead({ sla_deadline_at: "2026-08-19T08:14:00Z" }),
-      t,
-      "en",
-      zone,
-    );
-    expect(standing.tone).toBe("accent");
-    expect(standing.because).toBe("lead.standing.noResponse");
-  });
+  it.each(["manual", "import", "webform"])(
+    "reports the recorded status of an unanswered %s lead without claiming a reply is owed",
+    (source) => {
+      const standing = leadStanding(
+        lead({
+          source,
+          sla_state: "breached",
+          sla_deadline_at: "2026-08-19T08:14:00Z",
+        }),
+        t,
+        "en",
+        zone,
+      );
+      expect(standing.label).toBe("lead.status.new");
+      expect(standing.tone).toBe("unknown");
+      expect(standing.because).toBe("lead.standing.noResponse");
+      expect(standing.restsOn.map((r) => r.key)).toEqual(["status"]);
+    },
+  );
 
   it("is their move once we answered, and in motion once they engaged", () => {
     const answered = leadStanding(

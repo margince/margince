@@ -19,6 +19,7 @@ package aicert_test
 // and a ladder rewritten in tasks_gen.go re-attributes every row.
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // aiCertPresetDir is config/presets/ as this package reaches it, and
@@ -89,6 +91,9 @@ type aiCertPresetTask struct {
 	Passed               int `json:"passed"`
 	CasesFailingOften    int `json:"cases_failing_often"`
 	CasesBelowQualityBar int `json:"cases_below_quality_bar"`
+	// MeasuredOn is the binding whose record grades this rung when it is not
+	// the rung's own (aicert.MeasuredAs), so the page can say so.
+	MeasuredOn *aiCertBindingRef `json:"measured_on,omitempty"`
 	// record is the measuring record, which grades a rung only where
 	// aicert.RecordMeasures says it measured that rung.
 	record aicert.Record
@@ -104,6 +109,9 @@ type aiCertFallback struct {
 	SameModel bool   `json:"same_model"`
 	Band      string `json:"band"`
 	State     string `json:"state"`
+	// MeasuredOn is as on aiCertPresetTask: the binding whose record grades
+	// this rung when it is not the rung's own.
+	MeasuredOn *aiCertBindingRef `json:"measured_on,omitempty"`
 }
 
 // loadAICertPresets reads every preset in the directory through the same
@@ -194,7 +202,8 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 	}
 	first := rungs[0]
 	row.Tier, row.Model = string(first.Tier), presetBindingRef(first.Binding, preset.Profile)
-	if seen, ok := measuredOn(task, first.Binding, row.Model, measured); ok {
+	if seen, on, ok := measuredOn(task, first.Binding, row.Model, measured); ok {
+		row.MeasuredOn = on
 		row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
 		row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
 		row.Abandoned = seen.Abandoned
@@ -205,23 +214,33 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 			Tier: string(next.Tier), Model: presetBindingRef(next.Binding, preset.Profile),
 			SameModel: next.Binding.Provider == first.Binding.Provider && next.Binding.Model == first.Binding.Model,
 		}
-		if seen, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
-			row.Fallback.Band, row.Fallback.State = seen.Band, seen.State
+		if seen, on, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
+			row.Fallback.Band, row.Fallback.State, row.Fallback.MeasuredOn = seen.Band, seen.State, on
 		}
 	}
 	return row
 }
 
 // measuredOn is the record that grades a rung, by the rule the runner's
-// STALE_ONLY skip and the readiness report read too (aicert.RecordMeasures).
+// STALE_ONLY skip and the readiness report read too (aicert.RecordMeasures):
+// the rung's own record, else the one aicert.MeasuredAs names, which it
+// returns so the page can say where the grade was measured.
 func measuredOn(task string, binding ai.ProviderConfig, ref aiCertBindingRef,
 	measured map[string]aiCertPresetTask,
-) (aiCertPresetTask, bool) {
-	seen, ok := measured[aiCertRouteKey(task, ref)]
-	if !ok || !aicert.RecordMeasures(seen.record, binding, ai.Profile(ref.Env), ai.Task(task)) {
-		return aiCertPresetTask{}, false
+) (aiCertPresetTask, *aiCertBindingRef, bool) {
+	if seen, ok := measured[aiCertRouteKey(task, ref)]; ok && aicert.RecordMeasures(seen.record, binding, ai.Profile(ref.Env), ai.Task(task)) {
+		return seen, nil, true
 	}
-	return seen, true
+	as, env := aicert.MeasuredAs(binding, ai.Profile(ref.Env))
+	if as.Provider == binding.Provider {
+		return aiCertPresetTask{}, nil, false
+	}
+	on := presetBindingRef(as, string(env))
+	seen, ok := measured[aiCertRouteKey(task, on)]
+	if !ok || !aicert.RecordMeasures(seen.record, binding, ai.Profile(ref.Env), ai.Task(task)) {
+		return aiCertPresetTask{}, nil, false
+	}
+	return seen, &on, true
 }
 
 func presetBindingRef(binding ai.ProviderConfig, profile string) aiCertBindingRef {
@@ -360,13 +379,80 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 		if p.Unrecognised > 0 {
 			t.Errorf("preset %s carries %d row(s) whose band this rollup has no column for", p.File, p.Unrecognised)
 		}
-		// PER PRESET, not summed across them. A total hides the failure this
-		// asks about: attribution keys a preset's profile against a record's
-		// env, so one typo'd `profile:` turns that preset entirely `untested`
-		// while every other preset keeps the sum comfortably positive.
-		if measured := p.Bands.Certified + p.Bands.SupportedDegraded + p.Bands.NotSupported; measured == 0 {
-			t.Errorf("preset %s reaches no measured band at all — every task reads untested or unbound, "+
-				"which is a claim about the product if true and a broken join if not", p.File)
+	}
+	for _, problem := range unmeasuredPresetProblems(t, presets, aiCertRecordedModels(doc), aiCertUnmeasuredWaivers) {
+		t.Error(problem)
+	}
+	aiCertUnmeasuredWaivers.AssertAllMatched(t)
+}
+
+// aiCertUnmeasuredWaivers names the presets allowed to reach no measured band,
+// each with why. An entry is stale once its preset is measured or gone
+// (AssertAllMatched), or once any record measures one of its models.
+var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{})
+
+// unmeasuredPresetProblems asks, PER PRESET and not summed across them,
+// whether each reaches a measured band. A total hides the failure this asks
+// about: attribution keys a preset's profile against a record's env, so one
+// typo'd `profile:` turns that preset entirely `untested` while every other
+// preset keeps the sum comfortably positive.
+func unmeasuredPresetProblems(t testing.TB, presets []aiCertPreset, recorded map[string]bool, waivers *gatekit.Waivers[string]) []string {
+	var problems []string
+	for _, p := range presets {
+		if p.Bands.Certified+p.Bands.SupportedDegraded+p.Bands.NotSupported > 0 {
+			continue
+		}
+		switch {
+		case !waivers.Waived(t, p.File):
+			problems = append(problems, fmt.Sprintf("preset %s reaches no measured band at all — every task reads untested or unbound, "+
+				"which is a claim about the product if true and a broken join if not", p.File))
+		case bindsAMeasuredModel(p, recorded):
+			problems = append(problems, fmt.Sprintf("preset %s is waived as unmeasured, but a record measures one of its models, "+
+				"so its zero is a broken join — fix the attribution, then delete its entry from aiCertUnmeasuredWaivers", p.File))
+		}
+	}
+	return problems
+}
+
+// aiCertRecordedModels answers whether some record measured a provider and
+// model, under any profile.
+func aiCertRecordedModels(doc aiCertDoc) map[string]bool {
+	recorded := map[string]bool{}
+	for _, site := range doc.Sites {
+		for _, rec := range site.Records {
+			recorded[rec.Binding.Provider+"\x00"+rec.Binding.Model] = true
+		}
+	}
+	return recorded
+}
+
+func bindsAMeasuredModel(p aiCertPreset, recorded map[string]bool) bool {
+	for _, tier := range p.Tiers {
+		if recorded[tier.Provider+"\x00"+tier.Model] {
+			return true
+		}
+	}
+	return false
+}
+
+func TestAnUnmeasuredPresetFailsUnlessWaivedAndItsWaiverFailsOnceARecordExists(t *testing.T) {
+	t.Parallel()
+	unmeasured := aiCertPreset{File: "fresh.yaml", Tiers: []aiCertPresetTier{{Tier: "premium", Provider: "p", Model: "m"}}}
+	for name, tc := range map[string]struct {
+		recorded map[string]bool
+		waivers  map[string]string
+		want     string
+	}{
+		"unwaived": {map[string]bool{}, map[string]string{}, "reaches no measured band"},
+		"stale":    {map[string]bool{"p\x00m": true}, map[string]string{"fresh.yaml": "no certification run has been paid for its models yet"}, "broken join"},
+		"current":  {map[string]bool{"other\x00m": true}, map[string]string{"fresh.yaml": "no certification run has been paid for its models yet"}, ""},
+	} {
+		problems := unmeasuredPresetProblems(t, []aiCertPreset{unmeasured}, tc.recorded, gatekit.Waive(tc.waivers))
+		switch {
+		case tc.want == "" && len(problems) != 0:
+			t.Errorf("%s: a current waiver still failed: %q", name, problems)
+		case tc.want != "" && (len(problems) != 1 || !strings.Contains(problems[0], tc.want)):
+			t.Errorf("%s: problems = %q, want exactly one saying %q", name, problems, tc.want)
 		}
 	}
 }
@@ -385,7 +471,11 @@ func assertAICertPresetsReadTheRecords(t *testing.T, presets []aiCertPreset, rec
 			if row.Band == "" {
 				continue
 			}
-			key := row.Task + "/" + row.Model.Provider + "/" + row.Model.Model + "/" + row.Model.Env
+			graded := row.Model
+			if row.MeasuredOn != nil {
+				graded = *row.MeasuredOn
+			}
+			key := row.Task + "/" + graded.Provider + "/" + graded.Model + "/" + graded.Env
 			rec, found := byKey[key]
 			switch {
 			case !found:
@@ -532,7 +622,7 @@ func TestAPresetRowNamesTheModelThatAnswersAndTheOneAFailedCallFallsTo(t *testin
 			"a fallback binding the same model",
 			map[ai.Tier]ai.ProviderConfig{first: cheap, next: cheap},
 			[]aicert.Record{cheapRecord},
-			"cheap-1 · " + string(first) + " → " + string(next) + " is the same model, so no separate fallback",
+			"cheap-1 · " + string(first) + " · no separate fallback",
 		},
 		{
 			"no further bound rung",
@@ -563,6 +653,24 @@ func TestAPresetRowNamesTheModelThatAnswersAndTheOneAFailedCallFallsTo(t *testin
 				t.Errorf("grade cell = %q, want the grade with the route line under it", cell)
 			}
 		})
+	}
+}
+
+// A Vertex fallback graded by the AI Studio record for its model says so on its
+// route line, as a borrowed first rung does in the measurement table.
+func TestABorrowedFallbackGradeSaysWhereItWasMeasured(t *testing.T) {
+	task := ai.TaskSummarize
+	ladder := ai.TaskLadder(task)
+	first, next := ladder[0], ladder[1]
+	cheap := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/cheap-1"}
+	vertex := ai.ProviderConfig{Provider: "gemini_vertex", Location: "eu", Model: "gemini-3.5-flash"}
+	studio := ai.ProviderConfig{Provider: "gemini", Model: vertex.Model}
+	row := attributeOneTask(task, ai.ProfileEUHosted, map[ai.Tier]ai.ProviderConfig{first: cheap, next: vertex},
+		measuredRecord(task, cheap, ai.ProfileEUHosted, aicert.VerdictCertified, 0),
+		measuredRecord(task, studio, ai.ProfileCloudFrontier, aicert.VerdictCertified, 0)).Tasks[0]
+	want := "cheap-1 · " + string(first) + " → gemini-3.5-flash, " + aiCertReady + ", measured on `gemini`"
+	if got := aiCertRouteLine(row); got != want {
+		t.Errorf("route line = %q\nwant         %q", got, want)
 	}
 }
 

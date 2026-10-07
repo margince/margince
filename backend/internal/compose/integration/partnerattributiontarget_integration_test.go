@@ -121,7 +121,7 @@ func TestMergingAPartnerLeavesItsDealsNamingAPartner(t *testing.T) {
 		t.Fatalf("attributing the deal to the source partner: %v", err)
 	}
 
-	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
+	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target), nil); err != nil {
 		t.Fatalf("merging the partner into the plain company: %v", err)
 	}
 

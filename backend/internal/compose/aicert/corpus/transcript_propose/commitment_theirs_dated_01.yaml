@@ -1,0 +1,27 @@
+name: customer_promises_data_in_the_meeting
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+commitment_band: firm
+fixture:
+  - 'Lars: To price the Graz scope I need your monthly pallet volumes.'
+  - 'Ines: Understood. I will send you the monthly pallet volumes on 2026-03-11.'
+  - 'Lars: Perfect, thank you.'
+  - 'Ines: Anything else you need from us?'
+  - 'Lars: That is all.'
+expect:
+  outcome: accepted
+  answer:
+    - line: 2
+  rubric: >
+    The customer makes one dated promise: sending the monthly pallet volumes on
+    2026-03-11, cited on line 2 and owned by Ines. A promise by the other side
+    is as much a next step as ours, and it is stated as plainly. Proposing
+    anything from the lines that only acknowledge it is wrong. Score the
+    confidence as a real judgement, the due date as the one the transcript
+    states, and the summary as one plain sentence a colleague could act on.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

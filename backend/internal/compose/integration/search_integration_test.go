@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -53,11 +54,25 @@ func TestSearchHonorsObjectRBAC(t *testing.T) {
 	if len(page.Hits) != 1 || page.Hits[0].Type != "company" {
 		t.Fatalf("object RBAC leaked into search: %+v", page.Hits)
 	}
+	// A grouped page reserves room for every type, and a denied one still gets none.
+	perType := 5
+	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Hits) != 1 || page.Hits[0].Type != "company" {
+		t.Fatalf("object RBAC leaked into a grouped search: %+v", page.Hits)
+	}
 	// Explicitly requesting only the denied type answers an empty page,
 	// not an error — nothing to disclose.
 	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", Types: []string{"contact"}})
 	if err != nil || len(page.Hits) != 0 {
 		t.Fatalf("denied-type search → %v %+v, want an empty page", err, page.Hits)
+	}
+	// Grouped, the same refusal is still a grouped page: empty, cutting nothing.
+	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", Types: []string{"contact"}, PerType: &perType})
+	if err != nil || len(page.Hits) != 0 || page.TypesWithMore == nil || len(page.TypesWithMore) != 0 {
+		t.Fatalf("denied-type grouped search → %v %+v, want an empty grouped page", err, page)
 	}
 }
 
@@ -92,6 +107,109 @@ func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 	// above single-mention rows.
 	if page.Hits[0].Type != "activity" {
 		t.Errorf("rank order ignores term frequency: top hit %+v", page.Hits[0])
+	}
+}
+
+// An account's name is one word in one field; a note about it repeats the
+// word, so ranked across types three notes fill a page of three and the
+// account is not on it. Grouped, every type that matched is.
+func TestAGroupedSearchShowsTheAccountThatNotesNamingItOutrank(t *testing.T) {
+	e := SetupSearch(t)
+	account := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Lubeck Shipping', 'manual', 'human:x')`)
+	// Each note repeats the name once more than the last, so the four rank apart.
+	// The statement fetches one past the cap of two, so it must choose: the
+	// strongest two are kept and the weaker ones are never on the page.
+	notes := make([]ids.UUID, 4)
+	for i := range notes {
+		notes[i] = e.SeedID(t, fmt.Sprintf(`INSERT INTO activity (id, kind, subject, body, source, captured_by)
+			VALUES ($1, 'note', 'Lubeck renewal %d', '%s', 'manual', 'human:x')`, i, strings.Repeat("Lubeck terms again. ", i+1)))
+	}
+
+	ranked, err := e.Store.Search(e.Admin(), search.Input{Query: "lubeck", Limit: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasType(ranked.Hits, "company") {
+		t.Fatalf("the ranked page already carries the account, so this proves nothing: %+v", ranked.Hits)
+	}
+
+	perType := 2
+	grouped, err := e.Store.Search(e.Admin(), search.Input{Query: "lubeck", PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var companies, kept []ids.UUID
+	for _, hit := range grouped.Hits {
+		switch hit.Type {
+		case "activity":
+			kept = append(kept, hit.ID)
+		case "company":
+			companies = append(companies, hit.ID)
+		}
+	}
+	if len(companies) != 1 || companies[0] != account || len(kept) != 2 || len(grouped.Hits) != 3 {
+		t.Fatalf("grouped page = %+v, want the account and two of the four notes", grouped.Hits)
+	}
+	// The statement's own order decides which notes the cap keeps: the best.
+	if !slices.Contains(kept, notes[3]) || !slices.Contains(kept, notes[2]) {
+		t.Fatalf("the grouped page kept %v, want the two strongest notes %s and %s", kept, notes[3], notes[2])
+	}
+	if len(grouped.TypesWithMore) != 1 || grouped.TypesWithMore[0] != "activity" {
+		t.Fatalf("TypesWithMore = %v, want [activity]: two notes were left out", grouped.TypesWithMore)
+	}
+}
+
+// "philip" is still being typed, so it matches as a prefix and reaches every
+// Philipp too. The one contact named Philip is seeded last, so his id sorts
+// last and a tie broken by id alone would leave him off a page of three.
+func TestAnExactNameOutranksLongerNamesSharingItsPrefix(t *testing.T) {
+	e := SetupSearch(t)
+	var seeded []ids.UUID
+	for _, name := range []string{"Philipp Adler", "Philipp Brandt", "Jan Philipp Claes", "Philip Dorn"} {
+		seeded = append(seeded, e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name))
+	}
+	philip := seeded[len(seeded)-1]
+	if !slices.IsSortedFunc(seeded, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) }) {
+		t.Fatalf("the ids %v do not sort in seeding order, so an id tie-break would not drop Philip Dorn", seeded)
+	}
+
+	perType := 3
+	grouped, err := e.Store.Search(e.Admin(), search.Input{Query: "philip", Types: []string{"contact"}, PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(grouped.Hits) != 3 || grouped.Hits[0].ID != philip {
+		t.Fatalf("grouped page = %+v, want Philip Dorn first of three", grouped.Hits)
+	}
+
+	ranked, err := e.Store.Search(e.Admin(), search.Input{Query: "philip", Types: []string{"contact"}, Limit: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ranked.Hits) != 3 || ranked.Hits[0].ID != philip {
+		t.Fatalf("ranked page = %+v, want Philip Dorn first of three", ranked.Hits)
+	}
+}
+
+// English notes stem "study" and "studies" alike, so both match "study"; only
+// one carries the word itself, and it leads although the other repeats its own
+// in the subject as well as the body, which ranks it higher.
+func TestAWholeWordOutranksAWordSharingOnlyItsStem(t *testing.T) {
+	e := SetupSearch(t)
+	literal := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
+		VALUES ($1, 'note', 'Kickoff', 'We agreed on a pilot study.', 'en', 'manual', 'human:x')`)
+	stemmed := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
+		VALUES ($1, 'note', 'Case studies', 'More studies, studies and studies.', 'en', 'manual', 'human:x')`)
+
+	page, err := e.Store.Search(e.Admin(), search.Input{Query: "study", Types: []string{"activity"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Hits) != 2 || page.Hits[1].ID != stemmed {
+		t.Fatalf("hits = %+v, want both notes, the one saying only \"studies\" second", page.Hits)
+	}
+	if page.Hits[0].ID != literal {
+		t.Fatalf("hits = %+v, want the note saying \"study\" first", page.Hits)
 	}
 }
 
@@ -512,7 +630,7 @@ func TestTheSearchCeilingStillServesAnOrdinarySearch(t *testing.T) {
 func callSearch(t *testing.T, e *SearchEnv, budget time.Duration, q string) (int, string) {
 	t.Helper()
 	db := database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)).Bounded(budget)
-	h := search.NewHandlers(db, nil, nil, nil)
+	h := search.NewHandlers(db, nil, nil, nil, nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/search?q="+q, nil).WithContext(searchAs(e))
 	h.Search(rec, req, crmcontracts.SearchParams{Q: q})

@@ -47,6 +47,7 @@ import {
   type ChosenFile,
   useCarriageBlocks,
 } from "./composeattachments";
+import { ConversationFold } from "./composeconversation";
 import { DraftBand, RewriteRow } from "./composedraftband";
 import {
   AccountDraftContext,
@@ -62,6 +63,7 @@ import {
 } from "./composehead";
 import { deadRecipientsAmong } from "./composereachability";
 import { RELINK_KINDS, type RelinkKind, RelinkModal } from "./composerelink";
+import { useReplyRecipient } from "./composereplyrecipient";
 import {
   type SavedDraftFields,
   SavedDraftNotices,
@@ -73,6 +75,7 @@ import {
   ScheduleDialog,
   ScheduleMenu,
 } from "./composeschedule";
+import { SignOffPreview } from "./composesignoff";
 import {
   ConversationChoices,
   ThreadPane,
@@ -239,47 +242,6 @@ function ProjectFiling({
       onChange={onChange}
     />
   );
-}
-
-/**
- * Who a reply to this anchor goes to, resolved without drafting.
- *
- * Sending REQUIRES `to`, so an empty field is not a convenience gap: it is a
- * reply the reader must address by hand against a record that already holds
- * the answer. The server ranks the message's participants — its sender before
- * anyone copied on it — and this asks that same resolution the draft uses, so
- * what the composer shows on open and what a draft fills in cannot disagree.
- *
- * Undefined while unsettled and for a contact with no address on record. The
- * caller only ever fills an EMPTY field from it, so a reader who typed their
- * own recipient keeps it.
- */
-function useReplyRecipient(anchor: string | undefined): {
-  address: string | undefined;
-  mailboxes: string[] | undefined;
-} {
-  const query = useQuery({
-    queryKey: ["compose-reply-recipient", anchor],
-    queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/activities/{id}/reply-recipient",
-        { params: { path: { id: anchor ?? "" } } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    enabled: anchor !== undefined,
-  });
-  return {
-    address: query.data?.address === "" ? undefined : query.data?.address,
-    // Undefined until this ANCHOR's own answer arrives — the query is keyed on
-    // it, so a previous thread's settled answer is never served here. That
-    // matters: undefined means "not answered yet", which is a different fact
-    // from an empty list, and only the empty list says nobody's mailbox.
-    mailboxes: query.data?.mailbox_user_ids,
-  };
 }
 
 /**
@@ -1422,11 +1384,11 @@ export function ComposeModal({
   // A shut composer asks for nothing it does not share with the page behind it.
   const voiceProfile = useVoiceProfile(open);
   const bodyId = useId();
-  // WHICH WAY THIS IS GOING, when the record offers more than one. The caller's
-  // opening choice stands until the reader turns the dial; an empty selection
-  // resolves to the record's lead rather than being seeded, so reachability that
-  // arrives after the first render is not stuck behind what existed before it.
-  const [transportId, setTransportId] = useState(initialTransportId ?? "");
+  // WHICH WAY THIS IS GOING: each opening starts on the caller's choice, never on
+  // the last opening's dial; an empty one resolves to the record's lead.
+  const [dial, setDial] = useState({ open, id: initialTransportId ?? "" });
+  const transportId = open && !dial.open ? (initialTransportId ?? "") : dial.id;
+  if (dial.open !== open) setDial({ open, id: transportId });
   const transport =
     transports.find((option) => option.id === transportId) ??
     transports.find((option) => option.id === initialTransportId) ??
@@ -1673,8 +1635,8 @@ export function ComposeModal({
   const anchorRead = useThreadProject(answering, open);
   const anchorActivity = anchorRead.activity;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
-  // An anchor named but not yet read. The pane holds its place on this, so
-  // the drawer does not open narrow and snap wide when the read answers. A
+  // An anchor named but not yet read. The column holds its place on this
+  // rather than arriving under the reader when the read answers. A
   // read that FAILED is not one still arriving: the pane lets go, and the
   // composer keeps answering the anchor it was given without drawing it.
   const anchorUnresolved =
@@ -1724,13 +1686,11 @@ export function ComposeModal({
   // composer there means — the account path asked them to name a recipient the
   // thread already knows, in front of a To field the draft would have filled.
   const groundable = !answering && entityType === "company" && !isChannelReply;
-  // What SHAPE the composer takes, split from what it GROUNDS. One flag used to
-  // answer both, so a reply inherited the account path's box — and an account
-  // that had mail lost the drawer that path was given. The shape is every
-  // record's, not the account's: a mail written from a contact, lead or deal
-  // keeps that record on screen beside it just as an account's does, so the
-  // same verb cannot change shape with the page it was pressed on.
-  const asDrawer = !isChannelReply;
+  // Shaped by the transport this opening began on; the dial never reshapes it.
+  const openedOn = useRef(transport);
+  if (!open || !dial.open || !openedOn.current) openedOn.current = transport;
+  const asDrawer =
+    kind !== "message" && (openedOn.current?.id ?? "email") === "email";
   // The conversation rides beside the form only where there IS one and there is
   // room for a second column. A channel reply answers a live conversation the
   // provider owns, and has no thread of its own to draw.
@@ -1747,7 +1707,7 @@ export function ComposeModal({
   // resolves to a filed note collapses the column then — the one case that
   // still changes shape, and the honest one.
   const showConversation =
-    asDrawer &&
+    !isChannelReply &&
     ((answeringCorrespondence &&
       (conversation.messages.length > 0 ||
         conversation.pending ||
@@ -1757,9 +1717,7 @@ export function ComposeModal({
   // The ways in, when the reader has not taken one. Nothing to offer is not a
   // column: an account with no mail gets the plain drawer it had before.
   // While the lookup is still out, the column holds its place with the
-  // pending body — decided by the answer, the drawer opened narrow and
-  // snapped wide a beat later, a shape change under a reader already aiming
-  // at a field.
+  // pending body rather than arriving under a reader aiming at a field.
   // A read that failed keeps the column too, with the failure and a retry in
   // it: collapsed, the composer would offer a fresh mail as though the record
   // had no history, which is the surprise the choices exist to prevent.
@@ -1852,7 +1810,7 @@ export function ComposeModal({
   // reader believes they are writing to and the send never uses.
   const changeTransport = (next: string) => {
     draftEpoch.current += 1;
-    setTransportId(next);
+    setDial({ open, id: next });
     setSubject("");
     setBody("");
     setHtml("");
@@ -2061,12 +2019,12 @@ export function ComposeModal({
       // dialog they just read promised "you can move it or take it back from
       // Scheduled messages", and nothing in the product went there.
       //
-      // The verb makes it sticky, which is what this needs and a plain
-      // confirmation does not: the door is the point, and a toast that withdrew
-      // itself after three and a half seconds would take the door with it.
+      // An `open` verb keeps the toast until dismissed: the door is the point,
+      // and a toast that withdrew itself would take the door with it.
       if (result.scheduled) {
         toast.show(t("compose.scheduledQueued"), {
           action: {
+            kind: "open",
             label: t("compose.scheduledOpenQueue"),
             onAct: () => navigate({ screen: SCHEDULED_SCREEN }),
           },
@@ -2359,20 +2317,9 @@ export function ComposeModal({
               : "compose.sendConfirmTitle",
         )}
         tier="confirm"
-        // The rep is about to send irreversibly, so the body they are
-        // confirming has to be readable at a glance rather than through a
-        // five-line porthole — and the Send button has to sit above the fold,
-        // not below a scroll. A reply takes the split width because it carries
-        // a second column: the conversation it is answering.
-        size={splitColumns ? "split" : "wide"}
-        // A DRAWER for every mail on an account, whether it starts a
-        // conversation or answers one, so the record it is about stays on
-        // screen beside it. It used to turn on `groundable`, which is false as
-        // soon as the account has earlier mail — so the same button gave a
-        // drawer on a quiet account and a centred box on a busy one, and an
-        // account whose first message was still loading changed shape under
-        // the reader mid-open.
-        placement={asDrawer ? "right" : "center"}
+        // A reading drawer for every mail: the record stays in view beside it,
+        // and the body reads at a glance before an irreversible send.
+        intent={asDrawer ? "drawer-reading" : "form"}
         confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
         // The button stays live with fields outstanding. Grey, it refused
         // without saying what for, and the reader was left comparing the form
@@ -2471,31 +2418,35 @@ export function ComposeModal({
           ref={fields}
           className={splitColumns ? "compose-split" : undefined}
         >
-          {showChoices && (
-            <ConversationChoices
-              conversations={recent.conversations}
-              pending={recent.pending}
-              failed={recent.failed}
-              onRetry={recent.retry}
-              onChoose={selectMessage}
-            />
-          )}
-          {showConversation && (
-            <ThreadPane
-              messages={conversation.messages}
-              pending={conversation.pending || anchorUnresolved}
-              failed={conversation.failed || anchorRead.failed}
-              onRetry={
-                anchorRead.failed ? anchorRead.retry : conversation.retry
-              }
-              viewerUserId={viewerId}
-              nameOf={nameOf}
-              named
-              onLeave={() => selectMessage(null)}
-              selectedId={answering}
-              onSelect={selectMessage}
-              disabled={send.isPending || rejectionInFlight}
-            />
+          {splitColumns && (
+            <ConversationFold choosing={showChoices}>
+              {showChoices && (
+                <ConversationChoices
+                  conversations={recent.conversations}
+                  pending={recent.pending}
+                  failed={recent.failed}
+                  onRetry={recent.retry}
+                  onChoose={selectMessage}
+                />
+              )}
+              {showConversation && (
+                <ThreadPane
+                  messages={conversation.messages}
+                  pending={conversation.pending || anchorUnresolved}
+                  failed={conversation.failed || anchorRead.failed}
+                  onRetry={
+                    anchorRead.failed ? anchorRead.retry : conversation.retry
+                  }
+                  viewerUserId={viewerId}
+                  nameOf={nameOf}
+                  named
+                  onLeave={() => selectMessage(null)}
+                  selectedId={answering}
+                  onSelect={selectMessage}
+                  disabled={send.isPending || rejectionInFlight}
+                />
+              )}
+            </ConversationFold>
           )}
           <div className="compose-fields">
             <SavedDraftNotices draft={savedDraft} />
@@ -2621,6 +2572,11 @@ export function ComposeModal({
               show={flagged.has("body")}
               need={t("compose.missingBody")}
             />
+            {/* The sign-off the send appends, under the words it closes. A
+                channel message carries none, so it shows none. */}
+            {open && !isChannelReply && (
+              <SignOffPreview body={body} subject={subject} />
+            )}
             {/* What travels WITH the message, under the words it is about —
             the order a mail client puts them in, and the order a rep writes
             in: the sentence about the offer, then the offer. Nothing at all

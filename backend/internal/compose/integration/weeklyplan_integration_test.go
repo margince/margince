@@ -20,6 +20,7 @@ package integration_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -498,5 +499,79 @@ func TestCorrectingACommitmentOnAClosedWeekIsRefused(t *testing.T) {
 	var parse *values.ParseError
 	if !errors.As(err, &parse) || parse.Code != "week_closed" {
 		t.Errorf("editing a closed week gave %v, wanted a week_closed refusal", err)
+	}
+}
+
+// Marking a commitment done twice is one fact, not two: a repeated click or a
+// retry must not move the time the rep finished it or file a change that did
+// not happen.
+func TestMarkingACommitmentDoneTwiceKeepsItsFinishTimeAndFilesOneAuditRow(t *testing.T) {
+	e := setupPlan(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	id := planCommitment(t, e, e.rep1Ctx, "finish the proposal")
+
+	const audits = `SELECT count(*) FROM audit_log
+	                 WHERE entity_type = 'weekly_plan_commitment' AND entity_id = $1
+	                   AND action = 'update'`
+	const finished = `SELECT completed_at FROM weekly_plan_commitment WHERE id = $1`
+
+	if err := e.store.SetState(e.rep1Ctx, id, weeklyplan.StateDone); err != nil {
+		t.Fatalf("first done: %v", err)
+	}
+	auditsAfterFirst := countRows(t, owner, ctx, audits, id)
+
+	// Backdated so the repeat cannot land on the same instant by luck.
+	if _, err := owner.Exec(ctx, `UPDATE weekly_plan_commitment SET completed_at = completed_at - interval '2 seconds' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	var first time.Time
+	if err := owner.QueryRow(ctx, finished, id).Scan(&first); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.store.SetState(e.rep1Ctx, id, weeklyplan.StateDone); err != nil {
+		t.Fatalf("repeated done: %v", err)
+	}
+	var second time.Time
+	if err := owner.QueryRow(ctx, finished, id).Scan(&second); err != nil {
+		t.Fatal(err)
+	}
+	if !second.Equal(first) {
+		t.Errorf("a repeated done moved completed_at from %s to %s", first, second)
+	}
+	if got := countRows(t, owner, ctx, audits, id) - auditsAfterFirst; got != 0 {
+		t.Errorf("a repeated done filed %d audit rows, wanted none", got)
+	}
+}
+
+// Presses that arrive together are still one fact: the repeat is judged against
+// the row as it stands once the lock is held, not as it read before it.
+func TestConcurrentDonePressesFileOneAuditRow(t *testing.T) {
+	e := setupPlan(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	id := planCommitment(t, e, e.rep1Ctx, "finish the proposal")
+
+	const presses = 12
+	var group sync.WaitGroup
+	start := make(chan struct{})
+	for range presses {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			<-start
+			if err := e.store.SetState(e.rep1Ctx, id, weeklyplan.StateDone); err != nil {
+				t.Errorf("done: %v", err)
+			}
+		}()
+	}
+	close(start)
+	group.Wait()
+
+	got := countRows(t, owner, ctx, `SELECT count(*) FROM audit_log
+	                 WHERE entity_type = 'weekly_plan_commitment' AND entity_id = $1
+	                   AND action = 'update'`, id)
+	if got != 1 {
+		t.Errorf("%d concurrent done presses filed %d audit rows, wanted 1", presses, got)
 	}
 }

@@ -5,7 +5,7 @@
 
 package gates
 
-// What belongs to the REPOSITORY, as against what happens to be in a working
+// What belongs to the repository, as against what happens to be in a working
 // tree.
 //
 // A gate that walks the filesystem judges whatever a checkout carries: a build

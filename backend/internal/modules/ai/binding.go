@@ -10,6 +10,9 @@ package ai
 // different lifetimes now that the second can change under the first.
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -48,6 +51,11 @@ type binding struct {
 	// into that digest would regenerate every stored brief in the installation
 	// through paid models on every key rotation.
 	credentialVersion string
+	// tierRouting is each broker tier's resolved routing, and sent memoizes
+	// the per-attempt snapshots built from it (snapshotFor). Both nil on a
+	// Router assembled without a RoutingConfig, which records configSnapshot.
+	tierRouting map[Tier]*OpenRouterRouting
+	sent        *sentSnapshots
 	// decisions is the bound decisions lane, nil when the config binds none —
 	// the state in which Decide is exactly CompleteStructured.
 	decisions *decisionLane
@@ -96,6 +104,7 @@ func (b binding) withConfig(cfg RoutingConfig, decisions *decisionLane) binding 
 	b.embedDims = embedDims
 	b.configSnapshot = newConfigSnapshot(cfg.sourceHash, embedDims)
 	b.configHash = b.configSnapshot.Hash
+	b.tierRouting, b.sent = brokerRouting(cfg), &sentSnapshots{}
 	b.credentialVersion = cfg.credentialVersion
 	return b
 }
@@ -128,8 +137,14 @@ func (r *Router) Rebind(cfg RoutingConfig) error {
 		clients: clients, embedder: embedder,
 		profile: cfg.Profile, routeMeta: embedInclusiveMeta(cfg),
 	}.withConfig(cfg, decisions)
+	replaced := r.binding().providers()
 	r.install(next)
 	r.cache.clear()
+	// The providers being left count too: one removed from routing while
+	// blocked would otherwise stay reported until the process restarts.
+	for _, provider := range append(cfg.providers(), replaced...) {
+		sharedProviderHealth.forget(provider)
+	}
 	return nil
 }
 
@@ -166,3 +181,12 @@ func (r *Router) CredentialVersion() string { return r.binding().credentialVersi
 // hash never matches — so a caller polling for change would rebind on every
 // tick and drop every cached completion each time.
 func (r *Router) RoutingVersion() string { return r.binding().configSnapshot.RoutingConfigHash }
+
+// providers names every provider this binding's tiers are bound to.
+func (b *binding) providers() []string {
+	seen := map[string]bool{}
+	for _, meta := range b.routeMeta {
+		seen[meta.provider] = true
+	}
+	return slices.Sorted(maps.Keys(seen))
+}

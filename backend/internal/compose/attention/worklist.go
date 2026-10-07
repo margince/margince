@@ -24,12 +24,6 @@ import (
 // worklistPage is how many ranked items one read carries by default.
 const worklistPage = 25
 
-// leadResponseBound is how many leads still owed a reply one read carries.
-// Passed through the interface so the reach figure reports the number actually
-// asked for: a source read to its bound says "more may exist" rather than a
-// total it does not know.
-const leadResponseBound = 50
-
 // worklistMaxPage is the ceiling the contract publishes. A larger ask is
 // clamped rather than refused: the number is a request for how much to draw,
 // and answering the most that can be drawn is more useful than an error.
@@ -115,7 +109,7 @@ func (s *Service) worklistIn(
 	// score — from one read of the brief lane. Both travel as values rather than
 	// on the service: feed.go's assembleDay states why a field there would carry
 	// one reader's night onto the next reader's page.
-	day, night, err := reader.assembleDay(ctx)
+	day, beside, err := reader.assembleDay(ctx)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -136,10 +130,6 @@ func (s *Service) worklistIn(
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
 	waiting, waitingErr := reader.waitingCustomers(ctx, day.AsOf)
-	// The same rule for the leads still owed a reply: read beside the day,
-	// under the ownership dial this read already resolved, so `mine` narrows
-	// in the store's own query rather than by dropping rows afterwards.
-	leads, leadsErr := reader.owedLeads(ctx)
 	// The NARROWED service, not the shared one. The narrowing happens twice on
 	// this path — once when the lanes are read, once when the assembled rows are
 	// kept — and both halves read the same taskOwner. Projecting through `s`
@@ -170,20 +160,21 @@ func (s *Service) worklistIn(
 	// so they cannot travel as an argument the way the findings do — and they
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
-	withPins = withPins.readingScores(night.scores, night.cutoff)
-	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
+	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
+	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	out := withPins.worklistFrom(
-		ctx, day, resolved, filter, limit, waiting, leads, cursor,
-		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr})
+		ctx, day, resolved, filter, limit, waiting, cursor,
+		append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, beside.failed...))
+	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	teamWeek := teamWeekFor(ctx)
 	out.TeamWeek = &teamWeek
-	if err := reader.nameWorklistRows(ctx, out.Queue, night.findings); err != nil {
+	if err := reader.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	if out.Focus != nil {
-		if err := reader.nameWorklistRows(ctx, out.Focus.Items, night.findings); err != nil {
+		if err := reader.nameWorklistRows(ctx, out.Focus.Items, beside.night.findings); err != nil {
 			return crmcontracts.Worklist{}, err
 		}
 	}
@@ -194,10 +185,10 @@ func (s *Service) worklistIn(
 // ranking, the paging and the summary without standing up every lane's reader.
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting waitingRead, leads leadRead, cursor worklistCursor,
-	// The refusals from the two sources read BESIDE the assembled day. They
+	waiting waitingRead, cursor worklistCursor,
+	// The refusals from the sources read BESIDE the assembled day. They
 	// arrive here rather than being appended to the finished page because the
-	// readings have to see them: a refused waiting or leads lane is exactly the
+	// readings have to see them: a refused waiting lane is exactly the
 	// case where a tally would otherwise print a confident zero.
 	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.Worklist {
@@ -211,7 +202,6 @@ func (s *Service) worklistFrom(
 	rows = append(rows, s.planRows...)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	rows = append(rows, waits...)
-	rows = append(rows, rankedLeads(leads, day.AsOf)...)
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
 	// the fold so the surviving row can inherit a score even where the night's
@@ -220,9 +210,6 @@ func (s *Service) worklistFrom(
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
-	// One late reply is one row, not three: the escalation's own task about a
-	// lead this queue already shows says nothing the lead row does not.
-	rows = dropEscalationTasksAlreadyOwed(rows)
 	// One CONTACT is one row. "Nobody has spoken to them in sixty days" and
 	// "they wrote last week and are waiting" are both true of the same contact
 	// and read as a contradiction side by side.
@@ -230,7 +217,7 @@ func (s *Service) worklistFrom(
 	// Order does not matter among these three, and it is worth saying why
 	// rather than leaving the next reader to work it out: each drops rows of a
 	// source none of the others READS. This one decides on the waiting rows,
-	// and the two above remove only `deal_at_risk` and `task` rows — so the set
+	// and the pass above removes only `deal_at_risk` rows — so the set
 	// it judges against is the same wherever it sits. A fourth pass that
 	// removed waiting rows would break that, and would have to run last.
 	rows = dropDecayAlreadyWaiting(rows)
@@ -259,24 +246,18 @@ func (s *Service) worklistFrom(
 	// again.
 	rows, rowNote := s.narrowToScope(ctx, rows, scope, s.taskOwner)
 	scoped := rowNote.merge(waitNote)
-	// The lead read's own bound, which boundedSources cannot see: it reads
-	// beside the assembled day rather than as one of its lanes, so the figure
-	// travels with the rows.
 	bounded := boundedSources(day)
-	// Recorded ONLY when the lane ran. reachOf emits a row for every key in
-	// this map, so writing false for a source that never read would publish a
-	// zero-valued reach entry — the page reporting a source as successfully
-	// read and empty, which is exactly the claim an untracked policy must not
-	// make.
-	if leads.read {
-		bounded[sourceLeadResponse] = leads.bounded()
-	}
 	// The same rule for the who-is-waiting source, and for the same reason it
 	// needed one: it is read beside the assembled day rather than as one of its
 	// lanes, so boundedSources never saw it and the page reported it complete
 	// however deep the scan had gone.
 	if waiting.read {
 		bounded[sourceWaiting] = waiting.cut
+	}
+	// A team's promises are read beside the day too, and a roster cut at its
+	// cap leaves teammates past it never asked.
+	if s.planCoverage != nil {
+		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
@@ -474,22 +455,4 @@ func (s *Service) rankedWaits(
 		return waits[i].occurredAt.Before(waits[j].occurredAt)
 	})
 	return s.narrowToScope(ctx, waits, scope, s.taskOwner)
-}
-
-// rankedLeads classifies the leads still owed a first reply, among everything
-// else rather than in a queue of their own.
-//
-// Longest overdue first. The ordering re-sorts every row on the page anyway, so
-// this decides nothing a reader sees — what it fixes is the order two leads
-// that tie on every ranking step arrive in, which is what keeps one read's page
-// equal to the next.
-func rankedLeads(leads leadRead, asOf time.Time) []ranked {
-	sort.SliceStable(leads.rows, func(i, j int) bool {
-		return leads.rows[i].DeadlineAt.Before(leads.rows[j].DeadlineAt)
-	})
-	out := make([]ranked, 0, len(leads.rows))
-	for _, lead := range leads.rows {
-		out = append(out, classifyLead(lead, asOf))
-	}
-	return out
 }

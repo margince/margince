@@ -257,12 +257,9 @@ describe("a list rule's form", () => {
               },
             },
           }}
-          titleId="t"
+          formId="automation"
           initialName="Add to a Shortlist"
-          submitLabel="Save"
-          pending={false}
           onSubmit={() => undefined}
-          onCancel={() => undefined}
         />
       </StoryProviders>,
     );

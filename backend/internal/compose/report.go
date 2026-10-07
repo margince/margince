@@ -400,6 +400,9 @@ func buildSelectList(spec reportSpec, groupBy []string, aggregates []reportAggre
 		selects = append(selects, sel)
 		columns = append(columns, name)
 	}
+	if name, dup := firstDuplicate(columns); dup {
+		return nil, nil, &DuplicateColumnError{Name: name}
+	}
 	if len(selects) == 0 {
 		// Its own refusal: nothing here is out of vocabulary, so the vocabulary
 		// error would name a field the caller never wrote.

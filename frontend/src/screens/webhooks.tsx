@@ -19,7 +19,7 @@ import {
   OverflowMenu,
   SectionHeader,
 } from "../design-system/atoms";
-import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
@@ -354,7 +354,7 @@ function SecretRevealModal({
   });
 
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="confirm">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("webhooks.secret.title")}
       </Heading>
@@ -362,16 +362,16 @@ function SecretRevealModal({
           secret and the copy attempt do not each set a margin of their own. */}
       <div className="form-stack">
         <p>{t("webhooks.secret.warning")}</p>
-        <pre className="code-block" data-testid="webhook-signing-secret">
-          {secret}
-        </pre>
+        <CopyableText
+          text={secret}
+          label={t("webhooks.secret.title")}
+          testId="webhook-signing-secret"
+        />
         {copy.notice}
       </div>
-      {/* Dismissing is what DESTROYS the only copy of the secret: it lives in
-          this component's state and is never re-derivable from any read. So
-          Copy is the primary act here and Done is the quiet one. Done stays
-          available before a copy — abandoning a subscription must be possible —
-          but the caution says in words what it costs. */}
+      {/* Dismissing destroys the only copy of the secret, which no read can
+          re-derive: Copy is primary, and Done stays available before a copy
+          with a caution saying what leaving costs. */}
       {!copy.copied && (
         // ds:ignore a caution, not a refusal
         <p className="webhook-secret-caution">

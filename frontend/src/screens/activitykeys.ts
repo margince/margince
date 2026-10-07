@@ -96,9 +96,14 @@ export function derivedRecordKeys(
   recordKey: string,
   recordId: string,
 ): QueryKey[] {
-  const derived = DERIVED_FROM_RECORD[recordKey]?.(recordId);
-  return derived ? [derived] : [];
+  return DERIVED_FROM_RECORD[recordKey]?.(recordId) ?? [];
 }
+
+// The lists a record is on, and a Live List checked against it: a filter
+// judges the record's fields, so any write to them can move a membership.
+// Every list read sits under ["lists"], which a list write invalidates whole.
+export const recordListsKey = (recordType: string, recordId: string) =>
+  ["lists", "record", recordType, recordId] as const;
 
 // A deal's COVERAGE is written from its stakeholder edges: the rail's seats,
 // the committee map and the risk chips all read GET /deals/{id}/coverage, and
@@ -108,11 +113,14 @@ export function derivedRecordKeys(
 // stakeholder is seated from the contact's page as readily as from the deal's.
 export const DEAL_COVERAGE_KEY: QueryKey = ["deal-coverage"];
 
-const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey> = {
-  deal: (id) => DEAL_STATUS_KEY(id),
+const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
+  deal: (id) => [DEAL_STATUS_KEY(id), recordListsKey("deal", id)],
+  contact: (id) => [recordListsKey("contact", id)],
+  company: (id) => [recordListsKey("company", id)],
+  lead: (id) => [recordListsKey("lead", id)],
   // Keyed on the relationship's own id nowhere: what goes stale is the deal the
   // edge names, and the edit form knows only the edge. The prefix covers it.
-  relationship: () => DEAL_COVERAGE_KEY,
+  relationship: () => [DEAL_COVERAGE_KEY],
 };
 
 // A task is also a row in the standing work queue, which is keyed per workspace
@@ -251,3 +259,14 @@ export function isRecordRead(key: QueryKey): boolean {
 // key do not fail loudly: they fail as a drawer that quietly stops refreshing
 // after somebody changes who may read the message.
 export { emailDetailKey as emailPresentationKey } from "../design-system/emaildetail";
+
+/** The cache prefix every deal's watch card reads under. */
+export const DEAL_COMMITMENTS_KEY = ["deal-commitments"] as const;
+
+/** What a settled claim leaves stale: the contact's own page and a deal's watch
+ *  card list the same open claims. Read by the single settle and the bulk one. */
+export const CLAIM_SETTLED_KEYS: readonly QueryKey[] = [
+  ["contact"],
+  ["contact360"],
+  DEAL_COMMITMENTS_KEY,
+];

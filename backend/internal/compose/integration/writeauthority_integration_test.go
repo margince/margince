@@ -292,7 +292,7 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	// because the source is the record the CALLER named.
 	f.share(t, "read")
 	shareWith(f.owner, t, e, survivor, e.Rep1, "write")
-	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("merging away a source held on a read share → %v, want permission-denied", err)
 	}
 
@@ -300,7 +300,7 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	// they are folding away and not what it folds into.
 	f.share(t, "write")
 	revokeShare(t, e, survivor, e.Rep1)
-	_, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor))
+	_, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil)
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("merging into a survivor the caller cannot change → %v, want conflict", err)
 	}
@@ -308,14 +308,14 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	// Read on the survivor is not enough either — it is the arm the visibility
 	// probe used to accept, and the one this change closes.
 	shareWith(f.owner, t, e, survivor, e.Rep1, "read")
-	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor)); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("merging into a survivor held on a read share → %v, want conflict", err)
 	}
 
 	// Write on both: the merge goes through, so the two refusals above are the
 	// rule and not a merge that never worked.
 	shareWith(f.owner, t, e, survivor, e.Rep1, "write")
-	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor)); err != nil {
+	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil); err != nil {
 		t.Fatalf("merging with write on both ends → %v, want allowed", err)
 	}
 }
@@ -397,7 +397,7 @@ func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
 	store := deals.NewStore(e.DB(), deals.Installation{})
 	intro := "Rewritten by a reader"
 	editOffer := func() error {
-		_, err := store.UpdateOffer(holder, ids.From[ids.OfferKind](offer), deals.UpdateOfferInput{IntroText: &intro})
+		_, _, err := store.UpdateOffer(holder, ids.From[ids.OfferKind](offer), deals.UpdateOfferInput{IntroText: &intro})
 		return err
 	}
 	shareDeal := func(access string) {

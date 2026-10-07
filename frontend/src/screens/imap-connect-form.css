@@ -16,11 +16,6 @@
 .imap-mailbox-form > .imap-mailbox-span {
   grid-column: 1 / -1;
 }
-.imap-mailbox-form > .actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--gapActions);
-}
 @media (max-width: 640px) {
   .imap-mailbox-form {
     grid-template-columns: 1fr;

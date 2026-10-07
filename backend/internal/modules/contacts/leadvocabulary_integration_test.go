@@ -314,8 +314,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 			SELECT (envelope->'payload'->>'change') || ':' ||
 			       coalesce(envelope->'payload'->>'key', envelope->'payload'->>'label')
 			FROM event_outbox
-			WHERE envelope->>'type' = $1
-			ORDER BY id`, eventType)
+			WHERE envelope->>'type' = $1`, eventType)
 		if err != nil {
 			t.Fatalf("read outbox: %v", err)
 		}
@@ -331,6 +330,8 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			t.Fatalf("rows: %v", err)
 		}
+		// Outbox payloads are the contract; UUID order is not publication order.
+		slices.Sort(out)
 		return out
 	}
 
@@ -348,6 +349,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 	// The key, not the label, and unchanged by the rename: it is what a lead
 	// carries and what a subscriber has cached the entry under.
 	wantSources := []string{"created:webinar", "updated:webinar", "deleted:webinar"}
+	slices.Sort(wantSources)
 	if got := published("lead_source.changed"); !slices.Equal(got, wantSources) {
 		t.Errorf("lead_source.changed = %v, want %v", got, wantSources)
 	}
@@ -367,6 +369,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 	// reason has no key, so the label is its identity and a stale one would
 	// name something that no longer exists.
 	wantReasons := []string{"created:No budget", "updated:Budget withdrawn", "deleted:Budget withdrawn"}
+	slices.Sort(wantReasons)
 	if got := published("lead_disqualify_reason.changed"); !slices.Equal(got, wantReasons) {
 		t.Errorf("lead_disqualify_reason.changed = %v, want %v", got, wantReasons)
 	}

@@ -13,6 +13,7 @@ import {
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { TierCallsLine } from "./ai-call-figures";
 import { DECIDE_RUNG } from "./ai-decision-labels";
 import {
   inputOnlyLane,
@@ -20,6 +21,7 @@ import {
   type ModelLane,
   unreadablePrice,
 } from "./ai-models";
+import { isOpenRouter } from "./ai-provider-links";
 import { TermChip } from "./ai-terms";
 
 // The Model tiers table: one row per lane the routing document binds — the
@@ -58,7 +60,12 @@ function laneNameOf(rung: string): string {
 export type Lane = Readonly<{
   name: string;
   lane: ModelLane;
-  binding?: { provider: string; model: string; base_url?: string };
+  binding?: {
+    provider: string;
+    model: string;
+    base_url?: string;
+    routing?: components["schemas"]["AiOpenRouterRouting"];
+  };
   // What Edit opens; absent for a lane this reader may see and not bind.
   onEdit?: () => void;
   testId?: string;
@@ -211,7 +218,14 @@ function TierLine({
         data-testid={lane.testId ?? `ai-routing-tier-${lane.name}`}
         className={tierLineClass(health !== undefined)}
       >
-        {health && <HealthDot lane={lane.name} rung={rung} health={health} />}
+        {health && (
+          <HealthDot
+            lane={lane.name}
+            rung={rung}
+            health={health}
+            sort={servingSort(binding, t)}
+          />
+        )}
         <span className="ai-tier-who">
           <span className="ai-tier-name">{lane.name}</span>
           {gloss && <span className="t-caption">{gloss}</span>}
@@ -282,7 +296,13 @@ function HealthDot({
   lane,
   rung,
   health,
-}: Readonly<{ lane: string; rung: Rung | undefined; health: Health }>) {
+  sort,
+}: Readonly<{
+  lane: string;
+  rung: Rung | undefined;
+  health: Health;
+  sort?: string;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -331,6 +351,9 @@ function HealthDot({
           {rung.last_sentinel && <p>{rung.last_sentinel}</p>}
         </>
       )}
+      <p>
+        <TierCallsLine tier={rungOf(lane)} sort={sort} />
+      </p>
     </Popover>
   );
 }
@@ -342,6 +365,31 @@ function HealthDot({
 // any old string and ship a typo. It also means a tier the task contract grows
 // later renders with no gloss — correct, because nobody has written one, and a
 // missing sentence is better than a guessed one.
+/**
+ * How a broker tier orders its hosts: its own sort, the shipped default's when
+ * it declares no routing, or the broker's own when it opted out. Nothing for a
+ * binding no broker serves.
+ */
+function servingSort(
+  binding: Lane["binding"],
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  if (
+    binding?.provider !== "openai_compatible" ||
+    !isOpenRouter(binding.base_url ?? "")
+  ) {
+    return undefined;
+  }
+  const routing = binding.routing;
+  if (!routing) return "throughput";
+  const sort = routing.provider?.sort;
+  if (!sort) return t("aiFigures.line.brokerOwn");
+  if (typeof sort === "string") return sort;
+  return sort.partition === "none"
+    ? t("aiFigures.line.sortAcross", { by: sort.by })
+    : sort.by;
+}
+
 function laneGloss(name: string, t: ReturnType<typeof useT>): string | null {
   switch (name) {
     case "local_small":

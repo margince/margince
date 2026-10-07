@@ -75,7 +75,7 @@ test.describe("Analytics sections", () => {
     // route to the same body — or to none — passes a visibility check and fails
     // every reader, so the tabs are pressed rather than counted.
     for (const [key, expected] of [
-      ["analytics.sectionPerformance", "analytics.reportStageAge"],
+      ["analytics.sectionPerformance", "reporting.bookings_trend"],
       ["analytics.sectionDelivery", "analytics.reportProjectsByPhase"],
     ] as const) {
       if (key === "analytics.sectionDelivery") {
@@ -147,39 +147,6 @@ test.describe("Analytics sections", () => {
     ).toBeVisible();
   });
 
-  test("a figure too small to report says so rather than showing zero", async ({
-    page,
-  }) => {
-    await openAnalytics(page, "performance");
-    // The stage-age fixture holds one stage with a real median (12 days) and one
-    // with too few deals to have one. BOTH are asserted: the number proves the
-    // card rendered and read its rows, and the words prove it does not fill an
-    // absence with a zero.
-    //
-    // The number first, because without it the words below could come from a
-    // card that failed to render anything at all.
-    // Scoped to the ROW, not to a container: DataTable's scroll region is
-    // labelled only when its content overflows, so there is no stable wrapper to
-    // find the card by. The row names its own stage, which is what makes these
-    // two assertions about the same table.
-    //
-    // Both, and in this order. The measured stage's median proves the card read
-    // its rows at all; without it the words below could come from a card that
-    // rendered nothing, or from win-loss, which draws the same DaysCell.
-    const measured = page.getByRole("row", { name: /Qualify/ });
-    await expect(
-      measured.getByText(t("analytics.days").replace("{days}", "12")),
-      "the measured stage drew no median — the card did not read its rows",
-    ).toBeVisible();
-
-    const unmeasured = page.getByRole("row", { name: /Proposal/ });
-    await expect(
-      unmeasured.getByText(t("analytics.tooFewForMedian")).first(),
-      "a stage under the sample floor drew no words — a reader cannot tell an " +
-        "unmeasured stage from a fast one",
-    ).toBeVisible();
-  });
-
   test("a section with nothing to report says so in words", async ({
     page,
   }) => {
@@ -203,7 +170,7 @@ test.describe("Analytics sections", () => {
     // overflows nothing and would pass this by rendering less than the screen
     // promises.
     await expect(
-      page.getByText(t("analytics.reportStageAge")).first(),
+      page.getByText(t("reporting.bookings_trend")).first(),
       "the performance section drew nothing, so measuring its width proves nothing",
     ).toBeVisible();
 
@@ -250,9 +217,11 @@ test.describe("Explain a cell", () => {
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
-      await openAnalytics(page, "performance");
+      await openAnalytics(page, "pipeline");
       const opener = page.getByRole("button", { name: trigger("Qualify") });
-      const asked = page.waitForRequest(/\/reports\/stage-age\/derivation/);
+      const asked = page.waitForRequest(
+        /\/reports\/pipeline-current\/derivation/,
+      );
       await opener.click();
       // The ROW's handle reached the server, with its own group key bound.
       const request = new URL((await asked).url());

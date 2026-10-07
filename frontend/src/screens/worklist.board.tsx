@@ -9,7 +9,8 @@
 // whole point of showing counts rather than rows. The board is where a lead
 // decides who to look at; the queue is where they look.
 
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -29,6 +30,9 @@ import { type TeamBoardMember, useTeamBoard } from "./worklist.queries";
 type BoardRow = Readonly<{
   id: string;
   name: string;
+  // A seat that has not signed in yet: its counts were never measured, so the
+  // row says so rather than drawing them.
+  invited: boolean;
   waiting: number;
   atRisk: number;
   overdue: number;
@@ -48,6 +52,9 @@ function rowsOf(
   const rows = members.map((member) => ({
     id: member.user_id,
     name: member.display_name,
+    // A missing activation is version skew from a server that listed active
+    // seats only, so it reads as active.
+    invited: member.activation === "invited",
     waiting: member.counts.waiting,
     atRisk: member.counts.at_risk,
     overdue: member.counts.overdue,
@@ -74,6 +81,7 @@ function rowsOf(
         {
           id: "",
           name: unassignedLabel,
+          invited: false,
           waiting: unassigned.waiting,
           atRisk: unassigned.at_risk,
           overdue: unassigned.overdue,
@@ -129,6 +137,10 @@ export function TeamBoard({
   // the server refuses rather than answering zeros, and a surface that drew the
   // refusal as "nobody is carrying anything" would be the same lie one lane
   // further out.
+  // An invited seat's counts carry no meaning, and "—" already means zero on
+  // this board, so its cells say the figure was never taken.
+  const figure = (row: BoardRow, value: number | undefined) =>
+    row.invited ? t("worklist.board.notMeasured") : count(value);
   const state = board.isPending
     ? "loading"
     : board.isError
@@ -172,36 +184,44 @@ export function TeamBoard({
                     {
                       key: "name",
                       header: t("worklist.board.member"),
-                      render: (row) => (
-                        <>
-                          <Button
-                            variant="ghost"
-                            onClick={() =>
-                              row.id ? onOwner(row.id) : onUnassigned()
-                            }
-                          >
-                            {row.name}
-                          </Button>
-                          {teamId && row.id && (
-                            <TeamPlanReview owner={row.id} name={row.name} />
-                          )}
-                        </>
-                      ),
+                      // An invited seat has no day to open and no plan to
+                      // review, so its name is text with the mark under it.
+                      render: (row) =>
+                        row.invited ? (
+                          <CellStack>
+                            <span>{row.name}</span>
+                            <Badge>{t("users.status.invited")}</Badge>
+                          </CellStack>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              onClick={() =>
+                                row.id ? onOwner(row.id) : onUnassigned()
+                              }
+                            >
+                              {row.name}
+                            </Button>
+                            {teamId && row.id && (
+                              <TeamPlanReview owner={row.id} name={row.name} />
+                            )}
+                          </>
+                        ),
                     },
                     {
                       key: "waiting",
                       header: t("worklist.board.waiting"),
-                      render: (row) => count(row.waiting),
+                      render: (row) => figure(row, row.waiting),
                     },
                     {
                       key: "at_risk",
                       header: t("worklist.board.atRisk"),
-                      render: (row) => count(row.atRisk),
+                      render: (row) => figure(row, row.atRisk),
                     },
                     {
                       key: "overdue",
                       header: t("worklist.board.overdue"),
-                      render: (row) => count(row.overdue),
+                      render: (row) => figure(row, row.overdue),
                     },
                     // The column the coaching lines above are drawn from. Without
                     // it a lead reads "Ana owes 3 promises" with nowhere on the
@@ -210,7 +230,7 @@ export function TeamBoard({
                     {
                       key: "promises_due",
                       header: t("worklist.board.promises"),
-                      render: (row) => count(row.promises),
+                      render: (row) => figure(row, row.promises),
                     },
                   ]}
                 />

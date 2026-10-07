@@ -102,15 +102,27 @@ func (s *Store) SetArchivedView(ctx context.Context, id ids.ListID, archive bool
 	return s.view(ctx, l)
 }
 
-// MembersPage answers one page of a list's members.
-func (s *Store) MembersPage(ctx context.Context, id ids.ListID, limit int, cursor string) (crmcontracts.ListMemberListResponse, error) {
-	members, page, err := s.ListMembers(ctx, id, limit, cursor)
+// MembersPage answers one members read, naming who added each Shortlist member.
+func (s *Store) MembersPage(ctx context.Context, id ids.ListID, read MemberRead) (crmcontracts.ListMemberListResponse, error) {
+	members, page, err := s.readMembers(ctx, id, read)
+	if err != nil {
+		return crmcontracts.ListMemberListResponse{}, err
+	}
+	actors := make([]string, 0, len(members))
+	for _, m := range members {
+		actors = append(actors, m.AddedBy)
+	}
+	names, err := s.actorNames(ctx, actors)
 	if err != nil {
 		return crmcontracts.ListMemberListResponse{}, err
 	}
 	data := make([]crmcontracts.ListMember, 0, len(members))
 	for _, m := range members {
-		data = append(data, wireMember(m))
+		member := wireMember(m)
+		if name, ok := names[m.AddedBy]; ok {
+			member.AddedByName = &name
+		}
+		data = append(data, member)
 	}
 	return crmcontracts.ListMemberListResponse{Data: data, Page: wirePage(page)}, nil
 }
@@ -198,6 +210,12 @@ func wireList(l listSummary) crmcontracts.List {
 	if len(l.RetiredFields) > 0 {
 		out.RetiredFields = &l.RetiredFields
 	}
+	if len(l.RetiredTags) > 0 {
+		out.RetiredTags = &[]openapi_types.UUID{}
+		for _, id := range l.RetiredTags {
+			*out.RetiredTags = append(*out.RetiredTags, openapi_types.UUID(id))
+		}
+	}
 	if l.TeamID != nil {
 		team := openapi_types.UUID(l.TeamID.UUID)
 		out.TeamId = &team
@@ -276,11 +294,18 @@ func wireMember(m memberRow) crmcontracts.ListMember {
 	if !m.CreatedAt.IsZero() {
 		out.CreatedAt = &m.CreatedAt
 	}
+	if m.Values != nil {
+		values := make(map[string]crmcontracts.ListFieldValue, len(m.Values))
+		for field, v := range m.Values {
+			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden, Label: v.Label}
+		}
+		out.Values = &values
+	}
 	return out
 }
 
 func wireVerdict(n storekit.ExplainNode) crmcontracts.ListClauseVerdict {
-	out := crmcontracts.ListClauseVerdict{Result: n.Result, Value: n.Value}
+	out := crmcontracts.ListClauseVerdict{Result: n.Result, Value: n.Value, ValueLabel: n.ValueLabel}
 	if n.Join != "" {
 		join := crmcontracts.ListClauseVerdictJoin(n.Join)
 		children := make([]crmcontracts.ListClauseVerdict, 0, len(n.Children))

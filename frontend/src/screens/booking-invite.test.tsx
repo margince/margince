@@ -1,27 +1,32 @@
 /** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
-import { dayInZone, viewerZone } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import {
   bookingConnection,
   bookingContact,
   bookingHours,
+  bookingInvitation,
   bookingProfile,
   bookingSlots,
 } from "./book.testkit";
 import { BookingInviteScreen } from "./booking-invite";
+
+vi.mock("./compose", () => ({
+  ComposeModal: ({
+    initialMessage,
+  }: Readonly<{ initialMessage?: { subject: string; body: string } }>) => (
+    <div role="dialog" aria-label="Compose">
+      {initialMessage?.body}
+    </div>
+  ),
+}));
 
 function mount(
   configured = true,
@@ -35,6 +40,7 @@ function mount(
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-09-27T06:00:00Z"));
   const proposals: unknown[] = [];
+  const invitations: unknown[] = [];
   const paths: string[] = [];
   const windows: URLSearchParams[] = [];
   vi.stubGlobal(
@@ -43,7 +49,10 @@ function mount(
       const path = new URL(request.url).pathname;
       paths.push(path);
       let body: unknown;
-      if (request.method === "POST") {
+      if (request.method === "POST" && path.endsWith("/invitations")) {
+        invitations.push(await request.json());
+        body = { ...bookingInvitation, id: "meeting-1" };
+      } else if (request.method === "POST") {
         proposals.push(await request.json());
         body = {
           id: "proposal-1",
@@ -100,79 +109,160 @@ function mount(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { proposals, paths, windows };
+  return { proposals, invitations, paths, windows };
 }
 
 afterEach(() => {
   cleanup();
+  window.location.hash = "";
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
-it("prefills a singleton contact email and saved meeting details, then binds the selected proposal", async () => {
+const slotName = (start: string) =>
+  formatDateTime(start, "en", viewerZone()).replace(/\s+/g, " ");
+
+it("prefills the contact and saved details, then offers two picked times in one step", async () => {
   const user = userEvent.setup();
   const { proposals } = mount();
   expect(await screen.findByDisplayValue("nina@brandt.example")).toBeTruthy();
-  expect(await screen.findByDisplayValue(bookingProfile.title)).toBeTruthy();
-  expect(screen.getByDisplayValue(bookingProfile.location)).toBeTruthy();
-  expect(screen.getByText(/0 selected/)).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Book a meeting with Nina Weber" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Pick at least 2 times" }),
+  ).toHaveProperty("disabled", true);
   for (const slot of bookingSlots)
     await user.click(
-      await screen.findByRole("button", {
-        name: formatDateTime(slot.start, "en", viewerZone()).replace(
-          /\s+/g,
-          " ",
-        ),
-      }),
+      await screen.findByRole("button", { name: slotName(slot.start) }),
     );
-  expect(screen.getByText(/2 selected/)).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Create proposal" }));
+  expect(screen.getByText("2 of 3")).toBeTruthy();
+  await user.click(
+    screen.getByRole("button", { name: "Review email · 2 times" }),
+  );
   await waitFor(() => expect(proposals).toHaveLength(1));
   expect(proposals[0]).toMatchObject({
     contact_id: bookingContact.id,
     attendee_email: "nina@brandt.example",
     subject: bookingProfile.title,
-    location: bookingProfile.location,
+    location: "",
+    video_call: true,
     options: bookingSlots,
   });
-  expect(
-    await screen.findByRole("link", { name: "Open personal invitation" }),
-  ).toBeTruthy();
-  await user.type(screen.getByLabelText("Meeting title"), " updated");
-  expect(
-    screen.getByRole("link", { name: "Open personal invitation" }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Create updated proposal" }),
-  ).toBeTruthy();
-  expect(proposals).toHaveLength(1);
+  const email = await screen.findByRole("dialog", { name: "Compose" });
+  expect(email.textContent).toContain(
+    "https://crm.example.test/#/book/proposal-private",
+  );
+  expect(screen.getByText(/Link created/)).toBeTruthy();
+
+  // The link carries what was proposed, so a change after it means another one.
+  await user.type(screen.getByLabelText("Meeting title"), "!");
+  expect(screen.queryByText(/Link created/)).toBeNull();
+  expect(screen.getByText(/so it gets a new link/)).toBeTruthy();
 });
 
-it("explains calendar setup without requesting unavailable times", async () => {
+it("removes an offered time from the review list", async () => {
+  const user = userEvent.setup();
+  mount();
+  await user.click(
+    await screen.findByRole("button", {
+      name: slotName(bookingSlots[0].start),
+    }),
+  );
+  expect(screen.getByText("1 of 3")).toBeTruthy();
+  await user.click(
+    screen.getByRole("button", {
+      name: `Remove ${formatDateTime(bookingSlots[0].start, "en", viewerZone())}`,
+    }),
+  );
+  expect(screen.getByText("0 of 3")).toBeTruthy();
+  expect(screen.getByText("Pick 2 or 3 times in the calendar.")).toBeTruthy();
+});
+
+it("sends an agreed time as an invitation without a video link when switched off", async () => {
+  const user = userEvent.setup();
+  const { invitations } = mount();
+  await user.click(
+    await screen.findByRole("radio", { name: /Send an invite/ }),
+  );
+  await user.click(
+    screen.getByRole("switch", { name: "Add Google Meet link" }),
+  );
+  await user.click(screen.getByText(/^Details/));
+  const location = screen.getByLabelText("Location or meeting link");
+  await user.clear(location);
+  await user.type(location, "Office, Room 2");
+  await user.click(
+    await screen.findByRole("button", {
+      name: slotName(bookingSlots[1].start),
+    }),
+  );
+  await user.click(
+    screen.getByRole("button", {
+      name: `Send invite · ${formatDateTime(bookingSlots[1].start, "en", viewerZone())}`,
+    }),
+  );
+  await waitFor(() => expect(invitations).toHaveLength(1));
+  expect(invitations[0]).toMatchObject({
+    ...bookingSlots[1],
+    location: "Office, Room 2",
+    video_call: false,
+  });
+  await waitFor(() =>
+    expect(window.location.hash).toBe("#/book/meeting-meeting-1"),
+  );
+});
+
+it("shows the calendar setup step instead of times when no calendar can send invites", async () => {
   const { paths } = mount(false);
   expect(
-    await screen.findByRole("link", {
-      name: "Open meeting settings",
-    }),
+    await screen.findByRole("link", { name: "Open meeting settings" }),
   ).toBeTruthy();
   expect(
     screen.getByText(/Set up calendars and availability in Settings/),
   ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Connect a calendar first" }),
+  ).toHaveProperty("disabled", true);
   expect(paths.some((path) => path.endsWith("/availability"))).toBe(false);
 });
 
-it("explains a November date outside the saved horizon without claiming the calendar is busy", async () => {
-  const { windows } = mount();
-  await screen.findByText(/Bookings available through/);
-  const date = screen.getByLabelText("Starting date");
-  expect(date.getAttribute("max")).toBe(
-    dayInZone(Date.parse("2026-10-27T06:00:00Z"), viewerZone()),
+it("lets the guest pick for a personal link, showing the open times without asking for any", async () => {
+  const user = userEvent.setup();
+  const { proposals } = mount();
+  const slot = slotName(bookingSlots[0].start);
+  await user.click(await screen.findByRole("button", { name: slot }));
+  await user.click(
+    screen.getByRole("radio", { name: /Share a personal link/ }),
   );
-  await waitFor(() => expect(windows).toHaveLength(1));
-  fireEvent.change(date, { target: { value: "2026-11-02" } });
-  expect(await screen.findByText(/outside the booking horizon/)).toBeTruthy();
-  expect(screen.queryByText(/No available times/)).toBeNull();
-  expect(windows).toHaveLength(1);
+  // The same week stays on screen as the times the guest will choose from,
+  // and none of them is a time the host can pick.
+  expect(screen.getByRole("heading", { name: "Your open times" })).toBeTruthy();
+  expect(screen.getByText(slot)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: slot })).toBeNull();
+  expect(screen.getByText("Nina Weber picks the time")).toBeTruthy();
+  // The link books a meeting of the length chosen here.
+  await user.click(screen.getByRole("button", { name: "45 min" }));
+  await user.click(
+    screen.getByRole("button", { name: "Create link and review email" }),
+  );
+  await waitFor(() => expect(proposals).toHaveLength(1));
+  expect(proposals[0]).toMatchObject({ options: [], duration_minutes: 45 });
+});
+
+it("stops at the booking horizon when paging forward by week", async () => {
+  const user = userEvent.setup();
+  mount(true, 10);
+  const next = await screen.findByRole("button", { name: "Next week" });
+  expect(next).toHaveProperty("disabled", false);
+  await user.click(next);
+  expect(
+    await screen.findByRole("button", { name: "Next week" }),
+  ).toHaveProperty("disabled", true);
+  expect(screen.getByRole("button", { name: "Previous week" })).toHaveProperty(
+    "disabled",
+    false,
+  );
 });
 it("searches beyond a busy month in bounded requests and finds November within a longer horizon", async () => {
   const user = userEvent.setup();
@@ -188,10 +278,7 @@ it("searches beyond a busy month in bounded requests and finds November within a
   await waitFor(() => expect(windows).toHaveLength(3));
   expect(
     await screen.findByRole("button", {
-      name: formatDateTime(novemberSlots[0].start, "en", viewerZone()).replace(
-        /\s+/g,
-        " ",
-      ),
+      name: slotName(novemberSlots[0].start),
     }),
   ).toBeTruthy();
   for (const window of windows) {
@@ -219,9 +306,7 @@ it("finds a meeting crossing a search chunk boundary without losing it", async (
     await screen.findByRole("button", { name: "Find next available times" }),
   );
   expect(
-    await screen.findByRole("button", {
-      name: formatDateTime(start, "en", viewerZone()).replace(/\s+/g, " "),
-    }),
+    await screen.findByRole("button", { name: slotName(start) }),
   ).toBeTruthy();
   expect(windows).toHaveLength(3);
   expect(Date.parse(windows[2].get("from") ?? "")).toBe(

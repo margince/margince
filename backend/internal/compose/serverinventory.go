@@ -125,6 +125,7 @@ type Server struct {
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
 	claimHandlers
+	dealCommitmentHandlers
 	importHandlers
 	channelHandlers
 	traceHandlers
@@ -301,6 +302,9 @@ type Server struct {
 	// it feeds a /readyz probe and backs the capture connector-credential
 	// path; nil means a role that resolves no stored connector credentials.
 	vault keyvault.Vault
+	// priceCatalogues are shared by the routing picker and the price sync, so
+	// WithKeyvault can rebuild the sync over the vault on the same caches.
+	priceCatalogues aiPriceCatalogues
 
 	// mfaSigner and mfaSignerUnusable carry WithMFAChallengeSigner's outcome so
 	// armMFAEnrolment can couple it with the vault in either option order: TOTP
@@ -449,6 +453,8 @@ type Server struct {
 	// reason company360Svc is: the relationship brief is assembled from THIS gated
 	// read rather than a second one that could drift from what the page shows.
 	contact360Svc *contact360.Service
+	// firstDrafts are the composer's drafting engines, which draft_email reaches too.
+	firstDrafts firstMessageEngines
 	// meetingBriefSvc is held so an option can bind its model lane after the
 	// handler sets are built.
 	meetingBriefSvc *meetingbrief.Service
@@ -481,8 +487,11 @@ type Server struct {
 	resetRuntime ResetRuntime
 
 	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
-	listsEnabled     bool
-	reportingEnabled bool
+	listsEnabled bool
+
+	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
+	// leaves /.well-known/security.txt unmounted.
+	securityTxt string
 }
 
 var _ crmcontracts.ServerInterface = Server{}

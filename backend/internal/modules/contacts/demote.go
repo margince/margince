@@ -121,8 +121,18 @@ func (s *Store) DemoteLead(
 		if err != nil {
 			return err
 		}
+		// Asked before the unwind, while the contact still carries the tags
+		// and lists it would drop, and again after it, when a link a colleague
+		// added meanwhile is one the unwind retired.
+		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options, false); err != nil {
+			return err
+		}
 		unwind, err := unwindContact(ctx, tx, id, contactID, outcome)
 		if err != nil {
+			return err
+		}
+		archived := unwind == crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed
+		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options, archived); err != nil {
 			return err
 		}
 		setBy, err := statusSetByFor(ctx)
@@ -371,4 +381,30 @@ func promotedContactOf(ctx context.Context, tx pgx.Tx, id ids.LeadID) (ids.Conta
 		return ids.ContactID{}, &NotPromotedError{}
 	}
 	return ids.From[ids.ContactKind](*promoted), nil
+}
+
+// refuseIfColleagueWorkedOnCreated refuses, for a caller that asked, a
+// demotion that archives a contact a colleague has worked on since: their work
+// would be archived with it.
+func refuseIfColleagueWorkedOnCreated(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, outcome promotionOutcome, options writeOptions, unwound bool,
+) error {
+	if options.untouchedSince == nil || outcome != outcomeCreated {
+		return nil
+	}
+	worked, err := ColleagueWorkedOnSince(ctx, tx, entityContact, contactID.UUID, *options.untouchedSince, options.untouchedAfter)
+	if err != nil {
+		return err
+	}
+	if !worked && unwound {
+		// The unwind archived the contact it created, and that archive's
+		// cascade is what it took down.
+		if worked, err = ArchiveDroppedColleagueWork(ctx, tx, entityContact, contactID.UUID); err != nil {
+			return err
+		}
+	}
+	if worked {
+		return &HumanTouchedError{EntityType: entityContact, EntityID: contactID.UUID}
+	}
+	return nil
 }

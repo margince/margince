@@ -106,33 +106,65 @@ func employerScope(ctx context.Context, relAlias string, arg func(any) int) (cla
 }
 
 func attachContactEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
+	employers, err := readContactEmployers(ctx, tx, contactIDs)
+	if err != nil {
+		return err
+	}
+	for contactID, employer := range employers {
+		idx[openapi_types.UUID(contactID)].Employer = &employer
+	}
+	return nil
+}
+
+// CurrentEmployers answers where each of these contacts works today, as this
+// caller may see it: a contact whose employer is withheld from them is absent
+// from the map. The edge scope in employerScope covers both ends of the
+// employment, so a contact the caller may not see is withheld with it. A caller
+// without read on contacts or companies is refused with
+// apperrors.ErrPermissionDenied.
+func (s *Store) CurrentEmployers(ctx context.Context, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
+	for _, object := range []string{contactEntity, companyEntity} {
+		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+			return nil, err
+		}
+	}
+	var out map[ids.UUID]crmcontracts.ContactEmployer
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = readContactEmployers(ctx, tx, contactIDs)
+		return err
+	})
+	return out, err
+}
+
+// readContactEmployers is the one read behind every employer a contact
+// surface names, under currentEmployerFrom's gates.
+func readContactEmployers(ctx context.Context, tx pgx.Tx, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
+	out := make(map[ids.UUID]crmcontracts.ContactEmployer, len(contactIDs))
+	if len(contactIDs) == 0 {
+		return out, nil
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contacts := arg(contactIDs)
 
 	from, visible, err := currentEmployerFrom(ctx, storekit.SQLf("rel.contact_id = ANY($%d)", contacts), arg)
-	if err != nil {
-		return err
-	}
-	if !visible {
-		return nil
+	if err != nil || !visible {
+		return out, err
 	}
 
 	rows, err := tx.Query(ctx, `SELECT rel.contact_id, company.id, company.display_name`+from, args...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var contactID, companyID ids.UUID
 		var name string
 		if err := rows.Scan(&contactID, &companyID, &name); err != nil {
-			return err
+			return nil, err
 		}
-		idx[openapi_types.UUID(contactID)].Employer = &crmcontracts.ContactEmployer{
-			CompanyId:   openapi_types.UUID(companyID),
-			CompanyName: name,
-		}
+		out[contactID] = crmcontracts.ContactEmployer{CompanyId: openapi_types.UUID(companyID), CompanyName: name}
 	}
-	return rows.Err()
+	return out, rows.Err()
 }

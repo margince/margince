@@ -26,8 +26,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -47,7 +49,14 @@ type signalExtractMessage struct {
 	Direction string `json:"direction"`
 	Subject   string `json:"subject"`
 	Body      string `json:"body"`
+	// Sent is the day the message went, YYYY-MM-DD. A relative deadline is
+	// resolved against it, so a scenario that dates a promise names its day.
+	Sent string `json:"sent,omitempty"`
 }
+
+// certSentDefault dates a message whose scenario does not, so every prompt
+// carries a real day the way production's does.
+const certSentDefault = "2026-09-07"
 
 // signalExtractExpectation is one event the scenario says the conversation
 // states: its kind, and the 1-based position of the message stating it.
@@ -95,12 +104,22 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		return nil, err
 	}
 	thread := settledThread{Key: "cert-thread", CompanyID: ids.NewV7()}
-	for _, message := range messages {
+	for i, message := range messages {
+		sent := message.Sent
+		if sent == "" {
+			sent = certSentDefault
+		}
+		at, err := time.Parse(time.DateOnly, sent)
+		if err != nil {
+			return nil, fmt.Errorf("signal_extract/thread_events: message %d is sent on %q, which is not a day: %w",
+				i+1, sent, err)
+		}
 		thread.Messages = append(thread.Messages, threadMessage{
 			ID:        ids.NewV7(),
 			Direction: message.Direction,
 			Subject:   message.Subject,
 			Body:      message.Body,
+			At:        at,
 		})
 	}
 	return &signalExtractCase{thread: thread, expected: want}, nil
@@ -211,6 +230,30 @@ func (c *signalExtractCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(disagreements, "; ")}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// AnswerConfidence is the confidence range over the commitments the reply
+// reports: the one reading the task-creation threshold is set against.
+func (c *signalExtractCase) AnswerConfidence(trace aitasks.Trace) (low, high float64, ok bool) {
+	var payload extractPayload
+	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
+		return 0, 0, false
+	}
+	var confidences []float64
+	for _, event := range payload.events() {
+		if event.Kind == extractKindCommitment {
+			confidences = append(confidences, float64(event.Confidence))
+		}
+	}
+	return spanOf(confidences)
+}
+
+// spanOf is the least and greatest of a set of confidences, and false for none.
+func spanOf(confidences []float64) (low, high float64, ok bool) {
+	if len(confidences) == 0 {
+		return 0, 0, false
+	}
+	return slices.Min(confidences), slices.Max(confidences), true
 }
 
 // disagreements names every event the scenario expects and the reply missed,

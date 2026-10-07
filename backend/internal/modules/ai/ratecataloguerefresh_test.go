@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -33,7 +34,7 @@ func TestCatalogueTargetsAreTheOpenRouterModelsTheRoutingBinds(t *testing.T) {
 	cfg := RoutingConfig{
 		Tiers: map[Tier]ProviderConfig{
 			"premium":     openRouterBinding("anthropic/claude-opus-4.8"),
-			"cheap_cloud": {Provider: providerOpenAICompatible, Model: "self/hosted", BaseURL: "https://llm.internal.test/v1"},
+			"cheap_cloud": {Provider: providerVLLM, Model: "self/hosted", BaseURL: "https://llm.internal.test"},
 			"local_small": {Provider: providerOllama, Model: "gemma4"},
 		},
 		Embeddings: EmbeddingsConfig{ProviderConfig: openRouterBinding("openai/text-embedding-3-small")},
@@ -54,6 +55,37 @@ func TestCatalogueTargetsAreTheOpenRouterModelsTheRoutingBinds(t *testing.T) {
 		if got[key] != lane {
 			t.Errorf("target %s lane = %q, want %q", key, got[key], lane)
 		}
+	}
+}
+
+// Lanes no longer carry a host, so whether a model is called through
+// OpenRouter is read from its provider's.
+func TestRateCatalogue_TargetsComeFromProviders(t *testing.T) {
+	cfg := RoutingConfig{
+		Providers: map[string]ProviderSettings{
+			providerOpenAICompatible: {BaseURL: openRouterBase},
+			providerJevCompatible:    {BaseURL: "https://openrouter.ai/api/alpha/decisions"},
+		},
+		Tiers:      map[Tier]ProviderConfig{"premium": {Provider: providerOpenAICompatible, Model: "anthropic/claude-opus-4.8"}},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, Model: "openai/text-embedding-3-small"}},
+		Decisions:  &DecisionsConfig{Provider: providerJevCompatible, Model: "typesafe/jev-router"},
+	}
+
+	got := targetsOf(cfg)
+
+	want := map[string]Lane{
+		"openai_compatible/anthropic/claude-opus-4.8":     LaneChat,
+		"openai_compatible/openai/text-embedding-3-small": LaneEmbeddings,
+		"jev_compatible/typesafe/jev-router":              LaneDecisions,
+	}
+	if !maps.Equal(got, want) {
+		t.Fatalf("targets = %v, want %v", got, want)
+	}
+
+	// An embeddings lane on its own server is not priced by OpenRouter's list.
+	cfg.Embeddings.BaseURL = "https://vllm.internal.test"
+	if _, priced := targetsOf(cfg)["openai_compatible/openai/text-embedding-3-small"]; priced {
+		t.Error("an embeddings model served off the broker was targeted")
 	}
 }
 
@@ -220,9 +252,14 @@ func TestTheReportNamesEveryKnownProvider(t *testing.T) {
 	if got[providerJevCompatible] != RefreshNotBound {
 		t.Errorf("jev_compatible with nothing bound = %q, want not_bound", got[providerJevCompatible])
 	}
-	for _, vendor := range []string{providerGemini, providerAnthropic, providerOpenAI, providerOllama, providerVLLM, providerJev} {
-		if got[vendor] != RefreshNotAvailable {
-			t.Errorf("%s = %q, want not_available: it publishes no price list", vendor, got[vendor])
+	for _, vendor := range []string{providerGemini, providerAnthropic, providerOpenAI} {
+		if got[vendor] != RefreshNotBound {
+			t.Errorf("%s with no line = %q, want not_bound", vendor, got[vendor])
+		}
+	}
+	for _, local := range []string{providerOllama, providerVLLM, providerJev} {
+		if got[local] != RefreshNotAvailable {
+			t.Errorf("%s = %q, want not_available: it publishes no price list", local, got[local])
 		}
 	}
 }
