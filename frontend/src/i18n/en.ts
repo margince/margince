@@ -3475,6 +3475,8 @@ export const en = {
     "Loaded deals only. This owner’s totals are outside what you may measure.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
+  "deals.totalsNoSearch":
+    "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterMotion": "Motion",
@@ -3491,7 +3493,6 @@ export const en = {
   "deals.filterStalledAll": "All deals",
   "deals.filterOwnerAll": "All owners",
   "deals.filterPartnerAll": "All sources",
-  "deals.sortNewest": "Newest",
   "deals.unit": "deals",
   "deals.bulkStage": "Move to stage",
   "deals.bulkStagePick": "Pick a stage",

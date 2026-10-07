@@ -808,7 +808,7 @@ describe("DealsScreen", () => {
   // A view saved on the deals list is a server row, and the tab rail has to
   // read it. The rail carried only the one hardcoded sort before, so a saved
   // view was storable through the contract and then invisible.
-  it("offers a saved view as a tab beside the standing sort", async () => {
+  it("offers a saved view as a tab beside the standard views", async () => {
     vi.stubGlobal(
       "fetch",
       stubBackend([deal({})], {
@@ -833,7 +833,7 @@ describe("DealsScreen", () => {
     expect(
       await screen.findByRole("button", { name: "Slipping this quarter" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Newest" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
   });
 
   // Picking the tab has to narrow the list, not just highlight: the saved

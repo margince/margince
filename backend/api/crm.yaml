@@ -4674,6 +4674,10 @@ paths:
         - name: company_id
           in: query
           schema: { type: string, format: uuid }
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Full-text query over the deal's name and description, plus a substring match on the name.
         - name: status
           in: query
           schema: { type: string, enum: [open, won, lost] }
