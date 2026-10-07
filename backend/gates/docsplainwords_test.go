@@ -27,6 +27,7 @@ import (
 const (
 	plainMarker        = "prose:plain"
 	plainWordsFile     = "docs/plain-words.txt"
+	plainProjectFile   = "docs/plain-words-project.txt"
 	glossaryFile       = "docs/reference/glossary.md"
 	plainWordCap       = 999
 	plainStepWords     = 20
@@ -196,8 +197,8 @@ func plainTooLong(res plainResult, maxWords int) bool { return maxWords > 0 && r
 
 // plainPools gives each docs area its own list of fewer than 1,000 general
 // words, so a reader of one area meets a small vocabulary. The embedded copy of
-// the handbook reads the same list as its source; every other page reads the
-// root list.
+// the handbook reads the same list as its source. The entry pages a newcomer
+// opens first share the root list; every other page reads the project list.
 var plainPools = []struct{ prefix, list string }{
 	{"docs/handbook/", "docs/handbook/plain-words.txt"},
 	{"backend/internal/modules/knowledge/handbook/", "docs/handbook/plain-words.txt"},
@@ -205,7 +206,12 @@ var plainPools = []struct{ prefix, list string }{
 	{"docs/tutorials/", "docs/how-to/plain-words.txt"},
 	{"docs/explanation/", "docs/explanation/plain-words.txt"},
 	{"docs/reference/", "docs/reference/plain-words.txt"},
-	{"", plainWordsFile},
+	{"README.md", plainWordsFile},
+	{"CONTRIBUTING.md", plainWordsFile},
+	{"SECURITY.md", plainWordsFile},
+	{"SUPPORT.md", plainWordsFile},
+	{"docs/README.md", plainWordsFile},
+	{"", plainProjectFile},
 }
 
 // plainCaps is the most general words each list may hold. 999 is the target: a
@@ -218,6 +224,7 @@ var plainCaps = map[string]int{
 	"docs/explanation/plain-words.txt": 1300,
 	"docs/handbook/plain-words.txt":    1350,
 	"docs/reference/plain-words.txt":   1850,
+	plainProjectFile:                   2500,
 }
 
 // glossaryLegacyMax is how many names may still lack a meaning. They predate the
@@ -225,6 +232,8 @@ var plainCaps = map[string]int{
 const glossaryLegacyMax = 1400
 
 const glossaryLegacyHeading = "## Names without a meaning yet"
+
+var glossaryLegacyName = regexp.MustCompile("`([^`]+)`")
 
 var glossaryRow = regexp.MustCompile(`^\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*$`)
 
@@ -239,13 +248,12 @@ func parseGlossary(doc string) (terms []string, problems []string) {
 			continue
 		}
 		if inLegacy {
-			if term, ok := strings.CutPrefix(strings.TrimSpace(line), "- "); ok {
-				term = strings.Trim(term, "`")
-				if seen[term] {
-					problems = append(problems, fmt.Sprintf("%q is listed twice", term))
+			for _, m := range glossaryLegacyName.FindAllStringSubmatch(line, -1) {
+				if seen[m[1]] {
+					problems = append(problems, fmt.Sprintf("%q is listed twice", m[1]))
 				}
-				seen[term] = true
-				terms = append(terms, term)
+				seen[m[1]] = true
+				terms = append(terms, m[1])
 				legacy++
 			}
 			continue
@@ -438,13 +446,16 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 		"docs/how-to/add-a-job.md":                               "docs/how-to/plain-words.txt",
 		"docs/tutorials/getting-started.md":                      "docs/how-to/plain-words.txt",
 		"README.md":                                              plainWordsFile,
+		"docs/README.md":                                         plainWordsFile,
+		"DESIGN.md":                                              plainProjectFile,
+		"docs/principles/derive-the-obligation.md":               plainProjectFile,
 	} {
 		if got := plainPoolFor(rel); got != want {
 			t.Errorf("%s reads %s, want %s", rel, got, want)
 		}
 	}
 	if terms, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n\n" +
-		glossaryLegacyHeading + "\n\n- `nonce`\n"); len(problems) != 0 || len(terms) != 2 {
+		glossaryLegacyHeading + "\n\n`nonce`, `cron`\n"); len(problems) != 0 || len(terms) != 3 {
 		t.Errorf("a meaning row and a legacy name were not both read: %v %v", terms, problems)
 	}
 	if _, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n| boundary | edge |"); len(problems) != 1 {

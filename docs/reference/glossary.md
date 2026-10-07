@@ -65,4 +65,4 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 ## Names without a meaning yet
 
 These names joined before every name had to carry a meaning. Move a name up into the table when you write
-its meaning. No name may be added here.
+its meaning, and delete it here. No name may be added here.

@@ -96,8 +96,9 @@ A page whose first line is `<!-- prose:plain -->` is held to a stricter bar, che
 Each docs area has its own list of general English words. The target is 999 entries, so a reader of one
 area meets fewer than 1,000 simple words. An area whose pages needed more when they joined starts with a
 higher cap in `docsplainwords_test.go`, and that cap only goes down. The lists are: `docs/how-to/plain-words.txt` (with the tutorial),
-`docs/explanation/plain-words.txt`, `docs/reference/plain-words.txt`, `docs/handbook/plain-words.txt`, and
-`docs/plain-words.txt` for every other plain page. Names a reader must learn anyway, such as products,
+`docs/explanation/plain-words.txt`, `docs/reference/plain-words.txt`, `docs/handbook/plain-words.txt`, `docs/plain-words.txt` for the entry pages a
+newcomer opens first (README, CONTRIBUTING, SECURITY, SUPPORT and the docs index), and
+`docs/plain-words-project.txt` for every other plain page. Names a reader must learn anyway, such as products,
 protocols and file names, live in one shared glossary, `docs/reference/glossary.md`, each with a meaning of at
 least three words. Names that joined before that rule sit in its last section without a meaning;
 that section only shrinks. A general word also covers its regular forms, so a page may write `deals` or `connected`
