@@ -1,0 +1,112 @@
+# Design a daily-use bench case
+
+For an engineer who adds a case to `make bench-daily` or changes one. The bench signs in real seats, sends
+the requests a screen sends over HTTP, and judges each one against a published budget. Its files are
+`backend/internal/compose/integration/daily_*_bench_test.go`. It writes two generated pages:
+[performance-budgets.md](../reference/performance-budgets.md) for engineers and
+[benchmark.md](../reference/benchmark.md) for readers who want the answer in plain words.
+
+## 1. Pick a screen a seat opens every day
+
+A case is one screen, or one short journey such as search, then open the deal. Choose a screen a rep or a
+manager opens daily: the Worklist, Home, the search palette, a list, a record page, the analytics screen.
+Leave out screens opened rarely, such as settings or an import wizard.
+
+## 2. Derive the call list from what the screen sends
+
+Read the screen, not the API contract. List its reads:
+
+```sh
+grep -rn 'api.GET("/' frontend/src/screens/brief*.ts* frontend/src/screens/worklist*.ts
+```
+
+Follow the query modules the screen imports, since some reads live there and in `frontend/src/app/`. Send
+the same query parameters the screen sends: `per_type=3` and `per_type=5` plan different searches, and a
+Worklist without `scope` and `filter` runs a different query than the screen does. Calls a page fires
+together go in one row and run concurrently, as the browser runs them.
+
+Leave out two kinds of call:
+
+- **Model-lane reads.** An endpoint that calls a model on a cache miss measures the model fallback on every
+  sample instead of the screen's query. The deal status and the company dossier are out for this reason.
+- **Admin-only reads.** A call the screen makes only under an admin permission check is one a rep never
+  waits for.
+
+## 3. Choose the seats
+
+Measure as `rep` and `manager`, each a stored user who signs in through the product's own login. A rep
+sees owned rows and a manager sees the team's rows. On activities, both scopes walk the activity links.
+An admin sees every row and skips that walk, so an admin timing hides the cost the other two pay. The admin session runs only as background load in the morning pass and is never reported as a
+seat.
+
+## 4. Shape the corpus
+
+The bench seeds a deterministic corpus in bulk SQL, and its counts and ratios are declared once in the seed file. When a case needs data the seed lacks,
+extend the seed with the same care:
+
+- **Ownership is skewed.** The busiest rep owns several times what the median rep owns, and some
+  contacts are owner-only. Even ownership
+  hides the rep whose list is slow.
+- **Mail dominates activity.** Most activities are email, inbound outnumbers outbound, and a share of mail
+  is visible to its participants only. That audience split is what the visibility clause filters.
+- **Participants and links per activity.** Each email carries several participants and threads by
+  `thread_key`; the Worklist's waiting lanes read them. Each activity links to a contact and a company,
+  some to a deal.
+- **Link rules hold.** A trigger refuses a company link on a meeting or a call, so those get contact and
+  deal links only. Meetings leave `host_user_id` empty because of the overlap constraint.
+- **Bodies are long enough to be TOASTed**, as real mail is. Over short bodies, `search_tsv` stays in
+  the row and search looks faster than it is.
+- **Words come from a realistic vocabulary.** Names and business words in several languages, so a prefix
+  such as `co` or `contr` matches as many rows as it does in use. Sequential names (`Contact 17`) make
+  every prefix cheap.
+- **Months are uneven.** A flat spread hides the busy month a date-ranged query lands in.
+- **The census is asserted.** After seeding, the bench counts each table and fails on a short count, so a
+  seed step that silently inserts nothing cannot pass as a fast screen.
+
+Some lanes stay empty because no bulk writer exists for them. `GET /v1/deals/{id}/commitments` answers an
+empty list, so its time measures an empty read and says nothing about a full lane. A call that answers 404
+on every sample, such as a seeded company's logo, is recorded as "no data" for that call alone. It is never
+gated and never averaged into the rest of its row.
+
+## 5. Choose a budget, and list a known issue only when one is open
+
+Use a published ID from [performance-budgets.md](../reference/performance-budgets.md): `PERF-1` record open,
+`PERF-2` lists, `PERF-7` contact 360, `PERF-8` Worklist and Home, `PERF-9` analytics, `PERF-10` search as
+the screen calls it. When no budget covers a screen, add a new ID beside the others in
+`daily_budgets_bench_test.go` and in `backend/tools/gen-perfdoc/main.go`, then regenerate the page. A journey that spans
+two budgets is recorded as one row per budget, plus an ungated row for the whole journey.
+
+An over-budget flow fails the run. If an open issue already tracks it, add a row to the known-issues table
+(flow and issue number). The run then records "over budget" against that issue and passes. When the flow
+comes back within budget for every seat at full scale, the run fails and asks you to remove the row. Any
+5xx fails the run, and a 422 is allowed only on a flow listed for it.
+
+## 6. Know what each pass catches
+
+1. **Latency.** Warm-ups, then sequential samples per flow and seat, reported as p50, p95 and p99.
+2. **Repeat on prepared statements.** The latency samples share one pool that keeps its connections
+   and prepares statements, as the app's pool does (`make bench-daily` sets `cache_statement`). After its
+   fifth run, Postgres may switch a prepared statement to a generic plan, which shows as samples that
+   drift upward. Search statements are never prepared, so this does not apply to the search flows.
+3. **Morning load.** Every seat runs the morning journey at once while polling in the background. It
+   catches pool starvation: a cheap route such as `GET /v1/me` turns slow while connections wait.
+4. **First load after a restart.** The first Worklist and the first search on a fresh API process and
+   pool. Postgres keeps its buffers, so this measures the app's cold start, not a cold database.
+   Recorded, never gated.
+
+## 7. Add the case and run it
+
+1. Add a row to the flow table in `daily_flows_bench_test.go`: flow name, seats, calls with their
+   parameters, budget.
+2. Run a quick development pass at a fraction of the corpus:
+
+   ```sh
+   MARGINCE_BENCH_DAILY_SCALE=0.05 make bench-daily
+   ```
+
+   A run at any scale other than 1 marks its record as a development run, and the pages render it as inconclusive.
+   Only a full-scale `make bench-daily` writes a record you can publish.
+3. Commit the record and the regenerated pages together. After you change only the renderer, re-render
+   with `make perfdoc`; `make drift` fails a page that does not match its record.
+4. The bench database stays in place after every run, passed or failed, so you can read plans against it.
+   The next run recreates it. Drop it with `make bench-daily-clean` when you are done.
