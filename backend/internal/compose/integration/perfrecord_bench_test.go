@@ -9,7 +9,7 @@ package integration
 // record and to save one, measured at the transport the number is published
 // about.
 //
-// Two deliberate differences from perfbench_integration_test.go next door,
+// Two deliberate differences from perf_tier_bench_test.go next door,
 // which measures PERF-3/PERF-7:
 //
 //   - It measures through the BOOTED APPLICATION, not the store. PERF-3 and
