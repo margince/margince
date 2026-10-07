@@ -66,8 +66,7 @@ type Verdict = "spaced" | "flush" | "doubled" | "unplaced";
 type Row = { at: string; where: string; verdict: Verdict; by?: string };
 // The class lists of the boxes from an element's parent out to its dialog.
 type Chain = string[][];
-// A component judged under the boxes its call sits in; `via` holds the
-// components on the way to that call, so a recursion ends.
+// `via`: the components on the way to the call, so a recursion ends.
 type Guest = { def: ts.Node; outer: Chain[]; via: ReadonlySet<ts.Node> };
 // A component definition, mapped to the call that rendered it this time.
 type Links = Map<ts.Node, ts.Node>;
@@ -99,6 +98,7 @@ const NOT_ROWS = new Map([
 const rowKeys = [...FIELD_ROWS].map(([name, file]) => primitiveKey(file, name));
 const HEADING = primitiveKey("heading", "Heading");
 const NO_LINKS: Links = new Map();
+const DIALOG: Chain[] = [[["modal"]]];
 
 const keyIs = (n: ts.Node, key: string) => {
   const def = defOf(n);
@@ -560,7 +560,9 @@ function scopeOf(
   for (const n of inside) {
     const def = defOf(n);
     if (!def || via.has(def) || wraps(g, n) || isField(n)) continue;
-    guests.push({ def, outer: ancestry(g, viewAt(placement, n), n), via });
+    // An unplaced prop is not known to render inside the boxes `g.outer` names.
+    const at = unplacedAt(placement, n) ? { ...g, outer: DIALOG } : g;
+    guests.push({ def, outer: ancestry(at, viewAt(placement, n), n), via });
   }
   return { dialogs: dialogs.length, inside, guests };
 }
@@ -603,12 +605,12 @@ function rowsAcross(
   owners: Owners,
   keys: Keys,
 ) {
-  const base: Gate = { ...keys, owners, outer: [[["modal"]]] };
+  const base: Gate = { ...keys, owners, outer: DIALOG };
   const rows = new Map<string, Row>();
   const seen = new Set<string>();
   let dialogs = 0;
   let depth = 0;
-  let queue: Guest[] = [];
+  const queue: Guest[] = [];
   const take = (found: ReturnType<typeof rowsIn>) => {
     for (const r of found.rows) rows.set(`${r.at} ${r.verdict}`, r);
     queue.push(...found.guests);
@@ -619,9 +621,7 @@ function rowsAcross(
     take(found);
   }
   for (; queue.length > 0; depth++) {
-    const round = queue;
-    queue = [];
-    for (const q of round) {
+    for (const q of queue.splice(0)) {
       const key = `${keyOf(q.def)}#${JSON.stringify(q.outer)}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -684,7 +684,7 @@ function Bare() { const cite = () => <i className="m" />; return cite(); }
 function Refusals() { return <div className="m" />; }
 function Wrapped() { return <div className="s"><p /><div className="m" /></div>; }
 function Nest() { return <div className="s"><p /><div className="m"><Nest /></div></div>; }
-function Plain() { return <p />; }
+function HostsView() { return <View slot={<Wrapped />} />; }
 function Sheet({ children }) { return <Modal intent="form">{children}</Modal>; }
 function Side({ children, intent = "drawer" }) { return <Modal intent={intent}>{children}</Modal>; }
 function Shell({ body }) { return <Modal intent="form"><div>{body}</div></Modal>; }
@@ -977,7 +977,8 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     ${"judges a same-file component under each call's boxes"}   | ${inModal('<Wrapped /><div className="f"><Wrapped /></div>')}                                                             | ${"doubled"}              | ${HOSTED_STACK}
     ${"catches a margin on a same-file root in a form stack"}   | ${inModal('<div className="form-stack"><Refusals /></div>')}                                                              | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
     ${"ends at a component that renders itself"}                | ${inModal("<Nest />")}                                                                                                    | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
-    ${"keeps an unplaced prop out of another call's boxes"}     | ${'<><Modal intent="form"><div className="f"><Plain /></div></Modal><Kept body={(n) => <Wrapped />} /></>'}               | ${"no rows"}              | ${HOSTED_STACK}
+    ${"keeps an unplaced prop out of another call's boxes"}     | ${'<><Modal intent="form"><div className="f"><HostsView /></div></Modal><Kept body={(n) => <Wrapped />} /></>'}           | ${"no rows"}              | ${HOSTED_STACK}
+    ${"keeps a guest's unplaced prop out of its call's boxes"}  | ${inModal('<div className="f"><HostsView /></div>')}                                                                      | ${"no rows"}              | ${HOSTED_STACK}
   `("$spec", ({ jsx, verdict, sheet }: RowCase) => {
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners())).toBe(
       verdict,
