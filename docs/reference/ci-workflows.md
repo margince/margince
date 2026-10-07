@@ -191,7 +191,7 @@ because a diff exists.
 | SonarCloud quality gate | daily | `main`'s stored gate, read through the API (no re-scan) | It is not a required PR check, so nothing else reads it. `main-health.yml` publishes the analysis. |
 | backend lane | daily | The backend gate, unconditionally | A docs-only commit after a breaking one matches no classifier scope, so every gate skips and the run reports green over a broken tree. |
 | frontend clock drift | daily | The vitest suite run as if it were 200 days from now, with the same verdict | A fixture whose absolute date a component compares to `now` breaks on a calendar date, with no diff. |
-| PERF-3/PERF-7 budgets | weekly | Performance budgets over a quarter of a million seeded contacts, seeded twice | Weekly is enough for a budget that no merge depends on. |
+| PERF-3/PERF-7 budgets | weekly | `make bench-perf-check`: the budgets on the SMB tier (10,000 seeded contacts), writing no record | Weekly is enough for a budget that no merge depends on. |
 | model-driven use cases (`make e2e-llm`) | weekly | The deck scenarios driven by a real assistant, checking what it said | The deterministic suite pins payloads and refusals and stays green while the surface becomes undrivable by a model. |
 
 Notes on the jobs:
