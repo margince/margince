@@ -33,6 +33,12 @@ const FIELDS: readonly VocabularyField[] = [
 
 const TREE = newGroup("and", [newLeaf("city", "eq", "Berlin")]);
 
+// Two conditions joined with "and": the empty answer can advise "or".
+const AND_TREE = newGroup("and", [
+  newLeaf("city", "eq", "Berlin"),
+  newLeaf("city", "contains", "Mitte"),
+]);
+
 const ROWS = Array.from({ length: 100 }, (_, index) => ({
   id: `p-${index}`,
   full_name: `Contact ${index + 1}`,
@@ -80,28 +86,36 @@ function routes(first: Answer | "held" | "refused", later?: "held"): void {
   });
 }
 
-function Matches() {
+function Matches({ andJoined = false }: Readonly<{ andJoined?: boolean }>) {
   const [limit, setLimit] = useState(25);
-  const preview = useFilterPreview("contact", TREE, limit);
+  const preview = useFilterPreview(
+    "contact",
+    andJoined ? AND_TREE : TREE,
+    limit,
+  );
   return (
     <FilterMatches
       preview={preview}
       tab="contacts"
       fields={FIELDS}
       named={["city"]}
-      andJoined={false}
+      andJoined={andJoined}
       limit={limit}
       onLimit={setLimit}
     />
   );
 }
 
-function story(first: Answer | "held" | "refused", later?: "held") {
+function story(
+  first: Answer | "held" | "refused",
+  later?: "held",
+  andJoined?: boolean,
+) {
   return () => {
     routes(first, later);
     return (
       <StoryProviders>
-        <Matches />
+        <Matches andJoined={andJoined} />
       </StoryProviders>
     );
   };
@@ -139,6 +153,12 @@ export const ShowMoreOffered: Story = {
 
 export const NoMatches: Story = {
   render: story({ match_count: 0, rows: 0 }),
+};
+
+// Nothing matches two conditions joined with "and", so the advice names the
+// connector as well as the most specific condition.
+export const NoMatchesAndJoined: Story = {
+  render: story({ match_count: 0, rows: 0 }, undefined, true),
 };
 
 // Dark: the count beside the title and the table's header band and row rules,

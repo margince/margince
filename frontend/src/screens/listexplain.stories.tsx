@@ -131,3 +131,9 @@ export const RetiredTag: Story = {
     );
   },
 };
+
+// Dark: the archived tag's note against the dark surface.
+export const RetiredTagDark: Story = {
+  ...RetiredTag,
+  globals: { theme: "dark" },
+};

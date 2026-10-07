@@ -35,7 +35,7 @@ describe("The filters fake server", () => {
     expect(await history.json()).toMatchObject({ data: [] });
   });
 
-  it("answers a visit with the visit it stored, and makes no list of it", async () => {
+  it("answers a stored list's visit with a whole visit body, and makes no list of it", async () => {
     mountFilters({ listsOn: true, lists: [liveList] });
     const visit = await fetch(`${AT}/lists/${LIVE_ID}/visit`, {
       method: "POST",

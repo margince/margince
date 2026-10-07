@@ -2094,13 +2094,15 @@ export async function mockApi(
     }
     if (path === "/views" && method === "GET") {
       // One store answers every read, so the library, a list's rail and an
-      // opened view agree after a write. Archived views are left out.
+      // opened view agree after a write. Archived views are left out unless
+      // the read asks for them, as the contract's include_archived does.
       const resource = url.searchParams.get("resource");
+      const archivedToo = url.searchParams.get("include_archived") === "true";
       return json(
         page(
           views.filter(
             (view) =>
-              !view.archived_at &&
+              (archivedToo || !view.archived_at) &&
               (resource === null || view.resource === resource),
           ),
         ),
