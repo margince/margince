@@ -481,6 +481,46 @@ func TestAnUngreetedReplyIsServedWithTheFloorGreeting(t *testing.T) {
 	}
 }
 
+// The greeting is added after the model's body passed its bound, so the served
+// draft is held to the bound again: a body the greeting carries past it is
+// refused, which sends the caller to its deterministic draft, while one the
+// greeting brings exactly to it is served. Every lane that greets is held.
+func TestAGreetingThatCarriesTheBodyPastItsBoundIsRefused(t *testing.T) {
+	data := replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna", Intent: "confirm the plan"}
+	line := strings.TrimSuffix(draftcheck.EnsureGreeting("x", data.Envelope, data.Recipient, ""), "x")
+	lanes := map[string]func(*replyBrainStub) (replyDraft, error){
+		"reply": func(brain *replyBrainStub) (replyDraft, error) {
+			draft, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), ids.NewV7(), data, draftvoice.Context{})
+			return draft, err
+		},
+		"voiced reply": func(brain *replyBrainStub) (replyDraft, error) {
+			draft, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), ids.NewV7(), data, testVoiceContext())
+			return draft, err
+		},
+		"first message": func(brain *replyBrainStub) (replyDraft, error) {
+			return replyDrafter{brain: brain}.completeFirstVoiced(context.Background(), data, draftvoice.Context{})
+		},
+	}
+	for lane, draft := range lanes {
+		for bodyRunes, wantServed := range map[int]bool{
+			replyDraftBodyMaxRunes:                         false,
+			replyDraftBodyMaxRunes - len([]rune(line)) + 1: false,
+			replyDraftBodyMaxRunes - len([]rune(line)):     true,
+		} {
+			body := strings.Repeat("b", bodyRunes)
+			brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: plan","body":"` + body + `"}`}}
+			served, err := draft(brain)
+			if wantServed && (err != nil || served.Body != line+body) {
+				t.Errorf("%s, %d-rune body: err = %v, want it served greeted at the bound", lane, bodyRunes, err)
+			}
+			if !wantServed && err == nil {
+				t.Errorf("%s, %d-rune body: served %d runes past the %d-rune bound", lane, bodyRunes,
+					len([]rune(served.Body)), replyDraftBodyMaxRunes)
+			}
+		}
+	}
+}
+
 // The greeting repair runs after the voice floor, so a canned opener the model
 // wrote is still caught at the start of its own text rather than hidden behind
 // the floor's greeting line.
