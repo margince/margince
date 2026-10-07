@@ -285,6 +285,9 @@ function OverviewBody({
       </div>
       {!validPeriod && <p role="status">{t("reporting.chooseDates")}</p>}
       {invalidSelection && <ErrorLine error={query.error} />}
+      {/* Its sources are its own, so a failed or unasked evaluation does not
+          take the list down with it. */}
+      {(!validPeriod || query.isError) && <AnalyticsAttention scope={scope} />}
       {validPeriod && !invalidSelection && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (

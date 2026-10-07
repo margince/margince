@@ -693,14 +693,24 @@ function PipelineTotals({
 }>) {
   const t = useT();
   const count = aggregates.reduce((total, row) => total + row.count, 0);
-  const rawMinor = sumKnown(aggregates.map((row) => row.rawMinor));
-  const weightedMinor = sumKnown(aggregates.map((row) => row.weightedMinor));
   // Stated only when every stage answered it: a stage that did not would
   // count its deals into the total and none into the priced, a shortfall the
   // pipeline does not have.
   const pricedDeals = aggregates.every((row) => row.pricedDeals != null)
     ? sumKnown(aggregates.map((row) => row.pricedDeals))
     : null;
+  // A stage the rate sheet could not price drops out of the sums. With the
+  // priced count in hand the footnote says so; without it the shortfall has
+  // no words, so the totals are absent rather than quietly short.
+  const unstated =
+    pricedDeals == null &&
+    aggregates.some((row) => row.count > 0 && row.rawMinor == null);
+  const rawMinor = unstated
+    ? null
+    : sumKnown(aggregates.map((row) => row.rawMinor));
+  const weightedMinor = unstated
+    ? null
+    : sumKnown(aggregates.map((row) => row.weightedMinor));
   const footnote =
     pricedDeals == null
       ? undefined
@@ -722,6 +732,7 @@ function PipelineTotals({
         narrow="row"
         label={t("analytics.weighted")}
         value={formatMoneyOrAbsent(weightedMinor, baseCurrency, locale)}
+        detail={footnote}
       />
     </StatStrip>
   );

@@ -71,9 +71,12 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
     "quarter",
   );
   const coverage = useDataCoverage();
+  const canReadCoverage = useCan("data_coverage", "read");
 
+  // A disabled query still hands back what it cached, so a grant withdrawn
+  // mid-session is checked here as well as at the request.
   const items: AttentionItem[] = [];
-  const findings = checks.data ?? [];
+  const findings = (canReadForecast && checks.data) || [];
   if (findings.length > 0) {
     items.push({
       key: "checks",
@@ -85,7 +88,7 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
       section: "forecast",
     });
   }
-  const forecast = readings.data;
+  const forecast = canReadForecast ? readings.data : undefined;
   if (forecast && forecast.priced_count < forecast.eligible_count) {
     items.push({
       key: "unpriced",
@@ -99,7 +102,9 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
     });
   }
   const unread =
-    coverage.data?.sources.filter((source) => source.state !== "checked") ?? [];
+    (canReadCoverage &&
+      coverage.data?.sources.filter((source) => source.state !== "checked")) ||
+    [];
   if (unread.length > 0) {
     items.push({
       key: "coverage",

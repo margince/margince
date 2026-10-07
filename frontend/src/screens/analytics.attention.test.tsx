@@ -116,6 +116,22 @@ it("opens the section where each item is answered", async () => {
   );
 });
 
+it("keeps the list when the performance evaluation fails", async () => {
+  window.location.hash = "#/analytics/performance";
+  installFetchStub(
+    routes({
+      "GET /analytics/evaluate": () =>
+        jsonResponse({ status: 500, title: "Internal Server Error" }, 500),
+    }),
+  );
+  render(<AnalyticsScreen />);
+
+  expect(
+    await screen.findByRole("heading", { name: "Needs your attention" }),
+  ).toBeTruthy();
+  expect(await screen.findByText("2 forecast checks to answer")).toBeTruthy();
+});
+
 it("draws no panel when nothing needs the reader", async () => {
   window.location.hash = "#/analytics/performance";
   installFetchStub(
