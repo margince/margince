@@ -6,10 +6,10 @@
 // one kind of hit from crowding out the rest. None of that is what a command
 // palette IS, and all of it is what `palette.tsx` was mostly made of.
 
-import { useQuery } from "@tanstack/react-query";
-import { useDeferredValue } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useSettledValue } from "../design-system/debouncedsearch";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import {
@@ -56,9 +56,8 @@ type SearchArm = Readonly<{
   failure: string;
 }>;
 
-// Live record hits for the palette (RS-1): debounced via useDeferredValue
-// rather than a timer (craft: no real-clock waits in the render path), and
-// gated on a 2-char floor so single keystrokes don't fire a query per key.
+// Live record hits for the palette (RS-1): one request per pause in the typing
+// (useSettledValue), from two characters, and each superseded request aborted.
 //
 // GROUPED, a few of each kind: relevance does not compare across kinds, and a
 // short list ranked across them was all mail threads for a word that also
@@ -67,11 +66,17 @@ export function useSearchCommands(query: string): SearchArm {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const deferred = useDeferredValue(query.trim());
-  const enabled = deferred.length >= 2;
+  const typed = query.trim();
+  const settled = useSettledValue(typed);
+  // The typed floor hides a cleared box's hits at once (its fetch aborts a
+  // pause later, when `settled` moves); the settled one never asks one letter.
+  const enabled = typed.length >= 2 && settled.length >= 2;
   const result = useQuery({
-    queryKey: ["palette-search", deferred],
+    queryKey: ["palette-search", settled],
     enabled,
+    // The last answer stands while the next is asked: an empty list between
+    // two answers reads as "no matches" for a word that has some.
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
       const { data, error } = await api.GET("/search", {
         // So a keystroke the reader has typed past stops costing the server a
@@ -79,7 +84,7 @@ export function useSearchCommands(query: string): SearchArm {
         signal,
         params: {
           query: {
-            q: deferred,
+            q: settled,
             per_type: PALETTE_PER_TYPE,
             with_employees: true,
           },
@@ -101,7 +106,9 @@ export function useSearchCommands(query: string): SearchArm {
         }
         throw new Error(t("palette.searchFailed"));
       }
-      return data.data;
+      // Paired with the words it answered: a kept-over answer is routed by
+      // its own query, not by the one still being asked.
+      return { q: settled, hits: data.data };
     },
   });
   // The second line says which one of a kind this is; the group heading
@@ -124,10 +131,11 @@ export function useSearchCommands(query: string): SearchArm {
   // each kind lives. An activity that is not a message has no page and drops
   // out by answering null; an EMAIL goes to the results screen with that
   // message open, the one page that already owns its drawer.
-  const commands = groupSearchHits(result.data ?? []).flatMap(
+  const answer = enabled ? result.data : undefined;
+  const commands = groupSearchHits(answer?.hits ?? []).flatMap(
     ({ group, hits }) =>
       hits.flatMap((hit): Command[] => {
-        const route = searchHitDestination(hit, deferred);
+        const route = answer ? searchHitDestination(hit, answer.q) : null;
         if (!route) {
           return [];
         }
