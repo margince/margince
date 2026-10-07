@@ -65,6 +65,7 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/leadfromcontact.go:ensureContactStillLive":             "whether the contact a lead is created from is still live, re-asked under the lock after CreateLead read it through GetContact; it selects one boolean",
 	"internal/modules/contacts/leadidentity.go:ensureContactNotWorked":                "locks the contact row a lead is worked from so racing creates, reopens and demotes queue on it; it selects a constant and returns no contact column",
 	"internal/modules/deals/dealunarchive.go":                                         "the relationship restore of a deal un-archive: `contact` appears only in a NOT EXISTS that keeps a link to an archived contact archived. Nothing is selected; removing the condition could only restore more links",
 	"internal/modules/contacts/providerboughtfields.go":                               "which of a contact's values a purchase still owns. `contact` appears only inside an EXISTS comparing the title with the ledger's copy, and the statement selects ledger columns (table, field, row id, provider, time). Reached only from readContact, whose callers ask the contact object gate",
