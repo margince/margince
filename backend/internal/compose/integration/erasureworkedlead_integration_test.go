@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -109,5 +110,88 @@ func TestAMergedLeadHandsItsContactToTheSurvivor(t *testing.T) {
 	}
 	if merged.FromContactId == nil || ids.UUID(*merged.FromContactId) != ids.UUID(contact.Id) {
 		t.Errorf("the surviving lead is worked from %v, want the contact %s", merged.FromContactId, contact.Id)
+	}
+}
+
+// When both merged contacts were already worked through a live lead, the
+// merged-away one keeps its link, and erasing the survivor still reaches it.
+func TestErasingTheSurvivorReachesTheMergedAwayContactsLead(t *testing.T) {
+	e := Setup(t)
+	var contactIDs [2]ids.ContactID
+	var leadIDs [2]ids.UUID
+	for i := range contactIDs {
+		created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Dana Example", Source: "manual"})
+		if err != nil {
+			t.Fatalf("creating contact %d: %v", i, err)
+		}
+		contactIDs[i] = ids.From[ids.ContactKind](ids.UUID(created.Id))
+		lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &contactIDs[i]})
+		if err != nil {
+			t.Fatalf("working contact %d as a lead: %v", i, err)
+		}
+		leadIDs[i] = ids.UUID(lead.Id)
+	}
+	if _, err := e.Contacts.MergeContact(e.Admin(), contactIDs[0], contactIDs[1], nil); err != nil {
+		t.Fatalf("merging the contacts: %v", err)
+	}
+
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactIDs[1].UUID, "test"); err != nil {
+		t.Fatalf("erasing the survivor: %v", err)
+	}
+
+	for i, leadID := range leadIDs {
+		var name string
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(context.Background(), `SELECT full_name FROM lead WHERE id = $1`, leadID).Scan(&name)
+		}); err != nil {
+			t.Fatalf("reading lead %d back: %v", i, err)
+		}
+		if name == "Dana Example" {
+			t.Errorf("lead %d still reads the erased contact's name", i)
+		}
+	}
+}
+
+// A reader who cannot open the contact a lead was worked from reads the lead
+// without its id, and cannot find the lead by it either.
+func TestALeadWithholdsAContactItsReaderCannotOpen(t *testing.T) {
+	e := Setup(t)
+	// Capture-private: only its owner opens it, whatever anybody else's scope.
+	private := ids.NewV7()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`INSERT INTO contact (id, owner_id, full_name, visibility, source, captured_by)
+			 VALUES ($1, $2, 'Dana Example', 'owner', 'manual', 'human:x')`, private, e.Rep3)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the capture-private contact: %v", err)
+	}
+	contactID := ids.From[ids.ContactKind](private)
+	owner := ids.From[ids.UserKind](e.Rep1)
+	lead, _, err := e.Contacts.CreateLead(e.As(e.Rep3, nil, AdminPerms), contacts.CreateLeadInput{
+		Source: "manual", FromContactID: &contactID, OwnerID: &owner,
+	})
+	if err != nil {
+		t.Fatalf("the contact's owner working it as the rep's lead: %v", err)
+	}
+	rep := e.As(e.Rep1, nil, AdminPerms)
+
+	read, err := e.Contacts.GetLead(rep, ids.From[ids.LeadKind](ids.UUID(lead.Id)), storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("the rep reading their own lead: %v", err)
+	}
+	if read.FromContactId != nil {
+		t.Errorf("the rep reads from_contact_id %s, a contact they cannot open", *read.FromContactId)
+	}
+	found, _, err := e.Contacts.ListLeads(rep, contacts.ListLeadsInput{FromContactID: &contactID})
+	if err != nil {
+		t.Fatalf("the rep filtering by the contact: %v", err)
+	}
+	if len(found) != 0 {
+		t.Errorf("filtering by a contact the rep cannot open found %d leads, want none", len(found))
+	}
+	mine, err := e.Contacts.GetLead(e.As(e.Rep3, nil, AdminPerms), ids.From[ids.LeadKind](ids.UUID(lead.Id)), storekit.LiveOnly)
+	if err != nil || mine.FromContactId == nil {
+		t.Fatalf("the contact's owner reads %v (%v), want its id", mine.FromContactId, err)
 	}
 }

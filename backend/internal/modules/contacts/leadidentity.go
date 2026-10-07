@@ -166,3 +166,24 @@ func nameableLead(ctx context.Context, tx pgx.Tx, existing ids.LeadID) (ids.Lead
 	}
 	return existing, nil
 }
+
+// workedFromContact is the contact a lead row was worked from, or nil. Read off
+// the row: the wire lead withholds a contact its reader cannot open, and the
+// writers that need the link must see it either way.
+func workedFromContact(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (*ids.ContactID, error) {
+	var contact *ids.ContactID
+	if err := tx.QueryRow(ctx, `SELECT from_contact_id FROM lead WHERE id = $1`, leadID).Scan(&contact); err != nil {
+		return nil, fmt.Errorf("read the contact a lead was worked from: %w", err)
+	}
+	return contact, nil
+}
+
+// reopenedLeadContactFree refuses bringing a closed lead back to life while
+// another live lead is worked from its contact.
+func reopenedLeadContactFree(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) error {
+	contact, err := workedFromContact(ctx, tx, leadID)
+	if err != nil {
+		return err
+	}
+	return ensureContactNotWorked(ctx, tx, contact, &leadID)
+}

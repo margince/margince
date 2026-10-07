@@ -143,7 +143,36 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 	if err := stampLeadWritable(ctx, tx, &l); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	return l, nil
+	one := []crmcontracts.Lead{l}
+	if err := withholdUnreadableSourceContacts(ctx, tx, one); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	return one[0], nil
+}
+
+// withholdUnreadableSourceContacts blanks from_contact_id on every lead whose
+// contact the caller cannot open, so reading a lead never hands over the id of
+// a contact outside the reader's sight. One probe for the whole page.
+func withholdUnreadableSourceContacts(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
+	var contactIDs []ids.UUID
+	for _, l := range leads {
+		if l.FromContactId != nil {
+			contactIDs = append(contactIDs, ids.UUID(*l.FromContactId))
+		}
+	}
+	if len(contactIDs) == 0 {
+		return nil
+	}
+	visible, err := auth.VisibleSubset(ctx, tx, "contact", contactIDs)
+	if err != nil {
+		return err
+	}
+	for i := range leads {
+		if leads[i].FromContactId != nil && !visible[ids.UUID(*leads[i].FromContactId)] {
+			leads[i].FromContactId = nil
+		}
+	}
+	return nil
 }
 
 // scanLead scans core + active custom columns, plus whatever trailing

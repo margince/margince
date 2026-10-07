@@ -172,6 +172,9 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	if err := ensureContactNotWorked(ctx, tx, in.FromContactID, nil); err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
+	if err := ensureContactStillLive(ctx, tx, in.FromContactID); err != nil {
+		return crmcontracts.Lead{}, false, err
+	}
 
 	if in.ProjectID != nil {
 		if err := auth.EnsureLinkTarget(ctx, tx, "project", in.ProjectID.UUID); err != nil {

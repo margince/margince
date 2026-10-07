@@ -116,7 +116,7 @@ func (s *Store) DemoteLead(
 		if err := stillTheLeadTheCallerDescribed(lead, contactID, options); err != nil {
 			return err
 		}
-		if err := ensureContactNotWorked(ctx, tx, idArg[ids.ContactKind](lead.FromContactId), &id); err != nil {
+		if err := reopenedLeadContactFree(ctx, tx, id); err != nil {
 			return err
 		}
 
