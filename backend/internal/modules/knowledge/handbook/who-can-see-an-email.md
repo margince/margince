@@ -138,7 +138,7 @@ yourself, one at a time.
 **Shared with the team** makes mail open to read the moment it comes in. It is
 off unless an administrator allows it for the company. In Germany and Austria,
 reading a colleague's mailbox into a shared CRM needs a works council
-agreement. Margince does not check that you have one.
+agreement. Where there is no works council, each colleague must agree. Margince does not check that you have one.
 
 Changing the posture applies to mail captured after the change. The same dialog
 offers to narrow what is already captured. It never opens up captured mail; to
@@ -178,7 +178,8 @@ Also called: confidential client, lawyer mail, hide emails from colleagues.
 
 **Private correspondence**, on a contact's or a company's page, keeps your mail
 with one side to those on it, without deciding message by message. A domain hold
-covers the whole domain, which is most often what you want for a lawyer.
+covers the whole domain, which is most often what you want for a lawyer or an
+accountant.
 
 It holds mail from then on, and lifting it opens nothing again: "Lifting applies
 to new mail. Mail already held stays held."

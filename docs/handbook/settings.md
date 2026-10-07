@@ -122,7 +122,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 The Integrations page in Settings (group **Data**) shows what the installation is connected to, as against what one colleague connected.
 
-**Contact data** is a provider that sells contact data, with its budget and how many times it fills data in again. **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again.
+**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again.
 
 ## Extensions
 
@@ -136,13 +136,13 @@ The Capture rules page in Settings (group **Data**) decides what comes into the 
 
 **Email sharing**, at the top: whether captured mail is shared with colleagues. It holds for everybody, so it lives here. Your own **Connections** page shows the current setting and links here.
 
-**Own email domains** are the domains that belong to this company. Mail between colleagues is not stored for anyone, you too. Take note: no mailbox offers again the mail skipped while a domain is on this list.
+**Own email domains** are the domains that belong to this company. Mail between colleagues is not stored for anyone, including you. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
 **Enrichment.** Whether Margince fills in facts on captured companies by itself.
 
 **Consumer mail domains.** Which domains count as private mailboxes. Mail from one of them makes the contact, but never a company. Margince comes with the list; you can add a missing domain or change a wrong entry.
 
-**Refused domains.** Which domains this installation will not make a company for, and what decided each one: a model result, a fixed rule, or a human. Letting a domain back in makes Margince decide again whether it is a company.
+**Refused domains.** Which domains this installation will not make a company for, and what decided each one: a model result, an automatic rule, or a human. Letting a domain back in makes Margince decide again whether it is a company.
 
 ## The Sales group
 
@@ -180,7 +180,7 @@ The AI group in Settings has the pages **AI usage**, **AI models**, **AI call lo
 
 **Model routing**, on **AI models**, shows which model does each kind of work, listed by activity. What you see is the current setting; **AI call log** shows what ran. Settings that several kinds of work share sit under **Advanced**, and changing one can move several kinds of work at once. Prices show the cost of the text sent in and the text that comes back, per million tokens. To know where data goes and what it costs, check the model and provider shown on each row, not the tier name.
 
-Each row in **AI tasks** names its tier. Its name opens its state, what it does when the provider is down, and **View calls**. **Edit** sets how long it reasons, and its time limits. Search and retrieval has neither: set its model under **Model tiers**.
+Each row in **AI tasks** names its tier. Its name opens its state, what it does when the provider is down, and **View calls**. **Edit** sets how hard it reasons, and its time limits. Search and retrieval has neither: set its model under **Model tiers**.
 
 Changes start to work in about 60 seconds; a call already running keeps its old setting.
 
@@ -190,7 +190,7 @@ Changes start to work in about 60 seconds; a call already running keeps its old 
 
 **Monthly AI allowance**: Admin and Ops set it; Management can read it but not change it. The default is 12 million tokens each month for each full user who is active, shared by the whole company. It is one company total measured in tokens, with no limit per user and no money limit. You can set a fixed company total instead of the sum, which does not delete the number per user under it. With no users that count, the sum counts one.
 
-The allowance starts again at the start of each calendar month, UTC. At **80%**, work moves to lower tiers; the model can stay the same where two tiers use the same model. At **100%**, AI work in the background waits, and work you ask for uses the last tier. Search indexing keeps running, and still counts.
+The allowance starts again at the start of each calendar month, UTC. At **80%**, work moves to lower tiers; the model can stay the same where two tiers use the same model. At **100%**, AI work in the background waits, and work you ask for uses the lowest tier. Search indexing keeps running, and still counts.
 
 When someone sets a higher allowance, three kinds of waiting work run on the next pass, if the provider answers. They are reads of a company's site, company checks and voice builds. The waiting counts cover only those three kinds of work. Work asked for by someone who lost their access waits until that access comes back.
 
@@ -218,7 +218,7 @@ Between them they hold:
   rename or remove it.
 - **Retention**: how long each kind of record is kept, and what happens when its
   time runs out.
-- **Restricted records**: what the law makes Margince keep after it deletes a record.
+- **Restricted records**: what the law makes Margince hold after an erasure.
 - **Privacy requests**: requests from a contact about their own data, with their
   due dates.
 - **Audit log**: every action, and who did it.

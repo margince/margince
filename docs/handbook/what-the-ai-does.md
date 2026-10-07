@@ -48,7 +48,7 @@ sign-off."
 
 **Reading documents for deal fields.** You can ask the AI to read a file
 attached to a deal. It comes back with the fields it can find in that file (deal
-name, value, currency, expected close date). It shows each one with the text it
+name, amount, currency, expected close date). It shows each one with the text it
 read it from, and waits for you to accept. Nothing is written to the deal until
 you press accept.
 
@@ -109,7 +109,7 @@ Where Margince can say who put a value there, it does. The trust marks are:
 - "System task {job}", or plain "System task" when the job has no name to show.
   This is the installation's own work, such as a planned sweep or a run that
   makes up for lost time. It has a different name from an agent, so you know whether a model
-  decided something or Margince did its daily work.
+  decided something or Margince did routine work.
 - "Via {connector}": it came from a connected mailbox
 - "Source not recorded": when nobody knows where it came from
 
@@ -158,7 +158,7 @@ The **Worklist** on **Home** is the shape of the day. It shows what needs a
 decision, today's meetings, deals going quiet, promises you made, and what ran
 on its own during the night.
 
-The **Home** brief ranks companies and shows the reasons behind each rank, with
+The **Home** brief ranks open deals and shows the reasons behind each rank, with
 the evidence behind them. The reasons are how likely a win is, the money, the
 timing, how quickly things move, and how warm the contact is.
 
