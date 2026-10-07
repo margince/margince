@@ -374,6 +374,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
 		CustomFields:        req.AdditionalProperties,
+		FromContactID:       idArg[ids.ContactKind](req.ContactId),
 	}
 	if req.Email != nil {
 		email := string(*req.Email)

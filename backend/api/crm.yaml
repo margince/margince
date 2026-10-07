@@ -42360,6 +42360,15 @@ components:
         company_name: { type: [string, 'null'] }
         candidate_company_key: { type: [string, 'null'] }
         project_id: { type: [string, 'null'], format: uuid }
+        contact_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            An existing contact this lead is worked from. Its name, primary email, title,
+            LinkedIn profile and current employer fill whichever of those fields this request
+            leaves out, so a lead for a person the CRM already knows is never retyped or left
+            unnamed. The contact must be one the caller may read (422 otherwise); it is not
+            linked to the lead or changed.
         status: { type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.' }
         owner_id: { type: [string, 'null'], format: uuid }
         source_system: { type: [string, 'null'] }
