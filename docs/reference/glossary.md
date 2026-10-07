@@ -65,3 +65,12 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 
 The pages used these names before they joined the plain-words bar. Move a name up into the table when you
 write its meaning, and delete it here. A name new to the docs goes in the table, never here.
+
+<!-- prose:allow sentence a list of names, not a sentence -->
+`AA`, `Act`, `AirDrop`, `Apple`, `args`, `ASCII`, `AST`, `Aurora`, `Authenticode`, `axe`, `C`, `Chrome`,
+`CODEOWNERS`, `CRUD`, `CSS`, `Ctrl-C`, `DAG`, `DDL`, `DELETE`, `DSN`, `Edge`, `enum`, `Escape`, `Firefox`,
+`Fonts`, `frontend`, `FX`, `Gatekeeper`, `GB`, `Geist`, `GNU`, `HTTP`, `IANA`, `Intel`, `JSON`, `JSONPath`,
+`LLM`, `Mac`, `MB`, `ms`, `MSVC`, `notarization`, `NULL`, `OS`, `Outfit`, `Outlook`, `PATCH`, `pgvector`,
+`POST`, `PostgreSQL`, `PowerShell`, `px`, `README`, `River`, `Rosetta`, `Safari`, `SLA`, `SmartScreen`,
+`Sparkles`, `SPDX`, `SQL`, `Storybook`, `struct`, `Studio`, `TypeScript`, `UI`, `URL`, `USB`, `Valkey`,
+`Ventura`, `Visual`, `WCAG`, `Xcode`, `YAML`
