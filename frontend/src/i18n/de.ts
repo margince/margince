@@ -9699,6 +9699,8 @@ export const de = {
   "capturePurge.done": "Schließen",
   "capturePurge.failed":
     "Die Löschung wurde nicht abgeschlossen. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
+  "capturePurge.refused":
+    "Das Löschen wurde abgelehnt, daher wurde nichts vernichtet.",
   "capturePurge.wouldDestroy_one": "{count} Nachricht würde vernichtet.",
   "capturePurge.wouldDestroy_other": "{count} Nachrichten würden vernichtet.",
   "capturePurge.destroyed_one": "{count} Nachricht vernichtet.",

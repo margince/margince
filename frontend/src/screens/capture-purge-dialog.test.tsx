@@ -40,3 +40,42 @@ it("holds every way out while the purge is in flight", async () => {
   await user.keyboard("{Escape}");
   expect(onClose).not.toHaveBeenCalled();
 });
+
+// A refusal before anything ran destroyed nothing, and the dialog must not tell
+// the reader it may have.
+it("says nothing was destroyed when the purge is refused", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            title: "Forbidden",
+            status: 403,
+            code: "permission_denied",
+            detail: "activity.delete: permission denied",
+          }),
+          {
+            status: 403,
+            headers: { "content-type": "application/problem+json" },
+          },
+        ),
+    ),
+  );
+  const user = userEvent.setup();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <PurgeDialog
+          ruleId="ex-2"
+          ruleValue="recruiting.example"
+          onClose={vi.fn()}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Check first" }));
+
+  expect(await screen.findByText(/nothing was destroyed/i)).toBeInTheDocument();
+  expect(screen.queryByText(/may already have been destroyed/i)).toBeNull();
+});
