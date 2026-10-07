@@ -551,7 +551,7 @@ function scopeOf(
     const inDialog = [...climb(v, r)].some((s) => isDialog(g, s.at));
     if (inDialog) add(v, r);
   }
-  for (const [r, call] of placement.unplaced) {
+  for (const [r, call] of hosted ? [] : placement.unplaced) {
     const def = defOf(call);
     if (def && elementsIn(def).some((e) => isDialog(g, e))) add(plain, r);
   }
@@ -684,6 +684,7 @@ function Bare() { const cite = () => <i className="m" />; return cite(); }
 function Refusals() { return <div className="m" />; }
 function Wrapped() { return <div className="s"><p /><div className="m" /></div>; }
 function Nest() { return <div className="s"><p /><div className="m"><Nest /></div></div>; }
+function Plain() { return <p />; }
 function Sheet({ children }) { return <Modal intent="form">{children}</Modal>; }
 function Side({ children, intent = "drawer" }) { return <Modal intent={intent}>{children}</Modal>; }
 function Shell({ body }) { return <Modal intent="form"><div>{body}</div></Modal>; }
@@ -976,6 +977,7 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     ${"judges a same-file component under each call's boxes"}   | ${inModal('<Wrapped /><div className="f"><Wrapped /></div>')}                                                             | ${"doubled"}              | ${HOSTED_STACK}
     ${"catches a margin on a same-file root in a form stack"}   | ${inModal('<div className="form-stack"><Refusals /></div>')}                                                              | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
     ${"ends at a component that renders itself"}                | ${inModal("<Nest />")}                                                                                                    | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"keeps an unplaced prop out of another call's boxes"}     | ${'<><Modal intent="form"><div className="f"><Plain /></div></Modal><Kept body={(n) => <Wrapped />} /></>'}               | ${"no rows"}              | ${HOSTED_STACK}
   `("$spec", ({ jsx, verdict, sheet }: RowCase) => {
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners())).toBe(
       verdict,
