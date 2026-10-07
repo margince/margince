@@ -3419,7 +3419,8 @@ export const de = {
     "Nur geladene Deals. Die Summen der zuständigen Person darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
-  "deals.totalsNoSearch": "Nur geladene Deals. Keine Summe während der Suche.",
+  "deals.totalsNoSearch":
+    "Nur geladene Deals. Die Stufensummen kennen keine Suche, daher wird keine gezeigt.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Beliebiger Partner",
   "deals.filterMotion": "Geschäftsart",

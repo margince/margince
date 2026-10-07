@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { DealsScreen } from "./deals";
+import { SEARCH_DEBOUNCE_MS } from "./listquery";
 
 // What narrowed the pipeline has to be readable ON the surface that is
 // narrowed.
@@ -311,7 +312,7 @@ describe("the deals list narrows like every other record list", () => {
         target: { value: "retrofit" },
       });
       act(() => {
-        vi.advanceTimersByTime(250);
+        vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
       });
     } finally {
       vi.useRealTimers();
@@ -322,11 +323,12 @@ describe("the deals list narrows like every other record list", () => {
     );
     // The per-stage report takes no search, so a total over the column would
     // count deals the search is keeping off the board.
+    // One stage, so one column states it.
     expect(
       await screen.findAllByText(
-        "Loaded deals only. No total while you search.",
+        "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
       ),
-    ).not.toHaveLength(0);
+    ).toHaveLength(1);
   });
 
   it("offers Mine beside All, and Mine asks for the viewer's own deals", async () => {

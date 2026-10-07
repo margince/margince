@@ -3387,7 +3387,8 @@ export const vi = {
   "deals.totalsOwnerNotMeasurable":
     "Chỉ phần đã tải — bạn không được xem tổng của người phụ trách này",
   "deals.totalsNoTagFilter": "Chỉ phần đã tải — không có tổng khi lọc theo thẻ",
-  "deals.totalsNoSearch": "Chỉ phần đã tải — không có tổng khi đang tìm kiếm",
+  "deals.totalsNoSearch":
+    "Chỉ phần đã tải — tổng theo giai đoạn không áp dụng tìm kiếm nên không hiển thị",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
   "deals.filterMotion": "Loại giao dịch",

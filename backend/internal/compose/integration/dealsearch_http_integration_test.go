@@ -14,14 +14,14 @@ import (
 )
 
 // The deals list answers a search the way the contacts and leads lists do:
-// a word of the name finds the deal, and a deal whose name does not hold it
-// stays off the page.
-func TestTheDealsListFindsADealByAWordOfItsName(t *testing.T) {
+// a word of the name or the description finds the deal, and a deal that holds
+// neither stays off the page. A fragment reaches the name only.
+func TestTheDealsListFindsADealByItsNameOrDescription(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pipelineID, stageID, _ := companyRollupOpenStage(t, e)
-	retrofit := createSearchableDeal(t, e, pipelineID, stageID, "Fleet retrofit")
-	rollout := createSearchableDeal(t, e, pipelineID, stageID, "Depot rollout")
+	retrofit := createSearchableDeal(t, e, pipelineID, stageID, "Fleet retrofit", "")
+	rollout := createSearchableDeal(t, e, pipelineID, stageID, "Depot rollout", "Conveyor automation for the north hall")
 
 	found := listDealIDs(t, e, "retrofit")
 	if !found[retrofit] || found[rollout] {
@@ -31,9 +31,13 @@ func TestTheDealsListFindsADealByAWordOfItsName(t *testing.T) {
 	if found := listDealIDs(t, e, "ollou"); !found[rollout] || found[retrofit] {
 		t.Fatalf("q=ollou returned %v, want only the rollout deal %s", found, rollout)
 	}
+	// A word only the description holds is the full-text arm's to find.
+	if found := listDealIDs(t, e, "conveyor"); !found[rollout] || found[retrofit] {
+		t.Fatalf("q=conveyor returned %v, want only the rollout deal %s", found, rollout)
+	}
 }
 
-func createSearchableDeal(t *testing.T, e *apptest.AppEnv, pipelineID, stageID, name string) string {
+func createSearchableDeal(t *testing.T, e *apptest.AppEnv, pipelineID, stageID, name, description string) string {
 	t.Helper()
 	var deal struct {
 		ID string `json:"id"`
@@ -41,6 +45,7 @@ func createSearchableDeal(t *testing.T, e *apptest.AppEnv, pipelineID, stageID, 
 	status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": name, "amount_minor": 100_000, "currency": "EUR",
 		"pipeline_id": pipelineID, "stage_id": stageID, "source": "manual",
+		"description": description,
 	}, nil, &deal)
 	if status != http.StatusCreated {
 		t.Fatalf("create deal %q = %d", name, status)

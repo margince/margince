@@ -282,7 +282,7 @@ function dealsQueryParams(f: DealFilters) {
     limit: 100,
     include_archived: f.includeArchived || undefined,
     pipeline_id: f.pipelineId || undefined,
-    q: f.q.trim() || undefined,
+    q: f.q || undefined,
     sort: f.sort || undefined,
     stage_id: filters.stage_id || undefined,
     owner_id: filters.owner_id || undefined,
@@ -377,7 +377,7 @@ function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
   }
-  if (f.q.trim()) return "deals.totalsNoSearch";
+  if (f.q) return "deals.totalsNoSearch";
   return undefined;
 }
 
