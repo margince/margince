@@ -40,7 +40,7 @@ func (s *VoiceStore) ResumeBudgetBuilds(ctx context.Context, enqueue func(contex
 			return nil, err
 		}
 		return pgx.CollectRows(rows, func(row pgx.CollectableRow) (VoiceBuild, error) { return scanVoiceBuild(row) })
-	}, func(row VoiceBuild) ids.UUID { return row.ID }, func(tx pgx.Tx, row VoiceBuild) error {
+	}, func(row VoiceBuild) ids.UUID { return row.ID }, func(ctx context.Context, tx pgx.Tx, row VoiceBuild) error {
 		ok, err := enqueue(ctx, tx, row)
 		if err != nil || !ok {
 			return err
