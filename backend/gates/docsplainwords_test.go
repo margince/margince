@@ -208,13 +208,48 @@ var plainPools = []struct{ prefix, list string }{
 	{"", plainWordsFile},
 }
 
+// plainCaps is the most general words each list may hold. 999 is the target: a
+// reader of one area meets fewer than 1,000 simple words. An area whose pages
+// needed more when they joined starts at that size, and its cap only goes down:
+// lower it when a list shrinks, and never raise it.
+var plainCaps = map[string]int{
+	plainWordsFile:                     plainWordCap,
+	"docs/how-to/plain-words.txt":      1200,
+	"docs/explanation/plain-words.txt": 1300,
+	"docs/handbook/plain-words.txt":    1350,
+	"docs/reference/plain-words.txt":   1850,
+}
+
+// glossaryLegacyMax is how many names may still lack a meaning. They predate the
+// rule that a name carries one; the count only goes down as meanings are added.
+const glossaryLegacyMax = 1400
+
+const glossaryLegacyHeading = "## Names without a meaning yet"
+
 var glossaryRow = regexp.MustCompile(`^\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*$`)
 
 // parseGlossary reads the glossary table: each term a plain page may use as a
 // technical name, and a meaning a reader can learn it from.
 func parseGlossary(doc string) (terms []string, problems []string) {
 	seen := map[string]bool{}
+	legacy, inLegacy := 0, false
 	for _, line := range strings.Split(doc, "\n") {
+		if strings.HasPrefix(line, "## ") {
+			inLegacy = strings.TrimSpace(line) == glossaryLegacyHeading
+			continue
+		}
+		if inLegacy {
+			if term, ok := strings.CutPrefix(strings.TrimSpace(line), "- "); ok {
+				term = strings.Trim(term, "`")
+				if seen[term] {
+					problems = append(problems, fmt.Sprintf("%q is listed twice", term))
+				}
+				seen[term] = true
+				terms = append(terms, term)
+				legacy++
+			}
+			continue
+		}
 		m := glossaryRow.FindStringSubmatch(strings.TrimSpace(line))
 		if m == nil || m[1] == "Term" || strings.Trim(m[1], "-: ") == "" {
 			continue
@@ -228,6 +263,10 @@ func parseGlossary(doc string) (terms []string, problems []string) {
 			problems = append(problems, fmt.Sprintf("%q needs a meaning of at least three words", term))
 		}
 		terms = append(terms, term)
+	}
+	if legacy > glossaryLegacyMax {
+		problems = append(problems, fmt.Sprintf("%d names lack a meaning; at most %d may. Give a new name a meaning in the table.",
+			legacy, glossaryLegacyMax))
 	}
 	return terms, problems
 }
@@ -245,9 +284,13 @@ func plainPoolFor(rel string) string {
 func loadPlainPool(t *testing.T, rel string, names []string) plainVocab {
 	t.Helper()
 	general := readWordList(t, rel)
-	if len(general) > plainWordCap {
+	limit, ok := plainCaps[rel]
+	if !ok {
+		limit = plainWordCap
+	}
+	if len(general) > limit {
 		t.Errorf("%s lists %d words; the cap is %d. Replace a word on a page with a listed one before adding another.",
-			rel, len(general), plainWordCap)
+			rel, len(general), limit)
 	}
 	if !sort.StringsAreSorted(general) {
 		t.Errorf("%s is not sorted; keep one word per line in byte order so a diff shows what was added", rel)
@@ -399,6 +442,10 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 		if got := plainPoolFor(rel); got != want {
 			t.Errorf("%s reads %s, want %s", rel, got, want)
 		}
+	}
+	if terms, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n\n" +
+		glossaryLegacyHeading + "\n\n- `nonce`\n"); len(problems) != 0 || len(terms) != 2 {
+		t.Errorf("a meaning row and a legacy name were not both read: %v %v", terms, problems)
 	}
 	if _, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n| boundary | edge |"); len(problems) != 1 {
 		t.Errorf("a glossary row with a two-word meaning was not reported: %v", problems)

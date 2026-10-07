@@ -61,3 +61,8 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+
+## Names without a meaning yet
+
+These names joined before every name had to carry a meaning. Move a name up into the table when you write
+its meaning. No name may be added here.

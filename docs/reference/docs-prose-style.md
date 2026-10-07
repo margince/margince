@@ -93,12 +93,14 @@ A page whose first line is `<!-- prose:plain -->` is held to a stricter bar, che
 | Paragraph length | 6 sentences |
 | Page length | Only when the marker sets it: `<!-- prose:plain max-words=1000 -->` |
 
-Each docs area has its own list of general English words, capped at 999 entries, so a reader of one area
-meets fewer than 1,000 simple words: `docs/how-to/plain-words.txt` (with the tutorial),
+Each docs area has its own list of general English words. The target is 999 entries, so a reader of one
+area meets fewer than 1,000 simple words. An area whose pages needed more when they joined starts with a
+higher cap in `docsplainwords_test.go`, and that cap only goes down. The lists are: `docs/how-to/plain-words.txt` (with the tutorial),
 `docs/explanation/plain-words.txt`, `docs/reference/plain-words.txt`, `docs/handbook/plain-words.txt`, and
 `docs/plain-words.txt` for every other plain page. Names a reader must learn anyway, such as products,
 protocols and file names, live in one shared glossary, `docs/reference/glossary.md`, each with a meaning of at
-least three words. A general word also covers its regular forms, so a page may write `deals` or `connected`
+least three words. Names that joined before that rule sit in its last section without a meaning;
+that section only shrinks. A general word also covers its regular forms, so a page may write `deals` or `connected`
 when the list holds `deal` and `connect`; a glossary term matches only as written. Inline code is not checked, nor is link text
 that contains a `.` or a `/`, such as a path or a host. A bold UI label and a quoted screen message are not
 checked either: they must match the screen word for word, so they count as names.
