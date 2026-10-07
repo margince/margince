@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 251.7 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 65327 |
+| Approx. wire tokens | 65334 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Descriptions (incl. governance clause) | 65.7 KB | 26% | Yes, every step |
 | Input schemas | 56.7 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 19.8 KB | 7% | Partly |
-| **Description + input schema** | **122.3 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **122.4 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -12661,10 +12661,10 @@ wait longer (last_check says when); a record that joined and left between two ch
 recorded. A preview is logged as a read of those records. A list with health retired_field still
 works but filters on a retired custom field, named in retired_fields; its steward should replace
 that clause. A list with health retired_tag filters on an archived or merged-away tag, named in
-retired_tags, so it reads empty until its steward names the live tag. search_records finds records
-by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change,
-and next_cursor to read the next page. (Governance: runs immediately; requires passport scope
-"read".)
+retired_tags, and that tag no longer matches any record, so its steward should name the live tag.
+search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the
+version for a later change, and next_cursor to read the next page. (Governance: runs immediately;
+requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>

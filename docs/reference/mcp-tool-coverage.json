@@ -2233,7 +2233,7 @@
     },
     {
       "name": "read_lists",
-      "tokens": 737,
+      "tokens": 744,
       "agents": [],
       "required_by_cases": [
         "case47_tidy_the_fair_list"

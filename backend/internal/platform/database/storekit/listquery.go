@@ -168,13 +168,14 @@ func ParseListSort(ctx context.Context, spec *string, vocab map[string]SortField
 const sortKeyPrefixChars = 256
 
 // orderExpr is what this sort orders and continues by: the field's own
-// expression, or the column of its name, cut to sortKeyPrefixChars when text.
+// expression, or the column of its name, cut to sortKeyPrefixChars when it is
+// a single text value (an array or another kind is left whole).
 func (s *ListSort) orderExpr() string {
 	expr := s.expr
 	if expr == "" {
 		expr = quoteColumnIdentifier(s.name)
 	}
-	if listBindCast(s.kind) == "::text" {
+	if s.kind == fieldcatalog.TypeText || s.kind == fieldcatalog.TypePicklist {
 		return fmt.Sprintf("left(%s, %d)", expr, sortKeyPrefixChars)
 	}
 	return expr

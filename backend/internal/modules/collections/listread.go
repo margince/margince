@@ -29,8 +29,8 @@ const (
 	// healthRetiredField is a Live List still evaluating on a retired custom
 	// field's kept values, whose clause its steward should replace.
 	healthRetiredField = "retired_field"
-	// healthRetiredTag is a Live List whose filter names an archived tag, so
-	// its clause matches nothing and its steward should name the live one.
+	// healthRetiredTag is a Live List whose filter names an archived tag, which
+	// no longer matches any record, so its steward should name the live one.
 	healthRetiredTag = "retired_tag"
 )
 

@@ -6,6 +6,7 @@ package compose
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -48,6 +49,9 @@ var periodValueShapes = map[string]*regexp.Regexp{
 	fieldPeriodMonth:   regexp.MustCompile(`^\d{4}-(0[1-9]|1[0-2])$`),
 }
 
+// fiscalSpan reads the two years of a fiscal label, "FY2025/26".
+var fiscalSpan = regexp.MustCompile(`^FY(\d{4})/(\d{2})`)
+
 // PeriodValueError refuses a period filter no bucket can ever equal. Answered
 // as a filter that matches nothing it reads as "no deals closed", which is a
 // claim about the business made by a typo.
@@ -65,8 +69,21 @@ func (e *PeriodValueError) MessageFault() (code, message string) {
 // checkPeriodValue refuses a malformed value for a period filter; every other
 // filter is left to its own check.
 func checkPeriodValue(filter, value string) error {
-	if shape, ok := periodValueShapes[filter]; !ok || shape.MatchString(value) {
+	if shape, ok := periodValueShapes[filter]; !ok || (shape.MatchString(value) && fiscalSpanIsConsecutive(value)) {
 		return nil
 	}
 	return &PeriodValueError{Filter: filter, Value: value}
+}
+
+// fiscalSpanIsConsecutive is true for a value with no fiscal span, and for a
+// span ("FY2025/26") whose second year follows its first, the only span a
+// bucket renders.
+func fiscalSpanIsConsecutive(value string) bool {
+	match := fiscalSpan.FindStringSubmatch(value)
+	if match == nil {
+		return true
+	}
+	start, errStart := strconv.Atoi(match[1])
+	end, errEnd := strconv.Atoi(match[2])
+	return errStart == nil && errEnd == nil && (start+1)%100 == end
 }

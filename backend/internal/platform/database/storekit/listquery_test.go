@@ -443,3 +443,25 @@ func mustEncodeOpaque(t *testing.T, c Cursor) string {
 	}
 	return token
 }
+
+// Only a single text value is cut to the key bound: an array column has no
+// left(), and every other kind keeps its own ordering.
+func TestListSort_OnlySingleTextValuesAreCutToTheKeyBound(t *testing.T) {
+	vocab := map[string]SortField{
+		"title":  Column(fieldcatalog.TypeText),
+		"stage":  Column(fieldcatalog.TypePicklist),
+		"tags":   Column(fieldcatalog.TypeMultiselect),
+		"score":  Column(fieldcatalog.TypeNumber),
+		"opened": Column(KindTimestamp),
+	}
+	cut := map[string]bool{"title": true, "stage": true}
+	for name := range vocab {
+		sorted, err := ParseListSort(context.Background(), sortSpec(name), vocab, noArgs)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+		if got := strings.Contains(sorted.OrderBy(), "left("); got != cut[name] {
+			t.Errorf("sorting by %s: cut to the key bound = %v, want %v (%s)", name, got, cut[name], sorted.OrderBy())
+		}
+	}
+}

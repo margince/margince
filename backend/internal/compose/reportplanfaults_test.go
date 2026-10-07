@@ -50,6 +50,8 @@ func TestAMalformedPeriodFilterIsRefusedNotAnsweredEmpty(t *testing.T) {
 		{fieldPeriodQuarter, "2026Q1"},
 		{fieldPeriodMonth, "2026-13"},
 		{fieldPeriodMonth, "2026-1"},
+		{fieldPeriodYear, "FY2025/99"},
+		{fieldPeriodQuarter, "FY2025/27-Q1"},
 	} {
 		t.Run(bad.filter+"="+bad.value, func(t *testing.T) {
 			_, err := reportFilterValue(bad.filter, bad.value)
