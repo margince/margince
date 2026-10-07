@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A lead takes a tag the way a deal does: the record shows it, the word
@@ -75,5 +76,44 @@ func TestALeadCarriesATagAndTheListNarrowsToIt(t *testing.T) {
 		if len(page.Data[0].Tags) != 1 || page.Data[0].Tags[0].TagID != tag.ID {
 			t.Fatalf("tag_id%s row tags = %+v, want the applied tag", sort, page.Data[0].Tags)
 		}
+	}
+}
+
+// A disqualified lead is archived and its page still opens, so its tag read
+// answers rather than hiding the panel behind a not-found. Disqualifying takes
+// the lead's taggings down with it (its audit row keeps them for a reopen), so
+// the answer is none. A record nobody holds is still not-found.
+func TestAClosedLeadsTagReadAnswersAndAMissingOneIsNotFound(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	lead := createQuickFindLead(t, e, "Anna Example", "Northwind Traders")
+	var tag struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/tags", AnyMap{"name": "Product A"}, nil, &tag); status != http.StatusCreated {
+		t.Fatalf("create tag = %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", AnyMap{
+		"entity_type": "lead", "entity_id": lead,
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("apply tag = %d", status)
+	}
+	if status := e.Call(t, "DELETE", "/v1/leads/"+lead, AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("disqualify lead = %d", status)
+	}
+
+	var onRecord struct {
+		Data []struct {
+			TagID string `json:"tag_id"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/records/lead/"+lead+"/tags", nil, nil, &onRecord); status != http.StatusOK {
+		t.Fatalf("GET a disqualified lead's tags = %d, want 200", status)
+	}
+	if len(onRecord.Data) != 0 {
+		t.Fatalf("a disqualified lead's tags = %+v, want none: disqualifying removes them", onRecord.Data)
+	}
+	if status := e.Call(t, "GET", "/v1/records/lead/"+ids.NewV7().String()+"/tags", nil, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("GET tags of a lead nobody holds = %d, want 404", status)
 	}
 }

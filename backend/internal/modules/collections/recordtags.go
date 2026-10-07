@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -67,6 +68,9 @@ func RecordTagTypesServed() []string {
 // come first, so a caller naming a record outside their scope gets not-found
 // whatever their tag grants say — existence stays hidden. Only then does the
 // vocabulary grant decide whether the words themselves come back.
+//
+// An archived record still reads, as its page does: a promoted or
+// disqualified lead is archived, and its page still shows how it was filed.
 func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID ids.UUID) (RecordTags, error) {
 	if !recordTagTypes[entityType] {
 		return RecordTags{}, &BadInputError{
@@ -85,7 +89,10 @@ func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID i
 	var out RecordTags
 	out.Withheld = withheld
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
+		if err := auth.EnsureReadable(ctx, tx, entityType, entityID); err != nil {
+			return err
+		}
+		if err := recordExists(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
 		if withheld {
@@ -102,6 +109,22 @@ func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID i
 		return RecordTags{}, err
 	}
 	return out, nil
+}
+
+// recordExists answers not-found for an id no row holds, live or archived.
+// EnsureReadable asks nothing of a caller whose row scope is empty, and an
+// empty panel for a record that does not exist would state a fact about it.
+func recordExists(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) error {
+	var exists bool
+	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1)`,
+		pgx.Identifier{entityType}.Sanitize())
+	if err := tx.QueryRow(ctx, query, entityID).Scan(&exists); err != nil {
+		return fmt.Errorf("collections: probing the tagged record: %w", err)
+	}
+	if !exists {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
 
 // recordTagRows reads the assignments themselves, live words first.
