@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 251.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 65348 |
+| Approx. wire tokens | 65357 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -91,7 +91,7 @@ descriptions and input schemas are what each step pays for.
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
 | [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.2 KB |
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
-| [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
+| [`get_tag`](#get_tag) | Get a tag | yes |  | 1.7 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.6 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 3.0 KB |
@@ -7123,6 +7123,9 @@ themselves come from list_records. (Governance: runs immediately; requires passp
         "deals": {
           "type": "integer"
         },
+        "leads": {
+          "type": "integer"
+        },
         "name": {
           "type": "string"
         },
@@ -7135,6 +7138,7 @@ themselves come from list_records. (Governance: runs immediately; requires passp
         "companies",
         "contacts",
         "deals",
+        "leads",
         "name",
         "tag_id"
       ],

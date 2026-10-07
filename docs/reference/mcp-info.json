@@ -10,15 +10,15 @@
   "totals": {
     "tools": 82,
     "resources": 9,
-    "tool_catalog_bytes": 257834,
+    "tool_catalog_bytes": 257869,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 65348,
+    "approx_wire_tokens_total": 65357,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 67290,
       "input_schema_bytes": 58058,
-      "output_schema_bytes": 112198,
+      "output_schema_bytes": 112233,
       "description_plus_input_schema_bytes": 125348
     }
   },
@@ -6342,6 +6342,9 @@
                 "deals": {
                   "type": "integer"
                 },
+                "leads": {
+                  "type": "integer"
+                },
                 "name": {
                   "type": "string"
                 },
@@ -6354,6 +6357,7 @@
                 "companies",
                 "contacts",
                 "deals",
+                "leads",
                 "name",
                 "tag_id"
               ],
