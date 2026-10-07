@@ -55,8 +55,8 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 - `idx_project_company`: `btree (company_id) WHERE (archived_at IS NULL)`
 - `idx_project_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
-- `idx_project_name_trgm`: `gin (f_unaccent(lower(name)) gin_trgm_ops)`
 - `idx_project_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
+- `idx_project_quickfind_trgm`: `gin (f_fold_apostrophes(lower(((COALESCE(name, '') || ' ') || COALESCE(key, '')))) gin_trgm_ops)`
 - `idx_project_search`: `gin (search_tsv)`
 - `project_pkey`: `unique, btree (id)`
 - `uq_project_key`: `unique, btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))`
