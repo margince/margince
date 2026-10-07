@@ -15,16 +15,16 @@ knowledge documents are the exception: those can be deleted outright.
 ## Getting data out, getting data in, and removing records
 
 ### How do I export my data from Margince?
-To export or download records from Margince (for example all your contacts), open **Filters and views** in the sidebar, build a filter, then choose **Export CSV** or **Export JSON**.
+To export or download records from Margince (for example all your contacts), open **Filters and views** in the sidebar, build a filter, then choose **Export CSV** or **Export JSON** under **⋯** (**More for this filter**).
 1. Open **Filters and views**.
-2. Pick the **Record type**: **Contacts**, **Companies** or **Deals**.
-3. Choose **Add clause** and complete at least one clause. The export buttons appear once the filter is complete.
-4. Choose **Export CSV** or **Export JSON**. The file downloads.
+2. Press **New filter** and pick the record type.
+3. Press **Add condition** and complete it.
+4. Press **⋯** (**More for this filter**) at the foot, then **Export CSV** or **Export JSON**. The file downloads.
 The export holds only records you can see, and every export is written to the audit log. Agents cannot export.
 Also called: download, get my data out, backup, extract to Excel or spreadsheet.
 
 ### How do I get all of my company's data out of Margince?
-Margince has a whole-company export bundle (a ZIP of one CSV per record type, plus files describing how records link), but the app has no button for it yet. Ask whoever runs your installation to download it for you. Only an administrator or operations user can have it made, agents cannot, and it holds only what that user can see. Every download is audited. For everyday exports use **Filters and views → Export CSV**.
+Margince has a whole-company export bundle (a ZIP of one CSV per record type, plus files describing how records link), but the app has no button for it yet. Ask whoever runs your installation to download it for you. Only an administrator or operations user can have it made, agents cannot, and it holds only what that user can see. Every download is audited. For everyday exports use **Filters and views** → **New filter** → … → **⋯** (**More for this filter**) → **Export CSV**.
 Also called: full export, data handover, migrate away, leave Margince.
 
 ### How do I import contacts from a spreadsheet?
@@ -363,9 +363,10 @@ There are two exports, and they answer different questions.
 
 #### The list export
 
-On **Filters and views** you press **Export CSV** or **Export JSON**; those are
-the only two formats. The screen offers **contacts, companies and deals**. You
-export either a filtered set or a saved view.
+On **Filters and views** you build a filter and choose **Export CSV** or
+**Export JSON** under **⋯** (**More for this filter**); those are the only two formats.
+The screen offers **contacts, companies, deals and leads**. You export either a
+new filter or a saved view.
 
 **It exports only what you can see**, by the same rules as the list on your
 screen. Only a human can export; an agent cannot. **Every export is audited**,

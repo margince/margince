@@ -37,7 +37,7 @@ export function useMemberColumns(
       joined.has(row.id) ? (
         <span className="lists-member-name">
           {memberName(row, t)}
-          <Badge tone="accent">{t("lists.members.new")}</Badge>
+          <Badge tone="discovery">{t("lists.members.new")}</Badge>
         </span>
       ) : (
         memberName(row, t)
@@ -55,8 +55,10 @@ export function useMemberColumns(
  */
 function useFilterColumns(list: List): ListColumn<MemberRow>[] {
   const t = useT();
-  const vocabulary = useFilterVocabulary(list.entity_type);
-  const valueText = useFieldValueText(list.entity_type);
+  // Called for a Shortlist too, as hooks are; it has no filter, so asks nothing.
+  const live = list.list_type === "dynamic";
+  const vocabulary = useFilterVocabulary(list.entity_type, live);
+  const valueText = useFieldValueText(list.entity_type, live);
   const tree = decode(list.definition);
   const names = tree ? fieldsNamed(tree) : [];
   return names.map((field, index) => {

@@ -8,12 +8,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import {
   LIVE_ID,
   listsMe,
   liveList,
+  liveVocabulary,
   MEMBER_ID,
   notOnLiveWhy,
   SHORTLIST_ID,
@@ -92,6 +94,7 @@ describe("a record page's lists", () => {
     stub({
       [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () =>
         jsonResponse(notOnLiveWhy),
+      "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
     });
     const user = userEvent.setup();
     await user.click(
@@ -108,6 +111,11 @@ describe("a record page's lists", () => {
       within(failing as HTMLElement).getByLabelText(en["lists.why.unmet"]),
     ).toBeInTheDocument();
     expect(screen.getByText(en["lists.why.hidden"])).toBeInTheDocument();
+    // The clause reads as the list's own Filter line reads it, operand marked.
+    const ago = await screen.findByText("45 days ago", { selector: "strong" });
+    expect(ago.parentElement).toHaveTextContent(
+      /^last touch is more than 45 days ago$/,
+    );
   });
 
   it("names a referenced record in a clause rather than showing its id", async () => {
@@ -125,6 +133,19 @@ describe("a record page's lists", () => {
             value_label: "Acme Holding",
           },
         }),
+      "GET /filters/vocabulary": () =>
+        jsonResponse({
+          resource: "company",
+          fields: [
+            {
+              name: "parent_company_id",
+              type: "id",
+              operators: ["exists"],
+              custom: false,
+              references: "company",
+            },
+          ],
+        }),
     });
     const user = userEvent.setup();
     await user.click(
@@ -133,8 +154,138 @@ describe("a record page's lists", () => {
     await user.click(
       await screen.findByRole("option", { name: liveList.name }),
     );
-    expect(await screen.findByText("Now: Acme Holding")).toBeInTheDocument();
+    const value = await screen.findByText("Now: Acme Holding");
     expect(screen.queryByText(`Now: ${parent}`)).toBeNull();
+    // An exists clause says it all in its operator, so no operand is marked.
+    const clause = value.closest("p") as HTMLElement;
+    expect(await within(clause).findByText(/has a value$/)).toBeInTheDocument();
+    expect(clause.querySelector("strong")).toBeNull();
+  });
+
+  it.each([
+    ["in the currency its field names", { currency: "EUR" }, "Now: €1,250.00"],
+    ["as nothing yet when its field names no currency", {}, "Now: …"],
+  ])(
+    "reads a money value %s, never its minor units as the amount",
+    async (_, named, shown) => {
+      stub({
+        [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () =>
+          jsonResponse({
+            ...notOnLiveWhy,
+            clauses: {
+              field: "revenue",
+              op: "gt",
+              operand: 100000,
+              result: true,
+              value: "125000",
+            },
+          }),
+        "GET /filters/vocabulary": () =>
+          jsonResponse({
+            resource: "company",
+            fields: [
+              {
+                name: "revenue",
+                type: "currency",
+                operators: ["gt"],
+                custom: false,
+                ...named,
+              },
+            ],
+          }),
+      });
+      const user = userEvent.setup();
+      await user.click(
+        await screen.findByRole("combobox", { name: en["lists.record.check"] }),
+      );
+      await user.click(
+        await screen.findByRole("option", { name: liveList.name }),
+      );
+      expect(await screen.findByText(shown)).toBeInTheDocument();
+      expect(screen.queryByText("Now: 125000")).toBeNull();
+    },
+  );
+
+  it("names a retired tag in a clause and says no record carries one", async () => {
+    const live = "01a0f000-0000-7000-8000-000000000050";
+    const archived = "01a0f000-0000-7000-8000-000000000051";
+    stub({
+      "GET /me": () =>
+        jsonResponse({
+          ...meFixture({
+            allow: { list: ["read"], company: ["read"], tag: ["read"] },
+            settingsAvailability: { lists: true },
+          }),
+          teams: [],
+        }),
+      "GET /tags": () =>
+        jsonResponse({
+          data: [
+            { id: live, name: "Key account" },
+            {
+              id: archived,
+              name: "Trade fair 2025",
+              archived_at: "2026-01-12T09:00:00Z",
+            },
+          ],
+          page: { has_more: false },
+        }),
+      [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () =>
+        jsonResponse({
+          ...notOnLiveWhy,
+          clauses: {
+            join: "or",
+            result: false,
+            children: [
+              {
+                field: "tag",
+                op: "eq",
+                operand: live,
+                result: false,
+                hidden: true,
+              },
+              {
+                field: "tag",
+                op: "eq",
+                operand: archived,
+                result: false,
+                hidden: true,
+              },
+            ],
+          },
+        }),
+      "GET /filters/vocabulary": () =>
+        jsonResponse({
+          resource: "company",
+          fields: [
+            {
+              name: "tag",
+              type: "id",
+              operators: ["eq", "neq", "in"],
+              custom: false,
+              references: "tag",
+            },
+          ],
+        }),
+    });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("combobox", { name: en["lists.record.check"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: liveList.name }),
+    );
+    const retired = await screen.findByText("1 archived tag", {
+      selector: "strong",
+    });
+    expect(retired.closest("p")).toHaveTextContent(
+      en["filters.sentence.retiredTagNote"],
+    );
+    // The live tag's clause beside it is an ordinary one, with no such note.
+    const counted = screen.getByText("1 tag", { selector: "strong" });
+    expect(counted.closest("p")).not.toHaveTextContent(
+      en["filters.sentence.retiredTagNote"],
+    );
   });
 
   it("takes the record off a Shortlist with a note", async () => {

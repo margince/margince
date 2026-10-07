@@ -104,6 +104,7 @@ test("Forward returns to the list Back left", async ({ page }) => {
     (request) =>
       companies(request.url()) && searchOf(request.url()) === "brandt",
   );
+  await expect(page).toHaveURL(/[?&]q=brandt/);
 
   await page
     .getByRole("main")
