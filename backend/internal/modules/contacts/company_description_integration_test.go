@@ -117,7 +117,7 @@ func TestCompanyDescriptionFillsOnlyABlankMergeSurvivor(t *testing.T) {
 	}
 	merged, err := e.store.MergeCompany(ctx,
 		ids.From[ids.CompanyKind](ids.UUID(retired.Id)),
-		ids.From[ids.CompanyKind](ids.UUID(blankSurvivor.Id)))
+		ids.From[ids.CompanyKind](ids.UUID(blankSurvivor.Id)), nil)
 	if err != nil {
 		t.Fatalf("merge into blank survivor: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestCompanyDescriptionFillsOnlyABlankMergeSurvivor(t *testing.T) {
 	}
 	kept, err := e.store.MergeCompany(ctx,
 		ids.From[ids.CompanyKind](ids.UUID(secondRetired.Id)),
-		ids.From[ids.CompanyKind](ids.UUID(heldSurvivor.Id)))
+		ids.From[ids.CompanyKind](ids.UUID(heldSurvivor.Id)), nil)
 	if err != nil {
 		t.Fatalf("merge into held survivor: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestAMergedInDescriptionKeepsItsHumanAuthor(t *testing.T) {
 	}
 	survivorID := ids.From[ids.CompanyKind](ids.UUID(survivor.Id))
 	if _, err := e.store.MergeCompany(ctx,
-		ids.From[ids.CompanyKind](ids.UUID(retired.Id)), survivorID); err != nil {
+		ids.From[ids.CompanyKind](ids.UUID(retired.Id)), survivorID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 

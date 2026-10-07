@@ -73,7 +73,7 @@ func TestMergingTwoBillingContactsKeepsBothTheirRoles(t *testing.T) {
 	seedBillingEdge(t, src.UUID, company, "recipient")
 	seedBillingEdge(t, tgt.UUID, company, "approver")
 
-	if _, err := e.Contacts.MergeContact(admin, src, tgt); err != nil {
+	if _, err := e.Contacts.MergeContact(admin, src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -122,7 +122,7 @@ func TestMergingTwoBillingContactsCollapsesTheSameRoleOnce(t *testing.T) {
 	seedBillingEdge(t, src.UUID, company, "recipient")
 	seedBillingEdge(t, tgt.UUID, company, "recipient")
 
-	if _, err := e.Contacts.MergeContact(admin, src, tgt); err != nil {
+	if _, err := e.Contacts.MergeContact(admin, src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 	if roles := billingRolesAt(t, company); len(roles) != 1 {
@@ -154,7 +154,7 @@ func TestMergingTwoCompaniesKeepsBothBillingRolesOfOneContact(t *testing.T) {
 	seedBillingEdge(t, contactID.UUID, target, "approver")
 
 	if _, err := e.Contacts.MergeCompany(admin,
-		ids.From[ids.CompanyKind](source), ids.From[ids.CompanyKind](target)); err != nil {
+		ids.From[ids.CompanyKind](source), ids.From[ids.CompanyKind](target), nil); err != nil {
 		t.Fatalf("merge companies: %v", err)
 	}
 

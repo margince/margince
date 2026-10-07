@@ -188,7 +188,7 @@ func TestAnUnwiredMergeRefusesWhenAnAskWouldBeStranded(t *testing.T) {
 	target := c.contactAt(t, "Unwired Ask Target", "unwired-ask-target@carry.test")
 	c.ask(t, target, c.e.Rep1, &retired)
 
-	_, err := unwired.MergeContact(c.admin, retired, survivor)
+	_, err := unwired.MergeContact(c.admin, retired, survivor, nil)
 	var notWired *contacts.SatelliteCarrierNotWiredError
 	if !errors.As(err, &notWired) {
 		t.Fatalf("the merge answered %v, want SatelliteCarrierNotWiredError", err)

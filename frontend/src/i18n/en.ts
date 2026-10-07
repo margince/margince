@@ -11719,6 +11719,8 @@ export const en = {
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",
   "worklist.verb.completeFailed": "Task was not completed. Retry.",
+  "worklist.verb.completeStale":
+    "This task changed since you opened it, so it was not completed here. The list was refreshed.",
   "worklist.verb.pin": "Pin",
   // WHAT A PIN ACTUALLY DOES, because the word says none of it. Each clause
   // is checked against the code and none of them may be written loosely:

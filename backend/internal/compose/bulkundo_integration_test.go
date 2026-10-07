@@ -474,7 +474,7 @@ func TestASingleRecordRestoreRefusesAMergedOrLiveContact(t *testing.T) {
 	ctx := e.Admin()
 	source := ids.From[ids.ContactKind](e.SeedContact(t, "Merged Away", nil))
 	target := ids.From[ids.ContactKind](e.SeedContact(t, "Survivor", nil))
-	if _, err := e.Contacts.MergeContact(ctx, source, target); err != nil {
+	if _, err := e.Contacts.MergeContact(ctx, source, target, nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 	for name, id := range map[string]ids.ContactID{"merged": source, "not_archived": target} {

@@ -197,7 +197,7 @@ func TestEmploymentImportMergePreservesDifferentHistoricalRoles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target)); err != nil {
+	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil); err != nil {
 		t.Fatal(err)
 	}
 	report, err := store.ApplyEmploymentImport(e.Admin(), ids.From[ids.ContactKind](target), crmcontracts.EmploymentImportRequest{})
