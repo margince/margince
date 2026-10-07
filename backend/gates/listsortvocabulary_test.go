@@ -86,6 +86,7 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 		t.Fatal("read no shared column helpers at all — every screen's borrowed sorts would then go unchecked")
 	}
 
+	read := map[string]bool{}
 	screens := make([]string, 0, len(listSurfaces))
 	for name := range listSurfaces {
 		screens = append(screens, name)
@@ -100,7 +101,7 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 				surface.vocabulary)
 			continue
 		}
-		screen := screenWithColumns(t, name)
+		screen := screenWithColumns(t, name, read)
 
 		offered := map[string]string{}
 		for _, m := range tsSortLiteral.FindAllStringSubmatch(screen, -1) {
@@ -115,13 +116,6 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 			}
 		}
 
-		// A surface offering nothing is a census that read the wrong file: the
-		// columns moved and this scan kept reading where they used to be.
-		if len(offered) == 0 {
-			t.Errorf("%s offers no sort at all — its columns live somewhere this scan does not read", name)
-			continue
-		}
-
 		fields := make([]string, 0, len(offered))
 		for field := range offered {
 			fields = append(fields, field)
@@ -134,17 +128,35 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 			}
 		}
 	}
+	assertEveryColumnModuleRead(t, read)
 }
 
 // screenWithColumns is a screen's source plus every column module it imports,
 // since a header declared in `leads.columns.tsx` is the leads screen's header.
-func screenWithColumns(t *testing.T, name string) string {
+func screenWithColumns(t *testing.T, name string, read map[string]bool) string {
 	t.Helper()
 	screen := readSource(t, screenDir+name)
 	for _, m := range tsColumnsModule.FindAllStringSubmatch(screen, -1) {
 		screen += "\n" + readSource(t, screenDir+m[1]+".tsx")
+		read[m[1]+".tsx"] = true
 	}
 	return screen
+}
+
+// assertEveryColumnModuleRead fails a column module no surface's scan reached.
+// Moving a screen's columns into their own file otherwise takes every header
+// out of this census while it goes on reporting a pass.
+func assertEveryColumnModuleRead(t *testing.T, read map[string]bool) {
+	t.Helper()
+	modules, err := filepath.Glob(screenDir + "*.columns.tsx")
+	if err != nil {
+		t.Fatalf("listing column modules: %v", err)
+	}
+	for _, path := range modules {
+		if !read[filepath.Base(path)] {
+			t.Errorf("%s declares list columns and no surface in listSurfaces reads it — its sorts go unchecked", filepath.Base(path))
+		}
+	}
 }
 
 // sharedColumnSorts maps each shared helper to the sort it offers, skipping the
