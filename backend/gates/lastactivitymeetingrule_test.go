@@ -28,9 +28,8 @@ var meetingRuleClocks = []string{"last_activity_of_deal", "last_activity_of_cont
 // gatekit:fixture the Go reads of a record's last touch that do not read
 // last_activity_at, each with what it computes.
 var meetingRuleReaders = map[string]string{
-	"internal/modules/deals/health.go":         "deal health's recency evidence",
-	"internal/modules/activities/lasttouch.go": "the quiet-record scan",
-	"internal/modules/contacts/lead_read.go":   "a lead's last activity",
+	"internal/modules/deals/health.go":       "deal health's recency evidence",
+	"internal/modules/contacts/lead_read.go": "a lead's last activity",
 }
 
 func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {

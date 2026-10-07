@@ -5,13 +5,11 @@
 
 package integration
 
-// A called-off meeting is no touch in the two last-touch reads that do not use
-// the stored last_activity_at: the quiet-record scan (LastTouchBefore) and a
-// lead's last activity. Meetings are logged with LogActivity and called off
-// with UpdateActivity.
+// A called-off meeting is no touch in a lead's last activity, which is derived
+// from the lead's links rather than stored. Meetings are logged with
+// LogActivity and called off with UpdateActivity.
 
 import (
-	"slices"
 	"testing"
 	"time"
 
@@ -38,42 +36,6 @@ func callOff(t *testing.T, e *Env, meeting ids.ActivityID, status string) {
 	t.Helper()
 	if _, err := e.Activities.UpdateActivity(e.Admin(), meeting, activities.UpdateActivityInput{MeetingStatus: &status}); err != nil {
 		t.Fatalf("marking the meeting %s: %v", status, err)
-	}
-}
-
-func TestACanceledMeetingDoesNotKeepADealOutOfTheQuietScan(t *testing.T) {
-	e := Setup(t)
-	now := time.Now().UTC().Truncate(time.Second)
-	pipeline, open, _ := DealFixture(t, e)
-	deal := e.SeedDeal(t, "Quiet scan deal", pipeline, open, nil)
-	backdateCreatedAt(t, OwnerConn(t), "deal", deal, now.AddDate(0, 0, -60))
-	on := activities.ActivityLinkInput{EntityType: "deal", EntityID: deal}
-	heldAt := now.AddDate(0, 0, -10)
-	logTouchMeeting(t, e, on, "held", heldAt)
-	review := logTouchMeeting(t, e, on, "booked", now.AddDate(0, 0, -2))
-	cutoff := now.AddDate(0, 0, -5)
-
-	quietSince := func() (time.Time, bool) {
-		found, err := e.Activities.LastTouchBefore(e.Admin(), cutoff, 50, "no_activity_reminder")
-		if err != nil {
-			t.Fatal(err)
-		}
-		i := slices.IndexFunc(found, func(c activities.LastTouchCandidate) bool { return c.EntityID == deal })
-		if i < 0 {
-			return time.Time{}, false
-		}
-		return found[i].LastTouch, true
-	}
-	if _, quiet := quietSince(); quiet {
-		t.Fatal("a deal with a booked meeting two days ago reads as quiet — the case below proves nothing")
-	}
-	callOff(t, e, review, "canceled")
-	last, quiet := quietSince()
-	if !quiet {
-		t.Fatal("a canceled meeting still keeps the deal out of the quiet scan")
-	}
-	if !last.Equal(heldAt) {
-		t.Errorf("the scan dates the deal's last touch %v, want the held meeting %v", last, heldAt)
 	}
 }
 

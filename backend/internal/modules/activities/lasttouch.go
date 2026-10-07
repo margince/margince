@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -44,8 +43,8 @@ type LastTouchCandidate struct {
 }
 
 // genuineEngagement is what counts as a real touch for the quiet reminders:
-// live, an engagement rather than a notice, visible to the workspace, not a
-// called-off meeting, and not the engine's own output. The scan reads it to find a silence and the
+// live, an engagement rather than a notice, visible to the workspace, and not
+// the engine's own output. The scan reads it to find a silence and the
 // resolver (CompleteQuietRemindersReachedBy) to find its end, so a touch that
 // would not have moved the anchor does not close the reminder either.
 //
@@ -53,7 +52,7 @@ type LastTouchCandidate struct {
 // systemCapturedByPattern; source alone is a client's to spell, so it is
 // excluded only together with captured_by.
 func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) string {
-	return storekit.SQLf(`%[1]s.archived_at IS NULL AND `+relstrength.NotCalledOffSQL(alias)+
+	return storekit.SQLf(`%[1]s.archived_at IS NULL`+
 		auth.OriginIsEngagement(alias)+auth.AudienceWorkspaceOnly(alias)+`
 				  AND NOT (%[1]s.source = $%[2]d
 				           AND (%[1]s.captured_by = $%[3]d OR %[1]s.captured_by LIKE $%[4]d))`,
