@@ -72,6 +72,8 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const list = useList(listID);
   useVisitOnce(listID, list.isSuccess && list.isFetchedAfterMount);
+  const notice = list.data ? (noticeOf(list.data) ?? "none") : undefined;
+  const pressed = useChangedSinceShown(notice);
   if (list.isPending) {
     return <ListPending />;
   }
@@ -83,12 +85,24 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
       {/* Archive list, Restore and "Look after it" each remove the button that
           was pressed by changing the notice, so a fresh head takes the focus
           that would otherwise fall to <body>. */}
-      <ListHead key={noticeOf(list.data) ?? "none"} list={list.data} />
+      <ListHead key={notice} list={list.data} arrived={pressed} />
       <ListNotices list={list.data} />
       <ListMembers list={list.data} />
       <ListHistoryPanel list={list.data} />
     </div>
   );
+}
+
+/**
+ * Whether `value` differs from the one this page last committed: a verb's
+ * doing, where the first value the page shows is its arrival.
+ */
+function useChangedSinceShown(value: string | undefined): boolean {
+  const shown = useRef(value);
+  useEffect(() => {
+    shown.current = value;
+  }, [value]);
+  return shown.current !== undefined && value !== shown.current;
 }
 
 /**
@@ -108,8 +122,11 @@ function useVisitOnce(listID: string, readThisMount: boolean) {
   }, [listID, readThisMount, mutate]);
 }
 
-function ListHead({ list }: Readonly<{ list: List }>) {
-  const name = useArrivalFocus<HTMLHeadingElement>();
+function ListHead({
+  list,
+  arrived,
+}: Readonly<{ list: List; arrived: boolean }>) {
+  const name = useArrivalFocus<HTMLHeadingElement>(arrived);
   const exporting = useListExport(list);
   return (
     <header className="lists-head">

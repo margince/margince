@@ -696,6 +696,19 @@ describe("an opened list", () => {
     ).toBeInTheDocument();
   });
 
+  it("leaves focus alone when the list first opens", async () => {
+    stubLivePage(liveList);
+    page(LIVE_ID);
+    const name = await screen.findByRole("heading", {
+      level: 1,
+      name: liveList.name,
+    });
+    expect(
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
+    ).toBeInTheDocument();
+    expect(name).not.toHaveFocus();
+  });
+
   // Each verb takes its own button away by changing the notice, so the name
   // heading the fresh page is where a keyboard reader carries on from.
   it("hands focus to the list's name when archiving or restoring takes away the button pressed", async () => {
