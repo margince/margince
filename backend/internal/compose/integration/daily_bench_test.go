@@ -7,6 +7,7 @@ package integration
 
 import (
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -31,11 +32,21 @@ func TestDailyUseBudgets(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
 
+	var seats Seats
+	var corpus DailyCorpus
 	t.Run("seats", func(t *testing.T) {
-		seats := createDailySeats(t, e)
+		seats = createDailySeats(t, e)
 		if len(seats.Managers) != 2 || len(seats.Reps) != 2*dailyRepsPerTeam {
 			t.Fatalf("signed in %d managers and %d reps, want 2 and %d", len(seats.Managers), len(seats.Reps), 2*dailyRepsPerTeam)
 		}
 		t.Logf("seats: %d signed in (%d managers, %d reps)", len(seats.Managers)+len(seats.Reps), len(seats.Managers), len(seats.Reps))
+	})
+
+	t.Run("seed", func(t *testing.T) {
+		start := time.Now()
+		corpus = seedDailyCorpus(t, e, seats, scale)
+		t.Logf("seed: corpus at scale %g in %s; flows open deals %q and companies %q",
+			scale, time.Since(start).Round(time.Second), corpus.DealNames, corpus.CompanyNames)
+		assertDailyContactScope(t, e, seats, corpus)
 	})
 }
