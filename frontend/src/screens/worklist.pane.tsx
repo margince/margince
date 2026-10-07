@@ -215,7 +215,7 @@ export type TouchMoments = Readonly<{
 }>;
 
 /** Whose moments they are, which is what the two terms name: a company row
- *  printing "this contact" would claim a person the row does not have. */
+ *  printing "this contact" would claim a contact the row does not have. */
 export type TouchHolder = "contact" | "company";
 
 /** The moments with the record they belong to. Absent moments are withheld. */
