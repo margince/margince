@@ -201,6 +201,8 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
+	// planCoverage is whose plans a team read looked at; nil under every other scope.
+	planCoverage *crmcontracts.WorklistPlanCoverage
 	// overdueLoad is the team board's COUNTING reader for tasks, beside the
 	// bounded listing reader the ranked queue uses. Required BY THE BOARD —
 	// teamLoad refuses without it — and read by nothing else, so a feed
@@ -228,6 +230,9 @@ type Service struct {
 	taskOwner ids.UUID
 	// noticeOwners is a team roster; nil leaves the visible agenda unrestricted.
 	noticeOwners []ids.UUID
+	// teamRoster is the roster scope=team resolved with, which degradableRoster
+	// answers from rather than asking again; nil under every other scope.
+	teamRoster *rosterRead
 }
 
 // forOwner returns a copy that reads one named contact's queue. Same

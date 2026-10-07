@@ -15760,6 +15760,24 @@ func (e TaggableEntityType) Valid() bool {
 	}
 }
 
+// Defines values for TeamBoardMemberActivation.
+const (
+	TeamBoardMemberActivationActive  TeamBoardMemberActivation = "active"
+	TeamBoardMemberActivationInvited TeamBoardMemberActivation = "invited"
+)
+
+// Valid indicates whether the value is a known member of the TeamBoardMemberActivation enum.
+func (e TeamBoardMemberActivation) Valid() bool {
+	switch e {
+	case TeamBoardMemberActivationActive:
+		return true
+	case TeamBoardMemberActivationInvited:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TeamExceptionKind.
 const (
 	TeamExceptionKindTeamExceptionRepeatedFailure  TeamExceptionKind = "repeated_failure"
@@ -43600,6 +43618,10 @@ type TeamBoard struct {
 	// ordered by display name. Never empty: a caller on no team is their own single
 	// row, because "only you" and "nobody" are different answers and the second reads
 	// as an outage.
+	//
+	// For a named team (`team`), invited seats that have not signed in yet appear
+	// too, marked by `activation`, so a lead sees who is on the team rather than only
+	// who has arrived.
 	Members []TeamBoardMember `json:"members"`
 
 	// Truncated True when a count was read to its work bound, so the real figure may be higher
@@ -43638,6 +43660,10 @@ type TeamBoardCounts struct {
 
 // TeamBoardMember One teammate and the work they are answerable for.
 type TeamBoardMember struct {
+	// Activation `invited` is a seat that has not signed in yet. Its workload is not measured, so
+	// its `counts` carry no meaning — a client draws "not measured" for it, never zero.
+	Activation TeamBoardMemberActivation `json:"activation"`
+
 	// Counts Counts of work somebody owes, all read under the CALLER's visibility rather than the
 	// teammate's — so this is how much of their load the reader can see.
 	Counts TeamBoardCounts `json:"counts"`
@@ -43649,6 +43675,10 @@ type TeamBoardMember struct {
 	// drill-down the board routes to.
 	UserId openapi_types.UUID `json:"user_id"`
 }
+
+// TeamBoardMemberActivation `invited` is a seat that has not signed in yet. Its workload is not measured, so
+// its `counts` carry no meaning — a client draws "not measured" for it, never zero.
+type TeamBoardMemberActivation string
 
 // TeamException One condition on a lead's team that a contact can act on, with the evidence that
 // raised it and the basis it was judged against.
@@ -46217,6 +46247,14 @@ type Worklist struct {
 	// once.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
+	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
+	// due commitments were read across the team roster. Absent under every other scope.
+	//
+	// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+	// could not be read contributes no rows, and without this a lead would read their
+	// silence as a week with nothing owed.
+	PlanCoverage *WorklistPlanCoverage `json:"plan_coverage,omitempty"`
+
 	// Queue Everything actionable, best-first. The order is the product of this endpoint.
 	Queue []WorklistItem `json:"queue"`
 
@@ -47251,6 +47289,37 @@ type WorklistPinRequest struct {
 	// identifies a row: the lanes mint ids independently, so an id alone can name a
 	// row in a lane the caller was not looking at.
 	Source string `json:"source"`
+}
+
+// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
+// due commitments were read across the team roster. Absent under every other scope.
+//
+// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+// could not be read contributes no rows, and without this a lead would read their
+// silence as a week with nothing owed.
+type WorklistPlanCoverage struct {
+	// Members One entry per member of the roster as read (up to its cap), in roster order —
+	// including a teammate whose plan was never asked for because the team read ran
+	// out of time, who reads as `read: false`.
+	Members []WorklistPlanCoverageMember `json:"members"`
+
+	// Truncated True when the roster came back at its cap, so teammates past it were never asked
+	// for a plan at all — the same admission `scope_truncated` makes for the page.
+	Truncated bool `json:"truncated"`
+}
+
+// WorklistPlanCoverageMember One teammate and whether their weekly plan was read.
+type WorklistPlanCoverageMember struct {
+	// DisplayName The teammate, as the roster names them.
+	DisplayName string `json:"display_name"`
+
+	// Read True when the plan was read, whether or not anything in it was due. False when the
+	// read failed, was refused, or was never made because the team read ran out of time,
+	// so this teammate's commitments are unknown rather than absent.
+	Read bool `json:"read"`
+
+	// UserId Whose plan this entry is about.
+	UserId openapi_types.UUID `json:"user_id"`
 }
 
 // WorklistReach What one source contributed, in numbers that say what they counted.
