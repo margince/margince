@@ -63,7 +63,7 @@ runtime uses. Its `decision` block counts:
 - `kept`, `kept_correct`, `kept_wrong`: the answers the gate of the site accepted, and how many of
   those were right.
 - `fallbacks`, `fallback_rate`, `fallback_by_reason`: the runs the ladder would have answered, keyed by
-  why the decision did not stand, without its `decision_` prefix.
+  the reason for the try, without its `decision_` prefix.
 - `served_pass_rate`: the kept and correct runs, plus the pass rate of the LLM record on the runs that
   fall back. This is what the site would serve from end to end.
 - `min_kept_confidence`: a number to help you find a problem, and never a floor.

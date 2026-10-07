@@ -1,19 +1,20 @@
+<!-- prose:plain -->
 # Set up outbound mail
 
-Margince sends mail two ways, and an installation needs both set up before every
-button that mails somebody works: the user's connected mailbox, and the SMTP
-relay configured below.
+Margince sends mail in two ways, and an installation needs both set up before every
+button that sends mail works. One is the connected mailbox of the user, and the other is the SMTP
+relay that you set up below.
 
 ## Which mail goes out which way
 
-Mail a user writes goes out through **that user's connected mailbox**. The
-composer, replies, scheduled sends and sequences all send as the rep, through
+Mail a user writes goes out through **the connected mailbox of that user**. The
+composer, replies, planned sends and sequences all send as the rep, through
 the Gmail, Microsoft 365 or IMAP connection they made under Settings →
-Integrations. [connect-a-mailbox.md](connect-a-mailbox.md) sets that up.
+Integrations. To set that up, see [connect-a-mailbox.md](connect-a-mailbox.md).
 
 Mail the installation writes by itself goes out through **the SMTP relay** in
-the deployment file's `email:` block. It never uses anybody's connected mailbox,
-even when the user who pressed the button has one. This covers:
+the `email:` block of the deployment file. It never uses the connected mailbox of a user,
+even when the user who clicked the button has one. This covers:
 
 | Mail | Started by |
 |---|---|
@@ -23,18 +24,18 @@ even when the user who pressed the button has one. This covers:
 | Password reset | **Forgot password** on the sign-in page |
 | Member invitation | Settings → Users & roles |
 | Deal Room invitation | inviting a buyer to a Deal Room |
-| Weekly review and morning brief by email | the worker's schedule, per the rep's Settings → Account choice |
+| Weekly review and morning brief by email | the schedule of the worker, as the rep sets it in Settings → Account |
 
-The privacy notice and the confirmation links carry a single-use link that opens
+The privacy notice and the confirm links carry a link that works one time, and that opens
 the contact's own record. They go through the relay so that the link never sits
-in a rep's Sent folder, where the rep or anyone else with access to that
-mailbox could open it as the contact. The link is sealed in the keyvault and put
-into the body only at the moment of sending.
+in the Sent folder of a rep. There, the rep, or any other user with access to that
+mailbox, could open it as the contact. The keyvault seals the link, and the link goes
+into the body only at the time of sending.
 
-## Configure the relay
+## Set up the relay
 
-Add an `email:` block to the deployment file (`config/margince.yaml` on a dev
-stack, whatever `--config` / `MARGINCE_CONFIG` names elsewhere):
+Add an `email:` block to the deployment file. That is `config/margince.yaml` on a dev
+stack, and the file that `--config` / `MARGINCE_CONFIG` names in other places:
 
 ```yaml
 email:
@@ -50,52 +51,50 @@ email:
 - `from_address` is the sender every recipient sees. Use an address of the
   company that runs this installation. That company is the data controller, and
   a privacy notice must come from the controller.
-- `password` takes the reference form, `${env:NAME}` or `${file:/path}`, never
-  the value itself. Leave it out for a relay that needs no login. The first boot
-  that reads it seals it into the keyvault, and later boots read it from there;
-  [configuration.md](../reference/configuration.md) explains how to take the
-  reference out afterwards.
-- A Gmail or Google Workspace account can serve as the relay:
-  `smtp.gmail.com`, port `587`, the account address as `username`, and a Google
+- `password` takes the reference form, `${env:NAME}` or `${file:/path}`, and never
+  the value itself. Leave it out for a relay that needs no login. The first start
+  that reads it seals it into the keyvault, and later starts read it from there.
+  To take the reference out after that, see [configuration.md](../reference/configuration.md).
+- A Gmail or Google Workspace account can be the relay. Use
+  `smtp.gmail.com` and port `587`. Set the account address as `username`, and a Google
   **app password** (not the account password) as `password`.
 
-Boot refuses a block with `enabled: true` and no `smtp.host`, a port outside
-1–65535, or an invalid `from_address`.
+The start refuses a block with `enabled: true` and no `smtp.host`, a port outside
+1–65535, or a `from_address` that is not valid.
 
-Two more settings have to be in place:
+Two more settings must be in place:
 
-- **`--public-base-url` / `MARGINCE_PUBLIC_BASE_URL`** must be set. The api
-  refuses to boot with `email.enabled` and no base URL, because the links in
-  these messages are built on it. With a real sender configured it must be an
-  https address a recipient can open; `MARGINCE_ENV=dev` admits the dev stack's
-  `http://localhost`, which only you can open.
-- Both the api and the worker must read **the same deployment file**, because they
-  split the work. The api sends password resets and invitations itself, at the
-  moment of the request. For the privacy notice and the confirm links, the api
-  only stages the message, and only when it has a relay configured; `cmd/worker`
-  then transmits it. The worker also sends the weekly review and morning brief.
+- **`--public-base-url` / `MARGINCE_PUBLIC_BASE_URL`** must be set. The API
+  refuses to start with `email.enabled` and no base URL, because the links in
+  these messages are built on it. With a real sender set up, it must be an
+  HTTPS address that a recipient can open. `MARGINCE_ENV=dev` allows the
+  `http://localhost` of the dev stack, which only you can open.
+- Both the API and the worker must read **the same deployment file**, because they
+  share the work. The API sends password resets and invitations itself, at the
+  time of the request. For the privacy notice and the confirm links, the API
+  only puts the message in line, and only when it has a relay set up. Then `cmd/worker`
+  sends it. The worker also sends the weekly review and the morning brief.
 
-The api does not reload its configuration. Restart both processes (`make dev`
-on a dev stack). The api's boot log then prints
-`api operator mail enabled (password reset, invites)`, and the worker's prints
-`weekly review mail on (...)` instead of `weekly review mail off (no operator
-mail configured)`.
+The API does not read its settings again while it runs. Start both programs again (`make dev`
+on a dev stack). Then the start log of the API prints
+`api operator mail enabled (password reset, invites)`. The log of the worker prints
+`weekly review mail on (...)`, and not `weekly review mail off (no operator mail configured)`.
 
 ## What happens without a relay
 
-Nothing refuses to boot. Every mail in the table above fails without notice or
-with a one-line message:
+Nothing refuses to start. Every mail in the table above fails, with no sign or
+with a message of one line:
 
 - **Send privacy notice** and **Ask them to confirm their details** answer
-  "Not sent: this installation cannot send mail to *address*." The link is
-  created and not sent. The privacy-notice duty stays open, and its one-month
-  deadline keeps running.
-- **Forgot password** is absent from the sign-in page.
-- An invited member has no way to set a password; Settings → Users & roles
-  offers **Get set-password link** to hand over by other means.
-- The weekly review and morning brief stay on Home and are not mailed.
+  "Not sent: this installation cannot send mail to *address*." The system makes
+  the link and does not send it. The privacy notice duty stays open, and its deadline of one month
+  keeps running.
+- **Forgot password** is not on the sign-in page.
+- An invited member has no way to set a password. Settings → Users & roles
+  offers **Get set-password link**, so you can hand the link over in another way.
+- The weekly review and the morning brief stay on Home, and no one mails them.
 
 A dev stack from `make dev` has no relay: `config/margince.example.yaml` ships
-the block commented out. To discharge a privacy-notice duty on such a stack,
-either configure a relay as above, or tell the contact by other means and close
-the duty with **End the duty…**, recording how you told them.
+the block as a comment. To close a privacy notice duty on such a stack,
+set up a relay as above. Or tell the contact in another way, and close
+the duty with **End the duty…**, with a note of how you let them know.

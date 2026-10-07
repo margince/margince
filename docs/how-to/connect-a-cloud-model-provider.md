@@ -100,10 +100,8 @@ schema, and no `thinking_level` of its own, is sent `thinkingLevel: low`. This l
 default of a model.
 
 A Flash-Lite model already has `minimal` as its default, or no thinking at all on 2.5. So it is sent no
-level, and keeps its own. A model before Gemini 3, such as 2.5, does not take `thinkingLevel` and is sent
-none.
-
-A task that wants a different level names it on the request (`ProviderOptions["gemini"].thinking_level`). A tier that needs a different level names it on the
+level, and keeps its own. A task that wants a different level names it on the request
+(`ProviderOptions["gemini"].thinking_level`). A tier that needs a different level names it on the
 binding (`thinking_level: low`). A request's own level still wins over it. See
 [configuration.md](../reference/configuration.md).
 

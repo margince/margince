@@ -50,7 +50,7 @@ The version form of the dist service does not accept a `v` prefix, so the two la
 ### Where the patch of changes starts
 
 The patch of `release.yml` starts at the last commit that **was published**. The lane records it as the
-moving `released` tag once `publish-release` succeeds. While that tag exists, the lane does not use the old tip of the branch.
+moving `released` tag once `publish-release` succeeds. The lane does not use the old tip of the branch.
 
 The two agree only while every lane publishes. A run can be cancelled, or it can fail. (The release group
 holds one place in the queue, so a merge pushes out the run behind it.) Either way, no one publishes that

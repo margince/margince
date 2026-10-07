@@ -49,7 +49,7 @@ gh pr create --draft --label "claim: main-red" \
 does not have. The empty commit gives it one, so the claim opens before you write a line of the fix. Do
 not wait until you have a fix to show: by then the second session has already started.
 
-A draft runs almost no CI, and gets no CodeRabbit review. `ci.yml` runs the `changes` job only on
+A draft runs almost no CI, and gets no CodeRabbit review. `ci.yml` runs the `changes` step only on
 `draft == false`, so every lane that waits on its answer skips. And `.coderabbit.yaml` sets `drafts: false`.
 The draft state keeps it cheap whatever the diff holds, so push your work to it as you go. It costs CI
 only once you mark it ready.

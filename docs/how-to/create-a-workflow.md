@@ -6,9 +6,8 @@ An automation is a `when X happens, do Y` template that a workspace can turn on.
 automation is code and tests, never data. You make the handler from a template, fill in its `Match` and
 `Plan`, and register it. Then the closure tests prove the wiring.
 
-For the closure, the one path that fires an automation, and the two permission gates, see
-[explanation/automation.md](../explanation/automation.md). One gate runs when a user writes an automation.
-The other runs on each firing of an automation that has an owner.
+For the closure, the one path that fires an automation, and the two permission gates every firing passes
+through, see [explanation/automation.md](../explanation/automation.md).
 
 The usual case is **adding a new starter workflow handler** over the closed list of
 triggers and actions we already have. To add a new *trigger kind* or *action type* to that list is

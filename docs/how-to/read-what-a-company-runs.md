@@ -1,12 +1,13 @@
+<!-- prose:plain -->
 # Read what a company publicly runs
 
-Margince reads free public sources (DNS records, certificate-transparency logs, and the pages of the
-company's own site) and writes what it finds onto the company record as facts with evidence. A deep
-read says what a company **tells** you; this reading says what it demonstrably **runs**.
+Margince reads free public sources: DNS records, certificate transparency logs, and the pages of the
+company's own site. It writes what it finds on the company record, as facts with evidence. A deep read says
+what a company **tells** you; this reading says what you can prove it **runs**.
 
-> **Nothing to press.** There is no lookup button. The reading is queued by the site read, and a
-> scheduled sweep comes back round for companies whose picture went stale. If you want a company
-> re-read now, read its site.
+> **No button.** There is no lookup button. The site read puts the reading in the queue, and a
+> scheduled sweep comes back to companies whose data is stale. If you want to read a company
+> again now, read its site.
 
 ## What it reads
 
@@ -18,97 +19,98 @@ read says what a company **tells** you; this reading says what it demonstrably *
 | `operated_service` | certificate log | many | `webshop`, `careers`, `customer_portal`, `api`, `vpn`, `status_page` |
 | `technology` | site-page fingerprint | many | `shopware`, `shopify`, `wordpress`, `typo3`, `matomo`, `google_analytics` |
 
-Every value is an `company_fact` row with `category='signal'` and `source='technical_lookup'`,
-carrying the public record that proved it (the winning MX host, the proving subdomain, the matched
-marker), so the record can always answer "how do you know?".
+Every value is a `company_fact` row with `category='signal'` and `source='technical_lookup'`. It carries
+the public record that proved it: the MX host that won, the subdomain that proved it, or the matched
+marker. So the record can always answer "how do you know?".
 
-Extraction is **deterministic**: table-driven classifiers and a hand-curated fingerprint ruleset,
-with no model call anywhere in the lane.
+The reading is **deterministic**. It uses classifiers that read from tables, and a set of fingerprint rules
+that humans wrote by hand. No part of the lane calls a model.
 
 ### Two readers write `technology`, to different standards
 
-The site read produces `technology` facts twice over, from the same crawl, and the two mean
-different things.
+The site read makes `technology` facts twice, from the same crawl, and the two mean different things.
 
-**The fingerprint** reads what the site **serves**: a response header, a cookie name, a script
-`src`, a `<meta generator>`, a marker in the markup. `nginx` from `Header server: nginx` is a fact
-about what is running, which page text cannot produce.
+**The fingerprint** reads what the site **serves**: an answer header, a cookie name, a script `src`, a
+`<meta generator>`, or a marker in the markup. `nginx` from `Header server: nginx` is a fact about what
+runs, and page text cannot give that fact.
 
-**The model** reads what the company **states** it uses, from the page text: a stack a consultancy
-says it builds in, a platform named on a careers page. That is a weaker claim, so the vocabulary in
-`compose/sitereadvocab.go` requires the passage to assert this company's own use. A vendor merely
-named, compared, or offered as an integration is not a technology fact. An analyst firm or its report
-(Gartner, Forrester) never is, and a bare category (BI, CRM, ERP, PIM) is not a product.
+**The model** reads what the company **states** it uses, from the page text. Examples are a stack that a
+service company says it builds with, or a platform named on a careers page. That is a second tier of claim. So the
+vocabulary in `compose/sitereadvocab.go` requires the passage to state that this company itself uses it. A
+vendor that is only named, compared, or listed as an integration is not a technology fact. A research company
+or its report (Gartner, Forrester) never is, and a category alone (BI, CRM, ERP, PIM) is not a product.
 
-Both land in the same section of the card, each carrying its own evidence, so a reader who opens the
-mark can see which kind of claim they are looking at.
+Both go in the same part of the card, each with its own evidence. So a reader who opens the mark can see
+which kind of claim they look at.
 
 ### The sources
 
-- **DNS** (`internal/platform/dnsread`): MX, TXT (SPF at the root, DMARC at `_dmarc.`, DKIM at
-  bounded well-known selectors), A and AAAA, CNAME, and a reverse `PTR` lookup for the hosting hint.
-  Paced at one query per 200ms.
+- **DNS** (`internal/platform/dnsread`): MX, TXT (SPF at the root, DMARC at `_dmarc.`, DKIM at a set list of
+  selectors), A and AAAA, and CNAME. It also makes a reverse `PTR` lookup for a sign of the host. It runs at one
+  query each `200ms`.
 - **Certificate transparency** (`internal/platform/certlog`): one `GET https://crt.sh/?q=%25.<domain>&output=json`
-  per company. Every publicly trusted certificate must be published to append-only public logs, so
-  the hostnames a company holds certificates for are already public record; reading them needs no
-  agreement and no key. Paced at **one query per five seconds**, because crt.sh is a single free
-  service run on goodwill, and its operators have asked heavy users not to query in parallel.
-- **Site pages** (`internal/platform/webread` + `compose/sitetechnology.go`): the fingerprint
-  (response headers, cookie names, script `src`s, `<meta generator>`, raw markup) of **every page the
-  site read crawled**, not the homepage alone. A shop system announces itself on `/shop`, a portal on
-  `/kunden`, a careers platform on `/karriere`, and a homepage-only fetch sees none of the three. The
-  crawl already paid for those pages, so this costs no extra request. Evidence cites the page that
-  proved it.
+  for each company. Every public certificate must go to public logs that you can only add to. So the host names on the
+  certificates of a company are already public. To read them needs no agreement and no key, and it runs at
+  **one query each 5 seconds**. `crt.sh` is one free service that runs on good will. The team that runs it
+  has asked users not to send many queries at the same time.
+- **Site pages** (`internal/platform/webread` + `compose/sitetechnology.go`): the fingerprint of **every page
+  that the site read fetched**, and not only the start page. The fingerprint covers answer headers, cookie
+  names, script `src` values, `<meta generator>`, and the markup itself. A shop system shows itself on `/shop`, a portal on `/kunden`, and a
+  careers platform on `/karriere`. A fetch of only the start page sees no page of the three. The crawl already
+  fetched these pages, so this costs no more requests. The evidence names the page that proved it.
 
 ### What is never stored
 
-A certificate log publishes every hostname a company ever held a certificate for, and those include
-personal names: `lars.example.de` is a normal thing to find. The subdomain classifier is an
-**allowlist**: only first labels that name a *service* survive it, and it runs **before the cache
-write and before the fact write**. A personal name in a certificate matches nothing and reaches no
-table, whatever the caller does.
+A certificate log publishes every host name on any certificate of a company. These include
+the names of humans: `lars.example.de` is a normal thing to find. The subdomain classifier is an
+**allowlist**. Only first labels that name a *service* pass it, and it runs **before the cache write and
+before the fact write**. A human name in a certificate matches nothing and reaches no table, for any
+caller.
 
-## What triggers it
+## What starts it
 
-The lanes split by who fetches, so they are triggered differently.
+Each lane has its own fetcher, so different things start them.
 
-**The site-page lane runs inside the site read.** When a crawl finishes and resolved a company, the
-read matches every page it fetched against the ruleset and writes the technology facts itself
-(`compose/sitetechnology.go`). No job, no queue, no second request: the pages are already in hand.
-This covers both the automatic capture read and a human pressing **read the site**.
+**The page lane is in the site read.** When a crawl ends and has matched a company, the read
+matches every page it fetched against the rules. Then it writes the technology facts itself
+(`compose/sitetechnology.go`). No job, no queue, no second request: the pages are already in hand. This
+covers both the capture read that runs on its own, and a human who clicks **read the site**.
 
-The DNS and certificate lanes **run as their own job**, queued three ways:
+The DNS and certificate lanes **run as their own job**, and these things put that job in the queue:
 
 1. **Every site read**, right after the page lane (`compose/technicalonsiteread.go`).
-2. **The scheduled sweep** (`technical_enrich_backfill`). Every 6 hours by default, it nominates up
-   to 25 companies per workspace whose picture is missing or older than 7 days. It exists to keep
-   the picture fresh: unlike geocoding, which fires when an address is *written*, a company's mail
-   provider changes at the **company** and no write on our side announces it. Only a scheduled pass
-   observes a move.
-3. **`POST /companies/{id}/technical-enrich`**: the API surface, 202 with no body. No UI calls
-   it; it exists for scripting.
+2. **The scheduled sweep** (`technical_enrich_backfill`).
 
-The DNS and certificate lanes are **queued rather than run inline**. A certificate log with a
-five-second pacer would park a deep-read worker (the scarcest kind in the fleet) on a wait that has
-nothing to do with crawling. They run on their own single-threaded `technical_lookup` queue.
+   By default, it runs every 6 hours, and takes up to 25 companies in each workspace whose data is missing,
+   or older than 7 days. It keeps the data up to date. Geocoding starts when someone *writes* an address. But
+   the mail provider changes at the **company**, and no write on our part shows the change. Only a scheduled
+   pass sees a move.
+3. **`POST /companies/{id}/technical-enrich`**: the API path, `202` with no body. No screen calls it; it
+   exists for scripts.
 
-**The sweep does not refresh technology.** It refreshes mail, hosting and operated services. A company that switches Shopware → Shopify keeps the old row until its site is read
-again, because only a crawl can see what the pages declare.
+The DNS and certificate lanes **wait in a queue instead**. A certificate log that waits 5 seconds between
+queries would keep a deep read worker waiting, for no reason linked to the crawl. And the system has few
+workers of that kind. So they run on their own `technical_lookup` queue,
+one job at a time.
 
-Jobs are deduplicated by args while queued or running, so a site read of a company the sweep just
-nominated joins that lookup instead of asking the same two services twice. A human-triggered
-lookup runs at a higher priority than a sweep nomination, so it never waits behind a batch.
+**The sweep does not refresh technology.** It refreshes mail, hosting and the services a company runs. A
+company that changes from Shopware to Shopify keeps the old row until someone reads its site again.
+Only a crawl can see what the pages declare.
 
-The **domain is not a job argument**. The job reads whatever the company record holds when it runs.
-A copy in the args would be a stale-lookup bug moved one layer out, and a way to point the lookup at
-a domain the record never carried.
+The queue drops a copy of a job that waits or runs with the same args. Say a user reads the site of a
+company that the sweep has put in the queue. Then the read uses that lookup, and does not ask the same two
+services twice. A lookup that a human starts runs before a sweep job, so it never waits behind a batch.
 
-## Configure it
+The **domain is not a job argument**. The job reads the domain the company record holds when it runs. A
+copy in the args would be the same stale lookup bug, moved one layer out. It would also be a way to point
+the lookup at a domain that was never on the record.
 
-Two settings. The certificate log's address is an environment variable the **worker** reads at boot:
-the api does not read it, because the enricher is built in `cmd/worker/jobrunner.go`. Put it in
-`.env.local`, which `scripts/dev.sh` sources and exports. How often the sweep runs is an admin
-setting on Settings → System health, which a running worker picks up without a restart.
+## Set it up
+
+There are two settings. The address of the certificate log is an environment value that the **worker**
+reads when it starts. The API does not read it, because `cmd/worker/jobrunner.go` builds the enricher. Put
+it in `.env.local`, which `scripts/dev.sh` reads and exports. The time between sweeps is an admin setting
+in Settings → System health. A running worker sees a change without a new start.
 
 ### `MARGINCE_CERTLOG_BASE_URL`: required, or the whole lane is off
 
@@ -116,88 +118,86 @@ setting on Settings → System health, which a running worker picks up without a
 MARGINCE_CERTLOG_BASE_URL=public
 ```
 
-`public` is a keyword, not a URL: it resolves to `https://crt.sh`. To use your own
-certificate-transparency mirror, give the real base URL instead; it must answer the crt.sh query
-shape (`/?q=%25.<domain>&output=json`).
+`public` is a key word, not a URL: it means `https://crt.sh`. To use your own copy of a certificate
+transparency service, give its real base URL instead. It must answer queries of the `crt.sh` shape
+(`/?q=%25.<domain>&output=json`).
 
-**Empty or unset turns both lanes off**. A partial enricher would complete some lanes and never the
-others. A lane that never completes leaves its facts frozen at whatever the last full run saw, which
-on the record looks the same as a company that has not changed. An installation that should
-make no outbound lookups leaves it unset.
+**Empty or unset turns both lanes off.** An enricher with only some lanes would complete these lanes, and
+never the others. A lane that never completes leaves its facts frozen at the last full run. On the
+record, that looks the same as a company that has not changed. An installation that should make no outbound
+lookups leaves it unset.
 
-With it unset, the job kinds are never registered, and anything that enqueues a lookup produces a
-job that retries against an unregistered kind:
+When it is unset, the job kinds are never registered. Each step that puts a lookup in the queue makes a job
+that tries again and again against a kind that is not registered:
 
 ```
 job kind is not registered in the client's Workers bundle: technical_enrich_company
 ```
 
-The worker reads `MARGINCE_CERTLOG_BASE_URL` at boot. Run `make dev` again after changing it: Vite
-hot-reloads the SPA, but not the Go worker.
+The worker reads `MARGINCE_CERTLOG_BASE_URL` when it starts. Run `make dev` again after you change it.
+Vite shows changes to the app as you type, but not to the Go worker.
 
-### How often to refresh
+### Set the time between refreshes
 
-An admin setting, **Technical lookup sweep (seconds)** on Settings → System health: 21600 seconds
-(6 hours) by default. It runs on start; `0` turns the sweep off and leaves the lookup to the site
-read that queues it. A running worker rechecks for changes every minute.
+This is an admin setting, **Technical lookup sweep (seconds)**, in Settings → System health. It is 21600
+seconds (6 hours) by default. It runs at start. `0` turns the sweep off, and leaves the lookup to the site
+read that puts it in the queue. A running worker checks for changes every minute.
 
 ## Where it shows
 
-The **Technology** card on the company record's **Profile** tab, below the site-read card that
-queues it, where a reader who just started a company research looks for what it brought back. Its
-sections: **Mail**, **Website technology**, **Services**, **Hosting**.
+The **Technology** card is on the **Profile** tab of the company record. It is below the site read card that
+starts it, where a reader who has started company research looks for the results. Its parts are **Mail**,
+**Website technology**, **Services** and **Hosting**.
 
-The card is a read with no controls. Each value carries an evidence mark showing the public record
-behind it. When a source did not answer, a notice at the foot of the card names it. A missing service then
-means "not checked today" rather than "they have none", so a reader deciding whether to trust "no
-webshop" knows the certificate log has been down.
+The card only shows data, and has no controls. Each value has an evidence mark that shows the public record
+behind it. When a source gave no answer, a notice at the end of the card names it. Then a missing service
+means `not checked today`, and not `they have none`. So a reader who decides whether to trust `no webshop`
+knows that the certificate log was down.
 
-A human correcting a value rewrites the row's source to `human`, and the row stays on this card. The
-card partitions by **field name**, never by source, so a corrected row is never dropped from both
-cards or rendered on two.
+When a human fixes a value, the source of the row changes to `human`, and the row stays on this card. The
+card sorts rows by **field name**, never by source. So the system never drops a fixed row from both cards,
+and never shows it on two.
 
-Changed signals also appear on the company rail as a `technical_change` event.
+Changed signals also show on the company rail as a `technical_change` event.
 
-## How a refresh reconciles
+## How a refresh changes the facts
 
-Each lane that **completed** is authoritative over its own fields: rows it no longer observes are
-removed, so a company that moves Google → Microsoft 365 ends with one mail provider rather
-than two.
+Each lane that **completed** decides its own fields. It removes the rows it no longer sees. So a company
+that moves from Google to Microsoft 365 ends with one mail provider, and not two.
 
-A lane that **failed** changes nothing. A certificate-log outage must never be recorded as "this
-company operates no services". This is why the lane outcomes distinguish `empty` (the source
-answered; the company publishes none of what this lane reads) from `failed` (the lookup did not
-complete) and `refused` (robots.txt declined the page read).
+A lane that **failed** changes nothing. A certificate log outage must never be recorded as "this company
+runs no services". This is why the lane outcomes keep three cases separate. `empty` means the source answered,
+and the company publishes nothing that this lane reads. `failed` means the lookup failed to complete.
+`refused` means `robots.txt` refused the page read.
 
-Rows a human wrote are never removed by a machine refresh.
+A refresh by the system never removes rows that a human wrote.
 
-## Answers are cached, with a TTL
+## The cache keeps answers, with a TTL
 
-Cached per query name and record type, installation-global, since a domain's DNS answer is the same
-for every tenant. Negative results are recorded explicitly, so a company with no DMARC is not re-asked
-every run.
+The cache keys on query name and record type, for the whole installation. The DNS answer for a
+domain is the same for every tenant. The cache also records empty answers, so the system does not ask again
+on every run for a company with no DMARC.
 
 | Kind | Trusted for |
 |---|---|
-| MX, TXT, DMARC | 24h |
-| Address (A/AAAA), CNAME | 12h |
+| MX, TXT, DMARC | `24h` |
+| Address (A/AAAA), CNAME | `12h` |
 | DKIM, reverse (PTR) | 7 days |
-| Certificate log | 24h |
+| Certificate log | `24h` |
 
-Every TTL is shorter than the 7-day refresh cadence, because a cache entry that outlived the refresh
-would hide from the sweep the move it exists to catch. The cache holds **classified outcomes only**:
-the allowlist has already run, so no raw certificate hostname is stored.
+Every TTL is shorter than the refresh every 7 days. A cache entry that lasted longer than the refresh would
+keep the sweep from seeing the move it is there to catch. The cache holds **only the outcomes of the classifier**. The
+allowlist has already run, so no certificate host name is stored as it was.
 
 ## Check that it worked
 
 **In the app.** Open a company with a real domain, read its site, and watch the **Technology** card. The
-lookup is queued when the read finishes, so the fields arrive shortly after the read closes, not
-with it.
+lookup goes in the queue when the read ends. So the fields come soon after the read closes, not with it.
 
-**Per lane.** `GET /companies/{id}/technical-enrich/latest` reports what each of the three
-sources last did, with attempt counts and last-success stamps. Per lane rather than per run, because
-the three sources fail independently and one verdict would hide which of them is stale. The
-`homepage` lane is the site-page one, written by the crawl.
+**For each lane.** `GET /companies/{id}/technical-enrich/latest` reports the last run of each of the three
+sources, with try counts and the time of the last good run. It reports for each lane, and not for each run,
+because the three sources fail on their own. One verdict would not show which of them is stale. The `homepage`
+lane is the site page one, which the crawl writes.
 
 **In the job table.**
 
@@ -207,35 +207,35 @@ docker exec margince-postgres-1 psql -U margince_app -d margince \
       from river_job where kind like '%technical%' order by id desc limit 10;"
 ```
 
-`state='retryable'` with the "not registered" error means `MARGINCE_CERTLOG_BASE_URL` is unset or
-the worker has not been restarted since you set it.
+`state='retryable'` with the "not registered" error means `MARGINCE_CERTLOG_BASE_URL` is unset. Or the
+worker has not started again after you set it.
 
-**Against one domain, without a database.** There is no DB-less subcommand for this lane yet
-(`worker siteread <url>` covers the deep read only). To exercise the classifiers directly, the
-table-driven tests in `backend/internal/compose/techenrich_test.go` are the loop.
+**Against one domain, without a database.** There is no command for this lane that runs without a database
+yet (`worker siteread <url>` covers only the deep read). To test the classifiers on their own, use the table
+tests in `backend/internal/compose/techenrich_test.go` as the loop.
 
 ## When the card stays empty
 
-- **The feature is off.** `MARGINCE_CERTLOG_BASE_URL` unset, or the worker not restarted since.
-- **The company has no stored domain.** The lanes read the record's own domain and nothing else, so
-  a company without one produces nothing. A seeded demo company with a fake domain resolves nothing
-  and correctly writes nothing.
-- **Nothing has read the site yet.** The lookup rides the site read. A company nobody has read waits
-  for the sweep.
-- **The company publishes little.** A small site on shared hosting with no subdomains and
-  no recognisable markers is an ordinary `empty` result, not a failure.
+- **The feature is off.** `MARGINCE_CERTLOG_BASE_URL` is unset, or the worker has not started again after that.
+- **The company has no stored domain.** The lanes read the domain of the record and nothing else, so a
+  company without one gives nothing. A demo company from seed data with a made-up domain finds nothing, and
+  rightly writes nothing.
+- **Nothing has read the site yet.** The lookup follows the site read. A company that no one has read
+  waits for the sweep.
+- **The company publishes few signals.** A small site on shared hosting, with no subdomains and no markers the
+  rules know, is a normal `empty` result, not a failure.
 
 ## Limits worth knowing
 
-- **One provider for the certificate lane.** crt.sh is frequently slow and sometimes down. Callers
-  treat that as "this lane had nothing to say today", never as an authoritative empty answer. The
-  `certlog.Client` interface is what keeps that from hardening into an assumption.
-- **The fingerprint ruleset is small** (`platform/techprofile/data/rules.json`) and German-SMB-biased.
-  It grows by hand, not through a model.
-- **No paid tech-stack datasets**, and no Wappalyzer import: those datasets and their forks are GPL,
-  which is incompatible with this codebase's BUSL-1.1 licence.
+- **One provider for the certificate lane.** `crt.sh` is slow in many cases, and down at times. Callers count that as
+  "this lane has nothing to say today", never as an empty answer they can trust. The `certlog.Client`
+  interface is what keeps that from turning into a rule we never check.
+- **The fingerprint rules are few** (`platform/techprofile/data/rules.json`), and they are made for small
+  German companies. Humans add to them by hand, not through a model.
+- **No paid data sets of technology stacks**, and no Wappalyzer import. These data sets and their forks are GPL,
+  which cannot go with the BUSL-1.1 license of this code.
 
-## Related
+## See also
 
 - [add-a-job.md](add-a-job.md): how the two job kinds and their queue are declared.
-- [connect-an-mcp-client.md](connect-an-mcp-client.md): reaching these facts as tools.
+- [connect-an-mcp-client.md](connect-an-mcp-client.md): how to reach these facts as tools.

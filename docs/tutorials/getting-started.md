@@ -1,17 +1,17 @@
+<!-- prose:plain -->
 # Getting started
 
-This tutorial takes you from a fresh clone to a running Margince
-instance with a bootstrapped company, using only the repository's
-Makefile targets.
+This tutorial takes you from a new clone to a running Margince
+install with its company set up. It uses only the Makefile targets of the repository.
 
-## Prerequisites
+## Before you start
 
 - Go ≥ 1.27 (the module pins toolchain `go1.27.0`)
-- Docker (dev Postgres 16 + Redis 7 run as containers)
-- `golangci-lint` (only needed for `make check`)
+- Docker (dev Postgres 16 and Redis 7 run in containers)
+- `golangci-lint` (you need it only for `make check`)
 
-All targets exist at the repo root (a thin delegator) and in `backend/`;
-the commands below work from either directory.
+Every target is in the folder of the repository itself, which only hands it on, and in `backend/`.
+The commands below work from both folders.
 
 ## 1. Start the databases
 
@@ -20,9 +20,9 @@ make db-up
 ```
 
 This starts a `pgvector/pgvector:pg16` container on port 15432 and a
-`redis:7` container on port 16379, waits for Postgres to accept
-connections, and applies `scripts/db-init.sql` (which creates the
-runtime app role, so the API never runs as the schema owner).
+`redis:7` container on port 16379. It waits until Postgres is ready,
+then applies `scripts/db-init.sql`. That file makes the
+app role the API runs as, so the API never runs as the owner of the schema.
 
 ## 2. Apply the migrations
 
@@ -30,8 +30,8 @@ runtime app role, so the API never runs as the schema owner).
 make migrate
 ```
 
-Runs `cmd/migrate up` with the owner DSN: all core migrations plus the
-fork-owned custom namespace. Migrations are reversible; see
+This runs `cmd/migrate up` with the owner DSN. It applies all core migrations, and the
+custom space that a fork owns. Each migration has a down step; see
 [how-to/apply-migrations.md](../how-to/apply-migrations.md).
 
 ## 3. Run the API
@@ -40,51 +40,51 @@ fork-owned custom namespace. Migrations are reversible; see
 make dev
 ```
 
-`make dev` brings up the infra, re-runs db-up + migrate, and boots `cmd/api`
-with the app-role DSN, behind the app on `:8080`. By default
-the outbox relay runs inline in the api process, so this one command is a
-complete install. It returns when ready and the servers run in the
-background; stop them with `make dev-stop`.
+`make dev` starts the services, runs `db-up` and `migrate` again, and starts `cmd/api`
+with the DSN of the app role, behind the app on `:8080`. By default
+the outbox relay runs in the API itself, so this one command is a
+full install. It returns when the stack is ready, and the servers keep
+running. Stop them with `make dev-stop`.
 
-One installation serves one company: on its first boot
-against the empty database, the api bootstraps the company and admin
-user from the deployment config `config/margince.yaml`. `make dev` seeds
+One install serves one company. When the API first starts
+against the empty database, it sets up the company and the admin
+user from the settings file `config/margince.yaml`. On the first run, `make dev` makes
 that file (and the admin password file) from
-[`config/margince.example.yaml`](../../config/margince.example.yaml) on first
-run and then leaves it alone: edit it freely, or delete it to reset. There is no
-bootstrap screen or endpoint: no request creates a workspace.
+[`config/margince.example.yaml`](../../config/margince.example.yaml), and
+then leaves it alone. Edit it as you like, or delete it to start over. No
+screen or endpoint sets up a company, and no request creates a workspace.
 
-## 4. Log in
+## 4. Sign in
 
-Open <http://localhost:8080>. It serves the web UI and proxies `/v1` to the
-api behind it, so it is the only URL you need.
+Open <http://localhost:8080>. It serves the web app and sends `/v1` on to the
+API behind it, so it is the only URL you need.
 
 Sign in as `admin@demo.test` with `operator-supplied-first-password` (from
 `config/margince-admin-password`). The app asks you to set a new password
-before anything else works. The rest of this page follows that cold path.
+before any other step works. The rest of this page follows that cold path.
 
-`make seed-dev` (against the running stack) is the shortcut past it. It
-completes the admin's first login and sets the password to `demo-password-123`,
-describes the demo company so the cold start never opens, and writes demo
-records. Take it and the next two paragraphs do not apply: you land on a filled
+`make seed-dev`, run against the running stack, is the short way past it. It
+does the first sign in of the admin and sets the password to `demo-password-123`.
+It fills in the demo company so the cold start never opens, and it writes demo
+records. If you run it, the next two parts of this page do not apply: you start in a full
 app.
 
-The first login opens the **cold start**. It asks for your website (or "Enter
-the details yourself"), shows the crawl as it reads the site, and lets you
-review every field and fact before anything is written. A rail beside it shows
-where you are: Read · Confirm · Voice · Ready · Connect. You can resume or skip
-it; [explanation/company-context.md](../explanation/company-context.md)
+The first sign in opens the **cold start**. It asks for your website 
+(or `Enter the details yourself`), and it shows the crawl as it reads the site. You can
+review every field and fact before it writes any data. A list next to it shows
+where you are: Read · Confirm · Voice · Ready · Connect. You can come back to it later, or skip
+it. [explanation/company-context.md](../explanation/company-context.md)
 explains it.
 
-After that you have contacts, leads, the deal board and the activity timeline,
-all empty. `make dev` boots a cold installation so you see what a first
-customer sees. Run `make seed-dev` later when you want demo records; it is
-idempotent and safe to re-run.
+After that, you have contacts, leads, the deal board and the activity timeline,
+and all of them are empty. `make dev` starts an empty install, so you see what a new
+customer sees. Run `make seed-dev` later when you want demo records. You can run it
+as many times as you like, and it is safe.
 
-Prefer the API? Log in and reuse the session. The example uses the
-`make seed-dev` password. The `crm_session` cookie is `Secure`, so pull it out
-of the login response instead of relying on curl's jar. The server resolves its
-singleton company itself, and no header selects a tenant:
+Do you want to use the API? Sign in and use the session again. The code below uses the
+`make seed-dev` password. The `crm_session` cookie is `Secure`, so take it out
+of the sign in answer, and do not trust the cookie store of curl. The server finds its
+one company by itself, and no header chooses a tenant:
 
 ```sh
 SESSION=$(curl -sS -D - -o /dev/null http://localhost:8080/v1/auth/login \
@@ -95,36 +95,36 @@ SESSION=$(curl -sS -D - -o /dev/null http://localhost:8080/v1/auth/login \
 curl http://localhost:8080/v1/me --cookie "crm_session=$SESSION"
 ```
 
-(An agent uses a passport instead of a session; see [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).)
+(An agent uses a passport, not a session; see [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).)
 
-## 5. Verify your setup
+## 5. Check your setup
 
 ```sh
 make check
 ```
 
 is the merge gate (build, vet, lint, arch-lint, unit tests, contract
-drift). With the containers from step 1 running,
+drift). While the containers from step 1 run,
 
 ```sh
 make test-integration
 ```
 
-runs the real-Postgres lane: cross-tenant isolation gates, the governed-agent-writes loop,
-and the HTTP end-to-end sales flow. It fails loudly when the database is
-missing and never skips.
+runs the real Postgres lane. It runs the gates that keep tenants separate, the test where an agent writes under
+rules, and the HTTP sales flow from end to end. It fails with an error you can see when the database is
+missing, and it never skips.
 
 ## Where next
 
-- Contributing to the backend? Start at
-  [explanation/backend-onboarding.md](../explanation/backend-onboarding.md), the orientation hub (map,
-  reading order, how to add an endpoint or a migration).
+- Do you want to work on the backend? Start at
+  [explanation/backend-onboarding.md](../explanation/backend-onboarding.md). It is the guide to start with: a map,
+  an order to read in, and how to add an endpoint or a migration.
 - Connect an AI agent: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md),
   then [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md).
-- Send mail: a rep's own mail needs a connected mailbox
-  ([how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md)); the privacy
-  notice, confirm links and password reset need the installation's SMTP relay,
-  which this stack does not have yet
+- Send mail. The own mail of a rep needs a connected mailbox
+  ([how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md)). The privacy
+  notice, confirm links and password reset need the SMTP relay of the install.
+  This stack does not have one yet
   ([how-to/set-up-outbound-mail.md](../how-to/set-up-outbound-mail.md)).
-- Every flag and environment variable: [reference/configuration.md](../reference/configuration.md).
-- Why the code is shaped the way it is: [explanation/architecture.md](../explanation/architecture.md).
+- Every setting: [reference/configuration.md](../reference/configuration.md).
+- Why the code has the shape it has: [explanation/architecture.md](../explanation/architecture.md).

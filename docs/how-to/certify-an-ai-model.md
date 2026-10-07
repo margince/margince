@@ -10,8 +10,7 @@ The lane scores each answer with a pinned rubric judge. It folds the runs into a
 `supported_degraded` / `not_supported` verdict, and commits the result as a JSON record.
 
 This lane **costs money**, and runs only when you ask for it. It makes real provider calls, paid from
-your own **BYOK** key, because Margince runs no model of its own. The judge can use a Claude Code plan
-instead. The lane is never part of a request path.
+your own **BYOK** key, because Margince runs no model of its own. It is never part of a request path.
 
 > **Start for free.** `make e2e-ai-report` ([step 3](#3-read-the-report)) needs no key,
 > network or database. It prints what the record of every site we ship says, also for the sites with no
