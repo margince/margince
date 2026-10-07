@@ -59,6 +59,7 @@ func TestAMergeHonoursTheSourcesIfMatchVersion(t *testing.T) {
 			target := create("Survivor " + kind.nameField)
 			source := create("Source " + kind.nameField)
 			current := version(source)
+			targetBefore := version(target)
 
 			// 409 alone is not the claim: a merge answers it for an already-merged
 			// source and an unwritable target too.
@@ -67,6 +68,12 @@ func TestAMergeHonoursTheSourcesIfMatchVersion(t *testing.T) {
 			}
 			if archived(source) {
 				t.Fatal("a refused merge still archived the source")
+			}
+			if got := version(source); got != current {
+				t.Errorf("a refused merge moved the source from version %d to %d", current, got)
+			}
+			if got := version(target); got != targetBefore {
+				t.Errorf("a refused merge moved the target from version %d to %d", targetBefore, got)
 			}
 
 			if status, _ := merge(source, target, strconv.FormatInt(current, 10)); status != http.StatusOK {
