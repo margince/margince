@@ -15,6 +15,26 @@ export type Tag = components["schemas"]["Tag"];
 /** The record types the tags panel serves. */
 export type TaggableType = "contact" | "company" | "deal" | "lead";
 
+/** The list cache each type's rows, and so their tag chips, are held under. */
+const LIST_KEY: Record<TaggableType, string> = {
+  contact: "contacts",
+  company: "companies",
+  deal: "deals",
+  lead: "leads",
+};
+
+/** The panel and every list drawing this record's chips go stale together. */
+function invalidateTagged(
+  queryClient: ReturnType<typeof useQueryClient>,
+  entityType: TaggableType,
+  entityID: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: ["record-tags", entityType, entityID],
+  });
+  void queryClient.invalidateQueries({ queryKey: [LIST_KEY[entityType]] });
+}
+
 /**
  * The tags on one record, and whether the vocabulary was withheld.
  *
@@ -79,12 +99,7 @@ export function useApplyTag(entityType: TaggableType, entityID: string) {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
-      // The panel and any list showing this record's chips both go stale.
-      void queryClient.invalidateQueries({
-        queryKey: ["record-tags", entityType, entityID],
-      });
-    },
+    onSuccess: () => invalidateTagged(queryClient, entityType, entityID),
   });
 }
 
@@ -101,10 +116,6 @@ export function useRemoveTag(entityType: TaggableType, entityID: string) {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["record-tags", entityType, entityID],
-      });
-    },
+    onSuccess: () => invalidateTagged(queryClient, entityType, entityID),
   });
 }

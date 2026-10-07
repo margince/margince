@@ -36,6 +36,7 @@ import {
 } from "./listquery";
 import { mineEmptyNote, standardViews, useOwnerTagChips } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
+import { listQueryParams } from "./tagfilter";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
@@ -53,7 +54,7 @@ async function fetchLeadsPage(
         include_archived: query.includeArchived || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        ...query.filters,
+        ...listQueryParams(query.filters),
       },
     },
   });
