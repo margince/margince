@@ -14,7 +14,7 @@ import "./filterbar.css";
  * The caption belongs here too, for the same reason: "results through" is a
  * fact about the cut, and alone on the ground it is one more stray line.
  *
- * Named as a group, because the dials are only read as one cut together.
+ * A named fieldset, because the dials are only read as one cut together.
  */
 export function FilterBar({
   label,
@@ -32,7 +32,7 @@ export function FilterBar({
   caption?: ReactNode;
 }>) {
   return (
-    <div className="filter-bar" role="group" aria-label={label}>
+    <fieldset className="filter-bar" aria-label={label}>
       <div className="filter-bar-row">
         <div className="filter-bar-controls">{children}</div>
         {actions != null && <div className="filter-bar-actions">{actions}</div>}
@@ -42,6 +42,6 @@ export function FilterBar({
           {caption}
         </p>
       )}
-    </div>
+    </fieldset>
   );
 }

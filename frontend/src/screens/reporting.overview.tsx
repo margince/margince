@@ -12,7 +12,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { FilterBar } from "../design-system/filterbar";
 import { formatDateTime } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { AnalyticsAttention } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
 import { problemCodeOf, QueryGate, throwProblem } from "./common";
@@ -21,6 +21,7 @@ import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
 import {
+  type ReportingEvaluation,
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingQuery,
@@ -241,19 +242,9 @@ function OverviewBody({
           </>
         }
         caption={
-          !validPeriod
-            ? t("reporting.chooseDates")
-            : query.data &&
-                query.data.context.interval.end_at ===
-                  query.data.context.evaluated_at
-              ? t("reporting.resultsThrough", {
-                  at: formatDateTime(
-                    query.data.context.interval.end_at,
-                    locale,
-                    query.data.context.timezone,
-                  ),
-                })
-              : undefined
+          validPeriod
+            ? resultsThrough(query.data, locale, t)
+            : t("reporting.chooseDates")
         }
       >
         {scopeControl}
@@ -347,4 +338,26 @@ function OverviewBody({
 
 function validDateRange(period: string, start: string, end: string): boolean {
   return period !== "custom" || !!(start && end);
+}
+
+// "Results through" only while the period is still running: a closed period
+// ends where it says it does, and the line would only repeat it.
+function resultsThrough(
+  evaluation: ReportingEvaluation | undefined,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
+  if (
+    !evaluation ||
+    evaluation.context.interval.end_at !== evaluation.context.evaluated_at
+  ) {
+    return undefined;
+  }
+  return t("reporting.resultsThrough", {
+    at: formatDateTime(
+      evaluation.context.interval.end_at,
+      locale,
+      evaluation.context.timezone,
+    ),
+  });
 }

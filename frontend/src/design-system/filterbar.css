@@ -11,6 +11,10 @@
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
   backdrop-filter: blur(12px);
+  /* A fieldset's own margin and min-content floor, which would let a long row
+     push the page sideways instead of wrapping. */
+  margin: 0;
+  min-inline-size: 0;
 }
 
 /* Fields carry their label above the control, so the row aligns on the
