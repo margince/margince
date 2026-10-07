@@ -127,15 +127,17 @@ func (e *DuplicateContactLeadError) Is(target error) bool { return target == app
 
 // ensureContactNotWorked is the contact key's refusal. A contact with no email
 // and no LinkedIn profile has no other key, so without it a retried "Work as a
-// lead" mints a second lead. The lock makes two racing creates queue on the
-// contact; uq_lead_from_contact_live backs it up. A lead coming back to life
-// passes itself as except, so it is not refused over its own row.
+// lead" mints a second lead. Racing writers queue on the contact row itself:
+// demote already holds it, so a separate lock taken after it could deadlock
+// against a create, and NO KEY UPDATE leaves the lead's foreign-key check free.
+// uq_lead_from_contact_live backs it up. A lead coming back to life passes
+// itself as except, so it is not refused over its own row.
 func ensureContactNotWorked(ctx context.Context, tx pgx.Tx, contactID *ids.ContactID, except *ids.LeadID) error {
 	if contactID == nil {
 		return nil
 	}
-	if err := storekit.LockWriteIdentity(ctx, tx, "lead_from_contact", contactID.String()); err != nil {
-		return err
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR NO KEY UPDATE`, contactID); err != nil {
+		return fmt.Errorf("lock the contact a lead is worked from: %w", err)
 	}
 	var existing ids.LeadID
 	err := tx.QueryRow(ctx,

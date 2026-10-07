@@ -140,6 +140,18 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("repoint lead promotions: %w", err)
 	}
+	// A lead worked from the merged-away contact is worked from the survivor
+	// now. When the survivor already has a live lead, the source's keeps its
+	// link: one person worked through two leads is a lead merge for a human,
+	// and uq_lead_from_contact_live admits one.
+	if _, err := tx.Exec(ctx,
+		`UPDATE lead SET from_contact_id = $2
+		  WHERE from_contact_id = $1
+		    AND (archived_at IS NOT NULL OR NOT EXISTS (
+		          SELECT 1 FROM lead live WHERE live.from_contact_id = $2 AND live.archived_at IS NULL))`,
+		sourceID, targetID); err != nil {
+		return counts, fmt.Errorf("repoint leads worked from the contact: %w", err)
+	}
 	// What the merged-away contact sent back through their own confirm link —
 	// a correction they typed, or a request to be removed. It moves onto the
 	// survivor because it is a request the workspace still owes an answer to,

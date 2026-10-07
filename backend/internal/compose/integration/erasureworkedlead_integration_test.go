@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -49,5 +50,35 @@ func TestErasingAContactAnonymizesTheLeadWorkedFromIt(t *testing.T) {
 	}
 	if name == "Dana Example" || leadTitle != nil {
 		t.Errorf("the lead worked from the erased contact still reads %q, %v", name, leadTitle)
+	}
+}
+
+// Merging the contact a lead was worked from carries the link to the survivor,
+// so the survivor's page offers that lead instead of a second one.
+func TestAMergedContactsLeadIsWorkedFromTheSurvivor(t *testing.T) {
+	e := Setup(t)
+	source, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Dana Example", Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the merged-away contact: %v", err)
+	}
+	target, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Dana Example", Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the survivor: %v", err)
+	}
+	sourceID := ids.From[ids.ContactKind](ids.UUID(source.Id))
+	targetID := ids.From[ids.ContactKind](ids.UUID(target.Id))
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &sourceID})
+	if err != nil {
+		t.Fatalf("working the merged-away contact as a lead: %v", err)
+	}
+
+	if _, err := e.Contacts.MergeContact(e.Admin(), sourceID, targetID, nil); err != nil {
+		t.Fatalf("merging the contacts: %v", err)
+	}
+
+	_, _, err = e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &targetID})
+	var refused *contacts.DuplicateContactLeadError
+	if !errors.As(err, &refused) || refused.ExistingID.UUID != ids.UUID(lead.Id) {
+		t.Fatalf("a lead from the survivor = %v, want the refusal naming the lead worked from the merged-away contact", err)
 	}
 }
