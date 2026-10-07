@@ -208,6 +208,11 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_linkedin_url", duplicateID(dupLeadLinkedIn.ExistingID.UUID)))
 		return
 	}
+	var dupContactLead *DuplicateContactLeadError
+	if errors.As(err, &dupContactLead) {
+		httperr.Write(w, r, httperr.Duplicate("duplicate_contact_lead", duplicateID(dupContactLead.ExistingID.UUID)))
+		return
+	}
 	var primaryConflict *PrimaryConflictError
 	if errors.As(err, &primaryConflict) {
 		httperr.Write(w, r, &httperr.DetailedError{

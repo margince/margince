@@ -14,6 +14,8 @@ package contacts
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -108,6 +110,51 @@ func ensureLeadLinkedInUnclaimed(ctx context.Context, tx pgx.Tx, url *string) er
 		return err
 	}
 	dup := &DuplicateLeadLinkedInError{URL: *url}
+	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
+	if err != nil {
+		return err
+	}
+	if visible {
+		dup.ExistingID = existing
+	}
+	return dup
+}
+
+// DuplicateContactLeadError refuses a second live lead worked from one
+// contact. ExistingID is set only when the caller may read that lead.
+type DuplicateContactLeadError struct {
+	ExistingID ids.LeadID
+}
+
+func (e *DuplicateContactLeadError) Error() string {
+	return "a live lead is already worked from this contact"
+}
+
+func (e *DuplicateContactLeadError) Is(target error) bool { return target == apperrors.ErrConflict }
+
+// ensureContactNotWorked is the contact key's refusal. A contact with no email
+// and no LinkedIn profile has no other key, so without it a retried "Work as a
+// lead" mints a second lead. The lock makes two racing creates queue on the
+// contact; uq_lead_from_contact_live backs it up. A lead coming back to life
+// passes itself as except, so it is not refused over its own row.
+func ensureContactNotWorked(ctx context.Context, tx pgx.Tx, contactID *ids.ContactID, except *ids.LeadID) error {
+	if contactID == nil {
+		return nil
+	}
+	if err := storekit.LockWriteIdentity(ctx, tx, "lead_from_contact", contactID.String()); err != nil {
+		return err
+	}
+	var existing ids.LeadID
+	err := tx.QueryRow(ctx,
+		`SELECT id FROM lead WHERE from_contact_id = $1 AND archived_at IS NULL
+		   AND ($2::uuid IS NULL OR id <> $2)`, contactID, except).Scan(&existing)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("probe lead worked from contact: %w", err)
+	}
+	dup := &DuplicateContactLeadError{}
 	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
 	if err != nil {
 		return err

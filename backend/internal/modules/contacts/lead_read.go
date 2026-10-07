@@ -65,7 +65,7 @@ func leadLastActivitySQL() string {
 
 var leadColumns = `id, full_name, email, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
-	promoted_contact_id, promoted_at, merged_into_id, source, captured_by,
+	promoted_contact_id, promoted_at, merged_into_id, from_contact_id, source, captured_by,
 	source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("lead") + `,
 	version, created_at, updated_at, archived_at,
@@ -152,7 +152,7 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
-	var ownerID, projectID, promotedContact, mergedInto, disqualifyReason, qualifiedDeal *ids.UUID
+	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal *ids.UUID
 	var statusSetBy *string
 	var evidence []byte
 	var email *string
@@ -166,7 +166,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	dests := []any{
 		&id, &l.FullName, &email, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
 		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &l.SourceSystem, &l.SourceId,
-		&promotedContact, &l.PromotedAt, &mergedInto, &l.Source, &l.CapturedBy,
+		&promotedContact, &l.PromotedAt, &mergedInto, &fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
@@ -191,6 +191,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	// page can only see that the lead ended — and it said "Disqualified",
 	// which claims a human judged the lead not worth pursuing.
 	l.MergedIntoId = uuidPtr(mergedInto)
+	l.FromContactId = uuidPtr(fromContact)
 	l.DisqualifyReasonId = uuidPtr(disqualifyReason)
 	l.QualifiedDealId = uuidPtr(qualifiedDeal)
 	if statusSetBy != nil {

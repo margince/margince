@@ -160,6 +160,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if clause := storekit.TagFilterClause(ctx, leadEntity, "lead.id", in.TagIDs, in.TagMode, arg); clause != "" {
 		where = append(where, clause)
 	}
+	if in.FromContactID != nil {
+		where = append(where, storekit.SQLf("lead.from_contact_id = $%d", arg(*in.FromContactID)))
+	}
 	return where
 }
 
