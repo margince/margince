@@ -3,15 +3,15 @@
 
 ## Where do I start my sales review?
 
-Open **Analytics → Performance**. Choose **Sales** for sales won, pipeline stages, sales by salesperson and time in stage, or **SDR** for meetings held and accepted opportunities. Choose your record scope and time span. Stage charts need a single pipeline. A rep's own scope shows their own results; you need wider access to compare owners.
+Open **Analytics → Performance**. Choose **Sales** for sales won, pipeline stages, sales by salesperson and time in stage, or **SDR** for meetings confirmed as held and accepted opportunities. Choose your record scope and time span. Stage charts need a single pipeline. A rep's own scope shows their own results; you need wider access to compare owners.
 
 Sales won follows the close time span you picked and the deal owner of today. If a deal gets a new owner, its live sales and target results move to the new owner. Saved snapshots keep the owner and results from that time. Open pipeline and stage age show the pipeline as it is now, with the time window for expected closes printed next to the chart.
 
-A salesperson's target is for the month or the business quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
+A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
 “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts. The dates next to the numbers name the time span measured. A custom time span can be up to 12 months long. If the end date is today or later, real results stop at the reporting cutoff of today, shown above the charts. Future sales are not counted. A time span that is all in the future is refused; choose a start date before the cutoff.
 
-Targets use the month or business quarter that holds the real cutoff, even when the custom end date you asked for is later. A saved edition keeps its own cutoff.
+Targets use the month or fiscal quarter that holds the real cutoff, even when the custom end date you asked for is later. A saved edition keeps its own cutoff.
 
 Every chart can also be read as numbers. Select a mark, with a click or the keys, to open the records behind it; press `Esc` to close the side panel. A record you may not see stays hidden. Stage age records stay inside the reporting scope you picked.
 
@@ -31,7 +31,7 @@ Every chart can also be read as numbers. Select a mark, with a click or the keys
   shows only for given targets; an SDR without a target sees totals without a
   target column. Exact amounts, time zones and who gets credit stay in the
   reporting details.
-- **Forecast:** won value, open value that is likely to close, and extra value that may close, each shown on its own.
+- **Forecast:** won value, Commit value whose close date someone confirmed, and extra value that may close, each shown on its own.
   The manager's forecast is a mark of its own. Movement uses stored captures with their
   real dates; a new view needs two captures before it can show movement.
 
@@ -57,7 +57,7 @@ Select an edition in the history to see the values, targets, graphs and records 
 
 ## How do I set targets or export figures?
 
-Open **Targets** and choose sales won, qualified pipeline created, meetings held or accepted opportunities. Select the owner or team, the pipeline where that is offered, and month or business quarter. Choose a year and a first month; only months that can start a business quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**.
+Open **Targets** and choose sales won, qualified pipeline created, meetings held or accepted opportunities. Select the owner or team, the pipeline where that is offered, and month or fiscal quarter. Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**.
 
 Use **Export CSV**, next to **Save report**, for the report's numbers of today, or export a fixed edition for the numbers it stored. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **More analysis → Custom reports** or ask your connected AI to report through Margince.
 

@@ -113,7 +113,7 @@ A new company starts with these retention rules already in place. You can edit a
 
 **Stored message originals** are the copies that capture keeps of every message it filed, apart from the timeline entry made from each one. On a large mailbox they take the most storage. An original is never destroyed while the law still says its mail must be kept. The timeline entry stays, so the same message cannot be captured again.
 
-If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." One fixed time limit still runs with no rule: records of AI search calls end after 90 days (below).
+If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." One fixed time limit still runs with no rule: traces of AI embedding calls end after 90 days (below).
 
 ### What each retention window counts from
 **Leads** and **contacts** count from when the record was created. **Captured activity** and **call transcripts** count from the date on the message itself, not from when it was filed. **Deals** count from when the deal was closed.
@@ -154,7 +154,7 @@ Rules act **each night**, and a live one shows as "Acting nightly". Each night w
 
 ### One window nobody can change
 
-Records of AI search calls are kept for **90 days**, fixed. This runs with or without a rule, and no admin can edit it.
+Traces of AI embedding calls are kept for **90 days**, fixed. This runs with or without a rule, and no admin can edit it.
 
 ### Turning a retention policy off, versus deleting it
 

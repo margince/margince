@@ -22,13 +22,13 @@ Relationship strength in Margince comes from one rule, worked out from captured 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
 - **Recency** is cut by half every 30 days since the last exchange.
-- **Frequency** counts up to 20 exchanges in 90 days; any more add
+- **Frequency** counts up to 20 interactions in 90 days; any more add
   nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.
 
 **You cannot change it by hand.** It shows what happened in captured mail.
 
-A contact you have **never** written with has no score at all. One you have not written with for a long time has a low one.
+A contact you have **never** had an interaction with has no score at all. One you have not had an interaction with for a long time has a low one.
 
 The route also shows which way the mail goes: "{total} two-way exchanges in 90 days" against "{total} interactions in 90 days, one-sided". So six real exchanges never read the same as six sends with no answer.
 
