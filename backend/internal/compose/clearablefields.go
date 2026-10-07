@@ -32,6 +32,12 @@ package compose
 //     positions and a sticky decision, not values.
 //   - a contact's full_name and a company's display_name are absent because
 //     a record with no name is not a record anybody can find again.
+//   - a contract clears its DEAL and nothing else. That one is here because a
+//     human is told to use it: moving a deal to another company is refused while
+//     agreements filed against it still name the old one, and detaching them is
+//     the move the refusal names. Its company is not clearable — an agreement
+//     with no counterparty is not an agreement — and its money is not, for the
+//     reason the deal's is not.
 //
 //nolint:goconst // the rows are wire FIELD names and record types read as data; the constants goconst points at are other concepts that spell the same word — a report field, a filter param — and hiding these behind them would assert a correspondence this table exists to state on its own
 var clearableFields = map[string][]string{
@@ -50,6 +56,7 @@ var clearableFields = map[string][]string{
 	"project": {
 		"description", "owner_id", "started_at", "target_end_date", "ended_at",
 	},
+	"contract": {"deal_id"},
 	"activity": {},
 }
 

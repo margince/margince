@@ -97,7 +97,7 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	id := ids.From[ids.ContractKind](ids.UUID(contract.Id))
 	retitle := func() error {
 		title := "Rewritten by a reader"
-		_, err := store.UpdateContract(holder, id, crmcontracts.UpdateContractRequest{Title: &title}, nil)
+		_, err := store.UpdateContract(holder, id, crmcontracts.UpdateContractRequest{Title: &title}, nil, nil)
 		return err
 	}
 
