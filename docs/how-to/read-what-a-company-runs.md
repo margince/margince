@@ -49,9 +49,9 @@ which kind of claim they look at.
   selectors), A and AAAA, and CNAME. It also makes a reverse `PTR` lookup for a sign of the host. It runs at one
   query each `200ms`.
 - **Certificate transparency** (`internal/platform/certlog`): one `GET https://crt.sh/?q=%25.<domain>&output=json`
-  for each company. Every public certificate must go to public logs that you can only add to. So the host names on the
+  for each company. Every publicly trusted certificate must go to public logs that you can only add to. So the host names on the
   certificates of a company are already public. To read them needs no agreement and no key, and it runs at
-  **one query each 5 seconds**. `crt.sh` is one free service that runs on good will. The team that runs it
+  **one query each 5 seconds**. The [crt.sh](https://crt.sh) service is free and runs on good will. The team that runs it
   has asked users not to send many queries at the same time.
 - **Site pages** (`internal/platform/webread` + `compose/sitetechnology.go`): the fingerprint of **every page
   that the site read fetched**, and not only the start page. The fingerprint covers answer headers, cookie
@@ -119,7 +119,7 @@ MARGINCE_CERTLOG_BASE_URL=public
 ```
 
 `public` is a key word, not a URL: it means `https://crt.sh`. To use your own copy of a certificate
-transparency service, give its real base URL instead. It must answer queries of the `crt.sh` shape
+transparency service, give its real base URL instead. It must answer queries of the [crt.sh](https://crt.sh) shape
 (`/?q=%25.<domain>&output=json`).
 
 **Empty or unset turns both lanes off.** An enricher with only some lanes would complete these lanes, and
@@ -155,7 +155,7 @@ means `not checked today`, and not `they have none`. So a reader who decides whe
 knows that the certificate log was down.
 
 When a human fixes a value, the source of the row changes to `human`, and the row stays on this card. The
-card sorts rows by **field name**, never by source. So the system never drops a fixed row from both cards,
+two cards split rows by **field name**, never by source. So the system never drops a fixed row from both cards,
 and never shows it on two.
 
 Changed signals also show on the company rail as a `technical_change` event.
@@ -227,7 +227,7 @@ tests in `backend/internal/compose/techenrich_test.go` as the loop.
 
 ## Limits worth knowing
 
-- **One provider for the certificate lane.** `crt.sh` is slow in many cases, and down at times. Callers count that as
+- **One provider for the certificate lane.** The [crt.sh](https://crt.sh) service is slow in many cases, and down at times. Callers count that as
   "this lane has nothing to say today", never as an empty answer they can trust. The `certlog.Client`
   interface is what keeps that from turning into a rule we never check.
 - **The fingerprint rules are few** (`platform/techprofile/data/rules.json`), and they are made for small

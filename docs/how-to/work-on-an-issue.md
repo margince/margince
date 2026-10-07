@@ -102,7 +102,7 @@ body says `Closes #N` merges, but it keeps the labels. So
 [`issue-closed.yml`](../../.github/workflows/issue-closed.yml) takes
 `status: in progress` off an issue as soon as it closes.
 
-Some closes send no event,
+Some closes start no workflow,
 such as one a workflow makes with its own token, and a run can fail. The next daily
 sweep finds these, but not always, because GitHub can start a planned run
 later, or drop it. The assignee stays, as the record of who worked on the
