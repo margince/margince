@@ -5,21 +5,21 @@
 
 package gates
 
-// Table ownership as a fitness function: the import DAG is enforced three
-// ways, but nothing in the import graph stops a package from writing SQL
-// against a table it does not own. This test closes that gap — it walks the
-// hand-written Go under internal/modules and internal/compose, extracts every
-// INSERT/UPDATE/DELETE target from SQL string literals (plus the storekit
-// applier and row-lock table arguments), and asserts each module only writes its own
-// tables. Cross-store writes exist by design (merge relinks, GDPR erasure,
-// ingest materialization); each one is ratified in crossStoreWrites
-// (tableownershipwaivers_test.go) with a self-contained
-// rationale — an entry without a rationale is a finding, not a pass, and a
-// waiver that matches no remaining write is stale and fails too. SELECTs are
-// out of scope: reads are governed by each statement's own workspace predicate
-// and the platform/auth row-scope clauses, not by ownership. Neither of those
-// reaches `setting`, so its reads carry a rail of their own in
-// backend/gates/settingreaders_test.go rather than riding this exemption.
+// A package writes SQL only against tables it owns; the import DAG is enforced
+// three ways, but nothing in the import graph stops a write to another module's
+// table. This test closes that gap — it walks the hand-written Go under
+// internal/modules and internal/compose, extracts every INSERT/UPDATE/DELETE
+// target from SQL string literals (plus the storekit applier and row-lock table
+// arguments), and asserts each module only writes its own tables. Cross-store
+// writes exist by design (merge relinks, GDPR erasure, ingest materialization);
+// each one is ratified in crossStoreWrites (tableownershipwaivers_test.go) with
+// a self-contained rationale — an entry without a rationale is a finding, not a
+// pass, and a waiver that matches no remaining write is stale and fails too.
+// SELECTs are out of scope: reads are governed by each statement's own
+// workspace predicate and the platform/auth row-scope clauses, not by
+// ownership. Neither of those reaches `setting`, so its reads carry a rail of
+// their own in backend/gates/settingreaders_test.go rather than riding this
+// exemption.
 //
 // That last sentence names two of the three halves of a read's admission and
 // stops. The OBJECT half — may this caller read this KIND of record at all — is

@@ -230,18 +230,12 @@ func listRefusal(profile Profile, provider string) ModelAvailability {
 }
 
 // boundListRefusal is listRefusal asked of one binding: a Vertex binding with
-// no location has no host to ask, and eu_hosted promises EU inference, so a
-// Vertex location outside the EU is refused before a token is minted for it,
-// as the save would refuse it.
+// no location has no host to ask.
 func boundListRefusal(profile Profile, bound ProviderConfig) ModelAvailability {
-	switch {
-	case bound.Provider == providerGeminiVertex && bound.Location == "":
+	if bound.Provider == providerGeminiVertex && bound.Location == "" {
 		return AvailabilityNoEndpoint
-	case profile == ProfileEUHosted && vertexLocationGap(bound) != "":
-		return AvailabilityProfileForbids
-	default:
-		return listRefusal(profile, bound.Provider)
 	}
+	return listRefusal(profile, bound.Provider)
 }
 
 // isDecisionProvider is whether provider answers the decision wire rather than
@@ -257,10 +251,6 @@ func isDecisionProvider(provider string) bool {
 func (s *RoutingStore) listDecisionModels(ctx context.Context, cfg RoutingConfig, provider string) AvailableModels {
 	out := AvailableModels{Provider: provider}
 	lane := boundDecisionLane(cfg, provider)
-	if decisionLaneForbidden(cfg.Profile, lane) {
-		out.Unavailable = AvailabilityProfileForbids
-		return out
-	}
 	client, err := selectDecider(lane, s.resolvedKeys(ctx))
 	if err != nil {
 		out.Unavailable = unavailableFor(err)

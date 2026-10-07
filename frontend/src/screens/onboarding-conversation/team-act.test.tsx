@@ -136,8 +136,8 @@ describe("TeamAct", () => {
       screen.getByRole("button", { name: "Finish setup" }),
     ).toBeInTheDocument();
     // The set-password link, in the same dialog the roster hands it over in.
-    expect(
-      await screen.findByDisplayValue("https://crm.example/set-password?t=abc"),
-    ).toBeInTheDocument();
+    expect((await screen.findByTestId("password-link-url")).textContent).toBe(
+      "https://crm.example/set-password?t=abc",
+    );
   });
 });

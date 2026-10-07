@@ -5,7 +5,7 @@ validators and the assets in this directory:
 
 | Format | Validator | Asset here |
 | --- | --- | --- |
-| CycloneDX | first-party `cyclonedx-cli` (bundles its spec schema) | — |
+| CycloneDX | first-party `cyclonedx-cli` (bundles its spec schema) | none |
 | SPDX 2.2.1 | `pyspdxtools` (spdx/tools-python), structural **and** semantic | `spdx-tools-requirements.txt` |
 | SPDX 3.0.1 | generic JSON-schema validation | `spdx-3.0.1.schema.json` |
 
@@ -14,26 +14,26 @@ validators and the assets in this directory:
 (GitHub Actions, and PyPI deps whose metadata says only "BSD"). Keys are
 purls without a version, so every pinned action version matches.
 
-`pyspdxtools` is the canonical SPDX 2.x validator; it runs in a digest-pinned
+`pyspdxtools` is the canonical SPDX 2.x validator. It runs in a digest-pinned
 Python image with the hash-pinned dependency set in `spdx-tools-requirements.txt`,
-so it is as reproducible as the digest-pinned SBOM images (regeneration steps are
-in that file's header). It exits non-zero on an invalid document, so the Makefile
+so it is as reproducible as the digest-pinned SBOM images. Regeneration steps are
+in that file's header. It exits non-zero on an invalid document, so the Makefile
 recipe gates on its exit status and surfaces its report for context on failure.
 
-## Why SPDX 3.0 is JSON-schema only (spike finding)
+## Why SPDX 3.0 is validated by JSON schema only
 
 SPDX 3.0's semantic layer is SHACL, and the SPDX project points at
 [`spdx3-validate`](https://github.com/JPEWdev/spdx3-validate) /
 [`pyshacl`](https://github.com/spdx/spdx-3-model/blob/develop/serialization/jsonld/validation.md)
-for it. Neither is usable as a gate here today: run against syft 1.50's own
-SPDX 3.0 output, `spdx3-validate` reports ~1100 `sh:ClassConstraintComponent`
-violations (every `Element` reference fails the class check — the model is loaded
-without the OWL inference that makes `software_File` a subclass of `Element`),
-takes ~4 minutes, and fetches the model from spdx.org on every run. Gating on it
-would fail `make sbom` on a document we do not own (syft's writer) and cannot
-patch (contract-first). So SPDX 3.0 gets structural JSON-schema validation — the
-layer the SPDX 3 model doc calls the structural check — which passes on syft's
-output and is offline and fast. Revisit when syft's SPDX 3.0 writer and the SHACL
+for it. Neither is usable as a gate here. Run against syft 1.50's own SPDX 3.0
+output, `spdx3-validate` reports ~1100 `sh:ClassConstraintComponent` violations.
+Every `Element` reference fails the class check, because the model is loaded
+without the OWL inference that makes `software_File` a subclass of `Element`. It
+also takes ~4 minutes and fetches the model from spdx.org on every run. Gating on
+it would fail `make sbom` on a document we do not own (syft's writer) and cannot
+patch (contract-first). So SPDX 3.0 gets structural JSON-schema validation, the
+layer the SPDX 3 model doc calls the structural check. It passes on syft's output
+and is offline and fast. Revisit when syft's SPDX 3.0 writer and the SHACL
 tooling both mature.
 
 ## The vendored schema

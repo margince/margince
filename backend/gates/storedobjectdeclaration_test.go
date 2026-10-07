@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// A writer that puts bytes into the object store declares them FIRST, or says why its key needs no declaration.
+// A writer that puts bytes into the object store declares them first, or says why its key needs no declaration.
 //
 // A put and the row that owns it are two writes to two systems that cannot be made
 // atomic. An erasure walks ROWS, so bytes nothing references are bytes no erasure

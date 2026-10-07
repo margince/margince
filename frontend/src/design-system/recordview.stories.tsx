@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
 import { Button } from "./atoms";
 import type { TimelineEntry } from "./composed";
-import { RecordView } from "./recordview";
+import { RecordBack, RecordView } from "./recordview";
 
 const emailEntry: TimelineEntry = {
   id: "a1",
@@ -46,6 +46,14 @@ export const Default: Story = {
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: baseTimeline,
+  },
+};
+
+// Opened from a queue that offers the way back to it.
+export const WithWayBack: Story = {
+  args: {
+    ...Default.args,
+    back: <RecordBack href="#/home?queue=1" label="Back to Worklist" />,
   },
 };
 

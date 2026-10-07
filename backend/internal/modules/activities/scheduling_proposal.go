@@ -207,7 +207,7 @@ func (s *Store) validateProposal(ctx context.Context, host ids.UserID, in crmcon
 	if s.calendar == nil {
 		return time.Time{}, apperrors.ErrPermissionDenied
 	}
-	if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
+	if err := s.checkCalendarConnected(ctx, host, string(profile.Provider)); err != nil {
 		return time.Time{}, err
 	}
 	if err := s.calendar.CheckRecipient(ctx, host, ids.UUID(in.ContactId), string(in.AttendeeEmail)); err != nil {

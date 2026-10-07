@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import { CompanyScreen } from "./companies";
 import {
   installFetchStub,
@@ -430,5 +431,50 @@ export const CompanyProfile: Story = {
         <CompanyScreen id="o-1" />
       </StoryProviders>
     );
+  },
+};
+
+// The record's full history, opened from the header's overflow menu: the
+// reading drawer, so a long audit trail scrolls under a title that stays put.
+export const CompanyFullHistory: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1";
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read", "update"] }),
+      ...overviewRoutes,
+      "GET /records/company/o-1/history": () =>
+        jsonResponse({
+          data: Array.from({ length: 14 }, (_, index) => ({
+            id: `h${index}`,
+            actor_type: "human",
+            actor_id: "u1",
+            actor_name: "Mira Voss",
+            action: index === 13 ? "create" : "update",
+            occurred_at: `2026-07-${String(index + 1).padStart(2, "0")}T10:00:00Z`,
+            summary:
+              index === 13
+                ? "Created the record"
+                : "Mira Voss updated the record",
+          })),
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /field-history": () => jsonResponse(emptyPage),
+      "GET /companies/o-1/profile-fields": () => jsonResponse({ data: [] }),
+      "GET /companies/o-1/facts": () => jsonResponse({ data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    await userEvent.click(await screen.findByTestId("company-full-history"));
+    await screen.findByRole("dialog", { name: "Full history" });
   },
 };

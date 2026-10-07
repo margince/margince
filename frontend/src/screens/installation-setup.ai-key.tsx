@@ -151,7 +151,6 @@ export function AiKeyFields({
       {preset.location !== undefined && (
         <VertexLocationField
           value={location}
-          profile={preset.profile}
           disabled={disabled}
           noKeyHint={t("firstRun.ai.locationBeforeKey")}
           onChange={onLocation}

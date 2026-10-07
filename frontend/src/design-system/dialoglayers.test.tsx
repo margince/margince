@@ -12,7 +12,7 @@ afterEach(cleanup);
 function Layers({ close }: Readonly<{ close: () => void }>) {
   const [reading, setReading] = useState(false);
   return (
-    <Modal open onClose={close} labelledBy="composer-title">
+    <Modal open onClose={close} labelledBy="composer-title" intent="form">
       <Heading size="large" id="composer-title">
         Composer
       </Heading>
@@ -23,6 +23,7 @@ function Layers({ close }: Readonly<{ close: () => void }>) {
         open={reading}
         onClose={() => setReading(false)}
         labelledBy="reader-title"
+        intent="form"
       >
         <Heading size="large" id="reader-title">
           Email reader

@@ -591,7 +591,6 @@ export const vi = {
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
   "aiAdmin.activity": "Hoạt động",
   "aiAdmin.model": "Mô hình được chính sách chọn",
-  "aiAdmin.thenLadder": "sau đó",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa liên kết mô hình nào.",
   "aiAdmin.decisionSkip.uncertified":
@@ -624,7 +623,6 @@ export const vi = {
   "worklist.bandCount_one": "{count} mục",
   "worklist.bandCount_other": "{count} mục",
   "brief.focus.context": "Mở ngữ cảnh",
-  "brief.focus.back": "Quay lại ưu tiên",
   "brief.queue.back": "Quay lại danh sách",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Hiện danh sách công việc",
@@ -754,7 +752,6 @@ export const vi = {
   "brief.readings.unavailable.decisions": "Nguồn không khả dụng",
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
-  "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads_one": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.leads_other": "Đã phân công {count} khách hàng tiềm năng.",
@@ -842,6 +839,10 @@ export const vi = {
     "{count} trường sẽ trở lại giá trị trước thay đổi này:",
   "history.undo.confirmBody_other":
     "{count} trường sẽ trở lại giá trị trước thay đổi này:",
+  "history.undo.leftBehind_one":
+    "Đã hoàn tác. {count} mục liên quan không khôi phục được cùng bản ghi.",
+  "history.undo.leftBehind_other":
+    "Đã hoàn tác. {count} mục liên quan không khôi phục được cùng bản ghi.",
   "history.undo.versionSkew":
     "Bản ghi đã thay đổi trong lúc bạn đang xem. Lịch sử vừa được tải lại — hãy kiểm tra lại thay đổi trước khi hoàn tác.",
   "history.undo.noBeforeImage":
@@ -1130,6 +1131,10 @@ export const vi = {
   "deal.undated": "chưa có ngày chốt",
   "deal.lastMail": "Email gần nhất",
   "deal.mail.title": "Các email trước",
+  "deal.openDeal": "Mở deal",
+  "deal.card.summary": "Tóm tắt deal: {name}",
+  "deal.card.email": "Viết email: {name}",
+  "deal.card.addTask": "Thêm công việc: {name}",
   "deal.mail.sent": "Đã gửi {ago}",
   "deal.mail.received": "Đã nhận {ago}",
   "deal.mail.none": "Chưa có email nào về deal này",
@@ -1401,6 +1406,8 @@ export const vi = {
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách người dùng)",
   "picker.noMatch": "Không có kết quả",
+  "picker.results_one": "{count} kết quả",
+  "picker.results_other": "{count} kết quả",
 
   "app.errorTitle": "Màn hình này đã ngừng hoạt động.",
   "app.errorBody": "Hãy thử lại. Nếu vẫn tiếp tục lỗi, hãy tải lại trang.",
@@ -1476,6 +1483,7 @@ export const vi = {
   "unit.companies": "công ty",
   "unit.deals": "deal",
   "unit.leads": "khách hàng tiềm năng",
+  "unit.worklistItems": "việc và cam kết",
   "unit.partners": "đối tác",
   "unit.products": "sản phẩm",
   "unit.offerTemplates": "mẫu báo giá",
@@ -1714,7 +1722,7 @@ export const vi = {
   "co.health.dim.commercial": "Thương mại",
   "co.health.dim.payment": "Thanh toán",
   "co.health.means.relationship":
-    "Hai bên còn liên lạc hay không — ai đã viết, cách đây bao lâu và bên nào chủ động trước.",
+    "Hai bên còn liên lạc hay không — ai đã viết, lần gặp gần nhất diễn ra khi nào hoặc cuộc họp tiếp theo được đặt vào lúc nào, và bên nào chủ động trước.",
   "co.health.means.commercial":
     "Công việc đang chạy có tiến triển không — các deal đang mở, giai đoạn của chúng và đã đứng yên bao lâu.",
   "co.health.means.payment":
@@ -1725,6 +1733,33 @@ export const vi = {
   "co.health.payment.overdue": "Hiện có khoản quá hạn.",
   "co.health.payment.late": "Thường thanh toán trễ {days} ngày.",
   "co.health.payment.onTime": "Thanh toán đúng hạn.",
+  "co.health.reason.neverWritten":
+    "Chưa có tin nhắn nào từ họ và chưa có cuộc gặp nào.",
+  "co.health.reason.quiet_one":
+    "Không có phản hồi và không có cuộc gặp nào trong {days} ngày.",
+  "co.health.reason.quiet_other":
+    "Không có phản hồi và không có cuộc gặp nào trong {days} ngày.",
+  "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {at}.",
+  "co.health.reason.lastMet_one": "Lần gặp gần nhất cách đây {days} ngày.",
+  "co.health.reason.lastMet_other": "Lần gặp gần nhất cách đây {days} ngày.",
+  "co.health.reason.singleThreaded":
+    "Vẫn liên lạc, nhưng chỉ một liên hệ gánh cả công ty.",
+  "co.health.reason.severalContacts_one":
+    "{count} liên hệ ở đây đang liên lạc.",
+  "co.health.reason.severalContacts_other":
+    "{count} liên hệ ở đây đang liên lạc.",
+  "co.health.reason.dealsAllStalled_one":
+    "Deal đang mở duy nhất đã bị đình trệ.",
+  "co.health.reason.dealsAllStalled_other":
+    "Cả {count} deal đang mở đều đình trệ.",
+  "co.health.reason.dealsSomeStalled_one":
+    "{count} trên {total} deal đang mở bị đình trệ.",
+  "co.health.reason.dealsSomeStalled_other":
+    "{count} trên {total} deal đang mở bị đình trệ.",
+  "co.health.reason.dealsNoneStalled_one":
+    "{count} deal đang mở, không bị đình trệ.",
+  "co.health.reason.dealsNoneStalled_other":
+    "{count} deal đang mở, không cái nào bị đình trệ.",
   "company.partnerSetUp": "Thiết lập chương trình đối tác",
   "signal.kind.stalled_deal": "Deal đình trệ",
   "signal.kind.champion_left": "Người ủng hộ đã rời đi",
@@ -3352,6 +3387,8 @@ export const vi = {
   "deals.totalsOwnerNotMeasurable":
     "Chỉ phần đã tải — bạn không được xem tổng của người phụ trách này",
   "deals.totalsNoTagFilter": "Chỉ phần đã tải — không có tổng khi lọc theo thẻ",
+  "deals.totalsNoSearch":
+    "Chỉ phần đã tải — tổng theo giai đoạn không áp dụng tìm kiếm nên không hiển thị",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
   "deals.filterMotion": "Loại giao dịch",
@@ -3368,7 +3405,6 @@ export const vi = {
   "deals.filterStalledAll": "Mọi deal",
   "deals.filterOwnerAll": "Mọi người phụ trách",
   "deals.filterPartnerAll": "Mọi nguồn",
-  "deals.sortNewest": "Mới nhất",
   "deals.unit": "deal",
   "deals.bulkStage": "Chuyển sang giai đoạn",
   "deals.bulkStagePick": "Chọn giai đoạn",
@@ -3476,6 +3512,19 @@ export const vi = {
   "bulk.doneLeads_other": "Đã thay đổi {count} khách hàng tiềm năng.",
   "bulk.undoneLeads_one": "Đã hoàn tác {count} khách hàng tiềm năng.",
   "bulk.undoneLeads_other": "Đã hoàn tác {count} khách hàng tiềm năng.",
+  "bulk.doneWorklistItems_one": "Đã đánh dấu xong {count} mục.",
+  "bulk.doneWorklistItems_other": "Đã đánh dấu xong {count} mục.",
+  "bulk.undoneWorklistItems_one": "Đã mở lại {count} mục.",
+  "bulk.undoneWorklistItems_other": "Đã mở lại {count} mục.",
+  "bulk.titleComplete": "Đánh dấu xong {unit} đã chọn?",
+  "bulk.confirmComplete": "Đánh dấu xong",
+  "bulk.stateDone": "Xong",
+  "bulk.stateOpen": "Đang mở",
+  "bulk.reason.no_change_done": "Đã ở trạng thái đó",
+  "worklist.bulk.selectAll_one": "Chọn {count} mục đang hiển thị",
+  "worklist.bulk.selectAll_other": "Chọn cả {count} mục đang hiển thị",
+  "worklist.bulk.clear": "Bỏ chọn",
+  "worklist.bulk.markDone": "Đánh dấu xong",
 
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
@@ -3970,7 +4019,7 @@ export const vi = {
     "Tệp .vcf — định dạng mà mọi điện thoại và ứng dụng thư đều dùng để xuất danh bạ. Tấm danh thiếp ai đó đưa cho bạn là do họ chủ động trao, nên nó được ghi thẳng vào chứ không chờ phê duyệt.",
   "vcardImport.choose": "Chọn tệp .vcf",
   "vcardImport.working": "Đang đọc danh thiếp…",
-  "vcardImport.done": "Đóng",
+  "vcardImport.back": "Quay lại Liên hệ",
   "vcardImport.noCards": "Tệp này không chứa danh thiếp nào.",
   "vcardImport.failed": "Chưa nhập được các danh thiếp đó",
   "vcardImport.outcome.created": "Đã thêm",
@@ -4233,9 +4282,6 @@ export const vi = {
   "files.hide": "Ẩn khỏi deal này",
   "files.unhide": "Hiện lại trên deal này",
   "files.delete": "Xóa",
-  "files.hideTitle": "Ẩn {name} khỏi deal này?",
-  "files.hideBody":
-    "Tin nhắn và tệp đính kèm vẫn ở trên hoạt động và trong thư viện của công ty. Chỉ deal này không còn liệt kê nó.",
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
     "Tệp bị gỡ khỏi deal này, và khỏi mọi Deal Room đang chia sẻ nó.",
@@ -4531,6 +4577,10 @@ export const vi = {
   "compose.threadHeading": "Cuộc trao đổi này",
   "compose.continueHeading": "Tiếp nối một cuộc trao đổi?",
   "compose.threadLeave": "Email mới",
+  "compose.threadShow": "Hiện cuộc trao đổi này",
+  "compose.threadHide": "Ẩn cuộc trao đổi này",
+  "compose.choicesShow": "Hiện các cuộc trao đổi trước",
+  "compose.choicesHide": "Ẩn các cuộc trao đổi trước",
   "compose.messageCount_one": "{count} tin nhắn",
   "compose.messageCount_other": "{count} tin nhắn",
   "compose.threadContinuing": "Lần trao đổi gần nhất, mà thư này tiếp nối",
@@ -5317,6 +5367,8 @@ export const vi = {
     "Đưa tệp CSV khách hàng tiềm năng hoặc công ty vào hệ thống. Không có gì được ghi cho đến khi bạn đã đọc điều sẽ xảy ra.",
   "import.startLabel": "Nhập tệp CSV",
   "import.start": "Bắt đầu nhập",
+  "import.continue": "Tiếp tục phiên nhập",
+  "import.back": "Quay lại Nhập dữ liệu",
   "import.objectLabel": "Các dòng là gì",
   "import.object.lead": "Khách hàng tiềm năng",
   "import.object.company": "Công ty",
@@ -5330,6 +5382,8 @@ export const vi = {
   "import.fileLabel": "Tệp CSV cần nhập",
   "import.choose": "Chọn tệp",
   "import.chooseAnother": "Chọn tệp khác",
+  "import.discardFile":
+    "Bắt đầu lại sẽ gỡ lần nhập đang dở khỏi trang này, gồm tệp, ánh xạ cột và báo cáo của lần nhập đó.",
   "import.profiled": "Đọc từ {rows} dòng đầu của tệp.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",
@@ -6535,7 +6589,6 @@ export const vi = {
   "connectors.oauthConnected": "Đã tạo kết nối",
   "connectors.oauthNotConnected": "Chưa kết nối được gì",
   "connectors.connectFailed": "Không thể kết nối",
-  "connectors.imapConnectFailed": "Chưa kết nối hộp thư",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
   // opens a dialog listing the providers still addable, each with the sentence
@@ -6575,6 +6628,8 @@ export const vi = {
   "connectors.imapSubmitCta": "Kết nối",
   "connectors.imapNeeded": "Cần có để kết nối",
   "connectors.imapStillNeeded": "Còn thiếu: {fields}",
+  "connectors.imapRange": "Từ {min} đến {max}",
+  "connectors.imapOutOfRange": "Ngoài phạm vi: {fields}",
   "connectors.imapLoginRejected":
     "Hộp thư từ chối thông tin đăng nhập này. Hãy kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable": "Không liên lạc được với máy chủ thư.",
@@ -8657,8 +8712,7 @@ export const vi = {
   "users.link.urlLabel": "Liên kết đặt mật khẩu",
   "users.link.copy": "Sao chép liên kết",
   "users.link.copied": "Đã sao chép",
-  "users.link.copyFailed":
-    "Hãy bôi đen liên kết trong trường rồi sao chép thủ công.",
+  "users.link.copyFailed": "Hãy bôi đen liên kết ở trên rồi sao chép thủ công.",
   "users.link.expires": "Hết hạn {when}.",
   "users.link.failedTitle": "Không tạo được liên kết",
   "users.link.failed":
@@ -9163,10 +9217,6 @@ export const vi = {
     "Không đọc được tệp. Hãy chọn lại, hoặc dán nội dung của nó.",
   "aiRouting.location.label": "Vị trí",
   "aiRouting.location.help": "Nơi Google xử lý các lệnh gọi của làn này.",
-  "aiRouting.location.residentHelp":
-    "Hồ sơ eu_hosted chỉ chấp nhận các vị trí được đánh dấu lưu trú EU.",
-  "aiRouting.location.forbidden":
-    "Vị trí này nằm ngoài EU, nên hồ sơ eu_hosted từ chối nó. Hãy chọn một vị trí lưu trú EU.",
   "aiRouting.location.loading":
     "Đang hỏi Google khóa này truy cập được những vị trí nào…",
   "aiRouting.location.noKey":
@@ -9183,7 +9233,6 @@ export const vi = {
   "aiRouting.location.group.global": "Toàn cầu",
   "aiRouting.location.resident": "Lưu trú EU",
   "aiRouting.location.nonResident": "Không lưu trú",
-  "aiRouting.location.notResident": "ngoài EU",
   "aiRouting.probe.checking":
     "Đang kiểm tra {location} có phục vụ mô hình này không…",
   "aiRouting.probe.served": "Được phục vụ tại {location}.",
@@ -9302,10 +9351,29 @@ export const vi = {
   "aiRouting.median": "Trung vị {ms} ms",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
-    "Sửa một tác vụ để xem các lệnh gọi của nó diễn ra thế nào và đặt mức suy nghĩ cùng thời gian chờ. Tầng của nó do hợp đồng cố định; mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
+    "Mỗi dòng hiển thị tầng của tác vụ và nhà cung cấp phục vụ nó. Chọn tên tác vụ để xem nó làm gì, trạng thái của nó và nó làm gì khi nhà cung cấp ngừng hoạt động. Sửa để đặt mức suy nghĩ và thời gian chờ; tầng của nó do hợp đồng cố định.",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
+  "aiTasks.deferral.nowEmbedding":
+    "Đang bị từ chối: việc lập chỉ mục tìm kiếm sẽ tự thử lại theo lịch riêng.",
+  "aiTasks.deferral.embedding":
+    "Khi nhà cung cấp ngừng hoạt động, hết tín dụng hoặc từ chối khóa, việc lập chỉ mục tìm kiếm bị từ chối và tự thử lại theo lịch riêng.",
+  "aiTasks.dot.ok": "Đang trả lời",
+  "aiTasks.dot.bad": "Cần chú ý",
+  "aiTasks.dot.idle": "Không có lượt gọi gần đây",
+  "aiTasks.deferral.background":
+    "Khi mọi mô hình tác vụ này dùng được đều ngừng hoạt động, hết tín dụng hoặc từ chối khóa, công việc của nó sẽ chờ và thử lại ở lần kiểm tra tiếp theo của nhà cung cấp, không tốn lượt thử.",
+  "aiTasks.deferral.interactive":
+    "Khi mọi mô hình tác vụ này dùng được đều ngừng hoạt động, hết tín dụng hoặc từ chối khóa, yêu cầu sẽ lỗi ngay kèm lời nhắc liên hệ quản trị viên.",
+  "aiTasks.deferral.nowBackground":
+    "Đang chờ: mọi mô hình tác vụ này dùng được đều bị chặn.",
+  "aiTasks.deferral.nowInteractive":
+    "Đang lỗi: mọi mô hình tác vụ này dùng được đều bị chặn.",
+  "aiTasks.deferral.skipping":
+    "Nhà cung cấp bị chặn sẽ được bỏ qua, và mô hình kế tiếp sẽ trả lời.",
+  "aiTasks.embeddingsEdit":
+    "Tìm kiếm và truy xuất không có mức suy nghĩ hay thời gian chờ để đặt. Đổi nhà cung cấp và mô hình ở dòng embeddings trong Các tầng mô hình.",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
@@ -9397,6 +9465,68 @@ export const vi = {
   "agentConnections.ttl.refusal":
     "Nhập một số nguyên từ 5 đến 129.600 cho số phút.",
   "agentConnections.updateFailed": "Chưa thay đổi cài đặt",
+  "operations.schedules.title": "Lịch chạy nền",
+  "operations.schedules.sub":
+    "Tần suất chạy của từng tác vụ nền. Worker đang chạy nhận thay đổi trong vòng một phút: tác vụ chạy một lần ngay rồi tiếp tục theo khoảng mới.",
+  "operations.pacing.title": "Nhịp gửi thư",
+  "operations.pacing.sub":
+    "Tốc độ gửi tối đa của một hộp thư. Thay đổi áp dụng từ lần gửi tiếp theo.",
+  "operations.adminOnly":
+    "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
+  "operations.updateFailed": "Chưa thay đổi cài đặt",
+  "operations.refusal": "Nhập một số nguyên trong khoảng đã nêu.",
+  "operations.agentRunner.label": "Lượt chạy agent (giây)",
+  "operations.agentRunner.help":
+    "Tần suất kiểm tra các agent đã lên lịch có đến lượt chạy, 10 đến 3.600.",
+  "operations.webhookRetry.label": "Thử lại webhook (giây)",
+  "operations.webhookRetry.help":
+    "Tần suất gửi lại các webhook bị lỗi, 10 đến 3.600.",
+  "operations.timeScan.label": "Tự động hóa theo thời gian (giây)",
+  "operations.timeScan.help":
+    "Tần suất kiểm tra các quy tắc kích hoạt theo thời gian, 60 đến 86.400.",
+  "operations.closeDate.label": "Ngày chốt quá hạn (giây)",
+  "operations.closeDate.help":
+    "Tần suất đánh dấu các deal đã quá ngày chốt, 3.600 đến 604.800.",
+  "operations.followUp.label": "Đề xuất follow-up (giây)",
+  "operations.followUp.help":
+    "Tần suất kiểm tra các deal bị chững lại để đề xuất follow-up, 3.600 đến 604.800.",
+  "operations.retention.label": "Lưu giữ dữ liệu (giây)",
+  "operations.retention.help":
+    "Tần suất xóa dữ liệu đã quá thời hạn lưu giữ, 3.600 đến 604.800. Không thể tắt.",
+  "operations.geocode.label": "Tra cứu địa chỉ (giây)",
+  "operations.geocode.help":
+    "Tần suất tra cứu các địa chỉ chưa có tọa độ, 300 đến 604.800, hoặc 0 để tắt.",
+  "operations.technical.label": "Tra cứu kỹ thuật (giây)",
+  "operations.technical.help":
+    "Tần suất tra cứu các tên miền công ty chưa có thông tin kỹ thuật, 300 đến 604.800, hoặc 0 để tắt.",
+  "operations.gmailWatchScan.label": "Kiểm tra push Gmail (giây)",
+  "operations.gmailWatchScan.help":
+    "Tần suất kiểm tra các đăng ký push Gmail cần gia hạn, 600 đến 43.200.",
+  "operations.graphWatchScan.label": "Kiểm tra push Microsoft 365 (giây)",
+  "operations.graphWatchScan.help":
+    "Tần suất kiểm tra các đăng ký thư Microsoft 365 cần gia hạn, 600 đến 43.200.",
+  "operations.gmailWatchRenew.label": "Gia hạn Gmail trước (giờ)",
+  "operations.gmailWatchRenew.help":
+    "Gia hạn đăng ký Gmail bao lâu trước khi hết hạn sau 7 ngày, 24 đến 144.",
+  "operations.graphWatchRenew.label": "Gia hạn Microsoft 365 trước (giờ)",
+  "operations.graphWatchRenew.help":
+    "Gia hạn đăng ký Microsoft 365 bao lâu trước khi hết hạn sau 3 ngày, 24 đến 60.",
+  "operations.sendRateLimit.label": "Số thư mỗi khung thời gian",
+  "operations.sendRateLimit.help":
+    "Số thư tối đa một hộp thư được gửi trong một khung thời gian, 1 đến 1.000.",
+  "operations.sendRateWindow.label": "Khung thời gian (giây)",
+  "operations.sendRateWindow.help":
+    "Khung thời gian dùng để đếm số thư, 10 đến 3.600.",
+  "operations.sendMaxAge.label": "Thời gian chờ tối đa (giờ)",
+  "operations.sendMaxAge.help":
+    "Thư bị giữ lại được chờ bao lâu trước khi dừng kèm lý do, 1 đến 168.",
+  "captureMailSync.title": "Đồng bộ thư",
+  "captureMailSync.sub":
+    "Tần suất kiểm tra thư mới của từng hộp thư đã kết nối.",
+  "captureMailSync.interval.label": "Khoảng đồng bộ (giây)",
+  "captureMailSync.interval.help":
+    "Thời gian giữa hai lần đồng bộ của một hộp thư, 30 đến 3.600. Thay đổi áp dụng từ lần đồng bộ tiếp theo của mỗi hộp thư.",
+  "captureMailSync.interval.refusal": "Nhập số giây nguyên từ 30 đến 3.600.",
   "captureSettings.adminOnly":
     "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
 
@@ -10010,6 +10140,7 @@ export const vi = {
   "contact.memory.replied": "Đã hồi đáp",
   "contact.memory.unanswered": "Chưa hồi đáp",
 
+  "contact.mayBeDone.notYet": "Chưa xong",
   "contact.rail.blocked": "Bị chặn",
   "contact.rail.direction": "Chiều",
   "contact.rail.lastReply": "Hồi đáp gần nhất",
@@ -10794,8 +10925,6 @@ export const vi = {
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
   "project.assignOwnerSearch": "Tìm đồng nghiệp",
-  "project.assignOwnerNoneSelected": "Hãy chọn một đồng nghiệp trước",
-  "project.assignOwnerConfirm": "Giao",
   "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
@@ -10946,6 +11075,8 @@ export const vi = {
   "worklist.pane.nothing": "Chưa ghi nhận gì.",
   "worklist.pane.lastInbound": "Liên hệ này viết lần cuối",
   "worklist.pane.lastOutbound": "Chúng ta viết cho liên hệ này lần cuối",
+  "worklist.pane.lastFromCompany": "Công ty này viết lần cuối",
+  "worklist.pane.lastToCompany": "Chúng ta viết cho công ty này lần cuối",
   "worklist.pane.never": "Chưa bao giờ",
   "worklist.pane.company": "Làm việc cho",
   "worklist.pane.role": "Vai trò của họ",
@@ -11042,6 +11173,7 @@ export const vi = {
   "worklist.handled.about": "Về",
   "worklist.handled.when": "Khi nào",
   "worklist.handled.noRecord": "Không nêu hồ sơ nào",
+  "worklist.handled.hiddenRecord": "Hồ sơ không khả dụng",
   "worklist.handled.wayBack": "Hoàn tác",
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated":
@@ -11070,6 +11202,18 @@ export const vi = {
   "worklist.board.atRisk": "Deal có rủi ro",
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Công việc chưa phân công",
+  "worklist.board.notMeasured": "Chưa đo",
+  "worklist.planCoverage.all_one":
+    "Đã đọc kế hoạch tuần của một thành viên nhóm.",
+  "worklist.planCoverage.all_other":
+    "Đã đọc kế hoạch tuần của cả {count} thành viên nhóm.",
+  "worklist.planCoverage.some_one":
+    "Đã đọc kế hoạch tuần của {read} trên một thành viên nhóm.",
+  "worklist.planCoverage.some_other":
+    "Đã đọc kế hoạch tuần của {read} trên {count} thành viên nhóm.",
+  "worklist.planCoverage.unread": "Chưa đọc: {names}.",
+  "worklist.planCoverage.truncated":
+    "Danh sách nhóm đã bị cắt ngắn, các thành viên phía sau chưa được kiểm tra.",
   "worklist.coaching.title": "Đáng trao đổi sáng nay",
   "worklist.coaching.promises_one":
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",
@@ -11195,6 +11339,8 @@ export const vi = {
   "worklist.because.opened_overdue":
     "được ghi nhận sau thời hạn, từ dữ liệu đã nhập",
   "worklist.because.meeting_soon": "sắp bắt đầu",
+  "worklist.because.meeting_booked": "đã hẹn họp",
+  "worklist.because.meeting_booked.value": "đã hẹn họp vào {value}",
   "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
   "worklist.because.response_overdue": "quá hạn trả lời",

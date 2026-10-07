@@ -27,10 +27,14 @@ type bulkRow struct {
 	ownerID *ids.UUID
 }
 
-// bulkTarget is one record type's share of a bulk change. version is the one
-// the caller was shown; each write is conditioned on it.
+// bulkTarget is one record type's share of a bulk change.
 type bulkTarget interface {
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
+}
+
+// bulkReassigner is the share of a record type that has an owner to hand on.
+// version is the one the caller was shown; the write is conditioned on it.
+type bulkReassigner interface {
 	reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error
 }
 
@@ -44,7 +48,8 @@ type bulkArchiver interface {
 	restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind) (storekit.RestoreReport, error)
 }
 
-// bulkTargets builds the four adapters over the stores the REST handlers use.
+// bulkTargets builds the four record adapters over the stores the REST
+// handlers use; the Worklist's own adapter is bulkworklist.go's.
 func bulkTargets(contactsStore *contacts.Store, dealsStore *deals.Store) map[crmcontracts.BulkRecordType]bulkTarget {
 	return map[crmcontracts.BulkRecordType]bulkTarget{
 		crmcontracts.BulkRecordTypeContact: contactBulkTarget{store: contactsStore},

@@ -44,6 +44,7 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
+        intent="form"
         title={t("lists.settingsTitle")}
         confirmLabel={t("lists.save")}
         confirmDisabled={name.trim() === ""}

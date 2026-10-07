@@ -5,9 +5,9 @@
 
 package gates
 
-// A connector that POSTPONES a tick on an unreachable provider asks to run again
-// after a fixed delay, and that delay has to EQUAL the cadence its dispatcher
-// already ticks at — and has to survive the seam's ceiling on the way to the
+// A connector that postpones a tick on an unreachable provider asks to run
+// again after a fixed delay; that delay has to equal the cadence its dispatcher
+// already ticks at, and has to survive the seam's ceiling on the way to the
 // queue.
 //
 // WHY THE EQUALITY IS LOAD-BEARING, and not a tidiness preference: a postponed

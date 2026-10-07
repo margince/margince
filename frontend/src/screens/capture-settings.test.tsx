@@ -11,7 +11,11 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider, translate } from "../i18n";
-import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
+import {
+  CaptureSettingsCard,
+  MailSyncCard,
+  WebsiteReadingCard,
+} from "./capture-settings";
 
 // The Settings → Integrations capture-settings toggle: reads the auto-enrich
 // posture for every role, but only admin/ops can change it — the server stays
@@ -178,6 +182,7 @@ function readingBackend(allow: GrantSpec) {
     signature_enrich: true,
     auto_enrich_daily_cap: 500,
     site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+    mail_sync_interval_seconds: 120,
   };
   const patches: unknown[] = [];
   const fetchMock = vi.fn(
@@ -201,6 +206,9 @@ function readingBackend(allow: GrantSpec) {
               wall_seconds:
                 patch.site_read_wall_seconds ?? state.site_read.wall_seconds,
             },
+            mail_sync_interval_seconds:
+              patch.mail_sync_interval_seconds ??
+              state.mail_sync_interval_seconds,
           };
         }
         return jsonResponse(state);
@@ -293,4 +301,31 @@ describe("WebsiteReadingCard", () => {
       );
     },
   );
+});
+
+describe("MailSyncCard", () => {
+  it("saves a new sync interval and refuses one under 30 seconds", async () => {
+    const backend = readingBackend(CAPTURE_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<MailSyncCard />);
+
+    const box =
+      await screen.findByTestId<HTMLInputElement>("capture-mail-sync");
+    expect(box.value).toBe("120");
+    await user.clear(box);
+    await user.type(box, "29{Enter}");
+    expect(
+      await screen.findByText(
+        translate("en", "captureMailSync.interval.refusal"),
+      ),
+    ).toBeTruthy();
+    expect(backend.patches).toEqual([]);
+
+    await user.clear(box);
+    await user.type(box, "60{Enter}");
+    await waitFor(() =>
+      expect(backend.patches).toEqual([{ mail_sync_interval_seconds: 60 }]),
+    );
+  });
 });

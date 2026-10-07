@@ -128,6 +128,12 @@ const preview: Preview = {
           name: "Phone (max 700px)",
           styles: { width: "390px", height: "844px" },
         },
+        // The same phone on its side: a window short against its own text,
+        // which is a layout of its own wherever height is what runs out.
+        phoneOnItsSide: {
+          name: "Phone on its side",
+          styles: { width: "844px", height: "390px" },
+        },
       },
     },
   },

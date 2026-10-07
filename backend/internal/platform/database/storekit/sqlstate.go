@@ -38,6 +38,9 @@ const (
 	pgStringDataRightTruncation = "22001"
 	pgInvalidDatetimeFormat     = "22007"
 	pgDatetimeFieldOverflow     = "22008"
+	// 22021 is the one NUL and malformed UTF-8 raise: text Postgres cannot
+	// store, so the caller's string is what to change.
+	pgCharacterNotInRepertoire = "22021"
 )
 
 // pgViolation names the violated constraint when err is the given
@@ -180,17 +183,36 @@ func IsProgramLimitExceeded(err error) bool {
 // advice was to retry — advice that can never work, since the same text is the
 // same non-uuid forever.
 func IsInvalidValueForType(err error) bool {
+	if isIntegerOverflowOnEncode(err) {
+		return true
+	}
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) {
 		return false
 	}
 	switch pgErr.Code {
 	case pgInvalidTextRepresentation, pgNumericValueOutOfRange,
-		pgStringDataRightTruncation, pgInvalidDatetimeFormat, pgDatetimeFieldOverflow:
+		pgStringDataRightTruncation, pgInvalidDatetimeFormat, pgDatetimeFieldOverflow,
+		pgCharacterNotInRepertoire:
 		return true
 	default:
 		return false
 	}
+}
+
+// isIntegerOverflowOnEncode reads pgx's refusal to bind a Go integer into a
+// narrower column (int2/int4) as the caller's number being too large. pgx
+// raises it before the statement is sent, as an untyped error, so there is no
+// SQLSTATE to read; TestIsInvalidValueForType_pgxOverflowWording pins the
+// wording against the pgx this tree builds with.
+func isIntegerOverflowOnEncode(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "failed to encode args[") &&
+		(strings.Contains(msg, "is greater than maximum value for") ||
+			strings.Contains(msg, "is less than minimum value for"))
 }
 
 // staleStatementCacheRoutine is the backend function that raises the one 0A000

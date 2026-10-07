@@ -119,24 +119,28 @@ export function AddEmploymentModal({
   }
 
   return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
+    <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("contact.rail.addEmployment")}
       </Heading>
       <div className="form-stack">
-        <div className="field">
-          <span className="t-label">{t("contact.rail.employer")}</span>
-          <RecordPicker
-            label={t("contact.rail.employer")}
-            searchTargets={searchTargets}
-            selected={company}
-            onPick={setCompany}
-            disabled={create.isPending}
-          />
-          {!company && allConnected && (
-            <p>{t("contact.rail.allCompaniesConnected")}</p>
+        <Field label={t("contact.rail.employer")}>
+          {(control) => (
+            <>
+              <RecordPicker
+                id={control.id}
+                aria-describedby={control["aria-describedby"]}
+                searchTargets={searchTargets}
+                selected={company}
+                onPick={setCompany}
+                disabled={create.isPending}
+              />
+              {!company && allConnected && (
+                <p>{t("contact.rail.allCompaniesConnected")}</p>
+              )}
+            </>
           )}
-        </div>
+        </Field>
         <Field label={t("rel.role")}>
           {(control) => (
             <TextInput
@@ -163,8 +167,8 @@ export function AddEmploymentModal({
           disabled={create.isPending}
           onChange={(event) => setIsCurrent(event.target.checked)}
         />
+        <ErrorLine error={create.error} />
       </div>
-      <ErrorLine error={create.error} />
       <div className="actions">
         <Button onClick={close} disabled={create.isPending}>
           {t("create.cancel")}

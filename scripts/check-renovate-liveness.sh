@@ -150,6 +150,23 @@ if ((quiet_seconds > MAX_QUIET_DAYS * 86400)); then
   exit 1
 fi
 
+# A run is not progress. Renovate rewrites the dashboard on every run even when
+# its open PRs fill prConcurrentLimit and can never merge, so the check above
+# reads that state as live; it held every update, lockFileMaintenance
+# included, for two weeks. The dashboard lists each such update with an
+# `unlimit-branch=` checkbox, and a quiet week has none.
+rate_limited="$(jq -r '.body // ""' <<<"$dashboard" | grep -c 'unlimit-branch=' || true)"
+pr_quiet_seconds=$((MAX_QUIET_DAYS * 86400 + 1))
+[[ -n "$newest_pr" ]] && pr_quiet_seconds=$((now_epoch - $(to_epoch "$newest_pr")))
+
+if ((rate_limited > 0 && pr_quiet_seconds > MAX_QUIET_DAYS * 86400)); then
+  echo "Renovate runs but has opened no pull request in over $MAX_QUIET_DAYS days" >&2
+  echo "while $rate_limited update(s) wait as rate-limited on dashboard #$number." >&2
+  echo "Its open PRs fill prConcurrentLimit; find out why they cannot merge." >&2
+  verdict STALLED
+  exit 1
+fi
+
 echo "Renovate is live: $signal, $last_seen ($age_days days ago)."
 emit status LIVE
 emit outcome ok

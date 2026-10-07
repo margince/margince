@@ -29,6 +29,9 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);
+  /* Its own ink, never the row's: inside a caption it inherited --textSecondary,
+     4.07:1 on the chip in dark, an ink the chipInks contrast pairs never measure. */
+  color: var(--textPrimary);
 }
 .badge-label {
   min-inline-size: 0;

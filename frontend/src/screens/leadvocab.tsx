@@ -262,14 +262,19 @@ function AddSourceDialog({
 }>) {
   const t = useT();
   const titleId = useId();
+  const formId = useId();
   const [label, setLabel] = useState("");
   const [intent, setIntent] = useState<LeadSourceIntent>("neutral");
   const ready = label.trim() !== "";
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
+    <Modal open onClose={onClose} labelledBy={titleId} intent="form">
+      <Heading size="large" className="t-h2 modal-title" id={titleId}>
+        {t("leadSources.newLabel")}
+      </Heading>
       {/* A real form, so Enter commits it: two fields a reader types into and
           then has to reach for a button is not how anyone adds a list entry. */}
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(e) => {
           e.preventDefault();
@@ -280,9 +285,6 @@ function AddSourceDialog({
           );
         }}
       >
-        <Heading size="large" className="t-h3" id={titleId}>
-          {t("leadSources.newLabel")}
-        </Heading>
         {create.isError && (
           <Callout
             kind="outcome"
@@ -324,23 +326,24 @@ function AddSourceDialog({
             />
           )}
         </Field>
-        <div className="form-actions">
-          <Button variant="ghost" onClick={onClose}>
-            {t("deals.cancel")}
-          </Button>
-          {/* Two facts, two props: `!ready` is a form with nothing in it yet
-              and `isPending` is a write already on its way, and one `disabled`
-              covering both draws them the same. */}
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!create.isPending && !ready}
-            pending={create.isPending}
-          >
-            {t("leadSources.add")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t("deals.cancel")}
+        </Button>
+        {/* Two facts, two props: `!ready` is a form with nothing in it yet
+            and `isPending` is a write already on its way, and one `disabled`
+            covering both draws them the same. */}
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={!create.isPending && !ready}
+          pending={create.isPending}
+        >
+          {t("leadSources.add")}
+        </Button>
+      </div>
     </Modal>
   );
 }

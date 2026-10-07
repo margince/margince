@@ -4674,6 +4674,10 @@ paths:
         - name: company_id
           in: query
           schema: { type: string, format: uuid }
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Full-text query over the deal's name and description, plus a substring match on the name.
         - name: status
           in: query
           schema: { type: string, enum: [open, won, lost] }
@@ -5031,7 +5035,8 @@ paths:
         leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
         `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
         while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
-        (with `task`). The answer says which records the change would alter (`affected`), which it
+        (with `task`). Or it names up to 500 Worklist tasks and promises (`worklist_item`) and the
+        verb `complete`. The answer says which records the change would alter (`affected`), which it
         would leave alone and why (`excluded`), and up to three before/after rows to show the user.
 
         Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -5070,7 +5075,8 @@ paths:
         The second half of a bulk change. Each record is changed exactly as the single-record
         operation would change it (`updateContact`, `updateCompany`, `updateDeal`, `updateLead` for
         an owner; `archiveContact`, `archiveCompany`, `archiveDeal` for an archive; `applyTag` and
-        `removeTag` for a tag; `createTask` for a task), with its own `audit_log` row and its own
+        `removeTag` for a tag; `createTask` for a task; `updateActivity` or `settleConversationClaim`
+        for a Worklist item marked done), with its own `audit_log` row and its own
         event. Every audit row the change writes carries the same `batch_id`, which
         the answer returns.
 
@@ -16647,8 +16653,7 @@ paths:
         description: >-
           The Vertex AI location being edited, for `gemini_vertex` only — which models are served
           differs by location, and the location is where Google processes the call. Omitted, the
-          lane's stored location is used. Under the `eu_hosted` profile a location outside the EU
-          answers `profile_forbids` before any credential is used. Ignored by every other vendor.
+          lane's stored location is used. Ignored by every other vendor.
       - name: model
         in: query
         required: false
@@ -16725,12 +16730,13 @@ paths:
         The locations a `gemini_vertex` binding may name, asked of Google with the stored
         service-account key's project, plus the `eu` and `us` multi-regions and `global` when
         Google's list omits them. A metadata call on Google's global host; it carries no customer
-        data, so it is answered under every profile.
+        data, so it is asked under every profile except `sovereign`.
 
         `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
         location Google adds tomorrow appears as an option and is not resident until this build
-        says so. Under `eu_hosted` every location is still listed, and a binding at one with
-        `resident: false` is refused on save.
+        says so. Under `eu_hosted` and `cloud_frontier` every location is listed and selectable;
+        `resident` is information, not a gate. Under `sovereign` no list is served at all
+        (`profile_forbids`), because asking Google is cloud egress.
 
         A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`.
         Every vendor but `gemini_vertex` answers `not_published`: it has no location to choose.
@@ -16924,8 +16930,6 @@ paths:
           answered and did not refuse the key, but may have refused the body before reading it.
           A 200 is not a pass, since no decision server answers an empty request. It passes with
           no `model_count`.
-        - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
-          on OpenRouter) answers `profile_forbids` without being dialled.
 
         No request body. The key is the STORED one, never a candidate sent here: a credential
         that travels only to be tested is still a credential in a request log. The host is the
@@ -17106,8 +17110,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: disposeDedupeCandidate
-      x-agent-access: human-only
-      security: [ { cookieAuth: [] } ]
+      x-mcp-tool: { verb: decide_duplicate, record_type: contact, tier: auto_execute, scope: write }
       summary: Decide one pair — merge through the owner's verb, or dismiss forever.
       description: |
         `merge` requires `winner_id` (one of the pair) and executes `mergeContact`/
@@ -17140,8 +17143,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: undoDedupeDisposition
-      x-agent-access: human-only
-      security: [ { cookieAuth: [] } ]
+      x-mcp-tool: { verb: decide_duplicate, record_type: contact, tier: auto_execute, scope: write }
       summary: Re-open a disposed pair.
       description: |
         A dismissed pair re-opens (the suppression lifts). A merged pair needs the
@@ -27864,7 +27866,7 @@ components:
         event_types:
           type: array
           items: { type: string }
-          description: The subscribed event types, each from the published catalog (events.md §5).
+          description: The subscribed event types, each from the published event catalog.
         state: { type: string, enum: [active, paused] }
         version: { type: integer, format: int64, description: Optimistic-concurrency version; echo it in If-Match on update. }
         created_at: { type: string, format: date-time }
@@ -27961,7 +27963,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
       properties:
         name:
           type: string
@@ -28061,6 +28063,8 @@ components:
             for the code exchange and every refresh rotation alike. 30 days by default, at most
             90. A change applies to the next token minted; tokens already issued keep the expiry
             they were issued with.
+        operations:
+          $ref: '#/components/schemas/OperationSettings'
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -28182,6 +28186,21 @@ components:
           minimum: 5
           maximum: 129600
           description: Set how long a connector's access token lives, in minutes. Reaches the next token minted.
+        agent_runner_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.agent_runner_interval_seconds` describes.' }
+        webhook_retry_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.webhook_retry_interval_seconds` describes.' }
+        time_scan_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'Set the value `OperationSettings.time_scan_interval_seconds` describes.' }
+        close_date_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.' }
+        follow_up_reconcile_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes.' }
+        retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.retention_sweep_interval_seconds` describes.' }
+        geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.' }
+        technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.technical_backfill_interval_seconds` describes.' }
+        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.' }
+        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.' }
+        gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.' }
+        graph_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 60, description: 'Set the value `OperationSettings.graph_watch_renew_within_hours` describes.' }
+        send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'Set the value `OperationSettings.send_rate_limit` describes.' }
+        send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.send_rate_window_seconds` describes.' }
+        send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'Set the value `OperationSettings.send_max_age_hours` describes.' }
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -28586,7 +28605,7 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds]
       properties:
         auto_enrich_daily_cap:
           type: integer
@@ -28600,6 +28619,13 @@ components:
             without a restart. Default 500.
         site_read:
           $ref: '#/components/schemas/SiteReadLimits'
+        mail_sync_interval_seconds:
+          type: integer
+          minimum: 30
+          maximum: 3600
+          description: |
+            How long a mailbox waits after a successful sync before the next one, in seconds.
+            Applies from each mailbox's next sync. Default 120.
         mail_sharing:
           type: boolean
           description: |
@@ -29156,8 +29182,7 @@ components:
         resident:
           type: boolean
           description: >-
-            Whether Google keeps ML processing at this location inside the EU, which is what the
-            `eu_hosted` profile admits. This build's list, never Google's: a location Google adds
+            Whether Google keeps ML processing at this location inside the EU. This build's list, never Google's: a location Google adds
             is not resident until this build names it.
     AiProviderKeyStatus:
       type: object
@@ -29291,8 +29316,8 @@ components:
           description: |
             The location ladder (§4). `sovereign` means zero egress by construction: a cloud
             provider on any tier is refused, and so is a local provider pointed at another host.
-            `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-            `gemini_vertex` lane must name an EU location.
+            `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
+            connection's and the location's to say.
         tiers:
           type: object
           additionalProperties: { $ref: '#/components/schemas/AiTierBinding' }
@@ -29323,6 +29348,7 @@ components:
             Where the provider is reached. Required on `openai_compatible` while a lane binds it,
             and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint,
             posted to as written). Optional elsewhere; empty means the adapter's compiled default.
+            Refused on `gemini_vertex`, whose host follows from `location`.
         upstream:
           $ref: '#/components/schemas/AiOpenRouterUpstream'
         location:
@@ -29349,8 +29375,13 @@ components:
         data_collection: { type: string, enum: [allow, deny], description: "deny keeps every request off hosts that may store or train on prompts." }
         enforce_distillable_text: { type: boolean, description: "Only models whose licence allows their output to train other models." }
 
+    # Not closed with additionalProperties: AiEmbeddingsBinding extends this by allOf, which a
+    # closed base would reject. The server closes it on every routing write instead.
     AiTierBinding:
       type: object
+      description: |
+        One tier's binding. A key this schema does not declare is refused with a 422 naming its
+        path, on every routing write.
       required: [provider, model]
       properties:
         provider:
@@ -29571,6 +29602,31 @@ components:
         max_mib: { type: integer, description: 'Mebibytes one read may hold, summed over its pages. Default 32.' }
         wall_seconds: { type: integer, description: 'Seconds one crawl may run before it stops and extracts what it has. Default 240.' }
 
+    OperationSettings:
+      type: object
+      additionalProperties: false
+      description: |
+        The worker's operating values: how often each background pass runs, how far ahead a
+        mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+        them again within a minute of a change, so none needs a restart.
+      required: [agent_runner_interval_seconds, webhook_retry_interval_seconds, time_scan_interval_seconds, close_date_sweep_interval_seconds, follow_up_reconcile_interval_seconds, retention_sweep_interval_seconds, geocode_backfill_interval_seconds, technical_backfill_interval_seconds, gmail_watch_scan_interval_seconds, graph_watch_scan_interval_seconds, gmail_watch_renew_within_hours, graph_watch_renew_within_hours, send_rate_limit, send_rate_window_seconds, send_max_age_hours]
+      properties:
+        agent_runner_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often scheduled agents are checked for a run that is due, in seconds. Default 30.' }
+        webhook_retry_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often failed webhook deliveries are retried, in seconds. Default 30.' }
+        time_scan_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'How often time-based automation rules are checked, in seconds. Default 3600.' }
+        close_date_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often deals whose close date has passed are flagged, in seconds. Default 86400.' }
+        follow_up_reconcile_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400.' }
+        retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.' }
+        geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.' }
+        technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.' }
+        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.' }
+        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.' }
+        gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.' }
+        graph_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 60, description: 'How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24.' }
+        send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.' }
+        send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.' }
+        send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.' }
+
     UpdateCaptureSettingsRequest:
       type: object
       description: A sparse capture-settings patch (admin/ops).
@@ -29580,6 +29636,7 @@ components:
         site_read_max_pages: { type: integer, minimum: 1, maximum: 200, description: 'Set the page limit of one website read.' }
         site_read_max_mib: { type: integer, minimum: 1, maximum: 128, description: 'Set the size limit of one website read, in MiB.' }
         site_read_wall_seconds: { type: integer, minimum: 30, maximum: 600, description: 'Set the time limit of one website crawl, in seconds.' }
+        mail_sync_interval_seconds: { type: integer, minimum: 30, maximum: 3600, description: 'Set how long a mailbox waits between syncs, in seconds.' }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
@@ -29726,7 +29783,7 @@ components:
         provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox], description: The mail/calendar provider (A51 email+calendar parity). }
         account_label: { type: [string, 'null'], description: 'Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one.' }
         status: { type: string, enum: [connected, disconnected, error, reauth_required], description: 'Connection state; `reauth_required` when the stored token expired/was revoked upstream.' }
-        sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture — read-only.' }
+        sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only.' }
         watch_expires_at: { type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.' }
         scopes: { type: array, items: { type: string }, description: The granted provider scopes. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
@@ -30485,7 +30542,7 @@ components:
           type: string
           description: >-
             The folded address or domain, or a provider-qualified container (`gmail:Label_12`,
-            `graph:<folderId>`, `imap:INBOX/Family`) kept exactly as the provider spells it.
+            `graph:<folderId>`, `imap:INBOX/Family`) kept as the provider spells it.
         created_at: { type: string, format: date-time }
     CaptureExclusionScope:
       type: string
@@ -30972,7 +31029,7 @@ components:
           type: [integer, 'null']
           format: int64
           description: 'Proposed only when a finished reading of a cited document stated both an amount and a currency.'
-        currency: { type: [string, 'null'], description: 'Present exactly when amount_minor is.' }
+        currency: { type: [string, 'null'], description: 'Present when amount_minor is, and only then.' }
         close_date: { type: [string, 'null'], format: date }
         confidence: { type: number, minimum: 0, maximum: 1 }
         created_at: { type: string, format: date-time }
@@ -31025,13 +31082,13 @@ components:
       required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide]
       properties:
         id: { type: string, format: uuid }
-        entity_type: { type: string, enum: [contact, company, lead], description: 'A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.' }
+        entity_type: { type: string, enum: [contact, company, lead], description: 'A pair is always same-type: a lead is proposed as a duplicate of a lead or of nothing.' }
         left_id: { type: string, format: uuid, description: 'Canonical ordering: left is the lower id — {A,B} and {B,A} are one row.' }
         right_id: { type: string, format: uuid }
         confidence: { type: number, minimum: 0, maximum: 1, description: 'The PO-F-1/PO-F-2 fuzzy score at detection.' }
         evidence:
           type: array
-          description: 'Per-field agree/collide snapshot captured at detection — what the queue renders (AC-dedupe-2/3); never re-derived against since-edited rows.'
+          description: 'Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows.'
           items:
             type: object
             required: [field, left_value, right_value, signal]
@@ -31566,8 +31623,7 @@ components:
           type: string
           enum: [pending, connected, disconnected, error, reauth_required]
           description: >-
-            Only `connected` is live, and it is the only state a connect can produce — a pull
-            ingress makes no provider call after the write, so there is no half-connected state.
+            Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state.
             `error` and `reauth_required` are where ingress parks a binding it can no longer poll
             (another consumer holds the bot's updates; the token was refused), and neither is
             polled again until an operator acts. `pending` is a value NO server produces: it is
@@ -31943,7 +31999,7 @@ components:
         connector:  { type: string, enum: [csv, salesforce] }
         object:     { $ref: '#/components/schemas/ImportObject' }
         status:     { $ref: '#/components/schemas/ImportRunStatus' }
-        checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing` (IEM-WIRE-9) — 0 = not started either way. What a resume continues from.' }
+        checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing`; 0 = not started either way. What a resume continues from.' }
         error:      { type: [string, 'null'], description: 'Why a failed run stopped, in the uploader''s terms. Never a driver or SQL message.' }
         source:      { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
@@ -32655,14 +32711,13 @@ components:
           type: string
           enum: [contact]
           description: |
-            The kind of record this run enriches, drawn from the canonical EntityType vocabulary
-            (DM-CONV-17). Only `contact` is supported today; the matching typed id field below is
+            The kind of record this run enriches, drawn from the canonical EntityType vocabulary. Only `contact` is supported today; the matching typed id field below is
             populated for that kind (PI-DDL-2).
         contact_id:
           type: [string, 'null']
           format: uuid
           description: |
-            Populated exactly when `subject_kind` is `contact`, and null otherwise. Each supported
+            Populated when `subject_kind` is `contact`, and null otherwise. Each supported
             subject kind has its own typed id field; the pairing is enforced by the shape check on
             `provider_run` (PI-DDL-2), not by this schema.
         provider: { $ref: '#/components/schemas/Provider' }
@@ -32707,8 +32762,7 @@ components:
           type: boolean
           default: false
           description: |
-            True when a paid terminal result could not be handed to the owning domain within
-            the bounded retry (PI-PARAM-10). The spend is real and the claims are absent; an
+            True when a paid terminal result could not be handed to the owning domain within the bounded retry. The spend is real and the claims are absent; an
             operator sees the gap rather than discovering it as missing data (PI-AC-12).
         applied:
           type: boolean
@@ -33012,10 +33066,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this contact — the newest `occurred_at` of an activity
-            linked to it, maintained on the activity write exactly as `deal.last_activity_at` is
-            (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must
-            reproduce it). NULL until the first linked activity. Sortable (DM-VOCAB-1).
+            When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -33335,7 +33386,7 @@ components:
         tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         linkedin_url:
           type: [string, 'null']
-          description: Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
+          description: Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         website_url:
           type: [string, 'null']
@@ -33347,7 +33398,7 @@ components:
           type: boolean
           readOnly: true
           description: |
-            True only for this installation's OWN company (ADR-0065, amended by ADR-0082).
+            True only for this installation's own company.
             It is one ordinary company, reachable by id everywhere, but the surfaces that answer
             *which companies are we selling to* exclude it unless `include_anchor` is set, and it
             cannot be archived or merged. A caller that offers company actions should tell it apart.
@@ -33412,7 +33463,7 @@ components:
           type: string
           enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
           description: >-
-            WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at
+            Where the account stands with us. Single-valued: an account is at
             one point in a sales motion at a time. `unknown` is the default and means it — the retired
             `classification` defaulted to `prospect` and, having no writer, rendered that default on
             every unassessed account as though someone had judged it.
@@ -33490,10 +33541,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this account — the newest `occurred_at` of a
-            WORKSPACE-AUDIENCE activity linked to it, maintained on the activity write exactly as
-            `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second
-            truth — a rebuild must reproduce it). NULL until the first such activity.
+            When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity.
             Sortable (DM-VOCAB-2).
 
             A message limited to its participants does NOT move this date, even for a reader who
@@ -33722,8 +33770,7 @@ components:
         degrade_reason:
           type: [string, 'null']
           description: |
-            Why the read finished below the model — server-authored, in the reader's terms,
-            never a provider's message. Null when the model wrote the findings.
+            Why the read finished below the model: server-authored, in the reader's terms, never a provider's message. Null when the model wrote the findings.
         read:
           type: [object, 'null']
           description: |
@@ -34373,7 +34420,43 @@ components:
             the account.
         reason:
           type: string
-          description: One sentence naming what this rating was read from.
+          description: >-
+            One sentence naming what this rating was read from, in English. A client that knows
+            `reason_code` renders that instead, in the reader's language.
+        reason_code:
+          $ref: '#/components/schemas/HealthDimensionReasonCode'
+        reason_params:
+          $ref: '#/components/schemas/HealthDimensionReasonParams'
+
+    HealthDimensionReasonCode:
+      type: string
+      description: |
+        Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
+        dimension the client rates itself.
+
+        - `never_written`: no message from them and no meeting with them, ever.
+        - `quiet`: no message from them and no meeting with them for `days` days.
+        - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
+        - `last_met`: in touch through a meeting `days` days ago.
+        - `single_threaded`: in touch, but one contact carries the whole account.
+        - `several_contacts`: `count` contacts here are in touch with us.
+        - `deals_all_stalled`: all `count` open deals have stalled.
+        - `deals_some_stalled`: `count` of `total` open deals have stalled.
+        - `deals_none_stalled`: `count` open deals, none stalled.
+      enum: [never_written, quiet, meeting_booked, last_met, single_threaded, several_contacts,
+             deals_all_stalled, deals_some_stalled, deals_none_stalled]
+
+    HealthDimensionReasonParams:
+      type: object
+      description: The values the reason names. Each code lists which it reads.
+      properties:
+        days: { type: integer }
+        count: { type: integer }
+        total: { type: integer }
+        at:
+          type: string
+          format: date-time
+          description: An instant, so the client names its day in the record's own zone.
 
     Company360Health:
       type: object
@@ -35306,12 +35389,11 @@ components:
           type: [string, 'null']
           format: date-time
           description: |
-            When the SOURCE stated this value — the mail's own date, not when the pass read
-            it. Recency is judged on this, so a re-delivered old message cannot outrank a
+            When the source stated this value: the mail's own date, rather than when the pass read it. Recency is judged on this, so a re-delivered old message cannot outrank a
             recent one.
         evidence_snippet:
           type: string
-          description: The verbatim source text the value was read from — the reader checks the claim against its own source.
+          description: The verbatim source text the value was read from, so the reader can check the claim against its own source.
         source_ref:
           type: [string, 'null']
           description: "What was read, as `activity:<uuid>` for a signature or `site_read:<url>` for a page."
@@ -35319,7 +35401,7 @@ components:
         source: { type: string, description: "The channel that produced it, e.g. `capture_enrich` or `site_read`." }
         captured_by:
           type: string
-          description: "`agent:enrich` until a human edits the field, `human:<uuid>` after — this is how the page says \"corrected by you\"."
+          description: "`agent:enrich` until a human edits the field, `human:<uuid>` after; this is how the page says \"corrected by you\"."
         captured_at: { type: string, format: date-time }
         claim_key:
           type: string
@@ -35652,7 +35734,13 @@ components:
       properties:
         contact_id: { type: string, format: uuid }
         full_name: { type: string }
-        role: { type: string }
+        role:
+          type: string
+          description: |
+            The stakeholder's recorded buying role, EMPTY where the seat records
+            none: a deal_stakeholder may be seated without one, since the schema
+            requires a role only for billing_contact. A client that treats this as
+            a label to show should check it before showing it.
         photo_url:
           type: [string, 'null']
           description: Where to stream their portrait, or null — the client draws the deterministic monogram.
@@ -35714,14 +35802,14 @@ components:
         source_activity_id: { type: string, format: uuid }
         source_quote:
           type: string
-          description: The verbatim excerpt this was read from — never a summary of it, so the reader can check the claim against what was actually written.
+          description: The verbatim excerpt this was read from, never a summary of it, so the reader can check the claim against what was written.
         source_label:
           type: [string, 'null']
           description: How to name the source in a chip — the thread subject or the meeting title.
         occurred_at: { type: [string, 'null'], format: date-time }
         status:
           type: string
-          description: '`open` — the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.'
+          description: '`open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.'
           enum: [open, done, dismissed]
         due_at: { type: [string, 'null'], format: date-time }
         needs_review:
@@ -36362,7 +36450,7 @@ components:
         source_entity_id: { type: [string, 'null'], format: uuid }
         note:
           type: [string, 'null']
-          description: The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note IS the record.
+          description: The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record.
 
     ContactGraph:
       type: object
@@ -36647,14 +36735,13 @@ components:
         suggested_user_id:
           type: string
           format: uuid
-          description: Set on `suggest_other` — the colleague to ask instead.
+          description: Set on `suggest_other`; the colleague to ask instead.
         suggested_display_name: { type: string }
         source_activity_id:
           type: string
           format: uuid
           description: >-
-            The message the ask's CURRENT claim rests on — the introduction, the
-            name-drop, or the reply — where there is one. It moves with the status
+            The message the ask's current claim rests on (the introduction, the name-drop, or the reply), where there is one. It moves with the status
             rather than accumulating: a reply replaces the handshake's message,
             because a row reading `replied` whose receipt is the introduction
             sends a reader to check the wrong mail. The earlier evidence stays in
@@ -36888,6 +36975,30 @@ components:
           type: array
           maxItems: 3
           items: { $ref: '#/components/schemas/ContactMomentAction' }
+        may_be_done:
+          $ref: '#/components/schemas/ContactMomentMayBeDone'
+
+    ContactMomentMayBeDone:
+      type: object
+      description: |
+        Present when the moment is a promise we owe AND we wrote to the contact after it was
+        made: the card asks whether that email kept it, and never decides on its own. `Done`
+        completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+        (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+        `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+        later email asks again.
+      required: [promise_type, promise_id, email_activity_id, wrote_at]
+      properties:
+        promise_type:
+          type: string
+          description: '`task` — an open task. `claim` — a `commitment_ours` claim with no task.'
+          enum: [task, claim]
+        promise_id: { type: string, format: uuid }
+        email_activity_id:
+          type: string
+          format: uuid
+          description: The newest attested outbound email to the contact sent after the promise was made.
+        wrote_at: { type: string, format: date-time }
 
     ContactMomentRule:
       type: string
@@ -38057,7 +38168,7 @@ components:
             An edge saying only that somebody is a billing contact would not say
             which of the three to do with them, so the server refuses it. Every
             other kind keeps free text.
-        is_current_primary: { type: boolean, default: false, description: Employment — the one current primary employer (≤1 per contact). }
+        is_current_primary: { type: boolean, default: false, description: Employment; the one current primary employer (≤1 per contact). }
         employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
         started_precision: { type: string, enum: [day, month] }
         ended_precision: { type: string, enum: [day, month] }
@@ -38174,7 +38285,7 @@ components:
         pipeline_id: { type: [string, 'null'], format: uuid, description: 'The deal''s pipeline. A zero/placeholder UUID here is forbidden (dangling FK).' }
         stage_id: { type: [string, 'null'], format: uuid, description: 'The deal''s current stage; must belong to pipeline_id.' }
         company_id: { type: [string, 'null'], format: uuid, description: 'Primary company; never a raw lead. Null when the caller may not read that company, in which case `masked_fields` names it.' }
-        partner_company_id: { type: [string, 'null'], format: uuid, description: 'Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.' }
+        partner_company_id: { type: [string, 'null'], format: uuid, description: 'Deal registration/attribution to a partner company. The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.' }
         partner_attribution:
           type: [string, 'null']
           enum: [sourced, influenced, null]
@@ -38243,7 +38354,7 @@ components:
           enum: [imported, purchase_order, verbal, renewal_by_email, other, null]
           readOnly: true
           description: >-
-            Why this deal was won with no contract behind it (ADR-0109 §6). NULL on a won
+            Why this deal was won with no contract behind it. NULL on a won
             deal that HAS one — the two are distinguishable, which is what makes "how many
             won deals have no paper, and why" answerable. Cleared on reopen and on any
             transition away from won.
@@ -38252,8 +38363,8 @@ components:
           readOnly: true
           description: Required when the reason is `other`, which explains nothing on its own.
         forecast_category: { type: [string, 'null'], enum: [null, commit, best_case, pipeline, omitted] }
-        expected_close_date: { type: [string, 'null'], format: date, description: 'INV-CLOSE-PAST (formulas §11): an open deal never claims a past close date — saving one is rejected 422 (close_date_past); one that ages into the past is corrected by the nightly run.' }
-        close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation (formulas §11 🟡 tier); a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.' }
+        expected_close_date: { type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.' }
+        close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
         closed_at: { type: [string, 'null'], format: date-time }
         last_activity_at: { type: [string, 'null'], format: date-time, description: 'Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.' }
@@ -38510,7 +38621,7 @@ components:
           description: The partner's tier as it stood at accrual; the rate below was derived from it.
         rate_bps:
           type: integer
-          description: 'Basis points, so 15% is 1500 — no fractional-percent rounding enters the row.'
+          description: 'Basis points, so 15% is 1500 and no fractional-percent rounding enters the row.'
         basis_amount_minor: { type: integer, format: int64, description: The deal amount the rate applied to. }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         fx_rate_to_base:
@@ -38613,7 +38724,7 @@ components:
             a project the reader may not open; `masked_fields` names it only in the second case.
         contract_number:
           type: [string, 'null']
-          description: 'Free text — an imported agreement carries whatever number the counterparty''s own system gave it. Duplicates within an account are permitted: two systems reusing a number is their business, not a reason to refuse the row.'
+          description: 'Free text: an imported agreement carries whatever number the counterparty''s own system gave it. Duplicates within an account are permitted: two systems reusing a number is their business, not a reason to refuse the row.'
         title: { type: string }
         value_minor:
           type: [integer, 'null']
@@ -38626,7 +38737,7 @@ components:
           enum: [total, annualized_12m]
           default: total
           description: |
-            What `value_minor` measures (CONTRACT-PARAM-2). An open-ended agreement has
+            What `value_minor` measures. An open-ended agreement has
             no finite total, so it records twelve months and says so. Figures on
             different bases are never summed — thirty-six months plus twelve months is
             not forty-eight months of anything.
@@ -38656,7 +38767,7 @@ components:
           enum: [draft, active, expired, cancelled, superseded]
           default: draft
           readOnly: true
-          description: 'Read-only here — asserted through changeContractStatus so the transition, its event and any proposal are written from one transaction.'
+          description: 'Read-only here: asserted through changeContractStatus so the transition, its event and any proposal are written from one transaction.'
         signed_on:
           type: [string, 'null']
           format: date
@@ -38837,7 +38948,7 @@ components:
           type: [string, 'null']
           format: uuid
           description: >-
-            The project's CUSTOMER — the first company attached with that role, or null when the
+            The project's customer: the first company attached with that role, or null when the
             caller may not read it (in which case `masked_fields` names it) or when the project has
             no customer. It is a view of `companies`, kept because a project's client is the
             one company most readers mean; the full picture is the list.
@@ -38860,7 +38971,7 @@ components:
           enum: [initiative, pursuing, delivering, closed]
           default: initiative
           readOnly: true
-          description: 'Read-only here — transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.'
+          description: 'Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.'
         closed_reason: { type: [string, 'null'], description: Required when phase=closed. }
         description: { type: [string, 'null'] }
         started_at: { type: [string, 'null'], format: date }
@@ -38870,7 +38981,7 @@ components:
           type: [string, 'null']
           format: date-time
           readOnly: true
-          description: 'The newest WORKSPACE-AUDIENCE activity filed under the project, maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
+          description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write; a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         author:
@@ -39246,8 +39357,11 @@ components:
       type: string
       description: |
         The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-        verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
-      enum: [contact, company, deal, lead]
+        verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+        no bulk verb.
+        A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+        named by the id its row carries; `complete` is its only verb, and no other kind takes it.
+      enum: [contact, company, deal, lead, worklist_item]
 
     BulkVerb:
       type: string
@@ -39258,8 +39372,10 @@ components:
         `addListMember` and `removeListMember` do, and change nothing on the record itself.
         `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
         as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-        under each record, exactly as `createTask` does.
-      enum: [reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task]
+        under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+        a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+        `settleConversationClaim` with `outcome: done` does.
+      enum: [reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task, complete]
 
     BulkTask:
       type: object
@@ -39329,6 +39445,7 @@ components:
         purged. `value_taken`: another live record now holds its email or domain.
         `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
         each task the change created, and skips one completed or edited since as `changed_since_batch`.
+        Undoing `complete` opens each task or promise again, and skips one changed since the same way.
       enum: [not_found, not_writable, changed_since_preview, no_change, anchor_company, not_previewed, refused,
              changed_since_batch, merged, erased, value_taken, no_previous_owner]
 
@@ -39359,6 +39476,7 @@ components:
         listed: { type: boolean, description: 'For a list verb, whether the record is on the Shortlist.' }
         tagged: { type: boolean, description: 'For a tag verb, whether the record carries the tag.' }
         task_id: { type: string, format: uuid, description: 'For `create_task`, the task filed under the record, once the change ran.' }
+        done: { type: boolean, description: 'For `complete`, whether the task or promise is done.' }
 
     BulkSampleRow:
       type: object
@@ -39929,7 +40047,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
-        is_default: { type: boolean, default: false, description: Exactly one default per workspace. }
+        is_default: { type: boolean, default: false, description: At most one default per workspace. }
         position: { type: integer, default: 0 }
         stages:
           type: array
@@ -40312,7 +40430,7 @@ components:
           allOf: [{ $ref: '#/components/schemas/ProviderRef' }]
           nullable: true
           description: |
-            Which transport carried this message — non-null exactly when `kind=message`.
+            Which transport carried this message: set on every `kind=message` row, null on every other kind.
             The kind says what sort of interaction happened; this says what carried it. They
             are separate axes, and reading one off the other is what ADR-0107 retired.
         subject: { type: [string, 'null'] }
@@ -40419,15 +40537,14 @@ components:
           readOnly: true
           enum: [null, pending, confirmed, rescheduling, canceling, needs_attention, canceled]
           description: Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
-        source_system: { type: [string, 'null'], description: 'Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller''s own. Idempotency key part.' }
-        source_id: { type: [string, 'null'], description: Provider message/event id — idempotency key part. }
+        source_system: { type: [string, 'null'], description: 'Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller''s own. Idempotency key part.' }
+        source_id: { type: [string, 'null'], description: Provider message/event id; part of the idempotency key. }
         source_activity_id:
           type: [string, 'null']
           format: uuid
           readOnly: true
           description: >-
-            The activity this one was derived FROM — today, the meeting whose transcript
-            proposed a task. Null on almost every row: a task somebody typed came from
+            The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from
             nowhere but them. It is a reference, not a grant: opening it goes through the
             activity read path under the caller's own scope, so a reader who may not see
             the meeting gets the same answer they would get by asking for it directly.
@@ -40922,7 +41039,7 @@ components:
           type: string
           enum: [contract, offer, legal, email_attachment, message_attachment, other]
           description: |
-            What kind of document this is (DOC-DDL-1). Closed vocabulary; `other` is the
+            What kind of document this is. Closed vocabulary; `other` is the
             honest default, not a fallback for an unknown value.
 
             `email_attachment` and `message_attachment` record PROVENANCE rather than
@@ -40935,7 +41052,7 @@ components:
             uploaded file, which has no arrival to claim (422 `category_not_assertable`).
         title:
           type: [string, 'null']
-          description: A display name distinct from the filename — what a reader looks for, rather than what arrived.
+          description: A display name distinct from the filename, showing what a reader looks for rather than what arrived.
         doc_state:
           type: string
           enum: [draft, current, final, superseded]
@@ -40956,7 +41073,7 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The account this file rolls up to — a READ PATH, not a second parent. Visibility
+            The account this file rolls up to, kept as a read path rather than a second parent. Visibility
             stays the primary parent's, and this is maintained on relink and merge so a file
             follows the record it belongs to.
         contract_id:
@@ -40964,8 +41081,7 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The agreement this document is about (CONTRACT-DDL-5) — the same kind of roll-up
-            as company_id above, and just as deliberately not a second parent. Set at
+            The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at
             upload by the contact filing the paper; never inferred from a filename or a date,
             which is the guess the document state exists to refuse.
         bytes_withheld:
@@ -41516,7 +41632,7 @@ components:
           type: string
           enum: [scheduled, released, sent, cancelled, held]
           description: |
-            `scheduled` — waiting; the rep may move or cancel it.
+            `scheduled`: waiting; the rep may move or cancel it.
             `released` — it fired: the activity, the delivery row and the dispatch job exist,
             and the provider has not been called yet, so the delivery can still park or fail.
             A step rather than an ending.
@@ -42132,14 +42248,14 @@ components:
         id: { type: string, format: uuid }
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email, description: Lowercased; lead-internal dedupe key. }
-        linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key.' }
+        linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL; the exact-match dedupe key.' }
         title: { type: [string, 'null'] }
-        company_name: { type: [string, 'null'], description: FREE TEXT — NOT a company FK. }
+        company_name: { type: [string, 'null'], description: Free text; there is no foreign key to a company. }
         candidate_company_key: { type: [string, 'null'], description: Loose key for ABM routing without creating a company. }
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.' }
         status: { type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.' }
         score: { type: integer, default: 0, description: 'Lead-local scoring; never reads the contact graph. While an override is in force this is the human-set value (see score_override_reason).' }
-        score_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ `score` is a human Commercial-Judgement override (formulas §3.1) and recompute is suppressed; the machine value is retained in `score_computed`.' }
+        score_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ `score` is a human Commercial-Judgement override and recompute is suppressed; the machine value is retained in `score_computed`.' }
         score_computed: { type: [integer, 'null'], readOnly: true, description: 'Server-derived. The latest machine-computed §3 score, retained ONLY while an override is in force (else null, because score itself is the machine value).' }
         owner_id: { type: [string, 'null'], format: uuid }
         writable:
@@ -42172,7 +42288,7 @@ components:
             already carry the same field for the same reason.
         promoted_at: { type: [string, 'null'], format: date-time }
         routed_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'When routing assigned an owner. Starts the §18 first-response clock; null means the clock starts at created_at.' }
-        first_response_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'First genuine response to this lead (formulas §18): an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.' }
+        first_response_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.' }
         sla_deadline_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes (formulas §18.1). Null on a terminal lead, which owes no first response.' }
         sla_state:
           type: [string, 'null']
@@ -42913,7 +43029,7 @@ components:
         set_by: { type: string, format: uuid }
         set_at: { type: string, format: date-time }
         superseded_at: { type: [string, 'null'], format: date-time }
-        superseded_by: { type: [string, 'null'], description: 'Names the auto source that took over, so the rep sees WHAT replaced their estimate.' }
+        superseded_by: { type: [string, 'null'], description: 'Names the auto source that took over, so the rep sees what replaced their estimate.' }
 
     LeadManualSignalListResponse:
       type: object
@@ -42976,13 +43092,13 @@ components:
           description: 'The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.'
         resolution_confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
         resolved_company_id: { type: [string, 'null'], format: uuid, description: The company the raw signal resolved to (the only required attribution level). }
-        resolved_contact_id: { type: [string, 'null'], format: uuid, description: 'Optional contact resolution — set only under a recorded consent grant, never inferred.' }
+        resolved_contact_id: { type: [string, 'null'], format: uuid, description: 'Optional contact resolution, set only under a recorded consent grant and never inferred.' }
         severity: { type: string, enum: [info, warn, urgent], default: info }
         summary: { type: string }
         evidence:
           type: array
           items: { $ref: '#/components/schemas/SignalEvidence' }
-          description: Per-claim evidence (evidence-or-omit, features/07 §11 gate 1).
+          description: Per-claim evidence; a claim without evidence is omitted.
         status: { type: string, enum: [open, acknowledged, resolved, dismissed], default: open }
         detected_at: { type: string, format: date-time }
         source: { type: string }
@@ -43228,13 +43344,21 @@ components:
             evaluated (health `invalid`). Never the list's whole size.
         health:
           type: string
-          enum: [ok, ownerless, invalid, retired_field]
+          enum: [ok, ownerless, invalid, retired_field, retired_tag]
           description: >-
             `ownerless` when nobody looks after the list — no steward, or one who can no longer
             sign in — so somebody should take it over. `invalid` when a Live List's filter no
             longer compiles. `retired_field` when a Live List's filter names a custom field that
             has been retired: the list still evaluates on the kept values, and its steward should
-            replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
+            replace the clause. `retired_tag` when a Live List's filter names a tag that has been
+            archived or merged away: that tag no longer matches any record, so a clause on it selects
+            nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which
+            outranks `retired_field`, which outranks `retired_tag`.
+        retired_tags:
+          type: array
+          items: { type: string, format: uuid }
+          description: >-
+            The archived or merged-away tags a Live List's filter names. Absent when it names none.
         retired_fields:
           type: array
           items: { type: string }
@@ -44786,7 +44910,7 @@ components:
         query:
           type: object
           additionalProperties: true
-          description: The saved column choice, sort, and filter state (§13.5 vocabulary); persisted verbatim and restored exactly.
+          description: The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim.
         version: { type: integer, format: int64, description: Optimistic-concurrency version; echo it in If-Match on update. }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -46523,8 +46647,7 @@ components:
           type: [string, 'null']
           maxLength: 2000
           description: |
-            What the rep says about the room they have — "two days at the conference" — which
-            is the half of capacity no query can know. It stands beside `capacity`, which is
+            What the rep says about the room they have ("two days at the conference"), which is the half of capacity no query can know. It stands beside `capacity`, which is
             counted, and never replaces it.
 
             Null and empty carry the same distinction as `risks`.
@@ -46834,7 +46957,7 @@ components:
           type: integer
           format: int64
           description: >-
-            The row's optimistic-concurrency version (`RowVersion` semantics, data-model §1.3a).
+            The row's optimistic-concurrency version (`RowVersion` semantics).
             Spelled inline rather than as a `$ref` because this one is REQUIRED and a `$ref`
             renders optional in the generated clients: the editor must always have a version to
             echo in `If-Match`, and an optional one would let a client omit the guard by
@@ -47194,7 +47317,7 @@ components:
           type: string
           enum: [key, activity, addresses, counterparty, participants, size]
           description: |
-            Which check refused the record — the core's closed vocabulary
+            Which check refused the record, from the core's closed vocabulary
             (`extension.RecordRefusal`), one per check the ingress grammar runs. It is what
             names the mapping to fix: "every record fails its participants" is a different
             bug from "every record fails its key".
@@ -47455,7 +47578,7 @@ components:
         object:
           type: string
           enum: [contact, company, deal, lead, project, contract]
-          description: The existing core object this field is added to (CUSTOM-FIELDS-PARAM-2).
+          description: The existing core object this field is added to.
         label: { type: string, description: Display label; the only thing a rename updates. }
         slug: { type: string, description: Admin-facing key the column_name derives from. }
         type:
@@ -47465,14 +47588,12 @@ components:
         status:
           type: string
           enum: [active, retired]
-          description: 'retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).'
+          description: 'retired = soft: hidden from the API and filtering, column and values preserved.'
         column_name:
           type: string
           readOnly: true
           description: >-
-            Server-derived, `cf_`-prefixed, slug-derived physical column identifier
-            (CUSTOM-FIELDS-PARAM-3) — never client-supplied, immutable once live, stable
-            across rename.
+            Server-derived, `cf_`-prefixed, slug-derived physical column identifier: never client-supplied, immutable once live, stable across rename.
         currency:
           type: [string, 'null']
           pattern: '^[A-Z]{3}$'
@@ -47480,7 +47601,7 @@ components:
         options:
           type: [array, 'null']
           items: { type: string }
-          description: Allowed picklist values; present (non-empty) when `type=picklist` (CUSTOM-FIELDS-PARAM-5), null otherwise.
+          description: Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
         created_by: { type: string, format: uuid }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -47488,8 +47609,7 @@ components:
           type: [string, 'null']
           format: date-time
           description: >-
-            Base envelope field (DM-CONV-3); stays null even when `status=retired` — retire
-            is a status flip, not an archive.
+            Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
         version: { $ref: '#/components/schemas/RowVersion' }
 
     CustomFieldLiveLists:
@@ -47611,6 +47731,25 @@ components:
           $ref: '#/components/schemas/HistoryEdge'
         undoable:
           $ref: '#/components/schemas/Undoability'
+        left_behind:
+          type: array
+          description: >-
+            Set on the answer to putting back an archive, and omitted everywhere else: what the
+            archive took down with the record that the restore could not bring back (a link the
+            record's owner has since replaced, a list or tag archived in between). One entry per
+            thing, by kind only: a caller allowed to restore the record is not thereby allowed to
+            read a list, tag or link, so no id is returned. Absent means nothing was left.
+          items: { $ref: '#/components/schemas/RestoreLeftBehind' }
+
+    RestoreLeftBehind:
+      type: object
+      description: One thing a restore of an archive could not bring back with the record.
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [contact_email, contact_phone, contact_channel_identity, relationship, company_domain,
+                 company_relationship_type, partner, list, tag]
 
     HistoryEdge:
       type: [object, 'null']
@@ -48598,11 +48737,11 @@ components:
         retrieved_at:
           type: [string, 'null']
           format: date-time
-          description: When the source was last actually read (PO-DDL-N-2, ADR-0085). Distinct from captured_at, which is when we first recorded the claim.
+          description: When the source was last read. Distinct from captured_at, which is when we first recorded the claim.
         verified_at:
           type: [string, 'null']
           format: date-time
-          description: When a human last confirmed this claim (PO-DDL-N-2). Paired with verified_by — a verification without an actor describes a confirmation nobody made.
+          description: When a human last confirmed this claim. Paired with verified_by — a verification without an actor describes a confirmation nobody made.
         verified_by:
           type: [string, 'null']
           readOnly: true
@@ -48660,11 +48799,11 @@ components:
         retrieved_at:
           type: [string, 'null']
           format: date-time
-          description: When the source was last actually read (PO-DDL-N-2, ADR-0085). Distinct from captured_at, which is when we first recorded the claim.
+          description: When the source was last read. Distinct from captured_at, which is when we first recorded the claim.
         verified_at:
           type: [string, 'null']
           format: date-time
-          description: When a human last confirmed this claim (PO-DDL-N-2). Paired with verified_by — a verification without an actor describes a confirmation nobody made.
+          description: When a human last confirmed this claim. Paired with verified_by — a verification without an actor describes a confirmation nobody made.
         verified_by:
           type: [string, 'null']
           readOnly: true
@@ -49493,8 +49632,7 @@ components:
           type: [string, 'null']
           format: uuid
           description: |
-            The act that staged this proposal together with its siblings — today, a website read's
-            company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
+            The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
             bundle entity, and every member keeps its own diff hash, version pin, expiry and
             verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
             `POST /approval-bundles/{bundle_id}/approve|reject`, or any member on its own.
@@ -49540,8 +49678,7 @@ components:
         effect_failure:
           type: [string, 'null']
           description: |
-            The sentence a reader is shown about that failure — written for them, never
-            copied from the executor's error. Present exactly when `effect_failed_at` is.
+            The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is.
         created_at: { type: string, format: date-time }
 
     ApproveRequest:
@@ -49744,15 +49881,15 @@ components:
             for a seat that reads partners but not their commercial terms). A named field is null
             because it is withheld, not because it is empty; absent or empty means nothing is
             withheld.
-        partner_role: { type: string, enum: [hosting, consulting, strategic], description: Functional role (ADR-0034); implementation + dev are Margince's turf. }
+        partner_role: { type: string, enum: [hosting, consulting, strategic], description: Functional role; implementation + dev are Margince's turf. }
         cert_status: { type: string, enum: [applied, certified, suspended] }   # data-model §4.3 CHECK
-        margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25], description: Scenario-C margin tier (business/14-partner-program.md; data-model §4.3 CHECK). }
+        margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25], description: The partner's margin tier; the allowed values are in the table's CHECK constraint. }
         gate_metrics: { type: [object, 'null'], additionalProperties: true, description: 'Program gate metrics (certified seats, CSAT, ...).' }
         relationship_stage: { type: string, enum: [research, identified, contacted, in_conversation, fit_confirmed, agreement_pending, active, active_referring, dormant, no_fit], default: research }
         partner_fit_score: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.' }
         partner_fit_score_computed: { type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.' }
         partner_fit_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.' }
-        relationship_health: { type: [string, 'null'], description: 'Decimal-as-string 0..1 derived by formulas §16; basis for 30/60/90 partner dormancy flags.' }
+        relationship_health: { type: [string, 'null'], description: 'Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.' }
         last_contact_at: { type: [string, 'null'], format: date-time }
         next_step: { type: [string, 'null'] }
         next_step_due_at: { type: [string, 'null'], format: date }
@@ -49848,7 +49985,7 @@ components:
           description: The Art. 6 basis this window is argued from, for the auditor reading the row.
         enabled:
           type: boolean
-          description: A disabled policy is preserved and inert — the way to pause a rule without losing its window.
+          description: A disabled policy is preserved and inert, which is the way to pause a rule without losing its window.
         suppressed_by_posture:
           type: boolean
           description: |
@@ -50487,7 +50624,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         kind: { type: string, enum: [access, rectify, erasure] }
-        subject_ref: { type: string, description: 'The data subject — a contact id or external identifier.' }
+        subject_ref: { type: string, description: 'The data subject: a contact id or external identifier.' }
         status: { type: string, enum: [open, in_progress, fulfilled, rejected] }
         due_at: { type: string, format: date-time, description: 'Statutory deadline (e.g. 30 days).' }
         assignee_id: { type: [string, 'null'], format: uuid }
@@ -51391,7 +51528,7 @@ components:
         name: { type: string }
         sku: { type: [string, 'null'], description: Optional; unique per workspace while live. }
         description: { type: [string, 'null'] }
-        unit: { type: string, description: "'unit' | 'hour' | 'day' | … — display only, free text." }
+        unit: { type: string, description: "'unit' | 'hour' | 'day' | …; display only, free text." }
         unit_price_minor: { type: integer, format: int64, description: Integer minor units (P11); no float money. }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
@@ -52045,8 +52182,8 @@ components:
         id: { type: string, format: uuid }
         name: { type: string, description: Unique per workspace among live (non-archived) templates. }
         locale: { type: string, default: de-DE, description: 'DE/EN at launch (de-DE, en-US); drives the rendered PDF label set.' }
-        is_default: { type: boolean, default: false, description: At most one default template per locale (partial unique index; OFFER-DDL-4). }
-        layout: { type: object, additionalProperties: true, description: 'Logo/header/footer/terms-block refs — bounded params, not a CMS.' }
+        is_default: { type: boolean, default: false, description: At most one default template per locale (partial unique index). }
+        layout: { type: object, additionalProperties: true, description: 'Logo/header/footer/terms-block refs: bounded params rather than a CMS.' }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -52092,7 +52229,7 @@ components:
         description: { type: string }
         unit: { type: string }
         quantity: { type: number, format: double, description: 'Up to 3 decimal places (numeric 14,3); must be > 0.' }
-        unit_price_minor: { type: integer, format: int64, description: Snapshot — never re-read from product after creation. }
+        unit_price_minor: { type: integer, format: int64, description: Snapshot; never re-read from product after creation. }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         interval_count: { type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.' }
@@ -52101,8 +52238,8 @@ components:
         line_net_minor: { type: integer, format: int64, readOnly: true, description: 'round(qty × unit_price × (1 − discount_pct/100)) — server-computed.' }
         line_tax_minor: { type: integer, format: int64, readOnly: true, description: 'round(line_net × tax_rate/100) — server-computed.' }
         line_total_minor: { type: integer, format: int64, readOnly: true, description: line_net + line_tax — server-computed. }
-        evidence: { type: [object, 'null'], additionalProperties: true, description: '{snippet, source_id} when AI-drafted (evidence-or-omit, features/07).' }
-        price_grounded: { type: boolean, readOnly: true, default: true, description: 'false only for an AI-proposed line whose price could not be grounded in conversation evidence or the rate card (unit_price_minor is 0 in that case — an honest sentinel, never a guessed value); true for every human-entered or grounded line.' }
+        evidence: { type: [object, 'null'], additionalProperties: true, description: '{snippet, source_id} when AI-drafted; an AI-drafted line without evidence is omitted.' }
+        price_grounded: { type: boolean, readOnly: true, default: true, description: 'false only for an AI-proposed line whose price could not be grounded in conversation evidence or the rate card (unit_price_minor is 0 in that case: a sentinel, never a guessed value); true for every human-entered or grounded line.' }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -52124,9 +52261,9 @@ components:
         valid_until: { type: [string, 'null'], format: date }
         intro_text: { type: [string, 'null'] }
         terms_text: { type: [string, 'null'] }
-        net_minor: { type: integer, format: int64, readOnly: true, description: 'Σ line nets — derived, never client-set.' }
-        tax_minor: { type: integer, format: int64, readOnly: true, description: 'Σ line taxes — derived, never client-set.' }
-        gross_minor: { type: integer, format: int64, readOnly: true, description: 'net + tax — derived, never client-set.' }
+        net_minor: { type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set.' }
+        tax_minor: { type: integer, format: int64, readOnly: true, description: 'Σ line taxes; derived, never client-set.' }
+        gross_minor: { type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set.' }
         arr_minor: { type: integer, format: int64, readOnly: true, description: 'The annualized NET value of this offer''s recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.' }
         net_tcv_minor: { type: integer, format: int64, readOnly: true, description: 'The total the buyer commits to: one-off lines in full, plus each recurring line''s per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.' }
         fx_rate_to_base: { type: [string, 'null'], readOnly: true, description: 'Native→base, frozen at send (RT-PR-C2). Decimal-as-string to avoid float rounding.' }
@@ -52971,7 +53108,7 @@ components:
         period_end:
           type: string
           format: date
-          description: The last day INSIDE the window, not an exclusive bound.
+          description: The last day inside the window (an inclusive bound).
         opening_landing_minor:
           type: integer
           format: int64
@@ -53953,7 +54090,7 @@ components:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
             The version of the row this item's own verbs write to, present where it names one — a
-            task today. Carried for the reason `email_summary` carries one: a lane that offers
+            task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
             `complete` and `snooze` has to name the row those presses condition on, or two contacts
             acting on one task each overwrite the other and neither is told.
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
@@ -54281,6 +54418,46 @@ components:
             something to tell a reader, and a client inferring the headings from the rows it
             received could not say it. The queue arrives sorted so each band's rows are
             labelled in ranked order — a client draws a heading where the band changes.
+        plan_coverage:
+          $ref: '#/components/schemas/WorklistPlanCoverage'
+
+    WorklistPlanCoverage:
+      type: object
+      description: |
+        Whose weekly plans this read looked at, present only when `scope` is `team` and the
+        due commitments were read across the team roster. Absent under every other scope.
+
+        It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+        could not be read contributes no rows, and without this a lead would read their
+        silence as a week with nothing owed.
+      required: [members, truncated]
+      properties:
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistPlanCoverageMember' }
+          description: |
+            One entry per member of the roster as read (up to its cap), in roster order —
+            including a teammate whose plan was never asked for because the team read ran
+            out of time, who reads as `read: false`.
+        truncated:
+          type: boolean
+          description: |
+            True when the roster came back at its cap, so teammates past it were never asked
+            for a plan at all — the same admission `scope_truncated` makes for the page.
+
+    WorklistPlanCoverageMember:
+      type: object
+      description: One teammate and whether their weekly plan was read.
+      required: [user_id, display_name, read]
+      properties:
+        user_id: { type: string, format: uuid, description: 'Whose plan this entry is about.' }
+        display_name: { type: string, description: 'The teammate, as the roster names them.' }
+        read:
+          type: boolean
+          description: |
+            True when the plan was read, whether or not anything in it was due. False when the
+            read failed, was refused, or was never made because the team read ran out of time,
+            so this teammate's commitments are unknown rather than absent.
 
     WorklistReach:
       type: object
@@ -54514,6 +54691,10 @@ components:
             ordered by display name. Never empty: a caller on no team is their own single
             row, because "only you" and "nobody" are different answers and the second reads
             as an outage.
+
+            For a named team (`team`), invited seats that have not signed in yet appear
+            too, marked by `activation`, so a lead sees who is on the team rather than only
+            who has arrived.
         unassigned:
           $ref: '#/components/schemas/TeamBoardCounts'
           description: |
@@ -54534,7 +54715,7 @@ components:
     TeamBoardMember:
       type: object
       description: One teammate and the work they are answerable for.
-      required: [user_id, display_name, counts]
+      required: [user_id, display_name, activation, counts]
       properties:
         user_id:
           type: string
@@ -54543,6 +54724,12 @@ components:
             Whose row this is. It is what `GET /worklist?owner=` takes, which is the
             drill-down the board routes to.
         display_name: { type: string, description: 'The teammate, as the roster names them.' }
+        activation:
+          type: string
+          enum: [active, invited]
+          description: |
+            `invited` is a seat that has not signed in yet. Its workload is not measured, so
+            its `counts` carry no meaning — a client draws "not measured" for it, never zero.
         counts: { $ref: '#/components/schemas/TeamBoardCounts' }
 
     TeamBoardCounts:
@@ -55345,6 +55532,8 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
+        company:
+          $ref: '#/components/schemas/WorklistCompanyFacts'
         host:
           allOf:
             - $ref: '#/components/schemas/WorklistOwner'
@@ -55887,7 +56076,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
@@ -56109,17 +56298,37 @@ components:
             Absent where the contact has no current employer, or where this caller may
             not read the employment or the company. Absent never means "works nowhere".
 
+    WorklistCompanyFacts:
+      type: object
+      description: |
+        The account behind the row, and how the silence runs both ways, so a reader
+        knows whether the account or we wrote last before choosing a verb.
+
+        Present on every row whose `subject` is a company. Absent on a row about
+        anything else — a contact's row names its human in `contact`, and the account
+        that human works for is not this row's subject.
+
+        The `id` is the producer's claim and always travels. The moments are the
+        READER's, filled under their own grants, and absent where the reader may not
+        have them, which is not the same as never.
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        touch:
+          $ref: '#/components/schemas/WorklistContactTouch'
+
     WorklistContactTouch:
       type: object
       description: |
         When they last wrote to us and when we last wrote to them — the same two dates,
-        over the same walk, that the contact's own page reports as `last_inbound_at` and
-        `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-        who wrote last.
+        over the same walk, that the record's own page reports: the contact page's
+        `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+        engagement strip for an account. A queue row and the record it opens cannot
+        disagree about who wrote last.
 
         Absent from the row when the caller may not read activity, or may not read this
-        contact: a withheld answer. Present with both nulls for a contact nobody has ever
-        exchanged a message with.
+        contact or account: a withheld answer. Present with both nulls for a record
+        nobody has ever exchanged a message with.
       required: [last_inbound_at, last_outbound_at]
       properties:
         last_inbound_at: { type: [string, 'null'], format: date-time, description: 'When they last wrote to us. Null means nothing inbound was ever captured.' }
@@ -56209,12 +56418,19 @@ components:
           minimum: 0
           maximum: 1
           description: >-
-            The grounding floor: the cosine a passage must reach before it may be
-            cited at all. It removes what is obviously far and is NOT what tells a
-            covered question from an uncovered one — cosine is not calibrated across
-            embedding models, and under some bindings no value separates the two. A
-            reader is told what read the passages by generated_by and by the
-            unreviewed outcome.
+            The grounding floor in force: the cosine a passage must reach before it
+            may be cited at all. It is this corpus's own override when
+            min_similarity_overridden is true, else the floor measured for the
+            embedding binding that reads the corpus (0 where that binding has none).
+            The floor removes what is obviously far and is NOT what tells a covered
+            question from an uncovered one — cosine is not calibrated across embedding
+            models, and under some bindings no value separates the two. A reader is
+            told what read the passages by generated_by and by the unreviewed outcome.
+        min_similarity_overridden:
+          type: boolean
+          description: >-
+            True when min_similarity is this corpus's own number rather than the
+            binding's measured floor. An override may sit below the measured floor.
         default_ask:
           type: boolean
           description: The corpus the command palette's ask lands on. At most one per workspace.

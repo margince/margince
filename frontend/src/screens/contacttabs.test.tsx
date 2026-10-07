@@ -337,6 +337,35 @@ describe("the deals tab", () => {
     ).toBeNull();
   });
 
+  // A seat may record no role — the schema requires one only for
+  // billing_contact — so the row shows the name with nothing where the role
+  // would be, rather than a word the data does not support.
+  it("names a committee member whose seat records no role", () => {
+    const noRole: Contact360 = {
+      ...view,
+      commercial: {
+        deal: { deal_id: "d-1", title: "Fleet renewal 2026" },
+        role: null,
+        committee: [
+          { contact_id: "c-2", full_name: "Sacha Brandt", role: "" },
+          { contact_id: "c-3", full_name: "Rae Toft", role: "champion" },
+        ],
+      },
+    };
+    withProviders(<ContactDealsTab view={noRole} />);
+    // The row carries the name and NO role caption — not a word standing in for
+    // one, which is what a reader would have to trust otherwise.
+    const row = screen
+      .getByText("Sacha Brandt")
+      .closest(".pe-deal-card-committee-row");
+    expect(row).toBeTruthy();
+    expect(row?.querySelector(".t-caption")).toBeNull();
+    // The roled seat beside it still reads: one roleless seat took the whole
+    // list down before, so this says the list survived rather than emptied.
+    expect(screen.getByText("Rae Toft")).toBeTruthy();
+    expect(screen.getByText("Champion")).toBeTruthy();
+  });
+
   it("does not report an absent grant as an absence of deals", () => {
     withProviders(<ContactDealsTab view={withheld} />);
     expect(screen.queryByText(/not recorded on any deal/)).toBeNull();

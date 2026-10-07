@@ -185,7 +185,7 @@ function AddConnectionDialog({
   const t = useT();
   const headingId = useId();
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <div className="form-stack">
         <Heading size="large" id={headingId} className="t-h2">
           {t("connectors.addConnection")}

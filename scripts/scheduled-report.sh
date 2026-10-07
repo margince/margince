@@ -105,12 +105,15 @@ resolve() {
     return
   fi
   echo "green again — closing #$existing"
+  # A failed close is counted, not raised: under `set -e` a bare failure here
+  # would end the run before the arms below it file what they measured.
   gh issue close "$existing" --repo "$REPO" --reason completed \
     --comment "Green on the $(date -u +%Y-%m-%d) run: $RUN_URL
 
 Closed by the lane that filed it, which re-ran and passed. If this issue was
 about something the run does not measure, reopen it — the close means the check
-is green, not that every question on the thread was answered."
+is green, not that every question on the thread was answered." ||
+    unreported=1
 }
 
 # Each report is attempted independently. Under `set -e` a bare call would abort
@@ -190,7 +193,27 @@ elif [[ "${RENOVATE_RESULT:-}" = "success" ]] || [[ "${RENOVATE_OUTCOME:-}" = "q
   resolve "the Renovate liveness check could not run"
 fi
 
-if [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+# Two measured verdicts, two titles, because they send somebody to different
+# places: a stopped bot is a Mend account or installation question, a stalled
+# one is a question about the PRs it already opened. Each retracts the other.
+if [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]] && [[ "${RENOVATE_STATUS:-}" = "STALLED" ]]; then
+  resolve "Renovate has stopped running against main"
+  report "Renovate is running but opens no pull requests" "priority: high,area: ci-tests,bug" \
+"The liveness check read \`STALLED\` on the scheduled run: $RUN_URL
+
+Renovate runs and rewrites its dashboard, but has opened no pull request within
+the budget while updates wait under **Rate-Limited** on it. Its open PRs fill
+\`prConcurrentLimit\` and none of them can merge, so nothing new is raised —
+\`lockFileMaintenance\` included, which is the only mechanism that adopts a fix
+for a lockfile-only transitive advisory.
+
+Find out why the open Renovate PRs cannot merge. A status check stuck at pending
+is the usual cause; \`renovate/stability-days\` never passes for an update with
+no release date unless \`minimumReleaseAgeBehaviour\` lets it through. A major
+never automerges and holds its slot until somebody closes or takes it."\
+    || unreported=1
+elif [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+  resolve "Renovate is running but opens no pull requests"
   report "Renovate has stopped running against main" "priority: high,area: ci-tests,bug" \
 "The liveness check read \`${RENOVATE_STATUS:-unknown}\` on the scheduled run:
 $RUN_URL
@@ -202,16 +225,19 @@ argues that at length. While the bot is quiet that mechanism is gone, and
 nothing else in this repository will say so: no lane reddens and no pull request
 is blocked.
 
-\`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means it has
-never run here at all, which is what an installation bound to a previous owner or
-repository name looks like — check the GitHub App installation before looking
-at the config, because a bad \`renovate.json\` files a config-warning issue
+\`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means no
+dashboard issue exists: first check that \`dependencyDashboard\` is not switched
+off in \`renovate.json\`, since that alone removes it. Otherwise, read the job
+history on the Mend portal (developer.mend.io) before anything on GitHub: jobs
+finishing with nothing here means the account is in Silent mode, no jobs means
+an installation problem. A bad \`renovate.json\` files a config-warning issue
 rather than going silent.
 
 The job log names the last act it could find and its date."\
     || unreported=1
 elif [[ "${RENOVATE_RESULT:-}" = "success" ]]; then
   resolve "Renovate has stopped running against main"
+  resolve "Renovate is running but opens no pull requests"
 fi
 
 if [[ "${LANE_RESULT:-}" = "failure" ]]; then
@@ -692,6 +718,6 @@ close it; the record is the point."\
 fi
 
 if [[ "$unreported" -ne 0 ]]; then
-  echo "FAIL: at least one finding could not be filed — the run above names what was broken, but an issue for it does not exist" >&2
+  echo "FAIL: at least one finding could not be filed or retracted — the run above names which, and the tracker does not yet say so" >&2
   exit 1
 fi

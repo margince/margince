@@ -159,6 +159,60 @@ func TestAGroupedSearchShowsTheAccountThatNotesNamingItOutrank(t *testing.T) {
 	}
 }
 
+// "philip" is still being typed, so it matches as a prefix and reaches every
+// Philipp too. The one contact named Philip is seeded last, so his id sorts
+// last and a tie broken by id alone would leave him off a page of three.
+func TestAnExactNameOutranksLongerNamesSharingItsPrefix(t *testing.T) {
+	e := SetupSearch(t)
+	var seeded []ids.UUID
+	for _, name := range []string{"Philipp Adler", "Philipp Brandt", "Jan Philipp Claes", "Philip Dorn"} {
+		seeded = append(seeded, e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name))
+	}
+	philip := seeded[len(seeded)-1]
+	if !slices.IsSortedFunc(seeded, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) }) {
+		t.Fatalf("the ids %v do not sort in seeding order, so an id tie-break would not drop Philip Dorn", seeded)
+	}
+
+	perType := 3
+	grouped, err := e.Store.Search(e.Admin(), search.Input{Query: "philip", Types: []string{"contact"}, PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(grouped.Hits) != 3 || grouped.Hits[0].ID != philip {
+		t.Fatalf("grouped page = %+v, want Philip Dorn first of three", grouped.Hits)
+	}
+
+	ranked, err := e.Store.Search(e.Admin(), search.Input{Query: "philip", Types: []string{"contact"}, Limit: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ranked.Hits) != 3 || ranked.Hits[0].ID != philip {
+		t.Fatalf("ranked page = %+v, want Philip Dorn first of three", ranked.Hits)
+	}
+}
+
+// English notes stem "study" and "studies" alike, so both match "study"; only
+// one carries the word itself, and it leads although the other repeats its own
+// in the subject as well as the body, which ranks it higher.
+func TestAWholeWordOutranksAWordSharingOnlyItsStem(t *testing.T) {
+	e := SetupSearch(t)
+	literal := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
+		VALUES ($1, 'note', 'Kickoff', 'We agreed on a pilot study.', 'en', 'manual', 'human:x')`)
+	stemmed := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
+		VALUES ($1, 'note', 'Case studies', 'More studies, studies and studies.', 'en', 'manual', 'human:x')`)
+
+	page, err := e.Store.Search(e.Admin(), search.Input{Query: "study", Types: []string{"activity"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Hits) != 2 || page.Hits[1].ID != stemmed {
+		t.Fatalf("hits = %+v, want both notes, the one saying only \"studies\" second", page.Hits)
+	}
+	if page.Hits[0].ID != literal {
+		t.Fatalf("hits = %+v, want the note saying \"study\" first", page.Hits)
+	}
+}
+
 func TestSearchHitsCarryTheCallersRowScope(t *testing.T) {
 	e := SetupSearch(t)
 	// A contact is readable by every seat with the grant; a capture-private

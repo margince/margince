@@ -1,21 +1,17 @@
-# Search & retrieval — two arms, one row scope, two kinds of staleness
+# Search & retrieval: two arms, one row scope, two kinds of staleness
 
-Search is how a typed query becomes a ranked list of records — and, one seam
-deeper, how the AI layers ground their answers in the workspace's own data.
+Search is how a typed query becomes a ranked list of records and, one seam deeper, how the AI layers
+ground their answers in the workspace's own data.
 
-Two independent rankings run per query: a **lexical** arm (Postgres full-text
-search over generated `search_tsv` columns) and a **vector** arm (semantic
-similarity over pgvector embeddings), fused into one list by reciprocal rank
-fusion. The rule that governs both: a search hit *is* a read, so the caller's
-row-scope authority is compiled **into** the query rather than applied to its
-results.
+Two independent rankings run per query: a **lexical** arm (Postgres full-text search over generated
+`search_tsv` columns) and a **vector** arm (semantic similarity over pgvector embeddings), fused into
+one list by reciprocal rank fusion. The rule that governs both: a search hit *is* a read, so the
+caller's row-scope authority is compiled **into** the query rather than applied to its results.
 
-The second half of this page is the part that is easy to get wrong: an embedding
-store can be stale in two different ways, and only one of them is a human's
-decision. Where the embed lane's model comes from is
-[ai-runtime.md](ai-runtime.md); who may see a row is
-[authorization.md](authorization.md); the who-knows-whom projection this page
-only borrows from is [relationship-graph.md](relationship-graph.md).
+The second half covers the part that is easy to get wrong: an embedding store can be stale in two
+different ways, and only one of them is a human's decision. Where the embed lane's model comes from
+is [ai-runtime.md](ai-runtime.md); who may see a row is [authorization.md](authorization.md); the
+who-knows-whom projection used here is [relationship-graph.md](relationship-graph.md).
 
 ## The shape at a glance
 
@@ -44,371 +40,319 @@ only borrows from is [relationship-graph.md](relationship-graph.md).
                          ranked hits (fused score)
 ```
 
-- **Nine searchable entity types**, declared once in `searchBranches`: `contact`,
-  `company`, `deal`, `lead`, `project`, `product`, `offer_template`, `tag`,
-  `activity`. Adding a searchable entity is a row there (plus the matching
-  `embedText` / `pendingSources` entries) — the query builder derives the rest,
-  and `SearchedTables()` is what the structural GIN proof asks about, so a
-  branch added without an index fails rather than going unexamined.
-- **Two of them carry no owner.** `product` and `offer_template` are the price
-  list and the offer layouts: one catalog the whole workspace sells from, so
-  they declare `workspaceWide` and the OBJECT grant is the whole of the gate.
-  `tag` is `workspaceWide` for the same reason and `textOnly` besides — a word
-  has no record shape to plan a query over, no neighbours to walk and no prose
-  to embed, which is why it alone is not a context anchor.
-- **`active` is not a discovery narrowing.** A discontinued product still stands
-  on last quarter's offers, and a rep looking one up is usually holding one of
-  them; `archived_at`, which every branch carries, is the liveness question that
-  does bear on being found.
-- **The lexical arm** ranks with `ts_rank_cd` over each table's generated
-  `search_tsv` column, and pages by a keyset cursor on `(score DESC, rtype, id)`
-  so the page boundary is stable under concurrent writes. Name fields parse
-  `simple` and unaccented (`Muller` finds `Müller`, migration `0052`), OR-ed with
-  the apostrophe-collapsed parse (`oreilly` finds `O'Reilly`, migration `0077`);
-  the activity branch additionally ORs the German and English stemmed parses, so
-  `Vertrag` reaches a row that stemmed `Verträge`.
-- **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`, ranked
-  by cosine distance (`<=>`) and always filtered to the current embed identity
-  (next section). Migration `0114` dropped the HNSW index deliberately — the
-  identity-filtered per-branch query sequential-scans, and an index over a
-  mixed-width column would not have been usable anyway.
-- **Fusion is RRF**, `k = 60` (`rrfK`, ADR-0022 §6): each lane contributes
-  `1/(k + rank)`, so an entity both lanes agree on outranks either lane's solo
-  favourite. Both lanes are over-fetched to `3 × limit` — an entity ranked just
-  past `limit` in each lane can still fuse into the top set — and each returned
-  hit's `Score` is the **fused** score, not the lane score it arrived with.
-- **The vector arm degrades honestly.** A nil embedder and a bound embedder whose
-  `EmbedIdentity()` is `""` are the same shape from the query side: no live embed
-  lane to rank against, so the fused path returns the lexical lane alone rather
-  than calling into an unbound `Embed()`. A zero query vector is refused for a
-  different reason — cosine against zero is `0/0 = NaN`, and a naive
-  `ORDER BY sim DESC` sorts NaN *first*, silently outranking every real match.
-  The same guard sits on the write side: a zero vector never reaches storage.
+- **The searchable entity types** are declared once in `searchBranches`: `contact`, `company`,
+  `deal`, `lead`, `project`, `product`, `offer_template`, `tag`, `activity`. Adding a searchable
+  entity is a row there (plus the matching `embedText` / `pendingSources` entries); the query builder
+  derives the rest. `SearchedTables()` is what the structural GIN proof asks about, so a branch added
+  without an index fails rather than going unexamined.
+- **Three of them carry no owner**: `product`, `offer_template` and `tag`. `product` and
+  `offer_template` are the price list and the offer layouts, one catalog the whole workspace sells
+  from, so they declare `workspaceWide` and the object grant is the whole of the gate. `tag` is
+  `workspaceWide` for the same reason and `textOnly` besides. A word has no record shape to plan a
+  query over, no neighbours to walk and no prose to embed, which is why it alone is not a context
+  anchor.
+- **`active` does not narrow discovery.** A discontinued product still stands on last quarter's
+  offers, and a rep looking one up is usually holding one of them. `archived_at`, which every branch
+  carries, is the liveness question that does bear on being found.
+- **The lexical arm** ranks with `ts_rank_cd` over each table's generated `search_tsv` column, and
+  pages by a keyset cursor on `(score DESC, rtype, id)` so the page boundary is stable under
+  concurrent writes. Name fields parse `simple` and unaccented (`Muller` finds `Müller`), OR-ed with
+  the apostrophe-collapsed parse (`oreilly` finds `O'Reilly`). The activity branch also ORs the
+  German and English stemmed parses, so `Vertrag` reaches a row that stemmed `Verträge`.
+- **A whole word outranks a prefix.** The word still being typed matches as a prefix, so `philip`
+  reaches both Philip and Philipp, and `ts_rank_cd` scores them alike. `scoreExpression` therefore
+  normalises the rank into `[0, 1)`. It adds 1 when the record carries that word whole, unstemmed,
+  in any field it indexes. A whole-word hit then ranks above every hit the prefix alone supports,
+  so a per-type cap of three cannot drop Philip on an id tie.
+- **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`, ranked by cosine distance
+  (`<=>`) and always filtered to the current embed identity (next section). There is no HNSW index:
+  the identity-filtered per-branch query sequential-scans, and an index over a mixed-width column
+  would not be usable anyway.
+- **Fusion is RRF**, `k = 60` (`rrfK`): each lane contributes `1/(k + rank)`, so an entity both
+  lanes agree on outranks either lane's solo favourite. Both lanes are over-fetched to `3 × limit`,
+  because an entity ranked just past `limit` in each lane can still fuse into the top set. Each
+  returned hit's `Score` is the **fused** score rather than the lane score it arrived with.
+- **The vector arm falls back to lexical.** A nil embedder and a bound embedder whose
+  `EmbedIdentity()` is `""` are the same shape from the query side: no live embed lane to rank
+  against. The fused path then returns the lexical lane alone rather than calling into an unbound
+  `Embed()`. A zero query vector is refused for a different reason. Cosine against zero is
+  `0/0 = NaN`, and a naive `ORDER BY sim DESC` sorts NaN *first*, silently outranking every real
+  match. The same guard sits on the write side: a zero vector never reaches storage.
 
-**Two entry points, and they are not the same query.** `GET /v1/search` runs the
-**lexical arm alone** (`Store.Search`) — ranked, cursor-paged, every result
-stamped `trust_tier: authoritative` (the provenance grade the contract puts on
-natively-held records; `external` is reserved for connector-sourced rows and is
-not emitted yet).
+**Two entry points run different queries.** `GET /v1/search` runs the **lexical arm alone**
+(`Store.Search`): ranked, cursor-paged, every result stamped `trust_tier: authoritative`. That is the
+provenance grade the contract puts on natively-held records; `external` is reserved for
+connector-sourced rows and is not emitted yet.
 
-**`ts_rank_cd` does not compare across types.** A message that names an
-account in its subject and again through its body outranks the account, whose
-name is one `A`-weighted word, so a short list ranked across types can hold
-nothing but mail. `per_type=N` asks `GET /v1/search` for a **grouped** page
-instead (`groupedShape`): each admitted branch is capped at `N + 1` before the
-union, the extra row is dropped and reported in `types_with_more`, and the page
-takes no cursor or limit — narrowing to one type with `types` pages through the
-rest. The ⌘K palette (`per_type=3`) and the unnarrowed results screen
-(`per_type=5`) both ask for it, and draw an activity that carries an
-`email_summary` under **Emails**, apart from the calls and notes beside it.
+**`ts_rank_cd` does not compare across types.** Take a message that names an account in its subject
+and again through its body. It outranks the account, whose name is one `A`-weighted word, so a short list
+ranked across types can hold nothing but mail. `per_type=N` asks `GET /v1/search` for a **grouped**
+page instead (`groupedShape`). Each admitted branch is capped at `N + 1` before the union, the extra
+row is dropped and reported in `types_with_more`, and the page takes no cursor or limit; narrowing
+to one type with `types` pages through the rest. The ⌘K palette (`per_type=3`) and the unnarrowed
+results screen (`per_type=5`) both ask for it, and draw an activity that carries an `email_summary`
+under **Emails**, apart from the calls and notes beside it.
 
-**`with_employees=true` finds contacts through their employer.** A contact's
-`search_tsv` holds its name and title, never the company, so "Acme" found Acme
-and none of the contacts who work there. The flag adds one more union element,
-the **employer arm** (`employerArmSQL`), built by the store rather than declared
-in `searchBranches` — that table means one row per searchable entity to the
-vector lane, the plan compiler and two AST gates, and this is a second way to
-reach the contact type. The arm:
+**`with_employees=true` finds contacts through their employer.** A contact's `search_tsv` holds its
+name and title, never the company, so "Acme" alone would find Acme and none of the contacts who work
+there. The flag adds one more union element, the **employer arm** (`employerArmSQL`), built by the
+store rather than declared in `searchBranches`. That table means one row per searchable entity to
+the vector lane, the plan compiler and two AST gates, and this is a second way to reach the contact
+type. The arm:
 
-- **starts from the companies the company branch would return** — the same
-  match expression, `archived_at`, `NOT is_anchor` and company row scope — capped
-  to the best-matching `maxPerType` (20), so every company a grouped page can
-  show seeds its staff while a two-letter prefix or an industry word cannot fan
-  out to every employee in the workspace. The installation's own company seeds
-  no one: its staff are its employees;
-- **follows current employment only** — `kind = 'employment'`, unarchived, and
-  `employment.IsCurrentSQL`, the same reading as the company's own roster, so a
-  notice period still counts and a former job or a billing contact does not;
-- **takes three gates and refuses silently**: `contact` and `company` read,
-  the edge gate `auth.EdgeReadScope` (who works where is a fact about the pair),
-  and both row scopes. Any refusal drops the arm; the search still answers.
-  So does a query using the websearch operators, where `-acme` would match
-  nearly every company;
-- **never repeats a contact**: it excludes contacts the contact branch already
-  matches by their own text, and keeps one row per contact (`DISTINCT ON`) — the
-  best-matching employer, the primary job first. Each hit carries that company
-  as `works_at`;
-- **ranks below every own-text hit**: its score is `-1/(1+rank)`, in `[-1, 0)`,
-  under any `ts_rank_cd`, so both page shapes put a contact matched by name
-  first and the `(score, type, id)` cursor needs no second ordering. On a
-  grouped page the arm is capped like any branch and `page()` counts by type,
-  so `per_type` still bounds the contacts shown and `types_with_more` stays true.
+- **starts from the company branch's companies**: the same match expression,
+  `archived_at`, `NOT is_anchor` and company row scope, capped to the best-matching `maxPerType`
+  (20). Every company a grouped page can show seeds its staff, while a two-letter prefix or an
+  industry word cannot fan out to every employee in the workspace. The installation's own company
+  seeds no one, because its staff are its employees;
+- **follows current employment only**: `kind = 'employment'`, unarchived, and
+  `employment.IsCurrentSQL`, the same reading as the company's own roster. A notice period still
+  counts; a former job or a billing contact does not;
+- **takes three gates and refuses silently**: `contact` and `company` read, the edge gate
+  `auth.EdgeReadScope` (who works where is a fact about the pair), and both row scopes. Any refusal
+  drops the arm; the search still answers. So does a query using the websearch operators, where
+  `-acme` would match nearly every company;
+- **never repeats a contact**: it excludes contacts the contact branch already matches by their own
+  text, and keeps one row per contact (`DISTINCT ON`): the best-matching employer, the primary job
+  first. Each hit carries that company as `works_at`;
+- **ranks below every own-text hit**: its score is `-1/(1+rank)`, in `[-1, 0)`, under any
+  own-text score, which is never negative. Both page shapes therefore put a contact matched by
+  name first, and the `(score, type, id)` cursor needs no second ordering. On a grouped page the arm is capped like any
+  branch and `page()` counts by type, so `per_type` still bounds the contacts shown and
+  `types_with_more` stays true.
 
-It is opt-in because `Store.Search` has other callers: the agent retriever, the
-plan executor's `similar_to` and `HybridSearch` all reuse the lexical lane, and
-`Classify` promises to agree with it. Only the HTTP handler sets
-`Input.WithEmployees`, so those keep matching by own text alone. A company hit
-also carries `logo_url`, read for the page's companies by the contacts module's
-own reader (`contacts.CompanyLogoURLsBatch`, injected by compose) so the URL is
-spelled where the company record spells it.
+It is opt-in because `Store.Search` has other callers: the agent retriever, the plan executor's
+`similar_to` and `HybridSearch` all reuse the lexical lane, and `Classify` promises to agree with it.
+Only the HTTP handler sets `Input.WithEmployees`, so those keep matching by own text alone. A company
+hit also carries `logo_url`, read for the page's companies by the contacts module's own reader
+(`contacts.CompanyLogoURLsBatch`, injected by compose), so the URL is spelled where the company
+record spells it.
 
-The **fused** path (`Store.HybridSearch`) is
-reached through the `shared/ports/retrieval` seam (`search.Retriever`), which is
-what the AI layers ground on: `cmd/api` wires it with the resolved model path's
-embedder for the offer-draft surface, `cmd/worker` wires it as the Surface-B
-runner's grounding. The agent intent tools in `compose/registry.go` are
-constructed with a **nil** embedder on purpose — they ground on the context-graph
-walk, which needs no embed lane.
+The **fused** path (`Store.HybridSearch`) is reached through the `shared/ports/retrieval` seam
+(`search.Retriever`), which is what the AI layers ground on. `cmd/api` wires it with the resolved
+model path's embedder for the offer-draft surface; `cmd/worker` wires it as the Surface-B runner's
+grounding. The agent intent tools in `compose/registry.go` are constructed with a **nil** embedder,
+because they ground on the context-graph walk, which needs no embed lane.
 
 ## Row scope is not a filter on the results
 
-A search hit *is* a read, so the caller's authority is not applied to a result
-set — it is compiled into the query that produces it:
+A search hit *is* a read, so the caller's authority is compiled into the query that produces the
+result set:
 
-- **Object RBAC picks the branches.** `branchScope` runs
-  `auth.Require(ctx, entity, read)` per entity type; a type the role cannot read
-  contributes **no UNION branch at all**, silently and without an error, so
-  search can never out-see the per-entity lists. If every requested type is
-  denied, the answer is an empty page — not a 403 that would disclose which types
-  exist.
-- **Row scope rides the same branch.** `auth.ScopeClauseFor` (or
-  `auth.ActivityContentClause` for the activity branch's link walk) is appended to
-  that branch's `WHERE`, inside the same `database.WithWorkspaceTx` transaction.
-  Both arms use the identical helper — fusion adds no visibility of its own.
-- **The context walk gates the same way.** `anchorProfile` is the existence *and*
-  visibility gate for the whole assembly (`auth.EnsureVisible`, then a real row
-  read whose `pgx.ErrNoRows` becomes `apperrors.ErrNotFound`), and every hop-2
-  candidate is probed individually with `auth.VisibleTo`. The walk widens
-  context, never authority.
+- **Object RBAC picks the branches.** `branchScope` runs `auth.Require(ctx, entity, read)` per entity
+  type. A type the role cannot read contributes **no UNION branch at all**, silently and without an
+  error, so search can never out-see the per-entity lists. If every requested type is denied, the
+  answer is an empty page, never a 403 that would disclose which types exist.
+- **Row scope rides the same branch.** `auth.ScopeClauseFor` (or `auth.ActivityContentClause` for
+  the activity branch's link walk) is appended to that branch's `WHERE`, inside the same
+  `database.WithWorkspaceTx` transaction. Both arms use the identical helper; fusion adds no
+  visibility of its own.
+- **The context walk gates the same way.** `anchorProfile` is the existence *and* visibility gate for
+  the whole assembly (`auth.EnsureVisible`, then a real row read whose `pgx.ErrNoRows` becomes
+  `apperrors.ErrNotFound`), and every hop-2 candidate is probed individually with `auth.VisibleTo`.
+  The walk widens context, never authority.
 
-A row-scope miss therefore answers **404, not 403** — a record you cannot see is
-indistinguishable from one that does not exist, which is the same existence-hiding
-posture every single-record read takes. See
+A row-scope miss therefore answers **404, not 403**: a record you cannot see is indistinguishable
+from one that does not exist, the same existence-hiding posture every single-record read takes. See
 [authorization.md](authorization.md).
 
-## Embedding identity — `provider/model@dimensions`
+## Embedding identity: `provider/model@dimensions`
 
-`Embedder.EmbedIdentity()` returns the current binding's stamp and its expected
-vector width: the identity is the string `<provider>/<model>@<dims>`, and it is
-written into `embedding.model` on every row. It is cheap by contract — no API
-call — which is what lets every read, every job guard and the readiness probe
-compare against it.
+`Embedder.EmbedIdentity()` returns the current binding's stamp and its expected vector width: the
+identity is the string `<provider>/<model>@<dims>`, and it is written into `embedding.model` on every
+row. It is cheap by contract (no API call), which lets every read, every job guard and the readiness
+probe compare against it.
 
-**Retrieval filters to the current identity, and that predicate is load-bearing
-twice.** For correctness: rows embedded in an older model's space must not rank
-against a query embedded in the new one. And for crash-avoidance: the
-`embedding.embedding` column is an **unbounded** `vector` (migration `0114`), so
-a bare `e.embedding <=> $query` against a differently-sized row raises
-*"different vector dimensions"* — the identity filter excludes those rows before
-the projection ever computes `<=>`.
+**Retrieval filters to the current identity.** There are two reasons. For correctness, rows embedded in an
+older model's space must not rank against a query embedded in the new one. For crash-avoidance, the
+`embedding.embedding` column is an **unbounded** `vector`, so a bare `e.embedding <=> $query` against
+a differently-sized row raises *"different vector dimensions"*. The identity filter excludes those
+rows before the projection ever computes `<=>`.
 
-**The write side is content-hash keyed, identity-aware.** `UpsertEmbedding` reads
-the stored `(chunk_hash, model)` first: unchanged text under an unchanged binding
-costs **no model call**. A text match under a *changed* binding still re-embeds —
-skipping on the hash alone would leave a row stamped with a model no longer
-serving the workspace, indistinguishable from a live one. The insert is a CAS on
-the hash that was read, so a concurrent writer that already moved the row past it
+**The write side is content-hash keyed and identity-aware.** `UpsertEmbedding` reads the stored
+`(chunk_hash, model)` first: unchanged text under an unchanged binding costs **no model call**. A
+text match under a *changed* binding still re-embeds, because skipping on the hash alone would leave
+a row stamped with a model no longer serving the workspace, indistinguishable from a live one. The
+insert is a CAS on the hash that was read, so a concurrent writer that already moved the row past it
 wins rather than being clobbered.
 
-Together these give the property the whole ops story rests on: **correctness
-never depends on a reindex finishing.** A row that is stale, or absent, or stored
-at another width is *hidden* from retrieval — never served as if current — and
-every already-current row keeps answering queries while a rebuild runs.
+The ops story rests on the property these give together: correctness never depends on a
+reindex finishing. A row that is stale, or absent, or stored at another width is *hidden* from
+retrieval and never served as if current. Every already-current row keeps answering queries while a
+rebuild runs.
 
-An **unbound** embed lane (`--ai-fake`, or a routing config that never bound
-`embeddings:`) is a legitimate deployment shape, not an error: no binding marker
-is seeded, `/readyz` reports `unknown`, the three reindex operations stay their
-generated 501, neither drift-sweep job registers, and the fused query degrades to
-lexical. Which model serves the lane, and its `dimensions`, are runtime config —
-[ai-runtime.md](ai-runtime.md) and
-[../reference/configuration.md](../reference/configuration.md).
+An **unbound** embed lane (`--ai-fake`, or a routing config that never bound `embeddings:`) is a
+legitimate deployment shape. No binding marker is seeded, `/readyz` reports `unknown`, the three
+reindex operations stay their generated 501, neither drift-sweep job registers, and the fused query
+falls back to lexical. Which model serves the lane, and its `dimensions`, are runtime config:
+[ai-runtime.md](ai-runtime.md) and [../reference/configuration.md](../reference/configuration.md).
 
 ## Two kinds of staleness, two answers
 
 | What is stale | How it is detected | Who fixes it |
 |---|---|---|
-| An entity with no embedding row **under the current identity**, while the store's populated identity **matches** the configured one | the pending scan (`NOT EXISTS` against `embedding` at the current identity) | the periodic **drift sweep** — no operator, no confirm |
+| An entity with no embedding row **under the current identity**, while the store's populated identity **matches** the configured one | the pending scan (`NOT EXISTS` against `embedding` at the current identity) | the periodic **drift sweep**, with no operator and no confirm |
 | The configured identity **differs** from `embed_store_binding.populated_identity` | the marker read (one PK lookup, no scan) | an operator, through **preview → confirm** |
 
-Both are "rows missing at the current identity", and it would be tempting to heal
-them with one mechanism. They are kept apart because their *cost* differs: the
-first is spend the system already committed to and failed to make, the second is
-a rebuild of the whole corpus that a human should see priced first.
+Both are "rows missing at the current identity", and it would be tempting to heal them with one
+mechanism. They are kept apart because their *cost* differs: the first is spend the system already
+committed to and failed to make, the second is a rebuild of the whole corpus that a human should see
+priced first.
 
-### Drift — the bus lost the event, a worker sweep heals it
+### Drift: the bus lost the event, a worker sweep heals it
 
-`EmbedGen` subscribes to `cg:context-graph` and re-embeds an entity whose content
-changed (`.created`, `.updated`, `.captured`, `.promoted`, `.merged`). That bus
-is **at-least-once**, and at-least-once is not at-least-once *delivered to a
-process that survives*: a worker that dies between ack and write leaves an entity
-with no embedding row, invisible to the vector arm until something re-embeds it —
-which, without a sweep, means until a human confirms a reindex they never caused.
+`EmbedGen` subscribes to `cg:context-graph` and re-embeds an entity whose content changed
+(`.created`, `.updated`, `.captured`, `.promoted`, `.merged`). That bus is **at-least-once**, which
+does not mean delivered to a process that survives. A worker that dies between ack and write leaves
+an entity with no embedding row, invisible to the vector arm until something re-embeds it. Without a
+sweep, that would wait until a user confirmed a reindex they never caused.
 
-- **`embed_drift_sweep`** — the dispatcher, cadence **15 minutes**, fans out one
-  child per workspace and does no tenant work itself. The contract's own reason
-  states the budget it is buying: an empty pass is a handful of indexed
-  `NOT EXISTS` probes per workspace, and fifteen minutes is how long a lost embed
-  event may keep a record out of semantic search.
-- **`embed_drift_workspace`** — one workspace's pass; no wall-clock timeout (the
-  pass is bounded by the pending backlog, each embed by the model lane's own
-  per-call timeout), three attempts, since the dispatcher's tick *is* the real
-  retry cadence.
+- **`embed_drift_sweep`**: the dispatcher, cadence **15 minutes**, fans out one child per workspace
+  and does no tenant work itself. The contract states the budget: an empty pass is a handful of
+  indexed `NOT EXISTS` probes per workspace, and fifteen minutes is how long a lost embed event may
+  keep a record out of semantic search.
+- **`embed_drift_workspace`**: one workspace's pass. It has no wall-clock timeout (the pass is
+  bounded by the pending backlog, each embed by the model lane's own per-call timeout) and three
+  attempts, since the dispatcher's tick *is* the real retry cadence.
 
-Both are declared in `backend/api/jobs.yaml` and registered by
-`compose/embeddriftsweep.go` under a condition **stricter** than the contract's
-`when: [Embedder]` can express: the lane must also be *bound* (a non-empty
-`EmbedIdentity()`), because a configured-but-unbound lane seeds no marker and
+Both are declared in `backend/api/jobs.yaml` and registered by `compose/embeddriftsweep.go` under a
+condition **stricter** than the contract's `when: [Embedder]` can express. The lane must also be
+*bound* (a non-empty `EmbedIdentity()`), because a configured-but-unbound lane seeds no marker and
 there is nothing to compare a row against.
 
 The sweep's own properties:
 
-- **Idempotent by the same skip-compare that makes reindex resumable.** It calls
-  `UpsertEmbedding`, so an entity a concurrent ordinary embed already handled
-  costs nothing, and a retried job is free.
-- **It re-reads the entity's current source text at heal time.** The pending scan
-  collects **ids only**; `healEntity` re-reads the text in its own transaction
-  before embedding. Embedding the scan's snapshot would store obsolete text under
-  the current identity — and the row would then never look pending again, even
-  though its embedding is wrong. An entity archived or blanked since the scan is
-  simply no longer pending: skipped, not an error.
-- **It runs as the system principal.** An index repaired through one caller's row
-  scope would silently leave out records that caller cannot see, for everybody.
+- **It is idempotent.** The same skip-compare makes reindex resumable: it calls `UpsertEmbedding`,
+  so an entity a concurrent ordinary embed already handled costs nothing, and a retried job is free.
+- **It re-reads current source text when healing.** The pending scan collects **ids
+  only**; `healEntity` re-reads the text in its own transaction before embedding. Embedding the
+  scan's snapshot would store obsolete text under the current identity, and the row would then never
+  look pending again even though its embedding is wrong. An entity archived or blanked since the scan
+  is simply no longer pending: skipped, not an error.
+- **It runs as the system principal.** An index repaired through one caller's row scope would
+  silently leave out records that caller cannot see, for everybody.
 
 ### A changed binding keeps its preview → confirm
 
-When the operator swaps the embed binding, the spend is theirs to decide, so the
-flow stays human:
-`GET /v1/embeddings/reindex/preview` (the ADR-0020 scope-before-the-spend
-estimate — always `estimate_quality: heuristic`, a `SUM(octet_length(text))/4`
-work-shape floor over the pending set, plus each workspace's budget-impact band)
-→ `POST /v1/embeddings/reindex`, admin/ops-only and `x-agent-access: human-only`.
-The confirm claims the marker and enqueues the fleet-wide run in **one**
-transaction, so a claim can never outlive a job that was never queued.
+When the operator swaps the embed binding, the spend is theirs to decide, so the flow stays human.
+`GET /v1/embeddings/reindex/preview` returns a scope-before-the-spend estimate: always
+`estimate_quality: heuristic`, a `SUM(octet_length(text))/4` work-shape floor over the pending set,
+plus each workspace's budget-impact band. Then `POST /v1/embeddings/reindex` confirms; it is
+admin/ops-only and `x-agent-access: human-only`. The confirm claims the marker and enqueues the
+fleet-wide run in **one** transaction, so a claim can never outlive a job that was never queued.
 
-**The sweep must no-op there by construction, and does — three refusals, in
-order:**
+**The sweep no-ops there by construction.** It refuses three times, in order:
 
 1. the configured identity is `""` (no bound lane) → nothing to heal under;
-2. `populated_identity ≠ configured` → this is the binding-change case, not
-   drift;
+2. `populated_identity ≠ configured` → this is the binding-change case, not drift;
 3. `status = 'reembedding'` → a fleet-wide run already holds the marker.
 
-That marker read happens **per workspace, inside the workspace's own pass** —
-not once for the fleet — so a reindex claimed (or a binding swapped) after the
-dispatcher enumerated stops the remaining workspaces rather than racing the
-fleet-wide job. The sweep never writes the marker at all.
+That marker read happens **per workspace, inside the workspace's own pass**, rather than once for the
+fleet. A reindex claimed (or a binding swapped) after the dispatcher enumerated therefore stops the
+remaining workspaces rather than racing the fleet-wide job. The sweep never writes the marker at all.
 
-The run the confirm starts is `embed_reindex` (a dispatcher with **no tick** —
-a reindex is a human's confirm, never a cadence) fanning out to
-`embed_reindex_workspace` (queue `ai_capture`, five attempts, no wall-clock
-timeout). What makes it *one* run is the marker: the confirm claims it under a
-freshly minted run id, the dispatcher seeds the pending workspace set and
-enqueues the children in the same transaction, each child leaves the set at a
-terminal outcome, and the child that empties it hands the marker back. Every
-marker write **fences on the run id**, so a straggler of a finished run cannot
-move the marker of the run that replaced it. Three consequences worth knowing:
+The run the confirm starts is `embed_reindex` (a dispatcher with **no tick**, because a reindex is a
+user's confirm and never a cadence) fanning out to `embed_reindex_workspace` (queue `ai_capture`,
+five attempts, no wall-clock timeout). What makes it *one* run is the marker. The confirm claims it
+under a freshly minted run id, and the dispatcher seeds the pending workspace set and enqueues the
+children in the same transaction. Each child leaves the set at a terminal outcome, and the child
+that empties it hands the marker back. Every marker write **fences on the run id**, so a straggler
+of a finished run cannot move the marker of the run that replaced it. Three consequences worth
+knowing:
 
-- **A mid-flight binding change is detected, not absorbed.** The job carries the
-  identity in force at claim time; a worker whose live embedder no longer matches
-  it fails with `ErrIdentityDrift` → `river.JobCancel`, because what the fleet
-  needs is a *new* run under the current config, not this row's remaining
-  attempts.
-- **`populated_identity` means "the identity the last run was released under"** —
-  not "every workspace was re-embedded under it". A run releases when no
-  workspace has an outcome left to reach, and *exhausted attempts* is one of
-  those outcomes. `/readyz`'s `active` inherits exactly that weaker claim; the
-  pending counts on the status endpoint are what tell an operator the difference.
-- **A stuck marker has a way back.** A discarded or cancelled child can leave the
-  marker held with nothing running (a workspace job is exempt from River's
-  rescuer by declaring no timeout). A **forced** confirm steals a marker whose
-  last progress is older than an hour (`reembedStaleAfter`); a healthy pass
-  refreshes that timestamp around every leg of its own work, which is what makes
-  the window meaningful — and what makes "last progress N ago" a real signal in
-  the settings card.
+- **A mid-flight binding change is detected, not absorbed.** The job carries the identity in force at
+  claim time. A worker whose live embedder no longer matches it fails with `ErrIdentityDrift` →
+  `river.JobCancel`, because what the fleet needs is a *new* run under the current config rather
+  than this row's remaining attempts.
+- **`populated_identity` names the last released run's identity.** That is weaker than "every
+  workspace was re-embedded under it". A run releases when no workspace has an outcome
+  left to reach, and *exhausted attempts* is one of those outcomes. `/readyz`'s `active` inherits
+  that weaker claim; the pending counts on the status endpoint are what tell an operator the
+  difference.
+- **A stuck marker has a way back.** A discarded or cancelled child can leave the marker held with
+  nothing running (a workspace job is exempt from River's rescuer by declaring no timeout). A
+  **forced** confirm steals a marker whose last progress is older than an hour
+  (`reembedStaleAfter`). A healthy pass refreshes that timestamp around every leg of its own work,
+  which makes the window meaningful and makes "last progress N ago" a real signal in the settings
+  card.
 
 ### Why the banner keys on the mismatch alone
 
-`frontend/src/app/embedreindexbanner.tsx` renders when — and only when —
-`configured_identity !== populated_identity`. It is deliberately **not**
-qualified by `status`, even though a banner shown during a healthy rebuild is
-redundant: suppressing it while `status = "reembedding"` would also hide a
-rebuild whose job was drift-cancelled or attempt-discarded and left the marker
-stuck, which is precisely the state the settings card's force-rebuild recovery
-affordance exists for. A redundant banner during a healthy rebuild is the cheaper
-failure.
+`frontend/src/app/embedreindexbanner.tsx` renders when, and only when,
+`configured_identity !== populated_identity`. It is **not** qualified by `status`, even though a
+banner shown during a healthy rebuild is redundant. Suppressing it while `status = "reembedding"`
+would also hide a rebuild whose job was drift-cancelled or attempt-discarded and left the marker
+stuck. That is the state the settings card's force-rebuild recovery exists for, so a redundant
+banner during a healthy rebuild is the cheaper failure.
 
-Identity-*matched* pending entities are not the banner's business either — the
-drift sweep is already fixing them, and a banner about drift the system is
-repairing trains an admin to ignore the banner. The pending detail lives in the
-settings card (`frontend/src/screens/embedreindex.tsx`) instead. The banner's own
-status read is gated client-side on `embedding_reindex:read` — the same grant the
-server checks, asked *before* issuing a query that could only 403.
+Identity-*matched* pending entities are not the banner's business either: the drift sweep is already
+fixing them, and a banner about drift the system is repairing trains an admin to ignore the banner.
+The pending detail lives in the settings card (`frontend/src/screens/embedreindex.tsx`) instead. The
+banner's own status read is gated client-side on `embedding_reindex:read`, the same grant the server
+checks, asked *before* issuing a query that could only 403.
 
 ## The context graph
 
-`GET /v1/records/{entity_type}/{id}/context` assembles the picture *around* one
-record rather than a ranked list of records — the affordance the AI layers and
-the `catch_me_up_on` / `prep_for_meeting` intent tools consume through the same
-`retrieval` seam, every item provenance-stamped.
+`GET /v1/records/{entity_type}/{id}/context` assembles the picture *around* one record rather than a
+ranked list of records. The AI layers and the `catch_me_up_on` / `prep_for_meeting` intent tools
+consume it through the same `retrieval` seam, every item provenance-stamped.
 
-The walk is **fixed-depth by construction**, two joins rather than a traversal
-that can wander: anchor profile → the anchor's linked activities (hop 1, split
-into `recent_touches` and `open_tasks`) → those activities' *other* link targets
-(hop 2, emitted as `related_contacts` / `related_companies` / `related_deals` /
-`related_projects`).
-Every leg reads at most 50 rows before ranking trims to `max_items` (default 5,
-capped at 25), so an anchor with thousands of links costs about what one with
-fifty costs. Anchors are the non-activity, non-`textOnly` searchable types the contract's
-path enum names — derived from `searchBranches` rather than kept as a parallel
-list; an activity is a link, not a thing links hang off. Only `contact`,
-`company`, `deal` and `project` are WALKABLE (`anchorLinkColumn`): `lead`,
-`product` and `offer_template` name no `activity_link` column this walk follows,
-so their context is honestly their profile alone rather than a walk silently
-skipped. A `lead` has no `activity_link` neighborhood at all, so
-its context is honestly its profile alone.
+The walk is **fixed-depth by construction**: two joins rather than a traversal that can wander.
+Anchor profile → the anchor's linked activities (hop 1, split into `recent_touches` and
+`open_tasks`) → those activities' *other* link targets (hop 2, emitted as `related_contacts` /
+`related_companies` / `related_deals` / `related_projects`). Every leg reads at most 50 rows before
+ranking trims to `max_items` (default 5, capped at 25), so an anchor with thousands of links costs
+about what one with fifty costs. Anchors are the non-activity, non-`textOnly` searchable types the
+contract's path enum names, derived from `searchBranches` rather than kept as a parallel list; an
+activity is a link, not a thing links hang off. Only `contact`, `company`, `deal` and `project` are
+walkable (`anchorLinkColumn`). `lead`, `product` and `offer_template` name no `activity_link` column
+this walk follows, so their context is their profile alone.
 
-Ranking follows the retrieval-ranking weights
-`0.60·similarity + 0.30·recency + 0.10·source_trust` with an id-ascending
-tie-break; recency halves every 30 days, and source trust is keyed on
-`captured_by`, the authenticated principal a write stamps: a human's own
-statement scores 1.0 (T0), an agent write on a contact's authority scores 0.7
-(T1), and captured or connector content scores 0.4 (T2) — the same floor an
-unrecognized or empty `captured_by` takes, since guessing upward is the
-direction that misleads. An imported row is checked first and takes T2 even
-when it carries a human `captured_by`: an import runs as whoever ran it, so
-every row it writes truthfully names that administrator and falsely reads as
-their own testimony. Graph items carry no query similarity — there is no
-query — so their rank is recency × trust over the same weights.
+Ranking follows the retrieval-ranking weights `0.60·similarity + 0.30·recency + 0.10·source_trust`
+with an id-ascending tie-break. Recency halves every 30 days, and source trust is keyed on
+`captured_by`, the authenticated principal a write stamps. A human's own statement scores 1.0 (T0),
+an agent write on a human's authority scores 0.7 (T1), and captured or connector content scores 0.4
+(T2). That is the same floor an unrecognized or empty `captured_by` takes, since guessing upward is
+the direction that misleads. An imported row is checked first and takes T2 even when it carries a
+human `captured_by`: an import runs as whoever ran it, so every row it writes names that
+administrator and would falsely read as their own testimony. Graph items carry no query similarity,
+because there is no query, so their rank is recency × trust over the same weights.
 
-A **contact** anchor additionally carries a `who_knows` section: which colleagues
-actually interact with this contact, warmest first, each with its band and
-interaction count so a model handed the list cannot just pick the first name.
-That section reads the `graph_interaction_edge` projection, which is its own
-mechanism with its own maintenance rules — see
-[relationship-graph.md](relationship-graph.md).
+A **contact** anchor also carries a `who_knows` section: which colleagues actually interact with this
+contact, warmest first, each with its band and interaction count so a model handed the list cannot
+just pick the first name. That section reads the `graph_interaction_edge` projection, which has its
+own maintenance rules; see [relationship-graph.md](relationship-graph.md).
 
 ## Reference
 
 | Concern | Where |
 |---|---|
-| Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `activity`, `lead`, `project` (migrations `0004`–`0009`, `0131`), `tag`, and `product` + `offer_template`; linguistics `0052`, apostrophe folding `0077` |
-| Vector store | `embedding` (migration `0022`; identity stamp + unbounded `vector` + corpus wipe in `0114`) — **non-tenant**, no `workspace_id`, no RLS |
-| Binding marker | `embed_store_binding` (`0114`, run/identity/pending-set fan-out shape in `0174`) — **non-tenant**, no `workspace_id`, no RLS |
-| Relationship projection | `graph_interaction_edge` (`0158`) — see [relationship-graph.md](relationship-graph.md) |
-| RBAC object | `embedding_reindex` (`read`/`update`, admin + ops only; backfilled by `0115`) |
-| Job kinds | `embed_drift_sweep` → `embed_drift_workspace` (periodic, 15m) · `embed_reindex` → `embed_reindex_workspace` (on demand) — declared in `backend/api/jobs.yaml` |
+| Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `activity`, `lead`, `project`, `tag`, and `product` + `offer_template`, with the unaccent and apostrophe-folding functions (`backend/migrations/core/0001_baseline.up.sql`) |
+| Vector store | `embedding` (`backend/migrations/core/0001_baseline.up.sql`: identity stamp + unbounded `vector`). **Non-tenant**: no `workspace_id`, no RLS |
+| Binding marker | `embed_store_binding` (`backend/migrations/core/0001_baseline.up.sql`: run, identity and pending-set fan-out). **Non-tenant**: no `workspace_id`, no RLS |
+| Relationship projection | `graph_interaction_edge`; see [relationship-graph.md](relationship-graph.md) |
+| RBAC object | `embedding_reindex` (`read`/`update`, admin + ops only) |
+| Job kinds | `embed_drift_sweep` → `embed_drift_workspace` (periodic, 15m) · `embed_reindex` → `embed_reindex_workspace` (on demand), declared in `backend/api/jobs.yaml` |
 | Routes | `GET /v1/search` · `GET /v1/records/{entity_type}/{id}/context` · `GET /v1/embeddings/reindex/status` · `GET /v1/embeddings/reindex/preview` · `POST /v1/embeddings/reindex` |
 | Conflict codes on confirm | `reindex_running` · `reindex_not_needed` · `reindex_identity_drift` (all 409) |
-| `/readyz` embed line | `active` · `needs_reindex` · `reembedding` · `unknown` (no lane, or the marker read failed) — never gates readiness |
+| `/readyz` embed line | `active` · `needs_reindex` · `reembedding` · `unknown` (no lane, or the marker read failed); never gates readiness |
 | Agent access | `/v1/search` is a 🟢 `search_records` read under a passport; the context walk and all three reindex operations are `x-agent-access: human-only` |
 | Knobs (embed binding, `dimensions`, reindex operations, provider caveats) | [../reference/configuration.md](../reference/configuration.md) |
 
 ## Rules of thumb
 
-- **A search hit is a read.** Authority is compiled into the query, never applied
-  to its results — so a denied entity type contributes no branch, and a row-scope
-  miss answers 404 rather than 403.
-- **Never rank across embed identities.** Every vector read filters to the
-  current `provider/model@dims`; a row from an older binding is hidden, not
-  served at the wrong width.
-- **The vector lane degrades, it does not error.** No embedder, an unbound
-  identity, or a zero query vector falls back to the lexical arm — a search that
-  returns fewer kinds of answer beats one that returns none.
-- **Drift heals itself; a binding change asks a human.** An entity pending under
-  the *current* identity is a lost event and the sweep re-embeds it unprompted. A
-  *changed* binding is a spend decision, so it keeps preview → confirm.
-- **Correctness never waits on a reindex.** A half-rebuilt store hides stale rows
-  rather than ranking them, so the system is always honest mid-rebuild.
+- **A search hit is a read.** Authority is compiled into the query, never applied to its results, so
+  a denied entity type contributes no branch, and a row-scope miss answers 404 rather than 403.
+- **Never rank across embed identities.** Every vector read filters to the current
+  `provider/model@dims`; a row from an older binding is hidden, not served at the wrong width.
+- **The vector lane falls back without erroring.** No embedder, an unbound identity, or a zero
+  query vector falls back to the lexical arm, because a search that returns fewer kinds of answer
+  beats one that returns none.
+- **Drift self-heals; binding changes ask a human.** An entity pending under the *current*
+  identity is a lost event and the sweep re-embeds it unprompted. A *changed* binding is a spend
+  decision, so it keeps preview → confirm.
+- **Correctness never waits on a reindex.** A half-rebuilt store hides stale rows rather than
+  ranking them, so results stay correct mid-rebuild.
 
 ## Where the code lives
 

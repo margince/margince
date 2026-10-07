@@ -36,6 +36,10 @@ type bulkOutcome struct {
 	TaskVersion int64               `json:"task_version,omitempty"`
 	// TaggableID is the tag assignment add_tag made on the record.
 	TaggableID *openapi_types.UUID `json:"taggable_id,omitempty"`
+	// MemberNote and MemberAddedAt are what remove_from_list took off the list
+	// with the record, so the undo puts the membership back as it was.
+	MemberNote    *string    `json:"member_note,omitempty"`
+	MemberAddedAt *time.Time `json:"member_added_at,omitempty"`
 }
 
 // bulkResult is bulk_operation.result. A skip keeps its reason and code but

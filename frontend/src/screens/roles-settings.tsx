@@ -162,6 +162,7 @@ function NewRoleAction({
   const t = useT();
   const toast = useToast();
   const titleId = useId();
+  const formId = useId();
   const [open, setOpen] = useState(false);
   const live = roles.filter((role) => !role.archived_at);
   const [copyFrom, setCopyFrom] = useState(live[0]?.key ?? "");
@@ -171,8 +172,17 @@ function NewRoleAction({
   return (
     <>
       <Button onClick={() => setOpen(true)}>{t("roles.new")}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        intent="form"
+      >
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          {t("roles.newTitle")}
+        </Heading>
         <form
+          id={formId}
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
@@ -192,9 +202,6 @@ function NewRoleAction({
             );
           }}
         >
-          <Heading size="large" className="t-h3" id={titleId}>
-            {t("roles.newTitle")}
-          </Heading>
           <Field label={t("roles.newFrom")} hint={t("roles.newFromHint")}>
             {(control) => (
               <Select
@@ -221,12 +228,17 @@ function NewRoleAction({
               {roleRefusalOf(create.error, t)}
             </Callout>
           )}
-          <div className="form-actions">
-            <Button type="submit" variant="primary" disabled={!ready}>
-              {t("roles.newSubmit")}
-            </Button>
-          </div>
         </form>
+        <div className="actions">
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            disabled={!ready}
+          >
+            {t("roles.newSubmit")}
+          </Button>
+        </div>
       </Modal>
     </>
   );

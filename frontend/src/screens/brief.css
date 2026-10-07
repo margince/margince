@@ -402,18 +402,8 @@
 .brief-wrap > .record-details-toggle {
   margin-left: auto;
 }
-/* ── The queue drawer ──────────────────────────────────────────────────────
- * The focus-context drawer's head carries a heading AND a way back to the
- * queue behind it — the one head here that has two things to divide. The
- * queue drawer's own head does NOT use it: that one holds a title and nothing
- * else, so it takes the shared band's spacing and adds nothing. */
-.brief-queue-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
 
+/* ── The queue drawer ────────────────────────────────────────────────────── */
 /* The queue is EMBEDDED here, so it must not also pay the page gutter: the
    drawer body already spaces its content, and the worklist's own page wrapper
    on top of it made this the one drawer whose content sat twice as far in as

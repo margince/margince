@@ -426,7 +426,8 @@ func assertRecorded(t *testing.T, dsn, table, version string) {
 		}
 	}()
 	var found bool
-	if err := conn.QueryRow(ctx,
+	if err := conn.QueryRow(
+		ctx,
 		"SELECT EXISTS (SELECT 1 FROM "+table+" WHERE version = $1)", version,
 	).Scan(&found); err != nil {
 		t.Fatalf("reading %s: %v", table, err)
@@ -453,7 +454,8 @@ func assertRiverWorkspaceArgIndex(t *testing.T, dsn string) {
 		}
 	}()
 	var exists bool
-	if err := conn.QueryRow(ctx,
+	if err := conn.QueryRow(
+		ctx,
 		`SELECT EXISTS (SELECT 1 FROM pg_indexes
 		    WHERE tablename = 'river_job' AND indexname = 'river_job_workspace_arg')`,
 	).Scan(&exists); err != nil {

@@ -10,8 +10,8 @@ Zwischen [Firma] und dem Betriebsrat [Bezeichnung] wird Folgendes vereinbart.
 Diese Vereinbarung regelt den Einsatz des CRM-Systems Margince, soweit es
 E-Mail-Korrespondenz aus dienstlichen Postfächern erfasst. Das System ist
 objektiv zur Überwachung von Verhalten und Leistung geeignet und damit nach
-§ 87 Abs. 1 Nr. 6 BetrVG mitbestimmungspflichtig — **unabhängig davon, ob eine
-Überwachung beabsichtigt ist.**
+§ 87 Abs. 1 Nr. 6 BetrVG mitbestimmungspflichtig, unabhängig davon, ob eine
+Überwachung beabsichtigt ist.
 
 ## 2. Geltungsbereich
 
@@ -29,8 +29,8 @@ technische Protokolle über den Abruf.
 Die erfassten Daten dürfen ausschließlich zur Dokumentation und Bearbeitung
 geschäftlicher Vorgänge verwendet werden.
 
-**Nicht zulässig ist die Verwendung zur Bewertung von Verhalten oder Leistung
-einzelner Beschäftigter.** Das gilt namentlich für:
+Nicht zulässig ist die Verwendung zur Bewertung von Verhalten oder Leistung
+einzelner Beschäftigter. Das gilt namentlich für:
 
 - die Klassifikatorentscheidungen über Absender und Threads,
 - Zeitstempel des letzten Kontakts und daraus abgeleitete Kennzahlen,
@@ -73,8 +73,9 @@ Anbieter geben könnte, bedarf der vorherigen Zustimmung des Betriebsrats.
 ## 8. Aufbewahrung und Löschung
 
 Handelsbriefe [Frist] gemäß § 257 HGB, § 147 AO. Übrige Korrespondenz [Frist].
-Als privat eingestufte Korrespondenz wird nach sieben Tagen Widerrufsfrist
-vernichtet.
+Als privat eingestufte Korrespondenz wird vernichtet: nach sieben Tagen, wenn
+die beschäftigte Person den Absender selbst als privat gekennzeichnet hat,
+nach dreißig Tagen, wenn der Klassifikator entschieden hat.
 
 ## 9. Kontrolle
 

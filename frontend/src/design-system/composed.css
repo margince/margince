@@ -9,14 +9,16 @@
   /* ONE stage width, at every window width and on every board. A column that
      grows into whatever room is left is a different size on each screen, so two
      readers looking at the same pipeline see a different number of stages and
-     neither can say how many there are. 240px is what puts four and a half
-     stages in the 1142px a list surface leaves inside a 1440px window with the
-     rail out: (1142 - 4 * 16) / 4.5 = 239.6. The half stage is the part that
-     matters — it is what says the board carries on past the edge.
+     neither can say how many there are. 300px gives a card's name two lines of
+     about thirty characters and its last line room for the verbs beside the
+     mail; the 1142px a list surface leaves inside a 1440px window with the rail
+     out then holds (1142 + 16) / (300 + 16) = 3.7 stages. The part stage is
+     what says the board carries on past the edge, so it has to read as cut: at
+     280px the fourth stage is nine tenths on screen and looks like the end.
 
      Local to this sheet rather than a token: it is one component's measurement,
      not a step on the scale every surface shares. */
-  --board-col-w: 240px;
+  --board-col-w: 300px;
 
   display: flex;
   gap: var(--space-4);
@@ -344,24 +346,18 @@
   border-style: dashed;
 }
 /* The card answers a rep's questions in the order they ask them, from across
-   the board: does this one need me — a line that exists only when it does;
-   whose deal is it — the company, the line with the weight, because an account
-   is what a rep recognises in a column of forty; what is it worth and when does
-   it close — the figure at lead size, the one thing compared card to card; and
-   last, what it is called, the line that disambiguates two deals on one
-   account and is needed for nothing else. */
+   the board: who it is with and whose it is — a caption, because the company's
+   mark is what a rep picks an account out by; what it is called — the title,
+   held to two lines, because a long imported name was the card's biggest block
+   of ink and set its height; what it is worth and when it closes — the one
+   comparison made card to card; and last, how it is moving. Each line keeps
+   its place on every card, so a column is read straight down. */
 .deal-card .deal-flags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1) var(--space-3);
   margin-bottom: var(--space-1);
-}
-/* The size of the stall, in the stall's own tone: it sits beside the word, and
-   only ever beside it. */
-.deal-card .deal-age {
-  color: var(--warningText);
-  font-variant-numeric: tabular-nums;
 }
 .deal-card .deal-company {
   display: flex;
@@ -381,6 +377,47 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* The company and, at the far edge of its line, who carries the deal: a mark
+   only, because a rep on a team board scans for their own initials and the
+   name is one hover or one screen reader away. It never gives way — the
+   company's name elides before the mark does, so the mark stays in the same
+   place on every card in the column. The size and ink are `.t-caption`'s, worn
+   on the element; the weight is the one text beside a mark takes. */
+.deal-card .deal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-weight: var(--fontWeightMedium);
+}
+.deal-card .deal-head .deal-company {
+  color: inherit;
+}
+/* Above the stretched link, like the company, or the pointer never reaches the
+   mark and its name tip never opens. */
+.deal-card .deal-owner {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+  flex: none;
+  display: flex;
+}
+.deal-card .deal-name {
+  color: var(--textPrimary);
+}
+/* The title. The clamp is visual only: the whole name is still the link's
+   text, which is what a screen reader reads and what the deal page heads
+   itself with. `overflow: hidden` does not clip the stretched `::after`, whose
+   containing block is the card rather than this anchor. */
+.deal-card .deal-open {
+  font-weight: var(--fontWeightMedium);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
 .deal-card .deal-figure {
   display: flex;
   align-items: baseline;
@@ -388,12 +425,16 @@
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-2);
 }
-/* Tabular so a column of figures lines up digit for digit. */
+/* Tabular so a column of figures lines up digit for digit, and bold because it
+   is the one thing compared from card to card. */
 .deal-card .deal-value {
   color: var(--textPrimary);
+  font-weight: var(--fontWeightBold);
   font-variant-numeric: tabular-nums;
 }
 .deal-card .deal-closes {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
   white-space: nowrap;
 }
 /* A warning about the DATE, not about the deal: one nobody has confirmed, or
@@ -402,34 +443,40 @@
 .deal-card .deal-closes-warning {
   color: var(--warningText);
 }
-.deal-card .deal-name {
-  color: var(--textPrimary);
-}
-/* The company and, at the far edge of its line, who carries the deal: a mark
-   only, because a rep on a team board scans for their own initials and the
-   name is one hover or one screen reader away. It never gives way — the
-   company's name elides before the mark does, so the mark stays in the same
-   place on every card in the column. */
-.deal-card .deal-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.deal-card .deal-owner {
-  margin-left: auto;
-  flex: none;
-  display: flex;
-}
-/* The mail line, after everything else: when mail last moved on this deal and
-   which way, as a dense `Chip` — the pill every other fact about a record is
-   drawn in. It sits ABOVE the stretched link like the company, which is the
-   only reason the flyout's hover and its press reach it. The chip owns its own
-   face; what this sheet owns is where it sits and that it is a trigger. */
+/* How the deal is moving, under a hairline: the alarms where their quiet
+   reading sits, and the verbs at the trailing edge. Only what answers a press
+   rides above the stretched link — the mail flyout and the verbs — so the rest
+   of the line still opens the deal like every other part of the card. */
 .deal-card .deal-foot {
   display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
   margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--paneEdge);
 }
+.deal-card .deal-foot-facts {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+.deal-card .deal-stall {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The size of the stall, in the stall's own tone: it sits beside the word, and
+   only ever beside it. */
+.deal-card .deal-age {
+  color: var(--warningText);
+  font-variant-numeric: tabular-nums;
+}
+/* The mail chip is a dense `Chip`, the pill every other fact about a record is
+   drawn in. The chip owns its own face; what this sheet owns is where it sits
+   and that it is a trigger. */
 .deal-card .deal-foot .deal-mail {
   position: relative;
   z-index: 1;
@@ -447,6 +494,34 @@
 .deal-card .deal-foot button.deal-mail:hover .chip svg {
   color: var(--accentText);
 }
+.deal-card .deal-actions {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  gap: var(--gapActions);
+}
+/* Bare glyphs, with the ground coming back under the pointer: a ground and an
+   edge on every verb is sixty buttons on a column of twenty cards, where the
+   glyphs alone read as one quiet line a rep reaches into. Stated above
+   `.btn-ghost:hover`'s specificity, so the hover is not settled by which sheet
+   the bundler emits last. */
+.deal-card .deal-actions .btn {
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+}
+.deal-card .deal-actions .btn:hover:not(:disabled) {
+  background: var(--bgHover);
+}
+/* The supporting ink goes on the GLYPH, never the button: a `.btn`'s ink is the
+   control tier's, measured against every ground a button is drawn on. */
+.deal-card .deal-actions svg {
+  color: var(--textSecondary);
+}
+.deal-card .deal-actions .icon-action:hover svg {
+  color: var(--textPrimary);
+}
 
 /* `margin-bottom` owns the interval below the identity, one full step, on
    EVERY record: the head is a register of its own and what opens the record's
@@ -457,6 +532,12 @@
    and a full step under it on a company. `.record-head` is drawn by
    `RecordHead` and nothing else, so this rule reaches every record page and no
    other surface. */
+/* The way back over the head: one line of its own, a small step above the
+   identity it leads into. */
+.record-back {
+  margin-bottom: var(--space-3);
+}
+
 .record-head {
   display: flex;
   align-items: center;
@@ -1226,6 +1307,11 @@
   display: block;
   margin-top: var(--space-1);
 }
+/* In a row's body the text sits --space-2 below the line above, and the
+   body's own --space-1 gap already pays part of that. */
+.timeline .tl-body > .tl-text {
+  margin-top: calc(var(--space-2) - var(--space-1));
+}
 
 /* A note's body on its own plate: the rep's aside about the record, told
    apart from the correspondence around it before a word of either is read.
@@ -1249,6 +1335,13 @@
   display: block;
   white-space: pre-wrap;
   color: var(--textPrimary);
+}
+
+/* A note's markdown wrapper inherits the row's font and colour instead of the
+   document reader's body font; headings and code keep the reader's own. */
+.tl-text .md {
+  font: inherit;
+  color: inherit;
 }
 
 .tl-text-toggle {

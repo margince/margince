@@ -1,26 +1,26 @@
 # Add an AI task or invocation site
 
-A task checklist for putting a new AI call into the product. The AI surface is
-contract-first like the HTTP API: you declare it, regenerate, then implement —
-and the build refuses a site the contract never declared, a shipped task whose
+A checklist for putting a new AI call into the product. The AI surface is
+contract-first like the HTTP API: you declare it, regenerate, then implement.
+The build refuses a site the contract never declared, a shipped task whose
 site nobody wrote, and a site no certification case can measure.
 
-For *why* it works this way see
-[explanation/ai-runtime.md](../explanation/ai-runtime.md). Step 6 — writing the
-certification case — has its own guide:
+Why it works this way:
+[explanation/ai-runtime.md](../explanation/ai-runtime.md). Step 6, writing the
+certification case, has its own guide:
 [write-a-certification-case.md](write-a-certification-case.md). To certify a
 model **binding** that already exists (a swap, a cheaper candidate), you want
-[certify-an-ai-model.md](certify-an-ai-model.md) instead. For the branch,
-sign-off and PR mechanics every change goes through, see
+[certify-an-ai-model.md](certify-an-ai-model.md) instead. For the branch
+and PR mechanics every change goes through, see
 [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-> **Everything here is free except one step.** Steps 1–7 need no model, no key
+> Everything here is free except one step. Steps 1–7 need no model, no key
 > and no network. Only step 8 (`make e2e-ai`) calls a real provider, and it bills
-> **your own API key** — Margince runs no inference of its own. Nothing forces
-> you to run it: a site that has never been certified is reported honestly as
-> `absent`, and that is a legitimate state to open a PR in.
+> **your own API key**; Margince runs no inference of its own. You do not have to
+> run it: a site that has never been certified is reported as `absent`, and you
+> may open a PR in that state.
 
-## Quick start — a second prompt on a task that already exists
+## Quick start: a second prompt on a task that already exists
 
 The common case, and the cheapest way to see the whole loop. `enrich` already has
 a ladder, a budget posture and a **lane** (the field on `compose.ModelPath` that
@@ -47,36 +47,33 @@ make e2e-ai-report                         # free: your site now shows as `absen
 cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
 ```
 
-**Run `make check` early and often — it is the whole feedback loop.** The gates
-are written to name the file you have not written yet, in the order you need
-them, so a red test is the guide continuing rather than a failure. You do not
-need a working AI setup for any of it.
+Run `make check` early and often; it is the feedback loop. The gates name the
+file you have not written yet, in the order you need them, so a red test tells
+you the next step. You do not need a working AI setup for any of it.
 
 When you are ready to spend, `make e2e-ai TASK=enrich` certifies for real
 (step 8) and `make e2e-ai-report` then shows a band instead of `absent`.
 
 ## Task, or site?
 
-**A task is not one prompt.** A task is the routing / budget / cost unit: it owns
-a fallback ladder, an execution mode and a budget posture. A **site** is one
-named place in the build that actually calls the model. Today 16 shipped tasks
-carry 23 sites between them — `cold_start` has four, `voice_build` three,
-`summarize` two. (These counts have gone stale across
-several changes; `make e2e-ai-report` prints the current census — read-only, no
-model spend — and is the number to trust.)
+A **task** is the routing, budget and cost unit: it owns a fallback ladder, an
+execution mode and a budget posture, and may carry several prompts. A **site** is
+one named place in the build that calls the model. A task can carry several sites
+(`cold_start`, `voice_build` and `summarize` each do). `make e2e-ai-report` prints
+the current number of tasks and sites, with no model spend.
 
 | You are adding | Do |
 |---|---|
-| Another prompt for the same workload — a second pass, an evaluation call, a fan-out lane | a **site**: one name in the task's `sites[]`, then steps 3–9 |
+| Another prompt for the same workload: a second pass, an evaluation call, a fan-out lane | a **site**: one name in the task's `sites[]`, then steps 3–9 |
 | A workload that deserves its own ladder, budget posture or cost line | a **task**: all nine steps |
 
-**Do not reuse an existing task's name for a different workload** just because it
-is convenient. Routing, budget limits, tracing and the certification record are
-all tracked per task name, so two workloads sharing one name have their spend
-merged in reporting — and certifying that name then proves neither of them works.
+Do not reuse an existing task's name for a different workload. Routing, budget
+limits, tracing and the certification record are all tracked per task name. Two
+workloads sharing one name have their spend merged in reporting, and certifying
+that name then proves neither of them works.
 
-Every site declares a **kind**, which is a claim about how the model is invoked —
-and it caps how much of the site one certification run can cover:
+Every site declares a **kind**, which states how the model is invoked. The kind
+caps how much of the site one certification run can cover:
 
 | Kind | The site… | A run can certify at most |
 |---|---|---|
@@ -93,22 +90,17 @@ and it caps how much of the site one certification run can cover:
 
    What that means for you depends on where you are:
 
-   - **Maintainer, or working with spec access** — land the declaration in the
+   - Maintainer, or working with spec access: land the declaration in the
      specification repo, then copy it down into `ai-tasks.yaml` unchanged.
-   - **Outside contributor** — **open an issue** proposing the task or site, with
+   - Outside contributor: **open an issue** proposing the task or site, with
      the YAML block below filled in and a sentence on what calls it. A maintainer
      lands it upstream; your PR then carries the mirrored copy and everything from
      step 2 on. Do not skip ahead and hand-edit `ai-tasks.yaml` on its own: a
      mirror with no upstream declaration behind it cannot be merged, however green
-     the build is.
+     the build is. No gate catches this order, because every check compares the
+     code against this repository's copy of the contract.
 
-   > **No gate here can catch the wrong order.** Every check in this build
-   > compares the code against *this repo's copy* of the contract, so a task
-   > declared here first passes all of them and is still out of order. The build
-   > cannot warn you about a step it cannot see — which is exactly why it is
-   > written down rather than left to a test.
-
-   The declaration itself — the shape to put in that issue, and to mirror here:
+   The declaration itself, the shape to put in that issue and to mirror here:
 
    ```yaml
    tasks:
@@ -126,56 +118,54 @@ and it caps how much of the site one certification run can cover:
        doc: "one line on what this task is for"
    ```
 
-   - **`status`** — `shipped` obliges every name in `sites[]` to exist, be
+   - `status`: `shipped` obliges every name in `sites[]` to exist, be
      registered, own a certification case and own a corpus scenario. `planned`
-     forbids all four. Declare `planned` while the site is unwritten and flip it
-     in the commit that lands it: a task that ships uncertified and a task that
-     certifies a prompt nobody calls are the two lies this field refuses.
-   - **`company_context`** — `none`, or scopes + `token_budget` (+ `conditional`
-     for "only when the caller asks"). Not optional: an absent policy is a
-     **build** error, never a runtime default.
-   - **`no_payload: true`** — content from this task must never reach
-     `ai_call_payload`, whatever the deployment's capture posture says. A parsed
-     field, because a data-protection control must not be load-bearing prose.
-   - **`cost_unit`** — only for a task the pre-flight estimator prices, and only
+     forbids all four. Declare `planned` while the site is unwritten. Change it to
+     `shipped` in the commit that adds the site.
+   - `company_context`: `none`, or scopes + `token_budget` (+ `conditional`
+     for "only when the caller asks"). It is required: an absent policy is a
+     build error, never a runtime default.
+   - `no_payload: true`: content from this task must never reach
+     `ai_call_payload`, whatever the deployment's capture posture says. It is a
+     parsed field so that the build enforces this data-protection control.
+   - `cost_unit`: only for a task the pre-flight estimator prices, and only
      a name `internal/compose/costestimate` implements (today `per_message`,
-     `per_contact`). Naming a rule that does not exist — or implementing one
-     nothing names — fails the build. Omit it for an unpriced task.
+     `per_contact`). Naming a rule that does not exist, or implementing one
+     nothing names, fails the build. Omit it for an unpriced task.
 
-2. **Regenerate** — `make gen`. `tools/gen-aitasks` compiles the contract into
+2. **Regenerate** with `make gen`. `tools/gen-aitasks` compiles the contract into
    `internal/modules/ai/tasks_gen.go` (your `ai.TaskX` constant, `ai.SitesFor`,
    `ai.Status`, `ai.CompanyContextFor`) and rewrites
-   `config/margince.schema.json`. Never hand-edit either; commit both **with**
+   `config/margince.schema.json`. Never hand-edit either; commit both with
    the contract in one commit, or the drift gate fails.
 
-3. **Give the task a lane, and wire it into a process role** *(new task only)*.
-   A **lane** is how a task reaches a running process, and it takes three edits,
-   not one — the first two both in `internal/compose/brain.go`:
+3. **Wire the task's lane** *(new task only)*.
+   A **lane** is how a task reaches a running process. Declaring and binding it
+   happen in `internal/compose/brain.go`:
 
-   1. **Declare it** — a field on `compose.ModelPath`, named for the task it
+   1. Declare it: a field on `compose.ModelPath`, named for the task it
       serves.
-   2. **Bind it** — in `modelPathForRouter`, or the field stays nil and the task
+   2. Bind it in `modelPathForRouter`, or the field stays nil and the task
       never reaches the Router: `MeetingNotes: brain(ai.TaskMeetingNotes),`.
-   3. **Hand it to a role** — an `Option` in the compose package (the
+   3. Hand it to a role: an `Option` in the compose package (the
       `WithColdStart` / `WithOfferDraft` pattern), passed by the process that
       runs the workload: `cmd/api` for an `interactive` task, `cmd/worker` for a
       `background` one.
 
    Two gates read this. `TestEveryModelLaneIsWiredToTheTaskItIsNamedFor` names
    the missing bind for you; `TestEveryCensusedSiteRidesALaneAProcessRoleWires`
-   fails when no `cmd/` role passes the lane anywhere — without it a site can be
-   registered, scored and recorded while no binary ever reaches it.
+   fails when no `cmd/` role passes the lane anywhere, so a site cannot be
+   registered, scored and recorded while no binary reaches it.
 
-4. **Write the call site** in `internal/compose/`. That is not a style
-   preference: the import DAG lets only `compose` and `cmd` depend on the `ai`
-   module, so a request builder inside `internal/modules/<name>/` fails
+4. **Write the call site** in `internal/compose/`. The import DAG lets only
+   `compose` and `cmd` depend on the `ai` module, so a request builder inside `internal/modules/<name>/` fails
    `arch-lint` before any test runs. Every call goes through the Router via the
    lane, and `TestNoModelClientOutsideTheGate` fails a model client built
-   anywhere else. Keep the builder and the validator **reachable** — the
-   certification case must call the same two functions, and a copy is not one.
+   anywhere else. Keep the builder and the validator reachable: the
+   certification case must call the same two functions, not a copy of them.
 
-5. **Register the site and bind its case** — one line in the **census**
-   (`compose.NewTaskCensus`, `internal/compose/aitaskregistry.go`): the list of
+5. **Register the site and bind its case** with one line in the **census**
+   (`compose.NewTaskCensus`, `internal/compose/aitaskregistry.go`), the list of
    every invocation site this build ships, checked against the contract on every
    boot and in every test run.
 
@@ -183,21 +173,20 @@ and it caps how much of the site one certification run can cover:
    oneShot(ai.TaskMeetingNotes, "summarise", meetingNotesCases{})
    ```
 
-   `oneShot` / `multiTurn` / `agentLoop` are the three helpers; use the one
-   matching the kind the contract declares. The list is written out rather than
-   derived from the contract on purpose — a loop would compare the contract to
-   itself, and pass however little this build implements.
+   `oneShot` / `multiTurn` / `agentLoop` are the helpers; use the one
+   matching the kind the contract declares. Write the line by hand; the census
+   is not derived from the contract.
 
-6. **Write the certification case and its scenario** —
+6. **Write the certification case and its scenario**:
    `internal/compose/certcase_<site>.go` plus at least one fixture under
    `internal/compose/aicert/corpus/<task>/`. This is the substantial half:
    [write-a-certification-case.md](write-a-certification-case.md).
 
-7. **Verify** — `make check`. What each omission looks like:
+7. **Verify** with `make check`. What each omission looks like:
 
    | Missing | Fails as |
    |---|---|
-   | contract edited but not regenerated | `make drift` — a generated file differs |
+   | contract edited but not regenerated | `make drift`: a generated file differs |
    | a shipped task's site not registered | `task X is shipped but its site "y" is not registered` |
    | a site the contract never declared | `…the contract declares no such site (add it to sites[]…)` |
    | a site registered on a `planned` task | `task X is planned but site "y" is registered` |
@@ -207,21 +196,19 @@ and it caps how much of the site one certification run can cover:
    | a `planned` task carrying a corpus scenario | `planned tasks carry corpus scenarios: […] — a task nobody built cannot be certified` |
    | a `planned` task carrying a certification record | `planned tasks carry certification records: […] — the record claims a band for a prompt that does not ship` |
    | a fixture that is not the shape its site takes | `TestEveryCorpusScenarioPreparesAgainstItsSite` |
-   | a closed answer enum with a kind no accepted scenario names | `TestEveryClosedAnswerKindCarriesAScenario` — one scenario per site is not one per kind, and an unscored kind is a prompt branch no model has been graded on |
+   | a closed answer enum with a kind no accepted scenario names | `TestEveryClosedAnswerKindCarriesAScenario`. Each kind of the enum needs its own accepted scenario; one per site is not enough |
    | a task with no lane, or a lane no role wires | `TestEveryCensusedSiteRidesALaneAProcessRoleWires` |
    | a new `.go` file with no SPDX header | `TestEveryHandWrittenGoFileCarriesTheLicenseHeader` |
 
-8. **Certify it** — the one step that costs money, once the gates are green.
-   It needs two things this guide has not asked for until now: a provider key in
-   your environment (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, …) and the two models
-   the run binds — `MODEL=` for the candidate and `JUDGE=` for the second model
-   that grades it. Both are
-   set up in
-   [certify-an-ai-model.md § Prerequisites](certify-an-ai-model.md#prerequisites)
-   — read that first, or the run fails on a missing key.
+8. **Certify it** once the gates are green. This is the one step that costs money.
+   It needs a provider key in your environment (`GEMINI_API_KEY`,
+   `ANTHROPIC_API_KEY`, …) and the two models the run binds: `MODEL=` for the
+   candidate and `JUDGE=` for the second model that grades it. Both are set up in
+   [certify-an-ai-model.md § Prerequisites](certify-an-ai-model.md#prerequisites).
+   Read that first, or the run fails on a missing key.
 
    ```
-   # real calls, billed to YOUR api key; MODEL is required, JUDGE defaults to gpt-oss-120b
+   # real calls on your key; MODEL is required. JUDGE defaults to claude_cli:claude-sonnet-4-6
    make e2e-ai TASK=<your task> MODEL=gemini:gemini-3.1-flash-lite
    make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
    cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
@@ -230,49 +217,42 @@ and it caps how much of the site one certification run can cover:
    That last line rewrites
    [reference/ai-certification.md](../reference/ai-certification.md) from the
    record the run just wrote. It is free, and `make check` fails until the
-   committed page matches — a band nobody published is a band nobody reads.
+   committed page matches.
 
    `TASK=` takes the name you declared in step 1. A name with no scenarios behind
-   it — a typo, or a task nobody has written a corpus for — stops the run with
-   `task "…" has no scenarios under …` **before any provider request is made**, so
+   it (a typo, or a task with no corpus) stops the run with
+   `task "…" has no scenarios under …` before any provider request is made, so
    getting it wrong costs you nothing.
 
    Commit the record under `internal/compose/aicert/records/<task>/`.
 
-9. **Ship it** — contract, generated files, site, census line, case, scenario and
-   record in the PR ([CONTRIBUTING.md](../../CONTRIBUTING.md) has the branch,
-   sign-off and gate rules). Skipping step 8 is allowed: the report then reads
-   **`absent`** for your site, which is honest, and the paid lane never gates a
-   merge.
+9. **Ship it**: contract, generated files, site, census line, case, scenario and
+   record in the PR ([CONTRIBUTING.md](../../CONTRIBUTING.md) has the branch
+   and gate rules). You may skip step 8: the report then reads `absent` for
+   your site, and the paid lane never gates a merge.
 
-   Two gates will stop you here if the task is NEW (a new site on an existing
-   task trips neither), and both are about the activity rail:
+   Two gates about the activity rail stop you here if the task is new (a new site
+   on an existing task trips neither):
 
-   - **`TestEveryKindSomethingProducesIsOneTheContractCanExpress`** — a task the
+   - `TestEveryKindSomethingProducesIsOneTheContractCanExpress`: a task the
      router announces under a name `AiActivityKind` does not carry is a kind the
-     wire cannot express, and the rail renders nothing for AI work that really
-     happened. Its failure prints an `align:` line naming the file and exactly
-     what to add.
-   - **The frontend census** — `ACTIVITY_LINE` in
+     wire cannot express, and the rail renders nothing for that AI work. Its
+     failure prints an `align:` line naming the file and what to add.
+   - The frontend census: `ACTIVITY_LINE` in
      `frontend/src/app/ai-activity-lines.ts` is typed `Record`, not
-     `Partial<Record>`, so a new kind is a **compile error** until you either
-     write its copy in en/de/vi for all six states or state, in code, why it is
-     not shown.
+     `Partial<Record>`, so a new kind is a compile error. Either write its copy
+     in en/de/vi for all six states, or state in code why it is not shown.
 
-   The second one is a decision, not paperwork, and the default is "not shown":
-   the server's obligation is a complete record, but a reader is shown only work
-   they are waiting on. Ask whether a rep would be sitting there wondering. If
-   the work reaches nobody at all — a system principal with no `on_behalf_of` is
-   workspace-scoped with a NULL `actor_user_id`, and the feed filters on the
-   reader's own id — say THAT, because it is a fact about the work rather than an
-   editorial preference. See
+   Default to not shown. Show the kind only if a rep waits on the work. If no
+   human can see it, say so in code. A system principal with no `on_behalf_of`
+   is workspace-scoped with a NULL `actor_user_id`, and the feed filters on the
+   reader's own id. See
    [explanation/ai-activity-rail.md](../explanation/ai-activity-rail.md).
 
-   By default the router reports your task, which is why you did not have to
-   think about this earlier. If it owns a durable row with its own lifecycle,
-   consider registering it as a **carrier** in `ai.railOwners` instead — only a
-   carrier can say `queued`/`running` and declare the lease that makes `stalled`
-   derivable.
+   By default the router reports your task. If the task owns a durable row with
+   its own lifecycle, consider registering it as a **carrier** in
+   `ai.railOwners` instead. Only a carrier can say `queued`/`running` and declare
+   the lease that makes `stalled` derivable.
 
 ## Adding a decision site
 
@@ -302,7 +282,7 @@ Write the question to the decision-model guideline, not by pasting the prompt:
       full in `instructions`, naming state fields by backtick path
       (`` `page.text` ``). Question ids are never sent to the model.
 - [ ] The state is JSON with meaningful keys and coded values spelled out in
-      words. It carries **the same inputs** as the LLM request — a test beside
+      words. It carries the same inputs as the LLM request; a test beside
       the adapter holds that, as `TestTriageDecisionStateCarriesTheLLMInputs` does.
 - [ ] The criteria keys equal the LLM's answer enum (a test holds that too), and
       each criterion says what makes *that* label right, including the trap it
@@ -311,7 +291,7 @@ Write the question to the decision-model guideline, not by pasting the prompt:
       confidence": the wire keeps data apart from instructions and computes
       confidence itself.
 - [ ] The gate reads the answer into the site's existing answer type at the
-      site's **own** floor constant. There is no second floor; below it, the
+      site's own floor constant. There is no second floor; below it, the
       ladder answers.
 - [ ] Do not split a multi-factor judgment into several questions whose
       confidences you multiply: combined confidence was measured unsafe here.
@@ -320,12 +300,11 @@ Write the question to the decision-model guideline, not by pasting the prompt:
 
 ## Notes
 
-- **A record is a claim about one (provider, model, env) binding**, not about the
-  prompt in the abstract. Editing the prompt, the request builder, the grader or
-  the scoring rule re-stamps the version and marks the record **stale** —
-  re-certify rather than hand-editing a record.
-- **Renaming** a task or site starts upstream like any other contract change,
-  then lands here as the mirrored declaration, the census line, the case's
+- A record covers one (provider, model, env) binding. Editing the prompt, the
+  request builder, the grader or the scoring rule re-stamps the version and marks
+  the record **stale**. Re-certify instead of hand-editing a record.
+- **Renaming** a task or site starts upstream like any other contract change.
+  It then lands here as the mirrored declaration, the census line, the case's
   `Site()`, the corpus `site:` field, the record directory, and any exemption
   entry keyed by the old name.
 - **Retiring a site** means deleting its scenarios and its record too. A record

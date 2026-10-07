@@ -42,9 +42,22 @@ export function PurgeDialog({
   // A preview has been seen when one came back saying so; the button below
   // then asks for the real thing.
   const previewed = outcome?.preview === true;
+  // Escape and the backdrop wait for the server too: leaving mid-purge loses
+  // the receipt of what it destroyed and kept.
+  const close = () => {
+    if (!purge.isPending) onClose();
+  };
 
+  // Not ConfirmModal: its pair always offers a confirm, and the receipt after
+  // the purge has nothing left to confirm.
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal
+      open
+      onClose={close}
+      closeDisabled={purge.isPending}
+      labelledBy={headingId}
+      intent="confirm"
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("capturePurge.title", { value: ruleValue })}
       </Heading>
@@ -60,8 +73,10 @@ export function PurgeDialog({
             {problemMessageOf(purge.error, t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
+      </div>
+      <div className="actions">
+        <span className="actions-pair">
+          <Button type="button" onClick={onClose} disabled={purge.isPending}>
             {previewed || !outcome
               ? t("create.cancel")
               : t("capturePurge.done")}
@@ -70,7 +85,7 @@ export function PurgeDialog({
             <Button
               type="button"
               variant="primary"
-              disabled={purge.isPending}
+              pending={purge.isPending}
               onClick={() => purge.mutate({ id: ruleId, preview: true })}
             >
               {t("capturePurge.preview")}
@@ -80,13 +95,13 @@ export function PurgeDialog({
             <Button
               type="button"
               variant="danger"
-              disabled={purge.isPending}
+              pending={purge.isPending}
               onClick={() => purge.mutate({ id: ruleId, preview: false })}
             >
               {t("capturePurge.confirm")}
             </Button>
           )}
-        </div>
+        </span>
       </div>
     </Modal>
   );

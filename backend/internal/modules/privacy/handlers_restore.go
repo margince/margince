@@ -78,5 +78,7 @@ func (h Handlers) RestoreRecordChange(w http.ResponseWriter, r *http.Request,
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, recordHistoryEntryToWire(entry))
+	wire := recordHistoryEntryToWire(entry)
+	wire.LeftBehind = leftBehindToWire(entry.LeftBehind)
+	httperr.WriteJSON(w, http.StatusOK, wire)
 }

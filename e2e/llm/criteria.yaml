@@ -2,22 +2,22 @@
 #
 # THE NUMBERS ARE PER CASE, NOT GLOBAL. Case 1 criterion 1 and case 2 criterion 1
 # are different criteria that share a digit. The suites that pin them say so in
-# their own failures — "case 4 criterion 5", never a bare "criterion 5" — and a
+# their own failures ("case 4 criterion 5", never a bare "criterion 5"), and a
 # catalog keyed on the number alone would attribute one case's statement to
 # every other case that happens to use the same digit.
 #
 # WHY THIS FILE EXISTS: a scenario declares `criteria: [8, 14]`, and those
 # numbers named nothing a reader of this repository could reach. The statements
 # were written down in a working folder outside this tree, so the lane published
-# grades against criteria a public contributor could not look up — and neither
+# grades against criteria a public contributor could not look up, and neither
 # could anyone reading docs/reference/mcp-tool-coverage.md, which is the page a
 # decision gets made from.
 #
 # Each entry is the ONE sentence saying what that case's criterion asks. It is
 # the summary, not the specification: the case is the specification.
 #
-# A criterion a scenario declares and this file does not carry — or carries
-# without a statement — fails TestTheMCPToolCoverageIsPublished, in
+# A criterion a scenario declares and this file does not carry, or carries
+# without a statement, fails TestTheMCPToolCoverageIsPublished, in
 # backend/internal/compose/mcptoolcoverage_test.go. Add it in the change that
 # declares it.
 version: 1
@@ -36,16 +36,16 @@ cases:
         was correct and whose report of them was not still fails this.
   case2_business_card:
     4:
-      name: A possible duplicate is reported, not just filed
+      name: The assistant reports a possible duplicate it filed
       statement: >-
         The create's own answer carries the duplicate it queued, and the
-        assistant reads what came back and says so — a queue nobody is told
+        assistant reads what came back and says so. A queue nobody is told
         about is a queue nobody reads.
   case3_spreadsheet:
     1:
       name: The numbers are shown before anything is committed
       statement: >-
-        What the import will do is reported before it is done — how many rows
+        What the import will do is reported before it is done: how many rows
         will land, said out loud rather than discovered after the write.
     6:
       name: The row that could not be used is reported
@@ -68,12 +68,12 @@ cases:
     1:
       name: A briefing arrives without naming a record
       statement: >-
-        The request names the account the way a contact says it out loud,
-        "Vietnam partner", and not the way the record carries it — so an answer
+        The request names the account the way someone says it out loud,
+        "Vietnam partner", and not the way the record carries it. So an answer
         that only repeats the question has found nothing, and what the record
         holds beyond it is the evidence that it was opened.
     2:
-      name: The contacts are named, not their seats
+      name: The attendees on the other side are named
       statement: >-
         The briefing names the contacts on the other side of the meeting rather
         than describing the roles they hold.
@@ -81,8 +81,8 @@ cases:
       name: An empty calendar answer is not an empty diary
       statement: >-
         No calendar is connected, so every slot comes back free and that is what
-        the CRM's own meeting records leave open. Reporting it as a clear day —
-        or as the meeting being absent from the user's diary — states something
+        the CRM's own meeting records leave open. Reporting it as a clear day,
+        or as the meeting being absent from the user's diary, states something
         about a diary this product was never shown.
     5:
       name: The unkept promise is noticed
@@ -103,7 +103,7 @@ cases:
         Where a note's prose and the record it recalls disagree about when
         something happened, the answer carries the date the record holds.
     5:
-      name: The disagreement is pointed out, not quietly resolved
+      name: The disagreement between note and record is pointed out
       statement: >-
         The answer says that the note and the record do not agree, rather than
         picking one and leaving the reader unaware there was a conflict.
@@ -122,7 +122,7 @@ cases:
         conclusion that the CRM cannot break the question down.
   case8_whats_waiting:
     1:
-      name: The staged change is read, not just listed
+      name: The staged change is opened before it is reported
       statement: >-
         The queue's line is a summary with its values cut short, so an answer
         reporting what a proposal would do has to open the item itself; a report
@@ -131,20 +131,20 @@ cases:
       name: Each verdict lands on the item it was given for
       statement: >-
         Two proposals and two opposite instructions, so approving the one that
-        was to be rejected is a write nobody asked for — and the tool names
+        was to be rejected is a write nobody asked for, and the tool names
         alone cannot tell the two apart.
     3:
-      name: The decision is taken, not handed back
+      name: The approve and the reject are carried out as given
       statement: >-
         The colleague gave an explicit approve and an explicit reject, and an
         assistant that returns the queue and sends them to the web app has
         reported a limitation this surface does not have.
   case9_filed_in_the_wrong_place:
     1:
-      name: A misfiled message is moved, not also-linked
+      name: A misfiled message is moved off the wrong record
       statement: >-
-        The default is to add the new link beside the old one, and the contact
-        asked for the mail to be off the wrong company — an association leaves
+        The default is to add the new link beside the old one, and the user
+        asked for the mail to be off the wrong company. An association leaves
         the wrong timeline still showing it.
     2:
       name: A picked set moves as one act
@@ -153,7 +153,7 @@ cases:
         than as three separate moves of which the second can fail with the first
         already applied.
     3:
-      name: History is re-filed, never re-written
+      name: History is re-filed with its content unchanged
       statement: >-
         Recording the event again on the right record leaves two events where
         there was one and the wrong record still holding the first: the
@@ -162,7 +162,7 @@ cases:
     1:
       name: A pre-authorized import is actually committed
       statement: >-
-        The contact says they have been through the file and asks for it to go
+        The user says they have been through the file and asks for it to go
         in, so stopping at the dry run to ask for permission already given is
         the work handed back.
     2:
@@ -170,7 +170,7 @@ cases:
       statement: >-
         How many rows landed and whether anything was skipped, taken from the
         report rather than assumed from a commit that answered without a
-        failure — and with them the mapping the assistant had to invent, since
+        failure. With them comes the mapping the assistant had to invent, since
         the file's headers place nothing on their own and where each column went
         is its choice rather than the file's.
   case20_put_it_in_the_board_pack:
@@ -188,7 +188,7 @@ cases:
         refusal into a conclusion that it cannot.
   case21_what_are_we_closing:
     1:
-      name: The forecast is read, not assembled
+      name: The expectation is read from the forecast
       statement: >-
         The period's expectation comes from the forecast, which applies the
         installation's fiscal calendar and currency, rather than from a total
@@ -215,7 +215,7 @@ cases:
     1:
       name: Real openings, from the host's own calendar
       statement: >-
-        Times a contact can actually offer come back, worked out from the host's
+        Times the user can actually offer come back, worked out from the host's
         calendar rather than described in general terms.
     2:
       name: The other side's calendar is not claimed to be known
@@ -227,7 +227,7 @@ cases:
       name: The word the workspace already has is reused
       statement: >-
         The user asks for a tag by a spelling the workspace does not hold while
-        it holds a near one, and applying a tag never coins a word — reading the
+        it holds a near one, and applying a tag never coins a word. Reading the
         vocabulary and using what is there, rather than adding a second spelling
         beside it, is the test.
     2:
@@ -241,25 +241,25 @@ cases:
       name: The retired word on the record is reported
       statement: >-
         A record's own row omits archived tags, so an answer drawn from the
-        record alone says the retired word is not there — reading the record's
+        record alone says the retired word is not there. Reading the record's
         tags, where a retired word still shows, is the test.
     2:
       name: One record loses the word and the word survives
       statement: >-
         The tagging comes off the single account named and the vocabulary is
         left alone: retiring the word for the whole workspace answers a question
-        nobody asked and takes it from the accounts that hold it honestly.
+        nobody asked and takes it from the accounts that rightly hold it.
   case32_two_words_for_one_thing:
     1:
       name: The surviving word is chosen by what carries it
       statement: >-
         Which of two duplicate words survives is decided by how many records
-        each is on, and only the tag's own read carries that count — the tag
+        each is on, and only the tag's own read carries that count; the tag
         list does not.
     2:
       name: A fold nobody has released is reported as waiting
       statement: >-
-        Folding one word into another is a contact's decision, and the answer
+        Folding one word into another is a human's decision, and the answer
         names that decision rather than describing the vocabulary as already
         tidied up.
     3:
@@ -273,10 +273,10 @@ cases:
       statement: >-
         The second card carries correspondence worth keeping, so it is folded
         into the record that survives rather than archived where that history is
-        stranded — and because the fold cannot be called back the other way
+        stranded. Because the fold cannot be called back the other way
         round, the survivor is named rather than left for the reader to guess.
     2:
-      name: The company that shut down is archived, not merged
+      name: The company that shut down is archived
       statement: >-
         The closed account has no twin to fold into and nothing worth moving, so
         retiring it is what takes it out of day-to-day work; a merge would need
@@ -289,7 +289,7 @@ cases:
         answers.
   case40_sort_the_queue:
     1:
-      name: The record decides which verb, not the request
+      name: The record decides which verb applies
       statement: >-
         The request names no lead and no tool and states three policies, so
         which of the three terminal outcomes each lead gets has to be read off
@@ -326,7 +326,7 @@ cases:
         carrying the provider value this installation registered rather than a
         spelling that happens to look right.
     2:
-      name: Not being able to send is not the same as not being supported
+      name: A channel that cannot send replies still captures, files and reads
       statement: >-
         A transport that can carry no reply still captures, files and reads, and
         reporting the first as the second tells the reader the product cannot do
@@ -340,7 +340,7 @@ cases:
         an answer that says they needed sign-off reports a gate the product did
         not raise.
     2:
-      name: The sign-off given up front is used, not handed back
+      name: The sign-off given up front is used
       statement: >-
         The user approved in advance, and a record change can be undone, so
         the held proposal is approved and then redeemed from the conversation
@@ -365,14 +365,14 @@ cases:
     3:
       name: The reason is the workspace's
       statement: >-
-        The answer says what is missing — a mailbox, a Telegram bot — rather
+        The answer says what is missing (a mailbox, a Telegram bot) rather
         than leaving a refusal unexplained.
   case45_move_the_deal_on:
     1:
       name: The deal moves to the stage the call named
       statement: >-
         The deal lands on Negotiation and nowhere else; closing it as won is
-        more than the contact said.
+        more than the user said.
     2:
       name: The move leaves its reason on the deal
       statement: >-
@@ -403,10 +403,10 @@ cases:
     1:
       name: The list is read before it is changed
       statement: >-
-        The answer shows the shortlist was read — Mara was on it, and who else
-        was or how many — the baseline every later change is measured against.
+        The answer shows the shortlist was read: Mara was on it, and who else
+        was or how many. That is the baseline every later change is measured against.
     2:
-      name: A wrong promotion is demoted, not archived
+      name: A wrong promotion is demoted
       statement: >-
         Mara goes back to being a lead and off the list, through the demotion
         that undoes her promotion rather than an archive of her contact.
@@ -445,7 +445,7 @@ cases:
         not handed back with an instruction to open the app.
   case49_who_can_introduce_us:
     1:
-      name: The route is a colleague's, not the caller's
+      name: The introduction route runs through a colleague
       statement: >-
         The introduction runs through Sofia, who knows Heike at the account;
         the caller cannot introduce themself.
@@ -455,12 +455,26 @@ cases:
         The deals resting on one relationship or gone cold are named from the tool's
         own sweep, not from the model's reading of every deal.
     3:
-      name: The official number is the report's, not the assistant's sum
+      name: The official number is the report's
       statement: >-
         The bookings figure is read from the standard reporting reading, with
         its coverage, and is not recomputed and passed off as it.
     4:
-      name: A claim is checked against the records, not recalled
+      name: A claim is checked against the records
       statement: >-
         The price claim is tested against the logged mail: the answer says how
         many mails support it and cites the one that does, not memory.
+  case54_a_word_from_the_fair:
+    1:
+      name: A tag is offered and not claimed
+      statement: >-
+        The word the user named is passed to the create as an offer and the answer
+        says the workspace has it, but never reports it as applied: the user said
+        they would decide that themselves.
+  case56_not_the_same:
+    1:
+      name: Two different contacts are told apart
+      statement: >-
+        The user says the flagged record is a different contact, so the pair is
+        dismissed with decide_duplicate rather than merged, and the answer says
+        they were kept apart.

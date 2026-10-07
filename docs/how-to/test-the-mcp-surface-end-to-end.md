@@ -1,15 +1,15 @@
 # Test the MCP surface end to end with a real assistant
 
-Find out whether a real assistant — Claude, GPT or Mistral — can actually do a
-contact's everyday jobs through Margince's MCP surface, and say something true
-while it does. `make e2e-llm` boots its own stack, seeds a test world, hands a
+Find out whether a real assistant (Claude, GPT or Mistral) can do a user's
+everyday jobs through Margince's MCP surface, and say something true while it
+does. `make e2e-llm` boots its own stack, seeds a test world, hands a
 real model the scenario prompts under `e2e/llm/scenarios/`, and grades what the
 model called and what it said. The results publish to
 [reference/mcp-tool-coverage.md](../reference/mcp-tool-coverage.md).
 
 This is the **paid, opt-in** lane: every run spends real model tokens on your own
 credentials. The Go suites pin payloads and refusals for free; this lane answers
-the one question they cannot — can a model drive the surface.
+the question they cannot: whether a model can drive the surface.
 
 > **Start free.** `make test-e2e-llm-check` needs no key, network or stack. It
 > runs the checker, the judge's recorded verdicts and the bridge's unit tests
@@ -48,12 +48,12 @@ are the cheap way to run a big sweep on a subscription.
 declares `passport: wide`, and the lane presents a second passport that adds the
 `draft` and `send` scopes; without it those tools are never in the listing the
 model is shown. The lane's stack has no connected mailbox and no Telegram bot, so
-a send is refused after the model has chosen it and before anything leaves — the
+a send is refused after the model has chosen it and before anything leaves. The
 scenario grades whether the answer says "not sent, and why". The Go census
 `TestTheLaneCanReachEveryToolACaseRequires` holds each scenario's required tools
 against the scopes its passport carries.
 
-The judge — the model that decides each scenario's `judge:` criteria — is Haiku
+The judge (the model that decides each scenario's `judge:` criteria) is Haiku
 4.5 whatever the candidate. `E2E_LLM_JUDGE_VIA=cli|api|openrouter` picks how it
 is reached; `cli` (the default) needs the `claude` CLI and a Claude credential.
 
@@ -62,7 +62,7 @@ is reached; `cli` (the default) needs the `claude` CLI and a Claude credential.
 The scenarios lean on `search_context`, which ranks by meaning only when an
 embedding model serves the stack. A worktree's `.env.local` usually has no
 embedding key, and the lane **refuses to sweep** a stack whose search has fallen
-back to word overlap — every candidate would be measured on a degraded tool.
+back to word overlap, since every candidate would be measured on a degraded tool.
 
 Either put `GEMINI_API_KEY` in the `.env.local` of the checkout you run from
 (the dev stack's own binding), or bind the lane's stack to a committed preset:
@@ -103,7 +103,7 @@ MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=mistral E2E_LLM_VIA=openrouter \
   SCENARIO=case6_ask_the_company make e2e-llm
 ```
 
-The header the lane prints names everything a result depends on — read it before
+The header the lane prints names everything a result depends on. Read it before
 the result:
 
 ```
@@ -127,9 +127,9 @@ not included.
 | Candidate · route | Tokens per 21-case sweep | Cost per 21-case sweep | Wall time |
 |---|---|---|---|
 | `claude-sonnet-5-5` · `cli` | ~19M, 95% of it cache reads | ~$8 API-equivalent, drawn from a Claude subscription | ~1 h 10 |
-| `claude-opus-5` · `cli` | ~20M | ~$22 API-equivalent | — |
+| `claude-opus-5` · `cli` | ~20M | ~$22 API-equivalent | not measured |
 | `gpt-5.6-sol` · `cli` (codex) | ~19M; codex's own prompt and tools add 70–100k input tokens to every run | ~$17 at API prices; codex reports none and draws ChatGPT plan credits | ~4 h |
-| `mistral-medium-3-5` · `openrouter` | — | ~$45–90, extrapolated from one scenario at ~$4 for 3 runs: one tool call per turn runs long conversations | — |
+| `mistral-medium-3-5` · `openrouter` | not measured | ~$45–90, extrapolated from one scenario at ~$4 for 3 runs: one tool call per turn runs long conversations | not measured |
 
 `usage:` under each scenario, and `sweep total:` at the end, print what a run
 actually spent; the committed verdict keeps the same totals.
@@ -141,8 +141,8 @@ harness problem found on one scenario costs one scenario.
 
 A CLI route draws a subscription with a rolling limit, and a full GPT sweep needs
 more than one five-hour ChatGPT window. When the limit runs out, the lane stops
-with exit 2 and scores nothing — codex reports `Your workspace is out of
-credits`, the claude CLI its own usage-limit message — so a sweep run as one
+with exit 2 and scores nothing (codex reports `Your workspace is out of
+credits`, the claude CLI its own usage-limit message), so a sweep run as one
 command ends at that scenario.
 
 Run the scenarios one at a time instead, skip the ones already scored, and wait
@@ -173,7 +173,7 @@ done
 ```
 
 `make` exits 2 for a scored failure as well as for a harness stop, so the lane's
-`scenarios:` summary line — not the exit code — is what says a scenario was
+`scenarios:` summary line, rather than the exit code, says whether a scenario was
 scored. A seed refused with `answered HTTP 429` is the stack's own rate limiter
 after many restarts in a row; it clears within minutes.
 
@@ -189,9 +189,9 @@ A harness stop prints `HARNESS:` and the reason, and keeps the transcript. The
 lane stops on it rather than scoring, because a refused key or a tool the model
 was never offered would otherwise read as the product failing.
 
-A failing scenario lists what did not hold: a tool it never called, a fact it
-never said, something it must not say, a judged criterion with the judge's
-one-sentence reason, or a record the run left in the wrong state.
+A failing scenario lists what did not hold. That can be a tool it never called,
+a fact it never said, something it must not say, a judged criterion with the
+judge's one-sentence reason, or a record the run left in the wrong state.
 
 ### The end state
 
@@ -208,16 +208,16 @@ finds the record by its type and whole display name (every page of
 passport, and compares. A wrong value, a missing record or two records of one
 name fails the run, e.g.
 `ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
-A read that cannot be made — a refusal, a field the read does not carry, a
-reader that crashes — is a harness stop. The outcome is appended to the
+A read that cannot be made (a refusal, a field the read does not carry, a
+reader that crashes) is a harness stop. The outcome is appended to the
 transcript as an `end_state` event. Only `company` is readable by name today;
 another type is one line in `endstate.py`.
 
 ## 6. Diagnose a failure from the transcript
 
 The verdict says which scenario failed; only the transcript says what the model
-did. Transcripts land in the gitignored `e2e/llm/records/` — every run of each
-scenario from the last sweep — in the same shape for every route:
+did. Transcripts land in the gitignored `e2e/llm/records/` (every run of each
+scenario from the last sweep) in the same shape for every route:
 
 ```bash
 python3 - e2e/llm/records/case6_ask_the_company.run1.jsonl <<'PY'
@@ -243,7 +243,7 @@ Before calling a red scenario a product regression, rule out the harness:
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Every run "called nothing" | The MCP server never attached: a disabled server name in the claude CLI's config, or a codex run that could not reach its tools | Read the transcript's system line; the lane now stops on both |
+| Every run "called nothing" | The MCP server never attached: a disabled server name in the claude CLI's config, or a codex run that could not reach its tools | Read the transcript's system line; the lane stops on both |
 | `search_context` returns `semantic_ranking_degraded_to_lexical` | No embedding model serves the stack | section 2 |
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge falls back to the system bundle; check it exists |
 | OpenRouter 404 "No endpoints found that can handle the requested parameters" | `require_parameters` routing and a parameter no endpoint declares | Remove the parameter from the bridge's request |
@@ -251,7 +251,7 @@ Before calling a red scenario a product regression, rule out the harness:
 | Turn cap reached | The model makes one tool call per turn | A finding, not a fault: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) died mid-run; a CLI exiting nonzero under a result that reports no error stops the lane the same way | A harness stop, never a score: every driver writes a terminal result on a finish the model caused, the turn cap included. The stop prints the last lines the driver wrote to stderr |
 
-Always run a control — the same scenario on a model that passes it — before
+Always run a control (the same scenario on a model that passes it) before
 blaming your own change.
 
 ## 7. Experiment with effort or another model
@@ -280,5 +280,5 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 ```
 
 `make check` fails while the page and the committed verdicts disagree. Discard a
-verdict you do not mean to publish — a degraded or exploratory run — rather than
+verdict you do not mean to publish (a degraded or exploratory run) rather than
 leaving it uncommitted beside the others.

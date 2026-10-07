@@ -51,12 +51,26 @@ func CompanyLinkedActivityExists(companyPos int) string {
 // activity_link.company_id alone, which asked a narrower question than the
 // timeline the number is displayed above: capture files mail against the CONTACT
 // it was with, so an account's busiest correspondence carries no company
-// link at all and went uncounted. One walk, two bind shapes — a fourth link
-// added to the model still reaches both.
+// link at all and went uncounted. One walk, three operand shapes — a fourth
+// link added to the model still reaches every one.
 //
 // companiesPos is the bind position carrying the company id array.
 func CompanyLinkedActivityExistsAny(companiesPos int) string {
 	return activityReachesCompany(sprintf("ANY($%d)", companiesPos))
+}
+
+// OuterCompanyAlias is the alias CompanyLinkedActivityExistsPerCompany compares
+// against: the company table of the enclosing query.
+const OuterCompanyAlias = "co"
+
+// CompanyLinkedActivityExistsPerCompany is the same walk correlated with an
+// enclosing query over company aliased OuterCompanyAlias, for a set reader
+// that answers each company separately rather than the set as a whole.
+//
+// The operand is a fixed column, not a parameter, so no caller text ever
+// reaches the SQL.
+func CompanyLinkedActivityExistsPerCompany() string {
+	return activityReachesCompany(OuterCompanyAlias + ".id")
 }
 
 // companyArms is the three links themselves — the account an activity is filed
@@ -110,7 +124,7 @@ var participantEmployerArm = `EXISTS (
 
 // activityReachesCompany is the walk as a PREDICATE, for a query that aliases
 // activity as a. operand is what each arm compares its company id against
-// — a single bind, or ANY(array).
+// — a single bind, ANY(array), or the enclosing query's company column.
 //
 // It stays an EXISTS rather than a join against CompanyReachSet: EXISTS stops at
 // the first arm that matches, and every one of this function's callers is a

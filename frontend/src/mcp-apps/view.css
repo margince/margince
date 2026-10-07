@@ -27,6 +27,16 @@
 @import "../design-system/readings.css";
 @import "../design-system/callout.css";
 @import "../design-system/strengthmeter.css";
+/* The app's button, which a choice card presses. */
+@import "../design-system/base.css";
+
+/* Controls and scrollbars follow the dark preference of a document no host
+   stamped, and stay light where a host stated light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+}
 
 * {
   box-sizing: border-box;
@@ -117,28 +127,6 @@ ol {
   list-style: none;
 }
 
-/* Panels stacked down the frame, a handoff's head over its sections. */
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gapCards);
-}
-
-/* A queue position. The same chip the Worklist draws beside each row: a
-   marker beside the row rather than part of its sentence, at a fixed width so
-   a two-digit rank does not shift the titles beside it. */
-.rank {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--space-6);
-  block-size: var(--space-6);
-  border-radius: var(--r-sm);
-  background: var(--bgChip);
-  font-weight: var(--fontWeightMedium);
-  font-variant-numeric: tabular-nums;
-}
-
 /* One ranked or listed thing: its marker, what it is, and its figure. */
 .item {
   display: grid;
@@ -147,25 +135,9 @@ ol {
   align-items: start;
 }
 
-.item-plain {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-}
-
-.item-ranked {
-  grid-template-columns: auto minmax(0, 1fr);
-}
-
 .item-colleague {
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
-}
-
-.item-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 /* A list of rows after a panel's body keeps the rule over its first row:
@@ -194,70 +166,6 @@ ol {
   white-space: nowrap;
 }
 
-.figure-absent {
-  color: var(--textSecondary);
-}
-
-/* A state read as words at a row's far end. Text, so each takes its family's
-   Text ink — the reading the design system holds at AA on every ground. */
-.late {
-  color: var(--dangerText);
-  white-space: nowrap;
-}
-
-.unowned {
-  color: var(--warningText);
-}
-
-.factors {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin-top: var(--space-2);
-}
-
-/* A factor's name over its bar, the figure at the bar's end: the figure is
-   the reading, so it never gives way, and the name has the cell to itself. */
-.factor-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.factor-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
-}
-
-.factor-line .meterbar {
-  flex: 1;
-}
-
-/* Pushed to the far end of a flex line: a score beside a title, a foot's
-   sentence beside its counts. */
-.end {
-  margin-left: auto;
-}
-
-/* A handoff's own head: its mark, its name and its phase, then its facts. */
-.record-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.record-facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
-  margin-top: var(--space-4);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--borderSubtle);
-}
-
 /* The empty answer, which is a real answer on every view: a queue with nothing
    in it, a contact nobody has spoken to. Inside a panel it is the panel's own
    sentence, inset by panel.css; with no panel to hold it — a result the host
@@ -268,11 +176,34 @@ ol {
   background: var(--bgCard);
 }
 
-@media (max-width: 480px) {
-  .factors {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .record-facts {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* The duplicate card's evidence: the two records' values side by side. */
+.evidence {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: var(--space-3);
+}
+
+.evidence th,
+.evidence td {
+  padding: var(--space-1) var(--space-2);
+  text-align: start;
+  vertical-align: top;
+}
+
+.choices,
+.settled {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.refusal {
+  color: var(--textSecondary);
+}
+
+.evidence-list {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
 }

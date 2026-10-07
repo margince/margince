@@ -1,0 +1,55 @@
+# CASE 56 — Not the same contact.
+#
+# The business card in case 2 files a possible duplicate and the answer says so.
+# Here the user knows better: the other Lucy Vo on file is a different contact.
+# decide_duplicate is the verb for that call. It is undoable (decision reopen
+# lifts it), which is the whole reason an assistant may make it, and it is the
+# one acting tool on this surface no other case drives.
+#
+# WHAT IS HELD: the dismissal is made with the pair the create reported, by
+# candidate_id, and the answer does not claim the two were merged. merge_records
+# is not in may_call and the answer may not report a merge, which
+# must_not_mention below holds; the lane does not fail a run for an extra call
+# by itself.
+name: case56_not_the_same
+criteria: [1]
+
+writes: true
+
+prompt: |
+  I met her at a conference. Tech Sauce in Bangkok actually. Add her to the crm.
+  The card says: Lucy Vo, Cybersecurity Sales Manager, Terralogic,
+  lucy.vo@terralogic-vn.test, +84 28 3825 6789
+
+  I know the CRM will say there is already a Lucy Vo. That is a different
+  one, at another company, nothing to do with her. Make sure the two are
+  not flagged as the same woman.
+
+must_call:
+  - create_record
+  - decide_duplicate
+
+must_call_with:
+  - decide_duplicate.decision=not_the_same
+
+may_call:
+  - list_tags
+  - get_tag
+  - get_record_tags
+  - apply_tag
+  - resolve_entities
+  - search_records
+  - read_record
+  - query_workspace
+  - whoami
+
+must_mention:
+  - "Lucy Vo"
+  - "not (?:the same|a duplicate|flagged)|different (?:pers\w+|woman|contact)|dismiss|keep(?:ing)? (?:them )?separate"
+
+must_not_mention:
+  # A merge reported: the user said they are different contacts.
+  - "(?:I|we)(?:'ve| have)? merged"
+
+runs: 3
+pass_at: 2

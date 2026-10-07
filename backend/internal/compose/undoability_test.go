@@ -33,7 +33,7 @@ import (
 func evaluateWithoutTheTrail(t *testing.T, e Evaluator, row AuditRow) Undoability {
 	t.Helper()
 	var noTx pgx.Tx
-	answer, err := e.Evaluate(context.Background(), noTx, row, Advisory)
+	answer, err := e.Evaluate(systemSeatCtx(), noTx, row, Advisory)
 	if err != nil {
 		t.Fatalf("evaluate: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestAFailedWritabilityCheckIsAFaultAndNotARefusal(t *testing.T) {
 	e := Evaluator{Writable: func(context.Context, pgx.Tx, string, ids.UUID) error {
 		return errPortFailed
 	}}
-	_, err := e.Evaluate(context.Background(), nil, contactRow(`{"full_name":"Greta"}`), Binding)
+	_, err := e.Evaluate(systemSeatCtx(), nil, contactRow(`{"full_name":"Greta"}`), Binding)
 	if !errors.Is(err, errPortFailed) {
 		t.Errorf("err = %v, want the port's own failure to reach the caller", err)
 	}

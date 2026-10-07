@@ -5,7 +5,8 @@
 
 package gates
 
-// Fitness function over a guarantee this codebase no longer has.
+// Source comments may not name row-level security as a control on what a read
+// reaches, because no table carries it.
 //
 // No table in any schema carries row-level security, and no policy exists to
 // read. What a statement reaches is bounded by the predicate it writes for

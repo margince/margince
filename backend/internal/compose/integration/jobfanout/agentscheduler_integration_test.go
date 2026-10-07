@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -214,22 +215,20 @@ func TestAgentSchedulerSeedsAndClaimsWhatIsDue(t *testing.T) {
 
 // TestAgentSchedulerDispatchRepeatsOnItsConfiguredInterval pins the half of the
 // schedule a boot pass hides. RunOnStart fires once whatever the cadence is, so
-// a dispatcher wired to a constant instead of the operator's --runner-interval
+// a dispatcher wired to a constant instead of the admin's agent runner setting
 // looks identical at boot and then never runs again — every workspace's due
 // occurrences unseeded from that moment on, with every gate green. Two
 // dispatches less than jobtest.DispatchGapBound apart can only happen if a
-// cadence far shorter than that flag's own default is what River is scheduling
+// cadence far shorter than that setting's own default is what River is scheduling
 // on.
 func TestAgentSchedulerDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
 	re := setupRunner(t)
 
 	_, completed, _ := jobtest.StartTestJobRunner(t, re.pool, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		AgentScheduler: compose.AgentSchedulerConfig{
-			Interval: jobtest.DispatchInterval, Service: re.svc,
-		},
+		Schedules: compose.SchedulesForTest(map[string]time.Duration{
+			identity.AgentRunnerIntervalSeconds.Key(): jobtest.DispatchInterval,
+		}),
+		AgentScheduler: compose.AgentSchedulerConfig{Service: re.svc},
 	})
 	// Generous compared with the gap bound: a run this slow is a sick machine,
 	// and the assertion that decides the outcome is the gap below, not this.
@@ -238,55 +237,8 @@ func TestAgentSchedulerDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
 	kind := compose.AgentSchedulerArgs{}.Kind()
 	first, second := jobtest.AwaitTwoDispatchArrivals(waitCtx, t, completed, kind)
 	if gap := second.Sub(first); gap > jobtest.DispatchGapBound {
-		t.Fatalf("the two %s dispatches were %s apart, over the %s bound — the schedule is not the configured %s interval but some larger constant, and --runner-interval's own 30s default is the one that would look exactly like this",
+		t.Fatalf("the two %s dispatches were %s apart, over the %s bound — the schedule is not the configured %s interval but some larger constant, and the setting's own 30s default is the one that would look exactly like this",
 			kind, gap, jobtest.DispatchGapBound, jobtest.DispatchInterval)
-	}
-}
-
-// TestAgentSchedulerWithoutAnIntervalSchedulesNothingButStillWorksAQueuedRow
-// pins the omission. River accepts PeriodicInterval(0) and turns it into a
-// schedule whose next run time never advances, so a runner assembled by a
-// caller that never meant to schedule agents would fan the whole fleet out as
-// fast as Postgres accepts an insert. Registering no schedule is the honest
-// reading; the WORKERS still register, so a row an earlier boot queued is still
-// worked rather than stranded.
-func TestAgentSchedulerWithoutAnIntervalSchedulesNothingButStillWorksAQueuedRow(t *testing.T) {
-	re := setupRunner(t)
-
-	jobRunner, completed, _ := jobtest.StartTestJobRunner(t, re.pool, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		AgentScheduler:    compose.AgentSchedulerConfig{Interval: 0, Service: re.svc},
-	})
-	if err := jobRunner.Enqueue(context.Background(), compose.AgentSchedulerArgs{}, nil); err != nil {
-		t.Fatalf("enqueueing the pass an earlier boot would have left: %v", err)
-	}
-
-	// The close-date sweep is the FENCE, and it has to be: River inserts every
-	// RunOnStart periodic job in one round after Start returns, so a run that
-	// only waited on the hand-queued row could read the count before that round
-	// had happened at all — and would then report zero however the schedule was
-	// wired. Waiting for a sibling RunOnStart dispatcher to complete puts the
-	// round provably in the past. The scheduling pass is waited on for the other
-	// half of the claim: a queued row is still worked with no schedule present.
-	waitCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	jobtest.AwaitKindsCompleted(waitCtx, t, completed,
-		compose.CloseDateSweepArgs{}.Kind(), compose.AgentSchedulerArgs{}.Kind())
-
-	var dispatched int
-	if err := re.pool.QueryRow(context.Background(),
-		`SELECT count(*) FROM river_job WHERE kind = $1`,
-		compose.AgentSchedulerArgs{}.Kind()).Scan(&dispatched); err != nil {
-		t.Fatalf("counting the dispatched scheduling passes: %v", err)
-	}
-	// Exactly the one row this test queued by hand. The count used to be zero
-	// because the schedule and the work were different kinds; one kind does both
-	// now, so a spinning schedule shows as rows arriving ABOVE this floor.
-	if dispatched != 1 {
-		t.Errorf("%d %s rows exist after a runner was given no scheduler interval, want only the one queued here — a zero duration is not a cadence, and River spins on it rather than refusing it",
-			dispatched, compose.AgentSchedulerArgs{}.Kind())
 	}
 }
 

@@ -126,6 +126,7 @@ func Definitions() []settings.Definition {
 	return []settings.Definition{
 		AutoEnrich, MailSharing, SharedPostureAllowed, SignatureEnrich,
 		AutoEnrichDailyCap, SiteReadMaxPages, SiteReadMaxMiB, SiteReadWallSeconds,
+		MailSyncIntervalSeconds,
 		GoogleAppSetting, MicrosoftAppSetting,
 	}
 }

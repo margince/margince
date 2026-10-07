@@ -82,6 +82,16 @@ func (s *Service) WithContactTouch(r ContactTouch) *Service {
 	return s
 }
 
+// WithCompanyTouch binds the reader that puts, on every row about a company,
+// when the account last wrote to us and when we last wrote to it. An option
+// for the reason WithDealFacts is one.
+//
+// Unbound, a company row names its company and no moments.
+func (s *Service) WithCompanyTouch(r CompanyTouch) *Service {
+	s.companyTouch = r
+	return s
+}
+
 // WithContactEmployers binds the reader that says which account a meeting
 // row's contact works for. Unbound, the row names the contact and no account.
 func (s *Service) WithContactEmployers(e ContactEmployers) *Service {

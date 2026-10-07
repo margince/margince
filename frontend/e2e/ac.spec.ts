@@ -587,7 +587,7 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
  * grow-into-the-leftover-room sizing this replaced, and would have passed on
  * the defect it exists to catch.
  */
-const STAGE_WIDTH_PX = 240;
+const STAGE_WIDTH_PX = 300;
 
 /**
  * The stage geometry a reader is actually handed, read off the rendered board.
@@ -940,6 +940,20 @@ test("AC-pipeline-10: the bar under the pointer is the one that lights", async (
     });
 });
 
+// Whose deal it is reads the same in both views: the card's mark names the
+// owner on hover, and the table gives the owner a column of its own.
+test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
+  await page.goto("/#/deals");
+  const card = page.locator('[data-deal="d-fleet"]');
+  // Playwright refuses to hover an element another one covers, so this also
+  // holds the mark above the deal's link, which is stretched over the card.
+  await card.getByRole("img", { name: "Lena Fischer" }).hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Lena Fischer");
+  await page.getByRole("button", { name: "Tabelle" }).click();
+  const row = page.getByRole("row", { name: /Fleet retrofit/ });
+  await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
+});
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
@@ -949,6 +963,9 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   const card = page.locator('[data-deal="d-fleet"]');
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
+  // The board scrolls sideways and the terminal stage starts at this window's
+  // edge, so it is brought into view the way a rep scrolls to it before a drop.
+  await won.scrollIntoViewIfNeeded();
   await card.dragTo(won);
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 
@@ -1808,11 +1825,24 @@ test.describe("the cold start's board on a phone at 200% text", () => {
       document.documentElement.style.fontSize = "200%";
     });
     await expectBoardReachable(page);
+    // The Core's row is what a room this short against its text gives up —
+    // folded, never unmounted, or its WebGL loop restarts on the way back.
+    await expect(page.locator(".ob-stage-core")).toHaveCount(1);
+    await expect(page.locator(".ob-stage-core")).toBeHidden();
     // The ignition is the widest step: the sealed badge and the capability
     // lines are the lines that outgrew the board.
     await page.getByRole("button", { name: de["firstRun.continue"] }).click();
     await expect(page.locator(".ob-ig-can li")).toHaveCount(3);
     await expectBoardReachable(page);
+  });
+
+  // The same window at the text size it was built for keeps the Core: the fold
+  // is measured against the reader's text, not against the phone.
+  test("keeps the Core at the default text size", async ({ page }) => {
+    await mockApi(page, { journey: "unconfigured" });
+    await page.goto("/#/onboarding");
+    await expect(page.locator(".ob-stage-title")).toBeVisible();
+    await expect(page.locator(".ob-stage-core")).toBeVisible();
   });
 });
 

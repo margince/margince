@@ -65,7 +65,8 @@ var alteredTable = regexp.MustCompile(`(?is)\bALTER\s+TABLE\s+(?:ONLY\s+)?(?:IF\
 // UNIQUE and PRIMARY KEY are absent on purpose: they build an index rather than
 // validate a predicate, and NOT VALID is not a thing Postgres accepts for them.
 var scanningConstraint = regexp.MustCompile(
-	`(?is)\bADD\s+CONSTRAINT\s+([\w".]+)[^,;]*?\b(CHECK|FOREIGN\s+KEY)\b`)
+	`(?is)\bADD\s+CONSTRAINT\s+([\w".]+)[^,;]*?\b(CHECK|FOREIGN\s+KEY)\b`,
+)
 
 // notValidTail reports whether the matched statement ends NOT VALID.
 var notValidTail = regexp.MustCompile(`(?is)\bNOT\s+VALID\s*$`)

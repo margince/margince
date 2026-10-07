@@ -160,7 +160,7 @@ func TestIngestWordCountIsTheRealCountOfTheExtractedText(t *testing.T) {
 		}, 3},
 	}
 	for _, tc := range cases {
-		prepared, err := prepareSource(tc.in)
+		prepared, err := prepareKnowingNoOne(tc.in)
 		if err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
@@ -291,7 +291,7 @@ func TestUnlabelledSingleSpeakerInputPassesWhole(t *testing.T) {
 // cannot run on, and an unlabelled conversation cannot slip through as
 // "single-speaker".
 func TestConversationalKindsDemandAttributableInput(t *testing.T) {
-	if _, err := prepareSource(IngestSourceInput{
+	if _, err := prepareKnowingNoOne(IngestSourceInput{
 		Kind: "transcript", SourceLabel: "sales call", Format: "txt",
 		Content: "Ada: hello\nKlaus: our budget is 50k",
 	}); err == nil {
@@ -353,7 +353,7 @@ func TestBracketOpenedLabelledTextIsNotMistakenForJSON(t *testing.T) {
 	if format := transcriptCorpusFormat(content); format != "srt" {
 		t.Fatalf("sniffed %q, want srt — a bracket-opened labelled transcript is not JSON", format)
 	}
-	prepared, err := prepareSource(IngestSourceInput{
+	prepared, err := prepareKnowingNoOne(IngestSourceInput{
 		Kind: "transcript", SourceLabel: "call", Format: "transcript",
 		SpeakerLabel: "Lars", Content: content,
 	})
@@ -427,7 +427,7 @@ func TestPreviewOfPlainProseCarriesNoSpeakers(t *testing.T) {
 
 func TestIngestStatsTellTheKeptVersusDiscardedStory(t *testing.T) {
 	content := "Lars: one two three\nAnna: four five six seven\nLars: eight"
-	prepared, err := prepareSource(IngestSourceInput{
+	prepared, err := prepareKnowingNoOne(IngestSourceInput{
 		Kind: "transcript", SourceLabel: "call", Format: "transcript",
 		SpeakerLabel: "lars", Content: content,
 	})
@@ -460,7 +460,7 @@ func TestCorpusRefusalsCarryStableMachineCodes(t *testing.T) {
 			return err
 		}, CorpusErrSpeakerLabelRequired},
 		"speaker not found": {func() error {
-			_, err := prepareSource(IngestSourceInput{
+			_, err := prepareKnowingNoOne(IngestSourceInput{
 				Kind: "transcript", SourceLabel: "call",
 				Format: "transcript", SpeakerLabel: "Nobody", Content: "Lars: hello there",
 			})
@@ -595,7 +595,7 @@ func TestIngestRefusesAFilterOnASourceThatCannotBeFiltered(t *testing.T) {
 	// heading that merely looked like a speaker.
 	email := "Moin Stefan,\n\nJoshua und Marcus sind ja schon mit Vollgas dran. Wir gehen mit Vollgas an die ganze AI Sache.\n\nFrage: Ich hatte nicht geplant zu kommen.\n\nGanz liebe Gruesse"
 	for _, kind := range []string{voiceSourceKindTranscript, voiceSourceKindDocument} {
-		_, err := prepareSource(IngestSourceInput{Kind: kind, Format: "transcript", SpeakerLabel: "Frage", Content: email, SourceLabel: "emails.txt"})
+		_, err := prepareKnowingNoOne(IngestSourceInput{Kind: kind, Format: "transcript", SpeakerLabel: "Frage", Content: email, SourceLabel: "emails.txt"})
 		var refusal *CorpusIngestError
 		if !errors.As(err, &refusal) || refusal.Code != CorpusErrUnattributedTranscript {
 			t.Fatalf("kind %s: err = %v, want %s", kind, err, CorpusErrUnattributedTranscript)

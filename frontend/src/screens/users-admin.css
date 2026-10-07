@@ -39,9 +39,9 @@
   flex-basis: 100%;
 }
 
-/* The link and its copy button sit on one line, with the input taking the
-   slack — the URL is long, and truncating it would hide what is being copied.
-   Wraps to two lines on a narrow card rather than overflowing it. */
+/* The link and its copy button share a line when the card is wide enough, the
+   link taking the slack; otherwise Copy drops below. The link wraps rather than
+   truncates, because a clipped URL hides what is being copied. */
 .users-link-row {
   display: flex;
   flex-wrap: wrap;
@@ -50,7 +50,7 @@
   margin: var(--space-2) 0;
 }
 
-.users-link-row .input {
+.users-link-row .code-block {
   flex: 1 1 20rem;
   min-width: 0;
 }

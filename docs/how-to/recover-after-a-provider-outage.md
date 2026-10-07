@@ -49,18 +49,20 @@ worker reopen-parked --from 2026-03-01T08:00:00Z --to 2026-03-01T11:30:00Z
 The dry run prints how many sender questions and company enrichments would be
 reopened and changes nothing. A real run reopens at most `--batch` rows of each kind
 per workspace and prints how many remain in the window; run it again until none do.
-The window is half-open and cannot tell an outage from a message the validator
-rejected, because both retire a row with the same reason; name it from the **Started**
-line of the **AI provider status** card in System health, not wider. The card shows it
+The window is half-open, and it cannot tell an outage from a message the validator
+rejected, because both retire a row with the same reason. Take it from the **Started**
+line of the **AI provider status** card in System health, and no wider. The card shows it
 as a relative time ("Started 12 minutes ago"), so subtract that from now to get the
 start of the window; the end is when the provider answered again.
 
-It reopens two kinds of work, each back to zero attempts and due at once: sender
-questions retired to unsure for want of a verdict inside the window, which also
-withdraws their standing review offer and skips any someone already decided; and
-company enrichments that ran out of attempts or failed inside the window, skipping
-archived companies and ones with a site read already done. Each reopen writes an
-audit row. A repeat run finds nothing new.
+It reopens two kinds of work, each back to zero attempts and due at once:
+
+- sender questions retired to unsure for want of a verdict inside the window. This also
+  withdraws their standing review offer and skips any someone already decided.
+- company enrichments that ran out of attempts or failed inside the window, skipping
+  archived companies and ones with a site read already done.
+
+Each reopen writes an audit row. A repeat run finds nothing new.
 
 `--batch` defaults to 200. Both `--from` and `--to` are required, and a window that
 does not start before it ends is refused.

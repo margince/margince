@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -70,7 +71,7 @@ func TestNamedTeamRosterDoesNotIncludeAnotherTeam(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 	seam := newTeammatesSeam(e.Pool)
-	members, cut, err := seam.LiveMembersOfTeam(ctx, e.Team1)
+	members, cut, err := seam.MembersOfTeam(ctx, e.Team1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,15 +95,15 @@ func TestNamedTeamRosterRequiresTheCallersLiveTeamScope(t *testing.T) {
 	seam := newTeammatesSeam(e.Pool)
 	team := integration.RepPerms
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, team)
-	if members, _, err := seam.LiveMembersOfTeam(ctx, e.Team1); err != nil || len(members) == 0 {
+	if members, _, err := seam.MembersOfTeam(ctx, e.Team1); err != nil || len(members) == 0 {
 		t.Fatalf("own live team: %d members, %v", len(members), err)
 	}
-	if _, _, err := seam.LiveMembersOfTeam(ctx, e.Team2); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, _, err := seam.MembersOfTeam(ctx, e.Team2); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("other team: %v", err)
 	}
 	own := team
 	own.RowScope = principal.RowScopeOwn
-	if _, _, err := seam.LiveMembersOfTeam(e.As(e.Rep1, []ids.UUID{e.Team1}, own), e.Team1); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := seam.MembersOfTeam(e.As(e.Rep1, []ids.UUID{e.Team1}, own), e.Team1); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("own-only scope: %v", err)
 	}
 }
@@ -130,5 +131,41 @@ func TestPlanAgendaUsesTheInstallationCalendarAcrossDST(t *testing.T) {
 	expected := time.Date(2026, 3, 9, 3, 59, 59, 0, time.UTC)
 	if len(rows) != 1 || !rows[0].DueAt.Equal(expected) {
 		t.Fatalf("DST local end of day: %+v; expected %v", rows, expected)
+	}
+}
+
+func TestATeamWorklistCarriesATeammatesDueCommitmentUnderTheirName(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
+	teammate := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
+	store := weeklyPlanStore(e.Pool)
+	if _, err := store.StartWeek(teammate, now); err != nil {
+		t.Fatal(err)
+	}
+	yesterday := time.Date(2026, 6, 9, 0, 0, 0, 0, time.UTC)
+	if _, err := store.AddCommitment(teammate, now, weeklyplan.NewCommitment{Label: "Send the revised quote", DueOn: &yesterday}); err != nil {
+		t.Fatal(err)
+	}
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
+	day, err := feed.Worklist(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), "team", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, row := range day.Queue {
+		if row.Source == "weekly_commitment" && row.Title != nil && *row.Title == "Send the revised quote" {
+			found = row.Owner != nil && row.Owner.Id != nil && ids.UUID(*row.Owner.Id) == e.Rep2
+		}
+	}
+	if !found {
+		t.Fatalf("the teammate's overdue commitment is missing or not theirs: %+v", day.Queue)
+	}
+	if day.PlanCoverage == nil {
+		t.Fatal("a team read must say whose plans it looked at")
+	}
+	for _, member := range day.PlanCoverage.Members {
+		if !member.Read {
+			t.Errorf("%s's plan was not read on a team the reader shares", member.DisplayName)
+		}
 	}
 }
