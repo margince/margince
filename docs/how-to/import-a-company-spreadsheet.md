@@ -201,6 +201,6 @@ your own session. So over MCP the CSV goes across as text in the request.
 ## See also
 
 - [import-your-linkedin-network.md](import-your-linkedin-network.md): a different importer for a different
-  file, which lands links to contacts, not companies.
+  file. It stores your connections and links the confirmed matches to contacts, not companies.
 - [connect-an-mcp-client.md](connect-an-mcp-client.md): how to connect an assistant.
 - [mint-a-passport.md](mint-a-passport.md): how to issue the credential it uses.
