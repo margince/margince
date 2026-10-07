@@ -78,6 +78,14 @@ func TestALeadFromAContactTakesWhatTheContactKnows(t *testing.T) {
 		t.Fatalf("what the request states should win and the rest fill: %+v, want %+v", stated, stateWins)
 	}
 
+	// A blank name is the contact's to fill, not a refusal.
+	var blank leadWire
+	if status := e.Call(t, "POST", "/v1/leads", AnyMap{
+		"contact_id": captured.Contact.ID, "full_name": "", "source": "manual",
+		"email": "anna@third.northwind.example",
+	}, nil, &blank); status != http.StatusCreated || blank.FullName != "Anna Example" {
+		t.Fatalf("a blank name beside a contact = %d %+v, want the contact's name", status, blank)
+	}
 	if status := e.Call(t, "POST", "/v1/leads", AnyMap{
 		"contact_id": ids.NewV7().String(), "source": "manual",
 	}, nil, nil); status != http.StatusUnprocessableEntity {

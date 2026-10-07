@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -139,5 +140,16 @@ func TestRequireAnyNeedsAnActor(t *testing.T) {
 	err := RequireAny(context.Background(), "fx_rate", principal.ActionCreate)
 	if err == nil {
 		t.Fatal("RequireAny(no actor) = nil, want an error")
+	}
+}
+
+// A seat that may create a type and not read it learns that a duplicate
+// exists, never which row it is: the dedupe probe reads as not visible before
+// any row is consulted.
+func TestVisibleToRefusesACallerWithoutTheReadGrant(t *testing.T) {
+	ctx := grantedCtx("lead", principal.ObjectGrant{Create: true})
+	visible, err := VisibleTo(ctx, nil, "lead", ids.NewV7())
+	if err != nil || visible {
+		t.Fatalf("VisibleTo(create-only seat) = %v, %v; want false, nil", visible, err)
 	}
 }

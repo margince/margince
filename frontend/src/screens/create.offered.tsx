@@ -49,46 +49,73 @@ export function OfferedNameControl({
   control,
   values,
   setValues,
+  type,
 }: Readonly<{
   fieldKey: string;
   offers: NameOffers;
   control: FieldControl;
   values: Record<string, string>;
   setValues: (next: Record<string, string>) => void;
+  type?: "email";
 }>) {
   const name = values[fieldKey] ?? "";
   const { results } = useDebouncedSearch(offers.search, name.trim());
   return (
     <ComboBox
       {...control}
+      type={type}
       value={name}
       // Each offer's value is the record id, so two records sharing a name
       // stay two distinct picks; the label is what lands in the box.
       suggestions={results}
       onChange={(next) => {
         const picked = results.find((result) => result.value === next);
+        const memo = `${offers.pickedKey}:filled`;
         // Any keystroke after a pick is a new name, so the id goes with it.
         setValues({
           ...values,
-          ...blanksFilled(values, picked?.fills),
+          ...(picked ? refilled(values, picked.fills, values[memo]) : {}),
           [fieldKey]: picked ? picked.label : next,
           [offers.pickedKey]: picked ? picked.value : "",
+          ...(picked ? { [memo]: JSON.stringify(picked.fills ?? {}) } : {}),
         });
       }}
     />
   );
 }
 
-/** The picked record's values for the fields the form still holds blank. */
-function blanksFilled(
+/**
+ * The picked record's values for the fields it may write: the blank ones, and
+ * the ones an EARLIER pick filled and nobody has typed over since. A second
+ * pick replaces the first person rather than leaving half of them behind;
+ * what the reader typed is never touched.
+ */
+function refilled(
   values: Record<string, string>,
   fills: Readonly<Record<string, string>> | undefined,
+  earlierJSON: string | undefined,
 ): Record<string, string> {
+  const earlier = parsedFills(earlierJSON);
   const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(fills ?? {})) {
-    if (!values[key]?.trim() && value) {
-      out[key] = value;
+  for (const key of new Set([
+    ...Object.keys(earlier),
+    ...Object.keys(fills ?? {}),
+  ])) {
+    const current = values[key] ?? "";
+    if (!current.trim() || current === earlier[key]) {
+      out[key] = fills?.[key] ?? "";
     }
   }
   return out;
+}
+
+function parsedFills(json: string | undefined): Record<string, string> {
+  if (!json) return {};
+  const parsed: unknown = JSON.parse(json);
+  if (!parsed || typeof parsed !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(parsed).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
 }

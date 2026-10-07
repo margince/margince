@@ -28,6 +28,13 @@ const ben: Partial<Contact> = {
   employer: { company_id: "co-1", company_name: "Contoso Ltd" },
 };
 
+const anna: Partial<Contact> = {
+  id: "c-anna",
+  full_name: "Anna Example",
+  primary_email: "anna@northwind.example",
+  employer: { company_id: "co-2", company_name: "Northwind Traders" },
+};
+
 const unnamedLead = {
   id: "l-1",
   company_name: "Contoso Ltd",
@@ -94,7 +101,7 @@ function stubBackend(writes: { method: string; body: unknown }[]) {
       }
       if (url.includes("/contacts?")) {
         return jsonResponse({
-          data: [ben],
+          data: [ben, anna],
           page: { next_cursor: null, has_more: false },
         });
       }
@@ -152,6 +159,34 @@ describe("a lead's identity, offered from the contacts", () => {
       company_name: "Contoso Ltd",
       contact_id: "c-ben",
     });
+  });
+
+  it("replaces the first person when a second is picked, leaving nothing of them behind", async () => {
+    const writes: { method: string; body: unknown }[] = [];
+    stubBackend(writes);
+    const user = userEvent.setup();
+    mount(<LeadsScreen />);
+
+    await user.click(await screen.findByTestId("new-record"));
+    const form = within(screen.getByRole("dialog"));
+    await user.type(form.getByRole("combobox", { name: /Full name/ }), "Ben");
+    await user.click(await screen.findByRole("option", { name: /Ben Sample/ }));
+    const email = form.getByRole("combobox", { name: "Email" });
+    await user.clear(email);
+    await user.type(email, "anna");
+    await user.click(
+      await screen.findByRole("option", { name: /anna@northwind/ }),
+    );
+    await user.click(form.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]?.body).toMatchObject({
+      full_name: "Anna Example",
+      email: "anna@northwind.example",
+      company_name: "Northwind Traders",
+      contact_id: "c-anna",
+    });
+    expect(writes[0]?.body).not.toHaveProperty("title");
   });
 
   it("fills an unnamed lead from a contact in one save", async () => {
