@@ -159,3 +159,9 @@ export const Tagged: Story = {
     );
   },
 };
+
+/** The same rail in dark, where the tag pills are re-derived. */
+export const TaggedDark: Story = {
+  ...Tagged,
+  globals: { theme: "dark" },
+};
