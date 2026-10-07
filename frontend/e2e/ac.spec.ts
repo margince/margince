@@ -951,7 +951,11 @@ test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
   // holds the mark above the deal's link, which is stretched over the card.
   await mark.hover();
   await expect(page.getByRole("tooltip")).toHaveText("Lena Fischer");
-  // Raised above the link, the mark still opens the deal like the rest of the card.
+  // Raised above the link, the mark still opens the deal like the rest of the
+  // card: the middle button in a new tab, a click in place.
+  const tab = page.context().waitForEvent("page");
+  await mark.click({ button: "middle" });
+  await expect(await tab).toHaveURL(/#\/deals\/d-fleet$/);
   await mark.click();
   await expect(page).toHaveURL(/#\/deals\/d-fleet$/);
   await page.goto("/#/deals");

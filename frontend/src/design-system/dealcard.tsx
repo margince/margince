@@ -142,6 +142,20 @@ function DealOwner({
   dealLink: RefObject<HTMLAnchorElement | null>;
 }>) {
   const tip = useTooltip<HTMLSpanElement>(name);
+  // The mark sits above the deal's stretched link so its tip can open, so it
+  // hands a press on, button and modifier keys included, to keep the card one door.
+  const handOn = (event: React.MouseEvent) =>
+    dealLink.current?.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: event.button,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+      }),
+    );
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path to the deal is the card's own link, which holds the card's one tab stop
     <span // NOSONAR: forwards a pointer press to the deal's link; the mark itself is not a control
@@ -150,20 +164,14 @@ function DealOwner({
       aria-label={name}
       ref={tip.ref}
       {...tip.trigger}
-      // The mark sits above the deal's stretched link so its tip can open, so
-      // it hands a press on, modifier keys included, to keep the card one door.
-      onClick={(event) =>
-        dealLink.current?.dispatchEvent(
-          new MouseEvent("click", {
-            bubbles: true,
-            cancelable: true,
-            ctrlKey: event.ctrlKey,
-            metaKey: event.metaKey,
-            shiftKey: event.shiftKey,
-            altKey: event.altKey,
-          }),
-        )
-      }
+      onClick={handOn}
+      // The middle button's new tab, handed on as a click: a browser follows
+      // only a dispatched click, whichever button it carries.
+      onAuxClick={(event) => {
+        if (event.button === 1) {
+          handOn(event);
+        }
+      }}
     >
       <Avatar name={name} identity={id} />
       {tip.tip}
