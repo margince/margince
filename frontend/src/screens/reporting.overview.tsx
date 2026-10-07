@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
@@ -9,10 +9,10 @@ import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { type ISODate, isISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
-import { Select } from "../design-system/select";
 import { formatDateTime } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { AnalyticsAttention } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
 import { problemCodeOf, QueryGate, throwProblem } from "./common";
 import { ReportingCharts } from "./reporting.charts";
@@ -31,7 +31,8 @@ type Catalog = components["schemas"]["ReportingCatalog"];
 
 export function ReportingOverview({
   scope,
-}: Readonly<{ scope: AnalyticsScope }>) {
+  scopeControl,
+}: Readonly<{ scope: AnalyticsScope; scopeControl?: ReactNode }>) {
   const t = useT();
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
@@ -59,6 +60,7 @@ export function ReportingOverview({
               {(pipelines) => (
                 <OverviewBody
                   scope={scope}
+                  scopeControl={scopeControl}
                   catalog={catalog}
                   template={setup.definition.template}
                   pipelines={pipelines.data}
@@ -135,11 +137,13 @@ function useOverviewFilters(
 
 function OverviewBody({
   scope,
+  scopeControl,
   catalog,
   template: defaultTemplate,
   pipelines,
 }: Readonly<{
   scope: AnalyticsScope;
+  scopeControl?: ReactNode;
   catalog: Catalog;
   template: "sales" | "sdr";
   pipelines: readonly components["schemas"]["Pipeline"][];
@@ -225,6 +229,7 @@ function OverviewBody({
   return (
     <>
       <div className="reporting-controlbar">
+        {scopeControl}
         <SegmentedControl
           label={t("reporting.view")}
           options={["sales", "sdr"]}
@@ -238,7 +243,7 @@ function OverviewBody({
         <ReportingFilters
           selection={selection}
           showScope={false}
-          showCloseWindow={false}
+          showCloseWindow={template === "sales"}
           showPipeline={template === "sales"}
           showTargets={false}
           dates={{
@@ -298,31 +303,8 @@ function OverviewBody({
               )}
               <ReportingCharts
                 evaluation={evaluation}
+                afterSummary={<AnalyticsAttention scope={scope} />}
                 onEvidence={setEvidence}
-                pipelineControls={
-                  template === "sales" ? (
-                    <Select
-                      aria-label={t("reporting.pipelineFilter")}
-                      value={closeWindow}
-                      options={[
-                        { value: "all_open", label: t("reporting.all_open") },
-                        {
-                          value: "fiscal_quarter",
-                          label: t("reporting.fiscal_quarter"),
-                        },
-                      ]}
-                      onChange={(value) => {
-                        if (
-                          value === "all_open" ||
-                          value === "fiscal_quarter"
-                        ) {
-                          setCloseWindow(value);
-                          setEvidence(null);
-                        }
-                      }}
-                    />
-                  ) : undefined
-                }
               />
               {evidence && (
                 <ReportingEvidenceDrawer

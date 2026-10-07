@@ -16,7 +16,6 @@ import type { MessageKey } from "./en";
 export const vi = {
   "reporting.latestSnapshot": "Ảnh chụp mới nhất",
   "reporting.contextDetails": "Chi tiết báo cáo",
-  "reporting.pipelineFilter": "Cơ hội đang mở · dự kiến chốt",
   "reporting.targetRemaining": "Còn {amount}",
   "reporting.targetExceeded": "Vượt mục tiêu {amount}",
   "reporting.targetPeriodSummary": "{actual} trên {target} · {percent}%",
@@ -63,7 +62,6 @@ export const vi = {
   "reporting.remaining": "Còn lại",
   "reporting.ownerMetric": "{metric} theo thành viên",
   "reporting.quarterStart": "Chọn tháng đầu quý tài chính.",
-  "reporting.additional": "Phân tích khác",
   "reporting.settings": "Cài đặt báo cáo",
   "reporting.execution.skipped": "Đã bỏ qua",
   "reporting.execution.suspended": "Tạm dừng",
@@ -89,6 +87,7 @@ export const vi = {
   "reporting.shareSnapshot": "Ảnh chụp để chia sẻ",
   "reporting.capturePending": "Đã xếp hàng chụp. Kết quả sẽ xuất hiện tại đây.",
   "reporting.createReport": "Tạo từ Hiệu suất",
+  "reporting.newCustomReport": "Báo cáo tùy chỉnh mới",
   "reporting.observations_one": "Quan sát: {count}",
   "reporting.observations_other": "Quan sát: {count}",
   "reporting.observationsUnavailable": "Chưa có cỡ mẫu",
@@ -4700,6 +4699,23 @@ export const vi = {
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
   "analytics.sectionQuestions": "Báo cáo tùy chỉnh",
+  "analytics.sectionReports": "Báo cáo",
+  "analytics.setup": "Thiết lập",
+  "analytics.attention": "Cần bạn chú ý",
+  "analytics.attentionChecks_one": "Kiểm tra dự báo cần trả lời: 1",
+  "analytics.attentionChecks_other": "Kiểm tra dự báo cần trả lời: {count}",
+  "analytics.attentionChecksDetail": "Hãy trả lời trước khi cập nhật dự báo.",
+  "analytics.attentionChecksAction": "Xem trong Dự báo",
+  "analytics.attentionUnpriced":
+    "{priced} trên {eligible} deal đang mở có số tiền",
+  "analytics.attentionUnpricedDetail":
+    "Deal chưa có số tiền không đóng góp vào dự báo.",
+  "analytics.attentionUnpricedAction": "Mở Dự báo",
+  "analytics.attentionCoverage_one":
+    "Nguồn dữ liệu chưa được kiểm tra đầy đủ: 1",
+  "analytics.attentionCoverage_other":
+    "Nguồn dữ liệu chưa được kiểm tra đầy đủ: {count}",
+  "analytics.attentionCoverageAction": "Xem độ phủ dữ liệu",
   "analytics.reportDealsByStage": "Tất cả deal theo giai đoạn",
   "analytics.reportLeadsByStatus": "Lead theo trạng thái",
   "analytics.reportActivitiesByKind": "Hoạt động theo loại",

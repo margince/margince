@@ -33,10 +33,8 @@ it.each([
     expect(
       await screen.findByRole("heading", { name: "Sales won over time" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Saved reports" })).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Reporting settings" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reports" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Setup" })).toBeTruthy();
     expect(screen.queryByText("Won and lost")).toBeNull();
     expect(screen.queryByText("Time in stage")).toBeNull();
   },
@@ -47,9 +45,7 @@ it("opens the saved report library with the same reporting implementation", asyn
   window.location.hash = "#/analytics";
   installFetchStub(reportingStoryRoutes());
   render(<AnalyticsScreen />);
-  await user.click(
-    await screen.findByRole("button", { name: "Saved reports" }),
-  );
+  await user.click(await screen.findByRole("button", { name: "Reports" }));
   expect(
     await screen.findByRole("button", { name: "Create from Performance" }),
   ).toBeTruthy();
@@ -120,10 +116,11 @@ it.each([
       .getAttribute("aria-pressed"),
   ).toBe("true");
   expect(screen.queryByRole("button", { name: "Performance" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Saved reports" })).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: "Reporting settings" }),
-  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Reports" })).toBeNull();
+  // Without saved reports there is no Reports tab to open a custom report
+  // from, so custom reports keep a tab of their own.
+  expect(screen.getByRole("button", { name: "Custom reports" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Setup" })).toBeNull();
   expect(forbidden).not.toHaveBeenCalled();
 });
 

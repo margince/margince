@@ -77,14 +77,11 @@ export function ForecastReview() {
   );
 }
 
-function ReviewPanel({
-  run,
-  locale,
-  title,
-}: Readonly<{ run: Assurance; locale: Locale; title: string }>) {
-  const t = useT();
-
-  const checks = useQuery({
+// The open findings this reader may see, under the one key every reader of
+// them shares, so answering one here clears it everywhere it is counted.
+export function useInputChecks(enabled = true) {
+  return useQuery({
+    enabled,
     queryKey: ["input-checks"],
     queryFn: async () => {
       const { data, error } = await api.GET(
@@ -97,6 +94,16 @@ function ReviewPanel({
       return data.data;
     },
   });
+}
+
+function ReviewPanel({
+  run,
+  locale,
+  title,
+}: Readonly<{ run: Assurance; locale: Locale; title: string }>) {
+  const t = useT();
+
+  const checks = useInputChecks();
 
   return (
     <Panel title={title} titleAction={<ReadinessBadge run={run} />}>

@@ -270,7 +270,7 @@ type Story = StoryObj;
 // in the card's head, and the open value drawn as a bar with its weighted part.
 export const DealsByStage: Story = {
   render: screenStory,
-  play: clickButton("Pipeline analysis"),
+  play: clickButton("Pipeline"),
 };
 
 // The section the screen opens on: the answer with the period drawn as won,
@@ -286,7 +286,7 @@ export const Forecast: Story = {
 // selection. This story asked for a button by the card's title and found none.
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
-  play: clickButton("Pipeline analysis"),
+  play: clickButton("Pipeline"),
 };
 
 // The performance section: closed outcomes beside stage velocity, every
@@ -378,7 +378,7 @@ export const Delivery: Story = {
       </StoryProviders>
     );
   },
-  play: clickButton("More analysis", "Delivery"),
+  play: clickButton("Delivery"),
 };
 
 export const DataCoverage: Story = {
@@ -393,7 +393,7 @@ export const DataCoverage: Story = {
       </StoryProviders>
     );
   },
-  play: clickButton("More analysis", "Data coverage"),
+  play: clickButton("Setup", "Data coverage"),
 };
 
 export const MyOutcomes: Story = {
@@ -433,14 +433,14 @@ export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's head, and
   // the Forecast section the screen opens on draws no report cards at all.
-  play: clickButton("Pipeline analysis", "Explain this number"),
+  play: clickButton("Pipeline", "Explain this number"),
 };
 
 // One stage's figure explained in a drawer, over the table it came from.
 export const ExplainRow: Story = {
   render: screenStory,
   play: async (context) => {
-    await clickButton("Pipeline analysis", "Explain Qualify")(context);
+    await clickButton("Pipeline", "Explain Qualify")(context);
     await screen.findByRole("dialog");
   },
 };
@@ -461,7 +461,7 @@ export const ExplainLoading: Story = {
     );
   },
   play: async (context) => {
-    await clickButton("Pipeline analysis", "Explain this number")(context);
+    await clickButton("Pipeline", "Explain this number")(context);
     await within(context.canvasElement).findByText("How this number is built");
   },
 };

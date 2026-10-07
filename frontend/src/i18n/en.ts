@@ -5,7 +5,6 @@
 export const en = {
   "reporting.latestSnapshot": "Latest snapshot",
   "reporting.contextDetails": "Reporting details",
-  "reporting.pipelineFilter": "Open pipeline · expected close",
   "reporting.targetRemaining": "{amount} remaining",
   "reporting.targetExceeded": "{amount} above target",
   "reporting.targetPeriodSummary": "{actual} of {target} · {percent}%",
@@ -52,7 +51,6 @@ export const en = {
   "reporting.remaining": "Remaining",
   "reporting.ownerMetric": "{metric} by team member",
   "reporting.quarterStart": "Choose the first month of the fiscal quarter.",
-  "reporting.additional": "More analysis",
   "reporting.settings": "Reporting settings",
   "reporting.execution.skipped": "Skipped",
   "reporting.execution.suspended": "Paused",
@@ -79,6 +77,7 @@ export const en = {
   "reporting.capturePending":
     "Snapshot queued. It will appear here when ready.",
   "reporting.createReport": "Create from Performance",
+  "reporting.newCustomReport": "New custom report",
   "reporting.observations_one": "Observation: {count}",
   "reporting.observations_other": "Observations: {count}",
   "reporting.observationsUnavailable": "Sample size unavailable",
@@ -4854,7 +4853,7 @@ export const en = {
   "analytics.reportDeals": "Open deals by stage",
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
-  "analytics.sectionPipeline": "Pipeline analysis",
+  "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Performance",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
@@ -4863,6 +4862,22 @@ export const en = {
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
   "analytics.sectionQuestions": "Custom reports",
+  "analytics.sectionReports": "Reports",
+  "analytics.setup": "Setup",
+  "analytics.attention": "Needs your attention",
+  "analytics.attentionChecks_one": "1 forecast check to answer",
+  "analytics.attentionChecks_other": "{count} forecast checks to answer",
+  "analytics.attentionChecksDetail":
+    "Answer them before you update the forecast.",
+  "analytics.attentionChecksAction": "Review in Forecast",
+  "analytics.attentionUnpriced": "{priced} of {eligible} open deals are priced",
+  "analytics.attentionUnpricedDetail":
+    "A deal without a price adds nothing to the forecast.",
+  "analytics.attentionUnpricedAction": "Open Forecast",
+  "analytics.attentionCoverage_one": "1 data source was not fully checked",
+  "analytics.attentionCoverage_other":
+    "{count} data sources were not fully checked",
+  "analytics.attentionCoverageAction": "View data coverage",
   "analytics.reportDealsByStage": "All deals by stage",
   "analytics.reportLeadsByStatus": "Leads by status",
   "analytics.reportActivitiesByKind": "Activities by type",
