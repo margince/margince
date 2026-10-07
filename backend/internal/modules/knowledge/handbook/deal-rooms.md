@@ -72,7 +72,7 @@ Also called: preview the room, buyer view.
 ## What a Deal Room holds
 
 A Deal Room holds a **Room title** and a **Welcome message**, edited under
-**Title and welcome**. The welcome is the first text the buyer reads on
+**Title and welcome**. The welcome is the buyer's first paragraph on
 opening the room. It names a **steward**: the colleague a buyer turns to for
 help, who starts as the deal's owner.
 
@@ -179,8 +179,8 @@ An agent may **open** a Deal Room, list rooms, read one, read its participants
 and documents, and add a thread or comment on your side.
 
 **An agent may not** edit a room, or pause, resume, close or archive one. It
-may not set the end date, preview a room, add or remove a document, or close a
-thread. It may not touch a participant in any way (invite, correct, send again
+may not set the end date, preview a room, add or remove a document, or resolve
+a thread. It may not touch a participant in any way (invite, correct, send again
 or revoke). Only a human decides which outsiders read the papers of a deal.
 
 An agent also has no access to the buyer's side of the room.

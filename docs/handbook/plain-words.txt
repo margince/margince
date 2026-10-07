@@ -50,8 +50,7 @@ apart
 app
 appear
 applicable
-applied
-applies
+apply
 approval
 approve
 april
@@ -78,6 +77,7 @@ automatic
 automatically
 automation
 autopilot
+average
 await
 away
 back
@@ -85,7 +85,7 @@ backfill
 background
 badge
 ban
-bands
+band
 bar
 base
 basis
@@ -231,6 +231,7 @@ detail
 device
 dialog
 did
+difference
 different
 disagree
 disconnect
@@ -378,6 +379,7 @@ hour
 how
 human
 i
+ids
 if
 ignore
 immediate
@@ -468,8 +470,7 @@ me
 mean
 measure
 medium
-meet
-meetings
+meeting
 member
 menu
 merge
@@ -518,7 +519,7 @@ now
 number
 of
 off
-offered
+offer
 offline
 often
 ok
@@ -554,6 +555,7 @@ page
 palette
 panel
 paper
+paragraph
 part
 partially
 participant
@@ -667,12 +669,13 @@ renewal
 reopen
 rep
 replace
-replies
-replying
+reply
 report
 request
 require
 research
+resolve
+response
 rest
 restore
 restrict
@@ -721,13 +724,14 @@ serve
 service
 session
 set
-settings
+setting
 settle
 several
 share
 sheet
 ship
 short
+shorten
 shortlist
 should
 show
@@ -813,7 +817,7 @@ then
 there
 these
 they
-things
+thing
 this
 those
 thread

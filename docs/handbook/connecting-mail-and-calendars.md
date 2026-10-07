@@ -61,13 +61,14 @@ Each connected mailbox or calendar shows one status:
   again on their own.
 - **Disconnected**
 
-You also see "Last synced", "Next check around", and whether it is checked on a
-schedule or the provider pushes new mail to it.
+You also see "Last synced" and "Next check around". It also says whether the
+mailbox is checked on a schedule or the provider sends a notice when new mail
+arrives.
 
 ### Why did my Gmail or Outlook connection stop working?
 When emails stop coming into Margince, open **Settings → Connections** and read the status on the mailbox under **Connected mailboxes and calendars**.
 - **Needs reconnect**: "The provider rejected the stored credentials. Reconnect to resume." Press **Reconnect** and approve access again.
-- **Sync error**: the line under it says why. A slowed down or unreachable provider tries again on its own. If it stays in **Sync error**, press **Disconnect**, then connect again with **Add connector**.
+- **Sync error**: the line under it says why. When the provider is slowed down or unreachable, Margince tries again on its own. If it stays in **Sync error**, press **Disconnect**, then connect again with **Add connector**.
 - **Disconnected**: connect again with **Add connector**.
 Also called: mailbox not syncing, emails stopped coming in, Gmail disconnected, sync broken.
 

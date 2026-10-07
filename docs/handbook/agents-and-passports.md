@@ -76,7 +76,7 @@ AI names the address Margince reads. Someone who talks the AI round could make
 it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
 
-**Creating or changing a custom field.** This changes your data for everyone.
+**Creating or changing a custom field.** This changes the fields everyone can use.
 
 **Creating or changing a webhook subscription.** This decides where your events
 are sent.
@@ -308,8 +308,8 @@ that could grant itself lasting authority would be deciding its own rights.
 ### Daily allowances
 
 Each passport gets a fixed allowance per 24-hour window: records read, changes
-made, calls that go out, and total calls. One more count shows how much the
-agent's AI use cost; it is only for you to see, and limits nothing.
+made, calls that go out, and total calls. One more count shows how many AI
+tokens the agent used; it is only for you to see, and limits nothing.
 
 The allowances work differently when they run out. For reading and writing,
 the agent is refused, and a card goes to whoever approved the connection.
