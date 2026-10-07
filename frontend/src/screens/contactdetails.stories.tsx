@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { isLocale } from "../i18n";
 import { ContactDetails } from "./contactdetails";
 import {
   installFetchStub,
@@ -13,11 +14,18 @@ const meta: Meta<typeof ContactDetails> = {
   title: "Records/Contact 360/Details",
   component: ContactDetails,
   decorators: [
-    (Story, { parameters }) => (
-      <StoryProviders locale={parameters.locale === "de" ? "de" : "en"}>
-        <Story />
-      </StoryProviders>
-    ),
+    (Story, { parameters }) => {
+      const asked: unknown = parameters.locale;
+      return (
+        <StoryProviders
+          locale={
+            typeof asked === "string" && isLocale(asked) ? asked : undefined
+          }
+        >
+          <Story />
+        </StoryProviders>
+      );
+    },
   ],
   beforeEach: () =>
     installFetchStub({
@@ -189,9 +197,78 @@ const longFixture: components["schemas"]["Contact"] = {
   ],
 };
 
+// Indexes into the card's handles: the four addresses, then the number.
+type Placement = Readonly<{
+  kindsBeneath: readonly number[];
+  marksBeneath: readonly number[];
+}>;
+const allBeside: Placement = { kindsBeneath: [], marksBeneath: [] };
+
+function maxContentWidth(element: HTMLElement): number {
+  const probe = element.cloneNode(true);
+  if (!(probe instanceof HTMLElement)) {
+    throw new Error("a cloned element is no longer an element");
+  }
+  probe.style.position = "absolute";
+  probe.style.width = "max-content";
+  probe.style.maxWidth = "none";
+  probe.style.whiteSpace = "nowrap";
+  element.after(probe);
+  const width = probe.getBoundingClientRect().width;
+  probe.remove();
+  return width;
+}
+
+async function expectHandlePlaced(
+  handle: HTMLElement,
+  index: number,
+  placement: Placement,
+  floor: number,
+) {
+  const address = handle.firstElementChild;
+  const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
+  if (!(address instanceof HTMLElement) || !kind) {
+    throw new Error("a handle lost its address or its kind");
+  }
+  const lines = document.createRange();
+  lines.selectNodeContents(kind);
+  await expect(lines.getClientRects()).toHaveLength(1);
+  const box = address.getBoundingClientRect();
+  const gap = Number.parseFloat(getComputedStyle(handle).columnGap);
+  const kindBox = kind.getBoundingClientRect();
+  const mark = handle
+    .querySelector(":scope > .evmark")
+    ?.getBoundingClientRect();
+  if (placement.kindsBeneath.includes(index)) {
+    await expect(kindBox.top).toBeGreaterThanOrEqual(box.bottom - 0.5);
+    await expect(kindBox.left).toBeCloseTo(box.left, 0);
+  } else {
+    await expect(kindBox.top).toBeLessThan(box.bottom);
+    await expect(kindBox.left - box.right).toBeCloseTo(gap, 0);
+    await expect(box.width).toBeGreaterThanOrEqual(
+      Math.min(floor, maxContentWidth(address)) - 0.5,
+    );
+  }
+  if (mark && placement.marksBeneath.includes(index)) {
+    await expect(mark.top).toBeGreaterThanOrEqual(box.bottom - 0.5);
+  } else if (mark) {
+    await expect(mark.top).toBeLessThan(box.bottom);
+    await expect(mark.left - kindBox.right).toBeCloseTo(gap, 0);
+  }
+  const dropped = [kindBox, mark]
+    .flatMap((piece) => (piece ? [piece.top] : []))
+    .filter((top) => top >= box.bottom - 0.5);
+  const next = handle.nextElementSibling;
+  if (dropped.length > 0 && next?.classList.contains("fieldgrid-handle")) {
+    await expect(Math.min(...dropped) - box.bottom).toBeLessThan(
+      next.getBoundingClientRect().top - handle.getBoundingClientRect().bottom,
+    );
+  }
+}
+
 async function expectHandlesInColumn(
   canvasElement: HTMLElement,
-  kinds: "beside" | "mixed",
+  placement: Placement,
 ) {
   await within(canvasElement).findByText(
     longAddress("alexandra.konstantinopoulou"),
@@ -208,40 +285,8 @@ async function expectHandlesInColumn(
   }
   const floor =
     5 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
-  let dropped = 0;
-  let grouped = 0;
-  for (const handle of handles) {
-    const value = handle.firstElementChild?.getBoundingClientRect();
-    const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
-    if (!value || !kind) {
-      throw new Error("a handle lost its value or its kind");
-    }
-    const lines = document.createRange();
-    lines.selectNodeContents(kind);
-    await expect(lines.getClientRects()).toHaveLength(1);
-    const placed = kind.getBoundingClientRect();
-    if (placed.top < value.bottom) {
-      await expect(placed.left - value.right).toBeCloseTo(
-        Number.parseFloat(getComputedStyle(handle).columnGap),
-        0,
-      );
-      await expect(value.width).toBeGreaterThanOrEqual(floor - 0.5);
-      continue;
-    }
-    dropped += 1;
-    const next = handle.nextElementSibling;
-    if (next?.classList.contains("fieldgrid-handle")) {
-      grouped += 1;
-      await expect(placed.top - value.bottom).toBeLessThan(
-        next.getBoundingClientRect().top -
-          handle.getBoundingClientRect().bottom,
-      );
-    }
-  }
-  if (kinds === "beside") {
-    await expect(dropped).toBe(0);
-  } else {
-    await expect(grouped).toBeGreaterThan(0);
+  for (const [index, handle] of handles.entries()) {
+    await expectHandlePlaced(handle, index, placement, floor);
   }
   const first = handles[0].firstElementChild?.getBoundingClientRect();
   const firstKind = handles[0]
@@ -259,7 +304,7 @@ export const LongAddresses: Story = {
       </div>
     ),
   ],
-  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, "beside"),
+  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, allBeside),
 };
 export const LongAddressesDark: Story = {
   ...LongAddresses,
@@ -271,36 +316,42 @@ export const LongAddressesPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
-    await expectHandlesInColumn(canvasElement, "beside");
+    await expectHandlesInColumn(canvasElement, allBeside);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       document.documentElement.clientWidth,
     );
   },
 };
-// The card a 320px phone leaves, where "Geschäftlich" and "gekauft" outgrow
-// the value column unless they drop beneath the address.
+// Too narrow for any German kind beside a 5rem address: every kind drops.
 export const LongAddressesNarrowGerman: Story = {
   args: { contact: longFixture },
   parameters: { locale: "de" },
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: 288 }}>
+      <div style={{ maxWidth: 264 }}>
         <Story />
       </div>
     ),
   ],
-  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, "mixed"),
+  play: ({ canvasElement }) =>
+    expectHandlesInColumn(canvasElement, {
+      kindsBeneath: [0, 1, 2, 3, 4],
+      marksBeneath: [0],
+    }),
 };
-// A column that holds "Geschäftlich gekauft" beside an address only a few
-// letters wide.
+// Every kind stays beside its address; the bought one's mark drops beneath it.
 export const LongAddressesGerman: Story = {
   ...LongAddressesNarrowGerman,
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: 330 }}>
+      <div style={{ maxWidth: 340 }}>
         <Story />
       </div>
     ),
   ],
-  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, "beside"),
+  play: ({ canvasElement }) =>
+    expectHandlesInColumn(canvasElement, {
+      kindsBeneath: [],
+      marksBeneath: [0],
+    }),
 };
