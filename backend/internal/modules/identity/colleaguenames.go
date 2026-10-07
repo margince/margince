@@ -16,8 +16,8 @@ import (
 
 // SeatNamesAmong answers which of the given names belong to a seat — by display
 // name, its first word or its last word, case-insensitive — split by whose.
-// Colleagues are the live human seats Colleagues lists, so a name answered there
-// is one the roster would show; own are the names that are the caller's own,
+// colleagues are names of live human seats other than the caller, the same seats
+// the Colleagues roster lists; own are the names that are the caller's own,
 // because a name somebody writes in their own document is not a quotation of
 // themselves.
 func (s *Service) SeatNamesAmong(ctx context.Context, names []string) (colleagues, own []string, err error) {
