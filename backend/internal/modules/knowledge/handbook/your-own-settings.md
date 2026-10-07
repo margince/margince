@@ -18,7 +18,7 @@ Also called: my profile, my account, preferences, user settings.
 ### How do I change my notifications?
 Margince has no notification bell and no notification settings. The two summaries that come each day and each week are the morning brief and the weekly review. You choose whether they also come by email. Open **Settings → Account** and set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
 
-Both always appear on **Home**, whatever you pick, and what you still need to do waits on your Worklist there.
+Both always appear on **Home**, whatever you pick, and what needs you waits on your Worklist there.
 Also called: email notifications, turn off emails, alerts, daily digest.
 
 ## Account
@@ -33,7 +33,7 @@ also has **Sign out**.
 ### How do I change my password?
 To change your password in Margince, open Settings → **Account** and choose **Change password** in the **Password** row.
 1. Enter your **Current password**.
-2. Enter a **New password** of at least 12 characters, and type it again in **Confirm new password**.
+2. Enter a **New password** of at least 12 letters or signs, and type it again in **Confirm new password**.
 3. Choose **Save new password**.
 
 Margince says **Password changed** and signs you out on all your other computers and phones.
@@ -43,7 +43,7 @@ Also called: reset my password, update login.
 ### How do I change my display name?
 To change your display name in Margince, open Settings → **Account**, edit the **Display name** field and choose **Save**.
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
-It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
+It cannot be empty, and it can be up to 255 letters or signs long. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
 
 ### How do I add an email signature?
@@ -51,7 +51,7 @@ To add an email signature in Margince, open Settings → **Account** and choose 
 1. Type your sign-off in **Sign-off**, in plain text.
 2. Choose **Save**.
 
-Margince adds the signature under every email you send yourself, above the unsubscribe footer. Leave it empty and your emails end with a short greeting and your name instead, in the message's language. When the message is too short to tell, that is the installation's language, then English. The row then says **No sign-off set**.
+Margince adds the signature under every email you send yourself, above the unsubscribe footer. Leave it empty and your emails end with a short sign-off and your name instead, in the message's language. When the message is too short to tell, that is the installation's language, then English. The row then says **No sign-off set**.
 
 An email an agent sends carries no sign-off. AI drafts never add a sign-off, so this is the one that goes out.
 Also called: email footer, sign-off, signature block.
@@ -165,8 +165,7 @@ instead.
 When at least half of a file comes from named speakers, Margince reads it as a
 conversation. The page asks which speaker is you, and keeps only your parts.
 Under that share, the file counts as plain text and is taken whole. So an email
-with a line that opens with a heading and a colon, such as "Frage: …", is not
-asked about.
+with a line such as "Frage: …" is not asked about.
 
 ## Agents
 
@@ -221,7 +220,7 @@ rule applies from the next message; what is already captured stays.
 internal**, **No contact created**, **Awaiting sender check** and **Derivation
 failed**. Click one to narrow the list under it.
 
-**Messages**, behind a disclosure, is the log for each message: which step a message
+**Messages**, behind a button, is the log for each message: which step a message
 stopped at, and why. Open it when a message you expected did not show up. By
 default each row names the sender and a short subject. If your installation
 turned this off, the page says so above the rows.

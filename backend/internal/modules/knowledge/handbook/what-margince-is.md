@@ -22,7 +22,7 @@ In Margince, AI agents work inside the CRM. Most CRM products add AI as a panel 
 In Margince, an AI agent connects to your company and gets a set of actions with
 fixed rules. It can look things up, draft replies, read a document for you, add
 facts to a company and move a deal on. Margince records everything it does, and
-names who or what did it.
+who it did it for.
 
 The first rule fits in one sentence:
 
@@ -58,7 +58,7 @@ Margince keeps "no" apart from "I do not know", and it says which one it means:
 - A Worklist with nothing in it says so: "Nothing is waiting on you."
 - A field that was never changed says: "Set at creation and never changed. The
   audit log records no edits."
-- A count taken from part of the data says it is partial, so you do not read an
+- A count taken from part of the data says it is part, so you do not read an
   empty field as a fact.
 - Where nobody knows where a value came from, it says "source not recorded"
   instead of leaving it empty.
@@ -73,7 +73,7 @@ Margince holds these kinds of record:
 
 - **Contacts**: the humans you sell to
 - **Companies**: the companies they work for
-- **Leads**: prospects you are still checking, kept apart from contacts until you
+- **Leads**: buyers you are still checking, kept apart from contacts until you
   check them
 - **Deals**: business on its way to won or lost
 - **Projects**: the work itself, which starts during the deal and goes on after

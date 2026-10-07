@@ -267,8 +267,8 @@ it, and the observations.
 **Leads and meetings**: leads moved on, recorded replies (with how many missed
 the target), meetings held (with booked and missed meetings under them).
 
-**Deals** shows stage moves on and back, and the middle value of the days a deal
-spent in the stage it left. It shows how many open deals have a next step, and how many have more than
+**Deals** shows stage moves on and back, and how many days a deal most often stays
+in a stage. It shows how many open deals have a next step, and how many have more than
 one contact. It shows how many have a close date that is not a guess. And it shows forecast moves up
 against moves down.
 

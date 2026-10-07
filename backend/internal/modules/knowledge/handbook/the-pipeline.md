@@ -64,7 +64,7 @@ To add, rename, reorder or remove stages, open the account menu → **Settings**
 2. A new open stage goes after the other open stages.
 3. To change a stage, choose **Edit stage** on its row.
 4. To reorder, drag an open stage by its handle, or select the handle and press the up or down arrow.
-5. The order is saved when you let go, and **Undo** in the confirmation puts it back. Won and Lost always stay last.
+5. The order is saved when you let go, and **Undo** in the note puts it back. Won and Lost always stay last.
 6. To delete a stage, choose **Remove** → **Remove stage**. Move its deals off it first.
 
 A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only. Your role cannot change pipelines or stages."
@@ -348,14 +348,14 @@ A deal card on the board can carry four badges:
 
 Today the board shows only **stalled** and **archived**.
 
-A deal is single-threaded when you have exchanged messages with only one
-contact at the company. Contacts listed on the deal do not count: a deal can list many of them
+A deal is single-threaded when you have written with only one contact at the
+company. Contacts listed on the deal do not count: a deal can list many of them
 and still be single-threaded.
 
 ## The mail line on a deal card
 
 Under the deal's name, a card says when mail last moved on the deal, and which
-way. An envelope means a message they sent, and an arrow one you sent. Rest the
+way. A letter means a message they sent, and an arrow one you sent. Rest the
 mouse on it to see the last few subjects without opening the deal. **View all
 activity** opens the deal's own timeline.
 
