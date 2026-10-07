@@ -377,9 +377,7 @@ function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
   }
-  if (f.q.trim()) {
-    return "deals.totalsNoSearch";
-  }
+  if (f.q.trim()) return "deals.totalsNoSearch";
   return undefined;
 }
 
