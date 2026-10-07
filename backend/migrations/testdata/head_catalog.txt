@@ -4662,6 +4662,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE l.company_id = cid
     UNION ALL
     -- Filed against one of its deals.
@@ -4671,6 +4672,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE d.company_id = cid
     UNION ALL
     -- Filed against a contact it currently employs.
@@ -4680,6 +4682,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE r.company_id = cid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
   ) arms
@@ -4690,6 +4693,7 @@ public.last_activity_of_contact(cid uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
    WHERE l.contact_id = cid
 
 public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
