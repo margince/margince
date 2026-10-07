@@ -21651,6 +21651,8 @@ export interface components {
             /** @description What the task does, in plain words. */
             summary?: string;
             execution_mode: string;
+            /** @description An interactive task that answers from the record's own facts once no model can, and says so in generated_by, rather than failing. False for a task that fails fast and for a background task, which waits. */
+            degrades_on_outage?: boolean;
             leading_tier: string;
             normal_candidates: components["schemas"]["AiRouteCandidate"][];
             effective_candidates: components["schemas"]["AiRouteCandidate"][];

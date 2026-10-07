@@ -22365,7 +22365,10 @@ type AiFeatureRoute struct {
 	DecisionSkipReason *string `json:"decision_skip_reason,omitempty"`
 
 	// Defaults What a task's calls are sent with.
-	Defaults            *AiTaskSettings    `json:"defaults,omitempty"`
+	Defaults *AiTaskSettings `json:"defaults,omitempty"`
+
+	// DegradesOnOutage An interactive task that answers from the record's own facts once no model can, and says so in generated_by, rather than failing. False for a task that fails fast and for a background task, which waits.
+	DegradesOnOutage    *bool              `json:"degrades_on_outage,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`

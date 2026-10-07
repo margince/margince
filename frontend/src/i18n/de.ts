@@ -9493,6 +9493,10 @@ export const de = {
     "Wartet gerade: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
   "aiTasks.deferral.nowInteractive":
     "Schlägt gerade fehl: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
+  "aiTasks.deferral.degrades":
+    "Wenn jedes Modell dieser Aufgabe ausgefallen, ohne Guthaben oder mit abgelehntem Schlüssel ist, antwortet sie trotzdem ohne Modell aus ihren eigenen Fakten, statt zu scheitern.",
+  "aiTasks.deferral.nowDegrades":
+    "Antwortet gerade aus eigenen Fakten: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
   "aiTasks.deferral.skipping":
     "Ein gesperrter Anbieter wird übersprungen, und das nächste Modell antwortet.",
   "aiTasks.embeddingsEdit":

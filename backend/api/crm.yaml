@@ -31278,6 +31278,7 @@ components:
         display_name: { type: string }
         summary: { type: string, description: 'What the task does, in plain words.' }
         execution_mode: { type: string }
+        degrades_on_outage: { type: boolean, description: 'An interactive task that answers from the record''s own facts once no model can, and says so in generated_by, rather than failing. False for a task that fails fast and for a background task, which waits.' }
         leading_tier: { type: string }
         normal_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
         effective_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
