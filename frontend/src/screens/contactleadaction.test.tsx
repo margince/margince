@@ -11,6 +11,7 @@ function stubBackend(
   posted: unknown[],
   answer: () => Response,
   worked: readonly { id: string }[] = [],
+  lookups: string[] = [],
 ) {
   vi.stubGlobal(
     "fetch",
@@ -34,7 +35,9 @@ function stubBackend(
         });
       }
       return jsonResponse({
-        data: url.includes("from_contact_id=c-ben") ? worked : [],
+        data: url.includes("from_contact_id=c-ben")
+          ? (lookups.push(url), worked)
+          : [],
         page: { next_cursor: null, has_more: false },
       });
     },
@@ -50,7 +53,8 @@ afterEach(() => {
 describe("Work as a lead", () => {
   it("creates the reader's lead from the contact and opens it", async () => {
     const posted: unknown[] = [];
-    stubBackend(posted, () => jsonResponse({ id: "l-new" }, 201));
+    const lookups: string[] = [];
+    stubBackend(posted, () => jsonResponse({ id: "l-new" }, 201), [], lookups);
     const user = userEvent.setup();
     render(
       <StoryProviders>
@@ -65,6 +69,9 @@ describe("Work as a lead", () => {
     await user.click(button);
 
     await waitFor(() => expect(window.location.hash).toBe("#/leads/l-new"));
+    // The contact now has a lead, so the page asks again rather than keep
+    // offering a second one from its cached answer.
+    await waitFor(() => expect(lookups).toHaveLength(2));
     expect(posted).toEqual([
       {
         contact_id: "c-ben",

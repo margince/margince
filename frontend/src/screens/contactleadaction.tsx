@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
@@ -16,7 +16,7 @@ import {
   throwProblem,
   useMe,
 } from "./common";
-import { contactLeadKey } from "./leadkeys";
+import { contactLeadKey, LEAD_LIST_KEY } from "./leadkeys";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -34,6 +34,7 @@ export function WorkAsLeadAction({
   const me = useMe();
   const canCreate = useCanWrite("lead", "create");
   const toast = useOwnToast();
+  const queryClient = useQueryClient();
   const worked = useQuery({
     queryKey: contactLeadKey(contactId),
     queryFn: async () => {
@@ -67,7 +68,10 @@ export function WorkAsLeadAction({
       }
       return data;
     },
-    onSuccess: (lead) => navigate({ screen: "leads", id: lead.id }),
+    onSuccess: (lead) => {
+      void queryClient.invalidateQueries({ queryKey: LEAD_LIST_KEY });
+      navigate({ screen: "leads", id: lead.id });
+    },
     onError: (error) => {
       const existing =
         error instanceof ProblemError ? problemExistingId(error.problem) : null;
