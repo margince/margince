@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
@@ -13,8 +13,10 @@ import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
+  throwProblem,
   useMe,
 } from "./common";
+import { contactLeadKey } from "./leadkeys";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -22,8 +24,8 @@ type Lead = components["schemas"]["Lead"];
  * "Work as a lead": a contact the CRM already holds becomes the one an
  * opportunity is worked through, without retyping them. The lead is filled
  * from the contact on the server (`contact_id`), owned by the reader who asked,
- * and opened. A lead already holding the contact's address is that same
- * contact's lead, so the refusal that says so opens it rather than failing.
+ * and opened. A contact already worked through a live lead offers that lead
+ * instead, and a refusal naming one opens it rather than failing.
  */
 export function WorkAsLeadAction({
   contactId,
@@ -32,6 +34,18 @@ export function WorkAsLeadAction({
   const me = useMe();
   const canCreate = useCanWrite("lead", "create");
   const toast = useOwnToast();
+  const worked = useQuery({
+    queryKey: contactLeadKey(contactId),
+    queryFn: async () => {
+      const { data, error } = await api.GET("/leads", {
+        params: { query: { from_contact_id: contactId, limit: 1 } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data.data[0] ?? null;
+    },
+  });
   const create = useMutation({
     mutationFn: async ({
       contact,
@@ -64,12 +78,20 @@ export function WorkAsLeadAction({
       toast.show(problemMessageOf(error, t));
     },
   });
+  const open = worked.data;
+  if (open) {
+    return (
+      <Button onClick={() => navigate({ screen: "leads", id: open.id })}>
+        {t("contact.action.openLead")}
+      </Button>
+    );
+  }
   if (!canCreate) {
     return null;
   }
   return (
     <Button
-      disabled={create.isPending || !me.data}
+      disabled={create.isPending || !me.data || worked.isPending}
       onClick={() =>
         create.mutate({ contact: contactId, owner: me.data?.user.id })
       }
