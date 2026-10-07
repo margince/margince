@@ -103,7 +103,7 @@ the **proof** that category needs, and records a **decision** per recipient sayi
 
 Marketing consent needs the subject to answer a mail. A double-opt-in purpose needs a confirmed `consent_event`,
 completed **only by the data subject**. They complete it with a single-use link mailed to their own
-live primary address. No operator holds a token, because a token an operator can read and hand back
+live address of record. No operator holds a token, because a token an operator can read and hand back
 proves nothing about the mailbox it should reach.
 
 A refusal names only the address and tells nothing new. The engine is written once
@@ -359,7 +359,7 @@ a decision only a human makes: a named user who holds `activity.update`, with a 
   decided) and an `activity.updated` event carrying `project_filing_undone`.
 - It is allowed only when the project filing is the **only** basis. A `won` deal, a sent offer, a
   pin set by the data controller or a deal link that still counts keeps the class (`409 other_basis_remains` /
-  `qualifying_deal`). An activity a statutory retention hold has already restricted always keeps it
+  `qualifying_deal`). An activity a legal hold has already restricted always keeps it
   (`409 restricted`). A legal hold on any record it is linked to, the project included, comes before
   the undo (`409 legal_hold`).
 

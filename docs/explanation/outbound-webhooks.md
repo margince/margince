@@ -533,8 +533,8 @@ but no buttons that change data.
 | Secret sealing (`AES-256-GCM`) | `internal/modules/webhooks/cipher.go` |
 | Making secrets + HMAC signing + the wire headers | `internal/modules/webhooks/signing.go` |
 | The delivery client with the SSRF guard | `internal/modules/webhooks/client.go` |
-| HTTP transport + error mapping | `internal/modules/webhooks/handlers.go`, `mapping.go` |
-| The tables + their indexes | `backend/migrations/core/0001_baseline.up.sql` (`webhook_subscription`, `webhook_delivery`) |
+| HTTP transport (replaces the generated handlers) + error mapping | `internal/modules/webhooks/handlers.go`, `mapping.go` |
+| The tables + their index | `backend/migrations/core/0001_baseline.up.sql` (`webhook_subscription`, `webhook_delivery`) |
 | Compose setup (key-gate settings, the two deliverers) | `internal/compose/webhooks.go` |
 | Process-role setup (consumer + sweep) | `backend/cmd/worker/main.go`, `backend/cmd/api/main.go` |
 | The `cg:webhooks` consumer group | `internal/shared/kernel/events/catalog.go` |

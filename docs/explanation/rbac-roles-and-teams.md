@@ -30,7 +30,7 @@ does nothing for them until they have a role that passes the object gate.
 ## Roles
 
 A role is a row in the `role` table (`backend/migrations/core/0001_baseline.up.sql`), scoped to one
-workspace. Its `permissions` column (`jsonb`) holds two things:
+workspace. Its `permissions` JSON holds two things:
 
 - **`objects`**: for each object type, a grant of `{create, read, update, delete}` over the core
   objects (`contact`, `company`, `deal`, `lead`, `activity`, `pipeline`, `list`, `custom_field`,

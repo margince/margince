@@ -178,8 +178,8 @@ never sees.
 
 A judge from the same provider or model line as the model under test is marked. A run where a
 model would grade itself is refused. This follows the research on using a model as a judge. A
-reference answer helps stop the judge from giving long answers more points. A different model helps
-stop it from giving its own answers more points. The rubric text carries no history of older text; that
+reference answer stops the judge from giving long answers more points, and a different model stops
+it from giving its own answers more points. The rubric text carries no history of older text; that
 goes in a YAML comment.
 
 *Checked by* `TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer` and
@@ -189,12 +189,12 @@ goes in a YAML comment.
 ### 14. Model settings come last, and they stay at provider defaults until measured
 
 Google says to leave Gemini 3 temperature at its default. How much a model thinks is set per
-model. `flash-lite` defaults to `minimal`, which on a call site that must judge leaves the model
-next to no room to think. A request with a schema to a model that thinks more is sent `low`. So
+model. `flash-lite` defaults to `minimal`, which on a call site that must judge gives the model
+next to no time to think. A request with a schema to a model that thinks more is sent `low`. So
 it cannot use its whole output cap on thinking (`backend/internal/modules/ai/geminithinking.go`).
 
 Changing the thinking level or the tier is step 3 of the fix order below, never step 1. A cut can
-cost as much as it saves: `reasoning_effort: low` cost 20 points of the judge score (85 → 65) on a drafting task
+cost as much as it saves: `reasoning_effort: low` cost 20% of the score on a drafting task
 ([openrouter.md](../reference/openrouter.md)).
 
 *Checked by* a certification run against the changed binding.
@@ -218,7 +218,7 @@ Work down, and stop at the first step that explains why it fails.
 
 Take the September 2026 review of the `gemini_cloud` run. About half the failing grades turn out
 to be errors in the case, the check or the judge. A third are errors in the prompt, and two are real
-`flash-lite` misses. A tier move made first would have hidden all of the rest.
+`flash-lite` misses. A tier move made first would have covered all of the rest.
 
 ## Context budget
 

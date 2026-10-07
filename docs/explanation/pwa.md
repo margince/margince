@@ -136,7 +136,7 @@ answers one of:
 
 | State | Meaning |
 |---|---|
-| `installed` | running as the installed app (`display-mode: standalone`, or `navigator.standalone` on iOS; a browser without `matchMedia` reads as not installed), or accepted or installed during this visit |
+| `installed` | running as the installed app (`display-mode: standalone`, or `navigator.standalone` on iOS; a browser without `matchMedia` reads as not installed), or accepted or installed in this session |
 | `available` | the browser offered to install; `prompt()` asks it once and answers `accepted` or `dismissed`. A browser that refuses to show its window (an offer already used) answers `dismissed` and logs it, so the row never keeps offering a button that cannot work |
 | `dismissed` | the reader turned the offer down; it holds until the browser offers again (`available`) or the app is installed |
 | `manual-ios` | an iPhone or iPad browser, where Add to Home Screen is a step by hand |
@@ -149,11 +149,11 @@ answers one of:
 
 - `offline`: the browser reports no network (`navigator.onLine` and the `online`/`offline` events).
   Reads pause on every screen, as they always have.
-- `unreachable`: a request to the API is refused at the network level or runs past its client time
-  limit. Or it gets a 502, 503 or 504 with no problem body. (A `5xx` with no problem body is a proxy saying
-  the API is down; the API itself sends a `5xx` with a problem body.) A `/healthz` check sent at once fails
-  too. One refused path on a working server declares nothing. On a model route a run past the time
-  limit, or a bare 502, 503 or 504, does not count, since a long wait is the work there.
+- `unreachable`: a request to the API is refused at the network level, runs past its client time
+  limit, or gets a 502, 503 or 504 with no body. (A `5xx` with no body is a proxy saying the API is
+  down; the API itself sends a `5xx` with a problem body.) A `/healthz` check sent at once fails
+  too. One refused path on a working server declares nothing. None of it counts on a model route,
+  where a long wait is the work.
 
 Only a screen that states the problem holds it open, because a pause that nothing explains is a page
 that never loads. Two screens do: the shell's banner, and the connection screen that a failed first

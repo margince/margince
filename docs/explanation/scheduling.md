@@ -75,7 +75,7 @@ Google Calendar gets a call request linked to the invite's request ID, which nev
 create that runs again cannot ask for a second Google Meet. For Outlook, Margince reads the
 calendar's own default meeting provider and sends it as `onlineMeetingProvider` with
 `isOnlineMeeting` set, because Graph adds none by itself. That provider is Microsoft Teams for a
-Microsoft work or school account, and no link for a calendar that offers none.
+Microsoft work account, and no link for a calendar that offers none.
 
 Only a new meeting asks for a link. A move keeps the call the event already has. It never writes
 the body of an Outlook event again, because Outlook keeps the join text there.
@@ -160,7 +160,7 @@ A contact's open proposals list only the host's own links that are not used yet,
 not pulled back, newest first. Pulling one back archives the proposal's activity, and the guest's
 link stops working at once.
 
-Manage and proposal tokens are random keys, stored only as hashes. A manage or proposal URL
+Manage and proposal tokens are random keys, stored only as hashes. A manage or proposal URL also
 is also kept as a secret in the vault, because the delivery worker must put it in the invite.
 Public answers leave out calendar IDs, provider event URLs, guest addresses and internal record
 links. Access logs leave out the key part of the path, and public answers turn off caching and

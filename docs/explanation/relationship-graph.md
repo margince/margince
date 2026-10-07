@@ -350,12 +350,9 @@ soon as either changed.
 
 The graph tables exist to hold a party who is *not a record*. That is what the address arm of a
 participant row and a LinkedIn ghost both are. A contact-keyed sweep alone leaves the subject named,
-open to reach and open to a new match. So `privacy/erasure_graph.go` reaches the subject by
-more than contact id.
-
-Participants match by address and channel account id. Ghosts match by address,
-LinkedIn handle, or name plus employer. Edges use the contact id alone. All of it runs inside the same
-Article 17 transaction as the rest of the erasure:
+open to reach and open to a new match. So every clause in `privacy/erasure_graph.go` reaches the
+subject by **address or handle** as well as by contact id. It does so inside the same Article 17
+transaction as the rest of the erasure:
 
 - **Participants**: delete rows whose only identity is the subject. A participant row must name
   someone, so it cannot be left empty. Set the subject's arms to NULL on rows that also name one of
@@ -369,7 +366,7 @@ Article 17 transaction as the rest of the erasure:
 
 Erasure deletes edges in its own transaction. An Article 17 duty carried out by an event fails, and
 nobody sees it, when the bus is behind. The table-owner gate records this as the agreement
-for `privacy` writing a table `search` owns. The projection holds who interacted with the subject, how much and
+for `privacy` writing a table `search` owns. The projection holds who wrote to the subject, how much and
 how recently.
 
 Two other rules follow the same shape:
