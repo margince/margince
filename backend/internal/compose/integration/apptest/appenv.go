@@ -157,7 +157,7 @@ func (e *AppEnv) Close() {
 
 // serve composes the harness handler over e.Pool, starts it behind TLS and
 // fills in TS and Client. SetupApp and Reboot both boot through it, so a
-// rebooted app is wired exactly as the one it replaces.
+// rebooted app is wired the same as the one it replaces.
 func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 	t.Helper()
 	// The delivery machinery every send transport is composed with in the api

@@ -607,7 +607,7 @@ func assertDailyCensus(t *testing.T, e *apptest.AppEnv, want dailyCounts) {
 }
 
 // assertDailyContactScope: only owner-only contacts narrow the list, and only to their owner,
-// so the median rep sees the manager's count plus exactly their own (managers own none).
+// so the median rep sees the manager's count plus their own and no more (managers own none).
 func assertDailyContactScope(t *testing.T, e *apptest.AppEnv, seats Seats, corpus DailyCorpus) {
 	t.Helper()
 	rep := seats.Reps[slices.IndexFunc(seats.Reps, func(s Seat) bool { return s.UserID == corpus.MedianRepID })]

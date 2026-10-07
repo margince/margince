@@ -13,7 +13,7 @@ package gates
 // still being one of the benches, so the census a developer runs by hand reads
 // short and nothing fails.
 //
-// WHAT THIS DOES NOT CATCH: a bench outside backend/. The walk stays in this
+// What this does not catch: a bench outside backend/. The walk stays in this
 // module because the other roots are separate modules the test cache cannot
 // see, and every bench file lives here today.
 
