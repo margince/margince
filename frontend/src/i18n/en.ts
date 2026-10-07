@@ -2913,10 +2913,11 @@ export const en = {
   "tagResult.contacts": "Contacts",
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
+  "tagResult.leads": "Leads",
   "tagResult.viewAll": "View all {count} {kind}",
   "tagResult.resultsTitle": "Records with this tag",
   "tagResult.nothingCarries":
-    "No records have this tag yet. Apply it from any contact, company or deal.",
+    "No records have this tag yet. Apply it from any contact, company, deal or lead.",
   "tagResult.loadingRows": "Loading {kind}…",
   "tagResult.noneLeft": "No records have this tag anymore",
   "tagResult.unnamed": "Unnamed",

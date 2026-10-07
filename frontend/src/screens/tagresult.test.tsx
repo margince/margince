@@ -22,6 +22,7 @@ function tagRead(usage: {
   contacts: number;
   companies: number;
   deals: number;
+  leads?: number;
 }) {
   return () =>
     jsonResponse({
@@ -29,7 +30,7 @@ function tagRead(usage: {
       name: "Automation World 2026",
       color: "slate",
       version: 1,
-      usage,
+      usage: { leads: 0, ...usage },
     });
 }
 
@@ -202,7 +203,7 @@ describe("the tag page names what carries the word", () => {
           color: "slate",
           version: 2,
           archived_at: "2026-09-01T00:00:00Z",
-          usage: { contacts: 2, companies: 2, deals: 2 },
+          usage: { contacts: 2, companies: 2, deals: 2, leads: 0 },
         }),
       "GET /contacts": () => jsonResponse({ data: [] }),
       "GET /companies": () => jsonResponse({ data: [] }),
