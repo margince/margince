@@ -142,7 +142,7 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	}
 	// A lead worked from the merged-away contact is worked from the survivor
 	// now. When the survivor already has a live lead, the source's keeps its
-	// link: one person worked through two leads is a lead merge for a human,
+	// link: one contact worked through two leads is a lead merge for a human,
 	// and uq_lead_from_contact_live admits one.
 	if _, err := tx.Exec(ctx,
 		`UPDATE lead SET from_contact_id = $2
