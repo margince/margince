@@ -2828,10 +2828,11 @@ export const vi = {
   "tagResult.contacts": "Liên hệ",
   "tagResult.companies": "Công ty",
   "tagResult.deals": "Deal",
+  "tagResult.leads": "Lead",
   "tagResult.viewAll": "Xem tất cả {count} {kind}",
   "tagResult.resultsTitle": "Bản ghi có thẻ này",
   "tagResult.nothingCarries":
-    "Chưa có bản ghi nào mang thẻ này. Hãy gán thẻ từ một liên hệ, công ty hoặc deal.",
+    "Chưa có bản ghi nào mang thẻ này. Hãy gán thẻ từ một liên hệ, công ty, deal hoặc lead.",
   "tagResult.loadingRows": "Đang tải {kind}…",
   "tagResult.noneLeft": "Không còn bản ghi nào mang thẻ",
   "tagResult.unnamed": "Chưa có tên",

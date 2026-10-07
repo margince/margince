@@ -81,6 +81,10 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 	filterMinScore: storekit.FilterNumber(func(in *ListLeadsInput, v *int) { in.MinScore = v }),
 	filterOwnerID:  storekit.FilterID(func(in *ListLeadsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterStatus:   storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Status = v }),
+	filterTag:      storekit.FilterIDList[ids.TagKind](func(in *ListLeadsInput, v []ids.UUID) { in.TagIDs = v }),
+	filterTagMode: storekit.FilterWord(func(in *ListLeadsInput, v *string) {
+		in.TagMode = tagModeOrDefault(v)
+	}),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by. An entity

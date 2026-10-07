@@ -145,24 +145,7 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 		return nil, nil, nil, err
 	}
 	where = append(where, filters...)
-	if in.Query != nil && *in.Query != "" {
-		where = append(where, leadQuickFindClause(*in.Query, arg))
-	}
-	if in.Status != nil {
-		where = append(where, storekit.SQLf(leadStatusColumn+" = $%d", arg(*in.Status)))
-	}
-	if in.OwedAReply != nil && *in.OwedAReply {
-		where = append(where, leadOwesAReplySQL)
-	}
-	if in.MinScore != nil {
-		where = append(where, storekit.SQLf(leadScoreColumn+" >= $%d", arg(*in.MinScore)))
-	}
-	if in.Source != nil {
-		where = append(where, leadSourceClause(*in.Source, arg))
-	}
-	if in.SLAState != nil {
-		where = append(where, slaStateClause(ctx, policy, *in.SLAState, arg))
-	}
+	where = append(where, leadNarrowing(ctx, in, policy, arg)...)
 	return where, &args, arg, nil
 }
 
@@ -224,7 +207,7 @@ func (s *Store) readLeadQueuePage(ctx context.Context, query string, args []any,
 		// The work queue is its own page path, not a filter over the list, so
 		// it stamps writability itself; a queue that reported every lead
 		// writable would put an edit affordance on a colleague's row.
-		return stampLeadsWritable(ctx, tx, leads)
+		return attachLeadRows(ctx, tx, leads)
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err

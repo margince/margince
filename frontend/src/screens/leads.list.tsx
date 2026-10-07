@@ -34,10 +34,10 @@ import {
   ListTable,
   listFetchLimit,
   useListQuery,
-  useOwnerChips,
 } from "./listquery";
-import { mineEmptyNote, standardViews } from "./recordlist";
+import { mineEmptyNote, standardViews, useOwnerTagChips } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
+import { listQueryParams } from "./tagfilter";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
@@ -55,7 +55,7 @@ async function fetchLeadsPage(
         include_archived: query.includeArchived || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        ...query.filters,
+        ...listQueryParams(query.filters),
       },
     },
   });
@@ -207,7 +207,7 @@ function LeadsWorkbench({
   viewerId,
   opensOnAll,
 }: Readonly<{ viewerId: string; opensOnAll: boolean }>) {
-  const ownerChips = useOwnerChips();
+  const ownerChips = useOwnerTagChips();
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
   const assignable = useAssignableUserOptions();

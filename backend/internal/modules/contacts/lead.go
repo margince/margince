@@ -415,6 +415,9 @@ type ListLeadsInput struct {
 	// Source narrows to one capture source (inbound, webform, referral,
 	// import, crawl, manual, ...): the exact stored value, no prefix match.
 	Source *string
+	// TagIDs narrows to the leads carrying these tags, combined by TagMode.
+	TagIDs  []ids.UUID
+	TagMode storekit.TagMode
 	// SLAState narrows to leads in one first-response state (formulas
 	// §18.1); breached is the overdue queue.
 	SLAState *crmcontracts.ListLeadsParamsSlaState

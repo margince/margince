@@ -1,13 +1,19 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import type { ListChip } from "../design-system/listsurface.dials";
 import type { ListColumn } from "../design-system/listtable";
 import { RowTags } from "../design-system/rowtags";
 import { formatDateAbbrev } from "../format/format";
 import type { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { OwnerName } from "./entityref";
-import type { ListState, ViewSpec } from "./listquery";
+import {
+  type ListState,
+  useOwnerChips,
+  useTagChips,
+  type ViewSpec,
+} from "./listquery";
 
 type RowTag = components["schemas"]["RowTag"];
 
@@ -53,6 +59,11 @@ export function tagsColumn<Row extends TaggedRecord>(
     header: t("tags.columnHeader"),
     cell: (row) => <RowTags tags={row.tags} />,
   };
+}
+
+/** The filter chips an owner-scoped, taggable list opens with, in this order. */
+export function useOwnerTagChips(): readonly ListChip[] {
+  return [...useOwnerChips(), ...useTagChips()];
 }
 
 /** The Owner column: whose record this is, sortable by owner_id. */

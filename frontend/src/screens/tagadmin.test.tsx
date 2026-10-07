@@ -59,12 +59,12 @@ function mount(
     "GET /tags/t-1": () =>
       jsonResponse({
         ...KEY_ACCOUNT,
-        usage: { contacts: 4, companies: 2, deals: 1 },
+        usage: { contacts: 4, companies: 2, deals: 1, leads: 0 },
       }),
     "GET /tags/t-2": () =>
       jsonResponse({
         ...RETIRED,
-        usage: { contacts: 0, companies: 0, deals: 0 },
+        usage: { contacts: 0, companies: 0, deals: 0, leads: 0 },
       }),
     ...extra,
   });
@@ -165,7 +165,7 @@ describe("the tag vocabulary card", () => {
     expect(none.querySelector("[class*='tagpill-dot']")).toBeNull();
   });
 
-  // The count is three row-scoped queries per tag on the server, so drawing it
+  // The count is four row-scoped queries per tag on the server, so drawing it
   // for every row would spend hundreds opening the card to answer a question
   // about the one word being retired.
   it("counts a word's records only when asked", async () => {
@@ -173,7 +173,7 @@ describe("the tag vocabulary card", () => {
     const detail = vi.fn(() =>
       jsonResponse({
         ...KEY_ACCOUNT,
-        usage: { contacts: 4, companies: 2, deals: 1 },
+        usage: { contacts: 4, companies: 2, deals: 1, leads: 0 },
       }),
     );
     mount([KEY_ACCOUNT], ADMIN, { "GET /tags/t-1": detail });
