@@ -82,3 +82,32 @@ func TestAMergedContactsLeadIsWorkedFromTheSurvivor(t *testing.T) {
 		t.Fatalf("a lead from the survivor = %v, want the refusal naming the lead worked from the merged-away contact", err)
 	}
 }
+
+// A lead merged into another hands over the contact it was worked from, so the
+// surviving lead is the one that contact is worked through.
+func TestAMergedLeadHandsItsContactToTheSurvivor(t *testing.T) {
+	e := Setup(t)
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Dana Example", Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the contact: %v", err)
+	}
+	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	worked, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &contactID})
+	if err != nil {
+		t.Fatalf("working the contact as a lead: %v", err)
+	}
+	name, email := "Dana Example", "dana@contoso.example"
+	survivor, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
+	if err != nil {
+		t.Fatalf("creating the surviving lead: %v", err)
+	}
+
+	merged, err := e.Contacts.MergeLead(e.Admin(),
+		ids.From[ids.LeadKind](ids.UUID(worked.Id)), ids.From[ids.LeadKind](ids.UUID(survivor.Id)))
+	if err != nil {
+		t.Fatalf("merging the leads: %v", err)
+	}
+	if merged.FromContactId == nil || ids.UUID(*merged.FromContactId) != ids.UUID(contact.Id) {
+		t.Errorf("the surviving lead is worked from %v, want the contact %s", merged.FromContactId, contact.Id)
+	}
+}

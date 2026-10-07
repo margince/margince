@@ -150,10 +150,11 @@ func readLeadMergeState(ctx context.Context, tx pgx.Tx, id ids.LeadID) (crmcontr
 }
 
 // buildLeadSurvivorshipPatch folds the loser's values onto the survivor
-// fill-only: the survivor never loses what it holds. The exact keys move too
-// — an address the loser had and the survivor lacks is the strongest thing
-// the pair shares, and leaving it on an archived row would let a third
-// capture of the same contact land as a fresh lead.
+// fill-only: the survivor never loses what it holds. The exact keys move too,
+// the contact the loser was worked from among them: an address the loser had
+// and the survivor lacks is the strongest thing the pair shares, and leaving
+// it on an archived row would let a third capture of the same contact land as
+// a fresh lead.
 func buildLeadSurvivorshipPatch(target, source crmcontracts.Lead) *storekit.Patch {
 	p := storekit.NewPatch()
 	fillString(p, "title", target.Title, source.Title)
@@ -165,6 +166,9 @@ func buildLeadSurvivorshipPatch(target, source crmcontracts.Lead) *storekit.Patc
 	}
 	if target.OwnerId == nil && source.OwnerId != nil {
 		p.Set(ownerIDColumn, nil, ids.UUID(*source.OwnerId))
+	}
+	if target.FromContactId == nil && source.FromContactId != nil {
+		p.Set("from_contact_id", nil, ids.UUID(*source.FromContactId))
 	}
 	return p
 }
