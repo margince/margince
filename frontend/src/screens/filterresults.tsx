@@ -108,6 +108,8 @@ export type FilterResultsProps = Readonly<{
   unit: string;
   /** Names this table for the column widths it remembers between visits. */
   widthsKey: string;
+  /** What an empty answer says, worded by the caller from the filter it ran. */
+  emptyNote?: string;
   pending: boolean;
   /** How many rows match on the server, when more match than were sent. */
   total?: number;
@@ -125,6 +127,7 @@ export function FilterResults({
   named,
   unit,
   widthsKey,
+  emptyNote,
   pending,
   total,
   perPage,
@@ -150,7 +153,7 @@ export function FilterResults({
       rowKey={rowKey}
       unit={unit}
       widthsKey={widthsKey}
-      emptyNote={t("filters.noMatches", { records: unit })}
+      emptyNote={emptyNote}
       pending={pending}
       caption={t("filters.resultsCaption")}
       total={total}

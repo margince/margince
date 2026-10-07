@@ -101,9 +101,11 @@ describe("Sign-out (AS-1)", () => {
     );
     renderWith(newClient(), <App />);
 
-    // Authenticated: the chrome (and its account menu) is on screen.
+    // Authenticated: the chrome (and its account menu) is on screen. Boot may
+    // probe more than once; what this test owns is the probe sign-out causes.
     const account = await screen.findByRole("button", { name: /Account$/ });
-    expect(meCalls).toBe(1);
+    expect(meCalls).toBeGreaterThanOrEqual(1);
+    const probesBeforeSignOut = meCalls;
 
     await user.click(account);
     await user.click(screen.getByText("Sign out"));
@@ -115,6 +117,6 @@ describe("Sign-out (AS-1)", () => {
     await screen.findByRole("heading", { name: "Sign in to Margince" });
     expect(screen.queryByRole("navigation")).toBeNull();
     expect(loggedOut).toBe(true);
-    expect(meCalls).toBeGreaterThanOrEqual(2);
+    expect(meCalls).toBeGreaterThan(probesBeforeSignOut);
   });
 });

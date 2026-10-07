@@ -248,26 +248,36 @@ function LibraryKind({ item }: Readonly<{ item: LibraryItem }>) {
 /**
  * How many records a list holds that this reader can see, in its noun. A
  * saved view counts nothing until it is opened, and a list the server could
- * not count says only its type: never a dash and never a zero.
+ * not count says only its type: never a dash and never a zero. A Live List's
+ * pulse stands either way, since it counts past changes rather than members.
  */
 function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const type = resourceOf(item);
-  if (item.kind === "view" || item.list.visible_count == null) {
+  if (item.kind === "view") {
     return <span>{t(RECORD_TYPE_LABEL[type])}</span>;
   }
   const count = item.list.visible_count;
-  const records = plural(RECORDS_COUNT_LABEL[type], count, {
-    count: formatNumber(count, locale),
-  });
+  const records =
+    count == null
+      ? null
+      : plural(RECORDS_COUNT_LABEL[type], count, {
+          count: formatNumber(count, locale),
+        });
   return (
     <span className="library-records">
-      <span aria-hidden="true">{records}</span>
-      <span className="sr-only">
-        {t("filters.library.recordsSeen", { records })}
-      </span>
+      {records === null ? (
+        <span>{t(RECORD_TYPE_LABEL[type])}</span>
+      ) : (
+        <>
+          <span aria-hidden="true">{records}</span>
+          <span className="sr-only">
+            {t("filters.library.recordsSeen", { records })}
+          </span>
+        </>
+      )}
       {item.list.list_type === "dynamic" && <ListPulseBadge list={item.list} />}
     </span>
   );

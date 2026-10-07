@@ -63,6 +63,10 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  // An export test shadows the object-URL statics URL inherits; deleting the
+  // shadow hands the next test the inherited pair again.
+  Reflect.deleteProperty(URL, "createObjectURL");
+  Reflect.deleteProperty(URL, "revokeObjectURL");
   window.location.hash = "";
 });
 

@@ -120,6 +120,9 @@ function Verdict({
                     valueText(node.field ?? "", node.value)),
             })}
       </span>
+      {clause.note !== undefined && (
+        <span className="t-caption">{clause.note}</span>
+      )}
     </p>
   );
 }

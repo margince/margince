@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import { type Locale, translate, translatePlural } from "../i18n";
 import { de } from "../i18n/de";
+import { en as enCatalog } from "../i18n/en";
 import type { VocabularyField } from "./filterdata";
 import {
   clauseWords,
@@ -61,6 +62,13 @@ const FIELDS: VocabularyField[] = [
   },
   { name: "email", type: "text", operators: ["exists"], custom: false },
   { name: "city", type: "text", operators: ["eq"], custom: false },
+  {
+    name: "tag",
+    type: "id",
+    operators: ["eq", "neq", "in"],
+    custom: false,
+    references: "tag",
+  },
   {
     name: "employee_count",
     type: "number",
@@ -218,6 +226,59 @@ describe("a filter read as one sentence", () => {
     expect(read(newGroup("and", [newLeaf("stage_id", "in", ["s1"])]))).toBe(
       "Stage is any of 1 stage",
     );
+  });
+
+  it("names a retired tag archived under every operator, and says no record carries one", () => {
+    const retiring = { ...en, retiredTags: new Set(["t-old", "t-gone"]) };
+    const tagged = (op: "eq" | "neq" | "in", value: string | string[]) =>
+      read(newGroup("and", [newLeaf("tag", op, value)]), retiring);
+    expect(tagged("eq", "t-old")).toBe("Tag is 1 archived tag");
+    expect(tagged("neq", "t-old")).toBe("Tag is not 1 archived tag");
+    expect(tagged("in", ["t-old", "t-gone"])).toBe(
+      "Tag is any of 2 archived tags",
+    );
+    expect(tagged("in", ["t-live", "t-old", "t-new"])).toBe(
+      "Tag is any of 3 tags, 1 archived",
+    );
+    expect(tagged("eq", "t-live")).toBe("Tag is 1 tag");
+    // Beside an "or", the clause is one way in among others, not the group's answer.
+    expect(
+      read(
+        newGroup("or", [
+          newLeaf("city", "eq", "Berlin"),
+          newLeaf("tag", "eq", "t-old"),
+        ]),
+        retiring,
+      ),
+    ).toBe("City is Berlin or Tag is 1 archived tag");
+
+    const note = enCatalog["filters.sentence.retiredTagNote"];
+    for (const [op, operand] of [
+      ["eq", "t-old"],
+      ["neq", "t-old"],
+      ["in", ["t-live", "t-gone"]],
+    ] as const) {
+      expect(
+        clauseWords({ field: "tag", op, operand }, FIELDS, retiring),
+      ).toMatchObject({ note });
+    }
+    expect(
+      clauseWords(
+        { field: "tag", op: "eq", operand: "t-live" },
+        FIELDS,
+        retiring,
+      ).note,
+    ).toBeUndefined();
+    // Words that know of no retired tag count every id as a tag.
+    expect(read(newGroup("and", [newLeaf("tag", "eq", "t-old")]))).toBe(
+      "Tag is 1 tag",
+    );
+    expect(
+      read(newGroup("and", [newLeaf("tag", "eq", "t-old")]), {
+        ...wordsIn("de"),
+        retiredTags: retiring.retiredTags,
+      }),
+    ).toMatch(/ 1 archiviertes Tag$/);
   });
 
   it("counts ids in German with no article that must agree with the noun", () => {

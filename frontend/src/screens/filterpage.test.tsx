@@ -257,7 +257,7 @@ describe("growing the filter", () => {
     expect(
       screen.getByRole("heading", { name: "Matching records" }),
     ).toBeTruthy();
-    expect(screen.queryByText(/match/)).toBeNull();
+    expect(screen.queryByText(/contacts match/)).toBeNull();
     expect(screen.queryByText(FINISH_HINT)).toBeNull();
     answer();
     expect(await screen.findByText("2 contacts match")).toBeTruthy();

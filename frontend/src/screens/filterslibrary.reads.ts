@@ -50,6 +50,8 @@ export type LibraryReads = Readonly<{
   listsFailed: boolean;
   /** The list rows on screen answer the previous archived toggle, not this one. */
   listsHeld: boolean;
+  /** A capped library's search the server has not answered: still paused, or out. */
+  searchPending: boolean;
   unsettled: (group: LibraryGroup) => boolean;
   truncated: boolean;
   /** Every read answered in full, so a count is the whole figure. */
@@ -74,15 +76,8 @@ export function useLibraryReads(
   const views = useAllSavedViews();
   const lists = useLists({ includeArchived: cut.archived }, listsOn, true);
   const listsTruncated = lists.data?.page.has_more === true;
-  const typed = cut.q.trim();
-  const q = usePaused(typed);
-  const searching = listsOn && listsTruncated && q !== "" && typed !== "";
-  const searched = useLists(
-    { q, includeArchived: cut.archived },
-    searching,
-    true,
-  );
-  const listRead = searching && !searched.isPending ? searched : lists;
+  const search = useServerSearch(cut, listsOn && listsTruncated);
+  const listRead = search.answer ?? lists;
   const viewRows = views.data?.views;
   const cappedRows = lists.data?.data;
   const listRows = listRead.data?.data;
@@ -122,6 +117,7 @@ export function useLibraryReads(
     listsPending,
     listsFailed,
     listsHeld,
+    searchPending: search.pending,
     unsettled: (group) =>
       listsPending ||
       listsFailed ||
@@ -131,6 +127,28 @@ export function useLibraryReads(
     limit: formatNumber(Math.max(...truncatedRows), locale),
     retryViews: () => void views.refetch(),
     retryLists: () => void listRead.refetch(),
+  };
+}
+
+/**
+ * A capped library's search, sent once the reader pauses. It stays pending
+ * until the server answers the words on screen, not an earlier search's.
+ */
+function useServerSearch(cut: LibraryCut, capped: boolean) {
+  const typed = cut.q.trim();
+  const q = usePaused(typed);
+  const asked = capped && typed !== "";
+  const searching = asked && q !== "";
+  const searched = useLists(
+    { q, includeArchived: cut.archived },
+    searching,
+    true,
+  );
+  return {
+    answer: searching && !searched.isPending ? searched : undefined,
+    pending:
+      asked &&
+      (q !== typed || searched.isPending || searched.isPlaceholderData),
   };
 }
 

@@ -71,6 +71,30 @@ const searchPaused = (value: string) => {
   vi.useRealTimers();
 };
 
+/** Holds the server's answer to a search for `word` until `answer` is called. */
+const holdSearch = (word: string) => {
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  let asked = false;
+  const served = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (new URL(url, "https://x.local").searchParams.get("q") === word) {
+        asked = true;
+        await held;
+      }
+      return served(input, init);
+    },
+  );
+  return { answer, asked: () => asked };
+};
+
+const NOTHING_ZZZ = en["filters.library.noHits"].replace("{q}", "zzz");
+
 describe("before the session answers", () => {
   it("shows one pending body, and neither layout", async () => {
     const { wrapper } = mountFilters({
@@ -256,9 +280,7 @@ describe("the cut", () => {
     render(<FiltersScreen />, { wrapper });
     await screen.findByText(BERLIN.name);
     await user.type(screen.getByRole("searchbox"), "zzz");
-    expect(
-      screen.getByText("No views or lists match “zzz”."),
-    ).toBeInTheDocument();
+    expect(screen.getByText(NOTHING_ZZZ)).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: en["filters.library.clearSearch"] }),
     );
@@ -377,7 +399,7 @@ describe("a read the server cut short", () => {
       listsCap: 1,
     });
     render(<FiltersScreen />, { wrapper });
-    const caption = "Showing the first 1. Search to narrow the list.";
+    const caption = en["filters.library.truncated"].replace("{limit}", "1");
     expect(await screen.findByText(caption)).toBeInTheDocument();
     const uncounted = () =>
       screen.getByRole("button", { name: en["filters.library.all"] });
@@ -432,6 +454,53 @@ describe("a read the server cut short", () => {
     searchPaused("manufacturing");
     expect(await screen.findByText(partners.name)).toBeInTheDocument();
     expect(screen.getByText(accounts.name)).toBeInTheDocument();
+  });
+
+  it("says nothing matched only once the server has answered the search", async () => {
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [shortlist, liveList],
+      listsCap: 1,
+    });
+    const search = holdSearch("zzz");
+    render(<FiltersScreen />, { wrapper });
+    await screen.findByText(shortlist.name);
+    vi.useFakeTimers();
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "zzz" },
+    });
+    // Inside the pause, and then while the search is out.
+    expect(screen.getByText(en["filters.searching"])).toBeInTheDocument();
+    expect(screen.queryByText(NOTHING_ZZZ)).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+    });
+    vi.useRealTimers();
+    await vi.waitFor(() => expect(search.asked()).toBe(true));
+    expect(screen.getByText(en["filters.searching"])).toBeInTheDocument();
+    expect(screen.queryByText(NOTHING_ZZZ)).toBeNull();
+    search.answer();
+    expect(await screen.findByText(NOTHING_ZZZ)).toBeInTheDocument();
+    expect(screen.queryByText(en["filters.searching"])).toBeNull();
+  });
+
+  it("does not take the previous search's answer as this one's", async () => {
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [shortlist, liveList],
+      listsCap: 1,
+    });
+    const search = holdSearch("zzz");
+    render(<FiltersScreen />, { wrapper });
+    await screen.findByText(shortlist.name);
+    searchPaused("quiet");
+    expect(await screen.findByText(liveList.name)).toBeInTheDocument();
+    searchPaused("zzz");
+    await vi.waitFor(() => expect(search.asked()).toBe(true));
+    expect(screen.getByText(en["filters.searching"])).toBeInTheDocument();
+    expect(screen.queryByText(NOTHING_ZZZ)).toBeNull();
+    search.answer();
+    expect(await screen.findByText(NOTHING_ZZZ)).toBeInTheDocument();
   });
 
   it("keeps the search and its way back when the server finds nothing", async () => {
@@ -544,6 +613,32 @@ describe("a group's own address", () => {
     await screen.findByText(liveList.name);
     await vi.waitFor(() =>
       expect(region(en["filters.library.shared"]).parentElement).toHaveFocus(),
+    );
+  });
+
+  it("lands on the first-run plate for #/filters/lists when nothing is saved", async () => {
+    const { wrapper } = mountFilters({ listsOn: true });
+    render(<FiltersScreen id="lists" />, { wrapper });
+    const plate = await screen.findByText(en["filters.library.firstRunTitle"]);
+    await vi.waitFor(() =>
+      expect(plate.closest(".library-anchor")).toHaveFocus(),
+    );
+  });
+
+  it("lands on Only me for #/filters/lists when the cut leaves Shared out", async () => {
+    window.location.hash = "#/filters/lists?type=contacts";
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      views: [BERLIN],
+      lists: [liveList],
+    });
+    render(<FiltersScreen id="lists" />, { wrapper });
+    await screen.findByText(BERLIN.name);
+    expect(
+      screen.queryByRole("region", { name: en["filters.library.shared"] }),
+    ).toBeNull();
+    await vi.waitFor(() =>
+      expect(region(en["filters.library.mine"]).parentElement).toHaveFocus(),
     );
   });
 

@@ -18,9 +18,9 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // `#/filters`: every saved view and list the reader can use, in one library.
 // The states are the ones a reader can be in: the populated library, a first
-// run, lists switched off, a cut, a read that failed or stopped at its cap,
-// archived lists shown, a row's ⋯ and the type question open, and the wait
-// for the session.
+// run, lists switched off, a cut, a read that failed or stopped at its cap, a
+// search past the cap still out, archived lists shown, a row's ⋯ and the type
+// question open, and the wait for the session.
 const meta: Meta<typeof FiltersScreen> = {
   title: "Patterns/Filters and views/Library",
   component: FiltersScreen,
@@ -131,10 +131,13 @@ function routes(
     lists?: readonly List[];
     listsFail?: boolean;
     truncated?: boolean;
+    /** Every `GET /lists` after the first, the capped one, never answers. */
+    searchPending?: boolean;
     mePending?: boolean;
   }> = {},
 ) {
   globalThis.location.hash = options.hash ?? "#/filters";
+  let listReads = 0;
   const page = (data: readonly unknown[]) =>
     jsonResponse({ data, page: { has_more: options.truncated === true } });
   installFetchStub({
@@ -143,8 +146,13 @@ function routes(
       : listsMe(options.listsOn ?? true, [TEAM_ID]),
     "GET /teams": () => jsonResponse(teamsPage),
     "GET /views": () => page(options.views ?? VIEWS),
-    "GET /lists": () =>
-      options.listsFail ? FAILED() : page(options.lists ?? LISTS),
+    "GET /lists": () => {
+      listReads += 1;
+      if (options.searchPending && listReads > 1) {
+        return new Promise<Response>(() => {});
+      }
+      return options.listsFail ? FAILED() : page(options.lists ?? LISTS);
+    },
     "GET /filters/vocabulary": () => jsonResponse(VOCABULARY),
   });
 }
@@ -215,6 +223,14 @@ export const PartialFailureListsDown: Story = {
 export const Truncated: Story = {
   render: () => {
     routes({ truncated: true });
+    return <FiltersScreen />;
+  },
+};
+
+// A search past the cap waits for the server before it says nothing matched.
+export const SearchingPastTheCap: Story = {
+  render: () => {
+    routes({ hash: "#/filters?q=zzz", truncated: true, searchPending: true });
     return <FiltersScreen />;
   },
 };

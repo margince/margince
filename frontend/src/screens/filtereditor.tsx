@@ -48,6 +48,9 @@ export function FilterEditor({
   const t = useT();
   const fields = vocabulary.data?.fields ?? [];
   const empty = draft.tree.children.length === 0;
+  // With no description box, building by hand is the only way in: no "or",
+  // and the editor's stack rather than the side-by-side start.
+  const twoWays = words.available && !words.noModel;
   const focus = useArrivalFocus(draft);
   return (
     <SurfaceState
@@ -59,7 +62,9 @@ export function FilterEditor({
     >
       <div
         ref={focus.editor}
-        className={empty ? "filters-editor filters-start" : "filters-editor"}
+        className={
+          empty && twoWays ? "filters-editor filters-start" : "filters-editor"
+        }
       >
         <PlainWordsFilter
           words={words}
@@ -70,6 +75,7 @@ export function FilterEditor({
         />
         {empty ? (
           <BuildByHand
+            alternative={twoWays}
             refocus={focus.restarted}
             onAdd={() =>
               dispatch({
@@ -206,8 +212,14 @@ function leafIDs(node: Node): string[] {
  */
 function BuildByHand({
   onAdd,
+  alternative,
   refocus,
-}: Readonly<{ onAdd: () => void; refocus: boolean }>) {
+}: Readonly<{
+  onAdd: () => void;
+  /** The description box stands beside it, so "or" stands between them. */
+  alternative: boolean;
+  refocus: boolean;
+}>) {
   const t = useT();
   const add = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
@@ -217,7 +229,9 @@ function BuildByHand({
   }, [refocus]);
   return (
     <>
-      <p className="filters-start-or t-caption">{t("filters.startOr")}</p>
+      {alternative && (
+        <p className="filters-start-or t-caption">{t("filters.startOr")}</p>
+      )}
       <Card as="div" inset>
         <div className="filters-start-card">
           <Heading size="medium">{t("filters.start.buildTitle")}</Heading>

@@ -26,7 +26,13 @@ import {
   RESOURCE_OF,
   UNIT_LABEL,
 } from "./filtersaddress";
-import { fieldsNamed, type Group, isComplete } from "./segmentpredicate";
+import {
+  fieldsNamed,
+  type Group,
+  isComplete,
+  isGroup,
+  type Node,
+} from "./segmentpredicate";
 import "./filters.css";
 
 type Preview = ReturnType<typeof useFilterPreview>;
@@ -126,6 +132,7 @@ export function FilterMatches({
   tab,
   fields,
   named,
+  andJoined,
   limit,
   onLimit,
 }: Readonly<{
@@ -134,11 +141,14 @@ export function FilterMatches({
   fields: readonly VocabularyField[];
   /** The fields the filter names, in the order they were written. */
   named: readonly string[];
+  /** A group joins conditions with "and", so turning it to "or" loosens it. */
+  andJoined: boolean;
   limit: number;
   onLimit: (next: number) => void;
 }>) {
   const t = useT();
   const answer = preview.data;
+  const unit = t(UNIT_LABEL[tab]);
   return (
     <Panel
       title={t("filters.resultsTitle")}
@@ -163,7 +173,11 @@ export function FilterMatches({
                 preview={answer}
                 fields={fields}
                 named={named}
-                unit={t(UNIT_LABEL[tab])}
+                unit={unit}
+                emptyNote={t(
+                  andJoined ? "filters.noMatches" : "filters.noMatchesLoosen",
+                  { records: unit },
+                )}
                 // Per object, so switching tabs does not hand a deal's table
                 // the widths a reader dragged for a contact's columns.
                 widthsKey={`filter-preview-${tab}`}
@@ -222,11 +236,21 @@ export function FilterOutcome({
           tab={tab}
           fields={vocabulary.data?.fields ?? []}
           named={fieldsNamed(tree)}
+          andJoined={joinsWithAnd(tree)}
           limit={limit}
           onLimit={setLimit}
         />
       )}
     </>
+  );
+}
+
+/** Whether some group joins two or more conditions with "and". */
+function joinsWithAnd(node: Node): boolean {
+  return (
+    isGroup(node) &&
+    ((node.join === "and" && node.children.length > 1) ||
+      node.children.some(joinsWithAnd))
   );
 }
 

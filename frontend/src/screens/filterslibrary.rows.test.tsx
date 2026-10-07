@@ -130,6 +130,22 @@ describe("a row", () => {
     expect(within(chosen).queryByText(/since your last visit/)).toBeNull();
   });
 
+  it("says only the type of a Live List the server could not count, and still shows what it gained and lost", async () => {
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [{ ...liveList, health: "invalid", visible_count: null }],
+    });
+    render(<FiltersScreen />, { wrapper });
+    const live = await rowOf(liveList.name);
+    expect(
+      within(live).getByText(en["lists.type.company"]),
+    ).toBeInTheDocument();
+    expect(within(live).queryByText(/you can see$/)).toBeNull();
+    expect(
+      within(live).getByText("3 joined and 1 left since your last visit"),
+    ).toBeInTheDocument();
+  });
+
   it("says who can find each shared list: a named team, the owner's teams, everyone", async () => {
     const { wrapper } = mountFilters({
       listsOn: true,

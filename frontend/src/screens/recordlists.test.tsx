@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import {
@@ -204,6 +205,88 @@ describe("a record page's lists", () => {
       expect(screen.queryByText("Now: 125000")).toBeNull();
     },
   );
+
+  it("names a retired tag in a clause and says no record carries one", async () => {
+    const live = "01a0f000-0000-7000-8000-000000000050";
+    const archived = "01a0f000-0000-7000-8000-000000000051";
+    stub({
+      "GET /me": () =>
+        jsonResponse({
+          ...meFixture({
+            allow: { list: ["read"], company: ["read"], tag: ["read"] },
+            settingsAvailability: { lists: true },
+          }),
+          teams: [],
+        }),
+      "GET /tags": () =>
+        jsonResponse({
+          data: [
+            { id: live, name: "Key account" },
+            {
+              id: archived,
+              name: "Trade fair 2025",
+              archived_at: "2026-01-12T09:00:00Z",
+            },
+          ],
+          page: { has_more: false },
+        }),
+      [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () =>
+        jsonResponse({
+          ...notOnLiveWhy,
+          clauses: {
+            join: "or",
+            result: false,
+            children: [
+              {
+                field: "tag",
+                op: "eq",
+                operand: live,
+                result: false,
+                hidden: true,
+              },
+              {
+                field: "tag",
+                op: "eq",
+                operand: archived,
+                result: false,
+                hidden: true,
+              },
+            ],
+          },
+        }),
+      "GET /filters/vocabulary": () =>
+        jsonResponse({
+          resource: "company",
+          fields: [
+            {
+              name: "tag",
+              type: "id",
+              operators: ["eq", "neq", "in"],
+              custom: false,
+              references: "tag",
+            },
+          ],
+        }),
+    });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("combobox", { name: en["lists.record.check"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: liveList.name }),
+    );
+    const retired = await screen.findByText("1 archived tag", {
+      selector: "strong",
+    });
+    expect(retired.closest("p")).toHaveTextContent(
+      en["filters.sentence.retiredTagNote"],
+    );
+    // The live tag's clause beside it is an ordinary one, with no such note.
+    const counted = screen.getByText("1 tag", { selector: "strong" });
+    expect(counted.closest("p")).not.toHaveTextContent(
+      en["filters.sentence.retiredTagNote"],
+    );
+  });
 
   it("takes the record off a Shortlist with a note", async () => {
     const removed: unknown[] = [];

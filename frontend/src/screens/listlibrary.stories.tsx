@@ -117,6 +117,19 @@ export const ArchivedRow: Story = {
     ),
 };
 
+// A Live List whose filter no longer works has no count: it says its type,
+// and keeps what it gained and lost since the last visit.
+export const UncountedLiveList: Story = {
+  render: () =>
+    table(
+      libraryItems(
+        [],
+        [{ ...liveList, health: "invalid", visible_count: null }],
+      ),
+      "shared",
+    ),
+};
+
 /** New Shortlist pressed: its name, what it is for, its record type and audience. */
 export const StartingAShortlist: Story = {
   render: () => {

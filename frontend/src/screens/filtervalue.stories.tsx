@@ -92,6 +92,11 @@ export const Text: Story = {
   render: story({ type: "text", op: "eq", start: "Referral" }),
 };
 
+// A money field whose currency the reader cannot learn: the amount is held back, and the line under it says why.
+export const UnpricedAmount: Story = {
+  render: story({ type: "currency", op: "gt", start: 125000 }),
+};
+
 // The operator answers the question itself, so the two readings are the value.
 export const OperatorOnly: Story = {
   render: story({

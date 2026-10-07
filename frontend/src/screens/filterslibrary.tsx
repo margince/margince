@@ -87,9 +87,9 @@ export function FiltersLibrary({
         reads.unsettled,
       );
   const anchors = useAnchorFocus(anchor, listsOn, reads.settled);
-  // Nothing matched only once every read has answered: until then, the rows
-  // that would have matched may be the ones still out or refused.
-  const noHits =
+  // Nothing matched only once every read, a capped library's server search
+  // included, has answered: until then the match may be out or refused.
+  const cutEmpty =
     reads.settled &&
     !reads.failed &&
     narrowed &&
@@ -105,7 +105,12 @@ export function FiltersLibrary({
         folded={folded}
         listsOn={listsOn}
       />
-      {noHits && <NoHits cut={cut} />}
+      {cutEmpty &&
+        (reads.searchPending ? (
+          <PendingBody label={t("filters.searching")} visible />
+        ) : (
+          <NoHits cut={cut} />
+        ))}
       {/* The first-run plate takes the saved-views group's place, so the group
           a deleted last view handed focus to stays mounted and keeps it. */}
       {(firstRun ? (["mine"] as const) : groups).map((group) => (
@@ -434,7 +439,8 @@ function RetryButton({ onRetry }: Readonly<{ onRetry: () => void }>) {
 }
 
 /**
- * `#/filters/views` and `#/filters/lists` land on their group. Focus moves one
+ * `#/filters/views` and `#/filters/lists` land on their group, or on the one
+ * drawn when a cut or the first-run plate leaves theirs out. Focus moves one
  * commit after the rows have drawn, so the shell's scroll memory has already
  * put the new page at its top and the move is not undone under the reader.
  */
@@ -460,8 +466,9 @@ function useAnchorFocus(
       return;
     }
     landed.current = true;
-    const target = anchor === "lists" && listsOn ? shared : mine;
-    target.current?.focus();
+    const [own, other] =
+      anchor === "lists" && listsOn ? [shared, mine] : [mine, shared];
+    (own.current ?? other.current)?.focus();
   }, [ready, anchor, listsOn]);
   return { mine, shared };
 }

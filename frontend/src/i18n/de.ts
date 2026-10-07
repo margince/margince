@@ -10709,6 +10709,11 @@ export const de = {
   "filters.sentence.ref.company_other": "{count} Unternehmen",
   "filters.sentence.ref.tag_one": "{count} Tag",
   "filters.sentence.ref.tag_other": "{count} Tags",
+  "filters.sentence.ref.retiredTag_one": "{count} archiviertes Tag",
+  "filters.sentence.ref.retiredTag_other": "{count} archivierte Tags",
+  "filters.sentence.someRetired": "{tags}, davon {retired} archiviert",
+  "filters.sentence.retiredTagNote":
+    "Für Filter trägt kein Datensatz ein archiviertes Tag.",
   "filters.sentence.ref.project_one": "{count} Projekt",
   "filters.sentence.ref.project_other": "{count} Projekte",
   "filters.tab.leads": "Leads",
@@ -11016,6 +11021,8 @@ export const de = {
     "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
   "filters.noMatches":
     "Keine {records} passen zu diesen Bedingungen. Lockere eine: Stell eine Verknüpfung auf „oder“ um, oder entferne die genaueste Bedingung.",
+  "filters.noMatchesLoosen":
+    "Keine {records} passen zu diesem Filter. Lockere oder entferne eine Bedingung.",
   "filters.pickRecord": "Datensatz auswählen",
   "filters.searchRecords": "Unternehmen durchsuchen",
   "filters.typeToSearch": "Zum Suchen tippen",
@@ -11026,6 +11033,8 @@ export const de = {
   "filters.removeRecord": "{record} entfernen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert auswählen",
+  "filters.amountUnpriced":
+    "Dieser Betrag hat keine bekannte Währung und kann deshalb weder angezeigt noch geändert werden.",
   "filters.exportCsv": "CSV exportieren",
   "filters.exportJson": "JSON exportieren",
 

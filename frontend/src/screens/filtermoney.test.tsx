@@ -5,11 +5,21 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { en } from "../i18n/en";
+import { FilterBuilder } from "./filterbuilder";
 import { moneyText } from "./filtersentence";
 import { ValueControl } from "./filtervalue";
-import type { FilterOp, LeafValue } from "./segmentpredicate";
+import {
+  encode,
+  type FilterOp,
+  type LeafValue,
+  type Node,
+  newGroup,
+  newLeaf,
+} from "./segmentpredicate";
 import { StoryProviders } from "./story-utils";
 
 afterEach(cleanup);
@@ -88,6 +98,52 @@ describe("a money clause", () => {
     fireEvent.change(box, { target: { value: "250" } });
     fireEvent.keyDown(box, { key: "Enter" });
     expect(seen.at(-1)).toEqual([25_000]);
+  });
+});
+
+/** A saved revenue clause, in a vocabulary that names no currency for it. */
+function UnpricedClause() {
+  const [tree, setTree] = useState<Node>(() =>
+    newGroup("and", [newLeaf("revenue", "gt", 125_000)]),
+  );
+  return (
+    <>
+      <FilterBuilder
+        tree={tree}
+        onChange={setTree}
+        fields={[
+          {
+            name: "revenue",
+            type: "currency",
+            operators: ["gt", "exists"],
+            custom: false,
+          },
+        ]}
+      />
+      <pre data-testid="wire">{JSON.stringify(encode(tree))}</pre>
+    </>
+  );
+}
+
+describe("a money clause whose currency is unknown", () => {
+  it("holds its amount back, says why, and can still be removed", async () => {
+    render(
+      <StoryProviders>
+        <UnpricedClause />
+      </StoryProviders>,
+    );
+    const user = userEvent.setup();
+    const amount = screen.getByRole("textbox", { name: en["filters.value"] });
+    expect(amount).toBeDisabled();
+    expect(amount).toHaveValue("");
+    expect(amount).toHaveAccessibleDescription(en["filters.amountUnpriced"]);
+    expect(screen.queryByDisplayValue("125000")).toBeNull();
+    expect(screen.getByTestId("wire")).toHaveTextContent("125000");
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove revenue condition" }),
+    );
+    expect(screen.getByTestId("wire")).toHaveTextContent(/^\{"and":\[\]\}$/);
   });
 });
 

@@ -9,6 +9,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { type SavedView, useSavedViews } from "./savedviews.queries";
@@ -35,8 +36,8 @@ const VIEW: SavedView = {
 type Patch = Readonly<{ ifMatch: string | null; body: unknown }>;
 
 /**
- * A /views holding `stored`, refusing a rename held to any version but the one
- * it has, and forgetting a view once it is deleted.
+ * A /views holding `stored`: a rename held to the version it has lands and
+ * moves it on, one held to any other is refused, and a delete forgets it.
  */
 function stubViews(stored: SavedView) {
   const patches: Patch[] = [];
@@ -50,21 +51,26 @@ function stubViews(stored: SavedView) {
       }
       if (request.method === "PATCH") {
         const ifMatch = request.headers.get("If-Match");
-        patches.push({ ifMatch, body: await request.json() });
-        return ifMatch === String(stored.version)
-          ? Response.json(stored)
-          : Response.json(
-              {
-                title: "Conflict",
-                status: 409,
-                code: "version_skew",
-                detail: "The view changed since it was read.",
-              },
-              {
-                status: 409,
-                headers: { "Content-Type": "application/problem+json" },
-              },
-            );
+        const body: { name: string } = await request.json();
+        patches.push({ ifMatch, body });
+        const held = views.find((view) => String(view.version) === ifMatch);
+        if (held) {
+          const renamed = { ...held, ...body, version: held.version + 1 };
+          views = [renamed];
+          return Response.json(renamed);
+        }
+        return Response.json(
+          {
+            title: "Conflict",
+            status: 409,
+            code: "version_skew",
+            detail: "The view changed since it was read.",
+          },
+          {
+            status: 409,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        );
       }
       return Response.json({
         data: views,
@@ -129,6 +135,36 @@ describe("renaming a view", () => {
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(patches).toEqual([{ ifMatch: "3", body: { name: "Berlin leads" } }]);
+  });
+
+  it("closes on the server's answer, says so, and hands that answer on", async () => {
+    stubViews(VIEW);
+    const renamed = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <RenameViewAction view={VIEW} onRenamed={renamed} />
+        <ToastRegion />
+      </ToastProvider>,
+      { wrapper: Providers },
+    );
+    await user.click(screen.getByRole("button", { name: en["views.rename"] }));
+    const name = screen.getByRole("textbox", { name: en["views.name"] });
+    await user.clear(name);
+    await user.type(name, "Berlin leads");
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: en["views.rename"],
+      }),
+    );
+
+    expect(await screen.findByText(en["views.renamed"])).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(renamed).toHaveBeenCalledExactlyOnceWith({
+      ...VIEW,
+      name: "Berlin leads",
+      version: 4,
+    });
   });
 });
 

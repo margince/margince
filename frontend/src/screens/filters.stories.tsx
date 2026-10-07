@@ -81,3 +81,18 @@ export const LibraryLanding: Story = {
     return <FiltersScreen />;
   },
 };
+
+export const MePendingOnLibraryDark: Story = {
+  ...MePendingOnLibrary,
+  globals: { theme: "dark" },
+};
+
+export const MePendingOnFocusedPageDark: Story = {
+  ...MePendingOnFocusedPage,
+  globals: { theme: "dark" },
+};
+
+export const LibraryLandingDark: Story = {
+  ...LibraryLanding,
+  globals: { theme: "dark" },
+};

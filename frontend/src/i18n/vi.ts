@@ -10583,6 +10583,11 @@ export const vi = {
   "filters.sentence.ref.company_other": "{count} công ty",
   "filters.sentence.ref.tag_one": "{count} thẻ",
   "filters.sentence.ref.tag_other": "{count} thẻ",
+  "filters.sentence.ref.retiredTag_one": "{count} thẻ đã lưu trữ",
+  "filters.sentence.ref.retiredTag_other": "{count} thẻ đã lưu trữ",
+  "filters.sentence.someRetired": "{tags}, trong đó {retired} thẻ đã lưu trữ",
+  "filters.sentence.retiredTagNote":
+    "Với bộ lọc, không bản ghi nào mang thẻ đã lưu trữ.",
   "filters.sentence.ref.project_one": "{count} dự án",
   "filters.sentence.ref.project_other": "{count} dự án",
   "filters.tab.leads": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
@@ -10919,6 +10924,8 @@ export const vi = {
     "Trang \u0111\u1ea7u c\u1ee7a k\u1ebft qu\u1ea3 kh\u1edbp \u2014 \u0111\u1ee7 \u0111\u1ec3 ki\u1ec3m tra b\u1ed9 l\u1ecdc, kh\u00f4ng ph\u1ea3i to\u00e0n b\u1ed9.",
   "filters.noMatches":
     "Không có {records} nào khớp các điều kiện này. Hãy nới lỏng một điều kiện: chuyển một liên kết sang “hoặc”, hoặc xóa điều kiện cụ thể nhất.",
+  "filters.noMatchesLoosen":
+    "Không có {records} nào khớp bộ lọc này. Hãy nới lỏng hoặc xóa một điều kiện.",
   "filters.pickRecord": "Ch\u1ecdn m\u1ed9t",
   "filters.searchRecords": "Tìm kiếm công ty",
   "filters.typeToSearch": "Nhập để tìm",
@@ -10929,6 +10936,8 @@ export const vi = {
   "filters.removeRecord": "Xóa {record}",
   "filters.loadingRecords": "\u0110ang t\u1ea3i l\u1ef1a ch\u1ecdn\u2026",
   "filters.pickValue": "Ch\u1ecdn gi\u00e1 tr\u1ecb",
+  "filters.amountUnpriced":
+    "Số tiền này không có đơn vị tiền tệ xác định nên không thể hiển thị hoặc thay đổi.",
   "filters.exportCsv": "Xu\u1ea5t CSV",
   "filters.exportJson": "Xu\u1ea5t JSON",
 

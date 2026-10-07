@@ -4,7 +4,7 @@
 // A filter operand's control, shared by the Filters and Analytics builders.
 
 import { useId } from "react";
-import { SegmentedControl } from "../design-system/atoms";
+import { SegmentedControl, TextInput } from "../design-system/atoms";
 import { DateInput } from "../design-system/dateinput";
 import { Select } from "../design-system/select";
 import { TokenInput } from "../design-system/tokeninput";
@@ -91,8 +91,8 @@ export function ValueControl({
       />
     );
   }
-  if (type === "currency" && currency) {
-    return (
+  if (type === "currency") {
+    return currency ? (
       <MoneyControl
         op={op}
         value={value}
@@ -100,6 +100,8 @@ export function ValueControl({
         label={label}
         currency={currency}
       />
+    ) : (
+      <UnpricedAmount label={name} />
     );
   }
   if (op === "in") {
@@ -256,6 +258,23 @@ function RecordValue({
           a clause about the wrong set, and nothing else on this row would say
           so. */}
       <RosterPartialNote partial={partial} id={noteId} />
+    </div>
+  );
+}
+
+/**
+ * A money operand in a currency this reader cannot learn. Its minor units
+ * would read as the amount, "125000" for €1,250, so none is shown or typed.
+ */
+function UnpricedAmount({ label }: Readonly<{ label: string }>) {
+  const t = useT();
+  const noteId = useId();
+  return (
+    <div className="filter-value">
+      <TextInput disabled aria-label={label} aria-describedby={noteId} />
+      <p className="t-caption" id={noteId}>
+        {t("filters.amountUnpriced")}
+      </p>
     </div>
   );
 }

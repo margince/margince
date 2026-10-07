@@ -7,6 +7,7 @@
 // reader meets one wording for one filter wherever it appears.
 // filtersentence.census.test.ts fails any other module spelling an operator.
 
+import { useCan } from "../app/capability";
 import { formatDateAbbrev, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
@@ -27,6 +28,7 @@ import {
   type Leaf,
   type Node,
 } from "./segmentpredicate";
+import { useTagCatalog } from "./tagadmin.queries";
 
 /**
  * Which message names each operator, for a field whose comparisons read as dates.
@@ -80,19 +82,31 @@ const REFERENCE_NOUN: Record<ReferenceKind, PluralBase> = {
 const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const WHOLE_OR_DECIMAL = /^-?\d+(\.\d+)?$/;
 
-/** What a sentence is said with: the reader's catalog, plural rule and zone. */
+/**
+ * What a sentence is said with: the reader's catalog, plural rule and zone,
+ * and the tags retired from the vocabulary, archived or merged away.
+ */
 export type SentenceWords = Readonly<{
   t: Translator;
   plural: PluralTranslator;
   locale: Locale;
   zone: string;
+  retiredTags?: ReadonlySet<string>;
 }>;
 
 export function useSentenceWords(): SentenceWords {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  return { t, plural, locale, zone: viewerZone() };
+  // Not asked without the grant: the words are withheld from that seat, and a
+  // clause it reads keeps counting tags without telling retired ones apart.
+  const catalog = useTagCatalog(useCan("tag", "read"));
+  const retiredTags = new Set(
+    (catalog.data?.data ?? [])
+      .filter((tag) => tag.archived_at != null)
+      .map((tag) => tag.id),
+  );
+  return { t, plural, locale, zone: viewerZone(), retiredTags };
 }
 
 /** One clause as a filter states it: a stored leaf, or a verdict's clause. */
@@ -104,12 +118,14 @@ export type Clause = Readonly<{
 
 /**
  * A clause in words. No operand where the operator says it all, and neither
- * for a retired field, whose type no longer says how to read either.
+ * for a retired field, whose type no longer says how to read either. `note`
+ * is what the clause needs said beside it to be read right.
  */
 export type ClauseWords = Readonly<{
   field: string;
   op?: string;
   operand?: string;
+  note?: string;
 }>;
 
 /**
@@ -143,11 +159,31 @@ export function clauseWords(
     return { field, ...relative };
   }
   const text = operandText(operand, known, words);
-  return {
+  const said = {
     field,
     op: t(clauseOperatorKey(clause, known)),
     operand: text === "" ? t("filters.sentence.pendingValue") : text,
   };
+  return retiredTagCount(operand, known, words) > 0
+    ? { ...said, note: t("filters.sentence.retiredTagNote") }
+    : said;
+}
+
+/**
+ * How many of a tag clause's ids name a retired tag. The engine finds one on
+ * no record: `is` it holds for none, and `is not` it holds for every record.
+ */
+function retiredTagCount(
+  operand: unknown,
+  field: VocabularyField | undefined,
+  { retiredTags }: SentenceWords,
+): number {
+  if (field?.references !== "tag" || retiredTags === undefined) {
+    return 0;
+  }
+  const ids: unknown[] = Array.isArray(operand) ? operand : [operand];
+  return ids.filter((id) => typeof id === "string" && retiredTags.has(id))
+    .length;
 }
 
 /**
@@ -259,8 +295,9 @@ function scalarText(
 function typedOperandText(
   operand: unknown,
   field: VocabularyField,
-  { plural, locale }: SentenceWords,
+  words: SentenceWords,
 ): string | undefined {
+  const { t, plural, locale } = words;
   if (field.type === "currency") {
     return field.currency ? moneyText(operand, field.currency, locale) : "";
   }
@@ -269,9 +306,18 @@ function typedOperandText(
     return undefined;
   }
   const ids = Array.isArray(operand) ? operand.length : 1;
-  return plural(REFERENCE_NOUN[field.references], ids, {
-    count: formatNumber(ids, locale),
-  });
+  const count = { count: formatNumber(ids, locale) };
+  const retired = retiredTagCount(operand, field, words);
+  if (retired === ids) {
+    return plural("filters.sentence.ref.retiredTag", ids, count);
+  }
+  const counted = plural(REFERENCE_NOUN[field.references], ids, count);
+  return retired === 0
+    ? counted
+    : t("filters.sentence.someRetired", {
+        tags: counted,
+        retired: formatNumber(retired, locale),
+      });
 }
 
 /**

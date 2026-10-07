@@ -197,6 +197,17 @@ export const ProposedRowEdited: Story = {
   ),
 };
 
+// Dark: the staged edge and the AI badge are token mixes dark re-derives.
+export const ProposedRowDark: Story = {
+  ...ProposedRow,
+  globals: { theme: "dark" },
+};
+
+export const ProposedRowEditedDark: Story = {
+  ...ProposedRowEdited,
+  globals: { theme: "dark" },
+};
+
 /** One condition alone, as the builder draws each of its rows. */
 function OneClause() {
   const [tree, setTree] = useState<Node>(() =>

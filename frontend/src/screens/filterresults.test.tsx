@@ -159,13 +159,24 @@ it("shows a dash where a row has no value", () => {
   expect(screen.getByText("—")).toBeTruthy();
 });
 
-it("says no records match, and how to loosen the filter", () => {
-  render(results([]), { wrapper });
+it("says what the caller worded for an empty answer", () => {
+  // Only the caller knows which connector the filter ran on, so the advice
+  // is its own; the table only has to show it.
+  render(
+    <FilterResults
+      preview={preview([])}
+      fields={[TIER_FIELD]}
+      named={["cf_loyalty_tier"]}
+      unit="contacts"
+      widthsKey="filter-preview-contacts"
+      emptyNote="No contacts match. Remove the most specific condition."
+      pending={false}
+    />,
+    { wrapper },
+  );
 
   expect(
-    screen.getByText(
-      "No contacts match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
-    ),
+    screen.getByText("No contacts match. Remove the most specific condition."),
   ).toBeTruthy();
 });
 

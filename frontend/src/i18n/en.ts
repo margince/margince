@@ -10846,6 +10846,11 @@ export const en = {
   "filters.sentence.ref.company_other": "{count} companies",
   "filters.sentence.ref.tag_one": "{count} tag",
   "filters.sentence.ref.tag_other": "{count} tags",
+  "filters.sentence.ref.retiredTag_one": "{count} archived tag",
+  "filters.sentence.ref.retiredTag_other": "{count} archived tags",
+  "filters.sentence.someRetired": "{tags}, {retired} archived",
+  "filters.sentence.retiredTagNote":
+    "For filters, no record carries an archived tag.",
   "filters.sentence.ref.project_one": "{count} project",
   "filters.sentence.ref.project_other": "{count} projects",
   "filters.tab.leads": "Leads",
@@ -11151,6 +11156,8 @@ export const en = {
     "First page of matches, for checking the filter. Not the full selection.",
   "filters.noMatches":
     "No {records} match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
+  "filters.noMatchesLoosen":
+    "No {records} match this filter. Loosen or remove a condition.",
   "filters.pickRecord": "Select record",
   "filters.searchRecords": "Search companies",
   "filters.typeToSearch": "Type to search",
@@ -11161,6 +11168,8 @@ export const en = {
   "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Select value",
+  "filters.amountUnpriced":
+    "This amount has no known currency, so it cannot be shown or changed.",
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 

@@ -18,6 +18,7 @@ import { UnsavedGuard } from "../app/unsaved";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import type { FilterResource, FilterVocabulary } from "./filterdata";
+import { visitAnswer } from "./lists.fixtures";
 import type { List } from "./lists.queries";
 import type { SavedView } from "./savedviews.queries";
 
@@ -131,7 +132,7 @@ async function sentOf(input: RequestInfo | URL, init?: RequestInit) {
   return {
     method,
     url: String(request ? request.url : input),
-    ifMatch: request?.headers.get("If-Match") ?? null,
+    ifMatch: (request?.headers ?? new Headers(init?.headers)).get("If-Match"),
     body,
   };
 }
@@ -167,8 +168,8 @@ type ChangeView = (id: string, changes: Row) => void;
 
 /**
  * The saved views, as a server holding them: writes change what reads see, a
- * PATCH whose If-Match names a version the row has moved past is refused, and
- * an archived row is read but no longer written, as the server does both.
+ * PATCH whose If-Match is missing or names a version the row has moved past is
+ * refused, and an archived row is read but no longer written.
  */
 function viewsServer(server: FiltersServer) {
   let views: Row[] = [...(server.views ?? [])];
@@ -178,7 +179,9 @@ function viewsServer(server: FiltersServer) {
     if (was === undefined || was.archived_at) {
       return notFound();
     }
-    if (sent.ifMatch !== null && sent.ifMatch !== String(was.version)) {
+    // Stricter than the contract, which lets a PATCH without If-Match win last:
+    // every caller sends one, so a missing header is a client that lost it.
+    if (sent.ifMatch !== String(was.version)) {
       return problem({
         status: 409,
         code: "version_skew",
@@ -268,16 +271,17 @@ async function listsCatalog(
 type ChangeList = (id: string, changes: Partial<List>) => void;
 
 /**
- * The lists: the catalog, one list by id with an empty history, a create a
- * later read finds, and a filter written back, refused as the server refuses
- * it when the version it carries is not the stored one.
+ * The lists: the catalog, one list by id with an empty history, a visit
+ * answered as the contract answers one, a create a later read finds, and a
+ * filter written back, refused as the server refuses it when the version it
+ * carries is not the stored one.
  */
 function listsServer(server: FiltersServer) {
   let lists: Row[] = [...(server.lists ?? [])];
   const change: ChangeList = (id, changes) => {
     lists = lists.map((row) => (row.id === id ? { ...row, ...changes } : row));
   };
-  const create = (sent: Sent, path: string) => {
+  const create = (sent: Sent) => {
     if (server.createRefused) {
       return problem(server.createRefused);
     }
@@ -291,12 +295,11 @@ function listsServer(server: FiltersServer) {
       can_edit: true,
       ...(isRow(sent.body) ? sent.body : {}),
     };
-    // Only the catalog's own address makes a list; a visit posts below one.
-    if (path === "/lists") {
-      lists = [...lists, made];
-    }
+    lists = [...lists, made];
     return json(made, 201);
   };
+  const visited = (id: string) =>
+    lists.some((row) => row.id === id) ? visitAnswer(id)() : notFound();
   const update = (id: string, sent: Sent) => {
     const body = isRow(sent.body) ? sent.body : {};
     const was = lists.find((row) => row.id === id);
@@ -318,35 +321,38 @@ function listsServer(server: FiltersServer) {
     lists = lists.map((row) => (row.id === id ? now : row));
     return json(now);
   };
+  const catalog = async (sent: Sent) => {
+    if (sent.method === "POST") {
+      await server.createAnswered;
+      return create(sent);
+    }
+    return server.listsFail ? refused() : listsCatalog(server, lists, sent);
+  };
+  const oneList = async (sent: Sent, id: string) => {
+    if (sent.method === "PATCH") {
+      return update(id, sent);
+    }
+    await server.listAnswered;
+    const found = lists.find((row) => row.id === id);
+    return found ? json(found) : notFound();
+  };
   const answer = async (sent: Sent, path: string) => {
     const address = /^\/lists(?:\/([^/]+)(?:\/(visit|history))?)?$/.exec(path);
     if (address === null) {
       return notFound();
     }
     const [, id, below] = address;
-    if (sent.method === "POST") {
-      await server.createAnswered;
-      return create(sent, path);
+    if (id === undefined) {
+      return catalog(sent);
     }
     if (server.listsFail) {
       return refused();
     }
-    if (below === "history") {
-      return page([], false);
+    if (below === "visit") {
+      return sent.method === "POST" ? visited(id) : notFound();
     }
-    if (id !== undefined && sent.method === "PATCH") {
-      return update(id, sent);
-    }
-    if (id !== undefined) {
-      return oneList(id);
-    }
-    return listsCatalog(server, lists, sent);
+    return below === "history" ? page([], false) : oneList(sent, id);
   };
-  async function oneList(id: string) {
-    await server.listAnswered;
-    const found = lists.find((row) => row.id === id);
-    return found ? json(found) : notFound();
-  }
   return { answer, change };
 }
 

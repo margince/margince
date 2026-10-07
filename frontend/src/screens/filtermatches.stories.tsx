@@ -89,6 +89,7 @@ function Matches() {
       tab="contacts"
       fields={FIELDS}
       named={["city"]}
+      andJoined={false}
       limit={limit}
       onLimit={setLimit}
     />

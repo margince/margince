@@ -476,6 +476,8 @@ it("gives way to a line saying a model is needed, and building by hand still wor
 
   expect(await screen.findByText(en["filters.propose.noModel"])).toBeTruthy();
   expect(screen.queryByLabelText("Describe the contacts you want")).toBeNull();
+  // One way in is left, so nothing offers it as the other of two.
+  expect(screen.queryByText(en["filters.startOr"])).toBeNull();
   await user.click(
     screen.getByRole("button", { name: en["filters.addClause"] }),
   );

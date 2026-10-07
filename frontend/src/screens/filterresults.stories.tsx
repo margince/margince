@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { en } from "../i18n/en";
 import type { FilterPreview, VocabularyField } from "./filterdata";
 import { FilterResults } from "./filterresults";
 import { StoryProviders } from "./story-utils";
@@ -100,7 +101,11 @@ export const Rows: Story = {
 };
 
 export const NothingMatched: Story = {
-  args: { ...shared, preview: preview([]) },
+  args: {
+    ...shared,
+    preview: preview([]),
+    emptyNote: en["filters.noMatches"].replace("{records}", "contacts"),
+  },
 };
 
 export const Recounting: Story = {

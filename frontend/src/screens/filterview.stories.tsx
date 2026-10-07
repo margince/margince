@@ -223,3 +223,12 @@ export const ReadSeat: Story = {
     await within(canvasElement).findByRole("alert");
   },
 };
+
+// Dark, reading and changed: the sentence, the rows beneath it, and the foot
+// offering a save, each drawn in mixes the dark theme re-derives.
+export const ReadingDark: Story = { ...Reading, globals: { theme: "dark" } };
+
+export const EditingChangedDark: Story = {
+  ...EditingChanged,
+  globals: { theme: "dark" },
+};
