@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -48,9 +49,10 @@ var leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity a 
 	     AND a.audience = 'workspace'
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1)`
 
-// leadLastActivitySQL is the last-touch clock, excluding system remediation for
-// the same reason last_activity_of_contact does: work the product files ABOUT a
-// lead is not the lead engaging.
+// leadLastActivitySQL is the last-touch clock, excluding system remediation and
+// called-off meetings for the same reason last_activity_of_contact does: work
+// the product files ABOUT a lead, or a meeting that did not happen, is not the
+// lead engaging.
 //
 // The row that PRINTS it and the expression that ORDERS BY it read this, so a
 // reader sees the instant the list was arranged by rather than a second reading
@@ -58,7 +60,7 @@ var leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity a 
 func leadLastActivitySQL() string {
 	return `(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     ` + auth.OriginIsEngagement("a") + `)`
+	     AND ` + relstrength.NotCalledOffSQL("a") + auth.OriginIsEngagement("a") + `)`
 }
 
 var leadColumns = `id, full_name, email, title, company_name, candidate_company_key,
