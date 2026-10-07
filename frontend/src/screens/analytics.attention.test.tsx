@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { AnalyticsScreen } from "./analytics";
 import { render } from "./analytics.testkit";
+import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import {
   installFetchStub,
@@ -46,7 +47,7 @@ const readings = (priced: number, eligible: number) => ({
   confirmed_date_count: 10,
   fx_missing_count: eligible - priced,
   as_of: "2026-09-14T09:00:00Z",
-  timezone: "Europe/Berlin",
+  timezone: REPORTING_FIXTURE_ZONE,
   base_currency: "EUR",
 });
 
