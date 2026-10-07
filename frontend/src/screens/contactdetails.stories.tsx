@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { LocaleProvider } from "../i18n";
 import { ContactDetails } from "./contactdetails";
 import {
   installFetchStub,
@@ -131,36 +132,52 @@ export const BoughtValuesDark: Story = {
   globals: { theme: "dark" },
 };
 
-const longEmail = (
-  local: string,
-  id: string,
-  type: "work" | "personal" | "other",
-) => ({
-  id,
-  email: `${local}@very-long-company-domain-example.com`,
-  email_type: type,
-  is_primary: id === "e-1",
-  position: Number(id.slice(2)) - 1,
-  source: "manual",
-  captured_by: "human:u1",
-});
+const long = (local: string) => `${local}@very-long-company-domain-example.com`;
+const typed = { source: "manual", captured_by: "human:u1" };
 const longFixture: components["schemas"]["Contact"] = {
   ...fixture,
   emails: [
-    longEmail("alexandra.konstantinopoulou", "e-1", "work"),
-    longEmail("alexandra.k.private.mailbox", "e-2", "personal"),
-    longEmail("a.konstantinopoulou.assistant", "e-3", "other"),
-    longEmail("konstantinopoulou.alexandra", "e-4", "work"),
+    {
+      ...typed,
+      id: "e-1",
+      email: long("alexandra.konstantinopoulou"),
+      email_type: "work",
+      is_primary: true,
+      position: 0,
+    },
+    {
+      ...typed,
+      id: "e-2",
+      email: long("alexandra.k.private.mailbox"),
+      email_type: "personal",
+      is_primary: false,
+      position: 1,
+    },
+    {
+      ...typed,
+      id: "e-3",
+      email: long("a.konstantinopoulou.assistant"),
+      email_type: "other",
+      is_primary: false,
+      position: 2,
+    },
+    {
+      ...typed,
+      id: "e-4",
+      email: long("konstantinopoulou.alexandra"),
+      email_type: "work",
+      is_primary: false,
+      position: 3,
+    },
   ],
   phones: [
     {
+      ...typed,
       id: "p-1",
       phone: "+4915112345678",
       phone_type: "mobile",
       is_primary: true,
       position: 0,
-      source: "manual",
-      captured_by: "human:u1",
     },
   ],
   bought_fields: [
@@ -172,46 +189,56 @@ const longFixture: components["schemas"]["Contact"] = {
   ],
 };
 
-// Each kind stays one line beside its value, and the value wraps inside the
-// column instead of pushing the row past the card.
-async function expectKindsBesideWrappedValues(canvasElement: HTMLElement) {
-  await within(canvasElement).findByText(
-    "alexandra.konstantinopoulou@very-long-company-domain-example.com",
-  );
+async function expectHandlesInColumn(
+  canvasElement: HTMLElement,
+  kindSits: "beside" | "beneath",
+) {
+  await within(canvasElement).findByText(long("alexandra.konstantinopoulou"));
   const handles = [
     ...canvasElement.querySelectorAll<HTMLElement>(".fieldgrid-handle"),
   ];
   await expect(handles).toHaveLength(5);
   for (const handle of handles) {
-    const value = handle.firstElementChild;
-    const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
     const column = handle.closest(".fieldgrid-value");
-    if (!value || !kind || !column) {
-      throw new Error("a handle lost its value, its kind or its column");
+    await expect(handle.getBoundingClientRect().right).toBeLessThanOrEqual(
+      (column?.getBoundingClientRect().right ?? 0) + 0.5,
+    );
+  }
+  let grouped = 0;
+  for (const handle of handles) {
+    const value = handle.firstElementChild?.getBoundingClientRect();
+    const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
+    if (!value || !kind) {
+      throw new Error("a handle lost its value or its kind");
     }
     const lines = document.createRange();
     lines.selectNodeContents(kind);
     await expect(lines.getClientRects()).toHaveLength(1);
-    await expect(kind.getBoundingClientRect().left).toBeGreaterThanOrEqual(
-      value.getBoundingClientRect().right,
-    );
-    await expect(handle.getBoundingClientRect().right).toBeLessThanOrEqual(
-      column.getBoundingClientRect().right + 0.5,
-    );
+    const placed = kind.getBoundingClientRect();
+    if (kindSits === "beside") {
+      await expect(placed.left).toBeGreaterThanOrEqual(value.right);
+    } else {
+      await expect(placed.top).toBeGreaterThanOrEqual(value.bottom);
+      const next = handle.nextElementSibling;
+      if (next?.classList.contains("fieldgrid-handle")) {
+        grouped += 1;
+        await expect(placed.top - value.bottom).toBeLessThan(
+          next.getBoundingClientRect().top -
+            handle.getBoundingClientRect().bottom,
+        );
+      }
+    }
   }
+  await expect(grouped).toBe(kindSits === "beneath" ? 3 : 0);
   const first = handles[0].firstElementChild?.getBoundingClientRect();
   const firstKind = handles[0]
     .querySelector(".t-caption")
     ?.getBoundingClientRect();
   await expect(first?.height).toBeGreaterThan((firstKind?.height ?? 0) * 1.5);
-  await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
-    document.documentElement.clientWidth,
-  );
 }
 
 export const LongAddresses: Story = {
   args: { contact: longFixture },
-  // A rail-width card, so a long address outruns its value column.
   decorators: [
     (Story) => (
       <div style={{ maxWidth: 360 }}>
@@ -219,7 +246,7 @@ export const LongAddresses: Story = {
       </div>
     ),
   ],
-  play: ({ canvasElement }) => expectKindsBesideWrappedValues(canvasElement),
+  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, "beside"),
 };
 export const LongAddressesDark: Story = {
   ...LongAddresses,
@@ -227,7 +254,28 @@ export const LongAddressesDark: Story = {
 };
 export const LongAddressesPhone: Story = {
   args: { contact: longFixture },
+  parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  play: ({ canvasElement }) => expectKindsBesideWrappedValues(canvasElement),
+  play: async ({ canvasElement }) => {
+    await expectHandlesInColumn(canvasElement, "beside");
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  },
+};
+// The card a 320px phone leaves, where "Geschäftlich" and "gekauft" outgrow
+// the value column unless they drop beneath the address.
+export const LongAddressesNarrowGerman: Story = {
+  args: { contact: longFixture },
+  decorators: [
+    (Story) => (
+      <LocaleProvider initial="de">
+        <div style={{ maxWidth: 288 }}>
+          <Story />
+        </div>
+      </LocaleProvider>
+    ),
+  ],
+  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, "beneath"),
 };
