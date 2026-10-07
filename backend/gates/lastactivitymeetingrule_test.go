@@ -42,15 +42,17 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 			t.Errorf("no migration defines %s, so this gate checks nothing for it", name)
 			continue
 		}
-		arms := strings.Count(body, "activity a ON a.id = l.activity_id")
-		if arms == 0 {
+		arms := activityArms(body)
+		if len(arms) == 0 {
 			t.Errorf("%s: no activity join found, so the gate cannot see this function's shape", name)
 			continue
 		}
-		if got := strings.Count(body, rule); got < arms {
-			t.Errorf("%s: %d activity arm(s) but only %d carry %q, so a canceled or no-show meeting "+
-				"can keep the record looking recently active. Replace the function in a new migration "+
-				"with the rule's current text in every arm.", name, arms, got, rule)
+		for i, arm := range arms {
+			if !strings.Contains(arm, rule) {
+				t.Errorf("%s: activity arm %d of %d does not carry %q, so a canceled or no-show meeting "+
+					"can keep the record looking recently active. Replace the function in a new migration "+
+					"with the rule's current text in every arm.", name, i+1, len(arms), rule)
+			}
 		}
 	}
 	for file, what := range meetingRuleReaders {
@@ -64,4 +66,17 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 				"meeting as a touch", file, what)
 		}
 	}
+}
+
+// activityArms splits a function body at UNION ALL and answers the parts that
+// join activity; a function without a union is one arm. Each arm is checked on
+// its own, so a rule written twice in one cannot cover its absence in another.
+func activityArms(body string) []string {
+	var arms []string
+	for _, part := range strings.Split(body, "UNION ALL") {
+		if strings.Contains(part, "activity a ON a.id = l.activity_id") {
+			arms = append(arms, part)
+		}
+	}
+	return arms
 }
