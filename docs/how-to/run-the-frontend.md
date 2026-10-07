@@ -27,7 +27,7 @@ make frontend-e2e     # the screen-acceptance harness: AC-named tests,
 make bench-mobile     # the perceived-perf budget, sampled on Fast-3G
 ```
 
-By default, the `e2e` tests run without a live backend, against a stand-in that serves seed data.
+By default, the `e2e` tests run with no network, against a stand-in backend that serves seed data.
 To run the same tests against a live backend that holds seed data:
 
 ```sh

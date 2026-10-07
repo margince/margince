@@ -14,7 +14,7 @@ The two targets are the assistants that users connect in real work:
 | GPT through Codex | `gpt` | `cli` | `gpt-5.6-sol@codex-cli` |
 
 Mistral through OpenRouter, and the bridge (`E2E_LLM_VIA=api|openrouter`)
-that compares providers on equal terms, are good to have. Run them once a fix holds
+that compares providers in the same way, are good to have. Run them once a fix holds
 on both targets.
 
 [test-the-mcp-surface-end-to-end.md](test-the-mcp-surface-end-to-end.md) covers how to run the lane,
@@ -32,7 +32,7 @@ how it ends, and the stops of its harness. This page takes that as read. The res
 ## 1. Sweep both targets, and keep the transcripts separate
 
 Run the full sweep for each target, one after the other. Never run them at the same time as
-each other. Never run them with other heavy work on the same Claude subscription, because the
+each other. Never run them with other long work on the same Claude subscription, because the
 judge uses it too. Use the loop that runs one scenario at a time in
 [test-the-mcp-surface-end-to-end.md](test-the-mcp-surface-end-to-end.md#sweeping-through-a-subscription-limit).
 Then a subscription limit pauses the sweep and does not end it.
@@ -177,7 +177,7 @@ there needs one:
 - **Tools that change data** need a case, most of all when you cannot take the change back. Examples are send,
   move a deal, set up a meeting, edits to many records at once, and decide approvals. A tool with no case is a write that no
   test has ever asked a model to choose right.
-- **Support tools** (`describe_*`, `whoami`, `read_record`, `list_records`) stay in
+- **Support tools** (`describe_*`, `whoami`, `read_record`, `list_records`) stays in
   `may_call`. To require a step on the way grades the route, not the outcome.
 - **A tool that no real task needs** is a candidate to merge or remove, because
   every tool costs prompt tokens on every call.

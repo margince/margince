@@ -17,7 +17,7 @@ hubspot,acme-q3-renewal-2,Acme Q3 renewal
 hubspot,bolt-pilot-7,
 ```
 
-`source_system` and `source_key` pick out the deal as the import made it.
+`source_system` and `source_key` name the deal as the import made it.
 `source_title` is the name the source system shows for it, and it may be empty. You can use
 "Save as CSV" in a spreadsheet, and the byte order mark it adds is no problem.
 

@@ -71,7 +71,6 @@ attack
 attribution
 audience
 audit
-automated
 automation
 available
 away
@@ -141,7 +140,6 @@ calendar
 call
 callback
 callout
-campaigns
 can
 cancel
 candidate
@@ -341,7 +339,6 @@ edition
 effort
 either
 element
-eligibility
 else
 email
 embed
@@ -478,7 +475,6 @@ hash
 have
 head
 health
-heavy
 held
 help
 here
@@ -544,7 +540,6 @@ job
 join
 journal
 judge
-k
 keep
 kept
 key
@@ -1004,7 +999,8 @@ sovereign
 space
 specification
 speed
-spelling
+spell
+spellings
 spend
 spine
 split
@@ -1069,7 +1065,6 @@ technology
 tell
 template
 tenant
-term
 test
 text
 than

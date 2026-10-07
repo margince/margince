@@ -65,7 +65,7 @@ measure it, so count 2 is close but not exact. It matches the Worklist only when
 
    Every reader of the addresses of a seat already skips them, so they change nothing.
    They are old rows to remove. The count can be short, because the product also knows
-   the domains that send automated mail and email campaigns.
+   the domains that send only system mail.
 8. **Evidence counted twice in a duplicate pair.** Meetings, signals or documents
    that an open deal suggestion points to, on both companies of an open duplicate pair.
 

@@ -10,8 +10,8 @@ install with its company set up. It uses only the Makefile targets of the reposi
 - Docker (dev Postgres 16 and Redis 7 run in containers)
 - `golangci-lint` (you need it only for `make check`)
 
-Run the commands below from the root of the repository. The root hands most targets on to `backend/`,
-but `make dev`, `make dev-stop` and `make seed-dev` exist only at the root.
+Every target is in the folder of the repository itself, which only hands it on, and in `backend/`.
+The commands below work from both folders.
 
 ## 1. Start the databases
 
@@ -52,7 +52,7 @@ user from the settings file `config/margince.yaml`. On the first run, `make dev`
 that file (and the admin password file) from
 [`config/margince.example.yaml`](../../config/margince.example.yaml), and
 then leaves it alone. Edit it as you like, or delete it to start over. No
-screen or endpoint runs this first setup, and no request creates a workspace.
+screen or endpoint sets up a company, and no request creates a workspace.
 
 ## 4. Sign in
 

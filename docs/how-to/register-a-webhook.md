@@ -109,12 +109,9 @@ sends events that this owner may see.
 
 Every delivery is a POST that carries three [Standard Webhooks](https://www.standardwebhooks.com/) headers.
 Check `webhook-signature` against `{webhook-id}.{webhook-timestamp}.{raw request body}` with the
-secret from step 2. Run dedupe on `webhook-id`, because the bus can deliver an event more than one time.
-The delivery id stays the same in all retries.
-
-Each try mints a new `webhook-timestamp`. So a receiver that only accepts a time within a short window
-refuses a captured signature once that window passes. Inside the window, the dedupe on `webhook-id`
-catches it:
+secret from step 2. Run dedupe on `webhook-id`, because the bus can deliver an event more than one time. The delivery id
+stays the same in all retries. Each try mints a new `webhook-timestamp`. So no one can replay a captured
+signature against a receiver that only accepts a time within a short window:
 
 | Header | Meaning |
 |---|---|
@@ -207,9 +204,9 @@ curl -X DELETE --cookie 'crm_session=<admin or ops session>' \
   http://localhost:8080/v1/webhook-subscriptions/<id>
 ```
 
-A paused subscription holds its retries until it resumes. An archived one stops delivery, and a read by id
-answers `404` from then on. The list shows it only when you ask with `include_archived`.
-An empty PATCH (one that sets no `state` and no `event_types`) is a `422`.
+A paused subscription holds its retries until it resumes. An archived one stops delivery, and reads as
+`404` from then on, so that no one can tell it exists. An empty PATCH (one that sets no `state` and no `event_types`) is a
+`422`.
 
 ## Check it from end to end
 
