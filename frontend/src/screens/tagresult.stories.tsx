@@ -48,17 +48,24 @@ const companies = [
   { id: "o-2", display_name: "Nordfracht" },
 ];
 const deals = [{ id: "d-1", name: "netcare GmbH — Einführung" }];
+const leads = [{ id: "l-1", full_name: "Jonas Weber" }];
 
-// All three record types carry the word: one group per type, each naming its
+// Every record type carries the word: one group per type, each naming its
 // own rows, and none of them offering "View all" — every group here is shorter
 // than the preview, so there is nothing further to show.
 export const RecordsInEveryGroup: Story = {
   render: () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ contacts: 2, companies: 2, deals: 1 }),
+      [`GET /tags/${TAG}`]: tagRead({
+        contacts: 2,
+        companies: 2,
+        deals: 1,
+        leads: 1,
+      }),
       "GET /contacts": () => jsonResponse({ data: contacts }),
       "GET /companies": () => jsonResponse({ data: companies }),
       "GET /deals": () => jsonResponse({ data: deals }),
+      "GET /leads": () => jsonResponse({ data: leads }),
     });
     return (
       <StoryProviders>
@@ -73,7 +80,12 @@ export const RecordsInEveryGroup: Story = {
 export const NothingCarriesIt: Story = {
   render: () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ contacts: 0, companies: 0, deals: 0 }),
+      [`GET /tags/${TAG}`]: tagRead({
+        contacts: 0,
+        companies: 0,
+        deals: 0,
+        leads: 0,
+      }),
     });
     return (
       <StoryProviders>
@@ -90,7 +102,12 @@ export const NothingCarriesIt: Story = {
 export const RowsStillLoading: Story = {
   render: () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ contacts: 2, companies: 2, deals: 1 }),
+      [`GET /tags/${TAG}`]: tagRead({
+        contacts: 2,
+        companies: 2,
+        deals: 1,
+        leads: 0,
+      }),
       "GET /contacts": () => new Promise<Response>(() => {}),
       "GET /companies": () => new Promise<Response>(() => {}),
       "GET /deals": () => new Promise<Response>(() => {}),
