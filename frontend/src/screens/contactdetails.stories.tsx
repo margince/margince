@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { LocaleProvider } from "../i18n";
 import { ContactDetails } from "./contactdetails";
 import {
   installFetchStub,
@@ -14,8 +13,8 @@ const meta: Meta<typeof ContactDetails> = {
   title: "Records/Contact 360/Details",
   component: ContactDetails,
   decorators: [
-    (Story) => (
-      <StoryProviders>
+    (Story, { parameters }) => (
+      <StoryProviders locale={parameters.locale === "de" ? "de" : "en"}>
         <Story />
       </StoryProviders>
     ),
@@ -132,39 +131,40 @@ export const BoughtValuesDark: Story = {
   globals: { theme: "dark" },
 };
 
-const long = (local: string) => `${local}@very-long-company-domain-example.com`;
-const typed = { source: "manual", captured_by: "human:u1" };
+const longAddress = (local: string) =>
+  `${local}@very-long-company-domain-example.com`;
+const manual = { source: "manual", captured_by: "human:u1" };
 const longFixture: components["schemas"]["Contact"] = {
   ...fixture,
   emails: [
     {
-      ...typed,
+      ...manual,
       id: "e-1",
-      email: long("alexandra.konstantinopoulou"),
+      email: longAddress("alexandra.konstantinopoulou"),
       email_type: "work",
       is_primary: true,
       position: 0,
     },
     {
-      ...typed,
+      ...manual,
       id: "e-2",
-      email: long("alexandra.k.private.mailbox"),
+      email: longAddress("alexandra.k.private.mailbox"),
       email_type: "personal",
       is_primary: false,
       position: 1,
     },
     {
-      ...typed,
+      ...manual,
       id: "e-3",
-      email: long("a.konstantinopoulou.assistant"),
+      email: longAddress("a.konstantinopoulou.assistant"),
       email_type: "other",
       is_primary: false,
       position: 2,
     },
     {
-      ...typed,
+      ...manual,
       id: "e-4",
-      email: long("konstantinopoulou.alexandra"),
+      email: longAddress("konstantinopoulou.alexandra"),
       email_type: "work",
       is_primary: false,
       position: 3,
@@ -172,7 +172,7 @@ const longFixture: components["schemas"]["Contact"] = {
   ],
   phones: [
     {
-      ...typed,
+      ...manual,
       id: "p-1",
       phone: "+4915112345678",
       phone_type: "mobile",
@@ -182,7 +182,7 @@ const longFixture: components["schemas"]["Contact"] = {
   ],
   bought_fields: [
     {
-      target: "email:e-4",
+      target: "email:e-1",
       provider: "surfe",
       applied_at: "2026-06-02T12:00:00Z",
     },
@@ -191,9 +191,11 @@ const longFixture: components["schemas"]["Contact"] = {
 
 async function expectHandlesInColumn(
   canvasElement: HTMLElement,
-  kindSits: "beside" | "beneath",
+  kinds: "beside" | "mixed",
 ) {
-  await within(canvasElement).findByText(long("alexandra.konstantinopoulou"));
+  await within(canvasElement).findByText(
+    longAddress("alexandra.konstantinopoulou"),
+  );
   const handles = [
     ...canvasElement.querySelectorAll<HTMLElement>(".fieldgrid-handle"),
   ];
@@ -204,6 +206,9 @@ async function expectHandlesInColumn(
       (column?.getBoundingClientRect().right ?? 0) + 0.5,
     );
   }
+  const floor =
+    5 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  let dropped = 0;
   let grouped = 0;
   for (const handle of handles) {
     const value = handle.firstElementChild?.getBoundingClientRect();
@@ -215,21 +220,29 @@ async function expectHandlesInColumn(
     lines.selectNodeContents(kind);
     await expect(lines.getClientRects()).toHaveLength(1);
     const placed = kind.getBoundingClientRect();
-    if (kindSits === "beside") {
-      await expect(placed.left).toBeGreaterThanOrEqual(value.right);
-    } else {
-      await expect(placed.top).toBeGreaterThanOrEqual(value.bottom);
-      const next = handle.nextElementSibling;
-      if (next?.classList.contains("fieldgrid-handle")) {
-        grouped += 1;
-        await expect(placed.top - value.bottom).toBeLessThan(
-          next.getBoundingClientRect().top -
-            handle.getBoundingClientRect().bottom,
-        );
-      }
+    if (placed.top < value.bottom) {
+      await expect(placed.left - value.right).toBeCloseTo(
+        Number.parseFloat(getComputedStyle(handle).columnGap),
+        0,
+      );
+      await expect(value.width).toBeGreaterThanOrEqual(floor - 0.5);
+      continue;
+    }
+    dropped += 1;
+    const next = handle.nextElementSibling;
+    if (next?.classList.contains("fieldgrid-handle")) {
+      grouped += 1;
+      await expect(placed.top - value.bottom).toBeLessThan(
+        next.getBoundingClientRect().top -
+          handle.getBoundingClientRect().bottom,
+      );
     }
   }
-  await expect(grouped).toBe(kindSits === "beneath" ? 3 : 0);
+  if (kinds === "beside") {
+    await expect(dropped).toBe(0);
+  } else {
+    await expect(grouped).toBeGreaterThan(0);
+  }
   const first = handles[0].firstElementChild?.getBoundingClientRect();
   const firstKind = handles[0]
     .querySelector(".t-caption")
@@ -268,14 +281,26 @@ export const LongAddressesPhone: Story = {
 // the value column unless they drop beneath the address.
 export const LongAddressesNarrowGerman: Story = {
   args: { contact: longFixture },
+  parameters: { locale: "de" },
   decorators: [
     (Story) => (
-      <LocaleProvider initial="de">
-        <div style={{ maxWidth: 288 }}>
-          <Story />
-        </div>
-      </LocaleProvider>
+      <div style={{ maxWidth: 288 }}>
+        <Story />
+      </div>
     ),
   ],
-  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, "beneath"),
+  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, "mixed"),
+};
+// A column that holds "Geschäftlich gekauft" beside an address only a few
+// letters wide.
+export const LongAddressesGerman: Story = {
+  ...LongAddressesNarrowGerman,
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 330 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: ({ canvasElement }) => expectHandlesInColumn(canvasElement, "beside"),
 };
