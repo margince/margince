@@ -35,7 +35,7 @@ What each directory owns, and the rule that goes with it:
     database GUC, and no table has a `workspace_id` column or a policy per row.
   - `database/storekit` is the one spelling of the audit and outbox write shape, the keyset cursor, and
     version patches.
-  - `auth` is the one admission point: `Admit` (scope ∧ tier) + object RBAC + the row scope clauses, which
+  - `auth` is the one admission point: `Admit` (scope ∧ tier) + object RBAC + the row scope clause, which
     include the walk over activity links.
   - Also here: `events` (outbox relay, subscriber, dedupe), `dbmigrate`, `httperr` (RFC 7807 + wire
     helpers), `httpserver` (the frame of the server).

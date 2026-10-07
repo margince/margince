@@ -76,7 +76,7 @@ choice. `internal/modules/ai/` owns it:
   route *before* the call; every call is metered. **Callers never pick a model.**
 - **The `SecretStripper`** runs over *every* outbound payload and removes secrets for good: API keys,
   tokens, private keys, password values (→ `[SECRET-REMOVED:<kind>]`). It guards secrets only and does
-  no PII filtering. Names, emails and phone numbers pass through. The location ladder and the erasure
+  no PII filtering. Names, emails and phone numbers pass through. The location ladder and the erase
   engines handle privacy, and the sovereign profile blocks all data from leaving.
   - It covers the text lane only. An attached file goes in the payload as `base64`, and the rules
     match the text of a secret. So the stripper does not find a credential *inside an attached file*.

@@ -33,7 +33,7 @@ that a machine can read, under any reading. So the `ai_disclosure` field descrip
 ## Why the notice matters
 
 Where an Art. 50(4) duty *would* reach the text, it drops away in one case. That case is when the content
-the AI made has been through human review or editorial control. A human or a legal entity must also hold the
+the AI made has been through human review or editorial control. A real or legal party must also hold the
 editorial duty for it. (This is our own short version; read the law's own words in full before you
 depend on this.)
 

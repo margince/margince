@@ -662,7 +662,8 @@ me
 mean
 measure
 medium
-meeting
+meet
+meetings
 member
 membership
 mention

@@ -207,7 +207,7 @@ past the bound. Routed spend, the status screen, and the read that `ReplaceBudge
 then all work against the bound, and return no error. Such a limit can only allow less than what was
 set, never more.
 
-**The band** (`BudgetBand(spent, monthly)` in `usage.go`) turns spend into one of three states. One set of
+**The band** (`BudgetBand(spent, monthly)` in `usage.go`) of the spend turn spend into one of three states. One set of
 limits serves every part that asks "how are we doing". Those parts are the routing ladder, the admin
 status screen, and the cost preview.
 
@@ -304,7 +304,7 @@ ladder and prompt unless every check passes, in this order:
 No certification row is needed, only the two checks above.
 
 [Certifying a site](../how-to/certify-a-decision-site.md) is advice: a measured record that an operator
-trusts it by, never something `Router.Decide` reads. A fallback leaves its reason on the ladder's first
+trusts it by, never something `Router.Decide` reads. A fall back leaves its reason on the ladder's first
 attempt: `decision_local_only`, `decision_state_too_large`, `decision_error`, `decision_off_enum` or
 `decision_below_floor`.
 

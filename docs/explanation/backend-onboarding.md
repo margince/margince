@@ -14,7 +14,7 @@ already own.
 5. This page: the system in one screen, and the map of where things are. It also covers what is generated, the code you call, the gates, and the change steps.
 6. [CONTRIBUTING.md](../../CONTRIBUTING.md) + `AGENTS.md`: the PR loop, and the rules engineers must follow.
 7. [principles/](../principles/README.md): short statements about the shape of this code base. They settle a class of
-   questions before they start. Some are: one source of truth, the record is the code, every mutation
+   questions before they start. Some are: one source of truth, the record is the code, every change
    leaves a trace. Read one when you need the *why* behind a rule in `AGENTS.md`. Also read one when you
    audit a part of the code against it.
 

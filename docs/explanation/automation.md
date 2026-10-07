@@ -49,7 +49,7 @@ trigger has no event, and the time scan picks it up.
 | Trigger kind | Fires when… | Entry |
 |---|---|---|
 | `record_created_updated` | any record is created or updated | event (more than one stream; `Match` decides) |
-| `field_reaches_value` | a field crosses a set value | event (the same streams, field predicate) |
+| `field_reaches_value` | a field crosses a set value | event (the same stream, field predicate) |
 | `deal_enters_leaves_stage` | a deal moves pipeline stage | event (`deal.stage_changed`) |
 | `inbound_reply` | an inbound reply is captured | event (`engagement.reply`) |
 | `list_membership_changed` | a record joins or leaves a watched Live List | event (`list.evaluated`; one check goes out per record) |
