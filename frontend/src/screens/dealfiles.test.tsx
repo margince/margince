@@ -127,8 +127,8 @@ function me() {
 }
 
 /**
- * The backend: it records every write and keeps the hide flag, so a hidden row
- * leaves the default read. `refuse` answers a write with a problem document.
+ * The backend: it records every write and keeps the hide and delete state, so a
+ * row leaves the default read. `refuse` answers a write with a problem document.
  */
 function stubApi(
   docs: DealDocument[],
@@ -138,6 +138,7 @@ function stubApi(
   const hidden = new Set(
     docs.filter((doc) => doc.hidden).map((doc) => doc.attachment.id),
   );
+  const deleted = new Set<string>();
   vi.stubGlobal("fetch", (input: Request) => {
     const url = new URL(input.url);
     if (input.method !== "GET") {
@@ -153,6 +154,10 @@ function stubApi(
       } else if (hideOf) {
         hidden.delete(hideOf[1]);
       }
+      const deleteOf = /^\/v1\/attachments\/([^/]+)$/.exec(url.pathname);
+      if (deleteOf) {
+        deleted.add(deleteOf[1]);
+      }
       return Promise.resolve(new Response(null, { status: 204 }));
     }
     if (url.pathname.endsWith("/me")) {
@@ -160,6 +165,7 @@ function stubApi(
     }
     const withHidden = url.searchParams.get("include_hidden") === "true";
     const data = docs
+      .filter((doc) => !deleted.has(doc.attachment.id))
       .map((doc) => ({ ...doc, hidden: hidden.has(doc.attachment.id) }))
       .filter((doc) => withHidden || !doc.hidden);
     return Promise.resolve(jsonResponse({ data, page: {} }));
@@ -228,8 +234,29 @@ it("offers Delete on an upload and no Hide", async () => {
   ).not.toBeInTheDocument();
 });
 
-// The Undo is the hide's only way back, so it has to restore the row exactly
-// and has to say so when it cannot.
+it("hands focus to the list a deleted row left, not to the page", async () => {
+  stubApi([upload()]);
+  const user = userEvent.setup();
+  render(<DealFiles deal={dealOf()} />);
+
+  await user.click(
+    await screen.findByRole("button", { name: /Actions for pricing/ }),
+  );
+  await user.click(screen.getByRole("button", { name: en["files.delete"] }));
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: en["files.delete"],
+    }),
+  );
+
+  const empty = await screen.findByText(en["files.empty"]);
+  await waitFor(() => {
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toContainElement(empty);
+  });
+});
+
+// The toast's Undo puts the row back, and says so when the server refuses it.
 it("puts a hidden file back through the Undo the confirmation carries", async () => {
   const { calls } = stubApi([captured()]);
   const user = userEvent.setup();
@@ -239,6 +266,9 @@ it("puts a hidden file back through the Undo the confirmation carries", async ()
 
   const said = await screen.findByRole("status");
   expect(said).toHaveTextContent(en["dealfiles.hidden"]);
+  await waitFor(() =>
+    expect(screen.queryByText("MSA-redline.docx")).toBeNull(),
+  );
   await user.click(
     within(said).getByRole("button", { name: en["common.undo"] }),
   );
@@ -266,7 +296,7 @@ it("keeps a refused hide on screen as a danger toast, since no dialog is open to
     expect(said).toHaveTextContent("the message was deleted"),
   );
   expect(said.querySelector(".toast-dot-danger")).not.toBeNull();
-  // Sticky: a self-withdrawing toast draws no dismiss control.
+  // With no action on it, a Close button means the toast stays until dismissed.
   expect(
     within(said).getByRole("button", { name: en["common.close"] }),
   ).toBeInTheDocument();

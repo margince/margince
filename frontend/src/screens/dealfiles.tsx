@@ -64,7 +64,7 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
   const [adding, setAdding] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const listRegion = useRef<HTMLDivElement | null>(null);
-  const keepFocusInList = useCallback(() => listRegion.current?.focus(), []);
+  const focusLanding = useCallback(() => listRegion.current, []);
   const query = useQuery({
     queryKey: dealDocumentsKey(dealId, showHidden),
     queryFn: async () => {
@@ -129,7 +129,7 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
               dealId={dealId}
               doc={doc}
               mayWrite={mayWrite}
-              onLeave={keepFocusInList}
+              focusLanding={focusLanding}
             />
           ))}
         </SurfaceState>
@@ -142,12 +142,12 @@ function FileRow({
   dealId,
   doc,
   mayWrite,
-  onLeave,
+  focusLanding,
 }: Readonly<{
   dealId: string;
   doc: DealDocument;
   mayWrite: boolean;
-  onLeave: () => void;
+  focusLanding: () => HTMLElement | null;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -156,7 +156,7 @@ function FileRow({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const verbs = useFileVerbs(dealId, file.id);
   const side = useRef<HTMLDivElement | null>(null);
-  useFocusLeavesWithRow(side, onLeave);
+  useFocusLeavesWithMenu(side, focusLanding);
   return (
     <PanelRow
       className={doc.hidden ? "deal-file deal-file-hidden" : "deal-file"}
@@ -201,6 +201,7 @@ function FileRow({
       <ConfirmModal
         open={confirmingDelete}
         onClose={() => setConfirmingDelete(false)}
+        returnFocusTo={focusLanding}
         title={t("files.deleteTitle", { name: file.filename })}
         confirmLabel={t("files.delete")}
         confirmVariant="danger"
@@ -220,19 +221,20 @@ function FileRow({
   );
 }
 
-// A hide or a delete unmounts the row holding focus; its list is what survives.
-function useFocusLeavesWithRow(
-  row: RefObject<HTMLElement | null>,
-  onLeave: () => void,
+// The menu hands focus back to its trigger, and a hide that drops the row
+// takes the trigger with it.
+function useFocusLeavesWithMenu(
+  menuSide: RefObject<HTMLElement | null>,
+  focusLanding: () => HTMLElement | null,
 ) {
   useLayoutEffect(() => {
-    const node = row.current;
+    const node = menuSide.current;
     return () => {
       if (node?.contains(document.activeElement)) {
-        onLeave();
+        focusLanding()?.focus();
       }
     };
-  }, [row, onLeave]);
+  }, [menuSide, focusLanding]);
 }
 
 // The row's verbs: a captured file can be hidden or shown again, an upload
@@ -294,7 +296,7 @@ function useFileVerbs(dealId: string, attachmentId: string) {
       queryClient.invalidateQueries({ queryKey: ["deal-documents", dealId] }),
       queryClient.invalidateQueries({ queryKey: ["deal-attachments", dealId] }),
     ]);
-  // Neither the hide nor its Undo has a dialog or a row left to hold a refusal.
+  // A refused hide or Undo has no dialog, and the row has no error slot.
   const sayRefused = (error: Error) =>
     toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
   const hide = useMutation({
@@ -312,7 +314,7 @@ function useFileVerbs(dealId: string, attachmentId: string) {
     onError: sayRefused,
     onSuccess: async () => {
       await refresh();
-      // `DELETE .../hide` restores the row exactly: Undo replaces a confirm.
+      // `DELETE .../hide` restores the row as it was, so a hide asks nothing first.
       toast.show(t("dealfiles.hidden"), {
         action: undoAction(t("common.undo"), () => unhide.mutate()),
       });

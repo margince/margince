@@ -160,7 +160,7 @@ export const CarryingAnUndo: Story = {
   render: () => (
     <Bench
       label="Hide a file"
-      message="MSA-redline.docx hidden from this deal."
+      message="Hidden from this deal"
       options={{
         action: { kind: "undo", label: "Undo", onAct: () => {} },
       }}
