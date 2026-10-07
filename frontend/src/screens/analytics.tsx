@@ -57,13 +57,11 @@ import {
 import { ForecastView, SharedForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
 import { MyOutcomesView } from "./analytics.outcomes";
-import { StageAgeTable, WinLossTable } from "./analytics.performance";
 import { QuestionsView } from "./analytics.questions";
 import { FORECAST_CATEGORIES } from "./analytics.questions.values";
 import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { ForecastShareActions } from "./analytics.share";
-import { QueryGate, throwProblem, useMe } from "./common";
+import { QueryGate, throwProblem } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingLibrary } from "./reporting.library";
@@ -104,8 +102,6 @@ type ReportKey =
   | "pipeline-current"
   | "forecast"
   | "open-deals-per-company"
-  | "win-loss"
-  | "stage-age"
   | "projects-by-phase"
   | "project-commitments"
   | "projects-gone-quiet";
@@ -125,10 +121,7 @@ const SECTION_REPORTS = {
   // divides by category; what it is not is the forecast, which is now an
   // answer rather than a table.
   pipeline: ["pipeline-current", "forecast", "open-deals-per-company"],
-  // Closed outcomes and stage velocity: what happened, and how long things
-  // take. Both are the server's own report vocabulary — no rate or duration
-  // is computed in this file.
-  performance: ["win-loss", "stage-age"],
+  performance: [],
   // The rep's own week: a composed view like the forecast, not report cards.
   outcomes: [],
   // Source health: an ops view over the nightly check's own coverage rows.
@@ -159,8 +152,6 @@ const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
   "pipeline-current": ["stage_id"],
   forecast: ["forecast_category"],
   "open-deals-per-company": ["company_id", FIELD_CURRENCY],
-  "win-loss": ["status"],
-  "stage-age": ["stage_id"],
   // The specs' own defaults: an empty plan takes each report's declared
   // grouping and aggregates, which for these three is the whole point.
   "projects-by-phase": [],
@@ -221,17 +212,6 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
   "open-deals-per-company": [
     { fn: "sum", field: "amount_minor", as: "raw_minor" },
     { fn: "count", as: "deal_count" },
-  ],
-  "win-loss": [
-    { fn: "count", as: "deal_count" },
-    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-    { fn: "median", field: "days_to_close", as: "median_days" },
-    { fn: "p75", field: "days_to_close", as: "p75_days" },
-  ],
-  "stage-age": [
-    { fn: "count", as: "deal_count" },
-    { fn: "median", field: "days_in_stage", as: "median_days" },
-    { fn: "p75", field: "days_in_stage", as: "p75_days" },
   ],
   "projects-by-phase": [],
   "project-commitments": [],
@@ -832,12 +812,6 @@ function ReportBody({
           baseCurrency={base}
         />
       );
-    case "win-loss":
-      return (
-        <WinLossTable rows={run.rows} locale={locale} baseCurrency={base} />
-      );
-    case "stage-age":
-      return <StageAgeTable rows={run.rows} stages={stages} locale={locale} />;
     case "projects-by-phase":
       return (
         <ProjectsByPhaseTable
@@ -977,20 +951,9 @@ export function AnalyticsScreen() {
   // Read here rather than taken as a prop, so this screen stays drivable on its
   // own: a suite that renders it directly goes on pressing the tabs.
   const route = useRoute();
-  const reportingEnabled =
-    useMe().data?.settings_availability?.reporting === true;
   const requested = sectionFromAddress(
     route.screen === "analytics" ? route.id : undefined,
-    reportingEnabled ? "performance" : "forecast",
   );
-  const section =
-    !reportingEnabled &&
-    (requested === "reports" ||
-      requested === "targets" ||
-      requested === "definitions" ||
-      (route.screen === "analytics" && !route.id))
-      ? "forecast"
-      : requested;
   // The server decides which population this reader measures and which ones
   // they may choose. Read once here and handed down, so every card on the page
   // is answering about the same set.
@@ -1010,19 +973,16 @@ export function AnalyticsScreen() {
     },
   });
 
-  // Sharing sits beside the tabs rather than inside a section, because the
-  // thing being shared is the SECTION the reader is on — a button that moved
-  // with the content would read as sharing one card.
   const canReadReports = useCan("report_definition", "read");
   const canReadTargets = useCan("sales_target", "read");
   const canReadFramework = useCan("reporting_framework", "read");
   const canReadCoverage = useCan("data_coverage", "read");
   const coverageProbe = useDataCoverage();
   const availableSections = SECTIONS.filter((candidate) => {
-    if (candidate === "reports") return reportingEnabled && canReadReports;
-    if (candidate === "targets") return reportingEnabled && canReadTargets;
-    if (candidate === "definitions")
-      return reportingEnabled && canReadFramework;
+    if (candidate === "performance") return canReadReports && canReadFramework;
+    if (candidate === "reports") return canReadReports;
+    if (candidate === "targets") return canReadTargets;
+    if (candidate === "definitions") return canReadFramework;
     if (candidate === "outcomes") {
       return context.data?.default_scope.kind === "owner";
     }
@@ -1033,6 +993,11 @@ export function AnalyticsScreen() {
     }
     return true;
   });
+  const section =
+    ["performance", "reports", "targets", "definitions"].includes(requested) &&
+    !availableSections.includes(requested)
+      ? "forecast"
+      : requested;
   const header = (
     <div className="analytics-header">
       <RecordTabs
@@ -1063,7 +1028,7 @@ export function AnalyticsScreen() {
         label={t("analytics.sections")}
       />
       <div className="analytics-header-end">
-        {reportingEnabled && (canReadTargets || canReadFramework) && (
+        {(canReadTargets || canReadFramework) && (
           <Popover label={t("reporting.settings")}>
             {availableSections
               .filter(
@@ -1109,9 +1074,7 @@ export function AnalyticsScreen() {
               </Button>
             ))}
         </Popover>
-        {selection &&
-        context.data &&
-        scopePickerApplies(section, reportingEnabled) ? (
+        {selection && context.data && scopePickerApplies(section) ? (
           <div className="analytics-scope-control">
             <AnalyticsScopePicker
               scopes={context.data.allowed_scopes}
@@ -1119,9 +1082,6 @@ export function AnalyticsScreen() {
               onSelect={selectScope}
             />
           </div>
-        ) : null}
-        {section === "forecast" && selection && !reportingEnabled ? (
-          <ForecastShareActions target="forecast" scope={selection.scope} />
         ) : null}
       </div>
     </div>
@@ -1136,7 +1096,6 @@ export function AnalyticsScreen() {
       <div className="analytics-body">
         <SectionBody
           section={section}
-          reportingEnabled={reportingEnabled}
           locale={locale}
           context={context.data}
           selection={selection}
@@ -1152,7 +1111,6 @@ export function AnalyticsScreen() {
 // stays a header plus a choice rather than a ladder of ternaries.
 function SectionBody({
   section,
-  reportingEnabled,
   locale,
   context,
   selection,
@@ -1160,7 +1118,6 @@ function SectionBody({
   stages,
 }: Readonly<{
   section: Section;
-  reportingEnabled: boolean;
   locale: Locale;
   context: components["schemas"]["AnalyticsContext"] | undefined;
   selection: AnalyticsSelection | null;
@@ -1169,14 +1126,7 @@ function SectionBody({
 }>) {
   switch (section) {
     case "performance":
-      return (
-        <PerformanceSection
-          enabled={reportingEnabled}
-          selection={selection}
-          stages={stages}
-          locale={locale}
-        />
-      );
+      return selection ? <ReportingOverview scope={selection.scope} /> : null;
     case "reports":
       return <ReportingLibrary />;
     case "targets":
@@ -1203,7 +1153,6 @@ function SectionBody({
     case "forecast":
       return selection && context ? (
         <ForecastView
-          reportingEnabled={reportingEnabled}
           selection={selection}
           canSubmit={context.capabilities.submit_manager_forecast}
         />
@@ -1224,38 +1173,6 @@ function SectionBody({
   }
 }
 
-function PerformanceSection({
-  enabled,
-  selection,
-  stages,
-  locale,
-}: Readonly<{
-  enabled: boolean;
-  selection: AnalyticsSelection | null;
-  stages: readonly Stage[];
-  locale: Locale;
-}>) {
-  if (enabled)
-    return selection ? <ReportingOverview scope={selection.scope} /> : null;
-  return (
-    <>
-      {SECTION_REPORTS.performance.map((report) => (
-        <ReportCard
-          key={report}
-          report={report}
-          stages={stages}
-          locale={locale}
-        />
-      ))}
-    </>
-  );
-}
-
-function scopePickerApplies(
-  section: Section,
-  reportingEnabled: boolean,
-): boolean {
-  return section === "performance"
-    ? reportingEnabled
-    : ["forecast", "questions"].includes(section);
+function scopePickerApplies(section: Section): boolean {
+  return ["performance", "forecast", "questions"].includes(section);
 }

@@ -35,6 +35,8 @@ func decisionRoute(row *crmcontracts.AiFeatureRoute, cfg RoutingConfig, task Tas
 	if !TaskDecides(task) {
 		return
 	}
+	// The lane reads its host from its provider, as every planned lane does.
+	cfg = cfg.canonical().resolveProviders()
 	skip := decisionSkipFor(cfg.Decisions, task)
 	if lane := cfg.Decisions; lane != nil {
 		row.DecisionCandidate = &crmcontracts.AiRouteCandidate{

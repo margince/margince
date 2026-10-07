@@ -43,6 +43,7 @@ public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id
 public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))
+public.activity.activity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.activity.archived_at timestamp with time zone gen=- def=-
 public.activity.assignee_id uuid gen=- def=-
 public.activity.audience text NOT NULL gen=- def='workspace'::text
@@ -112,6 +113,19 @@ public.activity_audience_member.created_by text NOT NULL gen=- def=-
 public.activity_audience_member.subject_id uuid NOT NULL gen=- def=-
 public.activity_audience_member.subject_type text NOT NULL gen=- def=-
 public.activity_audience_member_pkey CREATE UNIQUE INDEX activity_audience_member_pkey ON public.activity_audience_member USING btree (activity_id, subject_type, subject_id)
+public.activity_class_needs_evidence() secdef=false cfg=- acl=- 
+BEGIN
+  IF EXISTS (SELECT 1 FROM activity a
+              WHERE a.id = OLD.activity_id AND a.retention_class IS NOT NULL)
+     AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
+                      WHERE e.activity_id = OLD.activity_id) THEN
+    RAISE EXCEPTION 'activity % carries a retention class with no evidence recording what qualified it', OLD.activity_id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_class_needs_evidence';
+  END IF;
+  RETURN NULL;
+END;
+
 public.activity_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_identity.activity_id uuid NOT NULL gen=- def=-
 public.activity_identity.activity_identity_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -219,7 +233,7 @@ public.activity_mail_reference_referenced_idx CREATE INDEX activity_mail_referen
 public.activity_meeting_attendee_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_attendee_repair.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'capped'::text, 'unreadable'::text])))
+public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'capped'::text, 'capped_seats'::text, 'unreadable'::text])))
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_pkey PRIMARY KEY (activity_id)
 public.activity_meeting_attendee_repair.outcome text NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.repaired_at timestamp with time zone NOT NULL gen=- def=now()
@@ -317,9 +331,36 @@ BEGIN
   -- when it was earned. Leaving the timestamp mutable would let a writer keep
   -- the class and move the date: the same rewriting of history with an extra
   -- step, on the field a supervisory authority would be shown.
+  --
+  -- The one exception is the declared undo of a project filing: the class
+  -- clears whole from an unrestricted row that nothing still qualifies, and the
+  -- declaration names this one activity.
   IF OLD.retention_class IS NOT NULL
      AND (NEW.retention_class IS DISTINCT FROM OLD.retention_class
-          OR NEW.retention_class_at IS DISTINCT FROM OLD.retention_class_at) THEN
+          OR NEW.retention_class_at IS DISTINCT FROM OLD.retention_class_at)
+     AND NOT (coalesce(current_setting('margince.project_filing_undo', true), '') = OLD.id::text
+              AND NEW.retention_class IS NULL AND NEW.retention_class_at IS NULL
+              AND OLD.restricted_at IS NULL AND NEW.restricted_at IS NULL
+              AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
+                               WHERE e.activity_id = OLD.id)
+              AND NOT EXISTS (SELECT 1 FROM activity_link l
+                               WHERE l.activity_id = OLD.id AND l.entity_type = 'project')
+              AND NOT EXISTS (SELECT 1 FROM activity_link hl
+                               JOIN deal hd ON hd.id = hl.deal_id
+                               WHERE hl.activity_id = OLD.id AND hl.entity_type = 'deal'
+                                 AND (hd.status = 'won'
+                                      OR EXISTS (SELECT 1 FROM offer o
+                                                  WHERE o.deal_id = hd.id AND o.status <> 'draft')))
+              AND NOT EXISTS (SELECT 1 FROM activity_link h
+                               LEFT JOIN contact hp ON hp.id = h.contact_id
+                               LEFT JOIN company hc ON hc.id = h.company_id
+                               LEFT JOIN deal hdl ON hdl.id = h.deal_id
+                               LEFT JOIN lead hld ON hld.id = h.lead_id
+                               LEFT JOIN project hpj ON hpj.id = h.project_id
+                               WHERE h.activity_id = OLD.id
+                                 AND (coalesce(hp.legal_hold, false) OR coalesce(hc.legal_hold, false)
+                                      OR coalesce(hdl.legal_hold, false) OR coalesce(hld.legal_hold, false)
+                                      OR coalesce(hpj.legal_hold, false)))) THEN
     RAISE EXCEPTION 'activity % carries retention class % earned at %, which is stamped once and never re-derived', OLD.id, OLD.retention_class, OLD.retention_class_at
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'activity_retention_class_monotonic';
@@ -433,6 +474,8 @@ public.activity_request_settlement.request_activity_id uuid NOT NULL gen=- def=-
 public.activity_request_settlement.verdict text NOT NULL gen=- def=-
 public.activity_request_settlement_pkey CREATE UNIQUE INDEX activity_request_settlement_pkey ON public.activity_request_settlement USING btree (request_activity_id)
 public.activity_retention_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_retention_evidence.activity_class_needs_evidence CREATE CONSTRAINT TRIGGER activity_class_needs_evidence AFTER DELETE ON public.activity_retention_evidence DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION activity_class_needs_evidence()
+public.activity_retention_evidence.activity_class_needs_evidence TRIGGER DEFERRABLE INITIALLY DEFERRED
 public.activity_retention_evidence.activity_id uuid NOT NULL gen=- def=-
 public.activity_retention_evidence.activity_retention_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_retention_evidence.activity_retention_evidence_basis_check CHECK ((basis = ANY (ARRAY['deal_won'::text, 'offer_beyond_draft'::text, 'project_linked'::text, 'controller_pin'::text])))
@@ -469,6 +512,28 @@ BEGIN
   -- activity is gone exactly when the delete is legitimate.
   IF TG_OP = 'DELETE' THEN
     IF EXISTS (SELECT 1 FROM activity a WHERE a.id = OLD.activity_id) THEN
+      -- Project-filing evidence only, from an activity no statutory or legal
+      -- hold has reached: every other row stays under the freeze.
+      IF OLD.basis = 'project_linked'
+         AND coalesce(current_setting('margince.project_filing_undo', true), '') = OLD.activity_id::text
+         AND NOT EXISTS (SELECT 1 FROM activity a
+                          WHERE a.id = OLD.activity_id AND a.restricted_at IS NOT NULL)
+         AND NOT EXISTS (SELECT 1 FROM activity_link pl
+                          WHERE pl.activity_id = OLD.activity_id AND pl.entity_type = 'project')
+         AND NOT EXISTS (SELECT 1 FROM project fp
+                          WHERE fp.id = OLD.project_id AND fp.legal_hold)
+         AND NOT EXISTS (SELECT 1 FROM activity_link h
+                          LEFT JOIN contact hp ON hp.id = h.contact_id
+                          LEFT JOIN company hc ON hc.id = h.company_id
+                          LEFT JOIN deal hdl ON hdl.id = h.deal_id
+                          LEFT JOIN lead hld ON hld.id = h.lead_id
+                          LEFT JOIN project hpj ON hpj.id = h.project_id
+                          WHERE h.activity_id = OLD.activity_id
+                            AND (coalesce(hp.legal_hold, false) OR coalesce(hc.legal_hold, false)
+                                 OR coalesce(hdl.legal_hold, false) OR coalesce(hld.legal_hold, false)
+                                 OR coalesce(hpj.legal_hold, false))) THEN
+        RETURN OLD;
+      END IF;
       RAISE EXCEPTION 'retention evidence % is frozen and is removed only with the activity it substantiates', OLD.id
         USING ERRCODE = 'check_violation',
               CONSTRAINT = 'activity_retention_evidence_frozen';
@@ -660,6 +725,8 @@ public.agent_task.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.agent_task_pkey CREATE UNIQUE INDEX agent_task_pkey ON public.agent_task USING btree (id)
 public.ai_call acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.ai_call.agent_run_id uuid gen=- def=-
+public.ai_call.ai_call_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_config_fk FOREIGN KEY (config_hash) REFERENCES ai_call_config(hash)
 public.ai_call.ai_call_context_bytes_check CHECK ((context_bytes >= 0))
 public.ai_call.ai_call_context_fingerprint_check CHECK (((context_fingerprint = ''::text) OR (context_fingerprint ~ '^[0-9a-f]{64}$'::text)))
@@ -668,11 +735,15 @@ public.ai_call.ai_call_context_tokens_estimate_check CHECK ((context_tokens_esti
 public.ai_call.ai_call_decision_answer_kind CHECK (((decision_choice IS NULL) OR (kind = 'decision'::text)))
 public.ai_call.ai_call_decision_answer_shape CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL)))
 public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 'embedding'::text, 'decision'::text])))
+public.ai_call.ai_call_latency_ms_js_safe CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
+public.ai_call.ai_call_reasoning_tokens_js_safe CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_schema_downgrade_check CHECK ((schema_downgrade = ANY (ARRAY[''::text, 'relaxed'::text, 'unenforced'::text, 'dropped'::text])))
 public.ai_call.ai_call_secrets_removed_check CHECK ((secrets_removed >= 0))
 public.ai_call.ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text])))
 public.ai_call.ai_call_subject_shape CHECK (((subject_type IS NULL) = (subject_id IS NULL)))
+public.ai_call.ai_call_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
 public.ai_call.attempt integer NOT NULL gen=- def=1
 public.ai_call.attempt_reason text NOT NULL gen=- def=''::text
 public.ai_call.cache_hit boolean NOT NULL gen=- def=false
@@ -743,6 +814,7 @@ public.ai_feedback.ai_feedback_pkey PRIMARY KEY (id)
 public.ai_feedback.ai_feedback_subject_type_check CHECK ((subject_type = ANY (ARRAY['company'::text, 'contact'::text, 'deal'::text, 'lead'::text])))
 public.ai_feedback.ai_feedback_subject_type_subject_id_claim_kind_key UNIQUE (subject_type, subject_id, claim_kind, claim_key)
 public.ai_feedback.ai_feedback_verdict_check CHECK ((verdict = ANY (ARRAY['corrected'::text, 'suppressed'::text, 'confirmed'::text])))
+public.ai_feedback.ai_feedback_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.ai_feedback.captured_by text NOT NULL gen=- def=-
 public.ai_feedback.claim_key text NOT NULL gen=- def=-
 public.ai_feedback.claim_kind text NOT NULL gen=- def=-
@@ -768,6 +840,7 @@ public.ai_model_rate.ai_model_rate_key UNIQUE (provider, model_id, effective_dat
 public.ai_model_rate.ai_model_rate_lane_check CHECK ((lane = ANY (ARRAY['chat'::text, 'embeddings'::text, 'decisions'::text])))
 public.ai_model_rate.ai_model_rate_output_per_mtok_microusd_check CHECK ((output_per_mtok_microusd >= 0))
 public.ai_model_rate.ai_model_rate_pkey PRIMARY KEY (id)
+public.ai_model_rate.ai_model_rate_source_check CHECK ((source = ANY (ARRAY['manual'::text, 'catalogue'::text, 'seed'::text])))
 public.ai_model_rate.cache_read_per_mtok_microusd bigint NOT NULL gen=- def=0
 public.ai_model_rate.cache_write_per_mtok_microusd bigint NOT NULL gen=- def=0
 public.ai_model_rate.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -778,6 +851,7 @@ public.ai_model_rate.lane text NOT NULL gen=- def='chat'::text
 public.ai_model_rate.model_id text NOT NULL gen=- def=-
 public.ai_model_rate.output_per_mtok_microusd bigint NOT NULL gen=- def=-
 public.ai_model_rate.provider text NOT NULL gen=- def=-
+public.ai_model_rate.source text NOT NULL gen=- def='manual'::text
 public.ai_model_rate_key CREATE UNIQUE INDEX ai_model_rate_key ON public.ai_model_rate USING btree (provider, model_id, effective_date)
 public.ai_model_rate_pkey CREATE UNIQUE INDEX ai_model_rate_pkey ON public.ai_model_rate USING btree (id)
 public.ai_task_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -836,7 +910,13 @@ public.ai_task_run_state_rank(state text) secdef=false cfg=- acl=-
     END
   
 public.ai_usage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.ai_usage.ai_usage_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_calls_js_safe CHECK (((calls >= '-9007199254740991'::bigint) AND (calls <= '9007199254740991'::bigint)))
 public.ai_usage.ai_usage_pkey PRIMARY KEY (day, task, tier)
+public.ai_usage.ai_usage_reasoning_tokens_js_safe CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
 public.ai_usage.cache_write_tokens bigint NOT NULL gen=- def=0
 public.ai_usage.cached_hits bigint NOT NULL gen=- def=0
 public.ai_usage.cached_tokens bigint NOT NULL gen=- def=0
@@ -857,6 +937,7 @@ public.analytics_share.analytics_share_scope_id_matches_kind CHECK (((scope_kind
 public.analytics_share.analytics_share_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
 public.analytics_share.analytics_share_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
 public.analytics_share.analytics_share_snapshot_matches_kind CHECK (((kind = 'snapshot'::text) = (snapshot_id IS NOT NULL)))
+public.analytics_share.analytics_share_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.analytics_share.captured_by text NOT NULL gen=- def=-
 public.analytics_share.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.analytics_share.created_by uuid NOT NULL gen=- def=-
@@ -880,6 +961,7 @@ public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NUL
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
 public.app_user.app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL))))
 public.app_user.app_user_forget_weekly_plan_responses CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()
+public.app_user.app_user_greeting_name_length CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))
 public.app_user.app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text])))
 public.app_user.app_user_morning_brief_delivery_check CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
 public.app_user.app_user_pkey PRIMARY KEY (id)
@@ -896,6 +978,8 @@ public.app_user.delivery_hour_local integer gen=- def=-
 public.app_user.display_name text NOT NULL gen=- def=-
 public.app_user.email text NOT NULL gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
+public.app_user.greeting_name text gen=- def=-
+public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
 public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
 public.app_user.locale text gen=- def=-
@@ -926,6 +1010,7 @@ public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES p
 public.approval.approval_pkey PRIMARY KEY (id)
 public.approval.approval_staged_by_connection_fkey FOREIGN KEY (staged_by_connection) REFERENCES oauth_grant(id) ON DELETE SET NULL
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
+public.approval.approval_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.approval.bundle_id uuid gen=- def=-
 public.approval.co_target_entity_id uuid gen=- def=-
 public.approval.co_target_entity_type text gen=- def=-
@@ -1014,12 +1099,14 @@ public.assurance_cycle_one_open_per_scope CREATE UNIQUE INDEX assurance_cycle_on
 public.assurance_cycle_pkey CREATE UNIQUE INDEX assurance_cycle_pkey ON public.assurance_cycle USING btree (id)
 public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_exception.affected_minor bigint gen=- def=-
+public.assurance_exception.assurance_exception_affected_minor_js_safe CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))
 public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((affected_minor IS NULL) = (currency IS NULL)))
 public.assurance_exception.assurance_exception_pkey PRIMARY KEY (id)
 public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at))
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
 public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text, 'subject_departed'::text])))
 public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
+public.assurance_exception.assurance_exception_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1050,6 +1137,7 @@ public.assurance_resolution.assurance_resolution_expiry_after_creation CHECK (((
 public.assurance_resolution.assurance_resolution_outcome_check CHECK ((outcome = ANY (ARRAY['fixed_record'::text, 'added_evidence'::text, 'value_correct'::text, 'not_relevant'::text, 'remind_later'::text, 'reassign'::text, 'condition_cleared'::text])))
 public.assurance_resolution.assurance_resolution_pkey PRIMARY KEY (id)
 public.assurance_resolution.assurance_resolution_suppression_expires CHECK (((outcome <> ALL (ARRAY['value_correct'::text, 'not_relevant'::text])) OR (expires_at IS NOT NULL)))
+public.assurance_resolution.assurance_resolution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_resolution.captured_by text NOT NULL gen=- def=-
 public.assurance_resolution.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_resolution.evidence_ref text gen=- def=-
@@ -1070,6 +1158,7 @@ public.assurance_run.assurance_run_readiness_check CHECK (((readiness IS NULL) O
 public.assurance_run.assurance_run_readiness_matches_status CHECK (((status = 'running'::text) = (readiness IS NULL)))
 public.assurance_run.assurance_run_requester_is_named CHECK (((requested_by IS NULL) OR (length(btrim(requested_by)) > 0)))
 public.assurance_run.assurance_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text])))
+public.assurance_run.assurance_run_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_run.captured_by text NOT NULL gen=- def=-
 public.assurance_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run.digest text gen=- def=-
@@ -1099,6 +1188,7 @@ public.assurance_source_coverage.assurance_source_coverage_pkey PRIMARY KEY (id)
 public.assurance_source_coverage.assurance_source_coverage_run_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
 public.assurance_source_coverage.assurance_source_coverage_source_check CHECK ((source = ANY (ARRAY['mail'::text, 'calendar'::text, 'documents'::text, 'contracts'::text, 'offers'::text, 'incumbent'::text])))
 public.assurance_source_coverage.assurance_source_coverage_state_check CHECK ((state = ANY (ARRAY['checked'::text, 'stale'::text, 'unavailable'::text, 'permission_limited'::text, 'not_connected'::text])))
+public.assurance_source_coverage.assurance_source_coverage_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_source_coverage.captured_by text NOT NULL gen=- def=-
 public.assurance_source_coverage.checked_through timestamp with time zone gen=- def=-
 public.assurance_source_coverage.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1135,6 +1225,7 @@ public.assurance_task_item_pkey CREATE UNIQUE INDEX assurance_task_item_pkey ON 
 public.attachment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.attachment.activity_id uuid gen=- def=-
 public.attachment.archived_at timestamp with time zone gen=- def=-
+public.attachment.attachment_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))
 public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text])))
 public.attachment.attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES contract(id) ON DELETE SET NULL
 public.attachment.attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text])))
@@ -1144,6 +1235,7 @@ public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
 public.attachment.attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
 public.attachment.byte_size bigint gen=- def=-
+public.attachment.bytes_withheld boolean NOT NULL gen=- def=false
 public.attachment.captured_by text NOT NULL gen=- def=-
 public.attachment.category text NOT NULL gen=- def='other'::text
 public.attachment.checksum text gen=- def=-
@@ -1240,6 +1332,7 @@ public.automation.automation_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_us
 public.automation.automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text])))
 public.automation.automation_pkey PRIMARY KEY (id)
 public.automation.automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text])))
+public.automation.automation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.automation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.automation.enabled boolean NOT NULL gen=- def=false
 public.automation.id uuid NOT NULL gen=- def=uuidv7()
@@ -1322,6 +1415,7 @@ public.brief_run.brief_run_narrative_needs_a_pass CHECK (((narrative IS NULL) OR
 public.brief_run.brief_run_pkey PRIMARY KEY (id)
 public.brief_run.brief_run_revenue_norm_currency_check CHECK (((revenue_norm_currency = ''::text) OR (revenue_norm_currency ~ '^[A-Z]{3}$'::text)))
 public.brief_run.brief_run_revenue_norm_minor_check CHECK ((revenue_norm_minor > 0))
+public.brief_run.brief_run_revenue_norm_minor_js_safe CHECK (((revenue_norm_minor >= '-9007199254740991'::bigint) AND (revenue_norm_minor <= '9007199254740991'::bigint)))
 public.brief_run.brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.factors_omitted text[] NOT NULL gen=- def='{}'::text[]
@@ -1350,8 +1444,8 @@ public.bulk_confirmation_pkey CREATE UNIQUE INDEX bulk_confirmation_pkey ON publ
 public.bulk_operation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.bulk_operation.bulk_operation_counts_check CHECK (((changed_count >= 0) AND (skipped_count >= 0)))
 public.bulk_operation.bulk_operation_pkey PRIMARY KEY (id)
-public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text])))
-public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text, 'add_tag'::text, 'remove_tag'::text, 'create_task'::text])))
+public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'worklist_item'::text])))
+public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text, 'add_tag'::text, 'remove_tag'::text, 'create_task'::text, 'complete'::text])))
 public.bulk_operation.changed_count integer NOT NULL gen=- def=-
 public.bulk_operation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.bulk_operation.id uuid NOT NULL gen=- def=uuidv7()
@@ -1410,6 +1504,7 @@ public.capture_backfill.contacts_created integer NOT NULL gen=- def=0
 public.capture_backfill.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_backfill.cursor jsonb gen=- def=-
 public.capture_backfill.dedupe_candidates integer NOT NULL gen=- def=0
+public.capture_backfill.failed integer NOT NULL gen=- def=0
 public.capture_backfill.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_backfill.inflight_captured integer NOT NULL gen=- def=0
 public.capture_backfill.inflight_scanned integer NOT NULL gen=- def=0
@@ -1424,6 +1519,7 @@ public.capture_backfill.total_estimate_is_floor boolean NOT NULL gen=- def=false
 public.capture_backfill.trg_capture_backfill_updated CREATE TRIGGER trg_capture_backfill_updated BEFORE UPDATE ON public.capture_backfill FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.capture_backfill.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_backfill.window_months integer NOT NULL gen=- def=-
+public.capture_backfill.window_restarts integer NOT NULL gen=- def=0
 public.capture_backfill_creation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_backfill_creation.backfill_id uuid NOT NULL gen=- def=-
 public.capture_backfill_creation.capture_backfill_creation_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES capture_backfill(id) ON DELETE CASCADE
@@ -1526,6 +1622,7 @@ public.capture_import.capture_import_verdict_status_check CHECK (((verdict_statu
 public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_import.posture_at_import text gen=- def=-
+public.capture_import.provider_received_at timestamp with time zone gen=- def=-
 public.capture_import.user_id uuid NOT NULL gen=- def=-
 public.capture_import.verdict_reason text gen=- def=-
 public.capture_import.verdict_reasons text[] gen=- def=-
@@ -1692,7 +1789,7 @@ public.capture_trace.subject text gen=- def=-
 public.capture_trace.user_id uuid gen=- def=-
 public.capture_trace_counterparty CREATE INDEX capture_trace_counterparty ON public.capture_trace USING btree (counterparty) WHERE (counterparty IS NOT NULL)
 public.capture_trace_message CREATE INDEX capture_trace_message ON public.capture_trace USING btree (source_system, source_id)
-public.capture_trace_natural_key CREATE UNIQUE INDEX capture_trace_natural_key ON public.capture_trace USING btree (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), source_system, source_id, stage, outcome)
+public.capture_trace_natural_key CREATE UNIQUE INDEX capture_trace_natural_key ON public.capture_trace USING btree (user_id, source_system, source_id, stage, outcome) NULLS NOT DISTINCT
 public.capture_trace_pkey CREATE UNIQUE INDEX capture_trace_pkey ON public.capture_trace USING btree (id)
 public.capture_trace_user_window CREATE INDEX capture_trace_user_window ON public.capture_trace USING btree (user_id, occurred_at DESC)
 public.capture_trace_window CREATE INDEX capture_trace_window ON public.capture_trace USING btree (occurred_at DESC)
@@ -1702,6 +1799,7 @@ public.channel_connection.channel_connection_connected_by_fkey FOREIGN KEY (conn
 public.channel_connection.channel_connection_pkey PRIMARY KEY (id)
 public.channel_connection.channel_connection_provider_check CHECK ((provider = 'telegram'::text))
 public.channel_connection.channel_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
+public.channel_connection.channel_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.channel_connection.channel_id text NOT NULL gen=- def=-
 public.channel_connection.channel_label text NOT NULL gen=- def=-
 public.channel_connection.connected_by uuid NOT NULL gen=- def=-
@@ -1735,6 +1833,7 @@ public.close_date_run.close_date_run_cursor_is_whole CHECK (((cursor_created_at 
 public.close_date_run.close_date_run_finish_matches_status CHECK (((status = 'running'::text) = (finished_at IS NULL)))
 public.close_date_run.close_date_run_pkey PRIMARY KEY (id)
 public.close_date_run.close_date_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text])))
+public.close_date_run.close_date_run_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.close_date_run.corrected integer NOT NULL gen=- def=0
 public.close_date_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.close_date_run.cursor_created_at timestamp with time zone gen=- def=-
@@ -1768,8 +1867,10 @@ public.commission_entry.attribution_at_accrual text NOT NULL gen=- def=-
 public.commission_entry.basis_amount_minor bigint NOT NULL gen=- def=-
 public.commission_entry.captured_by text NOT NULL gen=- def=-
 public.commission_entry.commission_entry_amount_minor_check CHECK ((amount_minor >= 0))
+public.commission_entry.commission_entry_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.commission_entry.commission_entry_attribution_at_accrual_check CHECK ((attribution_at_accrual = ANY (ARRAY['sourced'::text, 'influenced'::text])))
 public.commission_entry.commission_entry_basis_amount_minor_check CHECK ((basis_amount_minor >= 0))
+public.commission_entry.commission_entry_basis_amount_minor_js_safe CHECK (((basis_amount_minor >= '-9007199254740991'::bigint) AND (basis_amount_minor <= '9007199254740991'::bigint)))
 public.commission_entry.commission_entry_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.commission_entry.commission_entry_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.commission_entry.commission_entry_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE CASCADE
@@ -1778,6 +1879,7 @@ public.commission_entry.commission_entry_rate_bps_check CHECK (((rate_bps >= 0) 
 public.commission_entry.commission_entry_reversal_of_fkey FOREIGN KEY (reversal_of) REFERENCES commission_entry(id) ON DELETE RESTRICT
 public.commission_entry.commission_entry_status_check CHECK ((status = ANY (ARRAY['accrued'::text, 'approved'::text, 'paid'::text, 'void'::text])))
 public.commission_entry.commission_entry_touch CREATE TRIGGER commission_entry_touch BEFORE UPDATE ON public.commission_entry FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.commission_entry.commission_entry_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.commission_entry.commission_reversal_is_void CHECK (((reversal_of IS NULL) OR (status = 'void'::text)))
 public.commission_entry.commission_void_has_reason CHECK (((status <> 'void'::text) OR (void_reason IS NOT NULL)))
 public.commission_entry.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2016,6 +2118,30 @@ BEGIN
   RETURN NEW;
 END 
 public.communication_instruction_review_id_key CREATE UNIQUE INDEX communication_instruction_review_id_key ON public.communication_instruction USING btree (review_id)
+public.communication_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_override.captured_by text NOT NULL gen=- def=-
+public.communication_override.carried_from uuid gen=- def=-
+public.communication_override.category text NOT NULL gen=- def=-
+public.communication_override.communication_override_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_override(id) ON DELETE SET NULL
+public.communication_override.communication_override_category CHECK ((category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
+public.communication_override.communication_override_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.communication_override.communication_override_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['user'::text, 'admin'::text])))
+public.communication_override.communication_override_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.communication_override.communication_override_names_a_target CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+public.communication_override.communication_override_pkey PRIMARY KEY (id)
+public.communication_override.contact_id uuid gen=- def=-
+public.communication_override.decided_by_level text NOT NULL gen=- def=-
+public.communication_override.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_override.lead_id uuid gen=- def=-
+public.communication_override.reason text NOT NULL gen=- def=-
+public.communication_override.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_override.revoked_at timestamp with time zone gen=- def=-
+public.communication_override_carried_from CREATE INDEX communication_override_carried_from ON public.communication_override USING btree (carried_from) WHERE (carried_from IS NOT NULL)
+public.communication_override_contact_cascade CREATE INDEX communication_override_contact_cascade ON public.communication_override USING btree (contact_id) WHERE (contact_id IS NOT NULL)
+public.communication_override_lead_cascade CREATE INDEX communication_override_lead_cascade ON public.communication_override USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.communication_override_live_contact CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_live_lead CREATE INDEX communication_override_live_lead ON public.communication_override USING btree (lead_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_pkey CREATE UNIQUE INDEX communication_override_pkey ON public.communication_override USING btree (id)
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.approval_id uuid gen=- def=-
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
@@ -2093,6 +2219,7 @@ public.company.company_refuse_anchor_retirement CREATE TRIGGER company_refuse_an
 public.company.company_size_band_check CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10'::text, '11-50'::text, '51-200'::text, '201-500'::text, '501-1000'::text, '1001-5000'::text, '5000+'::text]))))
 public.company.company_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.company.company_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.company.company_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.company.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company.description text gen=- def=-
@@ -2154,6 +2281,7 @@ public.company_domain.captured_by text NOT NULL gen=- def=-
 public.company_domain.company_domain_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain.company_domain_norm CHECK ((domain = lower(domain)))
 public.company_domain.company_domain_pkey PRIMARY KEY (id)
+public.company_domain.company_domain_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_domain.company_id uuid NOT NULL gen=- def=-
 public.company_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain.domain text NOT NULL gen=- def=-
@@ -2226,6 +2354,7 @@ public.company_fact.company_fact_source_check CHECK ((source = ANY (ARRAY['human
 public.company_fact.company_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL))))
 public.company_fact.company_fact_value_key_cardinality CHECK ((((category = 'company'::text) AND (field <> 'location'::text) AND (value_key = ''::text)) OR ((category = 'company'::text) AND (field = 'location'::text) AND (value_key <> ''::text)) OR ((category = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text])) AND (value_key <> ''::text))))
 public.company_fact.company_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
+public.company_fact.company_fact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_fact.company_id uuid NOT NULL gen=- def=-
 public.company_fact.confidence real gen=- def=-
 public.company_fact.evidence_snippet text gen=- def=-
@@ -2397,6 +2526,7 @@ public.company_profile_field.company_profile_field_field_check CHECK ((field = A
 public.company_profile_field.company_profile_field_pkey PRIMARY KEY (id)
 public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
 public.company_profile_field.company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
+public.company_profile_field.company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_profile_field.company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
 public.company_profile_field.confidence real gen=- def=-
 public.company_profile_field.evidence_snippet text gen=- def=-
@@ -2438,6 +2568,7 @@ public.company_relationship_type.company_id uuid NOT NULL gen=- def=-
 public.company_relationship_type.company_relationship_typ_workspace_id_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_relationship_type.company_relationship_type_pkey PRIMARY KEY (id)
 public.company_relationship_type.company_relationship_type_relationship_type_check CHECK ((relationship_type = ANY (ARRAY['customer'::text, 'partner'::text, 'supplier'::text, 'investor'::text, 'portfolio_company'::text, 'competitor'::text, 'other'::text])))
+public.company_relationship_type.company_relationship_type_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_relationship_type.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_relationship_type.id uuid NOT NULL gen=- def=uuidv7()
 public.company_relationship_type.relationship_type text NOT NULL gen=- def=-
@@ -2500,6 +2631,7 @@ public.company_vat_check.company_vat_check_one_per_company UNIQUE (company_id)
 public.company_vat_check.company_vat_check_pkey PRIMARY KEY (id)
 public.company_vat_check.company_vat_check_receipt_needs_an_answer CHECK (((consultation_number IS NULL) OR (status <> 'unavailable'::text)))
 public.company_vat_check.company_vat_check_status_check CHECK ((status = ANY (ARRAY['valid'::text, 'invalid'::text, 'unavailable'::text])))
+public.company_vat_check.company_vat_check_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_vat_check.consultation_number text gen=- def=-
 public.company_vat_check.id uuid NOT NULL gen=- def=uuidv7()
 public.company_vat_check.registered_address text gen=- def=-
@@ -2678,6 +2810,7 @@ public.contact.contact_owner_private_names_its_owner CHECK (((visibility <> 'own
 public.contact.contact_pkey PRIMARY KEY (id)
 public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.contact.contact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact.contact_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.contact.converted_from_lead_id uuid gen=- def=-
 public.contact.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2708,7 +2841,7 @@ public.contact_acquisition_evidence acl=margince_owner=arwdDxt/margince_owner,ma
 public.contact_acquisition_evidence.captured_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_acquisition_evidence.captured_by text NOT NULL gen=- def=-
 public.contact_acquisition_evidence.contact_acquisition_evidence_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.contact_acquisition_evidence.contact_acquisition_evidence_kind CHECK ((kind = ANY (ARRAY['subject_initiated'::text, 'customer_contract'::text, 'requested_quote_or_meeting'::text, 'in_person_permission'::text, 'referral'::text, 'event_or_form'::text, 'public_or_business_source'::text, 'purchased_or_imported'::text, 'unknown_legacy'::text, 'crm_migration'::text])))
+public.contact_acquisition_evidence.contact_acquisition_evidence_kind CHECK ((kind = ANY (ARRAY['subject_initiated'::text, 'customer_contract'::text, 'requested_quote_or_meeting'::text, 'in_person_permission'::text, 'referral'::text, 'event_or_form'::text, 'public_or_business_source'::text, 'purchased_or_imported'::text, 'unknown_legacy'::text, 'crm_migration'::text, 'mailbox_history'::text])))
 public.contact_acquisition_evidence.contact_acquisition_evidence_pkey PRIMARY KEY (id)
 public.contact_acquisition_evidence.contact_acquisition_evidence_source_shape CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))
 public.contact_acquisition_evidence.contact_id uuid NOT NULL gen=- def=-
@@ -2742,6 +2875,7 @@ public.contact_channel_identity.channel_user_id text NOT NULL gen=- def=-
 public.contact_channel_identity.contact_channel_identity_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_channel_identity.contact_channel_identity_pkey PRIMARY KEY (id)
 public.contact_channel_identity.contact_channel_identity_provider_fkey FOREIGN KEY (provider) REFERENCES channel_provider(provider)
+public.contact_channel_identity.contact_channel_identity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact_channel_identity.contact_id uuid NOT NULL gen=- def=-
 public.contact_channel_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_channel_identity.id uuid NOT NULL gen=- def=uuidv7()
@@ -2804,6 +2938,7 @@ public.contact_email.contact_email_contact_id_fkey FOREIGN KEY (contact_id) REFE
 public.contact_email.contact_email_email_type_check CHECK ((email_type = ANY (ARRAY['work'::text, 'personal'::text, 'other'::text])))
 public.contact_email.contact_email_norm CHECK ((email = lower(email)))
 public.contact_email.contact_email_pkey PRIMARY KEY (id)
+public.contact_email.contact_email_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact_email.contact_id uuid NOT NULL gen=- def=-
 public.contact_email.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_email.email text NOT NULL gen=- def=-
@@ -2837,6 +2972,7 @@ public.contact_phone.contact_phone_e164 CHECK ((phone ~ '^\+[1-9][0-9]{7,14}$'::
 public.contact_phone.contact_phone_phone_type_check CHECK ((phone_type = ANY (ARRAY['work'::text, 'mobile'::text, 'home'::text, 'other'::text])))
 public.contact_phone.contact_phone_pkey PRIMARY KEY (id)
 public.contact_phone.contact_phone_superseded_phone_id_fkey FOREIGN KEY (superseded_phone_id) REFERENCES contact_phone(id) ON DELETE SET NULL
+public.contact_phone.contact_phone_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact_phone.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_phone.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_phone.is_primary boolean NOT NULL gen=- def=false
@@ -2860,6 +2996,7 @@ public.contact_profile_field.contact_profile_field_contact_fk FOREIGN KEY (conta
 public.contact_profile_field.contact_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text])))
 public.contact_profile_field.contact_profile_field_pkey PRIMARY KEY (id)
 public.contact_profile_field.contact_profile_field_value_key_cardinality CHECK (((field = 'phone'::text) = (value_key <> ''::text)))
+public.contact_profile_field.contact_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact_profile_field.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_profile_field.evidence_snippet text NOT NULL gen=- def=-
 public.contact_profile_field.field text NOT NULL gen=- def=-
@@ -2931,6 +3068,7 @@ public.contract.cancellation_effective_on date gen=- def=-
 public.contract.cancellation_notice_on date gen=- def=-
 public.contract.captured_by text NOT NULL gen=- def=-
 public.contract.company_id uuid NOT NULL gen=- def=-
+public.contract.contract_arr_minor_js_safe CHECK (((arr_minor >= '-9007199254740991'::bigint) AND (arr_minor <= '9007199254740991'::bigint)))
 public.contract.contract_arr_nonnegative CHECK (((arr_minor IS NULL) OR (arr_minor >= 0)))
 public.contract.contract_cancellation_order CHECK (((cancellation_notice_on IS NULL) OR (cancellation_effective_on IS NULL) OR (cancellation_effective_on >= cancellation_notice_on)))
 public.contract.contract_cancellation_within_term CHECK (((cancellation_effective_on IS NULL) OR (ends_on IS NULL) OR (cancellation_effective_on <= ends_on)))
@@ -2950,6 +3088,8 @@ public.contract.contract_superseded_by_id_fkey FOREIGN KEY (superseded_by_id) RE
 public.contract.contract_supersedes_not_self CHECK (((superseded_by_id IS NULL) OR (superseded_by_id <> id)))
 public.contract.contract_term_order CHECK (((starts_on IS NULL) OR (ends_on IS NULL) OR (ends_on >= starts_on)))
 public.contract.contract_value_basis_check CHECK ((value_basis = ANY (ARRAY['total'::text, 'annualized_12m'::text])))
+public.contract.contract_value_minor_js_safe CHECK (((value_minor >= '-9007199254740991'::bigint) AND (value_minor <= '9007199254740991'::bigint)))
+public.contract.contract_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contract.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contract.currency character(3) gen=- def=-
 public.contract.deal_id uuid gen=- def=-
@@ -2987,6 +3127,7 @@ public.conversation_claim.conversation_claim_kind_check CHECK ((kind = ANY (ARRA
 public.conversation_claim.conversation_claim_pkey PRIMARY KEY (id)
 public.conversation_claim.conversation_claim_status_check CHECK ((status = ANY (ARRAY['open'::text, 'done'::text, 'dismissed'::text])))
 public.conversation_claim.conversation_claim_task_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.conversation_claim.conversation_claim_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.conversation_claim.corrected_at timestamp with time zone gen=- def=-
 public.conversation_claim.corrected_by_user_id uuid gen=- def=-
 public.conversation_claim.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -3004,6 +3145,7 @@ public.conversation_claim.trg_conversation_claim_updated CREATE TRIGGER trg_conv
 public.conversation_claim.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.conversation_claim.version bigint NOT NULL gen=- def=1
 public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind) WHERE (archived_at IS NULL)
+public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
 public.currency_minor_digits acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
 public.currency_minor_digits.currency character(3) NOT NULL gen=- def=-
@@ -3023,6 +3165,7 @@ public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['conta
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text])))
+public.custom_field.custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-
 public.custom_field.object text NOT NULL gen=- def=-
@@ -3074,6 +3217,7 @@ public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency character(3) gen=- def=-
 public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE CASCADE ON DELETE RESTRICT
+public.deal.deal_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
 public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))
@@ -3081,6 +3225,7 @@ public.deal.deal_commercial_motion_check CHECK (((commercial_motion IS NULL) OR 
 public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL (company_id)
 public.deal.deal_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.deal.deal_description_bounded CHECK (((description IS NULL) OR (length(description) <= 20000)))
+public.deal.deal_expected_arr_minor_js_safe CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint)))
 public.deal.deal_expected_arr_nonnegative CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))
 public.deal.deal_forecast_category_check CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit'::text, 'best_case'::text, 'pipeline'::text, 'omitted'::text]))))
 public.deal.deal_last_activity CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()
@@ -3100,6 +3245,7 @@ public.deal.deal_source_author_needs_a_source CHECK ((((source_author_id IS NULL
 public.deal.deal_stage_id_fkey FOREIGN KEY (stage_id) REFERENCES stage(id) ON DELETE RESTRICT
 public.deal.deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES stage(id, pipeline_id)
 public.deal.deal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text])))
+public.deal.deal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal.deal_won_without_contract_detail CHECK (((won_without_contract_reason IS DISTINCT FROM 'other'::text) OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''::text))))
 public.deal.deal_won_without_contract_only_when_won CHECK (((won_without_contract_reason IS NULL) OR (status = 'won'::text)))
 public.deal.deal_won_without_contract_reason CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported'::text, 'purchase_order'::text, 'verbal'::text, 'renewal_by_email'::text, 'other'::text]))))
@@ -3150,6 +3296,7 @@ public.deal_acquisition_source.deal_acquisition_source_key_key UNIQUE (key)
 public.deal_acquisition_source.deal_acquisition_source_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))
 public.deal_acquisition_source.deal_acquisition_source_label_present CHECK ((length(btrim(label)) > 0))
 public.deal_acquisition_source.deal_acquisition_source_pkey PRIMARY KEY (id)
+public.deal_acquisition_source.deal_acquisition_source_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_acquisition_source.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_acquisition_source.key text NOT NULL gen=- def=-
 public.deal_acquisition_source.label text NOT NULL gen=- def=-
@@ -3185,6 +3332,7 @@ public.deal_correction.deal_correction_reversal_audit_id_fkey FOREIGN KEY (rever
 public.deal_correction.deal_correction_reversal_is_whole CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))
 public.deal_correction.deal_correction_run_id_fkey FOREIGN KEY (run_id) REFERENCES close_date_run(id) ON DELETE SET NULL
 public.deal_correction.deal_correction_tier_check CHECK ((correction = ANY (ARRAY['auto_apply'::text, 'provisional_confirm'::text, 'downgrade_and_review'::text])))
+public.deal_correction.deal_correction_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_correction.deal_id uuid NOT NULL gen=- def=-
 public.deal_correction.fields text[] NOT NULL gen=- def=-
 public.deal_correction.id uuid NOT NULL gen=- def=uuidv7()
@@ -3253,6 +3401,7 @@ public.deal_room.deal_room_pkey PRIMARY KEY (id)
 public.deal_room.deal_room_state_check CHECK ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text, 'closed'::text, 'expired'::text, 'archived'::text])))
 public.deal_room.deal_room_steward_fkey FOREIGN KEY (steward_user_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.deal_room.deal_room_touch CREATE TRIGGER deal_room_touch BEFORE UPDATE ON public.deal_room FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_room.deal_room_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_room.expires_at timestamp with time zone gen=- def=-
 public.deal_room.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_room.source text NOT NULL gen=- def=-
@@ -3276,6 +3425,7 @@ public.deal_room_comment.deal_room_comment_pkey PRIMARY KEY (id)
 public.deal_room_comment.deal_room_comment_room_fkey FOREIGN KEY (room_id) REFERENCES deal_room(id) ON DELETE CASCADE
 public.deal_room_comment.deal_room_comment_thread_fkey FOREIGN KEY (thread_id) REFERENCES deal_room_thread(id) ON DELETE CASCADE
 public.deal_room_comment.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_room_comment.request_id uuid gen=- def=-
 public.deal_room_comment.room_id uuid NOT NULL gen=- def=-
 public.deal_room_comment.source text NOT NULL gen=- def=-
 public.deal_room_comment.thread_id uuid NOT NULL gen=- def=-
@@ -3291,6 +3441,7 @@ public.deal_room_document.deal_room_document_pkey PRIMARY KEY (id)
 public.deal_room_document.deal_room_document_room_fkey FOREIGN KEY (room_id) REFERENCES deal_room(id) ON DELETE CASCADE
 public.deal_room_document.deal_room_document_title_check CHECK ((length(btrim(title)) > 0))
 public.deal_room_document.deal_room_document_touch CREATE TRIGGER deal_room_document_touch BEFORE UPDATE ON public.deal_room_document FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_room_document.deal_room_document_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_room_document.group_key text NOT NULL gen=- def=-
 public.deal_room_document.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_room_document.position integer NOT NULL gen=- def=0
@@ -3394,8 +3545,10 @@ public.deal_room_thread.deal_room_thread_resolver_fkey FOREIGN KEY (resolved_by_
 public.deal_room_thread.deal_room_thread_room_fkey FOREIGN KEY (room_id) REFERENCES deal_room(id) ON DELETE CASCADE
 public.deal_room_thread.deal_room_thread_state_check CHECK ((state = ANY (ARRAY['open'::text, 'resolved'::text])))
 public.deal_room_thread.deal_room_thread_touch CREATE TRIGGER deal_room_thread_touch BEFORE UPDATE ON public.deal_room_thread FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_room_thread.deal_room_thread_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_room_thread.document_id uuid gen=- def=-
 public.deal_room_thread.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_room_thread.request_id uuid gen=- def=-
 public.deal_room_thread.required_change boolean NOT NULL gen=- def=false
 public.deal_room_thread.resolved_at timestamp with time zone gen=- def=-
 public.deal_room_thread.resolved_by_user_id uuid gen=- def=-
@@ -3425,6 +3578,7 @@ public.deal_stage_evidence.deal_stage_evidence_refutation_whole CHECK (((refuted
 public.deal_stage_evidence.deal_stage_evidence_refuted_by_fkey FOREIGN KEY (refuted_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.deal_stage_evidence.deal_stage_evidence_snippet_len CHECK (((snippet IS NULL) OR (length(snippet) <= 500)))
 public.deal_stage_evidence.deal_stage_evidence_source_type_check CHECK ((source_type = ANY (ARRAY['activity'::text, 'contract'::text])))
+public.deal_stage_evidence.deal_stage_evidence_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_stage_evidence.extracted_by text NOT NULL gen=- def=-
 public.deal_stage_evidence.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_stage_evidence.met boolean NOT NULL gen=- def=-
@@ -3506,6 +3660,7 @@ public.deal_suggestion.deal_suggestion_pipeline_id_fkey FOREIGN KEY (pipeline_id
 public.deal_suggestion.deal_suggestion_pkey PRIMARY KEY (id)
 public.deal_suggestion.deal_suggestion_proposed_stage_id_fkey FOREIGN KEY (proposed_stage_id) REFERENCES stage(id) ON DELETE CASCADE
 public.deal_suggestion.deal_suggestion_state_check CHECK ((state = ANY (ARRAY['open'::text, 'accepted'::text, 'dismissed'::text, 'superseded'::text])))
+public.deal_suggestion.deal_suggestion_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_suggestion.decided_at timestamp with time zone gen=- def=-
 public.deal_suggestion.decided_by uuid gen=- def=-
 public.deal_suggestion.evidence_count integer NOT NULL gen=- def=-
@@ -3560,6 +3715,7 @@ public.dedupe_candidate.dedupe_candidate_right_company_id_fkey FOREIGN KEY (righ
 public.dedupe_candidate.dedupe_candidate_right_contact_id_fkey FOREIGN KEY (right_contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.dedupe_candidate.dedupe_candidate_right_lead_id_fkey FOREIGN KEY (right_lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.dedupe_candidate.dedupe_candidate_shape CHECK ((((entity_type = 'contact'::text) AND (left_contact_id IS NOT NULL) AND (right_contact_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company'::text) AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead'::text) AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL))))
+public.dedupe_candidate.dedupe_candidate_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.dedupe_candidate.disposed_at timestamp with time zone gen=- def=-
 public.dedupe_candidate.disposed_by uuid gen=- def=-
 public.dedupe_candidate.disposition text NOT NULL gen=- def='open'::text
@@ -3584,6 +3740,7 @@ public.email_signature.created_at timestamp with time zone NOT NULL gen=- def=no
 public.email_signature.email_signature_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.email_signature.email_signature_owner_id_key UNIQUE (owner_id)
 public.email_signature.email_signature_pkey PRIMARY KEY (id)
+public.email_signature.email_signature_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.email_signature.id uuid NOT NULL gen=- def=uuidv7()
 public.email_signature.owner_id uuid NOT NULL gen=- def=-
 public.email_signature.trg_email_signature_updated CREATE TRIGGER trg_email_signature_updated BEFORE UPDATE ON public.email_signature FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -3710,6 +3867,7 @@ public.finance_connection.created_at timestamp with time zone NOT NULL gen=- def
 public.finance_connection.credential_ref text NOT NULL gen=- def=-
 public.finance_connection.finance_connection_pkey PRIMARY KEY (id)
 public.finance_connection.finance_connection_status_check CHECK ((status = ANY (ARRAY['connecting'::text, 'active'::text, 'error'::text, 'disconnected'::text])))
+public.finance_connection.finance_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_connection.id uuid NOT NULL gen=- def=uuidv7()
 public.finance_connection.last_attempt_at timestamp with time zone gen=- def=-
 public.finance_connection.last_error_code text gen=- def=-
@@ -3732,6 +3890,7 @@ public.finance_customer_link.external_customer_id text NOT NULL gen=- def=-
 public.finance_customer_link.finance_customer_link_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_customer_link.finance_customer_link_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_customer_link.finance_customer_link_pkey PRIMARY KEY (id)
+public.finance_customer_link.finance_customer_link_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_customer_link.id uuid NOT NULL gen=- def=uuidv7()
 public.finance_customer_link.source text NOT NULL gen=- def=-
 public.finance_customer_link.source_updated_at timestamp with time zone gen=- def=-
@@ -3752,6 +3911,7 @@ public.finance_external_customer.external_customer_id text NOT NULL gen=- def=-
 public.finance_external_customer.finance_external_customer_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_external_customer.finance_external_customer_connection_id_extern_key UNIQUE (connection_id, external_customer_id)
 public.finance_external_customer.finance_external_customer_pkey PRIMARY KEY (id)
+public.finance_external_customer.finance_external_customer_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_external_customer.id uuid NOT NULL gen=- def=uuidv7()
 public.finance_external_customer.source text NOT NULL gen=- def=-
 public.finance_external_customer.source_updated_at timestamp with time zone gen=- def=-
@@ -3780,9 +3940,14 @@ public.finance_invoice.finance_invoice_credits_fk FOREIGN KEY (credits_invoice_i
 public.finance_invoice.finance_invoice_credits_not_self CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))
 public.finance_invoice.finance_invoice_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.finance_invoice.finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
+public.finance_invoice.finance_invoice_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
+public.finance_invoice.finance_invoice_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
+public.finance_invoice.finance_invoice_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_paid_status CHECK (((fully_paid_at IS NULL) OR (status = ANY (ARRAY['paid'::text, 'credited'::text, 'void'::text]))))
 public.finance_invoice.finance_invoice_pkey PRIMARY KEY (id)
 public.finance_invoice.finance_invoice_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'open'::text, 'partially_paid'::text, 'paid'::text, 'overdue'::text, 'disputed'::text, 'credited'::text, 'void'::text])))
+public.finance_invoice.finance_invoice_tax_minor_js_safe CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))
+public.finance_invoice.finance_invoice_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_void_agrees CHECK (((void_at IS NULL) = (status <> 'void'::text)))
 public.finance_invoice.fully_paid_at timestamp with time zone gen=- def=-
 public.finance_invoice.fx_rate_date date gen=- def=-
@@ -3817,12 +3982,14 @@ public.finance_payment.connection_id uuid NOT NULL gen=- def=-
 public.finance_payment.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_payment.currency character(3) NOT NULL gen=- def=-
 public.finance_payment.external_id text NOT NULL gen=- def=-
+public.finance_payment.finance_payment_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.finance_payment.finance_payment_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_connection_id_external_id_key UNIQUE (connection_id, external_id)
 public.finance_payment.finance_payment_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.finance_payment.finance_payment_invoice_fk FOREIGN KEY (invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_pkey PRIMARY KEY (id)
+public.finance_payment.finance_payment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_payment.id uuid NOT NULL gen=- def=uuidv7()
 public.finance_payment.invoice_id uuid gen=- def=-
 public.finance_payment.paid_at timestamp with time zone NOT NULL gen=- def=-
@@ -3842,6 +4009,7 @@ public.forecast_call.author_id uuid NOT NULL gen=- def=-
 public.forecast_call.captured_by text NOT NULL gen=- def=-
 public.forecast_call.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_call.currency text NOT NULL gen=- def=-
+public.forecast_call.forecast_call_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.forecast_call.forecast_call_amount_not_negative CHECK ((amount_minor >= 0))
 public.forecast_call.forecast_call_author_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.forecast_call.forecast_call_period_ordered CHECK ((period_end >= period_start))
@@ -3849,6 +4017,7 @@ public.forecast_call.forecast_call_pkey PRIMARY KEY (id)
 public.forecast_call.forecast_call_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.forecast_call.forecast_call_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
 public.forecast_call.forecast_call_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES forecast_call(id) ON DELETE RESTRICT
+public.forecast_call.forecast_call_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.forecast_call.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_call.note text gen=- def=-
 public.forecast_call.period_end date NOT NULL gen=- def=-
@@ -3884,12 +4053,15 @@ public.forecast_contribution.deal_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.effective_close_date date gen=- def=-
 public.forecast_contribution.exclusion_reason text gen=- def=-
 public.forecast_contribution.forecast_contribution_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
+public.forecast_contribution.forecast_contribution_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced'::text, 'fx_missing'::text, 'out_of_period'::text, 'not_eligible'::text]))))
 public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
 public.forecast_contribution.forecast_contribution_probability_is_a_percent CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))
 public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
 public.forecast_contribution.forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))
 public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
+public.forecast_contribution.forecast_contribution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.forecast_contribution.forecast_contribution_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_weighted_needs_a_base CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))
 public.forecast_contribution.fx_date date gen=- def=-
 public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-
@@ -3917,8 +4089,11 @@ public.forecast_snapshot.created_at timestamp with time zone NOT NULL gen=- def=
 public.forecast_snapshot.definition_version text NOT NULL gen=- def=-
 public.forecast_snapshot.eligible_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.evidence_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot.forecast_snapshot_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
 public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))
+public.forecast_snapshot.forecast_snapshot_evidence_minor_js_safe CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
 public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
 public.forecast_snapshot.forecast_snapshot_pkey PRIMARY KEY (id)
@@ -3926,6 +4101,9 @@ public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_mi
 public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.forecast_snapshot.forecast_snapshot_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
 public.forecast_snapshot.forecast_snapshot_trigger_check CHECK ((trigger = ANY (ARRAY['daily'::text, 'call'::text, 'period_close'::text, 'recheck'::text])))
+public.forecast_snapshot.forecast_snapshot_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_won_minor_js_safe CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.fx_missing_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_snapshot.local_day date NOT NULL gen=- def=-
@@ -4402,7 +4580,7 @@ public.intro_request.version integer NOT NULL gen=- def=1
 public.intro_request_awaiting_decision CREATE INDEX intro_request_awaiting_decision ON public.intro_request USING btree (introducer_user_id, due_at) WHERE ((status = 'requested'::text) AND (archived_at IS NULL))
 public.intro_request_due CREATE INDEX intro_request_due ON public.intro_request USING btree (due_at) WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
 public.intro_request_for_contact CREATE INDEX intro_request_for_contact ON public.intro_request USING btree (contact_id, requested_at DESC)
-public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, COALESCE(through_contact_id, '00000000-0000-0000-0000-000000000000'::uuid)) WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
+public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
 public.intro_request_pkey CREATE UNIQUE INDEX intro_request_pkey ON public.intro_request USING btree (id)
 public.ix_confirm_token_contact CREATE INDEX ix_confirm_token_contact ON public.confirm_token USING btree (contact_id)
 public.ix_contact_confirm_submission_contact CREATE INDEX ix_contact_confirm_submission_contact ON public.contact_confirm_submission USING btree (contact_id)
@@ -4440,7 +4618,7 @@ public.knowledge_corpus.knowledge_corpus_min_similarity_range CHECK (((min_simil
 public.knowledge_corpus.knowledge_corpus_pkey PRIMARY KEY (id)
 public.knowledge_corpus.knowledge_corpus_touch CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.knowledge_corpus.managed_source text gen=- def=-
-public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
+public.knowledge_corpus.min_similarity double precision gen=- def=-
 public.knowledge_corpus.name text NOT NULL gen=- def=-
 public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
 public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-
@@ -4462,6 +4640,7 @@ public.knowledge_document.id uuid NOT NULL gen=- def=uuidv7()
 public.knowledge_document.ingest_detail text gen=- def=-
 public.knowledge_document.ingest_started_at timestamp with time zone gen=- def=-
 public.knowledge_document.ingest_status text NOT NULL gen=- def='queued'::text
+public.knowledge_document.knowledge_document_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))
 public.knowledge_document.knowledge_document_corpus_fk FOREIGN KEY (corpus_id) REFERENCES knowledge_corpus(id) ON DELETE RESTRICT
 public.knowledge_document.knowledge_document_detail_shape CHECK (((ingest_status = 'failed'::text) = (ingest_detail IS NOT NULL)))
 public.knowledge_document.knowledge_document_managed_source_known CHECK (((managed_source IS NULL) OR (managed_source = 'handbook'::text)))
@@ -4571,6 +4750,7 @@ public.lead.lead_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES
 public.lead.lead_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.lead.lead_status_check CHECK ((status = ANY (ARRAY['new'::text, 'contacted'::text, 'engaged'::text, 'promoted'::text, 'disqualified'::text])))
 public.lead.lead_status_set_by_check CHECK (((status_set_by IS NULL) OR (status_set_by = ANY (ARRAY['human'::text, 'system'::text]))))
+public.lead.lead_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.lead.legal_hold boolean NOT NULL gen=- def=false
 public.lead.linkedin_url text gen=- def=-
 public.lead.merged_into_id uuid gen=- def=-
@@ -4603,6 +4783,7 @@ public.lead_disqualify_reason.id uuid NOT NULL gen=- def=uuidv7()
 public.lead_disqualify_reason.label text NOT NULL gen=- def=-
 public.lead_disqualify_reason.lead_disqualify_reason_label_present CHECK ((length(btrim(label)) > 0))
 public.lead_disqualify_reason.lead_disqualify_reason_pkey PRIMARY KEY (id)
+public.lead_disqualify_reason.lead_disqualify_reason_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.lead_disqualify_reason.sort_order integer NOT NULL gen=- def=0
 public.lead_disqualify_reason.system boolean NOT NULL gen=- def=false
 public.lead_disqualify_reason.trg_lead_disqualify_reason_updated CREATE TRIGGER trg_lead_disqualify_reason_updated BEFORE UPDATE ON public.lead_disqualify_reason FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -4662,6 +4843,7 @@ public.lead_source.lead_source_intent_check CHECK ((intent = ANY (ARRAY['high'::
 public.lead_source.lead_source_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))
 public.lead_source.lead_source_label_present CHECK ((length(btrim(label)) > 0))
 public.lead_source.lead_source_pkey PRIMARY KEY (id)
+public.lead_source.lead_source_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.lead_source.sort_order integer NOT NULL gen=- def=0
 public.lead_source.system boolean NOT NULL gen=- def=false
 public.lead_source.trg_lead_source_updated CREATE TRIGGER trg_lead_source_updated BEFORE UPDATE ON public.lead_source FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -4719,6 +4901,7 @@ public.list.list_sharing_check CHECK ((sharing = ANY (ARRAY['private'::text, 'te
 public.list.list_steward_id_fkey FOREIGN KEY (steward_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.list.list_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE SET NULL (team_id)
 public.list.list_type text NOT NULL gen=- def='static'::text
+public.list.list_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.list.name text NOT NULL gen=- def=-
 public.list.owner_id uuid gen=- def=-
 public.list.purpose text gen=- def=-
@@ -4731,6 +4914,7 @@ public.list.version bigint NOT NULL gen=- def=1
 public.list_evaluation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.list_evaluation.definition_version bigint NOT NULL gen=- def=-
 public.list_evaluation.evaluated_at timestamp with time zone NOT NULL gen=- def=-
+public.list_evaluation.list_evaluation_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))
 public.list_evaluation.list_evaluation_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_evaluation.list_evaluation_outcome_check CHECK ((outcome = ANY (ARRAY['complete'::text, 'too_large'::text, 'invalid'::text])))
 public.list_evaluation.list_evaluation_pkey PRIMARY KEY (list_id)
@@ -4744,6 +4928,7 @@ public.list_live_member.definition_version bigint NOT NULL gen=- def=-
 public.list_live_member.entity_id uuid NOT NULL gen=- def=-
 public.list_live_member.entity_type text NOT NULL gen=- def=-
 public.list_live_member.list_id uuid NOT NULL gen=- def=-
+public.list_live_member.list_live_member_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))
 public.list_live_member.list_live_member_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.list_live_member.list_live_member_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_live_member.list_live_member_pkey PRIMARY KEY (list_id, entity_id)
@@ -4770,6 +4955,7 @@ public.list_member_event.entity_type text NOT NULL gen=- def=-
 public.list_member_event.id uuid NOT NULL gen=- def=uuidv7()
 public.list_member_event.list_id uuid NOT NULL gen=- def=-
 public.list_member_event.list_member_event_action_check CHECK ((action = ANY (ARRAY['added'::text, 'removed'::text, 'entered'::text, 'left'::text])))
+public.list_member_event.list_member_event_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))
 public.list_member_event.list_member_event_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.list_member_event.list_member_event_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_member_event.list_member_event_pkey PRIMARY KEY (id)
@@ -4789,6 +4975,7 @@ public.list_revision.id uuid NOT NULL gen=- def=uuidv7()
 public.list_revision.list_id uuid NOT NULL gen=- def=-
 public.list_revision.list_revision_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_revision.list_revision_pkey PRIMARY KEY (id)
+public.list_revision.list_revision_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.list_revision.list_revision_version_key UNIQUE (list_id, version)
 public.list_revision.name text NOT NULL gen=- def=-
 public.list_revision.purpose text gen=- def=-
@@ -4826,6 +5013,7 @@ BEGIN
 END;
 
 public.mail_draft acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.mail_draft.agent_drafted boolean NOT NULL gen=- def=false
 public.mail_draft.anchor_id uuid NOT NULL gen=- def=-
 public.mail_draft.anchor_type text NOT NULL gen=- def=-
 public.mail_draft.author_id uuid NOT NULL gen=- def=-
@@ -4839,6 +5027,7 @@ public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activ
 public.mail_draft.mail_draft_author_id_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.mail_draft.mail_draft_one_per_anchor UNIQUE (author_id, anchor_type, anchor_id)
 public.mail_draft.mail_draft_pkey PRIMARY KEY (id)
+public.mail_draft.mail_draft_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.mail_draft.subject text NOT NULL gen=- def=''::text
 public.mail_draft.to_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -4870,6 +5059,7 @@ public.meeting_invitation.meeting_invitation_pkey PRIMARY KEY (activity_id)
 public.meeting_invitation.meeting_invitation_provider_check CHECK ((provider = ANY (ARRAY['gcal'::text, 'graphcal'::text])))
 public.meeting_invitation.meeting_invitation_reminder_status_check CHECK ((reminder_status = ANY (ARRAY['off'::text, 'pending'::text, 'queued'::text, 'unavailable'::text])))
 public.meeting_invitation.meeting_invitation_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'rescheduling'::text, 'canceling'::text, 'needs_attention'::text, 'canceled'::text, 'erased'::text])))
+public.meeting_invitation.meeting_invitation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.meeting_invitation.next_attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.meeting_invitation.provider text NOT NULL gen=- def=-
 public.meeting_invitation.public_intent jsonb gen=- def=-
@@ -5086,12 +5276,16 @@ public.offer.offer_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.offer.offer_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT
 public.offer.offer_deal_id_id_key UNIQUE (deal_id, id)
 public.offer.offer_gross_is_net_plus_tax CHECK ((gross_minor = (net_minor + tax_minor)))
+public.offer.offer_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
+public.offer.offer_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.offer.offer_number text NOT NULL gen=- def=-
 public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
 public.offer.offer_pkey PRIMARY KEY (id)
 public.offer.offer_revision_check CHECK ((revision >= 1))
 public.offer.offer_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'accepted'::text, 'rejected'::text, 'expired'::text, 'superseded'::text])))
+public.offer.offer_tax_minor_js_safe CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))
 public.offer.offer_template_id_fkey FOREIGN KEY (template_id) REFERENCES offer_template(id) ON DELETE SET NULL (template_id)
+public.offer.offer_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.offer.pdf_asset_ref text gen=- def=-
 public.offer.revision integer NOT NULL gen=- def=1
 public.offer.source text NOT NULL gen=- def=-
@@ -5122,6 +5316,8 @@ public.offer_line_item.offer_line_item_quantity_check CHECK ((quantity > (0)::nu
 public.offer_line_item.offer_line_item_tax_rate_check CHECK ((tax_rate >= (0)::numeric))
 public.offer_line_item.offer_line_item_ungrounded_price_zero CHECK ((price_grounded OR (unit_price_minor = 0)))
 public.offer_line_item.offer_line_item_unit_price_minor_check CHECK ((unit_price_minor >= 0))
+public.offer_line_item.offer_line_item_unit_price_minor_js_safe CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint)))
+public.offer_line_item.offer_line_item_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.offer_line_item.oli_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))
 public.offer_line_item.oli_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text]))))
 public.offer_line_item.oli_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time'::text)) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring'::text)) AND (billing_interval_months IS NOT NULL))))
@@ -5151,13 +5347,13 @@ public.offer_template.is_default boolean NOT NULL gen=- def=false
 public.offer_template.layout jsonb NOT NULL gen=- def=-
 public.offer_template.locale text NOT NULL gen=- def='de-DE'::text
 public.offer_template.name text NOT NULL gen=- def=-
-public.offer_template.offer_template_name_unique UNIQUE (name)
 public.offer_template.offer_template_pkey PRIMARY KEY (id)
+public.offer_template.offer_template_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.offer_template.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
 public.offer_template.trg_offer_template_updated CREATE TRIGGER trg_offer_template_updated BEFORE UPDATE ON public.offer_template FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.offer_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.offer_template.version bigint NOT NULL gen=- def=1
-public.offer_template_name_unique CREATE UNIQUE INDEX offer_template_name_unique ON public.offer_template USING btree (name)
+public.offer_template_name_unique CREATE UNIQUE INDEX offer_template_name_unique ON public.offer_template USING btree (name) WHERE (archived_at IS NULL)
 public.offer_template_pkey CREATE UNIQUE INDEX offer_template_pkey ON public.offer_template USING btree (id)
 public.onboarding_wizard_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.onboarding_wizard_state.company_draft jsonb NOT NULL gen=- def='{}'::jsonb
@@ -5174,6 +5370,7 @@ public.onboarding_wizard_state.onboarding_wizard_state_step_check CHECK ((step =
 public.onboarding_wizard_state.onboarding_wizard_state_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.onboarding_wizard_state.onboarding_wizard_state_user_id_key UNIQUE (user_id)
 public.onboarding_wizard_state.onboarding_wizard_state_version_check CHECK ((version >= 1))
+public.onboarding_wizard_state.onboarding_wizard_state_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.onboarding_wizard_state.path text NOT NULL gen=- def=-
 public.onboarding_wizard_state.selected_fact_keys text[] NOT NULL gen=- def='{}'::text[]
 public.onboarding_wizard_state.site_read_id uuid gen=- def=-
@@ -5215,6 +5412,7 @@ public.partner.partner_relationship_health_check CHECK (((relationship_health IS
 public.partner.partner_relationship_stage_check CHECK ((relationship_stage = ANY (ARRAY['research'::text, 'identified'::text, 'contacted'::text, 'in_conversation'::text, 'fit_confirmed'::text, 'agreement_pending'::text, 'active'::text, 'active_referring'::text, 'dormant'::text, 'no_fit'::text])))
 public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))
 public.partner.partner_role text gen=- def=-
+public.partner.partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.partner.relationship_health numeric(3,2) gen=- def=-
 public.partner.relationship_stage text NOT NULL gen=- def='research'::text
 public.partner.renews_at date gen=- def=-
@@ -5253,13 +5451,13 @@ public.pipeline.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.pipeline.id uuid NOT NULL gen=- def=uuidv7()
 public.pipeline.is_default boolean NOT NULL gen=- def=false
 public.pipeline.name text NOT NULL gen=- def=-
-public.pipeline.pipeline_name_unique UNIQUE (name)
 public.pipeline.pipeline_pkey PRIMARY KEY (id)
+public.pipeline.pipeline_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.pipeline.position integer NOT NULL gen=- def=0
 public.pipeline.trg_pipeline_updated CREATE TRIGGER trg_pipeline_updated BEFORE UPDATE ON public.pipeline FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.pipeline.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.pipeline.version bigint NOT NULL gen=- def=1
-public.pipeline_name_unique CREATE UNIQUE INDEX pipeline_name_unique ON public.pipeline USING btree (name)
+public.pipeline_name_unique CREATE UNIQUE INDEX pipeline_name_unique ON public.pipeline USING btree (name) WHERE (archived_at IS NULL)
 public.pipeline_pkey CREATE UNIQUE INDEX pipeline_pkey ON public.pipeline USING btree (id)
 public.preference_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.preference_token.contact_email_id uuid gen=- def=-
@@ -5333,6 +5531,8 @@ public.product.product_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.product.product_default_tax_rate_check CHECK ((default_tax_rate >= (0)::numeric))
 public.product.product_pkey PRIMARY KEY (id)
 public.product.product_unit_price_minor_check CHECK ((unit_price_minor >= 0))
+public.product.product_unit_price_minor_js_safe CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint)))
+public.product.product_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.product.search_tsv tsvector gen=s def=((((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(sku, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(description, ''::text))), 'B'::"char"))
 public.product.sku text gen=- def=-
 public.product.source text NOT NULL gen=- def=-
@@ -5366,6 +5566,7 @@ public.project.project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text
 public.project.project_pkey PRIMARY KEY (id)
 public.project.project_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.project.project_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.project.project_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.project.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))
 public.project.source text NOT NULL gen=- def=-
 public.project.source_author_id uuid gen=- def=-
@@ -5476,6 +5677,7 @@ public.provider_connection.provider_connection_pkey PRIMARY KEY (id)
 public.provider_connection.provider_connection_provider_key UNIQUE (provider)
 public.provider_connection.provider_connection_refresh_after_days_check CHECK ((refresh_after_days > 0))
 public.provider_connection.provider_connection_status_check CHECK ((status = ANY (ARRAY['disconnected'::text, 'validating'::text, 'connected'::text, 'invalid_credentials'::text, 'insufficient_credits'::text, 'rate_limited'::text, 'provider_error'::text])))
+public.provider_connection.provider_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.provider_connection.refresh_after_days integer gen=- def=-
 public.provider_connection.status text NOT NULL gen=- def=-
 public.provider_connection.trg_provider_connection_updated CREATE TRIGGER trg_provider_connection_updated BEFORE UPDATE ON public.provider_connection FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -5539,6 +5741,7 @@ public.provider_run.provider text NOT NULL gen=- def=-
 public.provider_run.provider_job_id text gen=- def=-
 public.provider_run.provider_run_attempt_count_check CHECK ((attempt_count >= 0))
 public.provider_run.provider_run_claims_unwritten_shape CHECK (((NOT claims_unwritten) OR (state = 'completed'::text)))
+public.provider_run.provider_run_connection_version_js_safe CHECK (((connection_version >= '-9007199254740991'::bigint) AND (connection_version <= '9007199254740991'::bigint)))
 public.provider_run.provider_run_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.provider_run.provider_run_external_correlation_id_key UNIQUE (external_correlation_id)
 public.provider_run.provider_run_pkey PRIMARY KEY (id)
@@ -5606,6 +5809,7 @@ public.record_assignment.record_assignment_project_id_fkey FOREIGN KEY (project_
 public.record_assignment.record_assignment_role_id_fkey FOREIGN KEY (role_id) REFERENCES record_role(id) ON DELETE RESTRICT
 public.record_assignment.record_assignment_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE RESTRICT
 public.record_assignment.record_assignment_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.record_assignment.record_assignment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.record_assignment.role_id uuid NOT NULL gen=- def=-
 public.record_assignment.source text gen=- def=-
 public.record_assignment.team_id uuid gen=- def=-
@@ -5627,6 +5831,7 @@ public.record_grant.record_grant_pkey PRIMARY KEY (id)
 public.record_grant.record_grant_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.record_grant.record_grant_subject_type_check CHECK ((subject_type = ANY (ARRAY['user'::text, 'team'::text])))
 public.record_grant.record_grant_unique UNIQUE (record_type, record_id, subject_type, subject_id)
+public.record_grant.record_grant_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.record_grant.record_id uuid NOT NULL gen=- def=-
 public.record_grant.record_type text NOT NULL gen=- def=-
 public.record_grant.subject_id uuid NOT NULL gen=- def=-
@@ -5647,6 +5852,7 @@ public.record_role.record_role_key_shape CHECK (((key = lower(key)) AND (length(
 public.record_role.record_role_label_present CHECK ((length(btrim(label)) > 0))
 public.record_role.record_role_pkey PRIMARY KEY (id)
 public.record_role.record_role_record_types_bounded CHECK (((cardinality(record_types) > 0) AND (record_types <@ ARRAY['company'::text, 'deal'::text, 'project'::text])))
+public.record_role.record_role_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.record_role.record_types text[] NOT NULL gen=- def=-
 public.record_role.sort_order integer NOT NULL gen=- def=0
 public.record_role.system boolean NOT NULL gen=- def=false
@@ -5711,6 +5917,7 @@ public.relationship.relationship_last_activity CREATE TRIGGER relationship_last_
 public.relationship.relationship_pkey PRIMARY KEY (id)
 public.relationship.relationship_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 public.relationship.relationship_started_precision_check CHECK ((started_precision = ANY (ARRAY['day'::text, 'month'::text])))
+public.relationship.relationship_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.relationship.role text gen=- def=-
 public.relationship.source text NOT NULL gen=- def=-
 public.relationship.started_at date gen=- def=-
@@ -5745,6 +5952,8 @@ public.report_definition.report_definition_audience_team_id_fkey FOREIGN KEY (au
 public.report_definition.report_definition_check CHECK (((audience = 'team'::text) = (audience_team_id IS NOT NULL)))
 public.report_definition.report_definition_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
 public.report_definition.report_definition_pkey PRIMARY KEY (id)
+public.report_definition.report_definition_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
+public.report_definition.report_definition_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.report_definition.revision bigint NOT NULL gen=- def=-
 public.report_definition.version bigint NOT NULL gen=- def=-
 public.report_definition_library CREATE INDEX report_definition_library ON public.report_definition USING btree (owner_id, audience, name, id) WHERE (archived_at IS NULL)
@@ -5754,8 +5963,10 @@ public.report_definition_revision.created_at timestamp with time zone NOT NULL g
 public.report_definition_revision.created_by uuid NOT NULL gen=- def=-
 public.report_definition_revision.framework_revision bigint NOT NULL gen=- def=-
 public.report_definition_revision.report_definition_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
+public.report_definition_revision.report_definition_revision_framework_revision_js_safe CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint)))
 public.report_definition_revision.report_definition_revision_pkey PRIMARY KEY (report_id, revision)
 public.report_definition_revision.report_definition_revision_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id)
+public.report_definition_revision.report_definition_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.report_definition_revision.report_id uuid NOT NULL gen=- def=-
 public.report_definition_revision.revision bigint NOT NULL gen=- def=-
 public.report_definition_revision.selection jsonb NOT NULL gen=- def=-
@@ -5775,6 +5986,7 @@ public.report_edition.report_edition_execution_id_fkey FOREIGN KEY (execution_id
 public.report_edition.report_edition_execution_id_key UNIQUE (execution_id)
 public.report_edition.report_edition_pkey PRIMARY KEY (id)
 public.report_edition.report_edition_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id)
+public.report_edition.report_edition_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
 public.report_edition.report_id uuid NOT NULL gen=- def=-
 public.report_edition.report_revision bigint NOT NULL gen=- def=-
 public.report_edition_archive CREATE INDEX report_edition_archive ON public.report_edition USING btree (report_id, intended_due_at DESC, id DESC)
@@ -5805,11 +6017,13 @@ public.report_execution.interval_start timestamp with time zone NOT NULL gen=- d
 public.report_execution.lease_until timestamp with time zone gen=- def=-
 public.report_execution.owner_id uuid NOT NULL gen=- def=-
 public.report_execution.reason text gen=- def=-
+public.report_execution.report_execution_attempt_js_safe CHECK (((attempt >= '-9007199254740991'::bigint) AND (attempt <= '9007199254740991'::bigint)))
 public.report_execution.report_execution_check CHECK (((retry_base_attempt >= 0) AND (retry_base_attempt <= attempt)))
 public.report_execution.report_execution_execution_key_key UNIQUE (execution_key)
 public.report_execution.report_execution_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
 public.report_execution.report_execution_pkey PRIMARY KEY (id)
 public.report_execution.report_execution_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision)
+public.report_execution.report_execution_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
 public.report_execution.report_execution_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES report_schedule(id)
 public.report_execution.report_execution_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'succeeded'::text, 'partial'::text, 'failed'::text, 'suspended'::text, 'skipped'::text])))
 public.report_execution.report_id uuid NOT NULL gen=- def=-
@@ -5860,6 +6074,8 @@ public.report_schedule.report_revision bigint NOT NULL gen=- def=-
 public.report_schedule.report_schedule_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
 public.report_schedule.report_schedule_pkey PRIMARY KEY (id)
 public.report_schedule.report_schedule_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision)
+public.report_schedule.report_schedule_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
+public.report_schedule.report_schedule_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.report_schedule.timezone text NOT NULL gen=- def=-
 public.report_schedule.version bigint NOT NULL gen=- def=-
 public.report_schedule_due CREATE INDEX report_schedule_due ON public.report_schedule USING btree (next_due_at, id) WHERE enabled
@@ -5868,7 +6084,9 @@ public.reporting_framework acl=margince_owner=arwdDxt/margince_owner,margince_ap
 public.reporting_framework.id uuid NOT NULL gen=- def=uuidv7()
 public.reporting_framework.reporting_framework_id_key UNIQUE (id)
 public.reporting_framework.reporting_framework_pkey PRIMARY KEY (singleton)
+public.reporting_framework.reporting_framework_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.reporting_framework.reporting_framework_singleton_check CHECK (singleton)
+public.reporting_framework.reporting_framework_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.reporting_framework.revision bigint NOT NULL gen=- def=-
 public.reporting_framework.singleton boolean NOT NULL gen=- def=true
 public.reporting_framework.version bigint NOT NULL gen=- def=-
@@ -5880,6 +6098,7 @@ public.reporting_framework_revision.definition jsonb NOT NULL gen=- def=-
 public.reporting_framework_revision.effective_at timestamp with time zone NOT NULL gen=- def=-
 public.reporting_framework_revision.reporting_framework_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
 public.reporting_framework_revision.reporting_framework_revision_pkey PRIMARY KEY (revision)
+public.reporting_framework_revision.reporting_framework_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.reporting_framework_revision.revision bigint NOT NULL gen=- def=-
 public.reporting_framework_revision_pkey CREATE UNIQUE INDEX reporting_framework_revision_pkey ON public.reporting_framework_revision USING btree (revision)
 public.reporting_primary_credit CREATE INDEX reporting_primary_credit ON public.sdr_handoff_event USING btree (deal_id_at_change, occurred_at, id) WHERE (to_status = 'accepted'::text)
@@ -5923,6 +6142,7 @@ public.role.permissions jsonb NOT NULL gen=- def='{}'::jsonb
 public.role.report_authority_role CREATE TRIGGER report_authority_role BEFORE INSERT OR DELETE OR UPDATE ON public.role FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.role.role_key_unique UNIQUE (key)
 public.role.role_pkey PRIMARY KEY (id)
+public.role.role_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.role.trg_role_updated CREATE TRIGGER trg_role_updated BEFORE UPDATE ON public.role FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.role.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.role.version bigint NOT NULL gen=- def=1
@@ -5974,12 +6194,14 @@ public.sales_target.sales_target_check1 CHECK (((scope_kind = 'workspace'::text)
 public.sales_target.sales_target_period_kind_check CHECK ((period_kind = ANY (ARRAY['month'::text, 'fiscal_quarter'::text])))
 public.sales_target.sales_target_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
 public.sales_target.sales_target_pkey PRIMARY KEY (id)
+public.sales_target.sales_target_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.sales_target.sales_target_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['owner'::text, 'team'::text, 'workspace'::text])))
+public.sales_target.sales_target_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.sales_target.scope_id uuid gen=- def=-
 public.sales_target.scope_kind text NOT NULL gen=- def=-
 public.sales_target.unit text NOT NULL gen=- def=-
 public.sales_target.version bigint NOT NULL gen=- def=-
-public.sales_target_identity CREATE UNIQUE INDEX sales_target_identity ON public.sales_target USING btree (metric, scope_kind, COALESCE((scope_id)::text, 'workspace'::text), COALESCE((pipeline_id)::text, 'all'::text), period_kind, period_start)
+public.sales_target_identity CREATE UNIQUE INDEX sales_target_identity ON public.sales_target USING btree (metric, scope_kind, scope_id, pipeline_id, period_kind, period_start) NULLS NOT DISTINCT
 public.sales_target_pkey CREATE UNIQUE INDEX sales_target_pkey ON public.sales_target USING btree (id)
 public.sales_target_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_target_revision.created_by uuid NOT NULL gen=- def=-
@@ -5988,6 +6210,7 @@ public.sales_target_revision.effective_at timestamp with time zone NOT NULL gen=
 public.sales_target_revision.revision bigint NOT NULL gen=- def=-
 public.sales_target_revision.sales_target_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
 public.sales_target_revision.sales_target_revision_pkey PRIMARY KEY (target_id, revision)
+public.sales_target_revision.sales_target_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.sales_target_revision.sales_target_revision_target_id_fkey FOREIGN KEY (target_id) REFERENCES sales_target(id)
 public.sales_target_revision.target_id uuid NOT NULL gen=- def=-
 public.sales_target_revision_pkey CREATE UNIQUE INDEX sales_target_revision_pkey ON public.sales_target_revision USING btree (target_id, revision)
@@ -6003,6 +6226,7 @@ public.saved_view.saved_view_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_us
 public.saved_view.saved_view_pkey PRIMARY KEY (id)
 public.saved_view.saved_view_resource_check CHECK ((resource = ANY (ARRAY['contacts'::text, 'companies'::text, 'deals'::text, 'activities'::text, 'leads'::text, 'partners'::text, 'projects'::text])))
 public.saved_view.saved_view_shared_scope_check CHECK ((shared_scope = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
+public.saved_view.saved_view_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.saved_view.shared_scope text NOT NULL gen=- def='private'::text
 public.saved_view.trg_saved_view_updated CREATE TRIGGER trg_saved_view_updated BEFORE UPDATE ON public.saved_view FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.saved_view.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6041,11 +6265,12 @@ public.scheduled_send.scheduled_send_principal_kind CHECK ((principal_kind = ANY
 public.scheduled_send.scheduled_send_released_shape CHECK ((((status = 'released'::text) AND (activity_id IS NOT NULL) AND (delivery_id IS NOT NULL)) OR ((status <> 'released'::text) AND (activity_id IS NULL) AND (delivery_id IS NULL))))
 public.scheduled_send.scheduled_send_scheduled_by_fkey FOREIGN KEY (scheduled_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.scheduled_send.scheduled_send_status CHECK ((status = ANY (ARRAY['scheduled'::text, 'released'::text, 'cancelled'::text, 'held'::text])))
+public.scheduled_send.scheduled_send_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.scheduled_send.scheduled_tz text NOT NULL gen=- def=-
 public.scheduled_send.status text NOT NULL gen=- def='scheduled'::text
 public.scheduled_send.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.version bigint NOT NULL gen=- def=1
-public.scheduled_send_one_held_message_per_seat CREATE UNIQUE INDEX scheduled_send_one_held_message_per_seat ON public.scheduled_send USING btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, COALESCE(agent_actor_id, ''::text), COALESCE(agent_passport_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(anchor_activity_id, '00000000-0000-0000-0000-000000000000'::uuid), md5((COALESCE(origin_links, '[]'::jsonb))::text), md5((COALESCE(also_links, '[]'::jsonb))::text), md5((payload)::text)) WHERE ((status = 'held'::text) AND (held_reason = 'send_refused'::text))
+public.scheduled_send_one_held_message_per_seat CREATE UNIQUE INDEX scheduled_send_one_held_message_per_seat ON public.scheduled_send USING btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, agent_actor_id, agent_passport_id, anchor_activity_id, md5((COALESCE(origin_links, '[]'::jsonb))::text), md5((COALESCE(also_links, '[]'::jsonb))::text), md5((payload)::text)) NULLS NOT DISTINCT WHERE ((status = 'held'::text) AND (held_reason = 'send_refused'::text))
 public.scheduled_send_pkey CREATE UNIQUE INDEX scheduled_send_pkey ON public.scheduled_send USING btree (id)
 public.sdr_handoff acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sdr_handoff.assigned_to uuid gen=- def=-
@@ -6075,6 +6300,7 @@ public.sdr_handoff.sdr_handoff_reason_pair CHECK (((reason_id IS NULL) = (reason
 public.sdr_handoff.sdr_handoff_reason_when_refused CHECK (((status = ANY (ARRAY['rejected'::text, 'recycled'::text])) = (reason_id IS NOT NULL)))
 public.sdr_handoff.sdr_handoff_status CHECK ((status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text])))
 public.sdr_handoff.sdr_handoff_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES app_user(id)
+public.sdr_handoff.sdr_handoff_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.sdr_handoff.status text NOT NULL gen=- def='submitted'::text
 public.sdr_handoff.submitted_at timestamp with time zone NOT NULL gen=- def=now()
 public.sdr_handoff.submitted_by uuid NOT NULL gen=- def=-
@@ -6109,6 +6335,7 @@ public.sdr_handoff_reason.sdr_handoff_reason_applies_to CHECK ((applies_to = ANY
 public.sdr_handoff_reason.sdr_handoff_reason_id_kind UNIQUE (id, applies_to)
 public.sdr_handoff_reason.sdr_handoff_reason_label_present CHECK ((length(btrim(label)) > 0))
 public.sdr_handoff_reason.sdr_handoff_reason_pkey PRIMARY KEY (id)
+public.sdr_handoff_reason.sdr_handoff_reason_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.sdr_handoff_reason.sort_order integer NOT NULL gen=- def=0
 public.sdr_handoff_reason.system boolean NOT NULL gen=- def=false
 public.sdr_handoff_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6194,6 +6421,7 @@ public.signal.signal_resolved_has_entity CHECK (((resolution_state <> 'resolved'
 public.signal.signal_severity_check CHECK ((severity = ANY (ARRAY['info'::text, 'warn'::text, 'urgent'::text])))
 public.signal.signal_source_channel_check CHECK ((source_channel = ANY (ARRAY['derived'::text, 'inbound'::text, 'web'::text, 'social'::text, 'deal_room_engagement'::text])))
 public.signal.signal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'acknowledged'::text, 'resolved'::text, 'dismissed'::text])))
+public.signal.signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.signal.signal_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.signal.source text NOT NULL gen=- def=-
 public.signal.source_channel text NOT NULL gen=- def='derived'::text
@@ -6311,6 +6539,7 @@ public.stage.stage_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipelin
 public.stage.stage_pkey PRIMARY KEY (id)
 public.stage.stage_semantic_check CHECK ((semantic = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text])))
 public.stage.stage_terminal_prob CHECK ((((semantic = 'won'::text) AND (win_probability = 100)) OR ((semantic = 'lost'::text) AND (win_probability = 0)) OR (semantic = 'open'::text)))
+public.stage.stage_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.stage.stage_win_probability_check CHECK (((win_probability >= 0) AND (win_probability <= 100)))
 public.stage.trg_stage_updated CREATE TRIGGER trg_stage_updated BEFORE UPDATE ON public.stage FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.stage.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6333,6 +6562,7 @@ public.stage_exit_criterion.stage_exit_criterion_label_len CHECK (((length(label
 public.stage_exit_criterion.stage_exit_criterion_pkey PRIMARY KEY (id)
 public.stage_exit_criterion.stage_exit_criterion_position_check CHECK (("position" >= 0))
 public.stage_exit_criterion.stage_exit_criterion_stage_fkey FOREIGN KEY (stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_exit_criterion.stage_exit_criterion_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.stage_exit_criterion.stage_id uuid NOT NULL gen=- def=-
 public.stage_exit_criterion.trg_stage_exit_criterion_updated CREATE TRIGGER trg_stage_exit_criterion_updated BEFORE UPDATE ON public.stage_exit_criterion FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.stage_exit_criterion.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6367,6 +6597,7 @@ public.stage_progression_outcome.stage_progression_outcome_reason_is_a_rejection
 public.stage_progression_outcome.stage_progression_outcome_reversal_is_timed CHECK (((reversed_by IS NULL) OR (reversed_at IS NOT NULL)))
 public.stage_progression_outcome.stage_progression_outcome_reversed_by_fkey FOREIGN KEY (reversed_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.stage_progression_outcome.stage_progression_outcome_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_progression_outcome.stage_progression_outcome_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.stage_progression_outcome.to_stage_id uuid NOT NULL gen=- def=-
 public.stage_progression_outcome.trg_stage_progression_outcome_updated CREATE TRIGGER trg_stage_progression_outcome_updated BEFORE UPDATE ON public.stage_progression_outcome FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.stage_progression_outcome.undo_window_hours integer gen=- def=-
@@ -6395,6 +6626,7 @@ public.stage_progression_policy.stage_progression_policy_pkey PRIMARY KEY (id)
 public.stage_progression_policy.stage_progression_policy_suspension_whole CHECK (((suspended_at IS NULL) = (suspended_reason IS NULL)))
 public.stage_progression_policy.stage_progression_policy_thresholds_are_shares CHECK (((clean_acceptance_threshold >= (0)::numeric) AND (clean_acceptance_threshold <= (1)::numeric) AND (correction_reversal_threshold >= (0)::numeric) AND (correction_reversal_threshold <= (1)::numeric)))
 public.stage_progression_policy.stage_progression_policy_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.stage_progression_policy.stage_progression_policy_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.stage_progression_policy.stage_progression_policy_volume_is_a_bar CHECK (((min_reviewed > 0) AND (min_observation_days > 0) AND (window_days > 0) AND (undo_window_hours > 0)))
 public.stage_progression_policy.suspended_at timestamp with time zone gen=- def=-
 public.stage_progression_policy.suspended_reason text gen=- def=-
@@ -6406,6 +6638,7 @@ public.stage_progression_policy.window_days integer NOT NULL gen=- def=30
 public.stage_progression_policy_pkey CREATE UNIQUE INDEX stage_progression_policy_pkey ON public.stage_progression_policy USING btree (id)
 public.stage_progression_policy_transition_key CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id)
 public.stored_object_intent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stored_object_intent.kind text NOT NULL gen=- def=-
 public.stored_object_intent.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.stored_object_intent.storage_key text NOT NULL gen=- def=-
 public.stored_object_intent.stored_object_intent_pkey PRIMARY KEY (storage_key)
@@ -6453,6 +6686,7 @@ public.tag.name text NOT NULL gen=- def=-
 public.tag.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
 public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text, 'sky'::text, 'violet'::text, 'lime'::text, 'orange'::text]))))
 public.tag.tag_pkey PRIMARY KEY (id)
+public.tag.tag_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.tag.trg_tag_updated CREATE TRIGGER trg_tag_updated BEFORE UPDATE ON public.tag FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.tag.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.tag.version bigint NOT NULL gen=- def=1
@@ -6481,7 +6715,6 @@ public.team.name text NOT NULL gen=- def=-
 public.team.parent_team_id uuid gen=- def=-
 public.team.report_authority_team_change CREATE TRIGGER report_authority_team_change BEFORE UPDATE OF archived_at ON public.team FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.team.report_authority_team_delete CREATE TRIGGER report_authority_team_delete BEFORE DELETE ON public.team FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
-public.team.team_name_unique UNIQUE (name)
 public.team.team_parent_team_id_fkey FOREIGN KEY (parent_team_id) REFERENCES team(id) ON DELETE SET NULL (parent_team_id)
 public.team.team_pkey PRIMARY KEY (id)
 public.team.trg_team_updated CREATE TRIGGER trg_team_updated BEFORE UPDATE ON public.team FOR EACH ROW EXECUTE FUNCTION set_updated_at()
@@ -6500,7 +6733,7 @@ public.team_membership.updated_at timestamp with time zone NOT NULL gen=- def=no
 public.team_membership.user_id uuid NOT NULL gen=- def=-
 public.team_membership_pkey CREATE UNIQUE INDEX team_membership_pkey ON public.team_membership USING btree (id)
 public.team_membership_unique CREATE UNIQUE INDEX team_membership_unique ON public.team_membership USING btree (team_id, user_id)
-public.team_name_unique CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (name)
+public.team_name_unique CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (name) WHERE (archived_at IS NULL)
 public.team_pkey CREATE UNIQUE INDEX team_pkey ON public.team USING btree (id)
 public.team_weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-
@@ -6547,14 +6780,20 @@ public.team_weekly_review_outlook.period_end date NOT NULL gen=- def=-
 public.team_weekly_review_outlook.period_kind text NOT NULL gen=- def=-
 public.team_weekly_review_outlook.period_start date NOT NULL gen=- def=-
 public.team_weekly_review_outlook.team_weekly_review_id uuid NOT NULL gen=- def=-
+public.team_weekly_review_outlook.team_weekly_review_outlook_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
+public.team_weekly_review_outlook.team_weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))
+public.team_weekly_review_outlook.team_weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_currency_present CHECK ((btrim(base_currency) <> ''::text))
 public.team_weekly_review_outlook.team_weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.team_weekly_review_outlook.team_weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))
+public.team_weekly_review_outlook.team_weekly_review_outlook_opening_landing_minor_js_safe CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_opening_whole CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))
 public.team_weekly_review_outlook.team_weekly_review_outlook_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
 public.team_weekly_review_outlook.team_weekly_review_outlook_pkey PRIMARY KEY (id)
 public.team_weekly_review_outlook.team_weekly_review_outlook_review_fkey FOREIGN KEY (team_weekly_review_id) REFERENCES team_weekly_review(id) ON DELETE CASCADE
+public.team_weekly_review_outlook.team_weekly_review_outlook_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_window_ordered CHECK ((period_end >= period_start))
+public.team_weekly_review_outlook.team_weekly_review_outlook_won_minor_js_safe CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.weighted_minor bigint gen=- def=-
 public.team_weekly_review_outlook.won_minor bigint gen=- def=-
 public.team_weekly_review_outlook_pkey CREATE UNIQUE INDEX team_weekly_review_outlook_pkey ON public.team_weekly_review_outlook USING btree (id)
@@ -6673,7 +6912,7 @@ END;
 
 public.uq_activity_link CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(contact_id, company_id, deal_id, lead_id, project_id))
 public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text)
-public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(contact_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''::text), COALESCE(channel_user_id, ''::text))
+public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT
 public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE ((basis <> 'controller_pin'::text) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
@@ -6688,7 +6927,7 @@ public.uq_brief_item_run_rank CREATE UNIQUE INDEX uq_brief_item_run_rank ON publ
 public.uq_brief_run_user_day CREATE UNIQUE INDEX uq_brief_run_user_day ON public.brief_run USING btree (user_id, local_day)
 public.uq_bulk_operation_undo_of CREATE UNIQUE INDEX uq_bulk_operation_undo_of ON public.bulk_operation USING btree (undo_of) WHERE (undo_of IS NOT NULL)
 public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
-public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, value)
+public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value) NULLS NOT DISTINCT
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
 public.uq_commission_live_per_deal CREATE UNIQUE INDEX uq_commission_live_per_deal ON public.commission_entry USING btree (deal_id) WHERE ((status <> 'void'::text) AND (reversal_of IS NULL))
@@ -6709,6 +6948,7 @@ public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON publ
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
 public.uq_deal_risk_day CREATE UNIQUE INDEX uq_deal_risk_day ON public.deal_risk_day USING btree (local_day)
 public.uq_deal_room_active CREATE UNIQUE INDEX uq_deal_room_active ON public.deal_room USING btree (deal_id) WHERE ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL))
+public.uq_deal_room_comment_request CREATE UNIQUE INDEX uq_deal_room_comment_request ON public.deal_room_comment USING btree (room_id, request_id) WHERE (request_id IS NOT NULL)
 public.uq_deal_room_document_in_room CREATE UNIQUE INDEX uq_deal_room_document_in_room ON public.deal_room_document USING btree (id, room_id)
 public.uq_deal_room_document_live CREATE UNIQUE INDEX uq_deal_room_document_live ON public.deal_room_document USING btree (room_id, attachment_id) WHERE (archived_at IS NULL)
 public.uq_deal_room_invitation_attempt CREATE UNIQUE INDEX uq_deal_room_invitation_attempt ON public.deal_room_invitation USING btree (participant_id, attempt_no)
@@ -6718,6 +6958,7 @@ public.uq_deal_room_participant_email CREATE UNIQUE INDEX uq_deal_room_participa
 public.uq_deal_room_participant_in_room CREATE UNIQUE INDEX uq_deal_room_participant_in_room ON public.deal_room_participant USING btree (id, room_id)
 public.uq_deal_room_preview_per_rep CREATE UNIQUE INDEX uq_deal_room_preview_per_rep ON public.deal_room_participant USING btree (room_id, invited_by) WHERE ((revoked_at IS NULL) AND preview)
 public.uq_deal_room_session_token CREATE UNIQUE INDEX uq_deal_room_session_token ON public.deal_room_session USING btree (token_hash)
+public.uq_deal_room_thread_request CREATE UNIQUE INDEX uq_deal_room_thread_request ON public.deal_room_thread USING btree (room_id, request_id) WHERE (request_id IS NOT NULL)
 public.uq_deal_suggestion_fingerprint CREATE UNIQUE INDEX uq_deal_suggestion_fingerprint ON public.deal_suggestion USING btree (fingerprint)
 public.uq_deal_suggestion_open_company CREATE UNIQUE INDEX uq_deal_suggestion_open_company ON public.deal_suggestion USING btree (company_id) WHERE (state = 'open'::text)
 public.uq_dedupe_candidate_pair CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id))
@@ -6731,7 +6972,7 @@ public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.l
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
-public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, COALESCE(normalized_company, ''::text), COALESCE(connected_on, '1970-01-01'::date)) WHERE (provider_member_ref IS NULL)
+public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)
 public.uq_linkedin_connection_provider CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)
 public.uq_notice_dedupe CREATE UNIQUE INDEX uq_notice_dedupe ON public.notice USING btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)
 public.uq_offer_template_default CREATE UNIQUE INDEX uq_offer_template_default ON public.offer_template USING btree (locale) WHERE (is_default AND (archived_at IS NULL))
@@ -6755,7 +6996,7 @@ public.uq_rel_employment CREATE UNIQUE INDEX uq_rel_employment ON public.relatio
 public.uq_rel_project_company CREATE UNIQUE INDEX uq_rel_project_company ON public.relationship USING btree (project_id, company_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.uq_rel_project_stakeholder CREATE UNIQUE INDEX uq_rel_project_stakeholder ON public.relationship USING btree (project_id, contact_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
 public.uq_rel_works_with CREATE UNIQUE INDEX uq_rel_works_with ON public.relationship USING btree (LEAST(contact_id, counterparty_contact_id), GREATEST(contact_id, counterparty_contact_id)) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
-public.uq_role_assignment CREATE UNIQUE INDEX uq_role_assignment ON public.role_assignment USING btree (role_id, user_id, COALESCE(team_id, '00000000-0000-0000-0000-000000000000'::uuid))
+public.uq_role_assignment CREATE UNIQUE INDEX uq_role_assignment ON public.role_assignment USING btree (role_id, user_id, team_id) NULLS NOT DISTINCT
 public.uq_signal_fingerprint CREATE UNIQUE INDEX uq_signal_fingerprint ON public.signal USING btree (fingerprint) WHERE ((fingerprint IS NOT NULL) AND (archived_at IS NULL))
 public.uq_site_read_company_inflight CREATE UNIQUE INDEX uq_site_read_company_inflight ON public.site_read USING btree (company_id, seed_url) WHERE ((target_kind = 'company'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_onboarding_inflight CREATE UNIQUE INDEX uq_site_read_onboarding_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'onboarding'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
@@ -6850,6 +7091,7 @@ public.voice_build.voice_build_source_count_check CHECK ((source_count >= 0))
 public.voice_build.voice_build_stage_check CHECK ((stage = ANY (ARRAY['snapshot'::text, 'extract'::text, 'evaluate'::text, 'activate'::text])))
 public.voice_build.voice_build_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text, 'succeeded'::text, 'failed'::text])))
 public.voice_build.voice_build_status_code_check CHECK ((status_code = ANY (ARRAY['budget_deferred'::text, 'model_unavailable'::text, 'invalid_output'::text, 'quality_regression'::text, 'material_drift'::text, 'internal'::text])))
+public.voice_build.voice_build_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_build.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_build_deferred_due CREATE INDEX voice_build_deferred_due ON public.voice_build USING btree (next_attempt_at, id) WHERE ((status = 'deferred'::text) AND (archived_at IS NULL))
 public.voice_build_one_active CREATE UNIQUE INDEX voice_build_one_active ON public.voice_build USING btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text]))
@@ -6885,6 +7127,7 @@ public.voice_corpus_source.voice_corpus_source_origin_check CHECK ((origin = ANY
 public.voice_corpus_source.voice_corpus_source_pkey PRIMARY KEY (id)
 public.voice_corpus_source.voice_corpus_source_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES voice_profile(id) ON DELETE CASCADE
 public.voice_corpus_source.voice_corpus_source_register_check CHECK ((register = ANY (ARRAY['email'::text, 'social'::text, 'long_form'::text, 'spoken'::text, 'general'::text])))
+public.voice_corpus_source.voice_corpus_source_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_corpus_source.voice_corpus_source_weight_check CHECK (((weight >= (0)::numeric) AND (weight <= (2)::numeric)))
 public.voice_corpus_source.voice_corpus_source_word_count_check CHECK ((word_count >= 0))
 public.voice_corpus_source.voice_profile_id uuid NOT NULL gen=- def=-
@@ -6919,6 +7162,7 @@ public.voice_learning_signal.voice_learning_signal_profile_version_check CHECK (
 public.voice_learning_signal.voice_learning_signal_qualifies_check CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent'::text) AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'::text))))
 public.voice_learning_signal.voice_learning_signal_similarity_check CHECK (((similarity >= (0)::numeric) AND (similarity <= (1)::numeric)))
 public.voice_learning_signal.voice_learning_signal_version_fkey FOREIGN KEY (voice_profile_id, profile_version) REFERENCES voice_profile_version(voice_profile_id, profile_version)
+public.voice_learning_signal.voice_learning_signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_learning_signal.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_learning_signal_pkey CREATE UNIQUE INDEX voice_learning_signal_pkey ON public.voice_learning_signal USING btree (id)
 public.voice_learning_signal_profile_fk CREATE INDEX voice_learning_signal_profile_fk ON public.voice_learning_signal USING btree (voice_profile_id)
@@ -6949,6 +7193,7 @@ public.voice_profile.voice_profile_scope_check CHECK ((scope = ANY (ARRAY['user'
 public.voice_profile.voice_profile_scope_owner_check CHECK ((((scope = 'user'::text) AND (owner_id IS NOT NULL) AND (team_id IS NULL)) OR ((scope = 'team'::text) AND (owner_id IS NULL) AND (team_id IS NOT NULL)) OR ((scope = 'workspace'::text) AND (owner_id IS NULL) AND (team_id IS NULL))))
 public.voice_profile.voice_profile_status_check CHECK ((status = ANY (ARRAY['collecting'::text, 'ready'::text, 'stale'::text])))
 public.voice_profile.voice_profile_team_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE RESTRICT
+public.voice_profile.voice_profile_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_profile.voice_profile_version_nonnegative CHECK ((profile_version >= 0))
 public.voice_profile_delta acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_profile_delta.activation_outcome text NOT NULL gen=- def=-
@@ -7009,6 +7254,7 @@ public.voice_profile_version.voice_profile_version_profile_version_check CHECK (
 public.voice_profile_version.voice_profile_version_reason_check CHECK ((reason = ANY (ARRAY['onboarding'::text, 'manual'::text, 'automatic'::text, 'rollback'::text])))
 public.voice_profile_version.voice_profile_version_source_count_check CHECK ((source_count >= 0))
 public.voice_profile_version.voice_profile_version_status_check CHECK ((status = ANY (ARRAY['candidate'::text, 'active'::text, 'superseded'::text, 'rejected'::text])))
+public.voice_profile_version.voice_profile_version_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_profile_version_history CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text)
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
@@ -7053,6 +7299,7 @@ public.webhook_subscription.webhook_subscription_owner_fkey FOREIGN KEY (owner_i
 public.webhook_subscription.webhook_subscription_pkey PRIMARY KEY (id)
 public.webhook_subscription.webhook_subscription_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text])))
 public.webhook_subscription.webhook_subscription_target_url_check CHECK ((target_url ~ '^https://'::text))
+public.webhook_subscription.webhook_subscription_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.webhook_subscription_pkey CREATE UNIQUE INDEX webhook_subscription_pkey ON public.webhook_subscription USING btree (id)
 public.weekly_plan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_plan.capacity_note text gen=- def=-
@@ -7075,6 +7322,7 @@ public.weekly_plan.weekly_plan_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_
 public.weekly_plan.weekly_plan_pkey PRIMARY KEY (id)
 public.weekly_plan.weekly_plan_risks_bounded CHECK (((risks IS NULL) OR (length(risks) <= 2000)))
 public.weekly_plan.weekly_plan_status_check CHECK ((status = ANY (ARRAY['open'::text, 'closed'::text])))
+public.weekly_plan.weekly_plan_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.weekly_plan_commitment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_plan_commitment.captured_by text NOT NULL gen=- def=-
 public.weekly_plan_commitment.completed_at timestamp with time zone gen=- def=-
@@ -7105,6 +7353,7 @@ public.weekly_plan_commitment.weekly_plan_commitment_plan_fkey FOREIGN KEY (plan
 public.weekly_plan_commitment.weekly_plan_commitment_response_bound CHECK ((length(manager_response) <= 2000))
 public.weekly_plan_commitment.weekly_plan_commitment_response_whole CHECK ((((btrim(manager_response) = ''::text) = (manager_user_id IS NULL)) AND ((manager_user_id IS NULL) = (responded_at IS NULL))))
 public.weekly_plan_commitment.weekly_plan_commitment_state_check CHECK ((state = ANY (ARRAY['open'::text, 'done'::text, 'missed'::text, 'dropped'::text])))
+public.weekly_plan_commitment.weekly_plan_commitment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.weekly_plan_commitment_forget_manager() secdef=false cfg=- acl=- 
 BEGIN
     UPDATE weekly_plan_commitment
@@ -7177,6 +7426,7 @@ public.weekly_review_deal.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_review_deal.occurred_at timestamp with time zone NOT NULL gen=- def=-
 public.weekly_review_deal.outcome text NOT NULL gen=- def=-
 public.weekly_review_deal.to_stage_label text gen=- def=-
+public.weekly_review_deal.weekly_review_deal_amount_minor_at_close_js_safe CHECK (((amount_minor_at_close >= '-9007199254740991'::bigint) AND (amount_minor_at_close <= '9007199254740991'::bigint)))
 public.weekly_review_deal.weekly_review_deal_label_present CHECK ((btrim(deal_label) <> ''::text))
 public.weekly_review_deal.weekly_review_deal_money_whole CHECK (((amount_minor_at_close IS NULL) = (currency_at_close IS NULL)))
 public.weekly_review_deal.weekly_review_deal_outcome_check CHECK ((outcome = ANY (ARRAY['moved'::text, 'won'::text, 'lost'::text])))
@@ -7192,6 +7442,7 @@ public.weekly_review_driver.delta_minor bigint NOT NULL gen=- def=-
 public.weekly_review_driver.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_review_driver.period_kind text NOT NULL gen=- def=-
 public.weekly_review_driver.weekly_review_driver_bar_check CHECK ((bar = ANY (ARRAY['created'::text, 'advanced'::text, 'slipped'::text, 'won'::text, 'lost'::text, 'other'::text])))
+public.weekly_review_driver.weekly_review_driver_delta_minor_js_safe CHECK (((delta_minor >= '-9007199254740991'::bigint) AND (delta_minor <= '9007199254740991'::bigint)))
 public.weekly_review_driver.weekly_review_driver_label_present CHECK ((btrim(deal_label) <> ''::text))
 public.weekly_review_driver.weekly_review_driver_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
 public.weekly_review_driver.weekly_review_driver_pkey PRIMARY KEY (id)
@@ -7232,6 +7483,7 @@ public.weekly_review_movement.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_review_movement.period_kind text NOT NULL gen=- def=-
 public.weekly_review_movement.weekly_review_id uuid NOT NULL gen=- def=-
 public.weekly_review_movement.weekly_review_movement_bar_check CHECK ((bar = ANY (ARRAY['created'::text, 'advanced'::text, 'slipped'::text, 'won'::text, 'lost'::text, 'other'::text])))
+public.weekly_review_movement.weekly_review_movement_delta_minor_js_safe CHECK (((delta_minor >= '-9007199254740991'::bigint) AND (delta_minor <= '9007199254740991'::bigint)))
 public.weekly_review_movement.weekly_review_movement_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
 public.weekly_review_movement.weekly_review_movement_pkey PRIMARY KEY (id)
 public.weekly_review_movement.weekly_review_movement_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
@@ -7250,14 +7502,20 @@ public.weekly_review_outlook.period_end date NOT NULL gen=- def=-
 public.weekly_review_outlook.period_kind text NOT NULL gen=- def=-
 public.weekly_review_outlook.period_start date NOT NULL gen=- def=-
 public.weekly_review_outlook.weekly_review_id uuid NOT NULL gen=- def=-
+public.weekly_review_outlook.weekly_review_outlook_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
+public.weekly_review_outlook.weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))
+public.weekly_review_outlook.weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_currency_present CHECK ((btrim(base_currency) <> ''::text))
 public.weekly_review_outlook.weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.weekly_review_outlook.weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))
+public.weekly_review_outlook.weekly_review_outlook_opening_landing_minor_js_safe CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_opening_whole CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))
 public.weekly_review_outlook.weekly_review_outlook_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
 public.weekly_review_outlook.weekly_review_outlook_pkey PRIMARY KEY (id)
 public.weekly_review_outlook.weekly_review_outlook_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
+public.weekly_review_outlook.weekly_review_outlook_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_window_ordered CHECK ((period_end >= period_start))
+public.weekly_review_outlook.weekly_review_outlook_won_minor_js_safe CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weighted_minor bigint gen=- def=-
 public.weekly_review_outlook.won_minor bigint gen=- def=-
 public.weekly_review_outlook_pkey CREATE UNIQUE INDEX weekly_review_outlook_pkey ON public.weekly_review_outlook USING btree (id)

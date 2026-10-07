@@ -11,10 +11,13 @@ import { Ignition } from "./onboarding-ignition";
 afterEach(cleanup);
 
 describe("the ignition's capability lines", () => {
-  it("reach a screen reader as one list of three items inside a polite, atomic live region", () => {
+  // Not a live region: one that mounts already full and never changes is
+  // announced by no screen reader reliably. The reader reaches the lines by
+  // focus, which the screen hosting the ignition hands to the stage title.
+  it("are one plain list of three items", () => {
     render(
       <LocaleProvider initial="en">
-        <Ignition vendor="Google Gemini" onDone={() => {}} />
+        <Ignition vendor="Google Gemini" onDone={async () => {}} />
       </LocaleProvider>,
     );
 
@@ -25,7 +28,6 @@ describe("the ignition's capability lines", () => {
       `${en["firstRun.ignite.canNow"]}${en["firstRun.ignite.draft"]}`,
       `${en["firstRun.ignite.cannot"]}${en["firstRun.ignite.act"]}`,
     ]);
-    expect(list.getAttribute("aria-live")).toBe("polite");
-    expect(list.getAttribute("aria-atomic")).toBe("true");
+    expect(list.getAttribute("aria-live")).toBeNull();
   });
 });

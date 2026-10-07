@@ -337,10 +337,41 @@ func TestABudgetDeferralPutsTheReadOffRatherThanFailingIt(t *testing.T) {
 	if got.State != crmcontracts.CompanyScanStateQueued || got.ResumesAt == nil || !got.ResumesAt.Equal(resumes) {
 		t.Errorf("state %q resumes %v; want queued again until %v", got.State, got.ResumesAt, resumes)
 	}
+	if got.DegradeReason == nil || *got.DegradeReason != "budget_deferred" {
+		t.Errorf("degrade_reason %v, want budget_deferred", got.DegradeReason)
+	}
 	// A read put off is still one read in flight: opening the page again
 	// queues nothing more.
 	if again, _ := svc.Ensure(rep, company, true); again.State != crmcontracts.CompanyScanStateQueued || len(queued) != 1 {
 		t.Errorf("a deferred read was queued again: %q, %d", again.State, len(queued))
+	}
+}
+
+// A provider outage is not the budget: the read waits just the same, but its
+// reason must not say the budget put it off.
+func TestAProviderOutageNamesItselfAsTheReasonTheReadWaits(t *testing.T) {
+	e := integration.Setup(t)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
+	seedInboundAsk(t, e, company.UUID, "workspace")
+	resumes := time.Now().Add(45 * time.Minute).UTC().Truncate(time.Second)
+	lane := &failingLane{err: &ai.ProviderDownError{Provider: "gemini", Health: model.HealthOutOfCredit, RetryAfter: resumes}}
+	var queued []companyscan.Queued
+	svc := scanClocked(e, lane, &queued, time.Now)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	if _, err := svc.Ensure(rep, company, false); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+	err := svc.Run(principal.WithCorrelationID(rep, queued[0].ScanID), queued[0].ScanID, company)
+	if !errors.Is(err, ai.ErrProviderDown) {
+		t.Fatalf("run: %v, want the provider deferral for the carrier to snooze on", err)
+	}
+	got, err := svc.Get(rep, company)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.DegradeReason == nil || *got.DegradeReason != "provider_deferred" {
+		t.Errorf("degrade_reason %v, want provider_deferred", got.DegradeReason)
 	}
 }
 

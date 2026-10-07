@@ -31,14 +31,15 @@ import (
 )
 
 // HandleBatch folds every envelope of one bus read in one transaction: the
-// activities as ONE target set through RecomputeEdgesForActivities, then each
-// contact event in arrival order.
+// activities and the contact events are gathered into ONE target set, then
+// applied in a single pass, contact table before interaction table (edgeTargets).
 //
-// Activities go first so that a merge in the same read drops the source's
-// edges after anything that could have refolded them, which is the order the
-// per-event path converges to as well. A contact event repeated within the
-// read is applied once: the second application would recompute the same rows
-// from the same base tables.
+// Gathering first is what keeps the table order: folding the activities and
+// then each contact event would take interaction locks and then ask for
+// contact ones again. A merge's drop still lands after every fold in the read,
+// which is the order the per-event path converges to as well. A contact event
+// repeated within the read is applied once: the second application would
+// recompute the same rows from the same base tables.
 //
 // One transaction, so a failure leaves nothing half-applied and the subscriber
 // hands every entry to HandleEvent instead — an event the batch cannot fold
@@ -79,13 +80,17 @@ func (g *GraphEdgeGen) HandleBatch(ctx context.Context, envs []events.Envelope) 
 		return err
 	}
 	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := RecomputeEdgesForActivities(ctx, tx, activityIDs); err != nil {
+		var targets edgeTargets
+		if err := targets.addActivities(ctx, tx, activityIDs); err != nil {
 			return fmt.Errorf("graph-edge: a batch of %d activities: %w", len(activityIDs), err)
 		}
 		for _, env := range contactEnvs {
-			if err := refoldContact(ctx, tx, env, env.Entity.ID); err != nil {
+			if err := targets.addContactEvent(ctx, tx, env, env.Entity.ID); err != nil {
 				return fmt.Errorf("graph-edge: %s: %w", env.Type, err)
 			}
+		}
+		if err := targets.apply(ctx, tx); err != nil {
+			return fmt.Errorf("graph-edge: folding a batch of %d events: %w", len(envs), err)
 		}
 		return nil
 	})

@@ -34,10 +34,6 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Name == "" {
-		writeStoreErr(w, r, &RequiredFieldError{Field: "name"})
-		return
-	}
 	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
 	in := CreateProductInput{
 		Name:           req.Name,
@@ -78,6 +74,10 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	}
 	var req crmcontracts.UpdateProductRequest
 	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := httperr.RefuseNull(r, "name"); err != nil {
+		writeStoreErr(w, r, err)
 		return
 	}
 	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)

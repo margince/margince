@@ -5,7 +5,7 @@
 
 package gates
 
-// principal.SendingHuman has ONE reader, and it answers one question.
+// principal.SendingHuman has one reader, and it answers one question.
 //
 // The value names the contact an outbound message goes out AS when that differs
 // from the acting principal — an automation composes under the system actor

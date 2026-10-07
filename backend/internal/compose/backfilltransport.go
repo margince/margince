@@ -325,7 +325,14 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	// is kept out of the closure's return path so the failure keeps its own
 	// status and copy instead of the generic connector-fault mapping.
 	var enqueueErr error
-	run, err := h.registry.StartBackfill(r.Context(), string(provider), userID, months, estimate,
+	// Continue a run that stopped on an error unless the caller asked to start
+	// over: re-reading a mailbox from the newest message repeats hours of
+	// provider calls for messages already captured.
+	start := h.registry.StartBackfill
+	if req.StartOver != nil && *req.StartOver {
+		start = h.registry.StartBackfillOver
+	}
+	run, err := start(r.Context(), string(provider), userID, months, estimate,
 		func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
 			enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
 				Workspace: ws, BackfillID: backfillID.String(),
@@ -426,13 +433,16 @@ func backfillStatusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
+		Failed           *int `json:"failed,omitempty"`
 		MessagesScanned  *int `json:"messages_scanned,omitempty"`
 		Skipped          *int `json:"skipped,omitempty"`
 	}{
-		MessagesScanned: &run.Scanned, Captured: &run.Captured, Skipped: &run.Skipped,
+		MessagesScanned: &run.Scanned, Captured: &run.Captured, Skipped: &run.Skipped, Failed: &run.Failed,
 		ContactsCreated: &run.Contacts, CompaniesCreated: &run.Companies,
 	}
 	st.LastErrorClass = run.ErrorClass
+	resumable := run.Resumable
+	st.Resumable = &resumable
 	return st
 }
 

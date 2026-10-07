@@ -96,7 +96,8 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 	}
 
 	// A transactional purpose has nothing to unsubscribe from, so the same
-	// configured seam adds no header and leaves the body as written.
+	// configured seam adds no header and no footer: the body is the one written
+	// plus the sender's sign-off.
 	if _, err := adapter.SendEmail(ctx, anchorID, agents.SendEmailArgs{
 		To: []string{"reader@buyer.test"}, Subject: "Your invoice", Body: "Attached.",
 		ConsentPurpose: "transactional",
@@ -106,7 +107,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 	if len(stager.staged) != 2 {
 		t.Fatalf("staged %d deliveries, want 2", len(stager.staged))
 	}
-	if transactional := stager.staged[1]; transactional.ListUnsubscribe != "" || transactional.Body != "Attached." {
+	if transactional := stager.staged[1]; transactional.ListUnsubscribe != "" || transactional.Body != "Attached.\n\nBest regards,\nRep" {
 		t.Fatalf("transactional send carried List-Unsubscribe %q / body %q, want neither",
 			transactional.ListUnsubscribe, transactional.Body)
 	}

@@ -3,13 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../design-system/panel";
-import {
-  ModelChain,
-  ModelRef,
-  PanelTitle,
-  TermChip,
-  TermLegend,
-} from "./ai-terms";
+import { ModelRef, PanelTitle, TermChip, TermLegend } from "./ai-terms";
 import { StoryProviders } from "./story-utils";
 
 // The three words of the AI settings area, each with one icon wherever it
@@ -28,13 +22,6 @@ function Terms() {
             <TermChip term="task">17 tasks</TermChip>
           </p>
           <ModelRef provider="gemini" model="gemini-3.5-flash" />
-          <ModelChain
-            steps={[
-              { provider: "jev_compatible", model: "typesafe/jev-1.13" },
-              { provider: "openai_compatible", model: "openai/gpt-oss-120b" },
-            ]}
-            connector="then"
-          />
         </PanelBody>
       </Panel>
     </StoryProviders>

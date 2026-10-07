@@ -68,6 +68,7 @@ func WithContactDraft(brain completer) Option {
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithEmailSummaries(emailRows(pool)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
+		s.firstDrafts.contact = svc
 		s.contactDraftHandlers = contactdraft.NewHandlers(svc)
 	}
 }
@@ -95,6 +96,7 @@ func WithLeadDraft(brain completer) Option {
 		).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
+		s.firstDrafts.lead = svc
 		s.leadDraftHandlers = leaddraft.NewHandlers(svc)
 	}
 }

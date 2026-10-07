@@ -49,24 +49,28 @@ type MailDraftContent struct {
 
 // MailDraft is one saved draft.
 type MailDraft struct {
-	ID        ids.UUID
-	Anchor    MailDraftAnchor
-	Content   MailDraftContent
-	Version   int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID      ids.UUID
+	Anchor  MailDraftAnchor
+	Content MailDraftContent
+	Version int64
+	// AgentDrafted is the AI marking: an agent wrote these words for the
+	// author, and no save from the author's composer has replaced them yet.
+	AgentDrafted bool
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 const (
 	entityMailDraft = "mail_draft"
 	fieldAnchorType = "anchor_type"
+	fieldVersion    = "version"
 	// maxDraftAddresses bounds each address line. A composer holds a handful;
 	// the ceiling stops a caller parking a mailing list in a row nothing reads.
 	maxDraftAddresses = 100
 )
 
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
-	subject, body, html_body, version, created_at, updated_at`
+	subject, body, html_body, version, agent_drafted, created_at, updated_at`
 
 // InvalidMailDraftError refuses a draft the store will not keep.
 type InvalidMailDraftError struct {
@@ -179,7 +183,7 @@ func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Ma
 		UPDATE mail_draft
 		   SET to_addresses = $%d, cc_addresses = $%d, bcc_addresses = $%d,
 		       subject = $%d, body = $%d, html_body = $%d,
-		       version = version + 1, updated_at = now()
+		       version = version + 1, agent_drafted = false, updated_at = now()
 		 WHERE author_id = $%d AND anchor_type = $%d AND anchor_id = $%d AND version = $%d
 		RETURNING `+mailDraftColumns,
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
@@ -194,7 +198,7 @@ func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Ma
 	if err != nil {
 		return MailDraft{}, err
 	}
-	before := map[string]any{"version": expected}
+	before := map[string]any{fieldVersion: expected}
 	if _, err := storekit.Audit(ctx, tx, "update", entityMailDraft, saved.ID, before, draftImage(saved)); err != nil {
 		return MailDraft{}, err
 	}
@@ -388,7 +392,7 @@ func canonicalAddresses(line []string) []string {
 //
 //craft:ignore naked-any the audit seam serializes this image to jsonb
 func draftImage(d MailDraft) map[string]any {
-	return map[string]any{fieldAnchorType: string(d.Anchor.Type), "anchor_id": d.Anchor.ID, "version": d.Version}
+	return map[string]any{fieldAnchorType: string(d.Anchor.Type), "anchor_id": d.Anchor.ID, fieldVersion: d.Version}
 }
 
 // addressLine is never nil: the columns are NOT NULL and a nil slice is NULL.
@@ -414,7 +418,7 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 	)
 	err := row.Scan(&out.ID, &anchorType, &out.Anchor.ID, &out.Content.To, &out.Content.Cc,
 		&out.Content.Bcc, &out.Content.Subject, &out.Content.Body, &html, &out.Version,
-		&out.CreatedAt, &out.UpdatedAt)
+		&out.AgentDrafted, &out.CreatedAt, &out.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MailDraft{}, apperrors.ErrNotFound
 	}

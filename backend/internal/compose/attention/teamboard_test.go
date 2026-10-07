@@ -595,7 +595,7 @@ func TestAWorklistOverACappedRosterSaysTheScopeWasCut(t *testing.T) {
 	svc.teammates = cutRoster{{UserID: theColleague}}
 	page := svc.worklistFrom(
 		boardReaderAt(principal.RowScopeTeam), crmcontracts.Attention{AsOf: boardInstant},
-		scopeTeam, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		scopeTeam, "", 25, waitingRead{}, worklistCursor{}, nil)
 	if page.ScopeTruncated == nil || !*page.ScopeTruncated {
 		t.Error("a team page answered over a capped roster does not say its scope was cut")
 	}
@@ -610,7 +610,7 @@ func TestAWorklistOverAWholeRosterClaimsNoTruncation(t *testing.T) {
 	svc.teammates = roster{{UserID: theColleague}}
 	page := svc.worklistFrom(
 		boardReaderAt(principal.RowScopeTeam), crmcontracts.Attention{AsOf: boardInstant},
-		scopeTeam, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		scopeTeam, "", 25, waitingRead{}, worklistCursor{}, nil)
 	if page.ScopeTruncated != nil {
 		t.Errorf("a team page over a whole roster claims scope_truncated=%v", *page.ScopeTruncated)
 	}
@@ -625,7 +625,7 @@ func TestAWorklistWhoseRosterDidNotAnswerNamesTheRefusal(t *testing.T) {
 	svc := &Service{now: func() time.Time { return boardInstant }}
 	page := svc.worklistFrom(
 		boardReaderAt(principal.RowScopeTeam), crmcontracts.Attention{AsOf: boardInstant},
-		scopeTeam, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		scopeTeam, "", 25, waitingRead{}, worklistCursor{}, nil)
 	var named bool
 	for _, missing := range page.SourcesUnavailable {
 		if missing.Source == teamRosterSource && missing.Reason == crmcontracts.WorklistSourceUnavailableReasonFailed {
@@ -647,7 +647,7 @@ func TestTheRosterRefusalNamesNoCategory(t *testing.T) {
 	svc := &Service{now: func() time.Time { return boardInstant }}
 	page := svc.worklistFrom(
 		boardReaderAt(principal.RowScopeTeam), crmcontracts.Attention{AsOf: boardInstant},
-		scopeTeam, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		scopeTeam, "", 25, waitingRead{}, worklistCursor{}, nil)
 	for _, missing := range page.SourcesUnavailable {
 		if missing.Source != teamRosterSource {
 			continue

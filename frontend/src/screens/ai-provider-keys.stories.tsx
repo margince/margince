@@ -28,7 +28,9 @@ function story(
     provider: string;
     configured: boolean;
     env_var: string;
+    usable: boolean;
     optional: boolean;
+    credential_kind: "api_key" | "service_account";
   }[],
   allow: GrantSpec = MANAGER,
 ) {
@@ -51,20 +53,36 @@ const gemini = {
   provider: "gemini",
   configured: true,
   env_var: "GEMINI_API_KEY",
+  usable: true,
   optional: false,
+  credential_kind: "api_key" as const,
 };
 const anthropic = {
   provider: "anthropic",
   configured: false,
   env_var: "ANTHROPIC_API_KEY",
+  usable: false,
   optional: false,
+  credential_kind: "api_key" as const,
+};
+// Keyed by a file rather than a paste: its row reads "Service account key
+// configured" and its editor is the key-file box.
+const vertex = {
+  provider: "gemini_vertex",
+  configured: true,
+  env_var: "GEMINI_VERTEX_SA_JSON",
+  usable: true,
+  optional: false,
+  credential_kind: "service_account" as const,
 };
 // A self-hosted decision server needs no key, so this one is sent when held.
 const jevCompatible = {
   provider: "jev_compatible",
   configured: false,
   env_var: "JEV_COMPATIBLE_API_KEY",
+  usable: true,
   optional: true,
+  credential_kind: "api_key" as const,
 };
 
 const meta: Meta<typeof AiProviderKeysCard> = {
@@ -82,7 +100,7 @@ export const Mixed: Story = { render: story([gemini, anthropic]) };
 // where the AI lanes are absent until somebody pastes a key. It must read as
 // "nothing set yet" and not as an error.
 export const NothingConfigured: Story = {
-  render: story([anthropic, { ...gemini, configured: false }]),
+  render: story([anthropic, { ...gemini, configured: false, usable: false }]),
 };
 
 // An optional key not held reads as optional, not as a gap: the adapter calls
@@ -115,6 +133,43 @@ export const Withheld: Story = {
   render: story([gemini, anthropic], NO_GRANT),
 };
 
+// A service-account vendor beside two API-key ones, opened at Replace: the
+// key-file box and picker, empty like every other.
+export const ServiceAccount: Story = {
+  render: story([gemini, vertex, anthropic]),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      within(
+        await body.findByTestId("ai-provider-row-gemini_vertex"),
+      ).getByRole("button", {
+        name: /^Edit/,
+      }),
+    );
+    await userEvent.click(
+      await body.findByRole("button", { name: /^replace$/i }),
+    );
+  },
+};
+
+export const ServiceAccountDark: Story = {
+  globals: { theme: "dark" },
+  render: story([gemini, vertex, anthropic]),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      within(
+        await body.findByTestId("ai-provider-row-gemini_vertex"),
+      ).getByRole("button", {
+        name: /^Edit/,
+      }),
+    );
+    await userEvent.click(
+      await body.findByRole("button", { name: /^replace$/i }),
+    );
+  },
+};
+
 // Dark. The configured/not-configured distinction is carried by a Badge tone,
 // and a tone that flattens against the dark panel would leave a reader unable
 // to tell a keyed provider from an unkeyed one — which on this card is the
@@ -131,7 +186,12 @@ export const Tested: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "Manage gemini" }),
+      within(await body.findByTestId("ai-provider-row-gemini")).getByRole(
+        "button",
+        {
+          name: /^Edit/,
+        },
+      ),
     );
     await userEvent.click(await body.findByRole("button", { name: /^test$/i }));
   },

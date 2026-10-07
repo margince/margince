@@ -27,6 +27,7 @@ import (
 // alongside would be a row of anonymous booleans at each call site.
 func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeResponse {
 	adminPasswordLink := h.canIssuePasswordLink(ctx, id)
+	reportingAvailable := true
 	roles := id.Roles
 	if roles == nil {
 		roles = []string{}
@@ -37,11 +38,12 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 	}
 	return crmcontracts.MeResponse{
 		User: crmcontracts.User{
-			Id:          openapi_types.UUID(id.UserID.UUID),
-			Email:       openapi_types.Email(id.Email),
-			DisplayName: id.DisplayName,
-			Status:      "active",
-			Locale:      contractLocale(id.Locale),
+			Id:           openapi_types.UUID(id.UserID.UUID),
+			Email:        openapi_types.Email(id.Email),
+			DisplayName:  id.DisplayName,
+			GreetingName: id.GreetingName,
+			Status:       "active",
+			Locale:       contractLocale(id.Locale),
 			// The round trip was built at both ends and severed here. Signup
 			// captures the browser's zone, ParseTimezone validates it, and the
 			// row stores it — and this response then dropped it, so nothing
@@ -66,7 +68,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			CompanyContext:   h.companyContextAvailable,
 			EmbeddingReindex: h.embedReindexAvailable,
 			Lists:            &h.listsAvailable,
-			Reporting:        &h.reportingAvailable,
+			Reporting:        &reportingAvailable,
 		},
 	}
 }

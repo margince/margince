@@ -1,8 +1,8 @@
 # The compliance package, in English
 
 The five documents in `../de/` are the ones to execute: they cite German
-statutes, and a translation of a legal document is not the document. These
-English versions are for reading and for internal circulation — so a founder,
+statutes, and only the original of a legal document binds. These
+English versions are for reading and for internal circulation, so a founder,
 an investor or a non-German-speaking colleague can see what the customer is
 being asked to sign.
 

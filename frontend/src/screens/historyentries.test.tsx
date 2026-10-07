@@ -118,6 +118,98 @@ describe("putting one change back", () => {
     expect(request.headers.get("If-Match")).toBe("7");
   });
 
+  // A restore that answers 200 and says nothing of what stayed archived reads
+  // as a whole record. The answer names it, and the panel keeps saying so
+  // after the refetch regroups the pressed entry into a reversal pair.
+  it("says what an archive's restore could not bring back", async () => {
+    const archived = {
+      ...restorable,
+      action: "archive",
+      before: null,
+      after: { archived_at: "2026-07-14T10:00:00Z" },
+    };
+    const reversal = {
+      ...repriced,
+      id: "h2",
+      action: "restore",
+      undid_audit_log_id: "h1",
+      occurred_at: "2026-07-14T11:00:00Z",
+    };
+    let restored = false;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("/restore")) {
+        restored = true;
+        return jsonResponse({
+          ...reversal,
+          left_behind: [{ kind: "relationship" }, { kind: "tag" }],
+        });
+      }
+      return jsonResponse({
+        data: restored ? [reversal, archived] : [archived],
+        page: { next_cursor: null },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(
+      <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^undo$/i,
+      }),
+    );
+
+    expect(await screen.findByText(/2 items could not/i)).toBeTruthy();
+    await waitFor(() => expect(restored).toBe(true));
+    expect(screen.getByText(/2 items could not/i)).toBeTruthy();
+  });
+
+  // The count belongs to the record it was produced for: a panel that stays
+  // mounted while the reader moves to another record must not carry it over.
+  it("does not show one record's left-behind notice on the next record", async () => {
+    const archived = {
+      ...restorable,
+      action: "archive",
+      before: null,
+      after: { archived_at: "2026-07-14T10:00:00Z" },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/restore")) {
+          return jsonResponse({ ...repriced, left_behind: [{ kind: "tag" }] });
+        }
+        return jsonResponse({ data: [archived], page: { next_cursor: null } });
+      }),
+    );
+    const user = userEvent.setup();
+    const view = render(
+      <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
+    );
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^undo$/i,
+      }),
+    );
+    expect(await screen.findByText(/1 item could not/i)).toBeTruthy();
+
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <RecordHistory kind="deal" id="d2" currency="EUR" restore={RESTORE} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("button", { name: /^undo$/i });
+    expect(screen.queryByText(/could not come back/i)).toBeNull();
+  });
+
   // A greyed control that says nothing is the shape this feature exists to
   // remove: the reason is the information.
   it("states the reason a refused change cannot be put back", async () => {
@@ -226,6 +318,36 @@ describe("putting one change back", () => {
     expect(within(dialog).getByText("Name")).toBeTruthy();
     expect(restoreCalls(fetchMock)).toHaveLength(0);
 
+    await user.click(within(dialog).getByRole("button", { name: /^undo$/i }));
+    await waitFor(() => expect(restoreCalls(fetchMock)).toHaveLength(1));
+  });
+
+  // Undoing a create archives the whole record, which no field list describes:
+  // the dialog says what happens before the press lands.
+  it("says an undo of a create archives the record, before it lands", async () => {
+    const created = {
+      ...restorable,
+      action: "create",
+      summary: "The mailbox created the record",
+      before: null,
+      after: null,
+    };
+    const fetchMock = servingOnePage([created]);
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(
+      <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(
+        "This archives the record. You can bring it back from its history.",
+      ),
+    ).toBeTruthy();
+    expect(restoreCalls(fetchMock)).toHaveLength(0);
     await user.click(within(dialog).getByRole("button", { name: /^undo$/i }));
     await waitFor(() => expect(restoreCalls(fetchMock)).toHaveLength(1));
   });

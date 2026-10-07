@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -57,7 +59,7 @@ func seedSheetRate(ctx context.Context, t *testing.T, store *ai.RateStore, provi
 	t.Helper()
 	if _, err := store.SetModelRate(ctx, ai.SetModelRateInput{
 		Provider: provider, ModelID: modelID, InputUsd: input, OutputUsd: "1",
-		CacheReadUsd: "0", CacheWriteUsd: "0", Lane: lane, EffectiveDate: day,
+		CacheReadUsd: "0", CacheWriteUsd: "0", Lane: lane, EffectiveDate: day, Source: ai.RateSourceSeed,
 	}); err != nil {
 		t.Fatalf("seeding %s/%s: %v", provider, modelID, err)
 	}
@@ -83,7 +85,7 @@ func rateAudits(e *Env, t *testing.T) int {
 	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='ai_model_rate'`)
 }
 
-func TestRefreshFromCatalogueWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) {
+func TestSyncPricesWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
@@ -95,14 +97,14 @@ func TestRefreshFromCatalogueWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) 
 	half := "0.5"
 	catalogue := catalogueOf(listed("a/bound", "5", "25", &half), listed("b/sheet-only", "1", "2", nil), listed("z/not-ours", "1", "1", nil))
 
-	report, err := store.RefreshFromCatalogue(ctx, cfg, catalogue)
+	report, err := store.SyncPrices(ctx, ai.PriceSources{Routing: cfg, Broker: catalogue}, discardRun)
 	if err != nil {
 		t.Fatalf("first refresh: %v", err)
 	}
 
 	line := lineOf(t, report, "openai_compatible")
-	if line.Outcome != ai.RefreshUpdated || line.Updated != 2 || len(line.Models) != 2 {
-		t.Fatalf("first run line = %+v, want two models updated", line)
+	if line.Outcome != ai.RefreshUpdated || line.Updated != 1 || line.Added != 1 || len(line.Models) != 2 {
+		t.Fatalf("first run line = %+v, want a/bound added and b/sheet-only re-priced", line)
 	}
 	bound := rateAt(ctx, t, store, "openai_compatible", "a/bound")
 	if bound.InputUsd != "5" || bound.OutputUsd != "25" || bound.CacheReadUsd != "0.5" || bound.CacheWriteUsd != "0" || bound.Lane != ai.LaneChat {
@@ -118,12 +120,12 @@ func TestRefreshFromCatalogueWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) 
 	if other := rateAt(ctx, t, store, "gemini", "gemini-x"); other.InputUsd != "1" {
 		t.Errorf("another provider's price moved: %+v", other)
 	}
-	if got := lineOf(t, report, "gemini").Outcome; got != ai.RefreshNotAvailable {
-		t.Errorf("gemini = %q, want not_available", got)
+	if got := lineOf(t, report, "gemini").Outcome; got != ai.RefreshNotConfigured {
+		t.Errorf("gemini = %q, want not_configured: the harness holds no gemini key", got)
 	}
 
 	before := rateAudits(e, t)
-	again, err := store.RefreshFromCatalogue(ctx, cfg, catalogue)
+	again, err := store.SyncPrices(ctx, ai.PriceSources{Routing: cfg, Broker: catalogue}, discardRun)
 	if err != nil {
 		t.Fatalf("second refresh: %v", err)
 	}
@@ -138,7 +140,7 @@ func TestRefreshFromCatalogueWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) 
 
 // A price scheduled for tomorrow is somebody's decision, and the refresh writes
 // today's row beside it rather than over it.
-func TestRefreshFromCatalogueLeavesAFutureDatedPriceAlone(t *testing.T) {
+func TestSyncPricesLeavesAFutureDatedPriceAlone(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
@@ -149,7 +151,7 @@ func TestRefreshFromCatalogueLeavesAFutureDatedPriceAlone(t *testing.T) {
 
 	// Equal to the price in force today: nothing to write, though the sheet's
 	// head (tomorrow's row) differs from the catalogue.
-	if _, err := store.RefreshFromCatalogue(ctx, cfg, catalogueOf(listed("a/bound", "5", "1", nil))); err != nil {
+	if _, err := store.SyncPrices(ctx, ai.PriceSources{Routing: cfg, Broker: catalogueOf(listed("a/bound", "5", "1", nil))}, discardRun); err != nil {
 		t.Fatalf("refresh at the price in force: %v", err)
 	}
 	hist, err := store.ModelRateHistory(ctx, "openai_compatible", "a/bound")
@@ -160,7 +162,7 @@ func TestRefreshFromCatalogueLeavesAFutureDatedPriceAlone(t *testing.T) {
 		t.Fatalf("history = %+v, want the two rows the sheet already had", hist)
 	}
 
-	if _, err := store.RefreshFromCatalogue(ctx, cfg, catalogueOf(listed("a/bound", "6", "1", nil))); err != nil {
+	if _, err := store.SyncPrices(ctx, ai.PriceSources{Routing: cfg, Broker: catalogueOf(listed("a/bound", "6", "1", nil))}, discardRun); err != nil {
 		t.Fatalf("refresh at a new price: %v", err)
 	}
 	if got := rateAt(ctx, t, store, "openai_compatible", "a/bound"); got.InputUsd != "6" {
@@ -175,7 +177,7 @@ func TestRefreshFromCatalogueLeavesAFutureDatedPriceAlone(t *testing.T) {
 	}
 }
 
-func TestRefreshFromCatalogueWritesNothingWhenTheListCannotBeRead(t *testing.T) {
+func TestSyncPricesWritesNothingWhenTheListCannotBeRead(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
@@ -183,8 +185,7 @@ func TestRefreshFromCatalogueWritesNothingWhenTheListCannotBeRead(t *testing.T) 
 	seedSheetRate(ctx, t, store, "openai_compatible", "a/bound", "5", ai.LaneChat, today)
 	before := rateAudits(e, t)
 
-	report, err := store.RefreshFromCatalogue(ctx, brokerRouting("a/bound"),
-		ai.AvailableModels{Provider: "openrouter", Unavailable: ai.AvailabilityUnreachable})
+	report, err := store.SyncPrices(ctx, ai.PriceSources{Routing: brokerRouting("a/bound"), Broker: ai.AvailableModels{Provider: "openrouter", Unavailable: ai.AvailabilityUnreachable}}, discardRun)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -199,7 +200,7 @@ func TestRefreshFromCatalogueWritesNothingWhenTheListCannotBeRead(t *testing.T) 
 }
 
 // A decision model the broker prices as variable (-1) stays a manual price.
-func TestRefreshFromCatalogueReportsAModelTheListDoesNotPriceAsNotAvailable(t *testing.T) {
+func TestSyncPricesReportsAModelTheListDoesNotPriceAsNotAvailable(t *testing.T) {
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB()).WithClock(pinnedRateDay)
 	cfg := ai.RoutingConfig{Decisions: &ai.DecisionsConfig{
@@ -207,8 +208,7 @@ func TestRefreshFromCatalogueReportsAModelTheListDoesNotPriceAsNotAvailable(t *t
 		BaseURL: "https://openrouter.ai/api/alpha/decisions",
 	}}
 
-	report, err := store.RefreshFromCatalogue(e.Admin(), cfg,
-		catalogueOf(ai.AvailableModel{Info: model.Info{ID: "typesafe/jev-router"}}))
+	report, err := store.SyncPrices(e.Admin(), ai.PriceSources{Routing: cfg, Broker: catalogueOf(ai.AvailableModel{Info: model.Info{ID: "typesafe/jev-router"}})}, discardRun)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -223,7 +223,7 @@ func TestRefreshFromCatalogueReportsAModelTheListDoesNotPriceAsNotAvailable(t *t
 
 // One transaction: a principal who may insert but not overwrite is refused at
 // the overwrite, and the insert that came before it in the same run rolls back.
-func TestRefreshFromCatalogueIsAllOrNothingAndHonoursTheWriteGrants(t *testing.T) {
+func TestSyncPricesIsAllOrNothingAndHonoursTheWriteGrants(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
@@ -231,8 +231,7 @@ func TestRefreshFromCatalogueIsAllOrNothingAndHonoursTheWriteGrants(t *testing.T
 	creator := e.As(e.Rep1, nil, modelRatePerms(principal.ObjectGrant{Create: true, Read: true}))
 	before := rateAudits(e, t)
 
-	_, err := store.RefreshFromCatalogue(creator, brokerRouting("a/bound"),
-		catalogueOf(listed("a/bound", "5", "25", nil), listed("b/sheet-only", "1", "2", nil)))
+	_, err := store.SyncPrices(creator, ai.PriceSources{Routing: brokerRouting("a/bound"), Broker: catalogueOf(listed("a/bound", "5", "25", nil), listed("b/sheet-only", "1", "2", nil))}, discardRun)
 
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("create-only refresh = %v, want ErrPermissionDenied", err)
@@ -245,12 +244,12 @@ func TestRefreshFromCatalogueIsAllOrNothingAndHonoursTheWriteGrants(t *testing.T
 	}
 }
 
-func TestRefreshFromCatalogueRefusesAPrincipalWithoutTheSheet(t *testing.T) {
+func TestSyncPricesRefusesAPrincipalWithoutTheSheet(t *testing.T) {
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB())
 	reader := e.As(e.Rep1, nil, ReadOnlyPerms)
 
-	_, err := store.RefreshFromCatalogue(reader, brokerRouting("a/bound"), catalogueOf(listed("a/bound", "5", "25", nil)))
+	_, err := store.SyncPrices(reader, ai.PriceSources{Routing: brokerRouting("a/bound"), Broker: catalogueOf(listed("a/bound", "5", "25", nil))}, discardRun)
 
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("read-only refresh = %v, want ErrPermissionDenied", err)
@@ -285,12 +284,11 @@ func TestRefreshAiModelRatesRefusesAnAgentBearerOverHTTP(t *testing.T) {
 
 // A misspelt bound id is neither priced nor "set by hand": the list simply does
 // not name it, and the report must say so and carry the id.
-func TestRefreshFromCatalogueNamesABoundModelTheListDoesNotHave(t *testing.T) {
+func TestSyncPricesNamesABoundModelTheListDoesNotHave(t *testing.T) {
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB()).WithClock(pinnedRateDay)
 
-	report, err := store.RefreshFromCatalogue(e.Admin(), brokerRouting("a/typo", "b/real"),
-		catalogueOf(listed("b/real", "1", "2", nil)))
+	report, err := store.SyncPrices(e.Admin(), ai.PriceSources{Routing: brokerRouting("a/typo", "b/real"), Broker: catalogueOf(listed("b/real", "1", "2", nil))}, discardRun)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -303,7 +301,7 @@ func TestRefreshFromCatalogueNamesABoundModelTheListDoesNotHave(t *testing.T) {
 		t.Errorf("outcome = %q: a run that wrote b/real is updated, with the typo listed beside it", line.Outcome)
 	}
 
-	only, err := store.RefreshFromCatalogue(e.Admin(), brokerRouting("a/typo"), catalogueOf(listed("z/else", "1", "2", nil)))
+	only, err := store.SyncPrices(e.Admin(), ai.PriceSources{Routing: brokerRouting("a/typo"), Broker: catalogueOf(listed("z/else", "1", "2", nil))}, discardRun)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -313,7 +311,7 @@ func TestRefreshFromCatalogueNamesABoundModelTheListDoesNotHave(t *testing.T) {
 }
 
 // Rows on the sheet under a host the refresh does not serve stay as typed.
-func TestRefreshFromCatalogueLeavesASelfHostedSheetRowAlone(t *testing.T) {
+func TestSyncPricesLeavesASelfHostedSheetRowAlone(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
@@ -322,7 +320,7 @@ func TestRefreshFromCatalogueLeavesASelfHostedSheetRowAlone(t *testing.T) {
 		"premium": {Provider: "openai_compatible", Model: "meta/llama-4", BaseURL: "https://llm.internal.test/v1"},
 	}}
 
-	if _, err := store.RefreshFromCatalogue(e.Admin(), selfHosted, catalogueOf(listed("meta/llama-4", "5", "25", nil))); err != nil {
+	if _, err := store.SyncPrices(e.Admin(), ai.PriceSources{Routing: selfHosted, Broker: catalogueOf(listed("meta/llama-4", "5", "25", nil))}, discardRun); err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
 
@@ -330,3 +328,5 @@ func TestRefreshFromCatalogueLeavesASelfHostedSheetRowAlone(t *testing.T) {
 		t.Errorf("a self-hosted model priced 0 by hand became %+v", got)
 	}
 }
+
+func discardRun(context.Context, pgx.Tx, ai.RateRefreshReport) error { return nil }

@@ -301,8 +301,98 @@ describe("deciding a commission entry", () => {
     });
 
     // The dialog is up and nothing has been sent.
-    expect(screen.getByTestId("commission-approve-confirm")).toBeTruthy();
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: en["commission.decide.approve"],
+      }),
+    ).toBeTruthy();
     expect(urls.length).toBe(before);
+  });
+
+  // The decide POST answers with `refusal`; each ledger read answers the entry
+  // one version on, as if another decision landed between reads.
+  function stubRefusedDecision(refusal: { status: number; body: object }) {
+    const ledgerReads: string[] = [];
+    const decidedVersions: (string | null)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        if (path.endsWith("/decide")) {
+          decidedVersions.push(request.headers.get("If-Match"));
+          return new Response(JSON.stringify(refusal.body), {
+            status: refusal.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        if (path.endsWith("/commissions")) ledgerReads.push(path);
+        const body = path.endsWith("/me")
+          ? me(true)
+          : { data: [{ ...accrued, version: ledgerReads.length }], page: {} };
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    return { ledgerReads, decidedVersions };
+  }
+
+  async function confirmApprove() {
+    render(<PartnerCommissions companyId="o-1" />);
+    await screen.findByTestId("commission-approve");
+    await act(async () => {
+      screen.getByTestId("commission-approve").click();
+    });
+    const dialog = screen.getByRole("dialog");
+    await act(async () => {
+      within(dialog)
+        .getByRole("button", { name: en["commission.decide.approve"] })
+        .click();
+    });
+    return dialog;
+  }
+
+  it("says the entry moved under you and refetches it when another decision won", async () => {
+    const { ledgerReads, decidedVersions } = stubRefusedDecision({
+      status: 409,
+      body: { code: "version_skew", title: "version skew", status: 409 },
+    });
+
+    const dialog = await confirmApprove();
+
+    expect(
+      await within(dialog).findByText(en["edit.versionSkew"]),
+    ).toBeTruthy();
+    await vi.waitFor(() => expect(ledgerReads.length).toBe(2));
+    await act(async () => {
+      within(screen.getByRole("dialog"))
+        .getByRole("button", { name: en["commission.decide.approve"] })
+        .click();
+    });
+
+    // Pressing again sends the refetched version, not the one that was refused.
+    await vi.waitFor(() => expect(decidedVersions).toEqual(["1", "2"]));
+  });
+
+  it("keeps the dialog open with the server's reason when the decision is refused", async () => {
+    const { ledgerReads } = stubRefusedDecision({
+      status: 422,
+      body: {
+        code: "validation_failed",
+        title: "Unprocessable",
+        detail: "This entry is already settled.",
+        status: 422,
+      },
+    });
+
+    const dialog = await confirmApprove();
+
+    expect(
+      await within(dialog).findByText("This entry is already settled."),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["edit.versionSkew"])).toBeNull();
+    expect(ledgerReads.length).toBe(1);
   });
 });
 

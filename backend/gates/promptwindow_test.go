@@ -5,9 +5,9 @@
 
 package gates
 
-// runner.MinimumPromptWindow is the SUPPORTED FLOOR — the smallest prompt
-// window any provider this build binds will carry — and this holds it equal to
-// the adapter that owns the figure.
+// runner.MinimumPromptWindow is the supported floor (the smallest prompt window
+// any provider this build binds will carry), and this holds it equal to the
+// adapter that owns the figure.
 //
 // TWO NUMBERS USED TO BE ONE, and separating them is what this file now checks.
 // What a RUN may spend on its transcript follows the configured provider

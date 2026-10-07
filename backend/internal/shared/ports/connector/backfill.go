@@ -64,6 +64,24 @@ type BackfillPageResult struct {
 	Scanned   int
 	Captured  int
 	Skipped   int
+	// Failed counts the messages the page could not capture and walked past.
+	// A failure that belongs to one message (the capture itself refused it)
+	// is not a reason to stop the import; a failure of the connection is, and
+	// the connector returns that as the page's error instead.
+	Failed int
+}
+
+// PreStoreJudge is the OPTIONAL Sink seam that answers, from a message's
+// headers alone, whether the Sink would keep the message out of the CRM before
+// storing anything — the internal-only and exclusion gates. A connector asks it
+// before downloading a full message, and downloads only what may be kept.
+//
+// It runs the SAME gates Upsert runs first, with the same side effects (the
+// breadcrumb and trace a drop leaves), so a message it drops is one Upsert
+// would have dropped. A record built from headers must carry the same
+// NaturalKey, Addresses and Containers the full message would.
+type PreStoreJudge interface {
+	DropBeforeStore(ctx context.Context, rec NormalizedRecord) (bool, error)
 }
 
 // BackfillProgress carries a page's tally WHILE the page runs, so the engine

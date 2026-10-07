@@ -133,7 +133,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 // With two families registered the count could not change for a tool in a third,
 // which is a census reporting PASS over two thirds of its subject.
 func registerEveryStageableFamily(r *Registry, p datasource.SystemOfRecordProvider, comms Comms) {
-	RegisterCoreTools(r, p, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil)
+	RegisterCoreTools(r, p, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil, nil)
 	RegisterCommsTools(r, comms, p)
 	RegisterLifecycleTools(r, p, nil, nil, nil, nil)
 	RegisterTagTools(r, stagingTags{})
@@ -169,6 +169,10 @@ func TestEveryStageableToolRefusesATargetHeldElsewhere(t *testing.T) {
 				t.Errorf("%s staged target id %s; a create has no row yet, and naming one makes the "+
 					"approvals surface probe and pin a record that does not exist", name, info.TargetID)
 			}
+			continue
+		}
+		if refusesToStage[name] {
+			assertRefusesToStage(t, name, stageable, args[name])
 			continue
 		}
 		if reason, own := stagesOverOurOwnTables[name]; own {
@@ -277,6 +281,10 @@ func TestEveryStageableToolSaysWhatItWouldDo(t *testing.T) {
 			continue
 		}
 		walked++
+		if refusesToStage[name] {
+			assertRefusesToStage(t, name, stageable, args[name])
+			continue
+		}
 		in, known := args[name]
 		if !known {
 			in, known = stagesACreate[name]
@@ -353,9 +361,23 @@ var stagesOverOurOwnTables = map[string]string{
 		"seam rather than the system-of-record provider",
 	"commit_import": "an import RUN, a row in this installation's own tables that no external " +
 		"system of record ever holds",
-	"relink_thread": "a THREAD KEY, which names captured mail this installation holds and never a " +
-		"row in another system of record — commandrelinkbatch refuses a thread key destination " +
-		"that needs a human for the same reason",
+}
+
+// refusesToStage names the stageable tools that describe no card at all: what a
+// human would release must be exactly what the retry moves, and a thread key is
+// re-read at the retry. Walked for the refusal, which has to say where to go
+// instead, rather than dropped from the count.
+var refusesToStage = map[string]bool{"relink_thread": true}
+
+// assertRefusesToStage holds a never-staging tool to its one obligation: a
+// refusal that names the tool to use instead.
+func assertRefusesToStage(t *testing.T, name string, stageable stageableTool, in string) {
+	t.Helper()
+	_, err := stageable.StageInfo(context.Background(), json.RawMessage(in))
+	var bad *BadArgsError
+	if !errors.As(err, &bad) || !strings.Contains(bad.Guidance, "relink_activities") {
+		t.Errorf("%s.StageInfo err = %v, want a refusal that sends the caller to relink_activities", name, err)
+	}
 }
 
 // stagingTags answers the two reads mergeTags makes before it describes a

@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -206,11 +207,84 @@ func (s *Store) validateProposal(ctx context.Context, host ids.UserID, in crmcon
 	if s.calendar == nil {
 		return time.Time{}, apperrors.ErrPermissionDenied
 	}
-	if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
+	if err := s.checkCalendarConnected(ctx, host, string(profile.Provider)); err != nil {
 		return time.Time{}, err
 	}
 	if err := s.calendar.CheckRecipient(ctx, host, ids.UUID(in.ContactId), string(in.AttendeeEmail)); err != nil {
 		return time.Time{}, err
 	}
 	return s.validateProposalOptions(ctx, host, in)
+}
+
+// maxOpenProposals bounds the list a contact page shows; a host with more open
+// links to one contact than this has stopped using them as proposals.
+const maxOpenProposals = 20
+
+type openProposal struct {
+	view    crmcontracts.MeetingProposal
+	linkRef string
+}
+
+// OpenProposals lists the acting host's links to one contact that a guest can
+// still book through, newest first. Withdrawing one archives its activity. The
+// list is read off the contact, so it needs the contact grant as well.
+func (s *Store) OpenProposals(ctx context.Context, contact ids.UUID) ([]crmcontracts.MeetingProposal, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	host, err := schedulingHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var open []openProposal
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisible(ctx, tx, linkEntityContact, contact); err != nil {
+			return err
+		}
+		var err error
+		open, err = openProposalRows(ctx, tx, host, contact, s.now())
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]crmcontracts.MeetingProposal, 0, len(open))
+	for _, proposal := range open {
+		if proposal.view.Url, err = s.openMeetingLink(ctx, proposal.linkRef); err != nil {
+			return nil, err
+		}
+		out = append(out, proposal.view)
+	}
+	return out, nil
+}
+
+func openProposalRows(ctx context.Context, tx pgx.Tx, host ids.UserID, contact ids.UUID, now time.Time) ([]openProposal, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	hostPos, contactPos, nowPos, limitPos := arg(host), arg(contact), arg(now), arg(maxOpenProposals)
+	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	// A proposal stored without options reads as an empty list, never null.
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT p.activity_id, p.request->>'subject', (p.request->>'duration_minutes')::int,
+		coalesce(nullif(p.request->'options', 'null'::jsonb), '[]'::jsonb), p.created_at, p.expires_at, p.link_ref
+		FROM meeting_proposal p JOIN activity a ON a.id = p.activity_id
+		WHERE p.host_user_id = $%d AND (p.request->>'contact_id')::uuid = $%d
+		  AND p.used_at IS NULL AND p.expires_at > $%d AND a.archived_at IS NULL AND %s
+		ORDER BY p.created_at DESC, p.activity_id DESC LIMIT $%d`, hostPos, contactPos, nowPos, scope, limitPos), args...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (openProposal, error) {
+		var proposal openProposal
+		var id ids.UUID
+		err := row.Scan(&id, &proposal.view.Subject, &proposal.view.DurationMinutes, &proposal.view.Options,
+			&proposal.view.CreatedAt, &proposal.view.ExpiresAt, &proposal.linkRef)
+		proposal.view.Id = crmcontracts.Id(id)
+		return proposal, err
+	})
 }

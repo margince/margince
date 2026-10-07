@@ -89,8 +89,8 @@ type HiddenBacklog struct {
 	// judgement worth watching: one rep's mistake removes a customer from
 	// everybody's day permanently.
 	NotSales int
-	// PastHorizon is work older than the queue's horizon with no open deal
-	// behind it. NOBODY CHOSE THIS. A customer who wrote four months ago and was
+	// PastHorizon is work older than the queue's horizon that no human holds,
+	// open deal or not. NOBODY CHOSE THIS. A customer who wrote four months ago and was
 	// never answered is exactly the failure a sales queue exists to prevent, and
 	// the horizon removes them silently.
 	PastHorizon int
@@ -168,14 +168,11 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 		// unable to act on it — the whole point of this reading is which rule to
 		// look at.
 		//
-		// `ids.UUID{}` is the no-reader spelling readerOrNobody already uses for
-		// a background job: it matches no activity_reader_state row, so nothing
-		// is set aside for it.
 		for _, relaxed := range []struct {
 			into *int
 			with waitingRelaxation
 		}{
-			{&out.SetAside, waitingRelaxation{reader: ids.UUID{}}},
+			{&out.SetAside, waitingRelaxation{reader: reader, keepSetAside: true}},
 			{&out.NotSales, waitingRelaxation{reader: reader, keepNotSales: true}},
 			{&out.PastHorizon, waitingRelaxation{reader: reader, wholeHorizon: true}},
 			{&out.Unlinked, waitingRelaxation{reader: reader, keepUnlinked: true}},
@@ -215,9 +212,14 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 // keeps a new relaxation from silently widening the strict read every figure is
 // measured against.
 type waitingRelaxation struct {
-	// reader is whose set-asides apply. The zero uuid matches no reader_state
-	// row, which is how the SetAside figure is taken.
+	// reader is who is asking. Every reader-relative rule answers to them, the
+	// open request tasks assigned to somebody else included.
 	reader ids.UUID
+	// keepSetAside admits threads this reader snoozed or marked not_mine. A
+	// flag beside the reader, not a swap to the zero uuid: that spelling also
+	// means "any assignee" to the request-task rule, and hid every mail a
+	// colleague holds a request on from the relaxed read.
+	keepSetAside bool
 	// keepNotSales admits threads somebody judged to be no sales business.
 	keepNotSales bool
 	// wholeHorizon looks back hiddenHorizonDays instead of the queue's own
@@ -302,7 +304,16 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
+	setAside := neverRelaxed
+	if relax.keepSetAside {
+		setAside = scopeUnbounded
+	}
 	readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
+	if err != nil {
+		return "", err
+	}
+	// Relaxations widen eligibility rules, never what a reader may be shown.
+	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 	if err != nil {
 		return "", err
 	}
@@ -311,7 +322,6 @@ func (s *Store) waitingStatement(
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
-		liveRecord(openDealPredicate, "fd"),
 		arg(relax.reader),
 		scopeUnbounded,
 		notSales, unlinked,
@@ -319,7 +329,8 @@ func (s *Store) waitingStatement(
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		fmt.Sprintf("$%d", arg(readerAddresses)),
 		informsUs,
-		noKeyset), nil
+		noKeyset, bookedDiscover,
+		setAside), nil
 }
 
 // countWaiting is the statement above asked for how many.

@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
@@ -67,12 +68,16 @@ export function SharedLinksButton({
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={headingId}
-        placement="right"
+        intent="drawer"
       >
-        <Heading size="large" id={headingId} className="t-h2 modal-title">
-          {t("analytics.share.listTitle")}
-        </Heading>
-        <OpenShareList headingId={headingId} canClose={canClose} />
+        <DrawerHead>
+          <Heading size="large" id={headingId} className="t-h2 modal-title">
+            {t("analytics.share.listTitle")}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          <OpenShareList headingId={headingId} canClose={canClose} />
+        </DrawerBody>
       </Modal>
     </>
   );

@@ -126,7 +126,7 @@ export function BackfillPanel({
         startErrorMessage={
           start.isError ? problemMessageOf(start.error, t) : null
         }
-        onStart={() => start.mutate(window)}
+        onStart={() => importRun.begin(window)}
         onSkip={() => setSkipped(true)}
       />
     );
@@ -139,6 +139,9 @@ export function BackfillPanel({
       cancelError={cancel.isError ? problemMessageOf(cancel.error, t) : null}
       onCancel={() => cancel.mutate()}
       onRestart={() => importRun.restart(run)}
+      onResume={() => importRun.resume(run)}
+      resuming={start.isPending}
+      resumeError={start.isError ? problemMessageOf(start.error, t) : null}
     />
   );
 }
@@ -290,12 +293,13 @@ function EstimateCard({
       )}
       {preview && costMinor !== undefined && (
         <p className="t-caption">
-          {t("backfill.estimateCost")} ~
-          {formatMoney(
-            costMinor,
-            preview.currency ?? FALLBACK_CURRENCY,
-            locale,
-          )}
+          {t("backfill.estimateCost", {
+            cost: formatMoney(
+              costMinor,
+              preview.currency ?? FALLBACK_CURRENCY,
+              locale,
+            ),
+          })}
         </p>
       )}
       {preview?.estimate_is_floor && costMinor !== undefined && (

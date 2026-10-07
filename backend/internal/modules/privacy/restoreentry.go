@@ -17,14 +17,15 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // UndidAuditLogID is the evidence key naming the row a restore reverses. It is
-// the only link between the two, so it is spelled here — where the read that
-// follows it lives — and imported by the writer rather than typed twice.
-const UndidAuditLogID = "undid_audit_log_id"
+// the only link between the two; storekit stamps it on every writer's row, and
+// this read follows storekit's spelling rather than keeping its own.
+const UndidAuditLogID = storekit.EvidenceKeyUndidAuditLog
 
 // ReadRestoreOf returns the history line for the restore that reversed
 // undidID, rendered exactly as ListRecordHistory renders it.

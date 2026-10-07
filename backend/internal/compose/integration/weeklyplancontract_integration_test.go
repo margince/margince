@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -274,4 +275,74 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func TestAContractSaveThatChangesNothingWritesNothing(t *testing.T) {
+	e := setupPlan(t)
+	saved, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
+		SetRisks: true, Risks: ptr("one contact out"),
+		SetCapacityNote: true, CapacityNote: ptr(""),
+	})
+	if err != nil {
+		t.Fatalf("writing the contract: %v", err)
+	}
+	owner, ctx := integration.OwnerConn(t), context.Background()
+	trail := func() (audits, events int) {
+		audits = countRows(t, owner, ctx,
+			`SELECT count(*) FROM audit_log WHERE entity_type = 'weekly_plan' AND entity_id = $1`, saved.ID)
+		events = countRows(t, owner, ctx, `SELECT count(*) FROM event_outbox
+			 WHERE envelope->>'type' = 'weekly_plan.updated'
+			   AND envelope->'payload'->>'plan_id' = $1::text`, saved.ID)
+		return audits, events
+	}
+	auditsBefore, eventsBefore := trail()
+
+	for name, edit := range map[string]weeklyplan.ContractEdit{
+		"nothing sent":          {},
+		"the stored text again": {SetRisks: true, Risks: ptr("one contact out")},
+		"an empty note again":   {SetCapacityNote: true, CapacityNote: ptr("")},
+	} {
+		got, err := e.store.SetContract(e.rep1Ctx, planClock, edit)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if deref(got.Risks) != "one contact out" || got.CapacityNote == nil {
+			t.Errorf("%s changed the plan: %+v", name, got)
+		}
+	}
+	if audits, events := trail(); audits != auditsBefore || events != eventsBefore {
+		t.Errorf("a save that changed nothing filed %d audit rows and %d events",
+			audits-auditsBefore, events-eventsBefore)
+	}
+}
+
+func TestClearingAnUnwrittenHalfIsNoChangeButClearingTextIs(t *testing.T) {
+	e := setupPlan(t)
+	owner, ctx := integration.OwnerConn(t), context.Background()
+	cleared := weeklyplan.ContractEdit{SetRisks: true, Risks: nil}
+	plan, err := e.store.SetContract(e.rep1Ctx, planClock, cleared)
+	if err != nil {
+		t.Fatalf("clearing an unwritten half: %v", err)
+	}
+	audits := func() int {
+		return countRows(t, owner, ctx,
+			`SELECT count(*) FROM audit_log WHERE entity_type = 'weekly_plan' AND entity_id = $1`, plan.ID)
+	}
+	if n := audits(); n != 0 {
+		t.Fatalf("clearing an unwritten half filed %d audit rows", n)
+	}
+	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
+		SetRisks: true, Risks: ptr("text"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	written := audits()
+
+	after, err := e.store.SetContract(e.rep1Ctx, planClock, cleared)
+	if err != nil {
+		t.Fatalf("clearing written text: %v", err)
+	}
+	if after.Risks != nil || audits() != written+1 {
+		t.Errorf("clearing text: risks=%v, audit rows %d -> %d", after.Risks, written, audits())
+	}
 }

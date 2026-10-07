@@ -79,7 +79,11 @@ const clientToolCeiling = 100
 // That leaves 20 of a client's 100 slots.
 // read_reporting groups catalog, evaluation, evidence and saved-edition reads in
 // one read-scope tool. It leaves 19 of the client's 100 slots for other servers.
-const publishedToolCeiling = 81
+//
+// decide_duplicate raises it to 82. A card that offers "not the same" needs a
+// verb an agent may call, and the dismissal and its undo share one tool with a
+// decision, so the user gives up one slot of the client's 100 rather than two.
+const publishedToolCeiling = 82
 
 type mcpInfoFile struct {
 	Totals struct {

@@ -19,7 +19,7 @@ import type { MessageKey } from "../i18n/en";
 import { BulkVerbs } from "./bulkverbs";
 import { throwProblem } from "./common";
 import { downloadBytes, filenameFromDisposition } from "./download";
-import type { List } from "./lists.queries";
+import { type List, type ListMember, listMembersAmong } from "./lists.queries";
 
 /** Where each record type's rows are read, and the screen a row opens. */
 export const MEMBER_SOURCES = {
@@ -39,6 +39,8 @@ export type MemberRow = Readonly<
     id: string;
     version?: number;
     archived_at?: string | null;
+    /** What the list says about this record: its filter values, or who chose it. */
+    listing?: ListMember;
   }
 >;
 
@@ -68,6 +70,27 @@ async function memberPage(
     throwProblem(error);
   }
   return data as MemberPage;
+}
+
+/**
+ * One page of members, each with what the list says about it. Two reads, one
+ * per page rather than one per member: the record rows, then the list's own
+ * answer for exactly those records.
+ */
+async function listedPage(
+  source: MemberSource,
+  listId: string,
+  cursor: string | undefined,
+): Promise<MemberPage> {
+  const page = await memberPage(source, listId, MEMBER_PAGE, cursor);
+  const listed = await listMembersAmong(
+    listId,
+    page.data.map((row) => row.id),
+  );
+  return {
+    ...page,
+    data: page.data.map((row) => ({ ...row, listing: listed.get(row.id) })),
+  };
 }
 
 /**
@@ -108,8 +131,7 @@ export function MemberRows({
   const members = useInfiniteQuery({
     queryKey: ["lists", "members", list.id, list.version],
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      memberPage(source, list.id, MEMBER_PAGE, pageParam),
+    queryFn: ({ pageParam }) => listedPage(source, list.id, pageParam),
     getNextPageParam: (last) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
   });

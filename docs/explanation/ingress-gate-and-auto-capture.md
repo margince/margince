@@ -1,7 +1,7 @@
 # The ingress gate, auto-capture, and the verdict engine
 
-This page explains what happens to a message **after** a connector fetched it from an external
-provider, and before it appears in the CRM.
+What happens to a message **after** a connector fetched it from an external provider, and before it
+appears in the CRM.
 
 The path is the same for every source: Gmail, IMAP, Microsoft Graph, Telegram, or an extension unit
 like `openchannel`. How a connector talks to its provider is that connector's own business, and
@@ -9,8 +9,8 @@ is covered in [capture-connectors.md](capture-connectors.md).
 
 A record has one of two **shapes**, and the shape decides which steps run:
 
-- **Mail-shaped** — the counterparty is named by an address. This is the default path on this page.
-- **Channel-shaped** — the counterparty is named by a *channel identity*: the account they hold at a
+- **Mail-shaped**: the counterparty is named by an address. This is the default path on this page.
+- **Channel-shaped**: the counterparty is named by a *channel identity*, the account they hold at a
   messaging provider (Telegram, a unit-supplied transport). This is what makes a message repliable,
   and it skips the mail ladder (section 3).
 
@@ -47,40 +47,39 @@ Three rules apply everywhere:
 
 | Stage | How it works | AI task |
 |---|---|---|
-| 1. Ingress gate | Plain code | — |
-| 2. Auto-capture | Plain code | — |
-| 3. Tier ladder (T0–T4) | Plain code | — |
-| 4. Verdict engine — claiming, writing, hiding, sweeping | Plain code | — |
-| 4. Verdict engine — **judging one sender** | **AI** | `capture_counterparty_verdict` |
-| 5. Confidentiality engine — **judging one thread** | **AI** | `capture_confidentiality_verdict` |
+| Ingress gate | Plain code | none |
+| Auto-capture | Plain code | none |
+| Tier ladder (T0–T4) | Plain code | none |
+| Verdict engine: claiming, writing, hiding, sweeping | Plain code | none |
+| Verdict engine: **judging one sender** | **AI** | `capture_counterparty_verdict` |
+| Confidentiality engine: **judging one thread** | **AI** | `capture_confidentiality_verdict` |
 | Does this domain deserve a company record? | **AI** | `site_triage` |
 | Attention labels on captured mail (separate feature) | **AI** | `capture_classify` |
 
-Two model decisions, and they answer different questions.
+Two model decisions answer different questions.
 
-*What kind of sender is this?* — asked once per **sender**, not per message, and only for senders
-plain code could not classify. The answer decides whether a **contact** is created, and whether that
-contact is the whole workspace's or the importing seat's alone.
+*What kind of sender is this?* This is asked once per **sender**, not per message, and only for
+senders plain code could not classify. The answer decides whether a **contact** is created, and
+whether that contact belongs to the whole workspace or to the importing seat alone.
 
-*Is this thread ordinary business?* — asked once per **thread per seat**, on the first message. The
-answer decides who may **read** the message, never whether it is kept. A thread it clears is
-readable by colleagues; anything else stays with the contacts who were on it, with the kind it
-concluded as the reason.
+*Is this thread ordinary business?* This is asked once per **thread per seat**, on the first message.
+The answer decides who may **read** the message, never whether it is kept. A thread it clears is
+readable by colleagues. Anything else stays with the seats whose mailboxes it came from, with the kind
+it concluded as the reason.
 
-Both run on a local rung by default and neither sends message text off the machine unless an admin
+Both run on a local rung by default, and neither sends message text off the machine unless an admin
 binds a cloud one. The generated egress table
 ([ai-egress.md](../reference/ai-egress.md)) says which, and a gate fails when the two disagree.
 
-**Neither model can widen anything by being unavailable.** With no model configured, capture works
-normally: records stay owner-scoped, threads stay held, and nothing is purged. An outage and a
-careful classifier look the same from the outside — mail stays with the contacts who were on it —
-which is the direction an outage has to fail in.
+**Neither model can widen access by being unavailable.** With no model configured, capture works
+normally: records stay owner-scoped, threads stay held, and nothing is purged. From the outside, an
+outage looks like a careful classifier: mail stays with the seats whose mailboxes it came from. That
+is the safe direction for an outage to fail in.
 
-A sender does not simply stay unjudged, though. The answers that come from the address and the
-ledger alone — the owner's own decision, a role mailbox — still land, and a sender that genuinely
-needs a model is put in front of a contact instead. Leaving the row open looked safe and was not:
-nothing else advances it, so the question would stay open forever, and a pending row nobody will
-ever judge is indistinguishable from one whose turn has not come.
+A sender does not stay unjudged, though. The answers that come from the address and the ledger alone
+(the owner's own decision, a role mailbox) still land. A sender that needs a model is put in front of
+a human instead. A row left open would never close, because nothing else advances it, and it would
+look the same as a row whose turn has not come.
 
 ---
 
@@ -93,16 +92,16 @@ Checks run cheapest-first:
 
 | # | Check | Error | Reason |
 |---|---|---|---|
-| 1 | Is this source declared in the unit's manifest? | `ErrIngressNotDeclared` | A typo should be rejected, not create a new source name nobody knows about |
+| 1 | Is this source declared in the unit's manifest? | `ErrIngressNotDeclared` | A typo is rejected instead of creating a new source name nobody knows about |
 | 2 | Does the source vouch for the identity keys this record carries? | `ErrInvalid` | An address offered as matching evidence is a claim about who somebody is. Only a source that declared the `email` merge key may make it |
-| 3 | Is this a background job, not a user request? | `ErrAttendedIngest` | A user request would mix two contacts's permissions |
-| 4 | Is the caller already inside its own transaction? | `ErrNestedIngest` | Capture opens its own. Two connections from a small pool does not error — it hangs |
+| 3 | Is this a background job, not a user request? | `ErrAttendedIngest` | A user request would mix two principals' permissions |
+| 4 | Is the caller already inside its own transaction? | `ErrNestedIngest` | Capture opens its own. Two connections from a small pool do not error; they hang |
 | 5 | Is the record within size limits? | `ErrInvalid` | Limits what a remote provider can make us store |
 | 6 | Does the kind match the transport? | `ErrInvalid` | A message must name a channel the unit declared. No other kind may name one, because the reply path would answer on it |
 | 7 | Is the counterparty's channel identity on a provider this unit supplies? | `ErrInvalid` | The reply path reads that binding to find *who* a reply goes to. An account bound under `telegram` would take a rep's next reply |
-| 8 | Did this deployment wire up a capture pipeline? | named error | Better a clear error than a half-wired pipeline that saves messages but no contacts |
+| 8 | Did this deployment wire up a capture pipeline? | named error | A clear error beats a half-wired pipeline that saves messages but no contacts |
 | 9 | Has this member stored a credential with this unit? | `ErrForbidden` | Storing the credential is how a member says "you may act for me" |
-| 10 | What is this member allowed to do right now? | — | Looked up fresh on every call |
+| 10 | What is this member allowed to do right now? | none | Looked up fresh on every call |
 
 **Size limits (check 5):** raw payload 256 KB, subject 500 characters, body 32,768 characters, at
 most 64 addresses (none empty), address at most 320 bytes, thread key 512 bytes, natural key 256
@@ -110,18 +109,18 @@ bytes, channel account id 256 bytes, display name 200 characters, and `OccurredA
 
 A record may list no addresses at all, but only if its counterparty carries no address either. A chat
 message often names none. A counterparty address with an empty address list is refused, because that
-shape silently disables the internal-only check (section 2).
+shape disables the internal-only check (section 2) without any error.
 
 **The merge-key declaration (check 2)** is `IngressSource.Merges` on the unit's source. It is empty by
 default and grants nothing, and an operator can read it in `manifest.generated.json` before enabling
 the unit. The check is narrow: it only asks about an address that rides alongside a channel identity.
 A mail-shaped record's address *is* its identity, so it needs no declaration.
 
-The rule is checked in two places, on purpose. The gate refuses with the unit named, so a unit author
-sees which declaration is missing. Capture's own admission check holds the same rule for every other
-caller — a core connector, a fixture, a backfill — that never passes through the gate.
+The rule is checked in two places. The gate refuses with the unit named, so a unit author sees which
+declaration is missing. Capture's own admission check holds the same rule for every other caller (a
+core connector, a fixture, a backfill) that never passes through the gate.
 
-Two more things the gate does:
+The gate does two more things:
 
 - **It fills in the source and `captured_by` itself**, from the calling unit. The record type has no
   field for these, so a connector cannot claim someone else captured a message.
@@ -133,24 +132,24 @@ The gate returns one of two results, and **both mean "move your cursor forward"*
 | Result | Meaning |
 |---|---|
 | `accepted` | The message is in the CRM |
-| `skipped` | The core deliberately kept nothing, and logged why |
+| `skipped` | The core kept nothing by design, and logged why |
 
-`skipped` is a success, not an error. As an error, it would make the connector retry the same message
-on every poll forever.
+`skipped` is a success. As an error, it would make the connector retry the same message on every
+poll forever.
 
 ## 2. Auto-capture: the single write
 
 Everything below happens in **one database transaction**, and is idempotent on
-`(source_system, source_id)` — the provider's own ID for the message. A repeat writes nothing.
+`(source_system, source_id)`, the provider's own ID for the message. A repeat writes nothing.
 
 Steps, in order:
 
 1. **Erasure check.** If the message names an account that has been erased, reject it.
 2. **Internal-only check.** If *every* address on the message belongs to the company's own mail
    domains, this is colleagues talking to each other. Write a short log row and drop the message.
-   This runs **before** step 3 on purpose, so a colleague-only message is never stored at all.
+   This runs **before** step 3, so a colleague-only message is never stored at all.
 3. **Store the raw payload.** Written once and never overwritten, so the original stays available.
-4. **Write the activity row** — plus links, attachments, participants, an `audit_log` row and an
+4. **Write the activity row**, plus links, attachments, participants, an `audit_log` row and an
    `event_outbox` event. This is the standard [write backbone](write-backbone.md). The audit row
    stores metadata only, never the subject or body.
 5. **Run the tier ladder** (section 3) inside a savepoint. If it fails, only the contact decision is
@@ -159,25 +158,25 @@ Steps, in order:
 > **Why `Addresses` must list everyone**
 >
 > Step 2 asks "are all parties internal?". Over an empty list the answer is "no", so the message is
-> kept. An empty address list therefore does not *skip* the check, it *disables* it, and internal
-> chatter gets stored. `Counterparty.Domain` behaves the same way: if it is missing, the suppression
-> rules below read the message as "keep".
+> kept. An empty address list therefore *disables* the check, and internal chatter gets stored.
+> `Counterparty.Domain` behaves the same way: if it is missing, the suppression rules below read the
+> message as "keep".
 >
-> The list names contacts, not things. A booked meeting room or device on a calendar event
-> (`…@resource.calendar.google.com`, or an attendee Google flags as a resource) is left out by the
-> calendar connector: it is on nobody's own domain, so counting it would turn every colleagues-only
+> The list names humans, and leaves out things. The calendar connector leaves out a booked meeting
+> room or device on a calendar event (`…@resource.calendar.google.com`, or an attendee Google flags
+> as a resource). It is on nobody's own domain, so counting it would turn every colleagues-only
 > meeting held in a room into a customer touch.
 
 ## 3. The tier ladder: create a contact or not?
 
 This is the **mail** path. It runs inside the same transaction as the message, so a message always
 has a decision attached. All of it is plain SQL and Go. T4's only job is to record that a model
-should be asked later. Channel records skip it — see the end of this section.
+should be asked later. Channel records skip it; see the end of this section.
 
 | Tier | Question | Result |
 |---|---|---|
 | **T0** | Is the sender a colleague? | Judge the external contact on the message instead. If everyone is internal, create nothing |
-| **T1** | Have we and this address actually exchanged mail? | **Create the contact.** Beats every rule below |
+| **T1** | Have we and this address exchanged mail? | **Create the contact.** Beats every rule below |
 | **T2** | Is this mail infrastructure (DocuSign, SendGrid…)? | Keep the message, create no contact and no company |
 | **T2.5** | Did we already decide about this address? | Reuse that decision. No new question, no model call |
 | **T3** | Is it a personal mail domain (`gmail.com`…)? | Create the contact, but no company |
@@ -188,22 +187,22 @@ Notes on the tricky ones:
 - **T0 switches target instead of skipping.** If a colleague emails a client and copies you, the
   message is about the client. The ladder judges the client, and the colleague is never recorded as
   the contact.
-- **T1 only trusts proof that *we* sent the mail**, not the `From` header, which can be forged. An
-  outbound message whose text is a refusal ("not interested", "unsubscribe", "kein Interesse") is
-  not evidence of intent at all.
-- **T1 needs an exchange, not a send.** Writing to somebody is intent, and intent is often
-  unreturned — a founder mails forty contacts about a conference and hears from six. So a contact is
-  created on sight only when they wrote back on a thread we wrote on, or we wrote to them on two
-  separate threads, which nobody does by accident. A single send is not refused: it falls to T4 and
-  the verdict engine reads the message and answers on its merits.
+- **T1 only trusts proof that *we* sent the mail.** It ignores the `From` header, which can be
+  forged. An outbound message whose text is a refusal ("not interested", "unsubscribe", "kein
+  Interesse") is not evidence of intent at all.
+- **T1 needs an exchange.** A single send is not one. Writing to somebody is intent, and intent
+  is often unreturned: a founder mails forty prospects about a conference and hears from six. So a
+  contact is created on sight only when they wrote back on a thread we wrote on, or we wrote to them
+  on two separate threads, which nobody does by accident. A single send is not refused: it falls to
+  T4, and the verdict engine reads the message and answers on its merits.
 - **Bulk mail is not writing back.** An address we wrote to once which then sends a newsletter has
-  added us to a list rather than answering us.
+  added us to a list; it has not answered us.
 - **T1 also beats an old negative verdict**, so replying to a sender we once marked as noise brings
   them back properly.
 - **T2.5 avoids paying twice.** Without it, every new message from a settled sender asks the model
   again and re-offers a decision a human already made. A live contact holding the address counts as a
-  settled `real`, except an address a channel connector vouched for: that identifies a contact, but it
-  is not mail correspondence.
+  settled `real`. The exception is an address a channel connector vouched for: that identifies a
+  contact, but it is not mail correspondence.
 
 **After the transaction commits,** the contact is created through the contacts module. This happens
 outside the transaction, so a failure there cannot lose the message. Failures are logged for the
@@ -214,29 +213,29 @@ the domain's website (AI task `site_triage`).
 
 ### Channel records don't climb the ladder
 
-A channel record — a direct message on Telegram or on a unit-supplied transport — skips every tier
+A channel record (a direct message on Telegram or on a unit-supplied transport) skips every tier
 above. All four mail gates (internal domains, personal-mail domains, the transactional registry, the
-deferral queue) key off a mail domain. The bypass keys off the **shape**, not off the address being
-empty.
+deferral queue) key off a mail domain. The bypass keys off the **shape**; an empty address does not
+trigger it.
 
-There is also nothing to defer. Someone who opens a conversation with the workspace's own bot is
-already the intent T1 looks for evidence of: nobody messages a company's bot by accident, and a bot
-cannot be cold-mailed. So the contact is created at once — **contact only, never a company**, and
+There is also nothing to defer. Someone who opens a conversation with the workspace's own bot has
+already shown the intent T1 looks for: nobody messages a company's bot by accident, and a bot cannot
+be cold-mailed. So the contact is created at once, as a **contact only, never a company**. It is
 **ownerless**, because a workspace bot has no granting human to own the record.
 
-The account is then bound to that contact. That binding is what a reply is routed on; a record with no
+The account is then bound to that contact. A reply is routed on that binding; a record with no
 identity lands a message nobody can answer.
 
-**If the record carries an address too** — allowed only for a source that declared the `email` merge
-key — the identity still names the human, and the address only corroborates. The resolution ladder
-matches on the address and **adopts** the contact already captured from mail: the account is bound onto
-their existing record, under the same lock a merge or an erasure takes. Without this, that colleague
-quietly becomes a second contact.
+**If the record carries an address too** (allowed only for a source that declared the `email` merge
+key), the identity still names the human, and the address only corroborates. The resolution ladder
+matches on the address and **adopts** the contact already captured from mail. The account is bound
+onto their existing record, under the same lock a merge or an erasure takes. Without this, that
+human becomes a second contact.
 
 A vouched address is stored as *not* correspondence (`contact_email.from_correspondence = false`). It
 identifies the contact, but proves nothing about mail. Otherwise one direct message from a stranger
-would mark their address a known counterparty for good: every later bulk mail from it auto-created,
-and the noise sweep switched off for it permanently.
+would mark their address a known counterparty for good. Every later bulk mail from it would be
+auto-created, and the noise sweep would be switched off for it permanently.
 
 Erasure is checked on **both** keys before the record lands. An erasure keyed on an address must not
 be undone by the subject's next direct message, which names them by an account that list never saw.
@@ -250,18 +249,18 @@ at once and a crash strands nothing. Each decision commits on its own, so a cras
 already decided. The decision and its effect share a transaction, so a row can never say `real`
 without the contact it promised.
 
-**The AI call — `capture_counterparty_verdict`.** One sender per call, never a batch. Only that
+**The AI call: `capture_counterparty_verdict`.** One sender per call, never a batch. Only that
 sender's text is in the prompt, so a malicious message cannot speak for anyone else. Subject, body
 and display name are trimmed in SQL first (300 / 1200 / 300 characters) and wrapped in a prompt
-fence. The reply must be valid JSON with the exact requested ID, a kind from a fixed list, and a
+fence. The reply must be valid JSON with the requested ID, a kind from a fixed list, and a
 confidence score. Anything else is rejected.
 
-The model returns one of eight kinds:
+The model returns one of these kinds:
 
 | Kind | What happens |
 |---|---|
 | `contact` | Create the contact. Queue the domain for `site_triage` |
-| `role_mailbox` (e.g. `support@`, `cs6@`) | Keep the mail visible. Create no contact — there is no contact to record |
+| `role_mailbox` (e.g. `support@`, `cs6@`) | Keep the mail visible. Create no contact, because there is no human to record |
 | `company_sender` | Same as above |
 | `newsletter` | Hide the mail, and mark the domain as "not a company" |
 | `transactional` | Same as above |
@@ -271,58 +270,59 @@ The model returns one of eight kinds:
 
 A service desk is a `role_mailbox` whether or not it is numbered, and whether or
 not an agent signs with a first name: the next reply is written by somebody else.
-The same kind of desk handling the owner's OWN private affair — their landlord,
-their clinic, their bank — is `personal` instead. Whose matter it is decides,
-not what sort of company it is.
+The same kind of desk handling the owner's own private affair (their landlord,
+their clinic, their bank) is `personal` instead. Whose matter it is decides the
+kind; the sort of company does not.
 
 ### A private correspondence leaves no contact behind
 
-The verdict almost always arrives AFTER the contact: capture creates a record on
+The verdict almost always arrives after the contact: capture creates a record on
 commit, and classification reads the conversation minutes or hours later. So
-refusing to create one is only half an answer — in one real mailbox every contact
-on a personal thread predated the verdict about it. Both verdicts therefore
-WITHDRAW the record as well as refusing a new one.
+refusing to create one is only half an answer, because the contacts on a personal
+thread usually exist before the verdict about it. Both verdicts therefore
+*withdraw* the record as well as refusing a new one.
 
 Two answers reach a contact, and they ask different questions:
 
 - The **sender** verdict answers about an address. `personal` withdraws the
   records that address holds in the deciding seat's own mailbox.
 - The **thread** verdict answers about one conversation. `personal` withdraws the
-  counterparty's record when no OTHER conversation with that seat is business.
+  counterparty's record when no other conversation with that seat is business.
 
 Correspondence does not save a record from either. That bound exists to stop one
 misclassified newsletter from costing a real counterparty their record, and it is
 wrong here: the owner writing back is what a private correspondence looks like.
-Applied to `personal`, it kept every record the kind is about — a founder's own
-clinic among them, with its test results, in a CRM the whole company reads.
+Applied to `personal`, it would keep every record the kind is about, such as a
+founder's own clinic with its test results, in a CRM the whole company reads.
 
 What still protects a record, in every case:
 
-- **A human published or edited it.** A machine promotion does not: the sender
-  classifier publishes a contact it judges a counterparty with nobody behind it,
-  so treating `workspace` visibility as protection let the earlier of two machine
-  answers outrank the later one.
+- **A human published or edited it.** A machine promotion does not count. The
+  sender classifier publishes a contact it judges a counterparty with nobody
+  behind it, so treating `workspace` visibility as protection would let the
+  earlier of two machine answers outrank the later one.
 - **The owner marked the address `business`.** A standing human decision outranks
   every classifier.
-- **Another conversation with that seat is business.** Evidence, not silence: a
+- **Another conversation with that seat is business.** This needs evidence: a
   thread that has been judged and is not personal, or mail already open to the
-  whole workspace. A thread nobody has judged is unknown, and a question still in
-  flight is a reason to wait — when it resolves personal, the withdrawal runs
+  whole workspace. A thread nobody has judged is unknown. A question still in
+  flight is a reason to wait; when it resolves personal, the withdrawal runs
   again.
 
-A withdrawal is an archive like any other, on the record's own audit trail, and a
-record that was workspace-visible is narrowed to its owner first — an archived
-contact is still listable by anyone who asks to see archived ones.
+A withdrawal is an archive like any other, on the record's own audit trail. A
+record that was workspace-visible is narrowed to its owner first, because an
+archived contact is still listable by anyone who asks to see archived ones.
 
 A `contact` verdict does not always publish the contact. Two cases keep the record
 visible to the mailbox owner alone:
 
-- **The owner wrote first and the address has never answered.** Writing to
-  somebody is an intention rather than a relationship, and publishing it tells
+- **The owner wrote first, with no reply.** The address has never answered. Writing to
+  somebody is an intention, not yet a relationship, and publishing it tells
   every colleague who this rep is prospecting. The record widens on its own the
   first time that address replies.
 - **The thread is under a confidentiality hold.** A workspace-visible contact
-  minted off held mail announces the counterparty the hold exists to keep quiet.
+  created from held mail would reveal the counterparty the hold exists to keep
+  private.
 
 Marking the domain matters separately from hiding the mail. A newsletter company has a real website,
 so without the mark, company triage would create it anyway the next time a named employee writes from
@@ -340,12 +340,12 @@ anything.
 
 **Noise is hidden first, deleted later.** The mail is hidden immediately, and its content is redacted
 after the undo window. The scope is narrow: only inbound, unlinked mail from an address we have never
-written to, and that no live contact holds as correspondence. An address a channel connector merely
+written to, and that no live contact holds as correspondence. An address a channel connector only
 vouched for does not protect it.
 
 **What runs each hour, in order:**
 
-1. **AI** — judge senders that are due. Skipped if no model is configured.
+1. **AI**: judge senders that are due. Skipped if no model is configured.
 2. Retire rows that used up their retries, and close proposals a human rejected.
 3. Create review proposals for `unsure` rows.
 4. Expire proposals that stood too long.
@@ -357,35 +357,33 @@ the workspace already decided were noise.
 
 ### Mail that arrived at an address before we knew it was yours
 
-A message is imported for a seat when one of that seat's OWN addresses is on it.
+A message is imported for a seat when one of that seat's own addresses is on it.
 Most addresses are known from the start: declared, reported by the connection, or
-signed in with. A forwarding alias is not — a previous employer's address, a role
+signed in with. A forwarding alias is not: a previous employer's address, a role
 address that redirects, a personal domain pointed at a work mailbox. None of those
-is ever the From of anything the mailbox sends, so the only way to learn one is
-from the mail arriving at it, and two separate messages must agree before it is
+is ever the From of anything the mailbox sends. The only way to learn one is from
+the mail arriving at it, and two separate messages must agree before it is
 believed.
 
-Which means there is always mail older than the claim, and for that mail the seat
-was nobody. It got no import row, so no confidentiality question was opened, so
-under a classified mailbox it stayed held with nothing scheduled ever to judge it.
-Held is indistinguishable from broken.
+So there is always mail older than the claim, and for that mail the seat had no
+claim. It got no import row, so no confidentiality question was opened. Under a
+classified mailbox it would stay held with nothing scheduled to judge it.
 
-An address becoming a seat's own — discovered or declared — now adopts that mail:
-it writes the import row the message should have had, and opens the question its
-thread was owed. A settled thread's answer is inherited rather than re-asked. A
-`shared` mailbox gets the row and no question, which matters more than it sounds:
-a question written but never asked reads as HELD, so the naive version of this
-would have held a shared mailbox's mail forever.
+When an address becomes a seat's own, discovered or declared, the seat adopts that
+mail. Adoption writes the import row the message should have had, and opens the
+question its thread was owed. A settled thread's answer is inherited instead of
+re-asked. A `shared` mailbox gets the row and no question. A question written but
+never asked reads as held, so asking one for a shared mailbox would hold its mail
+forever.
 
-The nightly reconcile does the same for mail stranded before this existed. It
-derives its work from the state — an address the seat owns, a message their own
-connector captured, no import row — rather than from a list, so it also catches
-mail stranded by any other route to the same condition.
+The nightly reconcile does the same for mail stranded earlier. It derives its work
+from the state (an address the seat owns, a message their own connector captured,
+no import row) instead of from a list, so it also catches mail stranded by any
+other route to the same condition.
 
-The delivery evidence is unchanged: an exact address the receiving server
-attested, never a domain, and never a `Delivered-To` a sender wrote themselves.
-A forged header claims no mail, because it never becomes an address in the first
-place.
+The delivery evidence is an exact address the receiving server attested, never a
+domain, and never a `Delivered-To` a sender wrote themselves. A forged header
+claims no mail, because it never becomes an address in the first place.
 
 ## 5. What a dropped message stores
 
@@ -399,20 +397,20 @@ place.
 | T2 / T4 / `noise` verdict | **yes** | yes | The message, plus a decision row and a log row saying why no contact was made |
 
 The internal-only check is the only one that discards message content, and it runs before the raw
-payload is stored, so no copy exists anywhere. Storing an address in the log would leak exactly what
-dropping the message was meant to prevent.
+payload is stored, so no copy exists anywhere. Storing an address in the log would leak what dropping
+the message was meant to prevent.
 
 The other three keep the **message** and only withhold the **contact**. A `noise` verdict is the only
 path that later deletes content, and only after the undo window.
 
 ## 6. Settings and limits
 
-**Changeable at runtime, per workspace. Takes effect on the next message:**
+**Changeable at runtime, per workspace.** Takes effect on the next message:
 
 | Setting | Where | Controls |
 |---|---|---|
 | Own mail domains | Capture settings (admins write, everyone reads) | Which messages count as internal, and are therefore dropped |
-| Personal-mail domains | `POST /v1/capture/consumer-mail-domains` — additions and exceptions on top of a built-in list of ~8,700 domains | T3: create a contact but no company |
+| Personal-mail domains | `POST /v1/capture/consumer-mail-domains`: additions and exceptions on top of a built-in list of ~8,700 domains | T3: create a contact but no company |
 | `auto_enrich` | `PATCH /v1/capture/settings` | Whether new companies are enriched automatically |
 | Approved sender domains | Contacts settings | Lets an admin allow a domain a verdict blocked |
 
@@ -422,9 +420,9 @@ path that later deletes content, and only after the undo window.
 |---|---|
 | `capture.transactional_extra` | Extra mail-infrastructure domains for T2 |
 | `capture.transactional_never` | Domains that must never be treated as infrastructure. Wins over everything |
-| `capture.freemail_extra` / `freemail_never` | **Still accepted, but ignored.** This list moved to the API above; the server logs a warning at boot |
+| `capture.freemail_extra` / `freemail_never` | **Accepted, but ignored.** This list is managed through the API above; the server logs a warning at boot |
 
-**Fixed in code today. Changing one means a code change:**
+**Fixed in code.** Changing one means a code change:
 
 | Limit | Value | Meaning |
 |---|---|---|
@@ -448,18 +446,19 @@ full" and "one domain is flooding it" are never confused.
 Every decision above is readable, per member, in **Settings → Capture activity**.
 
 The tab holds two things. First, **Keep out of capture**: the addresses and domains whose mail never
-enters the CRM. It lives here rather than under the administrator's Capture settings because blocking
-a sender is the reader's own answer to what this page reports, not an installation posture.
+enters the CRM. It lives here instead of under the administrator's Capture settings, because blocking
+a sender is the reader's own answer to what this page reports. It is not an installation posture.
 
-Then the last 24 hours of the reader's own connections: a count per outcome, and behind a disclosure
-titled **Messages**, a row per message saying when it arrived, which connector carried it, what the
-pipeline decided, and — where the decision needs it — the reason that changes what that decision
-means. A deferred message shows what later became of its sender, read from the disposition ledger.
+Then the last 24 hours of the reader's own connections: a count per outcome, and a disclosure titled
+**Messages**. Behind it is a row per message saying when it arrived, which connector carried it and
+what the pipeline decided. Where the decision needs it, the row adds the reason that changes what the
+decision means. A deferred message shows what later became of its sender, read from the disposition
+ledger.
 
 The log is closed by default. It answers a question about one message, which is what somebody
-debugging the pipeline asks and not what a member opening the page came for. It stays reachable by
-every seat rather than moving behind the `capture_trace` grant: a member's own trace rows answer to
-their owner and no grant widens them, so gating them here would invent a rule the API does not have.
+debugging the pipeline asks, and not what a member opening the page came for. Every seat can still
+reach it; it does not move behind the `capture_trace` grant. A member's own trace rows answer to their
+owner and no grant widens them, so gating them here would invent a rule the API does not have.
 
 That last column is **mail rows only**. The ledger belongs to the mail ladder and is keyed on an
 address. Without the guard, a direct message would inherit whatever verdict is pending for the same
@@ -468,33 +467,32 @@ channel record has no ladder verdict, which is not the same as having one that i
 
 | | |
 |---|---|
-| Who sees what | Your own connections need no grant — it is your own data. Rows from a workspace-owned channel binding (a Telegram bot, a Zalo OA) belong to no member, and are shown to holders of the `capture_trace` object. A grant never reaches a colleague's mailbox |
+| Who sees what | Your own connections need no grant, since it is your own data. Rows from a workspace-owned channel binding (a Telegram bot, a Zalo OA) belong to no member, and are shown to holders of the `capture_trace` object. A grant never reaches a colleague's mailbox |
 | Where the numbers start | At the ingress gate. What a connector filtered on its own side is not comparable between connectors, so it is excluded and the page says so |
 | Scope | Captured messages. Lead capture has its own outcomes and is not shown here |
 | Retention | 24 hours, deleted by an hourly sweep |
 
-**The trace names the sender and keeps a bounded subject**: one address and one subject line, clamped
+The trace **names the sender** and keeps a bounded subject: one address and one subject line, clamped
 to 320 and 300 characters, never a body. It covers internally-dropped mail, which the CRM otherwise
-stores nothing about and which is exactly what somebody is looking for when a message went missing.
+stores nothing about, and which is what somebody looks for when a message went missing.
 
-This is on by default, which is a deliberate reversal of where the feature started. A trace of
-decisions naming nobody cannot answer the question the page exists for — it tells a member their mail
-is a black box rather than telling them what the pipeline threw away. The exposure is bounded three
-ways: the payload is an address and a subject rather than the message, the hourly sweep deletes it
-with its row inside a day, and a member reads only rows from their own connections, so this is
-somebody's own mail shown back to them.
+This is on by default. A trace of decisions naming nobody cannot answer the question the page exists
+for: it cannot tell a member what the pipeline threw away. The exposure is bounded three ways:
+
+- the payload is an address and a subject, never the message;
+- the hourly sweep deletes it with its row inside a day;
+- a member reads only rows from their own connections, so this is their own mail shown back to them.
 
 `capture.trace_payloads: false` in `margince.yaml` turns it off, for an installation whose works
-agreement requires that; the trace then keeps recording every decision and names nobody, and one note
-above the list says so — once, about the deployment, rather than on each row where it read as a fact
-about that message. It is **settable only in the deployment file** — no API, no in-app switch — so
-neither posture is one member's to change for their colleagues. An erased subject's address is never
-written whatever the posture says, and an erasure request inside the window reaches what is already
-there.
+agreement requires that. The trace then keeps recording every decision and names nobody. One note
+above the list says so, once, about the deployment; a note on each row would read as a fact about that
+message. It is **settable only in the deployment file** (no API, no in-app switch), so neither posture
+is one member's to change for their colleagues. An erased subject's address is never written whatever
+the posture says, and an erasure request inside the window reaches what is already there.
 
 Operators also get `margince_capture_outcomes_total` on `/metrics`, counted per outcome since process
-start. It makes a change like "every message from that mailbox has been dropped as internal since
-somebody registered a domain" visible as a slope to alert on.
+start. It shows a change like "every message from that mailbox has been dropped as internal since
+somebody registered a domain" as a slope to alert on.
 
 ## 8. Examples
 
@@ -505,20 +503,20 @@ Assume `acme.com` is a registered own domain, and the client is `dana@client.io`
 | A colleague messages you | **Dropped** at section 2, step 2 (internal-only). Only a log row is written |
 | A colleague sends you a recap of a client meeting, client not on the message | **Also dropped.** Everyone on the message is internal. A recap *about* a client is not correspondence *with* one |
 | A colleague emails the client and copies you | **Kept.** T0 switches to `dana@client.io` and judges the client |
-| The client replies, and we have emailed them before | **T1** — contact created immediately |
-| A stranger writes for the first time | Message kept, **T4** — no contact until the verdict engine answers |
+| The client replies, and we have emailed them before | **T1**: contact created immediately |
+| A stranger writes for the first time | Message kept, **T4**: no contact until the verdict engine answers |
 | …verdict `contact` | Contact created, owned by the member whose connection captured it. Domain queued for `site_triage` |
 | …verdict `spam` | Mail hidden now, domain marked not-a-company, content redacted after 7 days |
-| …confidence below 0.7 twice | `unsure` — a proposal goes to the review queue. Rejecting it changes nothing |
-| A DocuSign envelope arrives | Message kept, **T2** — no contact, and `eu.docusign.net` never becomes a company |
+| …confidence below 0.7 twice | `unsure`: a proposal goes to the review queue. Rejecting it changes nothing |
+| A DocuSign envelope arrives | Message kept, **T2**: no contact, and `eu.docusign.net` never becomes a company |
 | A newsletter from someone you have emailed | **T1 keeps them.** A known contact is not infrastructure |
-| A first-time sender at `gmail.com` | **T3** — contact created, no company |
+| A first-time sender at `gmail.com` | **T3**: contact created, no company |
 | Someone mails you from 60 fresh addresses on one domain | The first 50 get queued. The rest arrive unjudged, with a `capture_deferral_capped` log row |
 | The same message is polled twice | Nothing happens the second time |
 | A member's permissions were reduced after connecting | Their next poll runs with the reduced permissions |
 | A stranger sends a direct message on a messaging channel | Message kept, **no tier runs**. An ownerless contact is created at once and the account bound, so the message can be replied to |
-| …and the connector also knows their address, and its source declared the `email` merge key | The contact already captured from that address is **adopted**. The account is bound onto them, not onto a second contact |
-| …but the source declared no merge key | Refused at the gate, naming the missing declaration. The address is not silently dropped |
+| …and the connector also knows their address, and its source declared the `email` merge key | The contact already captured from that address is **adopted**. The account is bound onto them instead of onto a second contact |
+| …but the source declared no merge key | Refused at the gate, naming the missing declaration. The address is never dropped without a word |
 | A DM from someone whose mail verdict is still pending | The trace shows the DM's own outcome, never the pending mail verdict |
 
 ## 9. What a connector must provide
@@ -529,16 +527,16 @@ Assume `acme.com` is a registered own domain, and the client is `dana@client.io`
 | `Addresses` | Everyone on the message, including your own user. No blanks. May be empty only when the counterparty carries no address | The internal-only check stops working |
 | `Domain` | Lower-case mail domain | Suppression rules treat a missing value as "keep" |
 | `ThreadKey` | Prefixed with the provider name | Two providers can collide and merge unrelated conversations |
-| `OccurredAt` | The provider's timestamp | The timeline is ordered by when we polled, not when things happened |
+| `OccurredAt` | The provider's timestamp | The timeline is ordered by when we polled instead of when things happened |
 | `Raw` | The original payload | You lose the original record |
 | `Counterparty.ChannelIdentity` | On a channel record: both halves (provider and account id), or neither | Half an identity is refused. An empty one lands a message with no reply box |
-| `Counterparty.Email` on a channel record | Send it whenever the provider knows it, and declare `email` in the source's `Merges` | No declaration, no record. No address, and a colleague already captured from mail becomes a second contact |
+| `Counterparty.Email` on a channel record | Send it whenever the provider knows it, and declare `email` in the source's `Merges` | No declaration, no record. No address, and a human already captured from mail becomes a second contact |
 | `Activity.ChannelProvider` | On a `message` and nothing else, naming a channel the unit declared | A non-message naming a transport is a note the reply path would answer on |
 
 The gate can check all of these except `Key`. Getting `Key` right is on the connector.
 
-The last three follow one rule: **a unit sends every field its provider gives it, and decides nothing
-about identity**. Which of those fields the ladder may match on is the core's call, read from the
+The last three follow one rule: a unit **sends every field** its provider gives it, and decides nothing
+about identity. Which of those fields the ladder may match on is the core's call, read from the
 source's declaration. Dropping an address you hold, to fit a shape, throws away evidence the ladder
 was entitled to.
 
@@ -555,8 +553,8 @@ was entitled to.
 | Auto-capture and the internal-only check | `backend/internal/modules/capture/sink.go`, `sinkmailgates.go` |
 | The tier ladder | `backend/internal/modules/capture/sinkensure.go` |
 | The channel path: shape, admission, erasure lock | `backend/internal/modules/capture/sinkchannel.go` |
-| Minting or adopting the human behind a channel account | `backend/internal/modules/contacts/ensurechannel.go`, `ensurechanneladopt.go` |
-| Address-as-identity vs. address-as-correspondence | `backend/migrations/core/0269_contact_email_correspondence_evidence.up.sql` |
+| Creating or adopting the human behind a channel account | `backend/internal/modules/contacts/ensurechannel.go`, `ensurechanneladopt.go` |
+| Address-as-identity vs. address-as-correspondence | `contact_email.from_correspondence`, created in `backend/migrations/core/0001_baseline.up.sql` and carried to its current table by `1789170001_the_record_is_called_a_contact.up.sql` |
 | The decision ledger and its caps | `backend/internal/modules/capture/pending.go`, `pendingcap.go` |
 | Review queue and sweeps | `backend/internal/modules/capture/pendingreview.go`, `pendingsweeps.go` |
 | Own domains, personal-mail list, settings | `owndomainstore.go`, `freemaildomain.go`, `baselinelist.go`, `settings.go` |
@@ -567,19 +565,10 @@ was entitled to.
 | Job schedules and timeouts | `backend/api/jobs.yaml` |
 | An example connector | `extensions/openchannel/` |
 
-### Decisions
-
-| Reference | Topic |
-|---|---|
-| ADR-0063 | Automatic contact creation |
-| ADR-0072 / A118 | The tier ladder, the decision ledger, the confidence floor, hide-then-redact |
-| ADR-0082 / A127 | The internal-only drop and the own-domain list |
-| ADR-0120 | The extension tier |
-| ADR-0107 / A158 | A message names the transport that carried it, separately from its kind |
-| CAP-PARAM-5 / -6 / -7 | Personal-mail domains, the transactional registry, workspace capture settings |
-
 ### Related pages
 
-[capture-connectors.md](capture-connectors.md) · [extensibility.md](extensibility.md) ·
-[write-backbone.md](write-backbone.md) · [ai-runtime.md](ai-runtime.md) ·
-[privacy-and-consent.md](privacy-and-consent.md)
+- [capture-connectors.md](capture-connectors.md)
+- [extensibility.md](extensibility.md)
+- [write-backbone.md](write-backbone.md)
+- [ai-runtime.md](ai-runtime.md)
+- [privacy-and-consent.md](privacy-and-consent.md)

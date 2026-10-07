@@ -20,7 +20,15 @@
 // so a full-bleed row keeps the card's radius, and a panel opened inside one
 // near the card's edge loses exactly the part it was opened for.
 
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type ComponentPropsWithRef,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button, type ButtonVariant } from "./atoms";
@@ -42,7 +50,12 @@ export function Popover({
   className,
   variant,
   disabled,
+  reasonId,
   onHover,
+  open: openProp,
+  onOpenChange,
+  dialog,
+  panelClassName,
   children,
 }: Readonly<{
   label: ReactNode;
@@ -83,9 +96,28 @@ export function Popover({
   // trigger inherits the type around it and is marked pressable by its own
   // caret and its hover, which is what a receipt under a reading wants.
   variant?: ButtonVariant;
+  /** A sentence elsewhere on the page that says why the trigger is refused;
+   *  it refuses to open the way `disabled` does, and names its reason. */
+  reasonId?: string;
+  /** Controlled: the caller holds the open state and hears every change. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** The panel holds controls to work in rather than prose to read, so it is
+   *  a non-modal dialog and the trigger says it opens one. */
+  dialog?: boolean;
+  panelClassName?: string;
   children: ReactNode;
 }>) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = openProp ?? ownOpen;
+  const setOpen = useCallback(
+    (next: boolean) => {
+      setOwnOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
+  const refused = (disabled === true || reasonId !== undefined) && !open;
   // How the panel came to be open. A press is a reader asking for it, and
   // focus follows; a passing pointer is not, and focus stays where it was.
   const [openedBy, setOpenedBy] = useState<"press" | "hover">("press");
@@ -115,7 +147,7 @@ export function Popover({
       // spreads this same pair on itself. Only the open path is guarded: the
       // close one has to keep working, or a panel that was up when the caller
       // refused the trigger could never be left by the pointer that opened it.
-      if (disabled === true) {
+      if (disabled === true || reasonId !== undefined) {
         return;
       }
       setOpenedBy("hover");
@@ -129,7 +161,7 @@ export function Popover({
   );
   const press = () => {
     setOpenedBy("press");
-    setOpen((was) => !was);
+    setOpen(!open);
   };
 
   useEffect(() => {
@@ -141,11 +173,9 @@ export function Popover({
         return;
       }
       event.preventDefault();
+      // Focus goes back to the trigger through `panelFocus`, once the panel
+      // has really gone: a controlled caller may refuse the close.
       setOpen(false);
-      // Back to the button that opened it. Escape with the focus left in a
-      // panel that has just been removed drops a keyboard reader at the top of
-      // the document, several sections above the reading they were on.
-      trigger.current?.focus();
     };
     const onPointer = (event: MouseEvent) => {
       if (!(event.target instanceof Node)) {
@@ -167,57 +197,39 @@ export function Popover({
       globalThis.removeEventListener("keydown", onKey);
       globalThis.removeEventListener("mousedown", onPointer);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   return (
     <>
-      {variant ? (
-        <Button
-          id={triggerId}
-          ref={trigger}
-          variant={variant}
-          className={
-            className ? `popover-trigger ${className}` : "popover-trigger"
-          }
-          disabled={disabled === true && !open}
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={press}
-          {...(onHover ? hover : {})}
-        >
-          {label}
-        </Button>
-      ) : (
-        <button
-          type="button"
-          id={triggerId}
-          ref={trigger}
-          className={
-            className ? `popover-trigger ${className}` : "popover-trigger"
-          }
-          disabled={disabled === true && !open}
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={press}
-          {...(onHover ? hover : {})}
-        >
-          {label}
-        </button>
-      )}
+      <PopoverTrigger
+        id={triggerId}
+        ref={trigger}
+        variant={variant}
+        className={withClass("popover-trigger", className)}
+        refused={refused}
+        reasonId={reasonId}
+        aria-haspopup={dialog ? "dialog" : undefined}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={press}
+        {...(onHover ? hover : {})}
+      >
+        {label}
+      </PopoverTrigger>
       {/* Rendered only while it is open. Nothing in here holds state a reader
           expects to find again — it is a paragraph of evidence — so unlike the
           overflow menu, which keeps items alive because they own dialogs,
           there is nothing to preserve across a close. */}
       {open &&
         createPortal(
-          // A named section, not a dialog: nothing here traps focus or has to
-          // be dismissed before the page can be used again, and announcing a
-          // dialog we do not implement would tell a screen reader the page has
-          // gone modal when it has not.
+          // A named section, or with `dialog` a NON-modal one: nothing here
+          // traps focus or has to be dismissed before the page can be used
+          // again, so it never claims `aria-modal`.
           <section
             id={panelId}
             ref={panel}
-            className="popover-panel"
+            className={withClass("popover-panel", panelClassName)}
+            role={dialog ? "dialog" : undefined}
             aria-labelledby={triggerId}
             {...(onHover ? hover : {})}
             {...panelFocus}
@@ -232,5 +244,36 @@ export function Popover({
           document.body,
         )}
     </>
+  );
+}
+
+function withClass(own: string, extra: string | undefined): string {
+  return extra ? `${own} ${extra}` : own;
+}
+
+function PopoverTrigger({
+  variant,
+  refused,
+  reasonId,
+  ...button
+}: ComponentPropsWithRef<"button"> &
+  Readonly<{ variant?: ButtonVariant; refused: boolean; reasonId?: string }>) {
+  if (variant) {
+    return (
+      <Button
+        {...button}
+        variant={variant}
+        disabled={refused}
+        reasonId={refused ? reasonId : undefined}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      {...button}
+      disabled={refused}
+      aria-describedby={refused ? reasonId : undefined}
+    />
   );
 }

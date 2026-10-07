@@ -5,9 +5,9 @@
 
 package gates
 
-// employment.IsCurrentSQL calls itself "the ONE spelling of 'this job is
-// still theirs', and the only definition of a current employment in this
-// product". That was a claim with nothing holding it, and it was false eleven
+// employment.IsCurrentSQL calls itself "the one spelling of 'this job is still
+// theirs'", and every statement that asks whether an employment is current goes
+// through it. That was a claim with nothing holding it, and it was false eleven
 // times over.
 //
 // Eight statements asked whether an employment was current with a bare

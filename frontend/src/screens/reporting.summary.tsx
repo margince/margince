@@ -69,13 +69,7 @@ export function ResultsSummary({
             value={amount(metric.value)}
             detail={
               <>
-                <span>
-                  {reportingPeriodLabel(
-                    evaluation.context.interval,
-                    evaluation.context.timezone,
-                    locale,
-                  )}
-                </span>
+                <OutcomePeriod evaluation={evaluation} metric={metric} />
                 {comparable && (
                   <span>
                     {t("reporting.targetPeriodSummary", {
@@ -96,9 +90,6 @@ export function ResultsSummary({
                     {evaluation.context.target_interval &&
                       ` · ${reportingPeriodLabel(evaluation.context.target_interval, evaluation.context.timezone, locale)}`}
                   </span>
-                )}
-                {metric.coverage.status !== "ok" && (
-                  <span>{t(`reporting.status.${metric.coverage.status}`)}</span>
                 )}
               </>
             }
@@ -138,5 +129,34 @@ export function ResultsSummary({
         );
       })}
     </StatStrip>
+  );
+}
+
+function OutcomePeriod({
+  evaluation,
+  metric,
+}: Readonly<{
+  evaluation: ReportingEvaluation;
+  metric: ReportingEvaluation["metrics"][number];
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <>
+      <span>
+        {metric.id === "bookings_won" && metric.coverage.status === "no_data"
+          ? `${t("reporting.noSalesWon")} · `
+          : ""}
+        {reportingPeriodLabel(
+          evaluation.context.interval,
+          evaluation.context.timezone,
+          locale,
+        )}
+      </span>
+      {metric.coverage.status !== "ok" &&
+        !(
+          metric.id === "bookings_won" && metric.coverage.status === "no_data"
+        ) && <span>{t(`reporting.status.${metric.coverage.status}`)}</span>}
+    </>
   );
 }

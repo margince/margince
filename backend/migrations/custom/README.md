@@ -1,4 +1,4 @@
-# custom/ — the fork-owned migration namespace (ADR-0017)
+# custom/: the fork-owned migration namespace
 
 Upstream ships this directory empty. A fork's agent-authored migrations
 land here as `<YYYYMMDDHHMMSS>_<name>.up.sql` / `.down.sql` pairs, tracked

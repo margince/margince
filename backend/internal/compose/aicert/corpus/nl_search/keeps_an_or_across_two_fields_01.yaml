@@ -11,7 +11,7 @@ fixture:
   fields:
   - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
   - {name: email, type: text, operators: [eq, neq, in, contains, exists]}
-  - {name: source, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: source, type: picklist, operators: [eq, neq, in, exists], options: [webinar, referral, website, event]}
   - {name: score, type: number, operators: [eq, neq, gt, gte, lt, lte, in, exists]}
   - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
 expect:

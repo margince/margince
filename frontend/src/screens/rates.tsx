@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
@@ -219,6 +219,7 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
   const qc = useQueryClient();
   const labelId = useId();
+  const formId = useId();
   const [from, setFrom] = useState("");
   const [rate, setRate] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(today());
@@ -243,22 +244,20 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
     },
     onError: (err: Error) => setError(problemMessageOf(err, t)),
   });
+  const ready = from.trim() !== "" && rate.trim() !== "";
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!ready || save.isPending) return;
+    setError(null);
+    save.mutate();
+  }
 
   return (
-    <Modal open onClose={onClose} labelledBy={labelId}>
-      {/* A dialog is portalled to the body, so it is its own region and its
-          title starts the outline at level 2 — the spelling ConfirmModal uses
-          for every other dialog in the tree. `.modal-title` is the catalog's
-          own name for the interval under it. */}
+    <Modal open onClose={onClose} labelledBy={labelId} intent="form">
       <Heading size="large" id={labelId} className="t-h2 modal-title">
         {t("settings.rates.fxModalTitle")}
       </Heading>
-      {/* `Field` owns each box's id and hands it to the input, so the label a
-          reader sees and the name the control announces are one string written
-          once. The stack owns the interval between them: a `.field` sets no
-          margin of its own, deliberately, and a dialog is not the place to
-          invent a second answer to that. */}
-      <div className="form-stack">
+      <form id={formId} className="form-stack" onSubmit={submit}>
         <Field label={t("settings.rates.colFrom")}>
           {(control) => (
             <TextInput
@@ -292,23 +291,19 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           )}
         </Field>
         <WriteRefused titleKey="settings.rates.notSaved" message={error} />
-        <div className="form-actions">
-          <Button variant="ghost" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setError(null);
-              save.mutate();
-            }}
-            disabled={
-              save.isPending || from.trim() === "" || rate.trim() === ""
-            }
-          >
-            {t("settings.rates.setRate")}
-          </Button>
-        </div>
+      </form>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={!ready || save.isPending}
+        >
+          {t("settings.rates.setRate")}
+        </Button>
       </div>
     </Modal>
   );

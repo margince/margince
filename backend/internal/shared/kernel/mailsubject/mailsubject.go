@@ -12,7 +12,11 @@
 // Stdlib only, which the shared tier requires.
 package mailsubject
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+	"unicode"
+)
 
 // ReplyPrefixes are the ways a client marks a subject as a reply, in the
 // languages this product writes. Lower case, colon included.
@@ -35,4 +39,37 @@ func ReplyPrefixPattern() string {
 		words = append(words, strings.TrimSuffix(prefix, ":"))
 	}
 	return `^(\s*(` + strings.Join(words, "|") + `)\s*:)+\s*`
+}
+
+var (
+	replyPrefixes = regexp.MustCompile(`(?i)` + ReplyPrefixPattern())
+	innerSpaces   = regexp.MustCompile(`\s+`)
+)
+
+// Normalized is a subject as the answer check compares it: reply prefixes and
+// outer spaces removed, inner runs of space folded, lower-cased. A forward
+// prefix stays. The SQL in activities/answered.go (normalisedSubject) spells
+// the same steps over the same pattern; TestNormalizedMatchesTheAnswerCheck
+// holds the two to one answer.
+func Normalized(subject string) string {
+	subject = strings.Map(func(r rune) rune {
+		if isPostgresSpace(r) {
+			return ' '
+		}
+		return r
+	}, subject)
+	stripped := replyPrefixes.ReplaceAllString(subject, "")
+	return strings.ToLower(strings.Trim(innerSpaces.ReplaceAllString(stripped, " "), " "))
+}
+
+// isPostgresSpace is what the database's \s matches: Unicode white space
+// except the no-break spaces, which its locale does not class as space. Go's
+// own \s is ASCII only, so every such rune is made a plain space before the
+// shared pattern runs, and btrim's plain-space trim follows.
+func isPostgresSpace(r rune) bool {
+	switch r {
+	case '\u00a0', '\u2007', '\u202f':
+		return false
+	}
+	return unicode.IsSpace(r)
 }

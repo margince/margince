@@ -26,7 +26,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
-	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -116,7 +115,8 @@ type Message struct {
 	// names: a system label is its name (INBOX, SENT, CATEGORY_PROMOTIONS) and
 	// a user label is an opaque "Label_<n>". They ride the same messages.get
 	// response FiledAsSent is read from, so they cost no extra call.
-	Labels []string
+	Labels     []string
+	ReceivedAt time.Time // Gmail's internalDate (see internalDate); zero when none
 }
 
 // API is the read-only Gmail surface the connector uses. All calls take a
@@ -323,8 +323,9 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 
 func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Message, error) {
 	var out struct {
-		Raw      string   `json:"raw"`
-		LabelIDs []string `json:"labelIds"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		Raw          string   `json:"raw"`
+		LabelIDs     []string `json:"labelIds"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		InternalDate string   `json:"internalDate"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	}
 	q := url.Values{"format": {"RAW"}}
 	status, err := a.get(ctx, accessToken, "/messages/"+url.PathEscape(msgID), q, &out, maxRawMessageBytes)
@@ -343,7 +344,10 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 	if err != nil {
 		return Message{}, fmt.Errorf("gmail: decoding raw message %s: %w", msgID, ErrUnreachable)
 	}
-	return Message{RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs}, nil
+	return Message{
+		RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs,
+		ReceivedAt: internalDate(out.InternalDate),
+	}, nil
 }
 
 // hasSentLabel reports whether Gmail filed this message under SENT — the
@@ -376,13 +380,13 @@ func hasRejectedLabel(labelIDs []string) bool {
 	return slices.Contains(labelIDs, spamLabelID) || slices.Contains(labelIDs, trashLabelID)
 }
 
-// Watch registers a users.watch so Gmail publishes change notifications for
+// watchOnce registers a users.watch so Gmail publishes change notifications for
 // the mailbox to the Pub/Sub topic. Gmail returns the mailbox's current
 // historyId and an expiration as a string of milliseconds since the epoch;
 // re-calling watch renews it (Gmail keeps one watch per mailbox). A non-200 is
 // classified by classifyStatus like every other Gmail call — Google's raw body
 // never reaches the caller.
-func (a *httpAPI) Watch(ctx context.Context, accessToken, topic string) (string, time.Time, error) {
+func (a *httpAPI) watchOnce(ctx context.Context, accessToken, topic string) (string, time.Time, error) {
 	reqBody, err := json.Marshal(map[string]string{"topicName": topic})
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("gmail: encoding watch request: %w", err)
@@ -426,10 +430,11 @@ func (a *httpAPI) Watch(ctx context.Context, accessToken, topic string) (string,
 // Retry-After Google had supplied.
 func classifyStatus(resp *http.Response, op string, body []byte) error {
 	switch {
-	case resp.StatusCode == http.StatusTooManyRequests:
-		return &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
-	case resp.StatusCode == http.StatusForbidden && googleconn.RateLimitBody(body):
-		return &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
+	case resp.StatusCode == http.StatusTooManyRequests,
+		resp.StatusCode == http.StatusForbidden && googleconn.RateLimitBody(body):
+		return &connector.RateLimitedError{
+			RetryAfter: rateLimitWait(resp, body), Reason: googleconn.RateLimitReason(body), Status: resp.StatusCode,
+		}
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return &connector.ProviderError{
 			Op: op, Status: resp.StatusCode, Reason: googleconn.Reason(body), Class: ErrAuthRejected,
@@ -455,13 +460,13 @@ const (
 	maxRawMessageBytes   = 96 << 20 // 96 MiB — a full-size RAW message
 )
 
-// get performs an authorized GET and JSON-decodes into out. It returns the
+// getOnce performs an authorized GET and JSON-decodes into out. It returns the
 // HTTP status (so History can special-case 404) alongside the failure
 // classifyStatus assigns, each carrying Google's own reason code. Google's raw
 // body is never surfaced to the caller.
 //
 //craft:ignore naked-any out is the caller-supplied JSON decode target — its concrete type varies per endpoint
-func (a *httpAPI) get(ctx context.Context, accessToken, path string, q url.Values, out any, maxBytes int64) (int, error) {
+func (a *httpAPI) getOnce(ctx context.Context, accessToken, path string, q url.Values, out any, maxBytes int64) (int, error) {
 	u := a.base + path
 	if len(q) > 0 {
 		u += "?" + q.Encode()

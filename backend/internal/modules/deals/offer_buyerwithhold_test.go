@@ -6,10 +6,12 @@ package deals
 import (
 	"context"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -34,7 +36,8 @@ func deskWithoutCompanyAccess() context.Context {
 func offerNamingBuyer(company ids.UUID) crmcontracts.Offer {
 	buyer := openapi_types.UUID(company)
 	snapshot := map[string]interface{}{"display_name": "Meridian Labs"}
-	return crmcontracts.Offer{BuyerCompanyId: &buyer, BuyerSnapshot: &snapshot}
+	rendering := "offers/meridian-labs.pdf"
+	return crmcontracts.Offer{BuyerCompanyId: &buyer, BuyerSnapshot: &snapshot, PdfAssetRef: &rendering}
 }
 
 // The read-back is the whole reason this spelling exists. Withholding against
@@ -69,15 +72,103 @@ func TestWithholdingTakesTheSnapshotWithTheReference(t *testing.T) {
 	}
 }
 
+// The rendering goes with the buyer it prints. The stored PDF carries the legal
+// block as its renderer could read it, so a reader denied the buyer is not
+// handed the document that names it.
+func TestWithholdingTakesTheRenderingWithTheBuyer(t *testing.T) {
+	offers := []crmcontracts.Offer{offerNamingBuyer(ids.NewV7())}
+	if err := withholdUnreadableBuyer(deskWithoutCompanyAccess(), nil, offers); err != nil {
+		t.Fatalf("withholding the buyer: %v", err)
+	}
+	if offers[0].PdfAssetRef != nil {
+		t.Errorf("the offer still names its rendering %q, which prints the buyer withheld beside it", *offers[0].PdfAssetRef)
+	}
+}
+
+// A new buyer retires the rendering, because the read judges the stored PDF by
+// the buyer the offer names, and that PDF still prints the old one.
+func TestANewBuyerRetiresTheRendering(t *testing.T) {
+	offer := offerNamingBuyer(ids.NewV7())
+	p := storekit.NewPatch()
+	retired := retireRenderingOnBuyerChange(p, offer, ids.From[ids.CompanyKind](ids.NewV7()))
+	if cleared, set := p.After()["pdf_asset_ref"]; !set || cleared != nil {
+		t.Errorf("a new buyer left the rendering in place (set=%v, value=%v)", set, cleared)
+	}
+	// The ref is handed back so the caller reclaims the object nothing names now.
+	if retired == nil || *retired != *offer.PdfAssetRef {
+		t.Errorf("the retirement answered %v, want the ref it cleared, %q", retired, *offer.PdfAssetRef)
+	}
+}
+
+// An offer never rendered has nothing to retire, so a buyer change on it writes no
+// rendering column at all.
+func TestABuyerChangeOnAnUnrenderedOfferRetiresNothing(t *testing.T) {
+	offer := offerNamingBuyer(ids.NewV7())
+	offer.PdfAssetRef = nil
+	p := storekit.NewPatch()
+	if retired := retireRenderingOnBuyerChange(p, offer, ids.From[ids.CompanyKind](ids.NewV7())); retired != nil || !p.Empty() {
+		t.Errorf("an unrendered offer retired %v: %v", retired, p.After())
+	}
+}
+
+// The header patch carries exactly the fields the edit names, each beside the
+// value it replaces, which is what lets the audit row say what the edit changed.
+func TestTheHeaderPatchCarriesEachNamedField(t *testing.T) {
+	intro, terms := "Was intro", "Was terms"
+	until := openapi_types.Date{Time: time.Date(2026, 11, 30, 0, 0, 0, 0, time.UTC)}
+	current := crmcontracts.Offer{Currency: "EUR", ValidUntil: &until, IntroText: &intro, TermsText: &terms}
+	newCurrency, newUntil, newIntro, newTerms := "USD", "2026-12-31", "New intro", "New terms"
+	p, retired, err := offerHeaderPatch(context.Background(), nil, current, UpdateOfferInput{
+		Currency: &newCurrency, ValidUntil: &newUntil, IntroText: &newIntro, TermsText: &newTerms,
+	})
+	if err != nil || retired != nil {
+		t.Fatalf("patching the plain header fields answered retired=%v err=%v", retired, err)
+	}
+	// The before-image is the current row's own field, compared by identity.
+	for _, field := range []struct {
+		column        string
+		before, after any
+	}{
+		{"currency", "EUR", newCurrency},
+		{"valid_until", &until, newUntil},
+		{"intro_text", &intro, newIntro},
+		{"terms_text", &terms, newTerms},
+	} {
+		if p.Before()[field.column] != field.before {
+			t.Errorf("the patch records %s as changing from something other than the current row's own value", field.column)
+		}
+		if got := p.After()[field.column]; got != field.after {
+			t.Errorf("the patch sets %s to %v, want %v", field.column, got, field.after)
+		}
+	}
+	if _, named := p.After()["buyer_company_id"]; named {
+		t.Error("the patch names a buyer the edit never sent")
+	}
+}
+
+// The same buyer saved again keeps it. A form resaves the fields nobody touched,
+// and a PDF that vanished on every save of the header would be a broken feature.
+func TestTheSameBuyerKeepsTheRendering(t *testing.T) {
+	company := ids.NewV7()
+	p := storekit.NewPatch()
+	if retired := retireRenderingOnBuyerChange(p, offerNamingBuyer(company), ids.From[ids.CompanyKind](company)); retired != nil || !p.Empty() {
+		t.Errorf("saving the same buyer again retired the rendering %v: %v", retired, p.After())
+	}
+}
+
 // An offer with no buyer names nothing to probe, so the page costs nothing and
 // the fields stay as they were rather than being rewritten to the same value.
 func TestAnOfferWithNoBuyerIsLeftAlone(t *testing.T) {
-	offer := crmcontracts.Offer{}
+	rendering := "offers/no-buyer.pdf"
+	offer := crmcontracts.Offer{PdfAssetRef: &rendering}
 	if err := withholdUnreadableBuyerOn(deskWithoutCompanyAccess(), nil, &offer); err != nil {
 		t.Fatalf("withholding on an offer with no buyer: %v", err)
 	}
 	if offer.BuyerCompanyId != nil || offer.BuyerSnapshot != nil {
 		t.Errorf("an offer with no buyer gained one: id=%v snapshot=%v", offer.BuyerCompanyId, offer.BuyerSnapshot)
+	}
+	if offer.PdfAssetRef == nil {
+		t.Error("an offer with no buyer lost its rendering — a document that names nobody has nothing to withhold")
 	}
 }
 

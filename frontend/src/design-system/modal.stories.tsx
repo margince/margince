@@ -1,7 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useId, useState } from "react";
-import { Button, Modal, SectionHeader } from "./atoms";
+import { type ReactNode, useId, useState } from "react";
+import { expect, screen, within } from "storybook/test";
+import {
+  Button,
+  Field,
+  Modal,
+  SectionHeader,
+  Textarea,
+  TextInput,
+} from "./atoms";
+import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { Heading } from "./heading";
+import type { ModalIntent } from "./modal";
 
 // fe-uat (frontend/scripts/fe-uat.mjs) maps modal.tsx → modal.stories.tsx and
 // fails a change to modal.tsx whose stories here do not render clean.
@@ -18,79 +28,58 @@ export default meta;
 
 type Story = StoryObj;
 
-// The centred box everyone pictures when they read "Modal".
-function ModalDemo() {
-  const [open, setOpen] = useState(true);
-  const titleId = useId();
+// The record a dialog opens over, so the scrim has a page to darken and a
+// drawer has a page to sit beside.
+function Behind({ onOpen }: Readonly<{ onOpen: () => void }>) {
   return (
     <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the dialog
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          Merge these companies?
-        </Heading>
-        <p className="t-caption">
-          Globex GmbH keeps its record; the duplicate's activities, deals and
-          contacts move onto it. This cannot be undone.
-        </p>
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="danger" onClick={() => setOpen(false)}>
-            Merge
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-export const Dialog: Story = {
-  render: () => <ModalDemo />,
-};
-
-// placement="right" is the drawer form of the SAME Modal: anchored to the
-// trailing edge, the record behind it still legible. One component, one prop
-// between it and the centred dialog everyone pictures when they read "Modal".
-//
-// It FLOATS — a --space-4 gap on three sides, the pane radius and the pop
-// shadow — so the scrim runs all the way round it. On a phone the gap goes and
-// the same drawer is a full-screen sheet; the Storybook viewport control is
-// where to see that, because it is the width that decides, not a prop.
-function DrawerDemo() {
-  const [open, setOpen] = useState(true);
-  const titleId = useId();
-  return (
-    <>
-      {/* Something behind the drawer, because "the record stays legible" is
-          the whole claim the placement makes and an empty canvas cannot show
-          it being kept. */}
       <SectionHeader title="Globex GmbH" />
       <p className="t-body">
         Anna Brandt replied on Tuesday and is waiting on pricing. Nobody has
         written since.
       </p>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the drawer
+      <Button variant="primary" onClick={onOpen}>
+        Open
       </Button>
+    </>
+  );
+}
+
+function IntentDemo({
+  intent,
+  title,
+  verb,
+  danger = false,
+  children,
+}: Readonly<{
+  intent: ModalIntent;
+  title: string;
+  verb: string;
+  danger?: boolean;
+  children: ReactNode;
+}>) {
+  const [open, setOpen] = useState(true);
+  const titleId = useId();
+  return (
+    <>
+      <Behind onOpen={() => setOpen(true)} />
       <Modal
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={titleId}
-        placement="right"
+        intent={intent}
       >
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          Write to Anna Brandt
+          {title}
         </Heading>
-        <p className="t-caption">
-          The draft sits beside the record it is about, so a rep can read the
-          history while writing rather than remembering it.
-        </p>
+        <div className="form-stack">{children}</div>
         <div className="actions">
-          <Button onClick={() => setOpen(false)}>Discard</Button>
-          <Button variant="primary" onClick={() => setOpen(false)}>
-            Send
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            variant={danger ? "danger" : "primary"}
+            onClick={() => setOpen(false)}
+          >
+            {verb}
           </Button>
         </div>
       </Modal>
@@ -98,38 +87,113 @@ function DrawerDemo() {
   );
 }
 
-export const Drawer: Story = {
-  render: () => <DrawerDemo />,
+const opens = (name: string) => async () => {
+  const dialog = within(await screen.findByRole("dialog", { name }));
+  await expect(
+    dialog.getByRole("button", { name: "Close" }),
+  ).toBeInTheDocument();
 };
 
-// The WIDE drawer, which is the one that holds bands: a sticky head, a
-// scrolling body and a sticky foot, each paying its own padding to the drawer's
-// own edge. That is what the clipped corners are for — without them the two
-// bands square off the radius they sit in — and it is also where the close
-// control has to stay legible, drawn over the head rather than under it.
-function WideDrawerDemo() {
+/** A yes/no before something irreversible: 440px, and a card on a phone. */
+export const Confirm: Story = {
+  render: () => (
+    <IntentDemo
+      intent="confirm"
+      title="Merge these companies?"
+      verb="Merge"
+      danger
+    >
+      <p className="t-caption">
+        Globex GmbH keeps its record; the duplicate's activities, deals and
+        contacts move onto it. This cannot be undone.
+      </p>
+    </IntentDemo>
+  ),
+  play: opens("Merge these companies?"),
+};
+
+function ContactFields({ more = false }: Readonly<{ more?: boolean }>) {
+  const names = more
+    ? ["First name", "Last name", "Email", "Phone", "Job title", "Company"]
+    : ["First name", "Last name", "Email", "Phone"];
+  return (
+    <>
+      {names.map((label) => (
+        <Field key={label} label={label}>
+          {(control) => <TextInput {...control} />}
+        </Field>
+      ))}
+      <Field label="Note" hint="Read by whoever picks the account up next.">
+        {(control) => <Textarea {...control} rows={more ? 6 : 3} />}
+      </Field>
+    </>
+  );
+}
+
+/** A short form a reader fills and leaves: 600px, a sheet on a phone. */
+export const Form: Story = {
+  render: () => (
+    <IntentDemo intent="form" title="New contact at Globex" verb="Save contact">
+      <ContactFields />
+    </IntentDemo>
+  ),
+  play: opens("New contact at Globex"),
+};
+
+/** Only the body scrolls; the title and the action row stay pinned. */
+export const FormLongerThanTheScreen: Story = {
+  render: () => (
+    <IntentDemo intent="form" title="Edit Anna Brandt" verb="Save changes">
+      <ContactFields more />
+      <Field label="Assistant">{(control) => <TextInput {...control} />}</Field>
+      <Field label="Background">
+        {(control) => <Textarea {...control} rows={10} />}
+      </Field>
+    </IntentDemo>
+  ),
+  play: async () => {
+    const dialog = await screen.findByRole("dialog", {
+      name: "Edit Anna Brandt",
+    });
+    const save = within(dialog).getByRole("button", { name: "Save changes" });
+    await expect(save.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      dialog.getBoundingClientRect().bottom,
+    );
+  },
+};
+
+/** Work beside the record: 560px on the trailing edge. */
+export const Drawer: Story = {
+  render: () => (
+    <IntentDemo intent="drawer" title="Log a call with Anna" verb="Log call">
+      <Field label="Outcome">{(control) => <TextInput {...control} />}</Field>
+      <Field label="What was said">
+        {(control) => <Textarea {...control} rows={8} />}
+      </Field>
+    </IntentDemo>
+  ),
+  play: opens("Log a call with Anna"),
+};
+
+function ReadingDemo() {
   const [open, setOpen] = useState(true);
   const titleId = useId();
   return (
     <>
-      <SectionHeader title="Globex GmbH" />
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the brief
-      </Button>
+      <Behind onOpen={() => setOpen(true)} />
       <Modal
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={titleId}
-        placement="right"
-        size="wide"
+        intent="drawer-reading"
       >
-        <div className="drawer-head">
+        <DrawerHead>
           <Heading size="large" id={titleId} className="t-h2">
             Before the room with Anna Brandt
           </Heading>
           <p className="t-caption">Tuesday 14:00 · 40 minutes · Munich</p>
-        </div>
-        <div className="drawer-body">
+        </DrawerHead>
+        <DrawerBody>
           {[
             "The objective: leave with a signed pilot scope.",
             "The risk: procurement has not seen the security pack.",
@@ -140,18 +204,74 @@ function WideDrawerDemo() {
               {line}
             </p>
           ))}
-        </div>
-        <div className="drawer-foot">
+        </DrawerBody>
+        <DrawerFoot>
           <Button onClick={() => setOpen(false)}>Discard</Button>
           <Button variant="primary" onClick={() => setOpen(false)}>
             Send the brief
           </Button>
+        </DrawerFoot>
+      </Modal>
+    </>
+  );
+}
+
+/** Something read at length beside the record: 880px, banded. */
+export const DrawerReading: Story = {
+  render: () => <ReadingDemo />,
+  play: opens("Before the room with Anna Brandt"),
+};
+
+function FullDemo() {
+  const [open, setOpen] = useState(true);
+  const titleId = useId();
+  return (
+    <>
+      <Behind onOpen={() => setOpen(true)} />
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        intent="full"
+      >
+        <div className="file-preview">
+          <div className="file-preview-head">
+            <Heading
+              size="large"
+              id={titleId}
+              className="t-h3 file-preview-name"
+            >
+              Globex master services agreement.pdf
+            </Heading>
+          </div>
+          <div className="file-preview-stage">
+            <p className="t-body">
+              1. Scope. The supplier provides the services described in each
+              order form signed by both parties.
+            </p>
+          </div>
         </div>
       </Modal>
     </>
   );
 }
 
-export const DrawerWide: Story = {
-  render: () => <WideDrawerDemo />,
+/** A stored file read at the size of the screen, framed by the scrim. */
+export const Full: Story = {
+  render: () => <FullDemo />,
+  play: opens("Globex master services agreement.pdf"),
+};
+
+/** Captured at 390px by `uat-phone`: a confirm stays a card, every other
+ * intent becomes the sheet. */
+export const PhoneConfirm: Story = {
+  ...Confirm,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const PhoneForm: Story = {
+  ...Form,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

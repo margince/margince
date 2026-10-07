@@ -36,11 +36,15 @@ type fixedVerifier struct {
 	emailVerified bool
 	// groups stands in for the token's `groups` claim; the zero value is the
 	// groupless token most providers mint.
-	groups []string
+	groups    []string
+	givenName string
 }
 
-func (f fixedVerifier) Verify(context.Context, string) (string, string, bool, []string, error) {
-	return f.email, f.sub, f.emailVerified, f.groups, nil
+func (f fixedVerifier) Verify(context.Context, string) (OIDCClaims, error) {
+	return OIDCClaims{
+		Email: f.email, Subject: f.sub, EmailVerified: f.emailVerified,
+		Groups: f.groups, GivenName: f.givenName,
+	}, nil
 }
 
 type fixedExchanger struct{ idToken string }
@@ -67,8 +71,8 @@ func (erroringExchanger) Exchange(context.Context, string, string, string) (stri
 
 type unverifiedEmailVerifier struct{}
 
-func (unverifiedEmailVerifier) Verify(context.Context, string) (string, string, bool, []string, error) {
-	return "carol@example.com", "sub-carol", false, nil, nil
+func (unverifiedEmailVerifier) Verify(context.Context, string) (OIDCClaims, error) {
+	return OIDCClaims{Email: "carol@example.com", Subject: "sub-carol"}, nil
 }
 
 func oidcStrPtr(s string) *string { return &s }

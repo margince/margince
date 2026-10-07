@@ -105,6 +105,7 @@ export function DecisionDialog({
 }: Readonly<{ initial: Decision; set: SetDecision; onClose: () => void }>) {
   const t = useT();
   const headingId = useId();
+  const formId = useId();
   const [domain, setDomain] = useState(initial.domain);
   const [admission, setAdmission] = useState<Admission>(initial.admission);
   const [reason, setReason] = useState(initial.reason);
@@ -112,11 +113,12 @@ export function DecisionDialog({
   const trimmedReason = reason.trim();
   const ready = trimmedDomain !== "" && trimmedReason !== "";
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("blockedDomains.record")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -188,19 +190,20 @@ export function DecisionDialog({
             {problemMessageOf(set.error, t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={set.isPending || !ready}
-          >
-            {t("blockedDomains.save")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={set.isPending || !ready}
+        >
+          {t("blockedDomains.save")}
+        </Button>
+      </div>
     </Modal>
   );
 }

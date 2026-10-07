@@ -82,6 +82,13 @@ func (s *Service) WithContactTouch(r ContactTouch) *Service {
 	return s
 }
 
+// WithContactEmployers binds the reader that says which account a meeting
+// row's contact works for. Unbound, the row names the contact and no account.
+func (s *Service) WithContactEmployers(e ContactEmployers) *Service {
+	s.employers = e
+	return s
+}
+
 // WithDealMoves binds the reader that puts a deal's already-decided next step
 // on its queue row. An option for the reason WithDealFacts is one.
 //
@@ -113,16 +120,6 @@ func (s *Service) WithDealStandings(d DealStandings) *Service {
 // unanswerable may-I is a no.
 func (s *Service) WithTeammates(t Teammates) *Service {
 	s.teammates = t
-	return s
-}
-
-// WithLeadResponses binds the inbound leads still owed a first reply.
-//
-// Read BESIDE the assembled day rather than as a fifteenth lane, the way the
-// waiting-customer source already is: /attention publishes a fourteen-lane
-// promise, and this is not one of them. The queue is where the two orders meet.
-func (s *Service) WithLeadResponses(l LeadResponses) *Service {
-	s.leads = l
 	return s
 }
 

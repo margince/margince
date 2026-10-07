@@ -9,13 +9,17 @@ package agents
 
 var draftEmailCopy = toolCopy{
 	Purpose: "Compose an email: a reply to a recorded thread (activity_id), or a FIRST message " +
-		"to a record (links).",
-	Limits: "It writes the message and stops: nothing is sent. With no drafting model configured " +
-		"the text is a short deterministic note rather than a composed one.",
+		"to a contact or lead (links naming that recipient; with a contact, also the company, its " +
+		"deal or a project the message is about), written from that recipient's record.",
+	Limits: "Nothing is sent. A first message is saved in Margince for the human you act for: " +
+		"it waits on the contact's or lead's page, marked as drafted by an agent, until they " +
+		"review, edit and send it there. It is not saved when they already keep an unsent draft " +
+		"of their own for that recipient (not_saved says so), and a reply is never saved: show " +
+		"those in full. With no drafting model configured the text is a short deterministic note.",
 	Instead: "draft_follow_ups_for drafts across a set of slipping deals at once; send_email " +
 		"sends a reply, send_company_email a first message.",
-	Retain: "Keep what comes back — subject, body, and the activity_id or links echoed with it; " +
-		"the send takes them. Re-writing the text in between means a human approves one " +
+	Retain: "Keep what comes back — subject, body, to, and the activity_id or links echoed with " +
+		"it; the send takes them. Re-writing the text in between means a human approves one " +
 		"message and another goes out.",
 }
 

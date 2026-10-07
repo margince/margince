@@ -5,10 +5,9 @@
 
 package gates
 
-// API-CC-8 as a fitness function: a replay is a read, so every operation
-// the idempotency middleware can replay must either re-probe the row scope
-// of the record its recorded body carries, or say in writing that the body
-// carries no such record.
+// A replay is a read, so every operation the idempotency middleware can replay
+// must either re-probe the row scope of the record its recorded body carries,
+// or say in writing that the body carries no such record.
 //
 // The operation's 2xx response names its schema, so the route's obligation
 // follows from the contract once the SHAPES are classified. Classifying them —

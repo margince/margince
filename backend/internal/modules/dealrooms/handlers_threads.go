@@ -54,7 +54,7 @@ func (h Handlers) ReplyDealRoomThread(w http.ResponseWriter, r *http.Request, id
 		httperr.Write(w, r, err)
 		return
 	}
-	thread, err := h.store.Reply(r.Context(), pathID(id), ids.UUID(threadID), body, source)
+	thread, err := h.store.Reply(r.Context(), pathID(id), ids.UUID(threadID), body, source, optionalUUID(req.RequestId))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -96,6 +96,11 @@ func openThreadInput(req crmcontracts.OpenDealRoomThreadRequest, sellerSide bool
 	if req.RequiredChange != nil {
 		in.RequiredChange = *req.RequiredChange
 	}
+	// BOTH edges. The schema is shared, so a request_id the seller sent and this
+	// dropped would be the contract promising something that does not happen —
+	// and neither openDealRoomThread nor replyDealRoomThread appears in
+	// replayableOperations, so the transport does not cover that side either.
+	in.RequestID = optionalUUID(req.RequestId)
 	return in, nil
 }
 

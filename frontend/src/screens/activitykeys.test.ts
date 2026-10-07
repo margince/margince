@@ -86,15 +86,25 @@ describe("which reads a write to the record itself invalidates", () => {
       ["deal", "d1"],
       ["deals", "d1", "outcome-reviews"],
       ["deal-status", "d1"],
+      ["lists", "record", "deal", "d1"],
     ]);
   });
 
   it("reaches the same card from the generic edit form, by record kind", () => {
-    expect(derivedRecordKeys("deal", "d1")).toEqual([["deal-status", "d1"]]);
+    expect(derivedRecordKeys("deal", "d1")).toEqual([
+      ["deal-status", "d1"],
+      ["lists", "record", "deal", "d1"],
+    ]);
+  });
+
+  it("reaches the lists a contact is on, which its fields decide", () => {
+    expect(derivedRecordKeys("contact", "p1")).toEqual([
+      ["lists", "record", "contact", "p1"],
+    ]);
   });
 
   it("names nothing for a record kind with no derived read", () => {
-    expect(derivedRecordKeys("contact", "p1")).toEqual([]);
+    expect(derivedRecordKeys("project", "p1")).toEqual([]);
   });
 });
 

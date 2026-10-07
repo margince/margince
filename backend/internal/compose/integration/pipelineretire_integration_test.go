@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -158,5 +159,80 @@ func TestARetiredPipelineCanBePutBack(t *testing.T) {
 	if _, err := e.Deals.RestorePipeline(ctx, id); err != nil {
 		t.Errorf("restoring an already-live pipeline answered %v, want the same answer as the first "+
 			"call — a caller who lost the response cannot tell which one they are making", err)
+	}
+}
+
+// The name a retired pipeline held is free while it is retired, so coming back is
+// the one direction that can collide — and the caller has to be told which pipeline
+// holds it, because only they can decide which of the two gets renamed.
+func TestARetiredPipelineCannotComeBackOntoATakenName(t *testing.T) {
+	e := Setup(t)
+	ctx := e.Admin()
+	retired, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Seasonal"})
+	if err != nil {
+		t.Fatalf("creating the pipeline: %v", err)
+	}
+	id := pipelineIDOf(ids.UUID(retired.Id))
+	if err := e.Deals.ArchivePipeline(ctx, id, nil); err != nil {
+		t.Fatalf("archiving it: %v", err)
+	}
+	// The whole point of the partial index: with it retired, the name is free.
+	if _, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Seasonal"}); err != nil {
+		t.Fatalf("a live pipeline could not take the retired name: %v", err)
+	}
+
+	_, err = e.Deals.RestorePipeline(ctx, id)
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("restoring onto a taken name = %v, want a conflict — the index would "+
+			"raise 23505 here, which reaches the caller as a 500 saying nothing", err)
+	}
+	// Still retired: a restore that cannot complete must not half-happen.
+	live, err := e.Deals.ListPipelines(ctx, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("listing the live pipelines: %v", err)
+	}
+	var seasonal int
+	for _, p := range live {
+		if p.Name == "Seasonal" {
+			seasonal++
+		}
+	}
+	if seasonal != 1 {
+		t.Errorf("%d live pipelines are named Seasonal, want 1 — the refused restore left "+
+			"the retired one live", seasonal)
+	}
+}
+
+// The name can go while the restore is in flight.
+//
+// nameStillFree looks under a lock on the pipeline being restored, and that lock says
+// nothing about a DIFFERENT row — so another transaction can create a live pipeline
+// under the freed name after the look and before the update. The index settles it,
+// and the caller is owed the same conflict either way rather than a 500.
+//
+// Built from two transactions, because the window between the check and the update
+// is not reachable by calling the store twice and hoping.
+func TestARestoreRefusedByTheIndexReadsAsAConflict(t *testing.T) {
+	e := Setup(t)
+	ctx := e.Admin()
+	retired, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Seasonal"})
+	if err != nil {
+		t.Fatalf("creating the pipeline: %v", err)
+	}
+	id := pipelineIDOf(ids.UUID(retired.Id))
+	if err := e.Deals.ArchivePipeline(ctx, id, nil); err != nil {
+		t.Fatalf("archiving it: %v", err)
+	}
+
+	// A live pipeline takes the name, committed — which is the state the restore's
+	// own UPDATE will meet whatever its earlier check saw.
+	if _, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Seasonal"}); err != nil {
+		t.Fatalf("a live pipeline could not take the retired name: %v", err)
+	}
+	// Reached through the store, so the whole path answers — including the error the
+	// index raises if the pre-check is ever removed or outrun.
+	_, err = e.Deals.RestorePipeline(ctx, id)
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a restore the index refuses = %v, want a conflict", err)
 	}
 }

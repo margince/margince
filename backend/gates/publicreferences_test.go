@@ -51,6 +51,9 @@ var forbidden = []struct {
 	name    string
 	pattern *regexp.Regexp
 	why     string
+	// docsOnly limits a pattern to Markdown: the API contract and the release
+	// workflow name these sources functionally, while a page only cites them.
+	docsOnly bool
 }{
 	{
 		name:    "private repository name",
@@ -64,8 +67,20 @@ var forbidden = []struct {
 	},
 	{
 		name:    "private pull-request reference",
-		pattern: regexp.MustCompile(`foundation\s?#\d+`),
+		pattern: regexp.MustCompile(`foundation\s?((PR|pull request)\s*)?#\d+`),
 		why:     "link an issue or PR in this repository, or state the fact without a link",
+	},
+	{
+		name:     "private GitHub owner path",
+		pattern:  regexp.MustCompile(`gradionhq/`),
+		why:      "describe the repository by role (\"the private release repository\"); a reader here cannot open it",
+		docsOnly: true,
+	},
+	{
+		name:     "private specification document",
+		pattern:  regexp.MustCompile(`business/\d+-|contract/interfaces\.md|(^|[^\w/.-])design/\d\d-[a-z-]+\.md|\b(data-model|formulas)(\.md)?\s*§`),
+		why:      "write the rule out here — a public contributor cannot open the specification",
+		docsOnly: true,
 	},
 }
 
@@ -123,6 +138,9 @@ func assertFileCitesNothingPrivate(t *testing.T, rel string) {
 
 	for i, line := range strings.Split(string(body), "\n") {
 		for _, f := range forbidden {
+			if f.docsOnly && filepath.Ext(rel) != ".md" {
+				continue
+			}
 			if f.pattern.MatchString(line) {
 				t.Errorf("%s:%d carries a %s — %s\n\t%s",
 					rel, i+1, f.name, f.why, strings.TrimSpace(line))

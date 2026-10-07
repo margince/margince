@@ -1,14 +1,13 @@
 # Mint an Agent Seat Passport
 
 A passport is a REST bearer credential you mint yourself for a script or
-integration to call the api directly. It authenticates on the `/mcp`
-transport too, the same way any bearer passport does, but that is not how
-an MCP client normally gets one: the OAuth consent flow mints its own
-credential when the human approves a connection, so there is nothing to
-prepare here for that path. It is scoped, expiring, revocable, and bound to
-the human who minted it — the agent never has more rights than that human,
-and the human's seat + RBAC are re-derived on every call, so revocation
-binds mid-session.
+integration to call the api directly. It also authenticates on the `/mcp`
+transport, like any bearer passport. An MCP client normally gets its own
+credential from the OAuth consent flow when the human approves a connection,
+so that path needs nothing from this page. A passport is scoped, expiring,
+revocable, and bound to the human who minted it. The agent never has more
+rights than that human, and the human's seat + RBAC are re-derived on every
+call, so revocation binds mid-session.
 
 ## Prerequisites
 
@@ -25,8 +24,8 @@ curl -X POST http://localhost:8080/v1/passports \
   -d '{"label": "Claude Desktop", "scopes": ["read", "write"], "ttl_hours": 720}'
 ```
 
-The response contains the raw `mgp_`-prefixed bearer token **once** —
-only its SHA-256 is stored, so copy it now. Scopes are the verb classes
+The response contains the raw `mgp_`-prefixed bearer token **once**.
+Only its SHA-256 is stored, so copy it now. Scopes are the verb classes
 read/draft/write/send/enrich (effective authority is always scopes ∩
 the granting human's RBAC); `ttl_hours` defaults to 720 (30 days) and
 is capped at 2160 (90 days).
@@ -36,8 +35,8 @@ is capped at 2160 (90 days).
 Send it as `Authorization: Bearer mgp_…` against the `/v1` REST surface. 🟢
 mutations execute with agent-stamped provenance, 🟡 mutations stage an
 approval, and human-only governance routes refuse agent principals. A passport
-carrying `write` can also answer what is waiting — `list_approvals`,
-`read_approval` and `decide_approval` — under its human's own authority; one
+carrying `write` can also answer what is waiting (`list_approvals`,
+`read_approval` and `decide_approval`) under its human's own authority; one
 minted `read` only reads the queue.
 
 Connecting an MCP client is a separate path and needs none of this

@@ -5,13 +5,16 @@ import { useId, useState } from "react";
 import { PageAsideToggle } from "../app/pageaside";
 import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
-import { Button, Modal } from "../design-system/atoms";
+import { Modal } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { PageZones } from "../design-system/pagezones";
 import { formatDateTime } from "../format/format";
+import { greetingNameOf } from "../format/greetingname";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { LinkedApprovalDrawer } from "./approvaldrawer";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
@@ -21,7 +24,7 @@ import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
-import { OvernightPanel } from "./brief.rail.overnight";
+import { OvernightDigest } from "./brief.rail.overnight";
 import { BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefTeamBoard } from "./brief.teamboard";
@@ -77,7 +80,7 @@ export function BriefScreen() {
   );
   const queuedDay = briefDay(queued.data?.pages);
   const review = useWeeklyReview(address.week);
-  const firstName = me.data?.user?.display_name?.trim().split(/\s+/)[0] ?? null;
+  const firstName = greetingNameOf(me.data?.user);
   return (
     <div className="wrap brief-wrap">
       {/* THE HEAD ON THE PAGE GROUND, the way a record's head stands: the
@@ -85,6 +88,8 @@ export function BriefScreen() {
           under it, and the controls on the far edge where a record's verbs
           stand. The one raised surface under it is the Focus panel — the
           work is the card, and everything around it is the page. */}
+      {/* A link to one decision, from a notice or a receipt, opens it here. */}
+      <LinkedApprovalDrawer />
       <div className="brief-head">
         <BriefGlance
           view={address.view}
@@ -257,10 +262,9 @@ function PersonalMorning({
           </p>
         </div>
       )}
-      {/* THE FOLLOW-THROUGH under it, in two columns: what was done for the
-          reader and the day's notices on the left, and on the right the
-          context the work is read against — the schedule as the day's line,
-          and the night. */}
+      {/* THE FOLLOW-THROUGH under it, in two columns: the day's notices and
+          what happened while the reader was away on the left, and on the right
+          the schedule the work is read against. */}
       <PageZones
         shape="aside"
         className="brief-followthrough"
@@ -269,22 +273,16 @@ function PersonalMorning({
         asideLabel={t("brief.rail")}
         main={
           <>
-            <BriefChanges />
             <BriefUpdates day={day} />
-            {/* THE RECEIPT, last and open. Everything above asks the reader for
-                something; this asks for nothing, and it is the reason the acts
-                above it are safe to take at all. It goes last because a reader
-                opens this page to find what to do next and a list of what is
-                already finished answers a different question. */}
-            <MagicPanel />
+            {/* THE RECEIPT, last and open, and the page's only one: the changes
+                still waiting for a word, what the machinery did and the night's
+                digest, in one card. It goes last because a reader opens this
+                page to find what to do next, and a list of what is already
+                finished answers a different question. */}
+            <MagicPanel lead={<BriefChanges />} foot={<OvernightDigest />} />
           </>
         }
-        aside={
-          <>
-            <SchedulePanel day={day} state={state} />
-            <OvernightPanel />
-          </>
-        }
+        aside={<SchedulePanel day={day} state={state} />}
       />
       {context && opensActivity ? (
         <TaskDetailModal
@@ -298,19 +296,14 @@ function PersonalMorning({
           open={Boolean(context)}
           onClose={() => setSelected("")}
           labelledBy={titleId}
-          placement="right"
+          intent="drawer"
         >
-          <div className="drawer-head brief-queue-head">
+          <DrawerHead>
             <Heading size="large" id={titleId} className="t-h2">
               {t("brief.focus.context")}
             </Heading>
-            <Button variant="ghost" onClick={() => setSelected("")}>
-              {t("brief.focus.back")}
-            </Button>
-          </div>
-          <div className="drawer-body">
-            {context && <WorklistPane item={context} />}
-          </div>
+          </DrawerHead>
+          <DrawerBody>{context && <WorklistPane item={context} />}</DrawerBody>
         </Modal>
       )}
     </>

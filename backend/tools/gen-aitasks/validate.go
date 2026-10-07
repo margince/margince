@@ -61,6 +61,9 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 	if err := checkDisplayName(name, def.DisplayName); err != nil {
 		return err
 	}
+	if err := checkSummary(name, def.Summary); err != nil {
+		return err
+	}
 	if len(def.Ladder) == 0 {
 		return fmt.Errorf("task %q: ladder is empty", name)
 	}

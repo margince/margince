@@ -235,7 +235,7 @@ function EmploymentMatchModal({
     item.employment_status,
   );
   return (
-    <Modal open onClose={onClose} labelledBy={heading}>
+    <Modal open onClose={onClose} labelledBy={heading} intent="form">
       <Heading size="large" id={heading} className="t-h2 modal-title">
         {t("employment.resolve")}
       </Heading>
@@ -243,13 +243,18 @@ function EmploymentMatchModal({
         <p>
           {item.company_name} · {item.role}
         </p>
-        <RecordPicker
-          label={t("contact.rail.employer")}
-          searchTargets={searchCompanyCandidates}
-          selected={company}
-          onPick={setCompany}
-          disabled={pending}
-        />
+        <Field label={t("contact.rail.employer")}>
+          {(control) => (
+            <RecordPicker
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              searchTargets={searchCompanyCandidates}
+              selected={company}
+              onPick={setCompany}
+              disabled={pending}
+            />
+          )}
+        </Field>
         {!company && (
           <Field
             label={t("employment.website")}
@@ -285,25 +290,37 @@ function EmploymentMatchModal({
             />
           )}
         </Field>
-        <Select
-          aria-label={t("employment.statusLabel")}
-          value={status}
-          onChange={(value) => {
-            if (
-              value === "current" ||
-              value === "former" ||
-              value === "unknown"
-            )
-              setStatus(value);
-          }}
-          options={(["current", "former", "unknown"] as const).map((value) => ({
-            value,
-            label: t(`employment.status.${value}`),
-          }))}
-          disabled={pending}
-        />
+        <Field label={t("employment.statusLabel")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={status}
+              onChange={(value) => {
+                if (
+                  value === "current" ||
+                  value === "former" ||
+                  value === "unknown"
+                )
+                  setStatus(value);
+              }}
+              options={(["current", "former", "unknown"] as const).map(
+                (value) => ({
+                  value,
+                  label: t(`employment.status.${value}`),
+                }),
+              )}
+              disabled={pending}
+            />
+          )}
+        </Field>
         <ErrorLine error={error} />
+      </div>
+      <div className="actions">
+        <Button onClick={onClose} disabled={pending}>
+          {t("create.cancel")}
+        </Button>
         <Button
+          variant="primary"
           disabled={
             pending ||
             (!company && !domain.trim()) ||

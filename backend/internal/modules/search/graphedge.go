@@ -102,62 +102,22 @@ const interactionRoles = `('from','to','cc','bcc','attendee','organizer')`
 // edge that outlives its evidence is a colleague being recommended for an
 // introduction they can no longer make.
 func RecomputeEdgesForActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
-	if len(activityIDs) == 0 {
-		return nil
-	}
-	// The contact↔contact projection rides the same entry point, so every
-	// consumer that keeps the colleague edges honest keeps these honest too —
-	// a second maintenance path would be a second chance to forget one.
-	contactPairs, err := affectedContactPairs(ctx, tx, activityIDs)
-	if err != nil {
+	var t edgeTargets
+	if err := t.addActivities(ctx, tx, activityIDs); err != nil {
 		return err
 	}
-	if err := recomputeContactPairs(ctx, tx, contactPairs); err != nil {
-		return err
-	}
-	// The pairs the activities touch — BEFORE the recompute, so a pair whose
-	// rows have all gone is still named and can be deleted below.
-	pairs, err := affectedPairs(ctx, tx, activityIDs)
-	if err != nil {
-		return err
-	}
-	return recomputePairs(ctx, tx, pairs)
+	return t.apply(ctx, tx)
 }
 
 // RecomputeEdgesForContact re-folds every edge touching one contact — the
 // handler for a merge, an archive or a restore, where the contact changed and
 // no single activity did.
 func RecomputeEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT u.user_id
-		  FROM activity_participant p
-		  JOIN activity_participant u ON u.activity_id = p.activity_id
-		 WHERE p.contact_id = $1 AND u.user_id IS NOT NULL
-		 UNION
-		SELECT user_id FROM graph_interaction_edge WHERE contact_id = $1`, contactID)
-	if err != nil {
-		return fmt.Errorf("search: resolving the colleagues who know a contact: %w", err)
-	}
-	defer rows.Close()
-	var pairs []pair
-	for rows.Next() {
-		var u ids.UUID
-		if err := rows.Scan(&u); err != nil {
-			return err
-		}
-		pairs = append(pairs, pair{user: u, contact: contactID})
-	}
-	if err := rows.Err(); err != nil {
+	var t edgeTargets
+	if err := t.addContact(ctx, tx, contactID); err != nil {
 		return err
 	}
-	if err := recomputePairs(ctx, tx, pairs); err != nil {
-		return err
-	}
-	contactPairs, err := contactPairsForContact(ctx, tx, contactID)
-	if err != nil {
-		return err
-	}
-	return recomputeContactPairs(ctx, tx, contactPairs)
+	return t.apply(ctx, tx)
 }
 
 // DropEdgesForContact removes every edge to one contact outright — the erasure
@@ -166,13 +126,8 @@ func RecomputeEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID
 // the contact one BOTH endpoint columns: the subject standing on the far end
 // of somebody else's edge is still the subject.
 func DropEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
-	if _, err := tx.Exec(ctx, `DELETE FROM graph_interaction_edge WHERE contact_id = $1`, contactID); err != nil {
-		return fmt.Errorf("search: dropping a contact's interaction edges: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM graph_contact_edge WHERE contact_a = $1 OR contact_b = $1`, contactID); err != nil {
-		return fmt.Errorf("search: dropping a contact's observed peer edges: %w", err)
-	}
-	return nil
+	t := edgeTargets{dropped: []ids.UUID{contactID}}
+	return t.apply(ctx, tx)
 }
 
 // recomputePairs re-folds the named pairs from the base tables in one
@@ -221,6 +176,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		      JOIN activity a
 		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		     GROUP BY t.user_id, t.contact_id
 		)
 		INSERT INTO graph_interaction_edge AS e
@@ -255,6 +211,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		         FROM activity_participant up
 		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`)`,
 		users, contacts); err != nil {
@@ -413,13 +370,24 @@ func scanEdges(rows pgx.Rows) ([]InteractionEdge, error) {
 // relstrength.InteractionUnitSQL. Every fold in this file and its contact half
 // aliases activity as `a`, so one rendering serves them all.
 //
-// It matters most here: these folds carry no kind filter, so a channel message
-// reaches them through activity_participant, and per-row counting would let a
-// day of chat outweigh a quarter of meetings on the colleague edge alone.
+// It matters most here: a channel message reaches these folds through
+// activity_participant, and per-row counting would let a day of chat outweigh
+// a quarter of meetings on the colleague edge alone.
 var graphInteractionUnit = relstrength.InteractionUnitSQL("a")
+
+// graphCountedActivity is which activity counts at all: a canceled or no-show
+// meeting is no edge's evidence, and never its last_at.
+var graphCountedActivity = relstrength.InteractionCountsSQL("a")
 
 func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
+	// Exclusive of the incremental writers, in the order they take their locks:
+	// a whole-table DELETE locks rows in heap order, which no row-lock order of
+	// theirs can agree with, so racing them deadlocks. Their ROW EXCLUSIVE
+	// writes wait for this instead.
+	if _, err := tx.Exec(ctx, `LOCK TABLE graph_contact_edge, graph_interaction_edge IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+		return fmt.Errorf("search: locking the projections for rebuild: %w", err)
+	}
 	// Replace wholesale rather than diff: the table is derived, the workspace
 	// is workspace-bound, and a diff would be a second implementation of the fold
 	// with its own way of being wrong.
@@ -442,6 +410,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		  FROM activity_participant up
 		  JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		  JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		 WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
 		   AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
 		 GROUP BY up.user_id, pp.contact_id`); err != nil {
@@ -470,6 +439,7 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		  JOIN activity_participant pb
 		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id
 		  JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		 WHERE pa.contact_id IS NOT NULL AND pa.role IN `+interactionRoles+`
 		   AND pb.role IN `+interactionRoles+`
 		 GROUP BY pa.contact_id, pb.contact_id`); err != nil {

@@ -183,16 +183,25 @@ func (s *Store) workspacePending(ctx context.Context, currentIdentity string) (c
 			// it. The per-workspace shape survives only because the re-embed
 			// fan-out still enqueues one pass per workspace; the two collapse
 			// together.
+			// The embedding anti-join runs BEFORE the text is read. Filtering on
+			// btrim(text) in the scan detoasts every body of the table, embedded
+			// or not, to answer a count that is zero in steady state.
 			sql := fmt.Sprintf(`
-				SELECT count(*), coalesce(sum(octet_length(btrim(%s))), 0)
-				FROM %s t
-				WHERE t.archived_at IS NULL
-				  AND %s
-				  AND btrim(%s) <> ''
-				  AND NOT EXISTS (
-				        SELECT 1 FROM embedding e
-				        WHERE e.entity_type = '%s' AND e.entity_id = t.id AND e.model = $1)`,
-				src.text, src.table, src.embeddablePredicate(), src.text, entityType)
+				WITH unembedded AS MATERIALIZED (
+				    SELECT t.id FROM %s t
+				    WHERE t.archived_at IS NULL
+				      AND %s
+				      AND NOT EXISTS (
+				            SELECT 1 FROM embedding e
+				            WHERE e.entity_type = '%s' AND e.entity_id = t.id AND e.model = $1)),
+				pending_text AS MATERIALIZED (
+				    SELECT btrim(%s) AS trimmed
+				    FROM %s t
+				    JOIN unembedded u ON u.id = t.id)
+				SELECT count(*), coalesce(sum(octet_length(trimmed)), 0)
+				FROM pending_text
+				WHERE trimmed <> ''`,
+				src.table, src.embeddablePredicate(), entityType, src.text, src.table)
 			var c int
 			var l int64
 			if err := tx.QueryRow(ctx, sql, currentIdentity).Scan(&c, &l); err != nil {

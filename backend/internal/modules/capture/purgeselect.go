@@ -87,6 +87,16 @@ func (s PurgeSubject) Total() int {
 // uuid, because `subject_ref` is free text and a row holding anything else
 // would fail the whole query rather than simply not match.
 //
+// EVERY ADDRESS THE PURGE CAN MATCH ON, not only the counterparty. A workspace rule
+// reaches a message through a To or Cc line, so a subject who was copied rather than
+// written to is matched by the purge — and a shield that read the counterparty alone
+// would hand over exactly that message while reporting a clean success. The shield
+// has to reach at least as far as the widest arm using it.
+//
+// No colleague filter here, unlike the match clause. There it keeps a rule naming the
+// workspace's own domain from matching everything; here the question is only whether
+// the subject's own address is on the message, and a wider shield fails safe.
+//
 // It reaches two tables this module does not own, and only reads them: which
 // correspondence a request covers is a question about the request, and there is
 // no seam that answers it without them.
@@ -94,7 +104,11 @@ const underAnOpenRequest = `EXISTS (
 		    SELECT 1 FROM data_subject_request d
 		     WHERE d.status IN ('open', 'in_progress')
 		       AND EXISTS (SELECT 1 FROM contact_email ce
-		                    WHERE lower(ce.email) = lower(a.counterparty_email)
+		                    WHERE (lower(ce.email) = lower(a.counterparty_email)
+		                           OR EXISTS (SELECT 1 FROM activity_participant ap
+		                                       WHERE ap.activity_id = a.id
+		                                         AND ap.address IS NOT NULL
+		                                         AND lower(ap.address) = lower(ce.email)))
 		                      AND (ce.contact_id = d.contact_id
 		                           OR ce.contact_id::text = d.subject_ref)))`
 
@@ -124,7 +138,7 @@ func SelectPurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       `+withheldReason(shielded, floor.shieldedAs(), true)+` AS withheld,
+		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
 		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
@@ -433,7 +447,7 @@ func SelectWorkspacePurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       `+withheldReason(shielded, floor.shieldedAs(), false)+` AS withheld
+		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld
 		  FROM activity a
 		 WHERE `+match+`
 		   AND EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id = a.id)
@@ -453,11 +467,12 @@ func SelectWorkspacePurgeSubjectTx(
 			// installation owes somebody else is not the workspace's to
 			// destroy, and it is REPORTED rather than silently skipped.
 			//
-			// Defence in depth, deliberately. A CHECK constraint on the
-			// destroying statement refuses a restricted row anyway, so removing
-			// this arm does not leak the mail — it turns a clean count into a
-			// failed purge that destroys nothing at all, including the rows the
-			// admin could have had.
+			// The only thing that keeps it. Destruction erases the id it is
+			// handed — `UPDATE activity SET body = NULL ... WHERE id = $1` —
+			// and the table's restriction CHECKs constrain what a restriction
+			// looks like, not what may be erased. So a row that falls out of
+			// this branch is destroyed, with the count reporting it as a clean
+			// success.
 			subject.Restricted = append(subject.Restricted, id)
 			subject.noteWithheld(withheld, id)
 			continue

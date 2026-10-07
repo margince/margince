@@ -85,7 +85,7 @@ type recordTool struct {
 func (r recordTool) Spec() mcp.ToolSpec { return r.spec }
 
 func (r recordTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
-	return json.Marshal(searchResult(ctx, datasource.SearchResult{Records: r.records}))
+	return json.Marshal(searchResult(ctx, nil, datasource.SearchResult{Records: r.records}))
 }
 
 // derivedTool answers the way an aggregate does: from records it read and does

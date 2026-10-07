@@ -4,11 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ListScreen } from "./listpage";
 import {
+  chosenListing,
   history,
   LIVE_ID,
+  listingAnswer,
   listsMe,
   liveHistory,
   liveList,
+  liveListing,
   members,
   SHORTLIST_ID,
   shortlist,
@@ -28,7 +31,8 @@ type Story = StoryObj;
 
 const page = { has_more: false };
 
-// A Live List a reader can change: members from its filter, nothing to fix.
+// A Live List a reader can change: members from its filter, each beside the
+// values of the fields the filter names, one of them hidden from this reader.
 export const LiveList: Story = {
   render: () => {
     installFetchStub({
@@ -38,6 +42,7 @@ export const LiveList: Story = {
       [`GET /lists/${LIVE_ID}/history`]: () =>
         jsonResponse({ data: liveHistory, page }),
       "GET /companies": () => jsonResponse({ data: members, page }),
+      [`GET /lists/${LIVE_ID}/members`]: listingAnswer(liveListing),
     });
     return (
       <StoryProviders>
@@ -47,7 +52,8 @@ export const LiveList: Story = {
   },
 };
 
-// A Shortlist whose steward is gone: the notice asks somebody to take it over.
+// A Shortlist whose steward is gone: the notice asks somebody to take it over,
+// and each member says who chose it, when and why.
 export const ShortlistNobodyLooksAfter: Story = {
   render: () => {
     installFetchStub({
@@ -57,6 +63,7 @@ export const ShortlistNobodyLooksAfter: Story = {
       [`GET /lists/${SHORTLIST_ID}/history`]: () =>
         jsonResponse({ data: history, page }),
       "GET /companies": () => jsonResponse({ data: members, page }),
+      [`GET /lists/${SHORTLIST_ID}/members`]: listingAnswer(chosenListing),
     });
     return (
       <StoryProviders>

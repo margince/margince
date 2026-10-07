@@ -4,161 +4,162 @@
 package ai
 
 import (
+	"encoding/json"
 	"fmt"
-	"math"
+	"maps"
 	"net/url"
+	"reflect"
 	"slices"
 	"strings"
 )
 
-// OpenRouterRouting is the upstream-selection preferences for a broker on the
-// OpenAI wire.
+// OpenRouterRouting is a binding's request to the OpenRouter broker: which
+// hosts may serve it and how (Provider), and how hard the model thinks
+// (Reasoning).
 //
-// A gateway fronting many inference hosts chooses one per request, and its
-// default choice optimizes PRICE: stable hosts first, then weighted by the
-// inverse square of cost. That is the opposite of what this product wants. The
-// same model id is served by hosts differing in quantization (fp4 through
-// bf16), output ceiling (8k through 118k tokens) and tail latency, so the
-// unpinned default makes answer quality and response time a per-request
-// lottery — and one nobody can see, because the broker reports the upstream in
-// a field this wire's callers rarely read.
+// A broker fronts many inference hosts per model and its own default weights
+// them by price, so one model id arrives at fp4 on one call and bf16 on the
+// next, with latency to match. These preferences are how a deployment says
+// which trade it wants.
 //
-// These preferences are how a deployment says which trade it wants. They are
-// deliberately NOT yaml-visible yet: the field set that matters is being
-// measured before it becomes a surface an operator can depend on.
-// The yaml and json spellings are deliberately the same string: an operator
-// writes `reasoning_effort` in the routing config, the settings store round-trips
-// the identical key as JSON, and MARGINCE_AICERT_UPSTREAM takes one of these as
-// JSON too. One name per field across all three, so a preference cannot mean a
-// different thing depending on which door it came through.
+// The JSON spelling IS OpenRouter's request body: the stored value, the served
+// schema and the wire share one name per field, so a preference cannot mean a
+// different thing depending on which door it came through. The flat spelling
+// this type had before (`sort`, `reasoning_effort` … at top level) is still
+// read at every door; openrouterlegacy.go maps it.
 type OpenRouterRouting struct {
-	// Only and Ignore are an allowlist and a blocklist of upstream slugs. Both
-	// are HARD filters — an excluded host is removed from the candidate set,
-	// not merely deprioritized — which makes them the only way to bound the
-	// tail rather than hope for it.
-	//
-	// A base slug matches every variant and region of a host; a full slug
-	// ("deepinfra/turbo") pins one endpoint.
-	Only   []string `yaml:"only" json:"only"`
-	Ignore []string `yaml:"ignore" json:"ignore"`
-	// Quantizations restricts serving precision (bf16, fp16, fp8, fp4, int8 …).
-	// Also a hard filter, and the one that decides whether repeated calls are
-	// COMPARABLE: two answers from the same model id at different precision are
-	// two different models for every purpose except billing.
-	Quantizations []string `yaml:"quantizations" json:"quantizations"`
-	// Sort orders candidates by "price", "throughput" or "latency". It reorders
-	// rather than filters, and setting it disables the broker's load balancing
-	// entirely — so it buys a consistent preference at the cost of spreading
-	// load, which is a trade to make deliberately.
-	Sort string `yaml:"sort" json:"sort"`
-	// RequireParameters keeps the request away from hosts that do not support
-	// every parameter it carries. Soft preferences already apply for tools and
-	// response_format, so this is belt-and-braces for a structured-output call
-	// rather than the thing that makes one work — but it turns a preference the
-	// broker may weigh into a guarantee it must honour.
-	// A pointer for the same reason AllowFallbacks is one: false is a real
-	// choice and must not read as unset. A plain bool loses it twice over —
-	// omitempty drops it from the wire, and providerBlockEmpty would call a
-	// block containing only `require_parameters: false` empty and emit no
-	// provider object at all, so the operator's "do NOT require these" would
-	// silently become the broker's own default.
-	RequireParameters *bool `yaml:"require_parameters" json:"require_parameters"`
-	// AllowFallbacks, when non-nil, overrides the broker's default of switching
-	// hosts on failure. A pointer because false is a real choice and the zero
-	// value must not be mistaken for it: turning fallbacks off trades
-	// availability for the certainty of being served by one host, which only a
-	// compliance rule or a measurement run should ask for.
-	AllowFallbacks *bool `yaml:"allow_fallbacks" json:"allow_fallbacks"`
-	// PreferredMaxLatencyP90 deprioritizes hosts whose 90th-percentile latency
-	// over a rolling five-minute window exceeds this many seconds. SOFT: a host
-	// past the threshold is moved down the list, never removed, so this alone
-	// cannot bound the tail — pair it with Only or Quantizations when the tail
-	// is what matters. 0 leaves it unset.
-	PreferredMaxLatencyP90 float64 `yaml:"preferred_max_latency_p90" json:"preferred_max_latency_p90"`
-	// ReasoningEffort caps a reasoning model's thinking budget ("none",
-	// "minimal", "low", "medium", "high", "xhigh", "max"). Unset means each
-	// host applies its OWN default, which is why it belongs here: thinking is
-	// charged to the same output budget as the answer, so an uncontrolled
-	// default varies cost, latency and — when it exhausts the budget before the
-	// answer starts — whether there is an answer at all.
-	ReasoningEffort string `yaml:"reasoning_effort" json:"reasoning_effort"`
+	Provider  OpenRouterProvider   `yaml:"provider" json:"provider,omitzero"`
+	Reasoning *OpenRouterReasoning `yaml:"reasoning,omitempty" json:"reasoning,omitempty"`
 }
 
-// providerBlockEmpty reports whether these preferences would add nothing to the
-// request's `provider` object, so the wire carries no such object at all rather
-// than an object of defaults that would disable load balancing by accident.
+// OpenRouterProvider is the broker's `provider` object. Every field is
+// omitempty: a broker reads an explicitly-null preference as a preference. The
+// pointers are there because false is a real choice that must not read as unset.
 //
-// Not the same question as IsEmpty: ReasoningEffort is a preference and is
-// deliberately not counted here, because it travels in its own `reasoning`
-// block. A binding that caps thinking and says nothing about upstream selection
-// must send the second block and not the first.
-func (r *OpenRouterRouting) providerBlockEmpty() bool {
-	if r == nil {
-		return true
+// Only, Ignore, AllowFallbacks, ZDR, DataCollection and EnforceDistillableText
+// say WHICH hosts may read the request; they live on the connection
+// (connectionKeys). The rest say how one model is served and live on a tier.
+type OpenRouterProvider struct {
+	// The fields the flat wire carried come first, in its order, so the bytes a
+	// pre-existing config sends are unchanged.
+	Only                   []string          `yaml:"only,omitempty" json:"only,omitempty"`
+	Ignore                 []string          `yaml:"ignore,omitempty" json:"ignore,omitempty"`
+	Quantizations          []string          `yaml:"quantizations,omitempty" json:"quantizations,omitempty"`
+	Sort                   *OpenRouterSort   `yaml:"sort,omitempty" json:"sort,omitempty"`
+	RequireParameters      *bool             `yaml:"require_parameters,omitempty" json:"require_parameters,omitempty"`
+	AllowFallbacks         *bool             `yaml:"allow_fallbacks,omitempty" json:"allow_fallbacks,omitempty"`
+	PreferredMaxLatency    *OpenRouterPctile `yaml:"preferred_max_latency,omitempty" json:"preferred_max_latency,omitempty"`
+	Order                  []string          `yaml:"order,omitempty" json:"order,omitempty"`
+	DataCollection         string            `yaml:"data_collection,omitempty" json:"data_collection,omitempty"`
+	ZDR                    *bool             `yaml:"zdr,omitempty" json:"zdr,omitempty"`
+	EnforceDistillableText *bool             `yaml:"enforce_distillable_text,omitempty" json:"enforce_distillable_text,omitempty"`
+	MaxPrice               *OpenRouterPrice  `yaml:"max_price,omitempty" json:"max_price,omitempty"`
+	PreferredMinThroughput *OpenRouterPctile `yaml:"preferred_min_throughput,omitempty" json:"preferred_min_throughput,omitempty"`
+}
+
+// OpenRouterSort orders candidates by price, throughput or latency. It reorders
+// rather than filters, and setting it disables the broker's load balancing.
+// Partition "none" sorts across every model of a fallback list at once.
+type OpenRouterSort struct {
+	By        string `json:"by"`
+	Partition string `json:"partition,omitempty"`
+	// asObject records the {by} spelling, so a refusal points at `sort.by`
+	// where the operator wrote it rather than at `sort`.
+	asObject bool
+}
+
+// OpenRouterPrice is the most a request may cost, in USD per million tokens
+// (prompt, completion) or per request or image. Hosts above it are filtered out.
+type OpenRouterPrice struct {
+	Prompt     *float64 `json:"prompt,omitempty"`
+	Completion *float64 `json:"completion,omitempty"`
+	Request    *float64 `json:"request,omitempty"`
+	Image      *float64 `json:"image,omitempty"`
+}
+
+// OpenRouterPctile is a soft threshold: one number for every percentile, or a
+// value per percentile. A host past it is moved down the list, never removed.
+type OpenRouterPctile struct {
+	All *float64 `json:"-"`
+	P50 *float64 `json:"p50,omitempty"`
+	P75 *float64 `json:"p75,omitempty"`
+	P90 *float64 `json:"p90,omitempty"`
+	P99 *float64 `json:"p99,omitempty"`
+}
+
+// OpenRouterReasoning is the reasoning-model control block. Unset leaves each
+// host its own default, which varies cost, latency and — when thinking exhausts
+// the output budget first — whether there is an answer at all.
+type OpenRouterReasoning struct {
+	Effort    string `yaml:"effort,omitempty" json:"effort,omitempty"`
+	MaxTokens *int   `yaml:"max_tokens,omitempty" json:"max_tokens,omitempty"`
+	Exclude   *bool  `yaml:"exclude,omitempty" json:"exclude,omitempty"`
+	Enabled   *bool  `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+}
+
+// MarshalJSON writes a sort with no partition as the bare string, which is the
+// spelling every existing request used, so the wire for an unchanged config is
+// byte-identical.
+func (s OpenRouterSort) MarshalJSON() ([]byte, error) {
+	if s.Partition == "" {
+		return json.Marshal(s.By)
 	}
-	return len(r.Only) == 0 && len(r.Ignore) == 0 && len(r.Quantizations) == 0 &&
-		r.Sort == "" && r.RequireParameters == nil && r.AllowFallbacks == nil &&
-		r.PreferredMaxLatencyP90 == 0
+	return json.Marshal(struct {
+		By        string `json:"by"`
+		Partition string `json:"partition"`
+	}{s.By, s.Partition})
+}
+
+// MarshalJSON writes a single threshold as the bare number OpenRouter accepts
+// for every percentile at once.
+func (p OpenRouterPctile) MarshalJSON() ([]byte, error) {
+	if p.All != nil {
+		return json.Marshal(*p.All)
+	}
+	type percentiles OpenRouterPctile
+	return json.Marshal(percentiles(p))
+}
+
+func (p OpenRouterProvider) isEmpty() bool {
+	return reflect.ValueOf(p).IsZero()
+}
+
+func (r *OpenRouterReasoning) isEmpty() bool {
+	return r == nil || *r == OpenRouterReasoning{}
 }
 
 // IsEmpty reports whether an operator wrote a declaration that asks for
 // nothing — `routing: {}`, the explicit opt-out that takes the broker's own
-// price-weighted routing.
-//
-// A method rather than a comparison against the zero value because the struct
-// holds slices and so is not comparable, and because the answer is a product
-// question ("did they opt out?") that should have one spelling rather than
-// being re-derived field by field at each call site.
+// price-weighted routing. `{"provider":{}}` is the same opt-out.
 func (r *OpenRouterRouting) IsEmpty() bool {
-	return r.providerBlockEmpty() && (r == nil || r.ReasoningEffort == "")
-}
-
-// openAICompatProviderWire is the broker's `provider` object. Every field is
-// omitempty: a broker reads an explicitly-null preference as a preference.
-type openAICompatProviderWire struct {
-	Only                []string                       `json:"only,omitempty"`
-	Ignore              []string                       `json:"ignore,omitempty"`
-	Quantizations       []string                       `json:"quantizations,omitempty"`
-	Sort                string                         `json:"sort,omitempty"`
-	RequireParameters   *bool                          `json:"require_parameters,omitempty"`
-	AllowFallbacks      *bool                          `json:"allow_fallbacks,omitempty"`
-	PreferredMaxLatency *openAICompatLatencyPercentile `json:"preferred_max_latency,omitempty"`
-}
-
-// openAICompatLatencyPercentile is the percentile-keyed threshold shape the
-// broker takes; p90 is the percentile a user-facing path is judged on.
-type openAICompatLatencyPercentile struct {
-	P90 float64 `json:"p90"`
-}
-
-// openAICompatReasoningWire is the reasoning-model control block.
-type openAICompatReasoningWire struct {
-	Effort string `json:"effort,omitempty"`
+	return r == nil || (r.Provider.isEmpty() && r.Reasoning.isEmpty())
 }
 
 // providerWire renders the `provider` object, or nil when these preferences
-// would say nothing.
-func (r *OpenRouterRouting) providerWire() *openAICompatProviderWire {
-	if r.providerBlockEmpty() {
+// would say nothing: an object of defaults would disable load balancing by
+// accident.
+func (r *OpenRouterRouting) providerWire() *OpenRouterProvider {
+	if r == nil || r.Provider.isEmpty() {
 		return nil
 	}
-	wire := &openAICompatProviderWire{
-		Only: r.Only, Ignore: r.Ignore, Quantizations: r.Quantizations,
-		Sort: r.Sort, RequireParameters: r.RequireParameters, AllowFallbacks: r.AllowFallbacks,
-	}
-	if r.PreferredMaxLatencyP90 > 0 {
-		wire.PreferredMaxLatency = &openAICompatLatencyPercentile{P90: r.PreferredMaxLatencyP90}
-	}
-	return wire
+	return &r.Provider
 }
 
-// reasoningWire renders the `reasoning` block, or nil when no effort is set —
-// leaving the host's own default in place, which is the pre-existing behaviour.
-func (r *OpenRouterRouting) reasoningWire() *openAICompatReasoningWire {
-	if r == nil || r.ReasoningEffort == "" {
+// reasoningWire renders the `reasoning` block, or nil when none is set —
+// leaving the host's own default in place.
+func (r *OpenRouterRouting) reasoningWire() *OpenRouterReasoning {
+	if r == nil || r.Reasoning.isEmpty() {
 		return nil
 	}
-	return &openAICompatReasoningWire{Effort: r.ReasoningEffort}
+	return r.Reasoning
+}
+
+// reasoningEffort is the effort this value pins, "" for none.
+func (r *OpenRouterRouting) reasoningEffort() string {
+	if r == nil || r.Reasoning == nil {
+		return ""
+	}
+	return r.Reasoning.Effort
 }
 
 // openRouterHost is the broker these preferences belong to.
@@ -231,11 +232,11 @@ func IsOpenRouterHost(baseURL string) bool {
 // true stands: pinning the sort is not a reason to stop failing over.
 func DefaultOpenRouterRouting() *OpenRouterRouting {
 	requireParameters := true
-	return &OpenRouterRouting{
-		Sort:              SortThroughput,
+	return &OpenRouterRouting{Provider: OpenRouterProvider{
+		Sort:              &OpenRouterSort{By: SortThroughput},
 		Quantizations:     []string{"fp16", "bf16"},
 		RequireParameters: &requireParameters,
-	}
+	}}
 }
 
 // The sort orders the broker accepts. Named because two of them are traps a
@@ -263,54 +264,6 @@ var (
 	// The effort levels the broker accepts, hardest first.
 	reasoningEfforts = []string{effortMax, effortXHigh, effortHigh, effortMedium, effortLow, effortMinimal, effortNone}
 )
-
-// Validate refuses a preference the broker would silently ignore.
-//
-// Exported because the config file is not the only door: the certification
-// lane takes these preferences from an environment variable, and a run that
-// accepted a misspelt value would report the untuned baseline under a tuned
-// run's name. One check, both doors.
-//
-// Silence is the whole reason this exists: an unknown sort or quantization is
-// dropped rather than rejected upstream, so a deployment would run with the
-// price-weighted default while its config file said otherwise — and the only
-// symptom would be the latency this default exists to remove.
-func (r *OpenRouterRouting) Validate() error {
-	if r == nil {
-		return nil
-	}
-	if r.Sort != "" && !slices.Contains(sortOrders, r.Sort) {
-		return fmt.Errorf("ai: routing config: sort %q is not one of %s", r.Sort, strings.Join(sortOrders, " | "))
-	}
-	// The generated schema declares these arrays minItems:1 and uniqueItems, so
-	// the parser has to refuse the same shapes — an editor and a runtime that
-	// authorize different configs is the drift the parity gate exists to catch,
-	// and the weaker half is the one that decides what actually runs.
-	for name, list := range map[string][]string{"only": r.Only, "ignore": r.Ignore, "quantizations": r.Quantizations} {
-		if err := refuseEmptyOrRepeated(name, list); err != nil {
-			return err
-		}
-	}
-	for _, q := range r.Quantizations {
-		if !slices.Contains(quantizationLevels, q) {
-			return fmt.Errorf("ai: routing config: quantization %q is not one of %s", q, strings.Join(quantizationLevels, " | "))
-		}
-	}
-	if r.ReasoningEffort != "" && !slices.Contains(reasoningEfforts, r.ReasoningEffort) {
-		return fmt.Errorf("ai: routing config: reasoning_effort %q is not one of %s", r.ReasoningEffort, strings.Join(reasoningEfforts, " | "))
-	}
-	// NaN and the infinities are rejected alongside a negative, because they
-	// fail LATER and worse: yaml accepts .nan and .inf, validation would pass
-	// them, and then every request fails at encode time — json cannot represent
-	// a non-finite number — so a config that booted would break each call.
-	if math.IsNaN(r.PreferredMaxLatencyP90) || math.IsInf(r.PreferredMaxLatencyP90, 0) {
-		return fmt.Errorf("ai: routing config: preferred_max_latency_p90 must be a finite number of seconds, got %g", r.PreferredMaxLatencyP90)
-	}
-	if r.PreferredMaxLatencyP90 < 0 {
-		return fmt.Errorf("ai: routing config: preferred_max_latency_p90 %g is negative", r.PreferredMaxLatencyP90)
-	}
-	return nil
-}
 
 // --- routing-config integration ------------------------------------------
 //
@@ -365,49 +318,72 @@ func UpstreamPreferencesApply(binding ProviderConfig) bool {
 // latency the setting was written to remove. An operator who wrote the block
 // gets told which of the two reasons it cannot apply — the provider or the host
 // — because those are different edits.
-func validateUpstreamPreferences(tier string, binding ProviderConfig) error {
+func validateUpstreamPreferences(path string, binding ProviderConfig) error {
 	if binding.Routing == nil {
 		return nil
 	}
 	if binding.Provider != providerOpenAICompatible {
-		return fmt.Errorf("ai: routing config: tier %s: `routing` is upstream selection for a broker and provider %s serves one model from one host; remove the block",
-			tier, binding.Provider)
+		return invalidAt(path, fmt.Sprintf("is upstream selection for a broker and provider %s serves one model from one host; remove the block",
+			binding.Provider))
 	}
 	if !IsOpenRouterHost(binding.BaseURL) {
-		return fmt.Errorf("ai: routing config: tier %s: `routing` names OpenRouter's own upstream-selection fields and base_url %q is not an OpenRouter host; remove the block, or point the binding at the broker",
-			tier, binding.BaseURL)
+		return invalidAt(path, fmt.Sprintf("names OpenRouter's own upstream-selection fields and base_url %q is not an OpenRouter host; remove the block, or point the binding at the broker",
+			binding.BaseURL))
 	}
-	if err := binding.Routing.Validate(); err != nil {
-		return fmt.Errorf("%w (tier %s)", err, tier)
-	}
-	return nil
+	return binding.Routing.Validate(path)
 }
 
-// validateEmbeddingsRouting admits on the embeddings lane only the preferences
-// that say WHICH hosts may read the text: `only`, `ignore` and
-// `allow_fallbacks`. The lane embeds the same text the chat tiers send, so a
-// residency pin that the chat tiers carry and the embeddings lane could not
-// would leave the one lane that sees every document free to leave the region.
-// The rest bound a completion's tail or its thinking, and an embedding is one
-// forward pass with neither — written there, they would be sent and ignored.
+// TierRoutingPath addresses a tier's routing in the routing document, the root
+// every fault path below it hangs from.
+func TierRoutingPath(tier Tier) string { return "tiers." + string(tier) + ".routing" }
+
+// EmbeddingsRoutingPath is TierRoutingPath for the embeddings lane.
+const EmbeddingsRoutingPath = "embeddings.routing"
+
+// validateEmbeddingsRouting admits on the embeddings lane only the connection
+// keys — which hosts may read the text, and under what privacy. The lane embeds
+// the same text the chat tiers send, so a residency pin or a retention rule the
+// chat tiers carry and the embeddings lane could not would leave the one lane
+// that sees every document free to leave it. The rest bound a completion's tail
+// or its thinking, and an embedding is one forward pass with neither.
 func validateEmbeddingsRouting(binding ProviderConfig) error {
 	r := binding.Routing
 	if r == nil {
 		return nil
 	}
-	if err := validateUpstreamPreferences(string(TierEmbedLane), binding); err != nil {
+	if err := validateUpstreamPreferences(EmbeddingsRoutingPath, binding); err != nil {
 		return err
 	}
 	// An allowlist, not a list of what is refused: a preference added to
 	// OpenRouterRouting later is refused here until somebody decides it belongs,
 	// which is what the generated schema's additionalProperties:false says too.
-	rest := *r
-	rest.Only, rest.Ignore, rest.AllowFallbacks = nil, nil, nil
-	if !rest.IsEmpty() {
-		return fmt.Errorf("ai: routing config: the embeddings lane takes only `only`, `ignore` and `allow_fallbacks` — " +
-			"they say which hosts may read the text; the other preferences bound a completion, and an embedding is one forward pass")
+	if rest := r.withoutPins(); !rest.IsEmpty() {
+		return refuseOnEmbeddings(rest)
 	}
 	return nil
+}
+
+// refuseOnEmbeddings names each key rest carries by its path: the lane takes
+// only the connection's host rules, which say which hosts may read the text,
+// and every other preference bounds a completion.
+func refuseOnEmbeddings(rest *OpenRouterRouting) error {
+	why := "is not taken on the embeddings lane, which accepts only the connection's host rules (" +
+		strings.Join(connectionKeys, ", ") + "). Remove it."
+	raw, err := rest.RequestJSON()
+	var written map[string]map[string]json.RawMessage
+	if err == nil {
+		err = json.Unmarshal(raw, &written)
+	}
+	if err != nil {
+		return fmt.Errorf("ai: reading the embeddings lane's routing: %w", err)
+	}
+	var errs []error
+	for _, block := range slices.Sorted(maps.Keys(written)) {
+		for _, key := range slices.Sorted(maps.Keys(written[block])) {
+			errs = append(errs, invalidAt(joinPath(EmbeddingsRoutingPath, block+"."+key), why))
+		}
+	}
+	return joinFaults(errs...)
 }
 
 // refuseEmptyOrRepeated holds a preference list to the shape the schema
@@ -417,17 +393,17 @@ func validateEmbeddingsRouting(binding ProviderConfig) error {
 // `only: []` reads as "no host may serve this" and is treated by the broker as
 // no preference at all, which is the opposite. A repeat is harmless to the
 // broker and means the operator believes something about the second one.
-func refuseEmptyOrRepeated(field string, list []string) error {
+func refuseEmptyOrRepeated(path string, list []string) error {
 	if list == nil {
 		return nil
 	}
 	if len(list) == 0 {
-		return fmt.Errorf("ai: routing config: `%s` is written with no entries; omit the field to state no preference", field)
+		return invalidAt(path, "is written with no entries; omit the field to state no preference")
 	}
 	seen := make(map[string]bool, len(list))
-	for _, entry := range list {
+	for i, entry := range list {
 		if seen[entry] {
-			return fmt.Errorf("ai: routing config: `%s` names %q twice", field, entry)
+			return invalidAt(fmt.Sprintf("%s[%d]", path, i), fmt.Sprintf("names %q twice", entry))
 		}
 		seen[entry] = true
 	}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -25,7 +26,15 @@ type tagAdapter struct{ store *collections.Store }
 // tag applied over MCP and one applied in the web app pass the same gates and
 // write the same audit row.
 func tagSeam(pool *pgxpool.Pool) agents.Tags {
-	return tagAdapter{store: collections.NewStore(InstallationDB(pool))}
+	return tagSeamFor(InstallationDB(pool))
+}
+
+// tagSeamFor binds the tag verbs to one workspace-bound handle, so a registry
+// built for a named workspace offers and applies a tag in the same one.
+//
+//nolint:ireturn // the seam is an interface by design: agents may not import the collections module
+func tagSeamFor(db *database.DB) agents.Tags {
+	return tagAdapter{store: collections.NewStore(db)}
 }
 
 // ResolveTag answers the id of an EXISTING workspace tag with this name, and

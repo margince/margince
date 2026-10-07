@@ -104,3 +104,32 @@ func TestTightLogoKeysEmptiesRatherThanGrowPastItsCap(t *testing.T) {
 		t.Fatal("the key that hit the cap was not kept after the reset")
 	}
 }
+
+// A mark larger than the ceiling allows is served as stored, never cropped.
+//
+// The legacy path holds the whole image to crop it. Before this, an oversized object
+// was read in full and then refused, so a single poisoned key cost MaxMarkBytes of
+// reads on every view and the record's logo never appeared at all. The size is known
+// before the read, so the decision belongs there.
+func TestAMarkTooLargeToCropIsStillServed(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name   string
+		tight  bool
+		size   int64
+		stored bool
+	}{
+		{"tight bytes need no crop", true, 1_000, true},
+		{"a legacy mark within the ceiling is cropped", false, 1_000, false},
+		{"at the ceiling it is still cropped", false, imagenorm.MaxMarkBytes, false},
+		{"past the ceiling it goes out as stored", false, imagenorm.MaxMarkBytes + 1, true},
+		// A tight oversized object is served either way, and for the tight reason.
+		{"tight and oversized", true, imagenorm.MaxMarkBytes + 1, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := servedAsStored(c.tight, c.size); got != c.stored {
+				t.Errorf("servedAsStored(%v, %d) = %v, want %v", c.tight, c.size, got, c.stored)
+			}
+		})
+	}
+}

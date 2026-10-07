@@ -4,19 +4,42 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Releases are cut by pushing a `v*` tag, which publishes a GitHub release with
-the desktop bundles attached — see
+the desktop bundles attached; see
 [docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md). The constellation
 dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
-
-There is deliberately no empty `Unreleased` section: `scripts/check-changelog-
-sections.sh` refuses a release heading with nothing under it, so one appears
-when it has content.
 
 ## [Unreleased]
 
 ### Added
 
-- Opt-in visual analytics for sellers and managers: bookings trends, pipeline
+- AI provider health. A provider that is out of credit, rejecting its key,
+  unreachable or degraded is marked on Settings → AI models and in the new
+  **AI provider status** card under System health. A blocked provider is skipped
+  with no call and no charge. Mail and enrichment wait instead of spending their
+  attempts, and a request you make yourself fails fast with a message to contact
+  the system administrator. The call that first meets an outage is refunded and
+  names the reason, read from the vendor's reply text as well as its status code.
+  A successful key test clears the provider's state at once. The API and the
+  worker share the status through Redis (the worst status wins; without Redis each
+  process shows only its own), so Settings shows an outage only the worker saw.
+  Failed probes are refunded, and one runs at a time. A vendor's "does not have
+  permission" refusal does not mark the key rejected. Settings → AI shows website
+  reads, account scans and voice builds waiting for a provider as their own
+  "Waiting for the AI provider" number, apart from work waiting on the allowance,
+  and they resume by themselves. `worker reopen-parked --from … --to … [--dry-run]`
+  reopens the sender questions and company enrichments an earlier outage parked.
+- Model prices sync themselves. Once a day (and on **Refresh model prices**) every
+  provider with a usable key is re-priced from models.dev or OpenRouter. Newly
+  listed chat and embedding models the catalogue prices are added, and a price you
+  set by hand is kept. The new **Model prices** card under Settings → AI shows when it
+  last ran and what changed, and can turn the daily sync off.
+- `web.security_txt` in `margince.yaml` publishes an RFC 9116
+  `/.well-known/security.txt` naming the operator's security contact. Unset, the
+  path is a 404. Route it to the api by its exact path.
+- `GET /v1/status`: an anonymous, fixed-body reachability probe for external
+  uptime monitors. It does no dependency work; `/healthz` and `/readyz` stay
+  internal.
+- Visual analytics for sellers and managers: bookings trends, pipeline
   stages and age, SDR outcomes, target attainment, forecast composition and
   captured movement, with permission-checked evidence and CSV export.
 - Saved report revisions, weekly/monthly schedules and dated editions retain
@@ -25,23 +48,36 @@ when it has content.
 
 - Mail history: setup and Settings share a dropdown through ten years, show the
   preview start date, and qualify capped message and cost estimates.
+- Undo reaches what Margince did on its own. A record it created can be
+  archived again, and an archived contact, company or deal can be brought back.
+  A lead it promoted can be demoted, and the fields a mail signature or a website
+  filled on a contact can be cleared. Each is one **Undo** on the record's
+  history and on the "Since your last brief" panel, which now lists what was
+  created and archived, one line per job, kind of record and day. A decision
+  waiting there offers **Decide** instead of saying it cannot be undone.
+- Mailbox imports report where their time goes on `/metrics`: every Gmail API
+  call by op and result, each message's fetch, parse, transaction and
+  follow-up time, pages and waits by cause, and the fleet's runs and progress.
 
 ### Removed
 
-- **A company no longer carries a `classification`.** It was superseded a release
-  ago by `lifecycle` — where an account stands with us, one value at a time — and
-  `relationship_types`, what the company IS to us, which is legitimately several
-  things at once. Nothing had written the old field since, so every unassessed
-  account was served the column default `prospect` as though somebody had judged
-  it. The API stops returning it, the company list stops offering it as a filter,
-  and both generated clients drop it. A segment already written against it keeps
-  evaluating — the column survives and the saved-filter vocabulary still reads it
-  — but no surface offers it for a new one.
-- **The backfill stops reporting `dedupe_candidates`.** No statement ever wrote
-  that counter, so it was served as a constant zero to every client polling an
-  import. The column stays; the wire field is gone.
+- **A company no longer carries a `classification`.** Use `lifecycle` (where an
+  account stands with us, one value at a time) and `relationship_types` (what the
+  company is to us, possibly several things at once). Nothing wrote the old field,
+  so every unassessed account showed the default `prospect`. The API stops
+  returning it, the company list stops offering it as a filter, and both
+  generated clients drop it. A segment already written against it keeps
+  evaluating, but no surface offers it for a new one.
+- **The backfill stops reporting `dedupe_candidates`.** The counter was never
+  written and always read zero. The column stays; the wire field is gone.
 
 ### Changed
+
+- Analytics uses one reporting implementation across the web, API, MCP and workers.
+  The old performance screen and rollout switch are removed. Existing
+  `analytics.performance_enabled` configuration is accepted but ignored.
+  Installations that disabled reporting after a pilot must pause schedules before
+  upgrading to avoid resuming enabled schedules; see [the reporting upgrade guide](docs/how-to/operate-reporting.md#upgrade-from-a-flag-gated-installation).
 
 - **`/metrics` on the api is closed by default.** It requires `--metrics-token`
   as a Bearer credential. A deployment whose scraper discovers its targets by
@@ -49,7 +85,30 @@ when it has content.
   already contained. An installation that scraped the api's `/metrics` without a
   token must set one of the two on upgrade, or its scrapes answer 401.
 
+- **The web tier answers 404 for missing files.** A path with a dot in
+  its last segment, or a dot-segment such as `/.env`, gets a plain-text 404
+  instead of the app shell under a 200. Extensionless app routes are unchanged.
+- The api and the web tier add `Permissions-Policy` (every powerful feature
+  denied except `clipboard-write` for the app's own origin),
+  `Cross-Origin-Opener-Policy: same-origin` and
+  `Cross-Origin-Resource-Policy: same-origin`, and nginx no longer sends its
+  version. `robots.txt` refuses the common AI crawlers by name.
+
 ### Fixed
+
+- **The contacts-without-consent retention rule acts again** on older installations.
+  An installation seeded before the record was renamed kept the rule under the old
+  `person/no_consent_no_deal` scope. The nightly evaluator has no selector for it,
+  so it skipped the rule every night while Settings → Privacy listed it as acting.
+  A migration carries it over to `contact/no_consent_no_deal` with its window and
+  action unchanged. Where an admin already added the contact rule, theirs stands.
+
+- **Sweep `_failed` gauges read the last finished run.**
+  `margince_sweep_workspaces_failed` and `margince_sweep_units_failed` read the
+  newest child of a pass, which is usually a pending next tick, so a tick that
+  exhausted its attempts read as healthy. They now take the outcome from the
+  newest run in a terminal state. Coverage still counts a pending child, and a
+  later `completed` run still supersedes an earlier failure.
 
 - Mobile record action bars and truncated contact deal-room lists keep their
   explanatory text inset from the surface edge. The unchecked Forecast story
@@ -58,971 +117,575 @@ when it has content.
 - **A failed-login lock no longer keeps out a browser that has signed in
   before.** Signing in sets a `crm_device` cookie; while an account is locked, a
   browser presenting it for that account is let in with the correct password.
-  Every other sign-in attempt is refused exactly as before.
+  Every other sign-in attempt is refused as before.
 - **The MCP connector's OAuth discovery documents name the configured public
   origin.** Their issuer and endpoint URLs, and the pointer the transport's 401
   carries, are built from `--public-base-url` rather than from the request, and
   are sent `Cache-Control: no-store`. With no public base URL configured they
   answer 404, as they do with the connector off.
 - The exchange-rate refresh accepts a rate from the page it reads only as a plain
-  decimal — digits and one decimal point, within bounded widths — and drops any
-  other form before parsing it, the shape the currency sheet itself accepts.
-- **A colleague connecting an MCP client no longer disconnects everyone else.**
-  A connection was superseded by `client_id` alone, which assumed that id names
-  one install. That holds for a client registered by DCR and fails for one
-  identified by a Client ID Metadata Document, where every human running the
-  software presents the same id — so an installation had one live connection in
-  total. Each new consent revoked the previous human's grant through the cascade
-  that answers token theft, killing their access token and spending their
-  refresh chain, so they were asked to reconnect mid-conversation and in turn
-  evicted whoever had connected before them. A connection is now superseded per
-  client registration **per human**: reconnecting from the same client still
-  replaces your own earlier connection, and never anyone else's.
+  decimal (digits and one decimal point, within bounded widths), the shape the
+  currency sheet itself accepts. It drops any other form before parsing it.
+- **One MCP connection no longer disconnects the others.**
+  A client identified by a Client ID Metadata Document presents the same
+  `client_id` for every user, so each new consent revoked the previous user's
+  grant. A connection is now superseded per client registration **per human**:
+  reconnecting from the same client replaces your own earlier connection, and
+  never anyone else's.
 - Customer meeting requests remain actionable on won or lost deals and outside
   recent email history. Source-linked reminders reconcile without duplicates;
   accepting or completing one updates request state across the deal and email
   views. Background deal refresh updates facts without model calls.
+- **An offer's PDF is no longer served to a reader who cannot open its buyer
+  company.** The PDF prints the buyer's legal block, which the offer already
+  withheld from that reader along with the buyer's id. For them the offer reads
+  as never rendered, a PDF they rendered themselves included, and its download
+  answers 404. Changing a draft's buyer removes its PDF, which printed the
+  previous one.
 
 ## [0.0.1] - 2026-09-10
 
 ### Removed
 
-- **The human-set sales quota is gone.** A quota was a revenue target a manager
-  typed, and everything the product said downstream of it — attainment, the pace
-  band — was that one number's arithmetic, so a target nobody had entered read as
-  an absence rather than as a question with no denominator. The Reports screen now
-  holds the three deal reports and nothing else. The `quota` table is dropped and
-  the `quota` RBAC object is stripped from every role document in the same
-  migration. Operational agent budgets are untouched: the per-agent volume meter,
-  the AI provider spend budget and the incumbent rate allowance are safety limits,
-  not sales targets, and keep working exactly as before.
+- **The human-set sales quota is gone.** Attainment and the pace band were
+  arithmetic on one number a manager typed, so a missing target read as an
+  absence. The Reports screen now holds the three deal reports. The `quota`
+  table is dropped and the `quota` RBAC object is stripped from every role in the
+  same migration. Operational agent budgets (the per-agent volume meter, the AI
+  provider spend budget and the incumbent rate allowance) are safety limits and
+  keep working as before.
 
 ### Changed
 
-- **Opening a meeting brief lights the AI-activity rail while it is written.**
-  The brief is generated on every open, and the chrome reported an agent at rest
-  for the whole of it because the client counted only a POST to a hand-kept
-  list of paths as the agent working. Which routes hold a model call open is now
-  the contract's to say (`x-waits-on-model: always | on-miss` on the operation),
-  the client mirrors that set by method and path, and a gate holds the two
-  together. Every generation a person waits on now reaches the rail the moment
-  its request leaves — the meeting brief, the intro drafts, the role proposals,
-  the onboarding conversation, and the cache-backed readings (the dossier, the
-  person brief, the deal status) once they have run longer than a stored answer
-  takes. A stored reading still never lights the orb.
+- **A meeting brief lights the AI-activity rail.** The rail now lights for every
+  request that waits on a model. That covers the meeting brief, the intro drafts, the role
+  proposals, the onboarding conversation, and the cache-backed readings (the
+  dossier, the contact brief, the deal status) once they run longer than a stored
+  answer takes. The contract marks those operations with
+  `x-waits-on-model: always | on-miss`, and the client mirrors that set. A stored
+  reading still never lights the orb.
 
-- **An email address anywhere in the product opens Margince's composer.** The
-  address on a contact's or a lead's header, in the contact rail's details, and
-  on the people cards of an account page used to be a `mailto:` link, which
-  handed the address to whatever mail client the browser had — the message left
-  outside the product, nothing was filed on the record, no consent was asked,
-  and the thread on the record had a hole where the reply arrived. Each address
-  is now a button into the same composer the header's Email verb opens, on the
-  record the address belongs to and with the address already in the To line —
-  for a reader who has connected a mailbox for Margince to send from. Without
-  one the address stays a `mailto:`, because the composer could only refuse.
-  Phone numbers still dial through `tel:`.
+- **Email addresses open Margince's composer.** This applies on a contact's or a
+  lead's header, in the contact rail's details, and on an account page's people
+  cards. The address opens the header's Email composer with the address in the
+  To line. Without a connected mailbox the address stays a
+  `mailto:` link. Phone numbers still dial through `tel:`.
 
-- **The relationship brief is written by a model, and reads what people actually
-  wrote.** The person page's standing brief has always been a deterministic
-  composition; it now runs on the `summarize` lane as the invocation site
-  `person_brief`, alongside the account brief, the prepared questions, the
-  company dossier and the meeting plan. The change that matters is not the model
-  but what the model is shown: the brief now reads the claims extracted from
-  conversations with their verbatim quotes and open/overdue state, what CHANGED
-  about the relationship, the moment the page's own ladder selected, and — for
-  each recent message — the server's own one-line summary of what was written
-  rather than its subject alone. A brief assembled from subjects, kinds and
-  directions could say no more than that mail had been exchanged, which is true
-  of every contact in the system. Every sentence is still cited or dropped
-  whole, the brief is still assembled and cached per reader under that reader's
-  own gated read, and a message the reader may not open contributes its date and
-  nothing else. A deployment with no model lane, an exhausted AI budget or a
-  reply the grounding filter refuses gets the deterministic floor as before, and
-  `generated_by` says which of the two wrote what is on screen — that floor now
-  leads with what is due and quotes what the last message said, so it is a
-  plainer brief rather than a thinner one.
+- **The relationship brief is written by a model.** The contact brief now runs
+  on the `summarize` lane as `person_brief`. It reads extracted claims with their
+  quotes and open/overdue state, recent changes, the moment the page selected,
+  and a one-line summary of each recent message. Every sentence is cited or
+  dropped, and a message the reader may not open contributes only its date. With
+  no model lane, no budget left or a refused reply, the deterministic brief is
+  used, and `generated_by` says which one wrote it. The deterministic brief now
+  leads with what is due and quotes the last message.
 
-- **"Set the next step" names the step, and the button writes it.** An account
-  with an open deal and nothing scheduled raised advice that restated the finding
-  as an instruction — and offered an "Add the next step" button the company page
-  had no surface to route to, so pressing it did nothing at all. The rule now
-  names the step in the words it will be written in ("Agree the next step on
-  *Fleet retrofit 2026*", or the account's own name where several deals are open
-  and picking one would be a guess) and prepares the exact `POST /tasks` body
-  beside it, which the client sends unchanged — so the sentence a rep accepts and
-  the task they get cannot come apart. The recommendation also appears on the
-  record's **Tasks** tab above the open work, marked as the agent's rather than a
-  person's, where a reader who came looking for what happens next will meet it;
-  an archived account offers no button, because the write would only be refused.
-  Still deterministic, still nothing staged: no task exists until a rep presses
-  the button, and the write goes through the same governed endpoint the task form
-  uses, audited and undoable.
+- **"Set the next step" writes a named step.** The advice names the step
+  ("Agree the next step on *Fleet retrofit 2026*", or the account's name when
+  several deals are open), and its button sends a prepared `POST /tasks` body
+  unchanged. The recommendation also appears on the record's **Tasks** tab,
+  marked as the agent's. An archived account offers no button. No task exists
+  until a rep presses the button, and the write is audited and undoable.
 
-- **The operational agent budgets stop being called quotas.** One word named two
-  unrelated things until the sales quota was retired: the revenue target a
-  manager typed, and the volume ceiling that stops an agent reading, writing or
-  spending without bound. The second is a safety limit and is unchanged in
-  behaviour, threshold and refusal — only its name moves. The Go package,
-  types and files are renamed, and two stored values move with them:
-  the approval kind `quota_release` becomes `volume_release` and the AI failure
-  code `provider_quota` becomes `provider_budget`, both migrated in place. The
-  contract already tells a reader to treat an unrecognized failure code as
-  "some failure", so a client that has not been updated degrades to the honest
-  general answer rather than breaking.
+- **Agent budgets are no longer called quotas.** The volume ceiling on agent
+  reads, writes and spend is renamed; its behaviour, thresholds and refusals are
+  unchanged. Two stored values are migrated in place: the approval kind
+  `quota_release` becomes `volume_release`, and the AI failure code
+  `provider_quota` becomes `provider_budget`. A client that has not been updated
+  treats the new code as a general failure.
 
-- **Home's test suite is under the 1000-line ceiling again.** It crossed while
-  Home gained its weekly-review section, and the split had one honest shape: the
-  harness both halves need — the recording fetch stub, the render wrapper and
-  the fixtures — is a module now (`home.testkit.tsx`) rather than something to
-  export from a test file or copy. A second answer to "what does an unrouted
-  read reply with" is exactly what these cases turn on.
+- **Home's test suite is split in two.** It is back under the 1000-line
+  ceiling, and the shared harness is now `home.testkit.tsx`.
 
-- **The Unreleased section carries one list per change type.** Three separate
-  `### Changed` sections had accreted under it, each appended by an author with
-  no signal that the others existed, so a reader looking for what changed had to
-  find all three. Every entry is preserved and unchanged; only the headings
-  moved. `make changelog-sections` holds it, reading the change types from the
-  file rather than from a list somebody has to maintain.
+- **One changelog list per change type.** Three
+  `### Changed` lists were merged; `make changelog-sections` now enforces one per
+  type.
 
-- **A certification fixture's trigger ref is checked against the shape
-  production mints.** The validator accepted any non-empty string, so a corpus
-  scenario could drift arbitrarily far from the runner and stay green: when the
-  ref grew a seat segment, a fixture kept the old two-segment value and nothing
-  failed, because a fixture that describes a different system has no failing
-  assertion to notice. The check is now derived from `AgentSpec.TriggerRef`
-  itself — a reference ref is minted and compared segment for segment — so the
-  day the writer changes shape, every stale fixture fails naming itself.
+- **Certification fixtures check their trigger ref.** The ref is compared
+  segment by segment with one minted by `AgentSpec.TriggerRef`, so a fixture with
+  a stale shape fails by name.
 
-- **BREAKING (metrics): the sweep gauges no longer carry a `_total` suffix.**
-  `margince_sweep_workspaces_total` is now `margince_sweep_workspaces`, and
-  `margince_sweep_units_total` is now `margince_sweep_units`. The two `_failed`
-  halves are unchanged. Any dashboard or alert reading the old names has to be
-  updated; nothing is aliased, because a series published under two names is a
-  worse surface than a rename with a note.
+- **BREAKING (metrics): sweep gauges drop `_total`.** Rename
+  `margince_sweep_workspaces_total` to `margince_sweep_workspaces` and
+  `margince_sweep_units_total` to `margince_sweep_units` in your dashboards and
+  alerts. The old names are not aliased. The `_failed` gauges are unchanged.
+  These are levels, and Prometheus reserves `_total` for counters; a gate now
+  rejects the suffix on a gauge and requires it on a counter.
 
-  All four are levels — how many workspaces or units a fleet pass currently
-  covers, read out of `river_job` at scrape time, numbers that go DOWN — and
-  Prometheus reserves `_total` for monotonic counters. The `# TYPE` line always
-  said `gauge`; the NAME is what a dashboard author reads, and this one invited
-  `rate()` and `increase()` over a level, which render as plausible noise rather
-  than as an error.
+- **One schema describes the whole of margince.yaml.**
+  `config/margince.schema.json` replaces `config/ai-routing.schema.json` and
+  covers every section, with the model binding under `$defs.aiRouting`. It is
+  generated from `deployconfig.Config` by `tools/gen-configschema`, with
+  descriptions from the Go doc comments, and `additionalProperties: false`
+  mirrors the loader's `KnownFields(true)`. Gates check that every struct field
+  is in the schema and that every shipped config validates. The shipped configs
+  carry a `# yaml-language-server:` line so an editor finds the schema.
 
-  Both pairs move together. Renaming one half would have left an operator
-  reading `margince_sweep_workspaces_total` beside `margince_sweep_units`,
-  which is a worse surface than the convention it satisfies.
+- **The dev stack's Compose project is named `margince`**, replacing
+  `margince-poc-v1`. **The first `make db-up` after upgrading starts on an empty
+  database**: the `margince-poc-v1_*` volumes are left in place, not migrated.
+  Re-seed with `make seed-dev`, or bring a stack up with `-p margince-poc-v1` to
+  read the old data. `MARGINCE_PG_CONTAINER` still overrides the container name
+  `scripts/migration-baseline.sh` uses.
 
-  A gate now holds the rule in both directions, over what the exposition writers
-  actually emit rather than over a list of names: a gauge may not carry the
-  suffix, and a counter must.
+- **The AI routing file is gone.** The tier-to-model binding is the
+  `ai.routing` setting, seeded from `seeds.ai_routing` in `margince.yaml` and
+  changed under Settings → AI. `--ai-routing` and `MARGINCE_AI_ROUTING` are
+  ignored with a warning. `ai.LoadRoutingFile` and the
+  `config/ai-routing.*.example.yaml` files are deleted; `ai.ParseRouting` still
+  reads the seed and the stored setting. A dev stack is bound by
+  `seeds.ai_routing` in `config/margince.dev.yaml`.
+  - The DB-less lanes take `--model provider:model` or `--ai-fake`
+    (`worker siteread`, `worker aitask`).
+  - `make e2e-ai` takes `MODEL=`, `JUDGE=`, `BASE_URL=` and `PROFILE=`. `JUDGE=`
+    is required, and the run refuses a judge equal to the candidate. `BASE_URL=`
+    applies to every rung of the ladder. `PROFILE=sovereign` with a cloud vendor
+    is refused through `ai.ValidateTierBinding`, the same rule a parsed config
+    meets.
+  - The certification runner binds every tier, so a demotion under budget
+    pressure lands on a bound tier.
+  - The pricing gate reads `seeds.ai_routing` from the shipped YAML files.
+  - The desktop launcher passes `--ai-fake` on every boot. A binding stored under
+    Settings → AI outranks it and takes effect without a restart.
 
-- **The schema describes margince.yaml, not just the routing block.**
-  `config/ai-routing.schema.json` is gone; `config/margince.schema.json` takes
-  its place and covers the whole file — all fifteen sections — with the model
-  binding under `$defs.aiRouting`, where `seeds.ai_routing` points.
+- **Settings pages use the record page's components.** Every settings card is a
+  `Panel`, and pages that drew their own chrome (the company profile drew five
+  surfaces, including a gradient hero) now use it. The pages gained a reading
+  measure, one vertical rhythm, and real heading styles.
 
-  The old file was right while a routing FILE existed. Once the binding moved
-  into margince.yaml and the database, a schema for one subtree left the other
-  fourteen sections unchecked: an editor validating the smallest part of the
-  file and saying nothing about the rest.
+- **`SurfaceState` moved into the design system.** Eight screens imported it from
+  `company360.tsx`; they now import it from the design system. `Eyebrow`,
+  `PanelPlate`, `Panel`'s accent tone and its actions band moved with it, and
+  `SectionHeader` gained level 3 for nested sections.
 
-  **Generated, because a hand-written one would be a second copy of
-  `deployconfig.Config`** — and the copy goes stale silently, reporting a new
-  field as an error against last quarter's shape. `tools/gen-configschema`
-  reflects over the struct the loader decodes into and reads the field
-  descriptions from the Go doc comments, so hover text is the explanation that
-  sits beside the code rather than a second one free to disagree.
-  `additionalProperties: false` throughout mirrors the loader's
-  `KnownFields(true)`.
+- **Settings entries open on a read grant.** An entry opens if you may read any
+  part of it; the write controls inside say who may use them. A read-only seat
+  was hidden from eight of the eleven entries the server answers. On a freshly
+  seeded installation every role reaches every entry except Maintenance.
 
-  Two gates hold it, both derived rather than listed: every field the struct
-  declares is a field the schema accepts, and every config this repo ships
-  validates against the schema this repo ships. The routing shape keeps the
-  enum-parity gate it already had, following it into `$defs`.
-
-  The shipped configs now carry a `# yaml-language-server:` line, so an editor
-  picks the schema up without being told.
-
-- **The dev stack's Docker Compose project is named `margince`**, not
-  `margince-poc-v1`. The old name outlived the repository it was named after.
-  A project name namespaces the stack's volumes, so **the first `make db-up`
-  after this change starts on an empty database**: the `margince-poc-v1_*`
-  volumes are orphaned rather than migrated. They are not deleted — their data
-  survives until someone removes them, and a stack brought up with
-  `-p margince-poc-v1` still reads it — but the renamed stack will not pick it
-  up, so re-seed with `make seed-dev`. `margince-dev` was not an option: the
-  frozen poc-era stack left `margince-dev_*` volumes behind, Postgres skips
-  initdb on a non-empty volume, and the owner role would then silently never
-  be created. `MARGINCE_PG_CONTAINER` still overrides the container name that
-  `scripts/migration-baseline.sh` reaches for.
-
-- **The AI routing FILE is gone, format and all.** The binding moved to the
-  database earlier; what stayed behind was a file format three DB-less lanes
-  still read, and the example yamls that fed them. Those lanes are now TOLD
-  their model instead: `worker siteread` and `worker aitask` already took
-  `--model provider:model` or `--ai-fake`, so `--ai-routing` was a redundant
-  third arm and is gone from both; `make e2e-ai` takes `MODEL=` and `JUDGE=`.
-  `ai.LoadRoutingFile` and `config/ai-routing.*.example.yaml` are deleted.
-  `ai.ParseRouting` stays — it is what reads `seeds.ai_routing` and the stored
-  setting — and so does `config/ai-routing.schema.json`, which still describes
-  that shape for an editor validating a seeds block.
-
-  Three things the file had been supplying quietly, which had to become
-  explicit rather than disappear:
-
-  **The judge.** The certification runner graded a candidate with a SECOND
-  model, and it got that model by having the judge ride the file's own binding
-  while `MODEL=` moved only the candidate. Deleting the file with nothing in
-  its place would have collapsed the two, and a model grading itself passes by
-  construction. `JUDGE=` is now required and the run refuses the two being
-  equal before it pays for a single call.
-
-  **The endpoint.** `openai_compatible` fails closed without a `base_url`, so
-  the file was the only thing making broker certification runnable at all.
-  `BASE_URL=` carries it, on every rung of the ladder rather than the first.
-
-  **The profile.** It is part of a record's identity — its path and its sort
-  key — and it is enforced, not a label: `PROFILE=sovereign` with a cloud
-  vendor is refused rather than run, through the same rule a parsed config
-  meets. That rule is now `ai.ValidateTierBinding`, shared rather than spelled
-  a second time in the cert lane.
-
-  Two smaller corrections fell out. The runner binds EVERY tier, not just the
-  task's ladder — the router demotes under budget pressure onto tiers a ladder
-  does not name, and an unbound one surfaces as "no bound tier can serve",
-  which reads like an unsupported task rather than a partial binding. And
-  `RoutingConfig.Validate` is unexported again: it was exported for exactly one
-  caller, the override path this change replaces.
-
-  The pricing gate moved with its subject. It asserted that every binding the
-  shipped EXAMPLES named was priced by `SeedModelRates`; with the examples gone
-  it now reads `seeds.ai_routing` out of the shipped Margince YAML files, which is
-  what a fresh installation actually boots bound to.
-
-- **The AI routing file is retired: one binding, declared in one place.** The
-  installation's tier→model binding has been the `ai.routing` setting for a
-  while, but `--ai-routing <file>` still seeded it on any boot that found the
-  setting unset — and `seeds.ai_routing` in `margince.yaml` seeded the same
-  setting at bootstrap. Two files could plant one installation's binding, nothing
-  interlocked them, and nothing said which had. The boot file is the survivor,
-  because it reaches every path that creates an installation (the claim flow, the
-  file bootstrap and a data reset all run the same seed inside the creating
-  transaction) where the flag only ever fired at boot.
-
-  `--ai-routing` and `MARGINCE_AI_ROUTING` are now **ignored, and warn** — the
-  flag stays registered so an existing command line does not die on an unknown
-  one, and the warning distinguishes the two situations it can be in, because on
-  an installation with nothing stored this is the boot where the AI lanes go
-  absent. A dev stack is bound by `seeds.ai_routing` in
-  `config/margince.dev.yaml` rather than by a per-engineer `config/ai-routing.yaml`
-  that `make install` used to seed; `make e2e-ai` now defaults to the **tracked**
-  `config/ai-routing.example.yaml`, so a recorded verdict is comparable between
-  engineers instead of being about whatever each had bound.
-
-  The file FORMAT stays, and so does its schema: `worker siteread`, `worker
-  aitask` and the certification runner read one deliberately, with no database
-  open. Those probe a binding rather than serve one, which is the one job a file
-  is right for.
-
-  The desktop launcher no longer looks for `ai-routing.yaml` either. It passes
-  `--ai-fake` on every boot, which is not the same as forcing the fake on: a
-  stored binding outranks that flag, so a user binds real models under
-  Settings → AI — with the provider key beside them — and it takes effect without
-  a restart, instead of copying a YAML file into the app folder.
-
-- **The twelve settings pages speak the record page's language.** Settings and
-  the company record were built from two different card primitives, and that was
-  most of the visual distance between them: the record page is `Panel` — an 8px
-  radius, a 48px header band with a hairline under it, full-bleed rows, a footer
-  band for a figure belonging to the whole card — while settings was `Card`, at a
-  12px radius with a 15px/600 title and no band. Across all twelve tabs `Panel`
-  was used zero times, `FieldGrid` zero, `FactList` twice. Every settings card is
-  a `Panel` now, and the surfaces that had invented their own chrome give it up —
-  the company profile alone drew five, including a gradient hero with a 180px
-  decorative circle; its stylesheet went from 292 lines to about 130 and none of
-  what remains is a surface. The pages also gained a reading measure (a single
-  text input on the Account tab was ~950px wide), one vertical rhythm (nineteen
-  inline margins and ten `card-stack` classes predated `.settings-stack`'s gap
-  and margins do not collapse in a flex container, so real gaps were a mix of 16
-  and 32 within one tab), and headings that are headings — Tailwind v4 preflight
-  is live with no global `h1`-`h6` rule, so a bare heading rendered at 14px/400,
-  identical to body text, which is what the Integrations lead card and the
-  company profile hero were doing with their titles.
-
-- **The record page's honest-state vocabulary left the screen it was written on.**
-  `SurfaceState` — ready, empty, withheld, unavailable, loading, unsupported,
-  failed, stale, partial — lived in `company360.tsx` and seven other screens
-  imported it from a screen file. `Eyebrow` was spelled out five times across
-  three stylesheets with no two agreeing. `PanelPlate`, `Panel`'s accent tone and
-  its actions band were all being reached into from a screen sheet.
-  `SectionHeader` learned level 3, because six nested sections were minting a
-  second `h2` inside an `h2` for want of a way to say what they meant.
-
-- **Opening a settings page is a READ, and every entry now asks like it.** Each entry's predicate was a WRITE grant, because each was written to
-  answer "can you *use* this" — and measured against the live API a read-only
-  seat was hidden from eight of the eleven entries the server answers 200 on,
-  including three surfaces that were ungated routes of their own before the
-  merge. One rule now covers all of them: the entry opens if the principal may
-  read any part of it, and the write affordances inside say for themselves who
-  may use them. A read grant is still a real question rather than a formality —
-  a role edited to drop `custom_field:read` loses the Data model row, which
-  `true` could never express. The consequence, stated: on a freshly seeded
-  installation every role reaches eleven of the twelve entries and only
-  Maintenance narrows, so what distinguishes seats has moved inside the pages,
-  where cards state their own denials.
-
-- **Connections split in two, and the entry with no predicate disappeared with
-  it.** One Organization row used to hold both a reader's own mailbox and
-  LinkedIn network *and* the installation's contact-data credential, webhooks and
-  HubSpot mirror — which is exactly why it could not be gated: any honest
-  predicate took a personal task away from whoever it hid it from. *You →
-  Connections* now holds the three per-user surfaces (every one reads a `/me` or
-  caller-scoped seam) and *Organization → Integrations* the four
-  installation-wide ones, each with a predicate of its own. The seam was never a
-  missing group; it was one entry belonging to both. The connector OAuth callback
-  keeps its `#/settings/connections` return route, because the connectors are the
-  half that stayed; the system-of-record chip follows the mirror to
+- **Connections are split in two.** *You → Connections* holds the per-user
+  surfaces (your mailbox, your LinkedIn network). *Organization → Integrations*
+  holds the installation-wide ones (the contact-data credential, webhooks, the
+  HubSpot mirror), each with its own permission. The connector OAuth callback
+  still returns to `#/settings/connections`; the system-of-record chip links to
   `#/settings/integrations`.
 
-- **The member roster is no longer admin-only, and People opens on it.**
-  `GET /users` answers 200 to any authenticated principal, and who is on the team
-  with what role is not an admin's private question — so every seat reads the
-  list, while inviting somebody and changing a role or status stay the admin's
-  and withhold themselves. A role nobody may change reads as text rather than as
-  a picker that could only be refused. The page also used to open on an empty
-  invite form: three blank fields ahead of the answer, for a task most visits are
-  not about.
+- **Every seat can read the member roster.** People opens
+  on it. Inviting, and changing a role or status, stay with the admin. A role nobody may change
+  reads as text.
 
-- **Three settings pages were ordered against the reader.** AI opened on spend
-  and buried the automations that *cause* it four screens down, past a price
-  table — and for manager, rep and read_only the two spend cards are withheld
-  anyway, so the page opened on a price sheet; it now reads automations → spend →
-  prices → the per-call trace last, that trace being a debugging instrument
-  rather than a setting. General claimed in a comment that the base currency and
-  its rate sheet were adjacent while the company profile sat between them; they
-  are adjacent now. Four card titles stopped repeating the heading above them
-  ("You" inside *You*, "Organization" inside *Organization*, "Capture" on
-  Capture), "Your agents" dropped a possessive the group heading already carried,
-  and "Voice" became "Writing voice" — in a product with mail capture, a bare
-  "Voice" reads as call recording.
+- **Three settings pages are reordered.** AI reads automations → spend → prices →
+  per-call trace. General puts the base currency beside its rate sheet. Card
+  titles no longer repeat the heading above them, "Your agents" drops the
+  possessive its group heading carries, and "Voice" is "Writing voice".
+
+- **Settings has 12 entries, down from 24.** Two groups: Account, Writing voice,
+  Agents and Connections under *You*; General, People & access, Integrations,
+  Capture, Data model, AI, Privacy & audit and Maintenance under *Organization*.
+  `#/custom-fields`, `#/products`, `#/offer-templates` and `#/automations` are
+  now content on the page that owns them and are gone as routes; Automations'
+  primary-nav slot went to the dedupe queue. `#/design` is deleted.
+  `GET /admin/job-health` has a UI on Maintenance, beside the search-index
+  rebuild and the danger zone. **No seat lost a surface it could use**: a merged
+  entry opens on the union of what its parts asked for. The connector OAuth
+  callback redirects to `#/settings/connections` (a hard-coded string in
+  `internal/compose/connectors_outcome.go`).
+
+- **Every dropdown uses the design system's `Select`.** It is a button trigger
+  plus a portalled listbox with the full keyboard contract (arrows, Home/End,
+  typeahead, Escape without committing, focus back to the trigger), styled with
+  the product's tokens. It anchors to the trigger inside a scrolling toolbar and
+  flips when the room below runs out. Callers pass `options` and receive the
+  value in `onChange`. A `<select>`, `<option>` or `<optgroup>` anywhere else
+  under `frontend/src` fails `make frontend-check`.
+  `frontend/src/design-system/README.md` is the catalog to read before building
+  a control.
+
+- **The sign-in screen is a split page.** The identity region runs full-bleed,
+  divided from the form by one hairline, and the wordmark sits top-left (above
+  the form when the layout stacks). The form is a single 400px column: heading,
+  full-width provider buttons, fields, locale row and fine print, with the
+  fields left-aligned. On phones (≤560px) the identity region is dropped,
+  including the AI disclosure; that gap is tracked in
+  [issue 562](https://github.com/margince/margince/issues/562). Every wider
+  layout shows the disclosure in full.
+
+- **The sign-in animation runs once per load.** A React remount
+  renders the surface already arrived.
+
+- **The Core holds its position.** The sphere's 11-second vertical drift is
+  gone; it still breathes, and the beat carries its state.
+
+- **The Core stops in an unfocused window.** The WebGL liquid and
+  the CSS rhythms (breath, sheen, halo, feed) stop and resume on one
+  document-level `focus`/`blur` signal.
+
+- **BREAKING: passport scopes come from the contract.**
+  The scope an operation spends is declared by the contract. Every
+  `x-mcp-tool` annotation declares its `scope` beside its tier, and the
+  REST agent gate spends that scope instead of a hard-coded `write`. Scopes are
+  exact membership, so `write` does not imply `send` or `enrich`. A passport
+  minted with `read`+`write` and no `enrich`/`send` is now refused
+  `POST /organizations/{id}/enrich`, `/deep-read`, `/coldstart`,
+  `POST /offers/{id}/send` and `POST /overlay/reconcile` with `scope_exceeded`.
+  Re-mint with the scopes you mean to grant; the per-tool scope is in
+  [docs/reference/agent-tools.md](docs/reference/agent-tools.md).
+
+- **Connected agents are listed apart from passports.**
+  `GET /v1/passports` carries a `connection` object on grant-issued rows and
+  lists one row per connection, however often its credential has rotated.
+  Revoking a grant-bound passport ends the whole connection.
+
+- **Language and theme moved into the account menu.** The top bar holds search
+  and the account button; the menu reads Settings · Language · Theme · Sign out,
+  with each preference showing its current value. Changing one keeps the menu
+  open, and closing it returns focus to the avatar. The language row is a nested
+  menu: one Escape closes the language list, the next closes the account menu.
+
+- **One orb in the product.** The agent panel at the sidebar foot now shows the
+  real Core instead of a CSS lookalike. The Core draws at its displayed size,
+  caps itself at 24fps on a timer, and stops on a hidden tab or an off-screen
+  canvas.
 
 ### Added
 
-- **The lit window edge can be switched off.** The agent's own periphery — the
-  waves that travel the rim of the window while a run or a mailbox import is in
-  flight — now has a switch in the foot of the agent panel, the card that opens
-  from the agent block at the bottom of the rail. It is on by default and off is
-  remembered per browser, beside the theme, so a reader who cannot work next to
-  movement in their peripheral vision, or simply does not want it, turns it off
-  once. Nothing is lost by turning it off: every reading the margin carries is
-  already written in words in the rail beside it, which is why the surface is
-  decoration a screen reader never sees in the first place. A machine that asks
-  for reduced motion still calms the waves on its own, for the reader who never
-  opens the panel.
+- **The lit window edge can be switched off.** Waves run along the window rim
+  during a run or a mailbox import. The switch is in the foot of the agent panel
+  (the card that opens from the agent block at the bottom of the rail). It is on
+  by default, and off is remembered per browser, beside the theme. Everything the
+  waves show is also written in the rail, so nothing is lost. A machine set to
+  reduced motion still calms the waves without the switch.
 
-- **An introduction is something the product records, not something a rep
-  remembers.** The Network tab already answered "who here can reach this
-  contact"; asking them was a conversation that happened elsewhere and came
-  back as a memory. `intro_request` records the ask, the colleague's bounded
-  answer and what came of it — five endpoints, a requester's composer, and a
-  decision surface of the colleague's own.
+- **Introductions are recorded.** `intro_request` records an ask to a colleague
+  who can reach a contact, the colleague's answer and the outcome. It ships with
+  its API, a requester's composer, and a decision surface for the colleague.
+  Approving a name-drop permits a mention only, and the ask completes as
+  `name_dropped`; the outcome is read from the ask's state, never from what the
+  caller sends. The domain row, the event and the audit after-image use the same
+  word. `replied` is set only from captured activity, never by a person.
 
-  The lifecycle is built so it cannot overstate an outcome. Approving a
-  name-drop permits a mention and nothing more, and no path turns it into a
-  handshake: the ask completes as `name_dropped`, and WHICH outcome that is
-  gets read from the state the ask was in rather than from anything the caller
-  sends. The domain row, the event and the audit after-image all say the same
-  word, because a dispute about whether an introduction happened is settled
-  from the trail.
+- **An overnight grant says when it is outgrown.** When the
+  agent gains a tool that needs a wider scope than the grant minted, the runner
+  drops that tool and the overnight work stops without an error.
+  `credential_funds_agent` is a second renewal cause, computed from what the
+  build would mint today, and the Settings card offers renewal with copy that
+  says the authority was outgrown.
 
-  `replied` is unreachable by any person. The contact answering is observed
-  from captured activity, so no button produces it.
-
-- **A standing overnight grant says when the agent has outgrown it.** A grant
-  mints the scopes the agent needed at the moment the rep answered; when the
-  agent later gains a tool needing a wider scope, every already-minted passport
-  is short. Nothing failed — the runner degrades the unfunded tools before the
-  first model step, so the rep's overnight work simply stopped, with no error,
-  no expiry and no prompt, and the grant still reported a usable credential
-  because liveness was all that was checked. `credential_funds_agent` is the
-  second renewal cause, computed at request time from what the build would mint
-  today, and the Settings card now offers renewal on it with copy that says the
-  authority was outgrown rather than that it expired.
-
-- **Foundation (WP0)**: the full core data model as reversible
-  migrations — RLS (`ENABLE`+`FORCE`, deny-on-unset) on every tenant
-  table, composite same-workspace foreign keys, append-only audit log,
-  transactional event outbox, and the core/custom migration namespaces.
+- **Data model**: the core schema as reversible migrations, with workspace
+  isolation through `database.WithWorkspaceTx`, composite same-workspace
+  foreign keys, an append-only audit log, a transactional event outbox, and the
+  core and custom migration namespaces.
 
 - **Contract pipeline**: `api/crm.yaml` (OpenAPI 3.1) → generated types
-  + chi server; every operation mounted; regeneration drift is
-  merge-blocking; every `crm.yaml` operation is implemented.
+  + chi server. Every operation is mounted and implemented, and regeneration
+  drift blocks a merge.
 
 - **Auth and tenancy**: workspace bootstrap, Argon2id login, opaque
-  server-side sessions, five seeded system roles, object RBAC +
-  own/team/all row scopes, and the read/full seat ceiling.
+  server-side sessions, seeded system roles, object RBAC with own/team/all row
+  scopes, and the read/full seat ceiling.
 
-- **Core CRM spine (WP1)**: people, organizations, leads (with
-  promotion), pipelines/stages, deals (stage-semantic advance, FX freeze
-  at close), activities and polymorphic links, two-record merge,
-  lists/tags, relationships/partners, deal stakeholders, scheduling.
+- **Core CRM**: contacts, organizations, leads (with promotion),
+  pipelines/stages, deals (stage-semantic advance, FX freeze at close),
+  activities and polymorphic links, two-record merge, lists/tags,
+  relationships/partners, deal stakeholders, scheduling.
 
-- **Event bus**: the events.md envelope over a transactional outbox →
-  Redis Streams relay, consumer groups, and at-least-once dedupe.
+- **Event bus**: the event envelope over a transactional outbox → Redis
+  Streams relay, consumer groups, and at-least-once dedupe.
 
-- **Governed agent surface**: Agent Seat Passports, the remote MCP
-  connector at `/mcp` (OAuth 2.1 + PKCE, dynamic client registration,
-  refresh rotation; the A1 stdio server is retired, SCR-9), the 🟢/🟡
-  autonomy tiers enforced below the transport on MCP and REST alike, and
-  the approval engine (stage → human decision → single-use redemption).
+- **Governed agent surface**: Agent Seat Passports and the remote MCP connector at
+  `/mcp` (OAuth 2.1 + PKCE, dynamic client registration, refresh rotation; the
+  stdio server is retired). Also the 🟢/🟡 autonomy tiers enforced below the
+  transport on MCP and REST alike, and the approval engine (stage → human
+  decision → single-use redemption).
 
-- **Consent lends a passport**: `GET /oauth/authorize` redirects to an SPA
-  consent screen where the human selects one of their own existing agent
-  passports; the connection receives exactly that passport's scopes,
-  carried by a *new* grant-bound passport, so revoking a connection never
-  touches the human's own credential. Deny
-  answers the client `access_denied`. A human with no passport is guided
-  to mint one and brought back to finish connecting, which means
-  `claude mcp add` no longer completes unattended for a fresh account.
-  The lend is recorded in the audit trail. Deactivating a member ends
-  their consents that no client redeemed yet, alongside the connections
-  that already exist — so reactivating them later cannot hand out a
-  connection on authority an admin took away.
+- **Consent lends a passport**: `GET /oauth/authorize` opens a consent screen
+  where the user picks one of their own agent passports. The connection gets
+  that passport's scopes through a new grant-bound passport, so revoking a
+  connection never touches the user's own credential. Deny answers the client
+  `access_denied`. A user with no passport is guided to mint one and brought
+  back, so `claude mcp add` no longer completes unattended for a fresh account.
+  The lend is audited. Deactivating a member ends their unredeemed consents and
+  their existing connections.
 
-- **AI surfaces**: model routing (the `ai.routing` setting — BYOK cloud via
-  the native Anthropic / OpenAI / Gemini adapters or the generic
-  `openai_compatible` wire, local Ollama / vLLM, an offline fake), the
-  Surface-B runner + scheduler, search (FTS + pgvector hybrid), capture
-  connector seam, cold-start read-back.
+- **AI surfaces**: model routing (the `ai.routing` setting: BYOK cloud via the
+  native Anthropic / OpenAI / Gemini adapters or the generic
+  `openai_compatible` wire, local Ollama / vLLM, an offline fake). Also the agent
+  runner and scheduler, search (FTS + pgvector hybrid), the capture connector
+  seam, and cold-start read-back.
 
-- **Model certification** (ADR-0074): a hand-authored fixture corpus
-  driven through each site's own production request builder and
-  validator, scored by a pinned judge and committed as a JSON record —
-  plus `make ai-probe`, which runs one site against operator-supplied
-  input through the same case.
+- **Model certification**: a hand-authored fixture corpus run through each
+  site's own production request builder and validator, scored by a pinned
+  judge and committed as a JSON record. `make ai-probe` runs one site against
+  operator-supplied input through the same case.
 
 - **The job contract** (`api/jobs.yaml`): every River job kind is declared
-  before it is written — a kind not in the file does not compile, and a
-  kind with no chosen timeout fails generation rather than running on
-  River's silent default. Each kind declares its role: a *dispatcher*
-  enumerates the fleet and enqueues, a *workspace worker* does one
-  tenant's work and fails its own job row. Job args name rows and never
-  carry content, so Art. 17 erasure reaches an in-flight job through the
-  row it names.
+  before it is written. A kind missing from the file does not compile, and a
+  kind with no timeout fails generation. Each kind declares its role: a
+  *dispatcher* enqueues work for the fleet; a *workspace worker* does one
+  tenant's work. Job args name rows and never carry content, so Art. 17 erasure
+  reaches an in-flight job through the row it names.
 
-- **Fleet observability** (OPS-MET-2): `/metrics` carries the job-runtime
-  section, `GET /v1/admin/job-health` is the same table read for an admin
-  (human-session-only, workspace-scoped, failure reasons drawn from a
-  vetted vocabulary rather than the raw error column), and
-  `cmd/worker --observe-addr` gives the worker its own `/healthz`,
-  `/readyz` and `/metrics` — which *process* is wedged is a question the
-  fleet-wide gauges structurally cannot answer.
+- **Fleet observability**: `/metrics` carries the job-runtime section.
+  `GET /v1/admin/job-health` shows the same table to an admin (human session
+  only, workspace-scoped, failure reasons from a vetted vocabulary).
+  `cmd/worker --observe-addr` gives the worker its own `/healthz`, `/readyz`
+  and `/metrics`, so you can see which process is wedged.
 
 - **Messaging channels**: a workspace-level Telegram bot binding
-  (`/channel-connections`) with pull ingress — the installation
-  long-polls, so it needs no public address and no inbound route — and a
-  governed reply (`POST /activities/{id}/send-message`) whose recipient
-  is the channel identity of the person the conversation is with, never
-  named by the caller.
+  (`/channel-connections`) with pull ingress; the installation long-polls, so
+  it needs no public address. Replies go through a governed endpoint
+  (`POST /activities/{id}/send-message`) whose recipient is the channel
+  identity of the contact in the conversation, never named by the caller.
 
-- **Outbound mail**: a Gmail send surface bound to the same consent as
-  capture, staged as a durable `comms_outbound` row, re-checked against
-  the staging human's live seat at transmit time, consent-gated, and
-  keyed on the identity the provider stamped rather than the one we asked
-  for — Gmail rewrites `Message-ID`, and bookkeeping keyed on the id we
-  requested loses the receipt.
+- **Outbound mail**: a Gmail send surface bound to the same consent as capture.
+  A message is staged as a durable `comms_outbound` row, re-checked against the
+  sender's live seat and consent at transmit time, and keyed on the
+  `Message-ID` Gmail stamps (Gmail rewrites the one we request).
 
 - **The relationship graph**: activity participants projected into an
-  interaction edge, answering who on our team already knows a contact —
-  with per-user warmth (never summed into a workspace score), deal
-  coverage and its risk rules, and a LinkedIn `Connections.csv` import
-  whose rows are graph substrate: invisible to search, lists, people
-  screens and agent record tools, and private to their owner.
+  interaction edge that shows who on our team already knows a contact. Warmth is
+  per user (never summed into a workspace score), with deal coverage and its
+  risk rules. A LinkedIn `Connections.csv` import feeds the graph only: its rows
+  are invisible to search, lists, contact screens and agent record tools, and
+  private to their owner.
 
-- **Company record page**: one gated 360 read behind the whole page, a
-  per-viewer account brief that degrades to a deterministic summary with
-  no model lane, Ask, record-derived next-step suggestions that each
-  carry their why, a dwell-gated visit baseline, and the one-hop
-  connections graph.
+- **Company record page**: one gated 360 read behind the whole page, and a
+  per-viewer account brief that falls back to a deterministic summary with no
+  model lane. Also Ask, record-derived next-step suggestions that each carry their
+  reason, a dwell-gated visit baseline, and the one-hop connections graph.
 
-- **Overlay mode (HubSpot as system of record)** and the **ADR-0071
-  overlay→native cutover**: mirror-backed reads behind the frozen
-  datasource seam, incumbent-first write-back on `Update`/`Archive`, a
-  conjunctive preflight that seals the mirror when green, and a
-  confirm-first flip behind a typed phrase. Both flip operations are
-  human-only — a one-way, estate-wide cutover must not collapse to a
-  single approval click. Reversibility is reconstruction from the
-  pre-flip bundle, not rollback.
+- **Overlay mode (HubSpot as system of record)** and the overlay → native
+  cutover: mirror-backed reads, incumbent-first write-back on
+  `Update`/`Archive`, a preflight that seals the mirror when green, and a
+  confirm-first flip behind a typed phrase. Both flip operations are human-only.
+  Reversal is reconstruction from the pre-flip bundle; there is no rollback.
 
-- **Supply chain**: three source-tree SBOMs (CycloneDX + SPDX 2.2.1 +
-  SPDX 3.0) generated from a clean export of HEAD, normalized to one file
-  set and parity-gated, license-gated against an explicit allowlist, and
-  keyless-signed on `main` from a job isolated from all PR-controlled
-  code — a keyless signature lands permanently in a public transparency
-  log and cannot be retracted.
+- **Supply chain**: three source-tree SBOMs (CycloneDX, SPDX 2.2.1, SPDX 3.0)
+  generated from a clean export of HEAD, normalized and parity-gated,
+  license-gated against an allowlist, and keyless-signed on `main` from a job
+  isolated from PR-controlled code.
 
-- **Self-hosting materials**: deployment-target-agnostic
-  `Dockerfile.{api,web,worker}` (all non-root), the entrypoints, the
-  one-time `db-bootstrap.sql` that creates the two non-superuser roles
-  `FORCE ROW LEVEL SECURITY` requires, and a runbook
+- **Self-hosting materials**: one root `Dockerfile` with `api`, `worker` and
+  `web` targets (all non-root), the entrypoints, the one-time
+  `db-bootstrap.sql` that creates two non-superuser roles (a DML-only runtime
+  role and the role that applies DDL), and a runbook
   ([docs/deployment.md](docs/deployment.md)).
 
-- **Non-production data reset**: `POST /v1/admin/reset-data` wipes
-  workspace data back to the bootstrapped state behind a four-gate chain
-  (non-production posture → human-only → `admin` role → typed
-  organization-name confirmation). In production the operation does not
-  exist: the posture check runs before auth, so it 404s rather than 403s.
+- **Non-production data reset**: `POST /v1/admin/reset-data` wipes workspace
+  data back to the bootstrapped state behind four checks: non-production
+  posture, human only, `admin` role, and a typed organization-name
+  confirmation. In production the operation answers 404, because the posture
+  check runs before auth.
 
-- **Embedding drift self-heal** (ADR-0069 §3a): a periodic worker sweep
-  re-embeds entities whose embed event the at-least-once bus lost, with
-  no operator confirm; the preview → confirm reindex remains solely for
-  a changed embed binding, and the ops banner fires only on that case.
+- **Embedding drift self-heal**: a periodic worker sweep re-embeds entities
+  whose embed event the bus lost, with no operator confirm. The preview →
+  confirm reindex is only for a changed embed binding, and the ops banner fires
+  only then.
 
-- **GDPR arm**: per-purpose consent with default-deny suppression,
-  retention evaluator with DE (GoBD) statutory floors, legal hold,
-  Art. 17 erasure with re-capture suppression, Art. 15 SAR assembly.
+- **GDPR**: per-purpose consent with default-deny suppression, a retention
+  evaluator with DE (GoBD) statutory floors, legal hold, Art. 17 erasure with
+  re-capture suppression, and Art. 15 SAR assembly.
 
-- **Web UI**: login/bootstrap, people, leads, deal board, timeline,
-  search, reports, privacy inbox — the Vite/React app in `frontend/`, a
-  standalone static build served separately from the API.
+- **Web UI**: login/bootstrap, contacts, leads, deal board, timeline, search,
+  reports, privacy inbox. It is the Vite/React app in `frontend/`, a standalone
+  static build served separately from the API.
 
 - **Quality gates**: golangci-lint + depguard, go-arch-lint, tree-derived
   architecture/schema/license fitness tests, contract drift-lint, and a
   real-Postgres integration lane covering the security invariants.
 
-- **Craftsmanship gate, strict** (ADR-0045): `craft static` now fails on
-  MAJOR findings as well as BLOCKER ones, in the pre-push hook (diff-scoped)
-  and in CI's `craftsmanship` job (whole tree). MINOR stays advisory. Test
-  files carry their own size ceilings — 160 body lines / 1000 file lines,
-  against 80 / 500 for product code — because a long scenario test that sets
-  up, acts and asserts once is not the god-function smell the product
-  thresholds hunt. Arming this meant clearing the whole backlog first: every
-  swallowed error, bare `any` in a signature, boolean-trap signature,
-  assertion-free test and over-long function in the tree.
+- **Strict craftsmanship gate**: `craft static` fails on MAJOR as well as
+  BLOCKER findings, in the pre-push hook (diff-scoped) and in CI's
+  `craftsmanship` job (whole tree). MINOR stays advisory. Test files have their
+  own size ceilings, 160 body lines / 1000 file lines against 80 / 500 for
+  product code. The existing backlog was cleared first.
 
-- **Company 360**: `GET /organizations/{id}/360` serves the whole company
-  record page in one transaction — profile, contacts with §4 relationship
-  strength and per-purpose consent, deals, timeline, tags, list
-  memberships, decidable approvals, open next steps, and what changed
-  since the caller last visited. Authorization is per section: a section
-  the caller may not read is omitted and named in `sections_omitted`,
-  never returned empty. `POST /organizations/{id}/view-ack` is the
-  explicit, human-only, monotonic visit baseline those counts run against.
+- **Company 360**: `GET /organizations/{id}/360` serves the company record page
+  in one transaction: profile, contacts with relationship strength and
+  per-purpose consent, deals, timeline, tags, list memberships, decidable
+  approvals, open next steps, and what changed since the caller's last visit. A
+  section the caller may not read is omitted and named in `sections_omitted`.
+  `POST /organizations/{id}/view-ack` is the explicit, human-only, monotonic
+  visit baseline.
 
-- **Company page verbs**: the record page opens a deal on the company it is
-  showing (open stages only, the organization implied rather than asked for),
-  and applies a tag or a list membership by typed name, creating either when
-  the name is new. Each verb renders only on a section the caller's grants let
-  them read, and an already-applied tag or membership is treated as the asked-
-  for state rather than reported as a collision.
+- **Company page verbs**: the record page opens a deal on the company it shows
+  (open stages only), and applies a tag or a list membership by typed name,
+  creating either when the name is new. Each verb renders only on a section the
+  caller may read. An already-applied tag or membership counts as success.
 
-- **Company connections**: `GET /organizations/{id}/graph` serves the
-  account's one-hop neighbourhood as nodes and edges the client lays out —
-  its contacts by employment (weighted by §4 strength), its open deals and
-  the stakeholder seats on them, its parent, children and partner
-  companies, and which contact the active signal's warm-intro path routes
-  through. Authorization is per group, the same posture the 360 takes for
-  its sections; node selection is deterministic and `dropped_count` says
-  what the caps left out. The rail's connections card draws it as an ego
-  diagram over a keyboard-reachable node list, and the diagram is
-  decorative — everything it shows is in the list.
+- **Company connections**: `GET /organizations/{id}/graph` serves the account's
+  one-hop neighbourhood as nodes and edges. It includes its contacts by employment (weighted
+  by relationship strength), its open deals and their stakeholders, its parent,
+  child and partner companies, and the contact the active signal's warm-intro
+  path routes through. Authorization is per group. Node selection is
+  deterministic, and `dropped_count` reports what the caps left out. The rail
+  draws it as a diagram over a keyboard-reachable node list that carries the
+  same content.
 
-- **The installation's own company is not one of its prospects**
-  (ADR-0082/A127). The anchor organization is excluded by default from the
-  surfaces that answer "which companies are we selling to" — the
-  organization list, lexical and vector search, dynamic segments and their
-  exports, duplicate detection, and signal candidate resolution — with
-  `include_anchor` as the opt-in on the NATIVE list, shaped like
-  `include_archived`; an overlay-mode list refuses it with 422, because the
-  mirror holds the incumbent's accounts and the anchor is a native row that
-  is never among them. It stays reachable by id everywhere, and stays
-  deliberately available where naming it is the point, such as recording
-  that a person works there. `is_anchor` is on the wire so a client can
-  tell it apart, and the governed agent surface learns the id through its
-  company context, since the company operation is human-only. Archiving it
-  or merging in either direction is refused in the schema as well as in the
-  service: losing the anchor makes the company read answer not-found, and
-  the application reads that as a workspace that was never configured.
+- **The installation's own company is excluded from prospects.** The anchor
+  organization is left out of the organization list, lexical and vector
+  search, dynamic segments and their exports, duplicate detection, and signal
+  candidate resolution. `include_anchor` opts in on the native list (shaped
+  like `include_archived`); an overlay-mode list refuses it with 422. It stays
+  reachable by id, and available where naming it is needed, such as recording
+  that a contact works there. `is_anchor` is on the wire, and the agent surface
+  learns the id through its company context. Archiving or merging the anchor is
+  refused in the schema and in the service.
 
-- **An administrator can see and change the workspace's own email
-  domains**: `GET`, `POST` and `DELETE` on `/capture/email-domains`,
-  admin/ops and human-only, since the set decides which mail the
-  installation may hold at all. Adding a domain IS the human vouching for
-  it, so it stores verified and takes effect on the next message; adding
-  one a connected mailbox already contributed confirms that candidate
-  rather than failing. The list reports what the company profile claims
-  separately from the registry, because only the second is editable here.
-  The screen states what removal does and does not undo: capture resumes
-  from that point on, and mail skipped meanwhile is never offered again by
-  any mailbox.
+- **Admins can manage the workspace's own email domains**: `GET`, `POST` and
+  `DELETE` on `/capture/email-domains`, admin/ops and human only. An added
+  domain is stored verified and applies to the next message; adding one a
+  mailbox already contributed confirms that candidate. The list shows what the
+  company profile claims separately from the registry. Removing a domain
+  resumes capture from that point; mail skipped meanwhile is never offered
+  again.
 
-- **Custom fields and tags are filter vocabulary**, so a dynamic list, a
-  saved view and a filtered export can all select on them. A custom field
-  stays filterable after it is retired: retirement is a status change and
-  never a column drop, so an already-saved segment naming a retired field
-  keeps returning the same rows rather than silently widening to every
-  record. A tag filter is a correlated `EXISTS` over the polymorphic
-  `taggable` join, which makes "does not carry this tag" and "carries no
-  tags at all" both expressible, on every record type the join admits —
-  people, organizations, deals, leads and projects. The operator set is
-  unchanged and no operation gained a parameter; the three surfaces
-  resolve one vocabulary through one method, so what a filter may say,
-  what it selects, and what an export of it contains cannot disagree.
-  Authoring such a filter in the product still needs the Filters & views
-  screen, which does not exist yet.
+- **Custom fields and tags are filter vocabulary** for dynamic lists, saved
+  views and filtered exports. A retired custom field stays filterable, so a
+  saved segment naming it keeps returning the same rows. A tag filter can say
+  "does not carry this tag" and "carries no tags at all", on contacts,
+  organizations, deals, leads and projects. The three surfaces share one
+  vocabulary. Authoring such a filter in the product still needs the Filters &
+  views screen, which does not exist yet.
 
 ### Fixed
 
-- **A sentence a card shows instead of content no longer prints against the
-  card's edge.** `EmptyState` draws its sentence on a recessed plate, and the
-  plate re-declared the card's padding while leaving the inline half at zero —
-  so "No offers yet", "Nothing related yet." and every other bare empty state in
-  the product sat hard against the left edge of the grey plate holding them. The
-  plate now names the card's own inset (`--padCard`) and raises only the block
-  half, which is the half it has a reason to change. Three more boxes had the
-  same defect for their own reasons and are fixed with it: the first-run
-  instructional state, the heading of the onboarding read's facts block, and a
-  board's caveat about a failed read handed to a list surface's body slot. In a
-  stack, a list row's title also stopped painting the frozen column's ground —
-  an opaque patch over the card's translucent one — since nothing is frozen when
-  the table is a column of cards. `make fe-edge-padding` renders the whole story
-  catalog at two widths and fails on a box that draws a visible edge with no
-  inline padding between that edge and its text; a stylesheet reader cannot see
-  this defect, because the two rules that make it are correct apart and wrong
-  only together.
+- **Empty-state text no longer touches the card edge.** `EmptyState`'s plate now
+  uses the card's inset (`--padCard`). The first-run instructional state, the
+  heading of the onboarding read's facts block, and a board's failed-read caveat
+  had the same defect and are fixed. In a stacked table, a row's title no longer
+  paints an opaque patch over the card. `make fe-edge-padding` renders the story
+  catalog at two widths and fails on a visible edge with no inline padding.
 
-- **A record page no longer offers a write the server will refuse.** A rep
-  holding the deal grant opened a colleague's deal, was offered Edit, the
-  upload, New offer, the stakeholder edges and the stage move, and learned from
-  a 403 after filling the form in that the record was never theirs to change.
-  The server has always said so per row (`writable`); the deal, contact, lead
-  and company pages now read it — with the object grant and the seat — through
-  one shared answer, print one sentence for why the record takes no changes,
-  and refuse every verb that writes the record from that sentence, the way the
-  project page already did. The relationships panel and the standing activity
-  composer ask the same before they draw, wherever they are mounted. The
-  "belongs to someone else" wording is gone: the one sentence now covers a
-  missing grant and a read seat as well, and tells the reader whom to ask.
+- **Record pages offer only allowed writes.** The deal,
+  contact, lead and company pages read the server's per-row `writable` flag,
+  with the object grant and the seat, through one shared answer. A record you
+  cannot change shows one sentence saying why and whom to ask, and its write
+  verbs are disabled, as the project page already did. The relationships panel
+  and the activity composer check the same.
 
-- **A replayed body re-checks every record it names, not only the one it
-  replays by.** `POST /people/quick-capture` answers the person created plus the
-  `organization_id` they were attached to; the replay gate probed the person and
-  handed the rest back, including an employer id the caller may since have lost
-  sight of. `POST /leads/{id}/promote` and `POST /leads/{id}/demote` have the
-  same shape — the third was found by widening the gate rather than by reading
-  the code. Every record reference a wrapper body carries is probed now, and a
-  gate derived from the contract fails when a response schema grows a reference
-  that nothing re-checks.
+- **A replayed body re-checks every record it names.**
+  `POST /people/quick-capture`, `POST /leads/{id}/promote` and
+  `POST /leads/{id}/demote` returned other record ids (such as the employer
+  organization) without re-checking that the caller can still see them. Every
+  record reference in a replayed body is now probed, and a gate derived from the
+  contract fails when a response schema adds one that nothing re-checks.
 
-- **A refused API key is no longer reported as six broken use cases.** The
-  `e2e-llm` lane guarded against an empty transcript but not against one the API
-  refused: a `401` produces an init line and an error result, which the checker
-  scored as a scenario that called nothing and said nothing. All eighteen runs
-  of a lane failed that way, every scenario was recorded as failing its
-  criteria, and the verdict named the product — nothing outside the transcripts
-  said otherwise. A run that never reached the model is now named as one and
-  stops the lane, and a run that answered badly is still a finding.
+- **A refused API key stops the `e2e-llm` lane.** A `401` was scored as a
+  scenario that did nothing, so every run of the lane failed its criteria and
+  the verdict blamed the product. A run that never reached the model is now
+  reported as such and stops the lane.
 
-- **Outbound mail is written in the installation's own language.** Every message
-  the product sent was hard-coded English while the screens are translated three
-  ways. The weekly retrospective is the one that shows: it arrives unasked every
-  Monday and it is the product talking to a rep about their own week, so a
-  German-speaking rep read their Home panel in German and then an English
-  summary of the same numbers. One catalog now serves all three senders — the
-  password reset, the invitation and the weekly — keyed off the installation's
-  base language, and the weekly's labels and counts are the panel's own strings
-  rather than a second translation of them. A language the catalog has no copy
-  for is sent in English rather than not sent, and a gate fails when the
-  contract admits one the catalog does not carry or leaves a line of it empty.
+- **Outbound mail is written in the installation's language.** The password
+  reset, the invitation and the weekly retrospective were always English. One
+  catalog now serves all three, keyed off the installation's base language, and
+  the weekly reuses the Home panel's strings. A language the catalog lacks is
+  sent in English. A gate fails when the contract admits a language the catalog
+  does not carry, or leaves a line empty.
 
-- **The dev tooling's psql path and its DSN name one database.** They were two,
-  with nothing tying them together: ad-hoc statements went through `docker
-  compose exec`, and the api, worker and migrator connected through a published
-  host port. `infra/docker-compose.dev.yml` pins one project name, so every
-  checkout on a machine resolves to the same project — and a seed run from a
-  second checkout landed in the first one's container while the api served the
-  migrated database on `:15432`, untouched. That run failed loudly because the
-  wrong database was empty; the ordinary case is a migrated one, where the seed
-  succeeds and writes another checkout's data. There is one way to name the
-  database now, the DSN's own port, so the statements land where the binaries
-  are looking. A DSN pointed at another checkout still reaches that checkout —
-  it is the DSN's job to say which database — but the two paths can no longer
-  disagree about which one that is without saying so: when no container
-  publishes the port, or more than one does, the command refuses and names what
-  it found.
+- **Dev psql and the DSN share a database.** Ad-hoc statements
+  went through `docker compose exec` while the binaries used a published port,
+  so a seed run from a second checkout could write another checkout's data.
+  Statements now use the DSN's port. When no container publishes that port, or
+  more than one does, the command refuses and names what it found.
 
-- **A technology lane announces an update only when something moved.** A
-  completed lane is worth an audit row whatever it found — it is what says when
-  the record was last looked at, and what lets a technology the company dropped
-  leave — but it emitted `organization.updated` even when nothing appeared,
-  moved or went. Both shapes are common: most companies' sites declare nothing
-  this build recognises, and most that do declare the same thing they declared
-  yesterday. Between them the lane produced a no-op event on nearly every read,
-  which every subscriber had to learn to ignore. A lane that REMOVES a stale
-  fact still announces, because that is a change.
+- **Technology lanes announce only real changes.** A
+  completed lane still writes an audit row, but emits `organization.updated`
+  only when a fact appeared, moved or went.
 
-- **A refusal the server has settled is asked once, not three times.** The
-  retry policy retried every status at or above 500, which swept in `501 Not
-  Implemented` — a final answer, not a failure the server may recover from. An
-  installation with no embeddings model bound answers 501 to the reindex status
-  by design, so every reader of that surface produced three requests and three
-  console errors for one settled answer, which an operator scanning for a real
-  fault reads first. 501 and 505 are excluded now; their neighbours are still
-  retried.
+- **A 501 is asked once.** The retry policy retried every status from 500 up,
+  including `501 Not Implemented`, so an installation with no embeddings model
+  sent three reindex-status requests and logged three console errors. 501 and
+  505 are no longer retried.
 
-- **A provider name the contract cannot carry is refused at registration.** The
-  API publishes `Provider` as a pattern-constrained string — a pattern rather
-  than an enum, because which providers exist is a deployment fact — and nothing
-  enforced it where a name enters the system: the registry asked only that a
-  name be non-empty and unique, and the database CHECK that pinned it to one
-  vendor is gone. An adapter called `Acme-Data` would have registered, written
-  rows, and been serialized into responses that violate the published schema,
-  with the failure surfacing at a client that validates rather than at the
-  author who chose the name. A gate compares the registry's rule against the
-  contract's own, so the two cannot drift. The same rule now holds at the
-  messaging-transport registry, whose names the contract publishes the same way
-  under `ProviderRef`; three test fixtures were already named with hyphens.
+- **Provider names are validated at registration.** The contract publishes
+  `Provider` as a pattern-constrained string; the registry now enforces that
+  pattern, and a gate keeps the two in step. The messaging-transport registry
+  (`ProviderRef`) follows the same rule.
 
-- **A provider run's audit actor names the provider it is for.** Every run was
-  audited as `connector:surfe`, whichever vendor it actually belonged to,
-  because the workers that execute a run hold a run id and the poll sweep drains
-  many at once — the name could only be a guess, and it was correct only while a
-  CHECK constraint made a second provider impossible. Those constraints are
-  gone, and the claim rows already derived their provenance from the run's own
-  provider, so the audit log and the evidence on the record would have named
-  different vendors for one purchase. The actor is now narrowed to the run's own
-  connector inside the module that reads it.
+- **Provider runs audit their own provider.** Every run was audited
+  as `connector:surfe`, whatever vendor it belonged to. The actor is now the
+  run's own connector.
 
-- **A partial payload took down the whole application.** `settings/maintenance`
-  dereferenced a contract-required field on `/admin/job-health`, and the only
-  error boundary was app-level, so one card's throw cost the reader the rail and
-  the navigation along with the page. The payload is rejected at the query
-  boundary rather than defaulted: an absent `kinds` rendered through `?? []`
-  draws the *idle* state, which tells an operator the background system has
-  nothing queued and nothing failed — a claim about the installation the
-  response never made. `CardBoundary` now contains a card that throws.
+- **A partial job-health payload no longer crashes.** The maintenance
+  page dereferenced a required field, and the only error boundary was
+  app-level. The payload is now rejected at the query boundary (defaulting it
+  would have shown a false idle state), and `CardBoundary` contains a card that
+  throws.
 
-- **`Switch` dropped `aria-checked`** whenever `checked` arrived `undefined`,
-  because React omits an undefined attribute. A `role="switch"` with no
-  `aria-checked` announces no state at all, and the stylesheet keys the knob off
-  the same attribute, so the track drew as off with nothing saying so.
+- **`Switch` dropped `aria-checked`** when `checked` was `undefined`, so a
+  screen reader announced no state and the track drew as off.
 
-- **A `Badge`'s contrast was a property of its ancestor.** The tone tints are
-  translucent by canon, so `--success` on `--successBg` measured 4.54:1 over a
-  panel and 4.05:1 over a recessed plate — four hundredths of headroom on one
-  surface and a WCAG AA failure on the other, same component, same tokens. Each
-  tone now composites over an explicit surface. The canon values are untouched.
+- **`Badge` contrast holds on every surface.** The translucent tone tints
+  measured 4.54:1 over a panel and 4.05:1 (an AA failure) over a recessed
+  plate. Each tone now composites over an explicit surface; the token values are
+  unchanged.
 
-- **`SegmentedControl` could not wrap.** An unwrapped `inline-flex` sets its own
-  minimum width and pushes its container: the company record's seven-tab strip
-  measured 543px inside a 374px column at 390px, which was the entire horizontal
-  overflow of the page every other surface is modelled on.
+- **`SegmentedControl` could not wrap.** The company record's seven-tab strip
+  measured 543px inside a 374px column at 390px width and caused the page's
+  horizontal overflow.
 
-- **Small text sat on tokens that do not carry it** — `--textMuted` at 1.54:1 on
-  a 13px form label, `--textTertiary` at 2.52:1 in nine rules. `tokens.css`
-  already names `--textMeta` the AA small-text role.
+- **Small text moved to an AA token.** `--textMuted` (1.54:1 on a 13px form
+  label) and `--textTertiary` (2.52:1 in nine rules) were replaced by
+  `--textMeta`, the token `tokens.css` names for small text.
 
-- **The gates could not see any of it.** The 390px sweep asserted on
-  `document.body`, which `.main { overflow: hidden }` makes structurally
-  incapable of growing — measured across twelve tabs the body read 0 while the
-  shell's own scroller overflowed by 273px. Seven of the twelve settings tabs
-  were in neither sweep. And both sweeps passed on the crashed maintenance page,
-  scoring zero violations and zero overflow on a page that had rendered the error
-  boundary. The sweep now measures the elements that actually scroll, covers all
-  twelve tabs, and asserts the shell survived before measuring anything.
+- **The layout sweeps measure the real page.** The 390px sweep
+  measured `document.body`, which never scrolls in this shell. It now measures
+  the elements that scroll, covers all twelve settings tabs, and checks that the
+  shell rendered (both sweeps had passed on a crashed page).
 
-- **Ten Storybook stories showed a state they were not named for.**
-  `aiusage`/`aicalls` never stubbed `GET /me`, so the fallback made `useMe` throw
-  and every capability hook failed closed — each of those stories captured the
-  `/me`-error branch. The shared stub now refuses to guess a session rather than
-  answering with a body that reads as a malformed one.
+- **Storybook stories show their named state.** The
+  `aiusage`/`aicalls` stories never stubbed `GET /me`, so ten stories captured
+  the `/me` error state. The shared stub now refuses to guess a session.
 
-- **Absent, disabled and withheld are now decided by CAUSE, and it is written
-  down** (`frontend/src/design-system/README.md`). A surface a permission denies
-  says so; a precondition the reader could fix disables the control and states
-  what would make it live; only "does not apply" is absent. Two cards returned
-  `null` on a denial while their neighbours on the same page explained
-  themselves — so for an ops seat the Privacy page showed the consent registry
-  working, retention silently gone and the subject queue saying why. An absent
-  retention card does not read as "not yours"; it reads as "this installation
-  keeps nothing". Both now state the denial and still ask the server for nothing,
-  because the answer was already known. The installation settings card disabled
-  three fields with no reason at all, under a comment claiming parity with the
-  card that does it right.
+- **Absent, disabled and withheld follow one rule**, written in
+  `frontend/src/design-system/README.md`. A surface a permission denies says
+  so; a precondition the reader could fix disables the control and says what
+  would enable it; only "does not apply" is absent. On the Privacy page, the
+  retention card and one other card now state a denial where they used to
+  vanish, without asking the server. The installation settings card now says
+  why its three fields are disabled.
 
-- **The scroll position survived a route change.** The document never scrolls
-  here — the content column does, and it is the same element on every route, so
-  it carried the last page's offset into the next one. Reading a scrolled AI
-  settings page and opening another entry landed the reader partway down whatever
-  the next page happened to hold at that offset.
+- **The scroll position resets on a route change.** The content column kept the
+  last page's offset.
 
-- **No skip link existed anywhere** (WCAG 2.4.1). Every page put the brand,
-  search, up to twelve navigation rows, More, the settings door and the account
-  menu ahead of the content, and a keyboard reader walked all of it again on
-  every page. It is a button rather than a fragment link because the app
-  is hash-routed and a fragment link would navigate.
+- **A skip link exists** (WCAG 2.4.1). It is a button, because the app is
+  hash-routed and a fragment link would navigate.
 
-- **Entering the settings level dropped focus to `<body>`.** The walk out of a
-  section was pinned and the walk in was not — the guard that was supposed to arm
-  it fires only for a row with children, and nothing in the tree gives a row
-  children. Two comments claimed both directions were covered.
+- **Entering the settings level keeps focus.** Focus fell to `<body>` on the way
+  in.
 
-- **A modal returned focus to whatever opened it, even after the mutation
-  removed that element** — passport revoke, member deactivate, connection end and
-  DSR transition all landed on `<body>`. `Modal` now takes a `returnFocusTo`
-  resolver evaluated at restore time, and checks the opener is still connected
-  before reaching for it.
+- **Modals restore focus after their opener goes.**
+  Passport revoke, member deactivate, connection end and DSR transition all
+  dropped focus to `<body>`. `Modal` takes a `returnFocusTo` resolver evaluated
+  at restore time, and checks that the opener is still in the document.
 
-- **Every card's load failure was announced to nobody**: `QueryStates`' error
-  branch carried no live region and its skeleton no busy state or spoken name.
-  One fix covers most surfaces in the product, plus the shared create/edit and
-  archive-confirm errors.
+- **Card load failures are announced.** `QueryStates`' error branch has a live
+  region, and its skeleton has a busy state and a spoken name. The shared
+  create/edit and archive-confirm errors are covered too.
 
-- **Two WCAG Level A defects on the AI attempt trail and the tool console.** A
-  row's expand affordance was a `<tr onClick>`, unreachable by keyboard; the tool
-  console dimmed unreachable rows to `opacity: 0.4`, taking the "scope not
-  granted" caption that is meant to be the text equivalent below the AA contrast
-  floor — while the passport list 150 lines above it had chosen a strikethrough
-  over dimming for exactly that reason. Every credit-pool meter was also
-  announced as an anonymous number triple (`label=""`).
+- **Two WCAG Level A defects on the AI attempt trail and the tool console are
+  fixed.** A row's expand control was a `<tr onClick>`, unreachable by keyboard.
+  The tool console dimmed unreachable rows to `opacity: 0.4`, pushing the
+  "scope not granted" caption below the contrast floor; it now uses a
+  strikethrough, like the passport list. Credit-pool meters have a label.
 
-- **Heading navigation landed on sections with nothing inside them.** Pipeline
-  names, provider names and block titles were styled spans and divs; two dialogs
-  opened with a raw `<h3>` under the page's `h1`.
+- **Headings mark real sections.** Pipeline names, provider names and block
+  titles were styled spans; two dialogs opened with a raw `<h3>` under the
+  page's `h1`.
 
-- **Passport scope checkboxes rendered the raw protocol words** (`read`,
-  `draft`, `write`, `send`, `enrich`), untranslated, on the page where a human
-  decides what to lend an agent — where "write" and "send" read as near-synonyms
-  until one of them names the mailbox.
+- **Passport scope checkboxes are translated.** They showed the raw protocol
+  words (`read`, `draft`, `write`, `send`, `enrich`).
 
-- **Twenty-one German strings addressed the reader as *Sie*** against `de.ts`'s
-  own mandated informal *du*, every one of them on a Connections surface — the
-  register flipped exactly where a rep does their own personal setup.
+- **German Connections strings use *du*.** Twenty-one strings used *Sie*,
+  against `de.ts`'s informal register.
 
-- **Retention wrote on flip through a `Checkbox`.** The design system reserves
-  `Switch` for a control that *is* the action; the flip also shared Save's
-  mutation, so pausing a policy collapsed the edit panel — discarding the panel,
-  the focus, and the operator's place — under a comment claiming it existed so
-  they would not have to save mid-edit.
+- **Retention pauses with a `Switch`.** It used a `Checkbox` and shared Save's
+  mutation, so pausing a policy collapsed the edit panel.
 
-- **The 390px and axe sweeps covered two settings pages of twelve**, both of
-  them short ones, so the widest page in the product went unmeasured. Data model,
-  Integrations and People are swept now.
+- **The 390px and axe sweeps cover more pages.** Data model,
+  Integrations and People are swept.
 
-- **`#/settings/capture` told the reader to change company domains elsewhere
-  and gave them no way there**, on a card whose whole point is that it cannot be
-  edited in place.
-
-- **Settings had 24 doors; it has 12 entries.** Fifteen tabs plus nine
-  routes outside them collapsed into eleven and then split back to twelve, in two
-  groups: Account, Writing voice, Agents and Connections under *You*; General,
-  People & access, Integrations, Capture, Data model, AI, Privacy & audit and
-  Maintenance under *Organization*. What merged, merged because it was one subject
-  all along — the installation and the company profile describe the same
-  organization, currency rates belong beside the base currency they
-  convert to while model prices belong beside the runtime they price, and
-  two different surfaces were both called "Capture". Four screens that
-  were reached only by a card whose job was to send you there are now
-  content on the page that owns them (`#/custom-fields`, `#/products`,
-  `#/offer-templates` and `#/automations` are gone as routes;
-  Automations' primary-nav slot went to the dedupe queue, which had no
-  address of its own outside a home digest card). `#/design` is deleted.
-  `GET /admin/job-health` shipped with no UI at all and now has one, on
-  Maintenance beside the search-index rebuild and the danger zone. **No
-  seat lost a surface it could use**: a merged entry opens on the union of
-  what its parts asked for, never the intersection, and the parts that
-  are narrower than their page gate themselves inside it. The connector
-  OAuth callback's return route moved with the page it lands on: the
-  server redirects to `#/settings/connections`, which is a hard-coded
-  string in `internal/compose/connectors_outcome.go` and the one part of
-  this change that a rename alone would have broken silently.
-
-- **Every dropdown in the product is the design system's, not the
-  browser's.** `Select` is a button trigger plus a portalled listbox with
-  the full keyboard contract (arrows, Home/End, typeahead, Escape without
-  committing, focus back to the trigger), so the option list takes the
-  product's tokens instead of the platform's — including inside a
-  scrolling toolbar, where it anchors to the trigger and flips when the
-  room below runs out. Callers pass `options` and receive the VALUE in
-  `onChange`; a `<select>`, `<option>` or `<optgroup>` anywhere under
-  `frontend/src` outside that one component now fails
-  `make frontend-check`. `frontend/src/design-system/README.md` is the
-  catalog to read before hand-rolling any control.
-
-- **The sign-in screen is two halves of a page, not a card in a pane.** The
-  identity region runs full-bleed and is divided from the form by one
-  hairline; the wordmark sits in the page's top-left corner on the split
-  layout and above the form when the layout stacks; each half reads down its
-  own centre line, and both carry the same inset at every width above the
-  phone. The form is a single 400px measure — heading, provider buttons
-  (stacked full width, so every way in presents the same target), fields,
-  locale row and fine print — with the fields the one thing that stays left,
-  because a label centred over a line of typing points at nothing. On phones
-  (≤560px) the identity region drops **entirely**: the sphere, the limits and
-  the AI's own sentence with them, because the form is the only thing that
-  screen is for. That leaves the phone surface disclosing nothing about the
-  AI behind the installation, which is a deliberate departure from
-  ADR-0076 Decision 1 at that width, tracked as issue #562; every wider
-  layout still makes the disclosure in full.
-
-- **The sign-in screen's entry animation belongs to the page load.** The
-  staggered fades and the typed statement ran again on every React remount
-  of the surface, which reads as the page reloading under the reader. The
-  choreography is now marked spent on the document once it has run its
-  course, so a remount renders the surface already arrived while a real
-  page load still gets the introduction.
-
-- **The Core holds its position.** The sphere's 11-second vertical drift is
-  gone everywhere; it still breathes, and the beat is still what carries
-  its state.
-
-- **The Core goes still while the window does not have focus.** Both halves
-  of it — the WebGL liquid and the CSS rhythms (breath, sheen, halo, feed) —
-  stop off one document-level `focus`/`blur` signal and resume with it, so
-  a Core behind another window costs nothing and the sphere and its glow
-  can never disagree about whether it is moving.
-
-- **The passport cap an operation spends comes from the contract.** Every
-  `x-mcp-tool` annotation now declares its `scope` alongside its tier, and
-  the REST agent gate spends that declared cap instead of a hardcoded
-  `write`. Scopes are exact membership, so `write` does not imply `send`
-  or `enrich`. A passport minted with `read`+`write` and no
-  `enrich`/`send` is now **refused** `POST /organizations/{id}/enrich`,
-  `/deep-read`, `/coldstart`, `POST /offers/{id}/send` and
-  `POST /overlay/reconcile` with `scope_exceeded`, where before it was
-  admitted. Re-mint with the caps you mean to grant; the per-tool cap is
-  tabled in [docs/reference/agent-tools.md](docs/reference/agent-tools.md).
-
-- **Connected agents are listed apart from passports you minted.**
-  `GET /v1/passports` carries a `connection` object on grant-issued rows
-  and groups the list one row per connection rather than one per
-  credential, so a connection appears once however many times its
-  credential has rotated. Revoking a grant-bound passport ends the whole
-  connection, not just the current credential.
-
-- **Language and theme moved into the account menu.** The top bar carried
-  an icon button for each beside the avatar; both are this person's
-  preferences rather than screen actions, so the bar is down to search and
-  one account affordance, and the menu reads Settings · Language · Theme ·
-  Sign out with the two preferences stating what they are set to. Changing
-  one keeps the menu open, so the theme you pick is visible from the
-  control that picked it, and dismissing the menu hands focus back to the
-  avatar. The language row is the three-locale menu itself, nested: one
-  Escape closes the language list, the next closes the account menu.
-
-- **One orb in the product.** The agent panel at the sidebar foot drew a
-  CSS lookalike of the Core because the real primitive held a render loop
-  for the whole session. The Core now costs what it displays — it draws at
-  the size it is shown at, spends its 24fps budget on a timer instead of a
-  callback per display refresh, and stops entirely on a hidden tab or an
-  off-screen canvas — so the shell shows the same sphere as sign-in and
-  onboarding, and the duplicate is gone.
-
-- **AI model routing is now per-engineer**: the working dev config moved
-  from a committed `backend/ai-routing.yaml` to a gitignored
-  `config/ai-routing.yaml`, seeded from `config/ai-routing.example.yaml`
-  by `make install` / `make dev`. Engineers bind their own local models
-  without touching a committed file; the annotated template stays the
-  parse-guarded source of truth.
+- **`#/settings/capture` links to where company domains are edited.**
 
 [0.0.1]: https://github.com/margince/margince/releases/tag/v0.0.1

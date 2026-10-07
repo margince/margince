@@ -7,7 +7,7 @@
 
 package gates
 
-// contact_phone's E.164 rule is ONE rule, spelled on both sides of the wire.
+// contact_phone's E.164 rule is one rule, spelled on both sides of the wire.
 //
 // Phone normalisation is parsing, not case folding: `+49 30 1234`, `+49301234`,
 // `0049301234` and `030 1234` are four spellings of one number, and only the

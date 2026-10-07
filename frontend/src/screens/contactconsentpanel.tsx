@@ -149,7 +149,7 @@ export function ConsentAndChannels({
         open={manage}
         onClose={() => setManage(false)}
         labelledBy={titleId}
-        placement="right"
+        intent="drawer"
       >
         <div className="pe-drawer-title">
           <Heading size="large" id={titleId}>

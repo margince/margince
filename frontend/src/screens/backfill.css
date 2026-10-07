@@ -44,6 +44,9 @@
  * bare <button> painted as an underlined link; it is a Button now, and the only
  * thing left for this sheet to say is where it sits. */
 .backfill-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
   margin-top: var(--space-3);
 }
 
@@ -103,6 +106,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);
+  color: var(--textPrimary);
   transition:
     background-color var(--dur-move) var(--ease-out),
     color var(--dur-move) var(--ease-out),

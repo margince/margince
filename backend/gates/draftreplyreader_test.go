@@ -5,7 +5,7 @@
 
 package gates
 
-// A {subject, body} model reply has ONE reader.
+// A {subject, body} model reply has one reader.
 //
 // It had two. The introduction REQUEST (company360, written to a colleague) and the
 // introduction NOTE (network, forwarded to a customer) each unmarshalled the

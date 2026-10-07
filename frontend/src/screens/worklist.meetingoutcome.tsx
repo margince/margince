@@ -31,7 +31,7 @@
 // the capture upsert is `ON CONFLICT (source_system, source_id) DO NOTHING`, so
 // a second sync of the same event returns the incumbent row untouched.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
@@ -49,6 +49,7 @@ import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { useT } from "../i18n";
+import { useActivity } from "./activityread";
 import { throwProblem } from "./common";
 import { useMeetingOutcome } from "./taskactions";
 import { worklistKey } from "./worklist.queries";
@@ -142,25 +143,13 @@ function MeetingOutcomeDialog({
   const t = useT();
   const toast = useToast();
   const titleId = useId();
+  const formId = useId();
   const recordZone = useRecordZone();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
   // The SAME read the task detail makes, and keyed the same way, so a write
   // that invalidates ["activity", id] refreshes whichever of the two is open.
-  const meeting = useQuery({
-    queryKey: ["activity", id],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
+  const meeting = useActivity(id);
   // Seeded from the read, once, during render rather than in an effect — an
   // effect paints the empty form first, and a reader who types into that frame
   // has their words replaced when the seed lands.
@@ -210,7 +199,7 @@ function MeetingOutcomeDialog({
     },
   });
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
+    <Modal open onClose={onClose} labelledBy={titleId} intent="form">
       <Heading size="large" id={titleId} className="t-h2 modal-title">
         {title ?? t("worklist.verb.meetingUpdateTitle")}
       </Heading>
@@ -218,93 +207,102 @@ function MeetingOutcomeDialog({
         <p className="t-caption">{t("worklist.verb.meetingReading")}</p>
       )}
       <ErrorLine error={meeting.error} />
-      {draft && (
-        <form
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            save.mutate({
-              draft,
-              version: meeting.data?.version,
-              zone: recordZone,
-            });
-          }}
-        >
-          <div className="form-row">
-            <Field label={t("worklist.verb.meetingWhatHappened")}>
-              {(control) => (
-                <Select
-                  {...control}
-                  options={[
-                    { value: "held", label: t("worklist.verb.meetingHeld") },
-                    {
-                      value: "no_show",
-                      label: t("worklist.verb.meetingNoShow"),
-                    },
-                  ]}
-                  value={draft.status}
-                  // The Select can only hand back one of the two above; anything
-                  // else is the ordinary answer rather than a refusal.
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      status: value === "no_show" ? "no_show" : "held",
-                    })
-                  }
-                />
-              )}
-            </Field>
-            <Field label={t("log.date")}>
+      {/* Only while the read holds the meeting: a refused re-read withdraws
+          what the draft was seeded from, and the version a save needs. */}
+      {draft && meeting.data && (
+        <>
+          <form
+            id={formId}
+            className="form-stack"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (save.isPending) {
+                return;
+              }
+              save.mutate({
+                draft,
+                version: meeting.data?.version,
+                zone: recordZone,
+              });
+            }}
+          >
+            <div className="form-row">
+              <Field label={t("worklist.verb.meetingWhatHappened")}>
+                {(control) => (
+                  <Select
+                    {...control}
+                    options={[
+                      { value: "held", label: t("worklist.verb.meetingHeld") },
+                      {
+                        value: "no_show",
+                        label: t("worklist.verb.meetingNoShow"),
+                      },
+                    ]}
+                    value={draft.status}
+                    // The Select can only hand back one of the two above; anything
+                    // else is the ordinary answer rather than a refusal.
+                    onChange={(value) =>
+                      setDraft({
+                        ...draft,
+                        status: value === "no_show" ? "no_show" : "held",
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={t("log.date")}>
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    type="date"
+                    value={draft.day}
+                    // A meeting cannot have happened in the future, and the cap
+                    // makes the box say so rather than leaving the server to.
+                    max={calendarDay(new Date(), recordZone)}
+                    onChange={(event) =>
+                      setDraft({ ...draft, day: event.target.value })
+                    }
+                    onClick={(event) => event.currentTarget.showPicker?.()}
+                  />
+                )}
+              </Field>
+            </div>
+            <Field label={t("log.subject")} required>
               {(control) => (
                 <TextInput
                   {...control}
-                  type="date"
-                  value={draft.day}
-                  // A meeting cannot have happened in the future, and the cap
-                  // makes the box say so rather than leaving the server to.
-                  max={calendarDay(new Date(), recordZone)}
+                  value={draft.subject}
                   onChange={(event) =>
-                    setDraft({ ...draft, day: event.target.value })
+                    setDraft({ ...draft, subject: event.target.value })
                   }
-                  onClick={(event) => event.currentTarget.showPicker?.()}
                 />
               )}
             </Field>
-          </div>
-          <Field label={t("log.subject")} required>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={draft.subject}
-                onChange={(event) =>
-                  setDraft({ ...draft, subject: event.target.value })
-                }
-              />
-            )}
-          </Field>
-          <Field
-            label={t("log.body")}
-            hint={t("worklist.verb.meetingBodyHint")}
-          >
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={6}
-                value={draft.body}
-                onChange={(event) =>
-                  setDraft({ ...draft, body: event.target.value })
-                }
-              />
-            )}
-          </Field>
-          <ErrorLine error={save.error} />
-          <div className="form-actions">
+            <Field
+              label={t("log.body")}
+              hint={t("worklist.verb.meetingBodyHint")}
+            >
+              {(control) => (
+                <Textarea
+                  {...control}
+                  rows={6}
+                  value={draft.body}
+                  onChange={(event) =>
+                    setDraft({ ...draft, body: event.target.value })
+                  }
+                />
+              )}
+            </Field>
+            <ErrorLine error={save.error} />
+          </form>
+          <div className="actions">
             <Button variant="ghost" type="button" onClick={onClose}>
               {t("common.close")}
             </Button>
             <Button
               variant="primary"
               type="submit"
+              form={formId}
               disabled={!save.isPending && !draft.subject.trim()}
               pending={save.isPending}
               busyLabel={t("log.saving")}
@@ -312,7 +310,7 @@ function MeetingOutcomeDialog({
               {t("log.save")}
             </Button>
           </div>
-        </form>
+        </>
       )}
     </Modal>
   );

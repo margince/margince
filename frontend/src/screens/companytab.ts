@@ -38,11 +38,6 @@ export const COMPANY_TABS = [
 
 export type CompanyTab = (typeof COMPANY_TABS)[number];
 
-/** isCompanyTab narrows a URL segment, which is any string a reader can type. */
-export function isCompanyTab(value: string | undefined): value is CompanyTab {
-  return COMPANY_TABS.some((tab) => tab === value);
-}
-
 /** companyTabRoute addresses one tab of one account. */
 export function companyTabRoute(id: string, tab: CompanyTab): Route {
   return { screen: "companies", id, id2: tab };

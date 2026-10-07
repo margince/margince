@@ -1,12 +1,19 @@
 # Home: morning and weekly priorities
 
-The personal morning brief draws up to six server-selected Focus cards, including actionable proposals and commitments due today. Informational notices appear in Updates; pinned notices retain their chosen position. The six priorities lead the page; supporting readings follow them. Task evidence opens in the shared task dialog, and contact context opens in a separate drawer, preserving the overview. Brief creation time comes from the stored run; agenda refresh time comes from the live queue. The headline names the same focus cards. The full queue opens on demand in Home and owns filtering and pagination. Future tasks and routine privacy work remain available there with their deadlines and actions.
+The personal morning brief has four parts:
+
+- **Focus**: up to six server-selected cards, including actionable proposals and commitments due today. They lead the page, supporting readings follow them, and the headline names the same cards.
+- **Updates**: informational notices. Pinned notices keep their chosen position.
+- **Context**: task evidence opens in the shared task dialog, and contact context opens in a separate drawer, so the overview stays in place.
+- **Full queue**: opens on demand in Home and owns filtering and pagination. Future tasks and routine privacy work stay there with their deadlines and actions.
+
+Brief creation time comes from the stored run; agenda refresh time comes from the live queue.
 
 The team morning is a named-team board with routes to each member’s work and current plan. Morning and Weekly retain the same team selection in the URL. The board roster is resolved through live membership and reader authority; workspace-wide unassigned work is not attributed to a named team.
 
 ## What leads the day
 
-Fresh waiting customers and approaching response deadlines retain precedence. Waiting threads older than fourteen days are recovery work: linked open deals retain material-risk priority, other old threads become routine. Privacy obligations enter the preparation window seven days before the actual deadline; the legal deadline itself is unchanged. Overdue or due-today tasks outside generic lead prospecting are urgent obligations. Deal recovery enters the urgent-work band when the deal is material relative to the priced risk population, or when its expected close is overdue or within fourteen days. The dated rule applies to equal-value, single-deal and unpriced portfolios too.
+Fresh waiting customers and approaching response deadlines retain precedence. Waiting threads older than fourteen days are recovery work: linked open deals retain material-risk priority, other old threads become routine. Privacy obligations enter the preparation window seven days before the actual deadline; the legal deadline itself is unchanged. A duty recorded more than a day after its own deadline (what an imported history produces) is a backlog to review rather than today's breach. It ranks as routine with the reason "recorded after its deadline" and never takes a Focus card. A duty that fell due while recorded stays urgent however old it is. A sent notice leaves the Worklist; it stays owed until delivered, and a bounce brings it back. Overdue or due-today tasks outside generic lead prospecting are urgent obligations. Deal recovery enters the urgent-work band when the deal is material relative to the priced risk population, or when its expected close is overdue or within fourteen days.
 
 Existing customer work precedes routine prospecting. Actual response deadlines and urgent obligations still lead both. Within each band, deadlines, value and the remaining server tie-breaks decide the order. Clients preserve that order.
 
@@ -32,17 +39,13 @@ Recorded lead responses are not presented as an SLA success rate. A missing brea
 
 New team snapshots include deal recovery in their agenda, after requests for help, breached responses and missed commitments, and before meeting hygiene or celebration. The evidence comes from each member's frozen deal scorecard: forecast downgrades, stage regressions, unsound close dates or missing next steps. Missing scorecard coverage supplies no finding.
 
-## Validation
-
-Regression tests cover dated risk without a materiality advantage, retained lead follow-ups, response deadlines outranking recovery, personal/team scope, zero and partial weekly coverage, and response timestamps on the week boundary. Real-Postgres tests cover an overdue deal behind more than one hundred current deals, and the shared response cutoff in both weekly projections.
-
 ## Reviewing automatic changes
 
 Changes made for you shows recorded work, its subject, reason and occurrence time.
 Close-date corrections name the old and new date when the date changed; a change
 in confidence alone is not described as a date change. Automatic stage moves use
 the progression ledger's guarded reversal; date corrections use record history's
-correction restore. Accept records a durable, audited review of that exact change
+correction restore. Accept records a durable, audited review of that change
 and retains its applied values. It does not replay the change or turn an unconfirmed
 forecast into a customer commitment. Reversed and superseded changes cannot be
 accepted. A generic stage notification is information, not evidence that an agent
@@ -51,10 +54,8 @@ changed the deal. New notifications retain the actual stage names at occurrence.
 ## Focus and the work queue
 
 Morning's Focus is an additive `/worklist` projection, selected on the server
-before the queue's filter and page limit. It carries up to six cards in the
-existing rank order. The headline reads exactly those cards. A quiet day has
-zero cards; future tasks and routine maintenance remain in the full queue.
-Pins are explicit exceptions, without changing a row's semantic urgency.
+before the queue's filter and page limit, in the existing rank order. A quiet
+day has zero cards. Pins are explicit exceptions, without changing a row's semantic urgency.
 Meeting preparation is eligible within 24 hours when preparation is missing;
 prepared meetings remain in Schedule. Privacy preparation retains its existing
 seven-day classifier window. Unpriced commercial work remains eligible.
@@ -75,9 +76,26 @@ Context opens independently of the overview. Closing it restores keyboard focus 
 
 ## Attribution and commitments
 
-New stage-change notifications carry the original event actor and occurrence time through live and retry dispatch. Delivery still writes as the automation, and a recipient/event key prevents duplicate notifications. Stage changes made by the recipient themselves are skipped before notification delivery and excluded from existing unread feeds before the page limit. Deal history still records those changes. Other human changes name the member; machine changes remain visible even when they ran on the recipient’s behalf. Unknown authorship is never treated as a self-made change. The reader retains its “You” formatting for compatible older servers and cached responses; the current server does not deliver self-made stage updates. Stage updates use the deal name once, then the recorded from/to stages and who changed them. Historical notices recover these facts through the exact notice-created event’s causation link to the stage-change event. Recorded stage names take precedence; without a snapshot, only a never-edited stage configuration supplies a name. Edited configurations remain unknown, without comparing clocks. Missing history is stated plainly; ownership is never substituted for authorship.
+Stage-change notifications:
+
+- **Actor**: a notification carries the original event actor and occurrence time through live and retry dispatch. Delivery still writes as the automation, and a recipient/event key prevents duplicate notifications.
+- **Self-changes**: stage changes the recipient made are skipped before delivery and excluded from existing unread feeds before the page limit. Deal history still records them. Unknown authorship is never treated as a self-made change.
+- **Other changes**: other human changes name the member. Machine changes stay visible even when they ran on the recipient’s behalf.
+- **Wording**: a stage update uses the deal name once, then the recorded from/to stages and who changed them.
+- **Old notices**: they recover these facts through the notice-created event’s causation link to the stage-change event. Recorded stage names take precedence; without a snapshot, only a never-edited stage configuration supplies a name. Edited configurations stay unknown, without comparing clocks. Missing history is stated plainly, and ownership is never substituted for authorship.
 
 Task responsibility comes from the assigned user ID. Recognized reader-prefixed task wording is presented as “You need to …”, without rewriting the stored promise. Details retain the original wording and evidence. Similar tasks from distinct transcripts or deadlines remain separate obligations; text similarity alone cannot establish supersession.
+
+One rule turns a promise read out of a meeting transcript or an email into work (`compose/commitmentdispatch.go`):
+
+- A promise the customer made is filed on their contact as something to watch. It never becomes a task. The deal page lists the open ones for its account (`GET /deals/{id}/commitments`), with the quoted words and, for a reader allowed to update contacts, a way to dismiss a wrong reading.
+- A promise a named colleague made becomes their task. Read at or above `CommitmentTaskConfidence`, it is written directly and captured by the reader (`agent:…`); below it, it is proposed to them as a `commitment_task` card and written when they accept.
+- A promise nobody can be named for is proposed to whoever the reading belongs to, and accepting it makes it theirs.
+- A promise in mail only one member may read stays with that member. Made by a colleague in it, it is proposed to the owner instead of becoming the colleague's task, and the task it becomes is visible to its holder alone.
+- In mail, only what the sender wrote counts: words they quote from earlier in the thread are not filed as theirs.
+- A task carries a due date only when the conversation stated a day. An undated promise sits in today's queue with undated request reminders.
+- A commitment and the task it became settle together (`compose/commitmentsettle.go`, consumer group `cg:commitment-settle`): ticking the task settles the commitment as kept, and settling the commitment as kept completes the task. Reopening the task leaves the commitment kept, and dismissing the commitment leaves the task alone.
+- The task is keyed on the promise's evidence (source, side, party and the words it was said in), archived tasks included. A task a rep archived, a proposal a rep refused and a customer promise a rep dismissed are not raised again when the conversation is read again.
 
 ## Stable close dates
 
@@ -113,7 +131,7 @@ A confirmed first request needs no previous outbound message to deserve attentio
 The classifier reads the sender's new words rather than quoted earlier requests.
 
 The hourly request pass creates one undated personal task for a confirmed unanswered
-request with exactly one directly addressed importing seat. It preserves the source
+request when a single importing seat is directly addressed. It preserves the source
 message and record links, honors the recipient's set-aside state, and never invents a
 deadline. Existing verdicts can be processed without a configured model. Private and
 restricted mail remains outside this automatic classification flow. Ambiguous assignment
@@ -130,8 +148,7 @@ When no classifier is available, uncertain mail stays in the conversation review
 queue. It does not claim Focus priority or a confirmed team obligation. Outbound
 intent is not classified by this pass: a sent acknowledgement does not prove that
 the recipient owes an answer. Email move therefore remains unknown (`none`) unless
-there is positive request evidence. The wire retains older move values for client
-compatibility; the current producer never infers them from direction alone.
+there is positive request evidence. Move is never inferred from direction alone.
 
 ## Weekly measurement and recovery
 

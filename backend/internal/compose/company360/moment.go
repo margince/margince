@@ -123,10 +123,9 @@ func accountMoment(now time.Time, tasks []crmcontracts.Company360NextStep, filed
 // Held by: TestTheAccountCardRanksBothSourcesByDateAlone (moment_test.go),
 // which fails if either source stops reaching the card.
 //
-// A UNION, NOT A JOIN. Nothing writes conversation_claim.task_activity_id, so
-// an extracted commitment and a task about the same thing are two unlinked
-// rows. A promise recorded both ways may appear as two, which is the honest
-// answer until that link is written.
+// The claims arrive without the ones that became tasks
+// (contacts.ourPromiseNotYetATask), so a promise is counted once. A task a rep
+// typed beside an extracted promise stays a second row: nothing links them.
 func accountPromises(tasks []crmcontracts.Company360NextStep, filed []time.Time, claims []contacts.CompanyCommitment) []owedwork.Item {
 	var items []owedwork.Item
 	for i, step := range tasks {

@@ -22,11 +22,17 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
-import { meshOf, meshStyle } from "./avatarmesh";
-import { coveredByDialog, useDialogFocus } from "./dialogfocus";
+import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
+import {
+  coveredByDialog,
+  panelsOpenedFrom,
+  useDialogFocus,
+} from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
 import { useScrollRegion } from "./scrollregion";
+import "./badge.css";
+import "./avatar.css";
 import "./atoms.css";
 import "./evidencemark.css";
 
@@ -419,25 +425,6 @@ export function Badge({
       <span className="badge-label">{children}</span>
     </span>
   );
-}
-
-/**
- * The initials a chip falls back to.
- *
- * Split on whitespace AND on the punctuation an address uses, because the
- * signed-in reader is frequently known to the product only by their address:
- * `jane.doe@example.com` reads as "JD" here, where a whitespace-only split
- * gives the single letter "J" and every colleague whose address starts with a
- * J gets the same chip. Two letters at most — a third stops being a monogram
- * and starts being text set too small to read.
- */
-function monogramOf(name: string): string {
-  return name
-    .split(/[\s@._-]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => [...part][0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 export function Avatar({
@@ -1383,11 +1370,14 @@ export function OverflowMenu({
       if (event.key !== "Escape") {
         return;
       }
-      // A dialog opened from this menu owns Escape while it is up. Closing
-      // both layers on one keypress would take the reader back past the menu
-      // they were choosing from, and they would have to reopen it to pick
-      // something else.
-      if (coveredByDialog(trigger.current)) {
+      // A dialog or panel opened from this menu owns Escape while it is up.
+      // Closing both layers on one keypress would take the reader back past
+      // the menu they were choosing from, and they would have to reopen it to
+      // pick something else.
+      if (
+        coveredByDialog(trigger.current) ||
+        panelsOpenedFrom(panel.current).length > 0
+      ) {
         return;
       }
       setOpen(false);
@@ -1397,10 +1387,16 @@ export function OverflowMenu({
       if (!(event.target instanceof Node)) {
         return;
       }
-      // A dialog this menu opened is portalled to the body, so every click
-      // inside it looks like a click outside the menu. Closing on those would
-      // hide the item the dialog has to give focus back to when it closes.
-      if (event.target instanceof Element && event.target.closest(".overlay")) {
+      // A dialog or a panel this menu opened is portalled to the body, so every
+      // click inside it looks like a click outside the menu. Closing on those
+      // would hide the item it has to give focus back to when it closes.
+      const target = event.target;
+      if (
+        (target instanceof Element && target.closest(".overlay")) ||
+        panelsOpenedFrom(panel.current).some((opened) =>
+          opened.contains(target),
+        )
+      ) {
         return;
       }
       // The panel lives at the body, not inside the wrapper, so "outside" is

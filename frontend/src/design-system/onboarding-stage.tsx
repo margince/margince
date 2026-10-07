@@ -5,6 +5,7 @@ import {
   createContext,
   type ReactNode,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -60,6 +61,29 @@ export type StageProgress = Readonly<{ steps: readonly string[]; at: number }>;
  * renamed.
  */
 export const STAGE_TITLE_ID = "ob-stage-title";
+
+/**
+ * Hands the reader to the stage headline whenever `board` (the caller's name
+ * for what the board shows) changes. A swap unmounts the control just pressed,
+ * so focus would fall to the body and a screen reader go quiet; from the title
+ * it reads the new board in order. The first board is an arrival, not a swap.
+ *
+ * Opt-in rather than the stage's own rule, because a flow that moves focus
+ * into its board itself (the conversation's entries) would be fought by it.
+ */
+export function useStageTitleFocus(board: string | undefined): void {
+  const shown = useRef(board);
+  useEffect(() => {
+    const swapped =
+      shown.current !== undefined &&
+      board !== undefined &&
+      shown.current !== board;
+    if (swapped) {
+      document.getElementById(STAGE_TITLE_ID)?.focus();
+    }
+    shown.current = board;
+  }, [board]);
+}
 
 /**
  * The Core's element id, for a surface that has to send something TO it.
@@ -152,16 +176,20 @@ function StageBand({
             {coreStateLabel}
           </p>
         )}
-        {aside}
-        {/* Setup is railless: no top bar, so without this the reader meets nine
-            screens in a row with no way to change a theme they can already see.
-            The STAGE owns it rather than each screen passing one, because it is
-            true of every onboarding screen and a per-caller prop is a rule that
-            holds until the screen that forgets it. */}
-        <span className="ob-stage-pref">
-          <span className="ob-stage-rule" aria-hidden="true" />
-          <ThemeToggle />
-        </span>
+        {/* One item, so a wrapping slot breaks after the state in words and
+            never strands the theme toggle on a line of its own. */}
+        <div className="ob-stage-tools">
+          {aside}
+          {/* Setup is railless: no top bar, so without this the reader meets
+              nine screens in a row with no way to change a theme they can
+              already see. The STAGE owns it rather than each screen passing one,
+              because it is true of every onboarding screen and a per-caller prop
+              is a rule that holds until the screen that forgets it. */}
+          <span className="ob-stage-pref">
+            <span className="ob-stage-rule" aria-hidden="true" />
+            <ThemeToggle />
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -389,6 +417,7 @@ export function OnboardingStage({
               size="xlarge"
               className="ob-stage-title"
               id={STAGE_TITLE_ID}
+              tabIndex={-1}
             >
               {title}
             </Heading>

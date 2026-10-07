@@ -13,10 +13,19 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 )
 
-// BudgetDeferredVoiceBuilds shares the status/recovery predicate for saved builds.
-const BudgetDeferredVoiceBuilds = "status = 'deferred' AND status_code = 'budget_deferred' AND next_attempt_at IS NOT NULL AND archived_at IS NULL"
+const deferredVoiceBuilds = "status = 'deferred' AND status_code = 'budget_deferred' AND next_attempt_at IS NOT NULL AND archived_at IS NULL"
+
+// BudgetDeferredVoiceBuilds shares the status/recovery predicate for saved
+// builds a budget raise would resume; a build waiting on the provider is not
+// among them.
+const BudgetDeferredVoiceBuilds = deferredVoiceBuilds + " AND " + providerwait.NotClause
+
+// ProviderDeferredVoiceBuilds selects saved builds waiting for the provider's
+// next probe, which resume by themselves and which a budget raise does not wake.
+const ProviderDeferredVoiceBuilds = deferredVoiceBuilds + " AND " + providerwait.Clause
 
 // ResumeBudgetBuilds advances only deferred builds whose unique job can run.
 func (s *VoiceStore) ResumeBudgetBuilds(ctx context.Context, enqueue func(context.Context, pgx.Tx, VoiceBuild) (bool, error)) error {

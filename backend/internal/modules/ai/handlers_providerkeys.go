@@ -46,10 +46,13 @@ func (h Handlers) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, s := range statuses {
 		out.Providers = append(out.Providers, crmcontracts.AiProviderKeyStatus{
-			Provider:   s.Provider,
-			Configured: s.Configured,
-			EnvVar:     s.EnvVar,
-			Optional:   s.Optional,
+			Provider:       s.Provider,
+			Configured:     s.Configured,
+			EnvVar:         s.EnvVar,
+			Optional:       s.Optional,
+			CredentialKind: crmcontracts.AiProviderKeyStatusCredentialKind(s.CredentialKind),
+			PricedBy:       optionalPricedBy(s.PricedBy),
+			Usable:         s.Usable(),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
@@ -91,7 +94,14 @@ func (h Handlers) SetAiProviderKey(w http.ResponseWriter, r *http.Request, provi
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	if err := h.providerKeys.Set(r.Context(), provider, writtenKey(body.ApiKey)); err != nil {
+	// Both fields named is refused whatever they hold: the contract takes
+	// exactly one, and an empty second one is not an absent one.
+	if body.ApiKey != nil && body.ServiceAccountJson != nil {
+		httperr.Write(w, r, keyRefused("send api_key or service_account_json, not both"))
+		return
+	}
+	sent := ProviderCredential{APIKey: writtenKey(body.ApiKey), ServiceAccountJSON: writtenKey(body.ServiceAccountJson)}
+	if err := h.providerKeys.Set(r.Context(), provider, sent); err != nil {
 		// A missing vault is the operator's to fix and nothing the caller sent,
 		// so it reads as unavailable rather than as their bad request.
 		if errors.Is(err, ErrVaultUnavailable) {
@@ -106,8 +116,8 @@ func (h Handlers) SetAiProviderKey(w http.ResponseWriter, r *http.Request, provi
 
 // writtenKey reads the credential the caller sent.
 //
-// A pointer because the schema marks `api_key` writeOnly, which is what keeps
-// the field out of every generated response type — the guarantee the
+// A pointer because the schema marks both credential fields writeOnly, which
+// keeps them out of every generated response type — the guarantee the
 // description makes. Absent becomes empty, and the store refuses empty BY NAME
 // ("remove the credential instead of storing nothing") rather than sealing a
 // zero-length key that would authenticate nothing while reading as configured.
@@ -136,4 +146,13 @@ func (h Handlers) DeleteAiProviderKey(w http.ResponseWriter, r *http.Request, pr
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// optionalPricedBy leaves the field off for a provider that borrows no prices,
+// rather than sending an empty name a client would have to read as absent.
+func optionalPricedBy(provider string) *string {
+	if provider == "" {
+		return nil
+	}
+	return &provider
 }

@@ -52,6 +52,10 @@ var bookkeepingFields = map[string]bool{
 	// feeds the reply lists; as a line it read "Changed owed verdict" once per
 	// email, which named an internal column and told the reader nothing.
 	"owed_verdict": true,
+	// Why a contact is visible to its owner alone. It follows the visibility
+	// field, which a line shows on its own; as a line by itself it read
+	// "Changed narrowing reason", an internal state the reader cannot act on.
+	"narrowing_reason": true,
 }
 
 // describe answers what an admitted audit row means to a reader, and whether it
@@ -62,7 +66,11 @@ func describe(e entry) (description, bool) {
 		if !ok {
 			return description{}, false
 		}
-		return description{summary: crmcontracts.MagicSentence{Key: meaning.sentence}}, true
+		key, ok := meaning.sentenceFor(e.EntityType)
+		if !ok {
+			return description{}, false
+		}
+		return description{summary: crmcontracts.MagicSentence{Key: key}}, true
 	}
 	after := objectOf(e.After)
 	if hasAny(after, cohortKeys) {

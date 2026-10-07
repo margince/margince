@@ -1,9 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
 import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
@@ -13,6 +12,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import {
   OnboardingStage,
   StageActions,
+  useStageTitleFocus,
 } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
@@ -26,10 +26,14 @@ import {
   type VendorCatalogue,
   vendorSuggestions,
 } from "./ai-models";
-import { useSetProviderKey } from "./ai-provider-keys";
+import { useSetProviderKey } from "./ai-provider-key-hooks";
 import { ModelRatePlate } from "./ai-rates";
-import { throwProblem, useMe, WriteRefused } from "./common";
+import { throwProblem, WriteRefused } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
+import {
+  usePlatformDeclined,
+  useRememberPlatformDeclined,
+} from "./installation-setup.decline";
 import { AiBindRefused } from "./installation-setup.notices";
 import {
   RedirectUris,
@@ -45,11 +49,18 @@ import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // so a first-run sheet named after its component would style the coldest screen
 // in the product from outside the censuses that keep the rest of it honest.
 import "./onboarding-first-run.css";
+import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
+import {
+  AiKeyFields,
+  choiceLabel,
+  useBindModels,
+} from "./installation-setup.ai-key";
 import {
   SETUP_PROVIDER_IDS,
   SETUP_PROVIDERS,
   type SetupProviderId,
 } from "./setup-providers";
+import { DEFAULT_VERTEX_LOCATION } from "./vertex-location";
 
 /**
  * What a fresh installation must be told before it can be used: the model
@@ -103,107 +114,6 @@ export function useInstallationSetup() {
 const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
 
 /**
- * Where "Not now" on the platform question is remembered.
- *
- * The app step is asked of the contact running the cold start, once. The server
- * has no word for "asked and declined" — the step is simply unconfigured until
- * an app is stored, from here or from Settings — so the decline lives in this
- * browser.
- *
- * KEYED BY THE ACCOUNT THAT GAVE IT. A mark keyed on the browser alone outlives
- * the installation it was about: a machine that had run one cold start carried
- * that answer into the next, and the second installation's setup skipped the
- * platform question with nothing on screen to say why — the one step that asks
- * for the company's OAuth app, silently gone, on the run that most needed
- * it. A re-claimed installation mints its own administrator, so its cold start
- * asks again; the same contact on the same installation is still asked once.
- */
-function declinedKey(account: string) {
-  return { family: STORAGE_KEYS.platformDeclined, member: account };
-}
-
-// The accounts that declined in THIS tab, whether or not storage kept it.
-const declinedThisSession = new Set<string>();
-
-/**
- * Forgets the in-tab declines — the counterpart to `localStorage.clear()`,
- * and needed for the same reason: this set is the half of the answer that
- * storage did not keep, so clearing one without the other leaves a decline
- * standing that the caller believes they erased. A test suite whose cases
- * each start from an unanswered question is the only caller today.
- */
-export function forgetPlatformDeclines(): void {
-  declinedThisSession.clear();
-}
-
-/** Whether `account` declined the question. An unknown account — the session
- *  probe has not answered yet — has declined nothing, which is the reading
- *  that asks rather than the one that hides. */
-function platformDeclined(account: string | null): boolean {
-  if (account === null) {
-    return false;
-  }
-  // Storage blocked and nothing declined in this tab either: the question is
-  // asked again, which is the safe reading of not knowing.
-  return (
-    declinedThisSession.has(account) || readStored(declinedKey(account)) === "1"
-  );
-}
-
-// Who is watching the decline: the gate on this screen and the act that
-// stands in front of it. Storage has no change event in the tab that wrote
-// it, so the write tells them itself.
-const declinedListeners = new Set<() => void>();
-
-function subscribeDeclined(listener: () => void): () => void {
-  declinedListeners.add(listener);
-  return () => declinedListeners.delete(listener);
-}
-
-function rememberPlatformDeclined(account: string | null): void {
-  if (account === null) {
-    return;
-  }
-  // Recorded here FIRST, and read back first: a browser that refuses storage
-  // still has to honour the answer for as long as the tab is open. Writing
-  // only to storage meant a private window asked the question again on the
-  // very next render, which is the step reappearing under the reader.
-  declinedThisSession.add(account);
-  writeStored(declinedKey(account), "1");
-  for (const listener of declinedListeners) {
-    listener();
-  }
-}
-
-/** The signed-in account the decline belongs to, or null while the session
- *  probe is still answering. */
-function useAccount(): string | null {
-  const me = useMe();
-  return me.data?.user.id ?? null;
-}
-
-/**
- * Whether this account declined the platform question in this browser, live:
- * the answer every caller of `outstandingStep` passes it, so the gate and the
- * act in front of it re-read the same fact the moment it changes.
- */
-export function usePlatformDeclined(): boolean {
-  const account = useAccount();
-  return useSyncExternalStore(
-    subscribeDeclined,
-    () => platformDeclined(account),
-    () => false,
-  );
-}
-
-/** Records the decline against the account that gave it. Its own hook so the
- *  gate does not have to hold the account itself to hand it back. */
-function useRememberPlatformDeclined(): () => void {
-  const account = useAccount();
-  return () => rememberPlatformDeclined(account);
-}
-
-/**
  * The first step that is not done yet AND that this screen can ask for, in the
  * server's order. A blocking step is always outstanding; the app step, which
  * does not block, is outstanding until it is configured or declined.
@@ -224,66 +134,6 @@ export function outstandingStep(
       ASKABLE_STEPS.includes(s.step) &&
       (s.blocking || !platformDeclined),
   );
-}
-
-function useBindModels() {
-  return useMutation({
-    // Same reasoning as the provider-key mutation: nothing here is a secret,
-    // but the two settle together and a stale binding on screen after a
-    // success is the same confusion.
-    gcTime: 0,
-    mutationFn: async (vars: {
-      provider: string;
-      baseUrl?: string;
-      chatModel: string;
-      embedModel: string;
-    }) => {
-      // Every chat tier on the one model the reader chose. A tier left unbound
-      // degrades honestly at runtime, but an onboarding that bound only some of
-      // them would have the product answer for one task and refuse another with
-      // no way for the reader to tell which they had configured.
-      const binding = {
-        provider: vars.provider,
-        model: vars.chatModel,
-        ...(vars.baseUrl ? { base_url: vars.baseUrl } : {}),
-      };
-      const { error } = await api.PUT("/ai/routing", {
-        body: {
-          // cloud_frontier rather than a question: `sovereign` forbids the
-          // cloud vendors this screen offers, `eu_hosted` promises EU inference
-          // that none of them is bound to keep (the server refuses an unpinned
-          // broker under it), and asking a first-time admin to choose a location
-          // ladder before they have bound anything is asking them to answer a
-          // question they cannot yet have.
-          profile: "cloud_frontier",
-          tiers: {
-            local_small: binding,
-            cheap_cloud: binding,
-            premium: binding,
-            frontier: binding,
-          },
-          embeddings: {
-            provider: vars.provider,
-            model: vars.embedModel,
-            ...(vars.baseUrl ? { base_url: vars.baseUrl } : {}),
-          },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    // NO invalidation here, and this is the one mutation in the file that holds
-    // it back. Re-reading the setup report is what moves the screen on, and the
-    // binding is the moment the ignition exists to mark — invalidating on
-    // success would swap the step out from under a sequence the reader is
-    // watching. The refetch happens when they press past it (`onDone`), which
-    // means the screen is theirs to leave rather than the query's to take.
-    //
-    // The write has already landed either way: a reload mid-sequence finds the
-    // server saying `ai_models` is configured and opens the next question, which
-    // is correct and loses nothing but the ceremony.
-  });
 }
 
 /**
@@ -352,6 +202,12 @@ function AiStep({
   const [choice, setChoice] = useState<SetupProviderId>("gemini");
   const preset = SETUP_PROVIDERS[choice];
   const [apiKey, setApiKey] = useState("");
+  const [location, setLocation] = useState(
+    preset.location ?? DEFAULT_VERTEX_LOCATION,
+  );
+  // Why the pasted key file cannot be sent, set by a press on Continue.
+  const [keyRefusal, setKeyRefusal] = useState<MessageKey | undefined>();
+  const keyFile = preset.credential === "service_account";
   const [chatModel, setChatModel] = useState(preset.chatModel);
   const [embedModel, setEmbedModel] = useState(preset.embedModel);
   const saveKey = useSetProviderKey();
@@ -371,6 +227,13 @@ function AiStep({
   // mean nothing to this one — leaving them would offer a binding that cannot
   // serve a single call.
   const pick = (next: SetupProviderId) => {
+    // A key is one vendor's: kept across a switch, it would be saved for the
+    // next vendor and refused on its first call.
+    if (next !== choice) {
+      setApiKey("");
+    }
+    setKeyRefusal(undefined);
+    setLocation(SETUP_PROVIDERS[next].location ?? DEFAULT_VERTEX_LOCATION);
     setChoice(next);
     setChatModel(SETUP_PROVIDERS[next].chatModel);
     setEmbedModel(SETUP_PROVIDERS[next].embedModel);
@@ -380,7 +243,10 @@ function AiStep({
   // What the binding cannot do without, by the label the field wears, so the
   // rail names the same thing the field marks once Continue is pressed early.
   const missing = [
-    [apiKey.trim() === "", t("firstRun.ai.key")],
+    [
+      apiKey.trim() === "",
+      keyFile ? t("serviceAccountKey.label") : t("firstRun.ai.key"),
+    ],
     [chatModel.trim() === "", t("firstRun.ai.chatModel")],
     [embedModel.trim() === "", t("firstRun.ai.embedModel")],
   ]
@@ -408,16 +274,31 @@ function AiStep({
       setAttempted(true);
       return;
     }
+    const problem = keyFile ? serviceAccountProblem(apiKey) : undefined;
+    if (problem) {
+      setKeyRefusal(problem);
+      return;
+    }
     saveKey.reset();
     bind.reset();
     saveKey.mutate(
-      { provider: preset.provider, apiKey: apiKey.trim() },
       {
-        onSuccess: () =>
+        provider: preset.provider,
+        kind: preset.credential,
+        secret: apiKey.trim(),
+      },
+      {
+        // The key is stored, so its copy in the mutation goes now, before a
+        // binding that may fail keeps it there; the field keeps its own.
+        onSuccess: () => {
+          saveKey.reset();
           bind.mutate(
             {
               provider: preset.provider,
               baseUrl: preset.baseUrl,
+              location: preset.location ? location : undefined,
+              embedLocation: preset.embedLocation,
+              profile: preset.profile,
               chatModel: chatModel.trim(),
               embedModel: embedModel.trim(),
             },
@@ -426,14 +307,14 @@ function AiStep({
                 // Both landed, so the field has done its job and this is the
                 // only copy of the key the app was holding.
                 setApiKey("");
-                saveKey.reset();
                 // And the screen becomes the ignition. Nothing is refetched
                 // yet: see `useBindModels` for why the reader, not the query,
                 // decides when this step is over.
                 onIgnite(preset.label);
               },
             },
-          ),
+          );
+        },
       },
     );
   };
@@ -470,34 +351,24 @@ function AiStep({
                 }}
                 options={SETUP_PROVIDER_IDS.map((id) => ({
                   value: id,
-                  label: SETUP_PROVIDERS[id].label,
+                  label: choiceLabel(SETUP_PROVIDERS[id], t),
                 }))}
               />
             )}
           </Field>
-          <Field
-            label={t("firstRun.ai.key")}
-            hint={t("firstRun.ai.keyHint")}
-            error={
-              attempted && apiKey.trim() === ""
-                ? t("firstRun.needed")
-                : undefined
-            }
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                // A password field so the browser does not offer to remember a
-                // credential this app never stores client-side, and a screenshare
-                // does not carry it.
-                type="password"
-                autoComplete="off"
-                value={apiKey}
-                disabled={busy}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-            )}
-          </Field>
+          <AiKeyFields
+            preset={preset}
+            secret={apiKey}
+            refusal={keyRefusal}
+            attempted={attempted}
+            location={location}
+            disabled={busy}
+            onSecret={(next) => {
+              setKeyRefusal(undefined);
+              setApiKey(next);
+            }}
+            onLocation={setLocation}
+          />
           {/* Both fields offer what the sheet can price for the chosen vendor,
             in the lane that field binds — and take anything typed, because the
             server accepts any id its vendor serves and the whole point of the
@@ -919,6 +790,21 @@ function head(
       };
 }
 
+// Which board is up, for the render, the room and the focus. The ignition
+// holds only while the report asks for the model, so moving past it ends it.
+function boardOf(
+  step: Step | undefined,
+  ignited: string | null,
+): "model" | "ignition" | "platform" | undefined {
+  if (step === undefined) {
+    return undefined;
+  }
+  if (step.step === "oauth_app") {
+    return "platform";
+  }
+  return ignited === null ? "model" : "ignition";
+}
+
 function modelBound(setup: Setup | undefined): boolean {
   return (
     setup?.steps?.some((s) => s.step === "ai_models" && s.configured) ?? false
@@ -951,7 +837,10 @@ export function InstallationSetup() {
   // here. The vendor travels with it, since "sealed in the vault" without whose
   // key is a sentence about a mechanism, not about what the reader just did.
   const [ignited, setIgnited] = useState<string | null>(null);
-  const igniting = useIgnitionCore(ignited !== null);
+  const board = boardOf(step, ignited);
+  const ignition = board === "ignition";
+  useStageTitleFocus(board);
+  const igniting = useIgnitionCore(ignition);
 
   // While the answer has not arrived, nothing: a step drawn from a guess would
   // be replaced a moment later by the real one, and the reader would have
@@ -964,9 +853,8 @@ export function InstallationSetup() {
   if (setup.isPending || !step) {
     return null;
   }
-  const core =
-    ignited !== null ? igniting.state : busy ? "working" : ("idle" as const);
-  const heading = head(step.step, ignited !== null);
+  const core = ignition ? igniting.state : busy ? "working" : ("idle" as const);
+  const heading = head(step.step, ignition);
   return (
     <OnboardingStage
       flow={t("ob.stage.flow")}
@@ -974,10 +862,10 @@ export function InstallationSetup() {
       // is asked again. That is not a second meaning for the indigo — it is the
       // same claim, made by the client that just watched the write succeed
       // rather than by the read that confirms it.
-      lit={ignited !== null || modelBound(setup.data)}
+      lit={ignition || modelBound(setup.data)}
       coreState={core}
       coreProgress={igniting.progress}
-      coreFlash={ignited !== null}
+      coreFlash={ignition}
       // The Core is aria-hidden, so the band says in words what it is showing.
       // From `ob.core.*`, the vocabulary every onboarding surface reads: the
       // orb showing the same state on two screens must not read as two
@@ -1003,7 +891,7 @@ export function InstallationSetup() {
       title={t(heading.title)}
       sub={t(heading.sub)}
     >
-      {step.step === "oauth_app" ? (
+      {board === "platform" ? (
         <PlatformStep onBusy={setBusy} onDecline={decline} />
       ) : ignited === null ? (
         <AiStep
@@ -1016,12 +904,14 @@ export function InstallationSetup() {
       ) : (
         <Ignition
           vendor={ignited}
-          onDone={() => {
+          onDone={async () => {
+            // NOW the server is asked again, and only its answer lets go of
+            // the ignition: the stale report would draw the model form again.
+            await queryClient.invalidateQueries(
+              { queryKey: ["installation-setup"] },
+              { throwOnError: true },
+            );
             setIgnited(null);
-            // NOW the server is asked again, and the answer is what moves the
-            // screen — the same rule every other step follows, just deferred
-            // until the reader was done with this one.
-            queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
           }}
         />
       )}

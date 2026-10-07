@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CaptureSettingsCard } from "./capture-settings";
+import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
 import {
   installFetchStub,
   jsonResponse,
@@ -32,7 +32,7 @@ const MANAGER = { capture_settings: ["read", "update"] } as const;
 const READER = { capture_settings: ["read"] } as const;
 
 const meta: Meta<typeof CaptureSettingsCard> = {
-  title: "Settings/Data/Capture rules/Capture posture",
+  title: "Settings/Data/Capture rules/Enrichment and website reads",
   component: CaptureSettingsCard,
 };
 export default meta;
@@ -58,4 +58,40 @@ export const CannotChange: Story = { render: story(true, READER) };
 export const CannotChangeDark: Story = {
   globals: { theme: "dark" },
   render: story(true, READER),
+};
+
+// The website-reading limits, editable and refused, read from the same record
+// as the switches above.
+function readingStory(allow: Parameters<typeof meRoute>[0]) {
+  return () => {
+    installFetchStub({
+      "GET /me": meRoute(allow),
+      "GET /capture/settings": () =>
+        jsonResponse({
+          auto_enrich: true,
+          mail_sharing: true,
+          shared_posture_allowed: false,
+          signature_enrich: true,
+          auto_enrich_daily_cap: 500,
+          site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+          mail_sync_interval_seconds: 120,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <WebsiteReadingCard />
+      </StoryProviders>
+    );
+  };
+}
+
+export const WebsiteReadsEditable: Story = { render: readingStory(MANAGER) };
+
+export const WebsiteReadsCannotChange: Story = {
+  render: readingStory(READER),
+};
+
+export const WebsiteReadsCannotChangeDark: Story = {
+  globals: { theme: "dark" },
+  render: readingStory(READER),
 };

@@ -19,14 +19,17 @@ import { type CssRule, rulesIn, withoutComments } from "../testing/css";
 
 // A label in a pill has one spelling, and it is `Badge`.
 //
-// `atoms.css` draws the pill and `atoms.tsx` is the one element that carries
-// its class. The tree grew the other two spellings anyway: a screen sheet that
+// `badge.css` draws the pill and `atoms.tsx` is the one element that carries
+// its class — with `mcp-apps/badge.ts` beside it, the views' one badge
+// builder, because those documents carry no React to render the atom with.
+// It is a module of its own so the exemption covers that builder and nothing
+// else the views build. The tree grew the other two spellings anyway: a screen sheet that
 // reached into `.badge` for a colour or an uppercase label, so the same status
 // read one way on one page and another way on the next; and a pill class of a
 // screen's own — `.x-tag` with a fill on a `--r-full` corner — that stops
 // moving when `Badge` does. Three arms, one per shape of the offence:
 //
-//   restyle     — a rule outside atoms.css whose selector names `.badge` or a
+//   restyle     — a rule outside badge.css whose selector names `.badge` or a
 //                 `.badge-*` class ANYWHERE (the subject, or an ancestor of the
 //                 subject: `.badge svg` restyles what the badge draws) and that
 //                 declares anything but placement. Placement is an allowlist,
@@ -61,9 +64,10 @@ const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const sourceRoot = join(frontendRoot, "src");
 const extensionsRoot = join(frontendRoot, "..", "extensions");
 
-/** The sheet that draws the pill, and the element that carries its class. */
-const homeSheet = "src/design-system/atoms.css";
+/** The sheet that draws the pill, and the elements that carry its class. */
+const homeSheet = "src/design-system/badge.css";
 const homeModule = "src/design-system/atoms.tsx";
+const viewBuilder = "src/mcp-apps/badge.ts";
 const tokensSheet = "src/design-system/tokens.css";
 
 function fromFrontend(path: string): string {
@@ -81,12 +85,12 @@ function sheets(): string[] {
     .filter((where) => where !== homeSheet);
 }
 
-/** Every module but the atom's own. */
+/** Every module but the atom's own and the views' badge builder. */
 function modules(): string[] {
   return filesUnder(sourceRoot)
     .concat(extensionFrontendFiles(extensionsRoot))
     .map(fromFrontend)
-    .filter((where) => where !== homeModule);
+    .filter((where) => where !== homeModule && where !== viewBuilder);
 }
 
 // ─── Declarations ──────────────────────────────────────────────────────────
@@ -513,14 +517,25 @@ describe("a label in a pill has one spelling", () => {
       atom.length,
       "atoms.tsx no longer mints the badge class",
     ).toBeGreaterThan(0);
+    const builder = markupIn(
+      parseSource(
+        viewBuilder,
+        readFileSync(join(frontendRoot, viewBuilder), "utf8"),
+      ),
+      true,
+    );
+    expect(
+      builder.length,
+      "mcp-apps/badge.ts no longer mints the badge class, so its exemption is stale",
+    ).toBeGreaterThan(0);
   });
 
-  it("finds no stylesheet restyling .badge outside atoms.css", () => {
+  it("finds no stylesheet restyling .badge outside badge.css", () => {
     expect(
       found.restyled.map(shown),
       "each of these rules restyles a badge from outside its home. Use " +
         "<Badge variant tone icon>; a look Badge does not have is a variant " +
-        "proposed in atoms.css. A placement-only rule (margin, align-self, " +
+        "proposed in badge.css. A placement-only rule (margin, align-self, " +
         "order, flex, grid, position, max-width, overflow) may stay\n",
     ).toEqual([]);
   });

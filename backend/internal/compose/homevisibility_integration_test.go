@@ -59,8 +59,11 @@ func homeNotice(t *testing.T, e *integration.Env, owner ids.UUID, private bool, 
 		if err := consent.OpenNoticeCaseTx(ctx, tx, consent.NoticeCaseInput{ContactID: contactID, AcquisitionID: acquisition, Rule: consent.RuleArt14, DueAt: due}); err != nil {
 			return err
 		}
-		args = []any{acquisition}
-		return tx.QueryRow(ctx, storekit.SQLf("SELECT id FROM privacy_notice_case WHERE acquisition_id = $%d", len(args)), args...).Scan(&caseID)
+		// Recorded a month before it falls due, as a live acquisition is. The
+		// writer stamps today's clock and this suite reads at a fixed instant,
+		// which would otherwise make every duty look imported after its deadline.
+		args = []any{acquisition, due.AddDate(0, -1, 0)}
+		return tx.QueryRow(ctx, storekit.SQLf("UPDATE privacy_notice_case SET created_at = $%d WHERE acquisition_id = $%d RETURNING id", 2, 1), args...).Scan(&caseID)
 	})
 	if err != nil {
 		t.Fatal(err)

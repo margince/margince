@@ -5,9 +5,9 @@
 
 package gates
 
-// "Someone who still works here" is `status = 'active' AND archived_at IS
-// NULL` on app_user, and TWO functions in two different packages each called
-// themselves the ONE spelling of it while the tree held about twenty copies.
+// "Someone who still works here" is `status = 'active' AND archived_at IS NULL`
+// on app_user, and two functions in two packages each called themselves the one
+// spelling of it while the tree held about twenty copies.
 //
 // company360's said so; search's said so as well, and its own comment recorded
 // that company360 had already spelled it that way — so the second author knew

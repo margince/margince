@@ -340,9 +340,9 @@ func (a *assembly) readTimeline() error {
 func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 	if !a.adviceRead {
 		// The signal reading comes first so it can be handed down: the
-		// contradiction rule and the health section are one query between
-		// them, and the dismissal path derives its inputs from the same
-		// function with its own reading.
+		// contradiction rule and the strip are one query between them, and
+		// the dismissal path derives its inputs from the same function with
+		// its own reading.
 		var facts signalFacts
 		facts, a.adviceErr = a.signalFactsOnce()
 		if a.adviceErr == nil {
@@ -364,10 +364,10 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 	return a.advice, a.adviceErr
 }
 
-// signalFactsOnce reads the account's open signals ONCE. The health section
-// counts the commitments and the contradiction rule asks whether the contract
-// ended; both are the same row set, and one read of it is also what keeps the
-// two from describing different instants.
+// signalFactsOnce reads the account's open signals ONCE. The strip states the
+// worst and the contradiction rule asks whether the contract ended; both are
+// the same row set, and one read of it is also what keeps the two from
+// describing different instants.
 func (a *assembly) signalFactsOnce() (signalFacts, error) {
 	if !a.signalsRead {
 		a.signals, a.signalsErr = readSignalFacts(a.ctx, a.tx, a.companyID)

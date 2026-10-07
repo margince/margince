@@ -9,6 +9,11 @@ import { ifMatch, requireVersion } from "../api/version";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
@@ -19,11 +24,8 @@ import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
 import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";
 
-// margince#3286: the three transitions a signed agreement actually goes
-// through after it is first recorded — renew, assert a status, record a
-// cancellation. Store.Renew / ChangeStatus / Cancel and their endpoints
-// (POST /contracts/{id}/renewal /status /cancellation) have always been
-// correct; nothing in the app could reach them.
+// The three transitions a signed agreement goes through after it is recorded:
+// renew, assert a status, record a cancellation.
 
 type Contract = components["schemas"]["Contract"];
 type ContractStatus = NonNullable<Contract["status"]>;
@@ -133,6 +135,7 @@ export function ContractRenewModal({
 }>) {
   const t = useT();
   const titleId = useId();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<ContractDraft>(renewDraftOf(contract));
   // Never seeded from the predecessor — see renewalBody's comment: the
@@ -151,13 +154,8 @@ export function ContractRenewModal({
     enabled: open && anchor != null,
   });
 
-  // Re-seed on open, and when a different row's renewal is what just opened:
-  // otherwise the form keeps the previous agreement's title and basis.
-  //
-  // Keyed on the ID, never the CONTRACT OBJECT: react-query hands back a new
-  // object on every refetch of the same row even when nothing changed, and a
-  // background refetch while this modal is open would otherwise re-seed
-  // mid-edit and discard whatever the reader had already typed.
+  // Re-seed when a different row's renewal opens, or the form keeps the
+  // previous agreement's title and basis.
   // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
   useEffect(() => {
     if (open) {
@@ -187,67 +185,81 @@ export function ContractRenewModal({
   const invalid = draftProblem(draft);
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="modal-title">
-        {t("contracts.renew.title")}
-      </Heading>
-      <p>{t("contracts.renew.hint")}</p>
-
-      <ContractTermsFields
-        draft={draft}
-        setDraft={setDraft}
-        currency={contractCurrency}
-      />
-
-      {/* Never required: the API path this mirrors has always accepted a
-          renewal with no deal, and a picker that refused to submit without
-          one would refuse an agreement the server has always allowed. */}
-      {anchor == null ? (
-        <Callout kind="standing" title={t("contracts.renew.dealWithheldTitle")}>
-          {t("contracts.renew.dealWithheldCompany")}
-        </Callout>
-      ) : (
-        <Field
-          label={t("contracts.renew.deal")}
-          hint={t("contracts.renew.dealHint")}
+    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={titleId}>
+          {t("contracts.renew.title")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        {/* Not native validation: a browser's step rule refuses amounts that
+            draftProblem and the server accept. */}
+        <form
+          id={formId}
+          className="form-stack"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (invalid === null) {
+              renew.mutate({
+                predecessor: contract,
+                draft: pricedIn(draft, baseCurrency),
+                dealId,
+              });
+            }
+          }}
         >
-          {(props) => (
-            <Select
-              {...props}
-              value={dealId}
-              onChange={setDealId}
-              disabled={deals.isPending}
-              options={[
-                { value: "", label: t("contracts.renew.dealNone") },
-                ...(deals.data ?? []).map((deal) => ({
-                  value: deal.id,
-                  label: deal.name,
-                })),
-              ]}
-            />
+          <p>{t("contracts.renew.hint")}</p>
+          <ContractTermsFields
+            draft={draft}
+            setDraft={setDraft}
+            currency={contractCurrency}
+          />
+          {/* Never required: the server accepts a renewal with no deal. */}
+          {anchor == null ? (
+            <Callout
+              kind="standing"
+              title={t("contracts.renew.dealWithheldTitle")}
+            >
+              {t("contracts.renew.dealWithheldCompany")}
+            </Callout>
+          ) : (
+            <Field
+              label={t("contracts.renew.deal")}
+              hint={t("contracts.renew.dealHint")}
+            >
+              {(props) => (
+                <Select
+                  {...props}
+                  value={dealId}
+                  onChange={setDealId}
+                  disabled={deals.isPending}
+                  options={[
+                    { value: "", label: t("contracts.renew.dealNone") },
+                    ...(deals.data ?? []).map((deal) => ({
+                      value: deal.id,
+                      label: deal.name,
+                    })),
+                  ]}
+                />
+              )}
+            </Field>
           )}
-        </Field>
-      )}
-
-      <ErrorLine error={renew.error} />
-
-      <div className="actions">
+          <ErrorLine error={renew.error} />
+        </form>
+      </DrawerBody>
+      <DrawerFoot className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         <Button
+          type="submit"
+          form={formId}
           variant="primary"
           reason={invalid ? t(invalid) : undefined}
           pending={renew.isPending}
-          onClick={() =>
-            renew.mutate({
-              predecessor: contract,
-              draft: pricedIn(draft, baseCurrency),
-              dealId,
-            })
-          }
         >
           {t("contracts.renew.submit")}
         </Button>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }
@@ -288,9 +300,6 @@ export function ContractStatusModal({
     contract.status ?? "draft",
   );
 
-  // Keyed on the ID, never the CONTRACT OBJECT — see ContractRenewModal's
-  // identical comment: a background refetch of the SAME row must not discard
-  // a status the reader already picked.
   // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
   useEffect(() => {
     if (open) {
@@ -315,27 +324,27 @@ export function ContractStatusModal({
   });
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId}>
+    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="form">
       <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.statusChange.title")}
       </Heading>
 
-      <Field label={t("contracts.statusChange.label")}>
-        {(props) => (
-          <Select
-            {...props}
-            value={status}
-            onChange={(value) => setStatus(value as ContractStatus)}
-            options={ASSERTABLE_STATUSES.map((value) => ({
-              value,
-              label: t(STATUS_LABEL_KEY[value]),
-            }))}
-          />
-        )}
-      </Field>
-
-      <ErrorLine error={assert.error} />
-
+      <div className="form-stack">
+        <Field label={t("contracts.statusChange.label")}>
+          {(props) => (
+            <Select
+              {...props}
+              value={status}
+              onChange={(value) => setStatus(value as ContractStatus)}
+              options={ASSERTABLE_STATUSES.map((value) => ({
+                value,
+                label: t(STATUS_LABEL_KEY[value]),
+              }))}
+            />
+          )}
+        </Field>
+        <ErrorLine error={assert.error} />
+      </div>
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         {/* recordAssignment (patch.go) records a SET regardless of whether
@@ -398,9 +407,6 @@ export function ContractCancelModal({
   const [noticeOn, setNoticeOn] = useState("");
   const [effectiveOn, setEffectiveOn] = useState("");
 
-  // Keyed on the ID, never the CONTRACT OBJECT — see ContractRenewModal's
-  // identical comment: a background refetch of the SAME row must not discard
-  // dates the reader already typed.
   // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
   useEffect(() => {
     if (open) {
@@ -445,40 +451,38 @@ export function ContractCancelModal({
           : null;
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId}>
+    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="form">
       <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.cancel.title")}
       </Heading>
-      <p>{t("contracts.cancel.hint")}</p>
-
-      <Field label={t("contracts.cancel.noticeOn")} required>
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={noticeOn}
-            onChange={(e) => setNoticeOn(e.target.value)}
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("contracts.cancel.effectiveOn")}
-        hint={t("contracts.cancel.effectiveOnHint")}
-        required
-      >
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={effectiveOn}
-            onChange={(e) => setEffectiveOn(e.target.value)}
-          />
-        )}
-      </Field>
-
-      <ErrorLine error={cancel.error} />
-
+      <div className="form-stack">
+        <p>{t("contracts.cancel.hint")}</p>
+        <Field label={t("contracts.cancel.noticeOn")} required>
+          {(props) => (
+            <TextInput
+              {...props}
+              type="date"
+              value={noticeOn}
+              onChange={(e) => setNoticeOn(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("contracts.cancel.effectiveOn")}
+          hint={t("contracts.cancel.effectiveOnHint")}
+          required
+        >
+          {(props) => (
+            <TextInput
+              {...props}
+              type="date"
+              value={effectiveOn}
+              onChange={(e) => setEffectiveOn(e.target.value)}
+            />
+          )}
+        </Field>
+        <ErrorLine error={cancel.error} />
+      </div>
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         <Button

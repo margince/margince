@@ -42,10 +42,7 @@ import { problemMessageOf, throwProblem } from "./common";
 // company is a document about the company; one filed against a deal is evidence
 // in that deal, and it is the only kind the extraction panel will offer to read
 // for deal fields, because a deal is the only record the accept can write to.
-// Filing everything against the company would be the tidier form and would
-// quietly make that feature unreachable, which is the state this screen was in
-// before: the upload existed, hardcoded to the company, and the reading it
-// fed had no way to happen.
+// Filing everything against the company would make that reading unreachable.
 //
 // WHY IT TAKES TWO REQUESTS. The upload endpoint carries the bytes and the
 // parent and nothing else — category and title live behind
@@ -82,8 +79,7 @@ const CATEGORY_KEYS: Record<Category, MessageKey> = {
 //
 // Derived by subtraction from CATEGORY_KEYS rather than listed, so a value added
 // to the contract lands in the picker by default and only a deliberate edit here
-// keeps it out. The alternative — a second hand-kept list — is how the two come
-// to disagree about a category nobody remembers adding.
+// keeps it out. Not a second hand-kept list: the two drift apart.
 const CAPTURED_ONLY: readonly Category[] = [
   "email_attachment",
   "message_attachment",
@@ -110,8 +106,7 @@ export type DocumentAnchor = Readonly<{
 // Which record the file hangs off: the one this dialog was opened from, or one
 // of that account's deals. Two named answers, not a Select carrying a sentinel
 // value beside a list of deal ids — filing against the account is a different
-// KIND of decision from picking one deal of hundreds, and the two spent a
-// release smuggled into one dropdown where the account read as the zeroth deal.
+// KIND of decision from picking one deal of hundreds.
 type Filing = "anchor" | "deal";
 
 /**
@@ -336,118 +331,107 @@ export function AddDocumentDialog({
   });
 
   return (
-    <Modal open={open} onClose={closeAndClear} labelledBy={titleId}>
+    <Modal
+      open={open}
+      onClose={closeAndClear}
+      labelledBy={titleId}
+      intent="form"
+    >
       <Heading size="large" id={titleId} className="modal-title">
         {t("docs.add.title")}
       </Heading>
-
-      {partial && (
-        <Callout
-          tone="warning"
-          kind="outcome"
-          title={t("docs.add.partialTitle")}
-        >
-          {t("docs.add.partial")}
-        </Callout>
-      )}
-      {upload.isError && (
-        <Callout tone="danger" kind="outcome" title={t("docs.add.failedTitle")}>
-          {/* The SERVER's own sentence when it gave one. An oversize file and a
-              permission denial are different problems with different next
-              moves, and one fixed "try again" is wrong advice for the second
-              and hides the size limit in the first. */}
-          {problemMessageOf(upload.error, t, t("docs.add.failed"))}
-        </Callout>
-      )}
-
-      {/* Asked only on an account, and asked as a QUESTION WITH TWO ANSWERS
-          rather than a dropdown: both answers have to be readable at rest,
-          because choosing between them is the decision this dialog exists to
-          put in front of the reader, and a menu covering two options makes
-          somebody open it to find out what the alternative was
-          (design-system/choicelist.tsx). A contact's library has no second
-          answer, so it asks nothing. */}
-      {anchor.record === "company" && (
-        <>
-          <ChoiceList
-            legend={t("docs.add.about")}
-            value={filing}
-            onChange={setFiling}
-            choices={[
-              { value: "anchor", label: t("docs.add.thisCompany") },
-              {
-                value: "deal",
-                label: t("docs.add.aDeal"),
-                description: t("docs.add.aboutHint"),
-              },
-            ]}
-          />
-          {filing === "deal" && (
-            <div className="field">
-              <RecordPicker
-                label={t("docs.add.dealSearch")}
-                searchTargets={searchDeals}
-                selected={deal}
-                onPick={setDeal}
-                disabled={upload.isPending}
-              />
-              {/* The reach, stated up front rather than after the reader has
-                  failed to find something. It is the same sentence whatever
-                  the account's size, which is what makes it trustworthy: a
-                  caption that only appeared once a walk ran out would be a
-                  claim about the last search rather than about the control,
-                  and RecordPicker hands its caller no way to know which search
-                  an answer belonged to. */}
-              <p className="t-caption">
-                {t("docs.add.dealSearchReach", {
-                  deals: formatNumber(DEAL_SEARCH_REACH, locale),
-                  matches: formatNumber(DEAL_MATCH_LIMIT, locale),
-                })}
-              </p>
-            </div>
+      <div className="form-stack">
+        {partial && (
+          <Callout
+            tone="warning"
+            kind="outcome"
+            title={t("docs.add.partialTitle")}
+          >
+            {t("docs.add.partial")}
+          </Callout>
+        )}
+        {upload.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("docs.add.failedTitle")}
+          >
+            {/* Oversize and permission denied need different next moves. */}
+            {problemMessageOf(upload.error, t, t("docs.add.failed"))}
+          </Callout>
+        )}
+        {/* Not a dropdown: a menu hides the alternative this choice is about.
+            Only an account asks: a contact's library has no second answer. */}
+        {anchor.record === "company" && (
+          <>
+            <ChoiceList
+              legend={t("docs.add.about")}
+              value={filing}
+              onChange={setFiling}
+              choices={[
+                { value: "anchor", label: t("docs.add.thisCompany") },
+                {
+                  value: "deal",
+                  label: t("docs.add.aDeal"),
+                  description: t("docs.add.aboutHint"),
+                },
+              ]}
+            />
+            {filing === "deal" && (
+              <div className="field">
+                <RecordPicker
+                  label={t("docs.add.dealSearch")}
+                  searchTargets={searchDeals}
+                  selected={deal}
+                  onPick={setDeal}
+                  disabled={upload.isPending}
+                />
+                {/* Always shown: RecordPicker cannot say which search ran out. */}
+                <p className="t-caption">
+                  {t("docs.add.dealSearchReach", {
+                    deals: formatNumber(DEAL_SEARCH_REACH, locale),
+                    matches: formatNumber(DEAL_MATCH_LIMIT, locale),
+                  })}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+        <Field label={t("docs.add.category")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={category}
+              onChange={(picked) => setCategory(picked as Category)}
+              options={UPLOADABLE_CATEGORIES.map((key) => ({
+                value: key,
+                label: t(CATEGORY_KEYS[key]),
+              }))}
+            />
           )}
-        </>
-      )}
-
-      <Field label={t("docs.add.category")}>
-        {(control) => (
-          <Select
-            {...control}
-            value={category}
-            onChange={(picked) => setCategory(picked as Category)}
-            options={UPLOADABLE_CATEGORIES.map((key) => ({
-              value: key,
-              label: t(CATEGORY_KEYS[key]),
-            }))}
-          />
-        )}
-      </Field>
-
-      <Field label={t("docs.add.name")} hint={t("docs.add.nameHint")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-        )}
-      </Field>
-
-      {/* The limit is the SERVER's, read from the installation rather than
-          written here: it is set per deployment, so a number in this copy would
-          be right only for whoever shipped the default. Until the answer
-          arrives the hint says nothing at all — silence is honest, a guess is
-          not, and the wait is one request long. */}
-      <FileDropzone
-        label={t("docs.add.file")}
-        hint={
-          limitLabel ? t("docs.add.fileHint", { size: limitLabel }) : undefined
-        }
-        emptyLabel={t("docs.add.fileEmpty")}
-        file={file}
-        onPick={setFile}
-      />
-
+        </Field>
+        <Field label={t("docs.add.name")} hint={t("docs.add.nameHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+          )}
+        </Field>
+        {/* The limit is set per deployment, so the hint waits for the server. */}
+        <FileDropzone
+          label={t("docs.add.file")}
+          hint={
+            limitLabel
+              ? t("docs.add.fileHint", { size: limitLabel })
+              : undefined
+          }
+          emptyLabel={t("docs.add.fileEmpty")}
+          file={file}
+          onPick={setFile}
+        />
+      </div>
       <div className="actions">
         <Button onClick={closeAndClear}>{t("docs.add.cancel")}</Button>
         <Button

@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -67,6 +68,7 @@ func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, said a
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     counterpartyTargetType,
 		TargetID:       row.ActivityID,
+		TargetLabel:    counterpartyLabel(row),
 		Summary:        fmt.Sprintf(said.counterpartyWorthKeeping, row.Email),
 		// The verdict pass is an at-least-once worker: a retried batch must
 		// return the existing offer rather than multiply inbox rows.
@@ -76,6 +78,16 @@ func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, said a
 		return ids.Nil, err
 	}
 	return id.UUID, nil
+}
+
+// counterpartyLabel names the sender a counterparty proposal is about, so the
+// receipt and the inbox say who wrote rather than which message.
+func counterpartyLabel(row capture.PendingCounterparty) *string {
+	label := row.Email
+	if name := strings.TrimSpace(row.DisplayName); name != "" {
+		label = name + " <" + row.Email + ">"
+	}
+	return &label
 }
 
 // counterpartyAcceptEffect builds the approvals.ApprovedEffect for kind

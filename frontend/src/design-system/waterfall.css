@@ -25,6 +25,8 @@
   inset-inline: 0;
   min-height: 2px;
   border-radius: var(--r-sm);
+}
+.waterfall-up .waterfall-fill {
   background: var(--accent);
 }
 .waterfall-anchor .waterfall-fill {

@@ -6,6 +6,8 @@ package collections
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -29,6 +31,37 @@ type memberRow struct {
 	AddedBy    string
 	CreatedAt  time.Time
 	Note       *string
+	// Values is what each field a Live List's filter names holds on the
+	// member, as this reader may see it; nil for a Shortlist member.
+	Values map[string]storekit.FieldValue
+}
+
+// MemberRead is one members read: a page by Limit and Cursor, or exactly the
+// members among Only, which takes no cursor.
+type MemberRead struct {
+	Limit  int
+	Cursor string
+	Only   []ids.UUID
+}
+
+// memberIDsField names the query input Only arrives as.
+const memberIDsField = "entity_id"
+
+// checked bounds Only by the largest page and settles the page size.
+func (r MemberRead) checked() (MemberRead, error) {
+	if len(r.Only) == 0 {
+		r.Only, r.Limit = nil, pageSize(r.Limit)
+		return r, nil
+	}
+	if r.Cursor != "" {
+		return r, &BadInputError{Field: memberIDsField, Reason: "takes no cursor"}
+	}
+	n := len(r.Only)
+	if most := storekit.ClampLimit(&n); most != n {
+		return r, &BadInputError{Field: memberIDsField, Reason: fmt.Sprintf("names at most %d records", most)}
+	}
+	r.Limit = len(r.Only)
+	return r, nil
 }
 
 // pageSize reads a limit of 0 as none named: the web routes and the agent tool
@@ -46,7 +79,14 @@ func pageSize(limit int) int {
 // filter evaluated inside that scope, so two readers may see different pages
 // of one list.
 func (s *Store) ListMembers(ctx context.Context, listID ids.ListID, limit int, cursor string) ([]memberRow, storekit.Page, error) {
-	limit = pageSize(limit)
+	return s.readMembers(ctx, listID, MemberRead{Limit: limit, Cursor: cursor})
+}
+
+func (s *Store) readMembers(ctx context.Context, listID ids.ListID, read MemberRead) ([]memberRow, storekit.Page, error) {
+	read, err := read.checked()
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
 	// GetList commits before the dynamic branch resolves its vocabulary, which
 	// opens a connection of its own (see evaluateSegment).
 	list, err := s.GetList(ctx, listID)
@@ -54,7 +94,7 @@ func (s *Store) ListMembers(ctx context.Context, listID ids.ListID, limit int, c
 		return nil, storekit.Page{}, err
 	}
 	if list.ListType == listTypeDynamic {
-		return s.evaluateSegment(ctx, list, limit, cursor)
+		return s.evaluateSegment(ctx, list, read)
 	}
 	if err := auth.Require(ctx, list.EntityType, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
@@ -66,7 +106,7 @@ func (s *Store) ListMembers(ctx context.Context, listID ids.ListID, limit int, c
 			return err
 		}
 		var listErr error
-		out, page, listErr = s.listStaticMembers(ctx, tx, listID, list.EntityType, limit, cursor)
+		out, page, listErr = s.listStaticMembers(ctx, tx, list, read)
 		return listErr
 	})
 	return out, page, err
@@ -97,17 +137,21 @@ func recordScope(ctx context.Context, table, alias string, arg func(any) int) (s
 
 // listStaticMembers reads the members of a Shortlist this reader may see,
 // keyset-paged over the member row id.
-func (s *Store) listStaticMembers(ctx context.Context, tx pgx.Tx, listID ids.ListID, listEntityType string, limit int, cursor string) ([]memberRow, storekit.Page, error) {
+func (s *Store) listStaticMembers(ctx context.Context, tx pgx.Tx, list listRow, read MemberRead) ([]memberRow, storekit.Page, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := visibleMemberClause(ctx, listEntityType, arg)
+	visible, err := visibleMemberClause(ctx, list.EntityType, arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
 	sql := fmt.Sprintf(`SELECT lm.id, lm.list_id, lm.entity_type, lm.entity_id, lm.added_by, lm.created_at, lm.note
-		FROM list_member lm WHERE lm.list_id = $%d AND %s`, arg(listID), visible)
-	if cursor != "" {
-		after, err := ids.Parse(cursor)
+		FROM list_member lm WHERE lm.list_id = $%d AND %s`, arg(list.ID), visible)
+	if read.Only != nil {
+		sql += fmt.Sprintf(" AND lm.entity_id = ANY($%d)", arg(read.Only))
+	}
+	limit := read.Limit
+	if read.Cursor != "" {
+		after, err := ids.Parse(read.Cursor)
 		if err != nil {
 			return nil, storekit.Page{}, &storekit.MalformedCursorError{}
 		}
@@ -206,25 +250,32 @@ func (s *Store) liveFilter(ctx context.Context, list listRow) (storekit.Query, s
 
 // evaluateSegment reads one page of a Live List: the stored filter evaluated
 // in SQL inside the caller's row scope, keyset-paged over the record id, so
-// every page of a set of any size is complete.
-func (s *Store) evaluateSegment(ctx context.Context, list listRow, limit int, cursor string) ([]memberRow, storekit.Page, error) {
+// every page of a set of any size is complete. Each member carries the values
+// of the fields its filter names.
+func (s *Store) evaluateSegment(ctx context.Context, list listRow, read MemberRead) ([]memberRow, storekit.Page, error) {
 	engine, pred, err := s.liveFilter(ctx, list)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
 	var after *ids.UUID
-	if cursor != "" {
-		parsed, err := ids.Parse(cursor)
+	if read.Cursor != "" {
+		parsed, err := ids.Parse(read.Cursor)
 		if err != nil {
 			return nil, storekit.Page{}, &storekit.MalformedCursorError{}
 		}
 		after = &parsed
 	}
-	var matched []ids.UUID
+	matched := read.Only
 	var more bool
+	var values map[ids.UUID]map[string]storekit.FieldValue
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var selectErr error
-		matched, more, selectErr = engine.SelectPage(ctx, tx, pred, after, limit)
+		if matched == nil {
+			if matched, more, selectErr = engine.SelectPage(ctx, tx, pred, after, read.Limit); selectErr != nil {
+				return selectErr
+			}
+		}
+		values, selectErr = engine.SelectedValues(ctx, tx, pred, matched)
 		return selectErr
 	})
 	if err != nil {
@@ -232,12 +283,22 @@ func (s *Store) evaluateSegment(ctx context.Context, list listRow, limit int, cu
 	}
 	out := make([]memberRow, 0, len(matched))
 	for _, entityID := range matched {
+		held, ok := values[entityID]
+		if !ok {
+			// Named in Only but not selected, or seen leaving between the
+			// page and its values: not a member of this answer.
+			continue
+		}
 		out = append(out, memberRow{
-			ID: entityID, ListID: list.ID, EntityType: list.EntityType, EntityID: entityID, AddedBy: dynamicAddedBy,
+			ID: entityID, ListID: list.ID, EntityType: list.EntityType, EntityID: entityID,
+			AddedBy: dynamicAddedBy, Values: held,
 		})
 	}
+	if read.Only != nil {
+		slices.SortFunc(out, func(a, b memberRow) int { return strings.Compare(a.ID.String(), b.ID.String()) })
+	}
 	if more {
-		return out, storekit.Page{HasMore: true, NextCursor: out[len(out)-1].EntityID.String()}, nil
+		return out, storekit.Page{HasMore: true, NextCursor: matched[len(matched)-1].String()}, nil
 	}
 	return out, storekit.Page{}, nil
 }

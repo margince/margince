@@ -16,12 +16,11 @@ import {
   Button,
   Field,
   type FieldControl,
-  Modal,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
+import { RecordFormDialog } from "../design-system/recordformdialog";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -34,6 +33,7 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProblemError, problemExistingId, problemMessageOf } from "./common";
+import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import {
   type NameOffers,
   OfferedNameControl,
@@ -43,17 +43,13 @@ import { RepeatableRowsField } from "./repeatablerowsfield";
 import "./create.css";
 import "./common.css";
 
-// The shared create-record form (contacts, companies, leads, deals): each
-// list screen declares its fields; the transport (which endpoint, how values
-// map onto the request body) stays with the screen that owns the resource.
-// Server-side validation is the truth — a 422 renders its RFC 7807 detail
-// verbatim under the form, never a swallowed or re-worded error.
+// The shared create-record form: each screen declares its fields and keeps its
+// transport. The server validates: a 422's detail renders verbatim, unreworded.
 
 export type CreateFieldOption = { value: string; label: string };
 
-// One subfield within a repeatable row (e.g. an emails row's `email` and
-// `email_type`) — reuses the same control types as a top-level CreateField,
-// minus repeatable-ness itself (rows don't nest).
+// One subfield of a repeatable row (an emails row's `email`, `email_type`):
+// a CreateField's controls, minus nesting.
 export type SubField = {
   key: string;
   label: MessageKey;
@@ -98,9 +94,8 @@ export type CreateField = {
   // A validation refusal blocks Save and is announced through Field.error.
   // The server remains authoritative for uniqueness and cross-record rules.
   validate?: (value: string) => string | undefined;
-  // repeatable-only: the subfields each row renders, the "add row" button's
-  // label, which subfield key holds the row's primary flag, and (if set)
-  // which one holds its kind — scoping primaryKey to same-kind rows.
+  // repeatable-only: each row's subfields, the add label, the primary flag's
+  // key and (if set) the kind's key, which scopes primaryKey to one kind.
   rowFields?: SubField[];
   addLabel?: MessageKey;
   primaryKey?: string;
@@ -108,12 +103,10 @@ export type CreateField = {
   // typeKey's value when unanswered — must match the request mapper's own
   // fallback, or an unset row groups differently here than once submitted.
   typeDefault?: string;
-  // A non-input group divider (renders its labelText as a heading, holds no
-  // value) — used to set custom fields apart from core fields.
+  // A heading that holds no value, setting custom fields apart from core ones.
   divider?: boolean;
-  // Optional read transform: maps the record's raw value to the input string
-  // at prefill time (e.g. currency minor units → major units). Absent means
-  // the raw value is stringified as-is.
+  // Maps the record's raw value to the input string at prefill (minor units →
+  // major); absent, the raw value is stringified.
   toInput?: (raw: unknown) => string;
   // See SubField.step: a money field must declare its cents.
   step?: string;
@@ -157,18 +150,8 @@ export function visibleFields(
   return fields.filter((field) => field.showWhen?.(values) ?? true);
 }
 
-/**
- * What the form sends: every value except those belonging to a field its own
- * `showWhen` currently hides.
- *
- * A hidden field's value is blanked rather than carried. Answering a question
- * and then withdrawing the one it depended on must not submit the orphaned
- * answer — choosing a partner, saying what they did, then clearing the partner
- * would otherwise send an attribution with nobody to attribute it to, which
- * the server refuses. Blanked rather than dropped, because a scalar the form
- * omits entirely leaves the stored value in place on an edit, and the reader
- * asked for it to be gone.
- */
+// Blanks what showWhen hides, so a cleared partner's role is not sent orphaned;
+// blanked, not dropped, since an omitted scalar keeps the stored value on edit.
 export function submittedValues(
   fields: CreateField[],
   values: Record<string, string>,
@@ -187,14 +170,8 @@ export function submittedValues(
   return out;
 }
 
-// What survives a save on a form that stays open: a field whose value is still
-// exactly what was sent is cleared to its default, and a field the reader has
-// since changed keeps what they typed.
-//
-// The comparison is against the SUBMITTED value rather than a timestamp or a
-// dirty flag, because that is the question being asked — "is this still the
-// saved record's word, or the next one's?" — and it answers correctly however
-// slow the round trip was.
+// After a save on a form kept open, a value still equal to what was SENT clears
+// and one typed since stays; values, not a flag, hold however slow the save.
 export function keepUnsubmitted(
   current: Record<string, string>,
   submitted: Record<string, string>,
@@ -221,10 +198,8 @@ export function fieldLabel(
 // One repeatable-row field's collected rows, e.g. `{ email: "a@x", email_type:
 // "work", is_primary: "true" }`.
 export type FormRow = Record<string, string>;
-// Repeatable-row values, keyed by the field's key — the SECOND channel: it
-// exists alongside `values: Record<string, string>` (never merged into it) so
-// every existing scalar-only screen and its single-arg create callback keeps
-// working untouched.
+// Repeatable-row values by field key, kept apart from the scalar `values` so a
+// scalar-only screen's single-argument create callback keeps working.
 export type FormRows = Record<string, FormRow[]>;
 
 function rowsRequirementMet(field: CreateField, rows: FormRow[]): boolean {
@@ -239,11 +214,8 @@ function rowsRequirementMet(field: CreateField, rows: FormRow[]): boolean {
   );
 }
 
-// The agent rail's WROTE head for a create landing on this screen (agentrail-
-// copy.ts). Only the three record kinds a salesperson creates by hand carry
-// one; every other screen this hook also serves (products, offer templates,
-// pipeline stages, webhooks...) gets none, which is what leaves the ticker
-// silent for those.
+// The rail's WROTE head for a create here (agentrail-copy.ts). Only the three
+// kinds a salesperson creates by hand have one; others leave the ticker silent.
 const CREATE_MUTATION_HEAD: Readonly<Partial<Record<Screen, string>>> = {
   contacts: "contact-new",
   companies: "company-new",
@@ -269,17 +241,11 @@ export function useCreateRecord<Created extends { id: string }>({
   // onDone, so a caller can name the record in a toast while the form it came
   // from is still the thing on screen.
   onCreated?: (created: Created) => void;
-  // `stay` keeps the reader where they are instead of opening what was just
-  // created. It is for creates whose result is a PROPERTY of the record on
-  // screen — a tag on this company, a list this company now belongs to —
-  // rather than a record worth visiting. Without it those creates route to
-  // `screen` with the new row's id, which is not an id that screen can load.
+  // For a create that is a PROPERTY of the record on screen (a tag, a list
+  // membership): its id is not one `screen` can load, so the reader stays.
   stay?: boolean;
-  // The record this create is ABOUT, when it differs from the record being
-  // created: a deal opened from a company page is about that company, and
-  // the deal has no id yet to name it by. Absent means the created record
-  // has no name to offer either (a fresh contact/company/deal has none
-  // until the server answers), so the ticker falls back to its plain phrase.
+  // The record this create is ABOUT when not the one created: a new deal has no
+  // id to name it by, so its company does. Absent, the ticker's plain phrase.
   aboutId?: string;
 }>) {
   const queryClient = useQueryClient();
@@ -333,12 +299,8 @@ export function CreateAction<Created extends { id: string }>({
   invalidate: string;
   screen: Screen;
   startOpen?: boolean;
-  // `keepOpen` turns one save into "saved, next": the modal stays open and
-  // empties itself instead of closing. It is for capture done in a run —
-  // somebody reading a list of profiles in another window types six contacts
-  // without reopening the form six times. It implies `stay`, because opening
-  // the record just created would be the opposite of staying to type the next
-  // one.
+  // `keepOpen` makes one save "saved, next" for capture in a run: the modal
+  // empties, not closes. It implies `stay`: opening the record would end a run.
   keepOpen?: boolean;
   // What was created, for a caller that reports it — the toast naming each
   // saved record is the only feedback a form that never closes gives.
@@ -358,10 +320,9 @@ export function CreateAction<Created extends { id: string }>({
 }>) {
   const t = useT();
   const [creating, setCreating] = useState(startOpen);
-  // Counts the saves this open session has taken, and is what empties the form
-  // between them. A counter rather than a boolean: two saves in a row have to
-  // read as two distinct clears, and a flag toggled back would leave the
-  // second one looking like the state the first already settled.
+  const shown = useSettledOpen(creating, catalogOfScreen(screen));
+  // Counts this session's saves, which empties the form between them. Not a
+  // boolean: two saves in a row must read as two distinct clears.
   const [saved, setSaved] = useState(0);
   const mutation = useCreateRecord({
     create,
@@ -388,9 +349,10 @@ export function CreateAction<Created extends { id: string }>({
         label={label}
         onClick={() => setCreating(true)}
         testId={testId}
+        pending={creating && !shown}
       />
       <CreateRecordModal
-        open={creating}
+        open={shown}
         onClose={() => setCreating(false)}
         title={label}
         fields={fields}
@@ -412,26 +374,24 @@ export function NewRecordButton({
   label,
   onClick,
   testId = "new-record",
+  pending,
 }: Readonly<{
   label: string;
   onClick: () => void;
-  // Two create buttons can sit in one list header — the full form and a
-  // quick-capture beside it — and a shared id makes both unaddressable to a
-  // test and to anything else querying by it. The default keeps every existing
-  // single-button screen exactly as it was.
+  // Two create buttons can share a list header (full form, quick capture); a
+  // shared id would make both unaddressable.
   testId?: string;
+  pending?: boolean;
 }>) {
   return (
-    <Button onClick={onClick} data-testid={testId}>
+    <Button onClick={onClick} data-testid={testId} pending={pending}>
       <Plus aria-hidden /> {label}
     </Button>
   );
 }
 
-// The control half of a field row. The label half — and with it the id, the
-// required marker and the described-by seam — belongs to the `Field` that
-// wraps this, which is why the wiring arrives whole as `control` rather than
-// being rebuilt from a field id here.
+// The control half of a field row; the wrapping `Field` owns the label, id and
+// described-by seam, so the wiring arrives whole as `control`.
 function referenceControl(
   field: CreateField,
   searchTargets: NonNullable<CreateField["searchTargets"]>,
@@ -443,7 +403,6 @@ function referenceControl(
   return (
     <>
       <RecordPicker
-        label={fieldLabel(field, t)}
         id={control.id}
         aria-describedby={control["aria-describedby"]}
         aria-invalid={control["aria-invalid"]}
@@ -541,10 +500,8 @@ export function fieldControl(
   );
 }
 
-// A multiselect field: a MultiSelect dropdown whose toggled set re-joins back
-// into `values` via `setValue` — the same single-string channel every scalar
-// field writes through (see `splitMultiselectValue`/`joinMultiselectValue`
-// above).
+// A multiselect field writes its set back through the scalar string channel
+// (`joinMultiselectValue`).
 function MultiselectField({
   field,
   value,
@@ -584,10 +541,8 @@ export const SUBMIT_COPY = {
 } as const satisfies Record<string, { label: MessageKey; busy: MessageKey }>;
 export type SubmitIntent = keyof typeof SUBMIT_COPY;
 
-// The shared modal form body: fields → controls, the error paragraph, and
-// the Cancel/Save row. Both create and edit render this identically — only
-// the values' origin (empty defaults vs. a prefilled record) and the submit
-// intent differ, and those stay with each modal's owner.
+// Fields, error and Cancel/Save, shared by create and edit: only the values'
+// origin and the submit intent differ, and those stay with each modal's owner.
 export function RecordFormBody({
   fields,
   values,
@@ -601,6 +556,7 @@ export function RecordFormBody({
   onSubmit,
   onClose,
   intent,
+  dialog,
 }: Readonly<{
   fields: CreateField[];
   values: Record<string, string>;
@@ -609,26 +565,22 @@ export function RecordFormBody({
   setRows: (next: FormRows) => void;
   pending: boolean;
   error: string | null;
-  // The collided record from a duplicate (409) problem, and the screen's
-  // mapping from its code + id to a Route — both present renders the "view
-  // existing" link right under the error message.
+  // A duplicate (409)'s collided record and the screen's route to it: both
+  // present, the "view existing" link renders under the error.
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
   onClose: () => void;
   intent: SubmitIntent;
+  dialog?: { open: boolean; title: string };
 }>) {
   const t = useT();
   const formId = useId();
 
-  // A field hidden by its own showWhen is absent from the form in every sense:
-  // it neither renders nor holds Save hostage to a value nobody was asked for.
+  // A field its showWhen hides neither renders nor holds Save hostage.
   const shown = visibleFields(fields, values);
-  // Writing a value must not resurrect an answer to a question that was
-  // withdrawn in between. Naming a partner, saying what they did, clearing the
-  // partner and naming a DIFFERENT one would otherwise carry the first
-  // partner's claim onto the second — and "influenced" silently earns them
-  // nothing where the default would have paid.
+  // A write must not resurrect an answer to a question withdrawn in between:
+  // the first partner's claim would carry onto a second one named after it.
   const setVisibleValues = (next: Record<string, string>) =>
     setValues(submittedValues(fields, next));
   const requiredMissing = shown.some((field) => {
@@ -643,16 +595,21 @@ export function RecordFormBody({
       return refusal ? [[field.key, refusal] as const] : [];
     }),
   );
+  // A refusal lands at the foot of a long stack, out of sight of a pinned Save.
+  useEffect(() => {
+    if (error) {
+      const last = document.getElementById(formId)?.lastElementChild;
+      last?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [error, formId]);
 
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!pending && !requiredMissing && refusals.size === 0)
-          onSubmit(submittedValues(fields, values), rows);
-      }}
-      className="form-stack"
-    >
+  const submit = (event: { preventDefault: () => void }) => {
+    event.preventDefault();
+    if (!pending && !requiredMissing && refusals.size === 0)
+      onSubmit(submittedValues(fields, values), rows);
+  };
+  const stack = (
+    <>
       {shown.map((field) => {
         if (field.divider) {
           return (
@@ -719,13 +676,9 @@ export function RecordFormBody({
           </Field>
         );
       })}
-      {error && (
-        // Announced, so a refused submit reaches a reader whose focus never
-        // left the form: nothing moves when this appears, and the server's
-        // reason is the only thing that says why the dialog is still open. The
-        // edit dialog renders this same body, so both carry it.
-        <ErrorLine>{error}</ErrorLine>
-      )}
+      {/* Announced: nothing moves when a submit is refused, and the server's
+          reason is the only thing saying why the form is still open. */}
+      {error && <ErrorLine>{error}</ErrorLine>}
       {existing && resolveExisting && (
         <Button
           type="button"
@@ -735,21 +688,46 @@ export function RecordFormBody({
           {t("dedupe.viewExisting")}
         </Button>
       )}
-      <div className="actions">
-        <Button type="button" onClick={onClose}>
-          {t("create.cancel")}
-        </Button>
-        <Button
-          variant="primary"
-          type="submit"
-          disabled={!pending && (requiredMissing || refusals.size > 0)}
-          pending={pending}
-          busyLabel={t(SUBMIT_COPY[intent].busy)}
-        >
-          {t(SUBMIT_COPY[intent].label)}
-        </Button>
-      </div>
-    </form>
+    </>
+  );
+  const actions = (
+    <>
+      <Button type="button" onClick={onClose}>
+        {t("create.cancel")}
+      </Button>
+      <Button
+        variant="primary"
+        type="submit"
+        form={formId}
+        disabled={!pending && (requiredMissing || refusals.size > 0)}
+        pending={pending}
+        busyLabel={t(SUBMIT_COPY[intent].busy)}
+      >
+        {t(SUBMIT_COPY[intent].label)}
+      </Button>
+    </>
+  );
+  if (!dialog) {
+    return (
+      <form id={formId} onSubmit={submit}>
+        <div className="form-stack">{stack}</div>
+        <div className="actions">{actions}</div>
+      </form>
+    );
+  }
+  return (
+    <RecordFormDialog
+      open={dialog.open}
+      title={dialog.title}
+      onClose={onClose}
+      fieldCount={fields.filter((field) => !field.divider).length}
+      form={
+        <form id={formId} className="form-stack" onSubmit={submit}>
+          {stack}
+        </form>
+      }
+      actions={actions}
+    />
   );
 }
 
@@ -775,28 +753,19 @@ export function CreateRecordModal({
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
-  // The form's live answers, published so a caller can drive a SERVER read
-  // from them. See the note on the shared publisher below.
+  // The form's live answers, for a caller driving a server read from them.
   onValuesChange?: (values: Record<string, string>) => void;
-  // Emptying the form WITHOUT closing it, for a modal that stays open to take
-  // the next record. The caller bumps this after a save it kept open, and the
-  // seeding below treats it exactly like a fresh open. A number rather than a
-  // callback because the reset has to happen during render for the same reason
-  // the open-transition one does — a caller reaching in to clear the values
-  // would be the effect this shape exists to avoid.
+  // Bumped after a save that keeps the form open; the seeding below treats it
+  // as a fresh open. A number, not a callback: the reset happens during render.
   resetToken?: number;
 }>) {
-  const headingId = useId();
   const [values, setValues] = useState<Record<string, string>>({});
   const [rows, setRows] = useState<FormRows>({});
   // What the last submit carried, so a reset can tell the saved record's words
   // apart from words typed after it while the save was still in flight.
   const [submitted, setSubmitted] = useState<Record<string, string>>({});
-  // Seeding happens DURING RENDER on the closed→open transition, not in an
-  // effect — see EditRecordModal (edit.tsx) for the race an effect opens and
-  // why this shape closes it. Keying off the transition (rather than `fields`,
-  // a non-primitive prop a background refetch or locale change can re-identify
-  // at any moment) is what keeps a re-render from wiping live input.
+  // Seeded DURING RENDER on the closed→open transition, not in an effect (see
+  // EditRecordModal), nor on `fields`, which a refetch renews, wiping input.
   // Starts false, not `open`: a modal mounted already open still has to seed.
   const [seededOpen, setSeededOpen] = useState(false);
   const [seededReset, setSeededReset] = useState(resetToken);
@@ -815,12 +784,8 @@ export function CreateRecordModal({
           defaults[field.key] = field.options?.[0]?.value ?? "";
         }
       }
-      // A form that stays open to take the next record clears only what the
-      // save it just made carried. Nothing disables the fields during the
-      // round trip, so a reader who kept typing while it was in flight has
-      // words on screen that belong to the NEXT contact — and blanking the
-      // whole form would take them with it. `submitted` is what went; anything
-      // typed after it stays exactly where the reader put it.
+      // A form kept open clears only what the save carried: words typed while
+      // it was in flight belong to the next record.
       setValues((current) =>
         reopened ? defaults : keepUnsubmitted(current, submitted, defaults),
       );
@@ -829,27 +794,23 @@ export function CreateRecordModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {title}
-      </Heading>
-      <RecordFormBody
-        fields={fields}
-        values={values}
-        setValues={setValues}
-        rows={rows}
-        setRows={setRows}
-        pending={pending}
-        error={error}
-        existing={existing}
-        resolveExisting={resolveExisting}
-        onSubmit={(sent, sentRows) => {
-          setSubmitted(sent);
-          onSubmit(sent, sentRows);
-        }}
-        onClose={onClose}
-        intent="create"
-      />
-    </Modal>
+    <RecordFormBody
+      dialog={{ open, title }}
+      fields={fields}
+      values={values}
+      setValues={setValues}
+      rows={rows}
+      setRows={setRows}
+      pending={pending}
+      error={error}
+      existing={existing}
+      resolveExisting={resolveExisting}
+      onSubmit={(sent, sentRows) => {
+        setSubmitted(sent);
+        onSubmit(sent, sentRows);
+      }}
+      onClose={onClose}
+      intent="create"
+    />
   );
 }

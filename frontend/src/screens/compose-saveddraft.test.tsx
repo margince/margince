@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { messageText, writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
-import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { ToastProvider, ToastRegion, useToast } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
 import { useSavedDraft } from "./composesaveddraft";
@@ -55,6 +55,7 @@ const SAVED: MailDraft = {
   body: "Half written before lunch",
   html_body: "<p>Half written before lunch</p>",
   version: 3,
+  agent_drafted: false,
   created_at: "2026-09-20T09:00:00Z",
   updated_at: "2026-09-20T09:05:00Z",
 };
@@ -280,6 +281,57 @@ describe("a saved draft", () => {
       screen.getByRole("button", { name: "Delete saved draft" }),
     );
     expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
+  });
+
+  it("leaves another screen's toast alone when it reopens", async () => {
+    // The "Draft saved" toast was already replaced by a later undo; reopening
+    // withdraws only its own message, never whatever is on screen now.
+    const sent: Sent[] = stubRoutes({
+      "PUT /mail-drafts": () => jsonResponse(SAVED),
+    });
+    function Page() {
+      const [open, setOpen] = useState(true);
+      const toast = useToast();
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Write again
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              toast.show("Task completed", {
+                action: { kind: "undo", label: "Undo", onAct: () => {} },
+              })
+            }
+          >
+            Complete a task
+          </button>
+          <ComposeModal
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+            open={open}
+            onClose={() => setOpen(false)}
+          />
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(<Page />);
+    await waitFor(() =>
+      expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
+    );
+    writeMessage("Body", "Half written before lunch");
+    await user.click(screen.getByRole("button", { name: "Save as draft" }));
+    expect(await screen.findByText("Draft saved")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Complete a task" }));
+    expect(screen.queryByText("Draft saved")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Write again" }));
+
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("Task completed")).toBeTruthy();
   });
 
   it("is not written when the composer closes as it opened", async () => {

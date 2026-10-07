@@ -123,8 +123,7 @@ export function ContactMeetingBrief({
       open={open}
       onClose={onClose}
       labelledBy="contact-meeting-title"
-      size="wide"
-      placement="right"
+      intent="drawer-reading"
     >
       <MeetingBriefView
         state={state}

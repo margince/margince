@@ -9,7 +9,7 @@ import { CountUp } from "../design-system/countup";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatDuration, formatNumber, formatPercent } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isLiveRun } from "./backfill-run";
 import "./backfill.css";
@@ -107,6 +107,9 @@ export function RunView({
   cancelError,
   onCancel,
   onRestart,
+  onResume,
+  resuming = false,
+  resumeError = null,
 }: {
   run: BackfillStatus;
   cancelling: boolean;
@@ -116,14 +119,26 @@ export function RunView({
   // that has stopped, which is every state this view draws that is not live:
   // stopping an import is a decision about this run, never about the mailbox.
   onRestart: () => void;
+  // Continue a run that stopped on an error from where it stopped. Offered only
+  // when the server says the run can be continued (`resumable`).
+  onResume?: () => void;
+  resuming?: boolean;
+  resumeError?: string | null;
 }) {
   const t = useT();
   const { locale } = useLocale();
   const counts = run.counts;
   const scanned = counts?.messages_scanned ?? 0;
+  // Messages the run walked past because they could not be captured. Said
+  // rather than folded into the other figures, so a gap has a number.
+  const failed = counts?.failed ?? 0;
   const live = isLiveRun(run.state);
   const done = run.state === "done";
   const { stale, agoMs } = staleness(run, live);
+  // A run that stopped on an error and kept its place is offered as one to
+  // continue, with starting over as the second choice.
+  const resumable =
+    run.state === "error" && run.resumable === true && onResume !== undefined;
   // The card wears the AI family only while the machine is actually reading:
   // indigo is a claim about who is doing the work, so a queued run that has
   // not started and a stalled one that has stopped both stay on plain ground.
@@ -168,23 +183,112 @@ export function RunView({
         fraction={fraction}
         staleForMs={stale ? agoMs : null}
       />
+      <RunNotes
+        run={run}
+        scanned={scanned}
+        failed={failed}
+        resumable={resumable}
+      />
+      <RunFoot
+        live={live}
+        resumable={resumable}
+        cancelling={cancelling}
+        resuming={resuming}
+        onCancel={onCancel}
+        onResume={onResume}
+        onRestart={onRestart}
+      />
+      {resumable && resumeError && <ErrorLine>{resumeError}</ErrorLine>}
+      {live && cancelError && <ErrorLine>{cancelError}</ErrorLine>}
+      {run.state === "cancelled" && <p>{t("backfill.cancelledNote")}</p>}
+    </div>
+  );
+}
+
+// What a stopped run has to say beyond its figures: the error, the messages it
+// walked past, and where a run that can be continued stopped.
+function RunNotes({
+  run,
+  scanned,
+  failed,
+  resumable,
+}: {
+  run: BackfillStatus;
+  scanned: number;
+  failed: number;
+  resumable: boolean;
+}) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (
+    <>
       {run.state === "error" && (
         <ErrorLine>
-          {t("backfill.errorNote")}
+          {t(resumable ? "backfill.errorResumeNote" : "backfill.errorNote")}
           {run.last_error_class ? ` (${run.last_error_class})` : ""}
         </ErrorLine>
       )}
-      <div className="backfill-foot">
-        {live ? (
-          <Button disabled={cancelling} onClick={onCancel}>
-            {t("backfill.cancel")}
-          </Button>
-        ) : (
-          <Button onClick={onRestart}>{t("backfill.restart")}</Button>
-        )}
-      </div>
-      {live && cancelError && <ErrorLine>{cancelError}</ErrorLine>}
-      {run.state === "cancelled" && <p>{t("backfill.cancelledNote")}</p>}
+      {failed > 0 && (
+        <p className="t-caption">
+          {plural("backfill.failedNote", failed, {
+            count: formatNumber(failed, locale),
+          })}
+        </p>
+      )}
+      {resumable && (
+        <p>
+          {plural("backfill.resumeNote", scanned, {
+            count: formatNumber(scanned, locale),
+          })}
+        </p>
+      )}
+    </>
+  );
+}
+
+// The run's verbs: stop a live one; continue or start over a stopped one that
+// can be continued; start a new one otherwise.
+function RunFoot({
+  live,
+  resumable,
+  cancelling,
+  resuming,
+  onCancel,
+  onResume,
+  onRestart,
+}: {
+  live: boolean;
+  resumable: boolean;
+  cancelling: boolean;
+  resuming: boolean;
+  onCancel: () => void;
+  onResume?: () => void;
+  onRestart: () => void;
+}) {
+  const t = useT();
+  return (
+    <div className="backfill-foot">
+      {live && (
+        <Button disabled={cancelling} onClick={onCancel}>
+          {t("backfill.cancel")}
+        </Button>
+      )}
+      {resumable && (
+        <Button
+          variant="primary"
+          pending={resuming}
+          busyLabel={t("backfill.starting")}
+          onClick={onResume}
+        >
+          {t("backfill.resumeCta")}
+        </Button>
+      )}
+      {!live && (
+        <Button disabled={resuming} onClick={onRestart}>
+          {t(resumable ? "backfill.startOverCta" : "backfill.restart")}
+        </Button>
+      )}
     </div>
   );
 }
@@ -237,6 +341,7 @@ function RunProgress({
   staleForMs: number | null;
 }) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   return (
     <>
@@ -250,7 +355,9 @@ function RunProgress({
       {fraction !== null && <RunBar fraction={fraction} />}
       <p className="t-caption capture-scanned" aria-live="polite">
         <span>
-          {t("backfill.countScanned")} {formatNumber(scanned, locale)}
+          {plural("backfill.countScanned", scanned, {
+            count: formatNumber(scanned, locale),
+          })}
         </span>
         {fraction !== null && (
           <span className="capture-pct">{formatPercent(fraction, locale)}</span>

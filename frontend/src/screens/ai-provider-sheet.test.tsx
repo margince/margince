@@ -10,6 +10,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AiProviderKeysCard } from "./ai-provider-keys";
+import { providerState } from "./ai-provider-sheet";
 
 afterEach(() => {
   cleanup();
@@ -29,24 +30,28 @@ const KEYS = {
       provider: "gemini",
       configured: true,
       env_var: "GEMINI_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "anthropic",
       configured: true,
       env_var: "ANTHROPIC_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai",
       configured: false,
       env_var: "OPENAI_API_KEY",
+      usable: false,
       optional: false,
     },
     {
       provider: "jev",
       configured: false,
       env_var: "TYPESAFE_API_KEY",
+      usable: false,
       optional: false,
     },
   ],
@@ -104,18 +109,27 @@ function backend(
         models: [{ id: "gemini-4-pro" }],
       });
     }
-    if (path.endsWith("/ai-model-rates/refresh")) {
+    if (path.endsWith("/ai/price-sync")) {
       return jsonResponse({
-        providers: [
-          {
-            provider: "gemini",
-            outcome: "not_available",
-            updated: 0,
-            unchanged: 0,
-            models: [],
-            unlisted: [],
+        auto_sync: true,
+        last_run: {
+          ran_at: "2026-10-02T10:00:00Z",
+          trigger: "scheduled",
+          report: {
+            providers: [
+              {
+                provider: "gemini",
+                outcome: "unchanged",
+                updated: 0,
+                unchanged: 0,
+                added: 0,
+                kept: 1,
+                models: [],
+                unlisted: [],
+              },
+            ],
           },
-        ],
+        },
       });
     }
     if (path.endsWith("/ai-model-rates") && req.method === "POST") {
@@ -169,9 +183,12 @@ async function open(
   provider: string,
 ) {
   await user.click(
-    await screen.findByRole("button", { name: `Manage ${provider}` }),
+    within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
+      "button",
+      { name: /^Edit/ },
+    ),
   );
-  return screen.findByRole("dialog", { name: provider });
+  return screen.findByRole("dialog");
 }
 
 describe("the Providers list", () => {
@@ -387,14 +404,13 @@ describe("a provider's sheet", () => {
     ).toBeTruthy();
   });
 
-  it("says a refresh left this vendor to be priced by hand", async () => {
+  it("says what the last price sync did for this vendor", async () => {
     const user = userEvent.setup();
     mount();
-    await user.click(
-      await screen.findByRole("button", { name: "Refresh model prices" }),
-    );
     const sheet = await open(user, "gemini");
-    expect(await within(sheet).findByText("Set by hand")).toBeTruthy();
+    expect(
+      await within(sheet).findByText("1 hand-set price kept"),
+    ).toBeTruthy();
   });
 
   it("offers a reader who may not write the sheet no verb at all", async () => {
@@ -410,17 +426,6 @@ describe("a provider's sheet", () => {
     ).toBeNull();
   });
 
-  // The refresh reads the sheet before writing it, so a write grant without
-  // the read would press the button into a refusal.
-  it("offers no refresh to a writer who may not read the sheet", async () => {
-    const user = userEvent.setup();
-    mount({ ai_routing: ["read"], ai_model_rate: ["create", "update"] });
-    await open(user, "gemini");
-    expect(
-      screen.queryByRole("button", { name: "Refresh model prices" }),
-    ).toBeNull();
-  });
-
   // A denial already known is not asked of the server: the 403 would only
   // spend a request on the empty answer the hook stands in for.
   it("asks for no prices on behalf of a reader who may not see them", async () => {
@@ -431,5 +436,22 @@ describe("a provider's sheet", () => {
     expect(within(sheet).queryByText("Prices")).toBeNull();
     expect(asked).not.toContain("GET /v1/ai-model-rates");
     expect(asked).toContain("GET /v1/ai/provider-keys");
+  });
+});
+
+describe("providerState", () => {
+  it("reads the server's usable answer rather than re-deriving it", () => {
+    const status = {
+      provider: "openai",
+      configured: false,
+      optional: false,
+      env_var: "OPENAI_API_KEY",
+      credential_kind: "api_key" as const,
+      usable: true,
+    };
+    expect(providerState(status, undefined)).toBe("ready");
+    expect(providerState({ ...status, usable: false }, undefined)).toBe(
+      "inactive",
+    );
   });
 });

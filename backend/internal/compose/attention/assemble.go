@@ -38,3 +38,11 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	})
 	return day, err
 }
+
+// besideDay is what assembleDay learned that the wire day does not carry: the
+// night's reading, and the sources inside the day that failed. /attention has
+// no vocabulary for a failed source; the worklist names each one.
+type besideDay struct {
+	night  theNight
+	failed []*crmcontracts.WorklistSourceUnavailable
+}

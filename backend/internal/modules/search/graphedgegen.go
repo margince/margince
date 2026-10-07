@@ -142,9 +142,18 @@ func (g *GraphEdgeGen) onContact(ctx context.Context, env events.Envelope, conta
 	})
 }
 
-// refoldContact is onContact's effect inside a caller's transaction, so a
-// batch can run it beside the activity refold it shares a transaction with.
+// refoldContact is onContact's effect inside a caller's transaction.
 func refoldContact(ctx context.Context, tx pgx.Tx, env events.Envelope, contactID ids.UUID) error {
+	var t edgeTargets
+	if err := t.addContactEvent(ctx, tx, env, contactID); err != nil {
+		return err
+	}
+	return t.apply(ctx, tx)
+}
+
+// addContactEvent gathers what one contact event refolds or drops, so a batch
+// can fold the activities and every contact event as one set.
+func (t *edgeTargets) addContactEvent(ctx context.Context, tx pgx.Tx, env events.Envelope, contactID ids.UUID) error {
 	switch env.Type {
 	case "contact.merged":
 		// The source's edges belong to the survivor now. Dropping the
@@ -154,15 +163,13 @@ func refoldContact(ctx context.Context, tx pgx.Tx, env events.Envelope, contactI
 		// refolded here rather than relying on that ordering, because a
 		// projection that is only correct if two events arrive in order is
 		// not correct on an at-least-once bus.
-		if err := DropEdgesForContact(ctx, tx, contactID); err != nil {
-			return err
-		}
+		t.dropped = append(t.dropped, contactID)
 		if target := mergeTarget(env); target != ids.Nil {
-			return RecomputeEdgesForContact(ctx, tx, target)
+			return t.addContact(ctx, tx, target)
 		}
 		return nil
 	case "contact.archived", "contact.restored", "contact.updated", "contact.created", "retention.applied":
-		return RecomputeEdgesForContact(ctx, tx, contactID)
+		return t.addContact(ctx, tx, contactID)
 	default:
 		return nil
 	}

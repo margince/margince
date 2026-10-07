@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 
@@ -13,7 +13,7 @@ import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
-import { AddTagDialog } from "./tagpicker";
+import { AddTagPicker } from "./tagpicker";
 import type { RecordTag, TaggableType } from "./tags.queries";
 import { useRecordTags, useRemoveTag } from "./tags.queries";
 import "./tagspanel.css";
@@ -50,7 +50,6 @@ export function TagsPanel({
   const t = useT();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
-  const [adding, setAdding] = useState(false);
   // Where focus returns once a pill is gone: the Add tag row, which stays
   // mounted whenever a tag can be removed, including after the last one goes
   // and the row of tags unmounts with it.
@@ -132,19 +131,12 @@ export function TagsPanel({
       )}
       {canEdit && (
         <div className="tagspanel-actions" ref={actions} tabIndex={-1}>
-          <AddTagButton onOpen={() => setAdding(true)} />
+          <AddTagPicker
+            entityType={entityType}
+            entityID={entityID}
+            current={tags}
+          />
         </div>
-      )}
-      {/* `canEdit` again, not `adding` alone: a seat downgrade, an archive or an
-          ownership change while the picker is open takes the button away, and a
-          dialog that outlived it would still submit. */}
-      {canEdit && adding && (
-        <AddTagDialog
-          entityType={entityType}
-          entityID={entityID}
-          current={tags}
-          onClose={() => setAdding(false)}
-        />
       )}
     </TagsFrame>
   );
@@ -275,22 +267,5 @@ function TagOnRecord({
         </>
       )}
     </span>
-  );
-}
-
-/**
- * The add-tag verb.
- *
- * Private to this file. Applying a word needs the record's CURRENT tags, so the
- * dialog can offer each one once — and this panel is what holds that read. A
- * caller placing the verb itself had to fetch the same list a second time to
- * feed the dialog, and a caller that forgot placed no verb at all.
- */
-function AddTagButton({ onOpen }: Readonly<{ onOpen: () => void }>) {
-  const t = useT();
-  return (
-    <Button variant="ghost" onClick={onOpen}>
-      <Plus aria-hidden /> {t("tags.add")}
-    </Button>
   );
 }
