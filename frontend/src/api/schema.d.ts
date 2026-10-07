@@ -41819,6 +41819,7 @@ export interface components {
              */
             with_contact?: string;
             contact?: components["schemas"]["WorklistContactFacts"];
+            company?: components["schemas"]["WorklistCompanyFacts"];
             /**
              * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
              *     seat whose calendar it came off. `kind` is always `user`.
@@ -42449,14 +42450,32 @@ export interface components {
             employer?: components["schemas"]["ContactEmployer"];
         };
         /**
+         * @description The account behind the row, and how the silence runs both ways, so a reader
+         *     knows whether the account or we wrote last before choosing a verb.
+         *
+         *     Present on every row whose `subject` is a company. Absent on a row about
+         *     anything else — a contact's row names its human in `contact`, and the account
+         *     that human works for is not this row's subject.
+         *
+         *     The `id` is the producer's claim and always travels. The moments are the
+         *     READER's, filled under their own grants, and absent where the reader may not
+         *     have them, which is not the same as never.
+         */
+        WorklistCompanyFacts: {
+            /** Format: uuid */
+            id: string;
+            touch?: components["schemas"]["WorklistContactTouch"];
+        };
+        /**
          * @description When they last wrote to us and when we last wrote to them — the same two dates,
-         *     over the same walk, that the contact's own page reports as `last_inbound_at` and
-         *     `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-         *     who wrote last.
+         *     over the same walk, that the record's own page reports: the contact page's
+         *     `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+         *     engagement strip for an account. A queue row and the record it opens cannot
+         *     disagree about who wrote last.
          *
          *     Absent from the row when the caller may not read activity, or may not read this
-         *     contact: a withheld answer. Present with both nulls for a contact nobody has ever
-         *     exchanged a message with.
+         *     contact or account: a withheld answer. Present with both nulls for a record
+         *     nobody has ever exchanged a message with.
          */
         WorklistContactTouch: {
             /**

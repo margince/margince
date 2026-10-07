@@ -11308,6 +11308,8 @@ export const en = {
   "worklist.pane.nothing": "Nothing recorded yet.",
   "worklist.pane.lastInbound": "Last from this contact",
   "worklist.pane.lastOutbound": "Last to this contact",
+  "worklist.pane.lastFromCompany": "Last from this company",
+  "worklist.pane.lastToCompany": "Last to this company",
   "worklist.pane.never": "Never",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",

@@ -55532,6 +55532,8 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
+        company:
+          $ref: '#/components/schemas/WorklistCompanyFacts'
         host:
           allOf:
             - $ref: '#/components/schemas/WorklistOwner'
@@ -56296,17 +56298,37 @@ components:
             Absent where the contact has no current employer, or where this caller may
             not read the employment or the company. Absent never means "works nowhere".
 
+    WorklistCompanyFacts:
+      type: object
+      description: |
+        The account behind the row, and how the silence runs both ways, so a reader
+        knows whether the account or we wrote last before choosing a verb.
+
+        Present on every row whose `subject` is a company. Absent on a row about
+        anything else — a contact's row names its human in `contact`, and the account
+        that human works for is not this row's subject.
+
+        The `id` is the producer's claim and always travels. The moments are the
+        READER's, filled under their own grants, and absent where the reader may not
+        have them, which is not the same as never.
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        touch:
+          $ref: '#/components/schemas/WorklistContactTouch'
+
     WorklistContactTouch:
       type: object
       description: |
         When they last wrote to us and when we last wrote to them — the same two dates,
-        over the same walk, that the contact's own page reports as `last_inbound_at` and
-        `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-        who wrote last.
+        over the same walk, that the record's own page reports: the contact page's
+        `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+        engagement strip for an account. A queue row and the record it opens cannot
+        disagree about who wrote last.
 
         Absent from the row when the caller may not read activity, or may not read this
-        contact: a withheld answer. Present with both nulls for a contact nobody has ever
-        exchanged a message with.
+        contact or account: a withheld answer. Present with both nulls for a record
+        nobody has ever exchanged a message with.
       required: [last_inbound_at, last_outbound_at]
       properties:
         last_inbound_at: { type: [string, 'null'], format: date-time, description: 'When they last wrote to us. Null means nothing inbound was ever captured.' }

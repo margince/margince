@@ -11075,6 +11075,8 @@ export const vi = {
   "worklist.pane.nothing": "Chưa ghi nhận gì.",
   "worklist.pane.lastInbound": "Liên hệ này viết lần cuối",
   "worklist.pane.lastOutbound": "Chúng ta viết cho liên hệ này lần cuối",
+  "worklist.pane.lastFromCompany": "Công ty này viết lần cuối",
+  "worklist.pane.lastToCompany": "Chúng ta viết cho công ty này lần cuối",
   "worklist.pane.never": "Chưa bao giờ",
   "worklist.pane.company": "Làm việc cho",
   "worklist.pane.role": "Vai trò của họ",

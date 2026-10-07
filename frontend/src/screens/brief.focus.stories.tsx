@@ -110,6 +110,24 @@ export const Pressed: Story = {
   },
 };
 
+/** A row about an account in hand: the account linked, and its own pair. */
+export const AccountInHand: Story = {
+  render: panel([
+    {
+      ...taskRow("renewal", "Send the renewal terms"),
+      subject: { type: "company", id: "company-nordwind", label: "Nordwind" },
+      company: {
+        id: "company-nordwind",
+        touch: {
+          last_inbound_at: "2026-03-12T10:05:00Z",
+          last_outbound_at: null,
+        },
+      },
+    },
+    taskRow("one", "Call the buyer"),
+  ]),
+};
+
 /** The last row of a short day: one behind it, so the stack is one edge deep. */
 export const NothingBehindIt: Story = {
   render: panel([waitingEmailRow(), taskRow("one", "Call the buyer")], 1),

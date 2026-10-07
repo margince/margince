@@ -162,6 +162,8 @@ type Service struct {
 	// contactTouch is OPTIONAL in the same way: nil means a row names its
 	// contact and not when either side last wrote.
 	contactTouch ContactTouch
+	// companyTouch is OPTIONAL in the same way, for a row about an account.
+	companyTouch CompanyTouch
 	// employers is OPTIONAL in the same way: nil means a meeting row names who
 	// it was with and not which account they work for.
 	employers ContactEmployers
