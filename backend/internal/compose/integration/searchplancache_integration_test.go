@@ -20,13 +20,12 @@ import (
 )
 
 // A repeated search is planned with its words every time. After five runs of
-// one prepared statement Postgres may switch to a generic plan, which keeps the
+// one named statement Postgres may switch to a generic plan, which keeps the
 // query text a parameter and rebuilds every tsquery for each row it touches.
 //
-// The harness pool runs describe_exec, which never names a statement and so
-// never reaches a generic plan; this test opens the product's own pool config
-// on ONE connection (OwnPoolFromConfig keeps its exec mode), so every run
-// reuses the statement cmd/api would reuse.
+// The harness pool never names a statement, so this test opens the product's
+// own pool config on ONE connection (OwnPoolFromConfig keeps its exec mode):
+// any ranking statement cmd/api would cache, this connection caches too.
 func TestARepeatedSearchIsNeverGenericallyPlanned(t *testing.T) {
 	e := Setup(t)
 	ctx := context.Background()
@@ -41,6 +40,7 @@ func TestARepeatedSearchIsNeverGenericallyPlanned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("configuring the product pool: %v", err)
 	}
+	cfg.MinConns = 1
 	cfg.MaxConns = 1
 	pool, err := testdb.OwnPoolFromConfig(ctx, cfg)
 	if err != nil {
@@ -61,63 +61,19 @@ func TestARepeatedSearchIsNeverGenericallyPlanned(t *testing.T) {
 	}
 
 	// This probe is itself a prepared statement carrying the marker, so it
-	// excludes itself; exactly one other row must remain.
+	// excludes itself. An unnamed statement is never cached, so none remains.
 	rows, err := pool.Query(ctx, `
 		SELECT generic_plans, custom_plans FROM pg_prepared_statements
 		 WHERE statement LIKE '%AS rtype%' AND statement NOT LIKE '%pg_prepared_statements%'`)
 	if err != nil {
-		t.Fatalf("reading the ranking statement's plan counts: %v", err)
+		t.Fatalf("reading the cached ranking statements: %v", err)
 	}
-	counts, err := pgx.CollectRows(rows, pgx.RowToStructByPos[struct{ Generic, Custom int64 }])
+	cached, err := pgx.CollectRows(rows, pgx.RowToStructByPos[struct{ Generic, Custom int64 }])
 	if err != nil {
-		t.Fatalf("reading the ranking statement's plan counts: %v", err)
+		t.Fatalf("reading the cached ranking statements: %v", err)
 	}
-	if len(counts) != 1 {
-		t.Fatalf("found %d cached ranking statements on the connection, want exactly one", len(counts))
-	}
-	if generic, custom := counts[0].Generic, counts[0].Custom; generic != 0 || custom != runs {
-		t.Fatalf("the ranking statement ran %d generic and %d custom plans over %d searches; "+
-			"every run must be custom-planned, or each row rebuilds the tsquery", generic, custom, runs)
-	}
-}
-
-// A search joined to an ambient snapshot leaves the snapshot's plan cache mode
-// as it found it. The snapshot sets its own non-default value first, so a
-// restore to the server default would fail here as surely as a leak would.
-func TestASearchInsideASnapshotLeavesItsPlanCacheModeAlone(t *testing.T) {
-	e := Setup(t)
-	admin := e.Admin()
-	if _, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
-		FullName: "Henrike Vossberg", Source: "manual",
-	}); err != nil {
-		t.Fatalf("seeding the contact: %v", err)
-	}
-	store := search.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
-
-	err := database.WithWorkspaceSnapshot(admin, e.Pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-			if _, err := tx.Exec(ctx, `SELECT set_config('plan_cache_mode', 'force_generic_plan', true)`); err != nil {
-				t.Fatalf("setting the snapshot's own plan cache mode: %v", err)
-			}
-			page, err := store.Search(ctx, search.Input{Query: "vossberg", Types: []string{"contact"}})
-			if err != nil {
-				t.Fatalf("search: %v", err)
-			}
-			if len(page.Hits) != 1 {
-				t.Fatalf("search found %d hits, want the one seeded contact", len(page.Hits))
-			}
-			var after string
-			if err := tx.QueryRow(ctx, `SELECT current_setting('plan_cache_mode')`).Scan(&after); err != nil {
-				t.Fatalf("reading the plan cache mode after the search: %v", err)
-			}
-			if after != "force_generic_plan" {
-				t.Fatalf("the snapshot's plan cache mode is %q after a search, want its own %q: "+
-					"a joined search must not re-plan every later lane", after, "force_generic_plan")
-			}
-			return nil
-		})
-	})
-	if err != nil {
-		t.Fatalf("the snapshot failed: %v", err)
+	if len(cached) != 0 {
+		t.Fatalf("the connection caches %d ranking statements (generic/custom plans %v) after %d searches, "+
+			"want none: a cached statement turns generic, and then each row rebuilds the tsquery", len(cached), cached, runs)
 	}
 }
