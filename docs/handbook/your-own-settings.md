@@ -2,9 +2,8 @@
 
 Your own settings in Margince are the six pages under **You** in Settings:
 **Account**, **Meetings**, **Writing voice**, **Agents**, **Connections** and **Capture
-activity**. Everything here changes your own seat and nobody else's, with two
-named exceptions that carry one company-wide card each — Connections and Capture
-activity.
+activity**. Everything here changes your own seat and nobody else's. Two pages,
+Connections and Capture activity, also carry one company-wide card each.
 
 For everything else, see [Settings](settings.md).
 
@@ -25,7 +24,7 @@ The Account page in Settings holds one card, **Your account**: who you are, how
 you sign in, how you sign off, which language the product speaks to you in
 (English, Deutsch or Tiếng Việt), and how it looks. It also has **Sign out**.
 **Appearance** is here as well as in the account menu, where it is called
-**Theme** — one setting with two doors, so changing it in either moves the other.
+**Theme**. Both change the one setting.
 
 ### How do I change my password?
 To change your password in Margince, open Settings → **Account** and choose **Change password** in the **Password** row.
@@ -46,7 +45,7 @@ Also called: my name, profile name, rename myself.
 To add an email signature in Margince, open Settings → **Account** and choose **Edit signature** in the **Email signature** row.
 1. Type your sign-off in **Sign-off**, in plain text.
 2. Choose **Save**.
-The signature is added below every message you send, above the unsubscribe footer. Leave it empty to send without one; the row then says **No sign-off set**.
+The signature is added below every email you send yourself, above the unsubscribe footer. Leave it empty and your emails close with a short greeting and your name instead, in the message's language (the installation's language, then English, when the message is too short to tell); the row then says **No sign-off set**. An email an agent sends carries no sign-off.
 AI drafts never add a sign-off, so this is the one that goes out.
 Also called: email footer, sign-off, signature block.
 
@@ -122,8 +121,8 @@ Proposals and personal links still waiting on a reply are listed on the same
 tab; **Withdraw** stops a link working before the guest uses it.
 
 Calendar availability includes private and internal busy time without copying
-those details into Margince. Bookable hours, notice and buffers are checked by
-the server. **Creating your invitation…** means delivery is still pending;
+those details into Margince. Margince checks bookable hours, notice and buffers
+when a guest books. **Creating your invitation…** means delivery is still pending;
 **Calendar invitation created** means the calendar provider accepted it. The
 guest's acceptance is a separate event. Open the meeting from its timeline status
 to reschedule, cancel or retry a delivery that needs attention.
@@ -133,9 +132,6 @@ to reschedule, cancel or retry a delivery that needs attention.
 The Writing voice page in Settings holds your **Voice DNA**: "Your personal
 writing voice. It shapes drafts written for you, is visible only to you and
 learns only from samples you add."
-
-Three properties in one sentence. It affects your drafts. Nobody else sees it.
-It learns only from what you give it.
 
 ### How do I set up my writing voice?
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
@@ -150,8 +146,8 @@ meeting transcripts. Leave out text others wrote and AI drafts: they teach a
 different voice. A read-only seat sees the page and cannot change it.
 
 A PDF or Word document is read to its text in the browser before anything is
-sent. A file with no text in it is skipped, and one that cannot be opened —
-password-protected or damaged — is named so you can paste its text instead.
+sent. A file with no text in it is skipped. A file that cannot be opened
+(password-protected or damaged) is named so you can paste its text instead.
 
 A file at least half attributed to named speakers is treated as a conversation:
 the page asks which speaker is you and keeps only your turns. Below that share
@@ -160,12 +156,8 @@ colon ("Frage: …") is not asked about.
 
 ## Agents
 
-The Agents page in Settings is where you mint and revoke **passports** — the
-credentials that let an AI agent work as you.
-
-Every member gets this page, ungated. A passport is minted by a colleague for
-their own use, so making it administrator-only would mean only administrators
-could mint one.
+The Agents page in Settings is where you mint and revoke **passports**: the
+credentials that let an AI agent work as you. Every member can open this page.
 
 ### How do I create an agent passport?
 To create an agent passport in Margince, open Settings → **Agents** and choose **New passport** in the **Agent passports** card.
@@ -186,9 +178,8 @@ do](agents-and-passports.md#passports-how-an-agent-is-connected).
 ## Connections
 
 The Connections page in Settings holds your own mailbox and calendar
-connections, and your LinkedIn import. The distinction from **Integrations** is
-deliberate: Connections is what *you* connected, Integrations is what the
-*installation* is wired to.
+connections, and your LinkedIn import. Connections is what *you* connected;
+**Integrations** is what the *installation* is wired to.
 
 ### How do I connect my mailbox?
 To connect your mailbox or calendar to Margince, open Settings → **Connections** and choose **Add connector** in **Connected mailboxes and calendars**.
@@ -197,8 +188,8 @@ To connect your mailbox or calendar to Margince, open Settings → **Connections
 When it works, Margince says "Connected. Your mailbox is capturing."
 Also called: link my email, sync Gmail, sync Outlook, connect my calendar.
 
-Full detail — IMAP settings, importing past mail, reconnecting and what capture
-files where — is in [Connecting your mailbox and calendar](connecting-mail-and-calendars.md#what-you-can-connect).
+Full detail (IMAP settings, importing past mail, reconnecting and what capture
+files where) is in [Connecting your mailbox and calendar](connecting-mail-and-calendars.md#what-you-can-connect).
 
 ## Capture activity
 
@@ -210,18 +201,18 @@ CRM. Your rules apply only to mailboxes you connected; the company's rules apply
 to everyone (and only an administrator may add or remove one of those). A rule
 applies from the next message; what is already captured stays.
 
-**Outcomes.** Five counters for the window — **Captured**, **Dropped as
+**Outcomes.** Counters for the window: **Captured**, **Dropped as
 internal**, **No contact created**, **Awaiting sender check** and **Derivation
 failed**. Click one to narrow the list under it.
 
 **Messages**, behind a disclosure, is the per-message log: which step a single
 message stopped at and why. Open it when a message you expected did not show up.
-Most installations record no sender and no subject for these rows — the page says
-so once above them, and that is the default, not a misconfiguration.
+By default each row names the sender and a short subject. If your installation
+turned this off, the page says so above the rows.
 
 ### Why did an email not show up in Margince?
 To find out why an email did not show up in Margince, open Settings → **Capture activity** and look in **Messages** for the last 24 hours.
 1. Click an **Outcomes** counter, such as **Dropped as internal** or **No contact created**, to narrow the list.
 2. Open a row's processing steps to see where that message stopped and why.
-Mail between colleagues is never stored, and a sender under **Capture exclusions** is kept out on purpose.
+Mail between colleagues is never stored, and a sender under **Capture exclusions** is always kept out.
 Also called: missing email, email not captured, email not synced.

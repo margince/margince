@@ -63,6 +63,8 @@ var (
 	// configFieldRE is a JobRunnerConfig field path: a field, or a field of a
 	// sub-config (GmailWatch.Topic).
 	configFieldRE = regexp.MustCompile(`^[A-Z][A-Za-z0-9]*(\.[A-Z][A-Za-z0-9]*)*$`)
+	// settingKeyRE is the <module>.<name> key of a registered setting.
+	settingKeyRE = regexp.MustCompile(`^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`)
 	// goConstRE is the name of the Go constant a {derived: …} timeout tracks.
 	goConstRE = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]*$`)
 	// argFieldRE is an args struct's Go field name — exported, because River
@@ -218,16 +220,13 @@ func validateArgs(name string, def kindDef) error {
 }
 
 // validateTimeout holds the rule this whole contract exists for: every kind
-// has a CHOSEN timeout, in exactly one of the four forms.
+// has a CHOSEN timeout, in exactly one of the three forms.
 func validateTimeout(name string, t *timeoutDef) error {
 	if t == nil {
 		return fmt.Errorf("kind %q: declares no timeout — an absent one is River's silent 1-minute default, which is what this contract removes", name)
 	}
 	forms := 0
 	if t.None {
-		forms++
-	}
-	if t.Operator != "" {
 		forms++
 	}
 	if t.Derived != "" {
@@ -237,16 +236,12 @@ func validateTimeout(name string, t *timeoutDef) error {
 		forms++
 	}
 	if forms != 1 {
-		return fmt.Errorf("kind %q: timeout must take exactly one of the four forms (a duration, {derived: …}, {operator: …}, {none: true}), got %d", name, forms)
+		return fmt.Errorf("kind %q: timeout must take exactly one of the three forms (a duration, {derived: …}, {none: true}), got %d", name, forms)
 	}
 	switch {
 	case t.None:
 		if t.Reason == "" {
 			return fmt.Errorf("kind %q: a {none: true} timeout needs a reason — taking a job out of River's rescuer is a decision, not a default", name)
-		}
-	case t.Operator != "":
-		if !configFieldRE.MatchString(t.Operator) {
-			return fmt.Errorf("kind %q: timeout operator %q must name a JobRunnerConfig field", name, t.Operator)
 		}
 	case t.Derived != "":
 		if !goConstRE.MatchString(t.Derived) {
@@ -328,23 +323,14 @@ func (c contract) validateCadence(name string, def kindDef) error {
 	if cad.Fixed != 0 {
 		forms++
 	}
-	if cad.Operator != "" {
+	if cad.Setting != "" {
 		forms++
 	}
 	if forms != 1 {
-		return fmt.Errorf("kind %q: cadence must take exactly one of a duration, {operator: …} or %q, got %d", name, cadenceOnDemand, forms)
+		return fmt.Errorf("kind %q: cadence must take exactly one of a duration, {setting: …} or %q, got %d", name, cadenceOnDemand, forms)
 	}
-	if cad.Operator != "" && !configFieldRE.MatchString(cad.Operator) {
-		return fmt.Errorf("kind %q: cadence operator %q must name a JobRunnerConfig field", name, cad.Operator)
-	}
-	if cad.ScheduleWhenPositive == "" {
-		return nil
-	}
-	if !configFieldRE.MatchString(cad.ScheduleWhenPositive) {
-		return fmt.Errorf("kind %q: schedule_when_positive %q must name a JobRunnerConfig field", name, cad.ScheduleWhenPositive)
-	}
-	if cad.OnDemand {
-		return fmt.Errorf("kind %q: schedule_when_positive names the dial a non-positive value silences, and an %q kind has no dial", name, cadenceOnDemand)
+	if cad.Setting != "" && !settingKeyRE.MatchString(cad.Setting) {
+		return fmt.Errorf("kind %q: cadence setting %q must be a <module>.<name> settings key", name, cad.Setting)
 	}
 	return nil
 }

@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -114,14 +115,14 @@ func (s *Store) StageCapturedFiles(
 	staged := make([]StagedFile, 0, len(files))
 	for _, file := range files {
 		id := ids.NewV7()
-		key := blobstore.WorkspaceKey(workspace, "attachment", id.String())
+		key := blobstore.WorkspaceKey(workspace, string(storedobjects.KindAttachment), id.String())
 		sum := sha256.Sum256(file.Body)
 		// Declared provisional BEFORE the bytes exist, on its own transaction,
 		// so the declaration survives the failure of the caller's — which is
 		// exactly the failure that leaves an object nothing references, and an
 		// erasure reads storage_key off the attachment row. See
 		// storedobjectintent.go.
-		if err := s.recordStoredObjectIntent(ctx, key); err != nil {
+		if err := s.recordAttachmentIntent(ctx, key); err != nil {
 			return nil, err
 		}
 		if err := s.blob.Put(ctx, key, bytes.NewReader(file.Body),
@@ -177,38 +178,52 @@ func (s *Store) RecordCapturedFiles(
 		rollUp = &account
 	}
 	for _, file := range staged {
-		if err := insertCapturedAttachment(ctx, tx, activityID, rollUp, from, file); err != nil {
+		checksum := file.checksum
+		row := capturedFileRow{id: file.id, file: file.file, byteSize: len(file.file.Body), key: file.key, checksum: &checksum}
+		if err := insertCapturedAttachment(ctx, tx, activityID, rollUp, from, row); err != nil {
 			return err
 		}
 		// On the CALLER's transaction, the one that just gave the key a row:
 		// the pair commits together or neither does.
-		if err := clearStoredObjectIntent(ctx, tx, file.key); err != nil {
+		if err := storedobjects.Clear(ctx, tx, file.key); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// capturedFileRow is one attachment row a capture writes: a file whose bytes are
+// stored under key, or one whose bytes were withheld, which has no key and no
+// checksum but still says what arrived.
+type capturedFileRow struct {
+	id       ids.UUID
+	file     CapturedFile
+	byteSize int
+	key      string
+	checksum *string
+	withheld bool
+}
+
 func insertCapturedAttachment(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, account *ids.UUID,
-	from CapturedFileSource, file StagedFile,
+	from CapturedFileSource, row capturedFileRow,
 ) error {
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO attachment (
 			id, entity_type, entity_id, filename, content_type,
 			byte_size, storage_key, checksum, source, captured_by,
 			category, company_id, activity_id,
-			external_source_id, external_part_id, declared_type)
+			external_source_id, external_part_id, declared_type, bytes_withheld)
 		VALUES ($1, 'activity', $2, $3, $4,
 		        $5, $6, $7, $8, $9,
 		        $10, $11, $2,
-		        $12, $13, $14)
+		        $12, $13, $14, $15)
 		ON CONFLICT (external_source_id, external_part_id)
 		  WHERE external_source_id IS NOT NULL DO NOTHING`,
-		file.id, activityID, file.file.Filename, nullIfEmpty(file.file.ContentType),
-		len(file.file.Body), file.key, file.checksum, from.System, from.CapturedBy,
-		from.Category, account, providerMessageKey(from), file.file.PartID,
-		nullIfEmpty(file.file.DeclaredType))
+		row.id, activityID, row.file.Filename, nullIfEmpty(row.file.ContentType),
+		row.byteSize, row.key, row.checksum, from.System, from.CapturedBy,
+		from.Category, account, providerMessageKey(from), row.file.PartID,
+		nullIfEmpty(row.file.DeclaredType), row.withheld)
 	if err != nil {
 		return fmt.Errorf("record a captured file: %w", err)
 	}
@@ -221,12 +236,13 @@ func insertCapturedAttachment(
 	// Every mutation leaves an audit row. The image is metadata only — never
 	// the bytes and never anything a sender wrote beyond the name we already
 	// sanitized — matching how a captured activity is audited (ADR-0072/A118).
-	if _, err := storekit.Audit(ctx, tx, "create", "attachment", file.id, nil, map[string]any{
-		"entity_type":   "activity",
-		"entity_id":     activityID.String(),
-		"category":      from.Category,
-		"byte_size":     len(file.file.Body),
-		"source_system": from.System,
+	if _, err := storekit.Audit(ctx, tx, "create", "attachment", row.id, nil, map[string]any{
+		"entity_type":      linkEntityActivity,
+		"entity_id":        activityID.String(),
+		"category":         from.Category,
+		"byte_size":        row.byteSize,
+		"source_system":    from.System,
+		fieldBytesWithheld: row.withheld,
 	}); err != nil {
 		return fmt.Errorf("audit a captured file: %w", err)
 	}

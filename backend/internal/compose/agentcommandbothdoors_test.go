@@ -489,7 +489,7 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 		agents.WithTierFloor(func(string, string) (mcp.RiskTier, bool) {
 			return mcp.TierConfirmationRequired, true
 		}))
-	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil, nil)
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
 	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
@@ -589,8 +589,8 @@ func (bothDoorsComms) DraftEmail(context.Context, ids.UUID, string) (string, str
 	return "", "", errBothDoorsExecuted
 }
 
-func (bothDoorsComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
-	return "", "", errBothDoorsExecuted
+func (bothDoorsComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (agents.FirstDraft, error) {
+	return agents.FirstDraft{}, errBothDoorsExecuted
 }
 
 func (bothDoorsComms) SendEmail(context.Context, ids.UUID, agents.SendEmailArgs) (agents.SendEmailResult, error) {
@@ -678,10 +678,9 @@ var dynamicTierVerbs = gatekit.Waive(map[string]string{
 		"the MCP door through the tool's own InputSchema — that second one exists because relinkActivity is " +
 		"not a dynamicTool, so the registry hands the resolver raw tool arguments and the two spellings of " +
 		"`entity_type` are held together by nothing else",
-	"relink_thread": "the same destination-type tier as relink_activity, answered by the same resolver " +
-		"(relinkActivityTier) off the same `entity_type` argument on both doors; " +
-		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door and " +
-		"TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares the MCP door",
+	"relink_thread": "it stages nothing on either door: its resolver refuses every thread move with one " +
+		"shared refusal, so there is no staged row for the two doors to differ on; " +
+		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door's tier",
 	"relink_activities": "the same destination-type tier as relink_activity, answered by the same resolver " +
 		"(relinkActivityTier) off the same `entity_type` argument on both doors; " +
 		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door and " +

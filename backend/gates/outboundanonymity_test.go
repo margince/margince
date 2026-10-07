@@ -6,7 +6,7 @@
 package gates
 
 // Every outbound HTTP request either says who is calling, or is registered as
-// deliberately anonymous with the reason.
+// anonymous by design with the reason.
 //
 // The sibling gate next door (TestNoOutboundIdentityIsWrittenAtItsCallSite)
 // holds the calls that DECLARE something to one spelling. It has nothing to say

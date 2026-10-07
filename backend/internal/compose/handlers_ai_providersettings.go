@@ -24,7 +24,7 @@ func (h aiRoutingHandlers) SetAiProviderSettings(w http.ResponseWriter, r *http.
 		return
 	}
 	var req crmcontracts.AiProviderSettings
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeClosed(w, r, &req, routingBlockIsOwned) {
 		return
 	}
 	cfg, err := h.store.SetProviderSettings(r.Context(), provider, providerSettingsFromWire(req))
@@ -32,8 +32,7 @@ func (h aiRoutingHandlers) SetAiProviderSettings(w http.ResponseWriter, r *http.
 		httperr.Write(w, r, err)
 		return
 	}
-	w.Header().Set("ETag", `"`+cfg.Revision()+`"`)
-	httperr.WriteJSON(w, http.StatusOK, toContractAiRouting(cfg))
+	writeAiRouting(w, r, cfg)
 }
 
 // providersToWire and providersFromWire carry the providers map. Nil on the
@@ -74,23 +73,35 @@ func providerSettingsFromWire(p crmcontracts.AiProviderSettings) ai.ProviderSett
 
 // upstreamToWire and upstreamFromWire keep absent and empty apart, as
 // routingToWire does: an empty upstream says "no pins", absent says nothing.
+// The connection holds only its own keys, so the flat contract shape says all
+// of it.
 func upstreamToWire(r *ai.OpenRouterRouting) *crmcontracts.AiOpenRouterUpstream {
 	if r == nil {
 		return nil
 	}
-	return &crmcontracts.AiOpenRouterUpstream{Only: optionalStrings(r.Only), Ignore: optionalStrings(r.Ignore), AllowFallbacks: r.AllowFallbacks}
+	p := r.Provider
+	return &crmcontracts.AiOpenRouterUpstream{
+		Only: optionalStrings(p.Only), Ignore: optionalStrings(p.Ignore), AllowFallbacks: p.AllowFallbacks,
+		Zdr: p.ZDR, EnforceDistillableText: p.EnforceDistillableText,
+		DataCollection: optionalEnum[crmcontracts.AiOpenRouterUpstreamDataCollection](p.DataCollection),
+	}
 }
 
 func upstreamFromWire(r *crmcontracts.AiOpenRouterUpstream) *ai.OpenRouterRouting {
 	if r == nil {
 		return nil
 	}
-	out := &ai.OpenRouterRouting{AllowFallbacks: r.AllowFallbacks}
+	out := &ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{
+		AllowFallbacks: r.AllowFallbacks, ZDR: r.Zdr, EnforceDistillableText: r.EnforceDistillableText,
+	}}
 	if r.Only != nil {
-		out.Only = *r.Only
+		out.Provider.Only = *r.Only
 	}
 	if r.Ignore != nil {
-		out.Ignore = *r.Ignore
+		out.Provider.Ignore = *r.Ignore
+	}
+	if r.DataCollection != nil {
+		out.Provider.DataCollection = string(*r.DataCollection)
 	}
 	return out
 }

@@ -169,7 +169,9 @@ export function BookingReview({
             )}
           </div>
         </Disclosure>
-        {mode !== "link" && (
+        {mode === "link" ? (
+          <GuestPicks name={draft.contactName} />
+        ) : (
           <PickTray
             mode={mode}
             picks={picks}
@@ -207,6 +209,22 @@ export function BookingReview({
         <p className="t-caption">{t(NOTES[mode])}</p>
       </PanelBody>
     </Panel>
+  );
+}
+
+// Where the other modes list the times picked, a personal link says who picks,
+// in the same place and at the same height.
+function GuestPicks({ name }: Readonly<{ name?: string }>) {
+  const t = useT();
+  return (
+    <section className="book-picks">
+      <span className="t-name">
+        {t("scheduling.guestPicks", {
+          name: name?.trim() || t("scheduling.guest"),
+        })}
+      </span>
+      <p className="t-caption">{t("scheduling.guestPicksOne")}</p>
+    </section>
   );
 }
 

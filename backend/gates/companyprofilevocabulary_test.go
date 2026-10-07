@@ -5,8 +5,8 @@
 
 package gates
 
-// The company-profile vocabulary is spelled in eight places, and this gate is
-// what makes widening seven of them a failure instead of a silent half-job.
+// The company-profile vocabulary is spelled in eight places, and widening seven
+// of them without the eighth fails here.
 //
 // `company_profile_field.field` names what a company profile may state.
 // The same list is restated by the contract enum (four times, because four

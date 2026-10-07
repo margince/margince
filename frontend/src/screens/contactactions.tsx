@@ -13,11 +13,11 @@ import { useT } from "../i18n";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { useMe } from "./common";
 import { ContactRecordActions } from "./contactrecordactions";
-import { contactTabRoute } from "./contacttab";
 import type { Transport } from "./contacttransports";
 import { primaryTransportAction, useTransports } from "./contacttransports";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
+import { openContactTab } from "./worklist.return";
 
 // The header's verbs on the contact record page (contactpage.tsx): writing,
 // calling, meeting, logging, and the menu that holds everything else.
@@ -119,14 +119,12 @@ export function ContactActions({
       <IconAction
         label={t("contact.action.call")}
         icon={<Phone aria-hidden="true" />}
-        onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
+        onClick={() => openContactTab(contactId, "timeline")}
       />
       <IconAction
         label={t("contact.action.meetings")}
         icon={<CalendarDays aria-hidden="true" />}
-        onClick={() =>
-          navigate({ screen: "contacts", id: contactId, id2: "meetings" })
-        }
+        onClick={() => openContactTab(contactId, "meetings")}
       />
       {/* A hairline between reaching the record and recording what happened
           to it: two groups of verbs, not one toolbar. */}
@@ -188,9 +186,7 @@ export function ContactActions({
                 disabledReasonId={refusedReasonId}
               />
               <AddToShortlistAction entityType="contact" entityId={contactId} />
-              <Button
-                onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
-              >
+              <Button onClick={() => openContactTab(contactId, "timeline")}>
                 {t("record.fullHistory")}
               </Button>
               <Button onClick={onResearch}>

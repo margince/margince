@@ -935,7 +935,7 @@ describe("company view — the citations under a finding", () => {
             ],
           },
         ]}
-        onOpenRecord={(...args) => opened.push(args)}
+        onOpenReceipt={(...args) => opened.push(args)}
         citations="collected"
       />,
     );
@@ -946,8 +946,7 @@ describe("company view — the citations under a finding", () => {
     await userEvent.click(screen.getByText("3 profile fields"));
     expect(opened).toEqual([
       [
-        "profile_field",
-        "pf-1",
+        { entityType: "profile_field", entityId: "pf-1" },
         [
           { entityType: "profile_field", entityId: "pf-1" },
           { entityType: "profile_field", entityId: "pf-2" },
@@ -1172,6 +1171,21 @@ describe("company view — the visit baseline", () => {
   });
 });
 
+// The page's two lifecycle controls, header first. They are deliberately not
+// the same primitive: the header's is the design system's dropdown worn as a
+// button beside the name (a combobox named by its field), the grid's is the
+// inline value a row of values carries ("Change Lifecycle"). Exactly one of
+// each, so a third mount point or a lost one fails here rather than passing.
+async function lifecycleControls(): Promise<HTMLElement[]> {
+  const header = await screen.findAllByRole("combobox", { name: "Lifecycle" });
+  const grid = await screen.findAllByRole("button", {
+    name: "Change Lifecycle",
+  });
+  expect(header).toHaveLength(1);
+  expect(grid).toHaveLength(1);
+  return [...header, ...grid];
+}
+
 describe("company view — where the account stands, and what it is to us", () => {
   it("shows where the account stands, and the types it does not already say", async () => {
     // Not "partner": that type also raises the Partner tab, and the badge and
@@ -1195,15 +1209,10 @@ describe("company view — where the account stands, and what it is to us", () =
     // Lifecycle is now the editable control; the types stay read-only badges.
     // findAllBy, not getBy: the controls appear only once /me answers with
     // the viewer's grants, which resolves independently of the 360 awaited
-    // above. TWO controls, not one — the header's pulse line and the rail's
-    // Details grid both mount `CompanyLifecycleControl`, the SAME
-    // implementation reused rather than a second one, so both show the same
-    // value and either one writes through the same patch.
-    const controls = await screen.findAllByRole("button", {
-      name: "Change Lifecycle",
-    });
-    expect(controls).toHaveLength(2);
-    for (const control of controls) {
+    // above. TWO controls, not one — the header's button beside the name and
+    // the rail's Details grid inline field — and both show the same value,
+    // because both read the one row and write through the same patch.
+    for (const control of await lifecycleControls()) {
       expect(control.textContent).toContain("Former customer");
     }
     // A type the lifecycle already speaks for is NOT drawn beside it. This
@@ -1232,18 +1241,14 @@ describe("company view — where the account stands, and what it is to us", () =
     // the account that needs it set, and there is no other way in from here.
     // What it must NOT do is read as a verdict, which is why it carries the
     // field name and 'Not assessed' never stands on its own. Both mount
-    // points (header, grid) show it, since both draw the same control.
-    const controls = await screen.findAllByRole("button", {
-      name: "Change Lifecycle",
-    });
-    expect(controls).toHaveLength(2);
-    for (const control of controls) {
+    // points (header, grid) show it.
+    for (const control of await lifecycleControls()) {
       expect(control.textContent).toContain("Not assessed");
     }
   });
 
   it("writes lifecycle once and shows the new value on both mount points", async () => {
-    // The one thing "one implementation, two mount points" actually promises:
+    // The one thing "one write path, two mount points" actually promises:
     // a save through EITHER control reaches the server exactly once, and the
     // OTHER control reflects the new value once the record refetches — not a
     // second write, and not one control left showing the stale value.
@@ -1295,9 +1300,7 @@ describe("company view — where the account stands, and what it is to us", () =
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
-    const [headerControl] = await screen.findAllByRole("button", {
-      name: "Change Lifecycle",
-    });
+    const [headerControl] = await lifecycleControls();
     await userEvent.click(headerControl);
     await userEvent.click(screen.getByRole("option", { name: "Prospect" }));
 
@@ -1307,11 +1310,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // reused copy — because the single write invalidates the one query both
     // read from, not because either wrote a second time.
     await waitFor(async () => {
-      const updated = await screen.findAllByRole("button", {
-        name: "Change Lifecycle",
-      });
-      expect(updated).toHaveLength(2);
-      for (const control of updated) {
+      for (const control of await lifecycleControls()) {
         expect(control.textContent).toContain("Prospect");
       }
     });

@@ -5,12 +5,12 @@
 
 package gates
 
-// The allow-list of provider-defined containers lives in two places — the
-// CHECK on capture_exclusion and the Go the writer consults — and a set that
-// lives in two places drifts. The drift is silent and asymmetric: a token in
-// the CHECK but not in Go is a rule the database would accept and the writer
-// refuses; one in Go but not the CHECK is a write that passes validation and
-// dies on a constraint violation, which reaches a reader as a 500.
+// The allow-list of provider-defined containers lives in two places (the CHECK
+// on capture_exclusion and the Go the writer consults), and the two must agree.
+// The drift is silent and asymmetric: a token in the CHECK but not in Go is a
+// rule the database would accept and the writer refuses; one in Go but not the
+// CHECK is a write that passes validation and dies on a constraint violation,
+// which reaches a reader as a 500.
 //
 // Both sides are read from SOURCE. A gate may not import a module (ADR-0054
 // §3), and parsing is the right shape anyway: what a reviewer checks is the

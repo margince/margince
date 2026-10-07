@@ -302,25 +302,25 @@ func writeAICertGlossary(page *strings.Builder) {
 	page.WriteString("| Task | One job the product does with a model, such as `draft_reply` or `cold_start`. |\n")
 	page.WriteString("| Site | One spot inside a task where the product asks a model something. A task can have several: `cold_start` asks four separate questions, so it has four sites. Everything on this page is counted per site, because that is what a test case names. |\n")
 	page.WriteString("| Scenario | One test case: what the model is given, and what a good answer looks like. |\n")
-	page.WriteString("| Binding | The exact setup a model was tested on: who supplies it, which model, and where it runs. A result counts for that setup only — the same model reached another way has to be tested again. |\n")
+	page.WriteString("| Binding | The exact setup a model was tested on: who supplies it, which model, and where it runs. A result counts for that setup only: the same model reached another way has to be tested again. |\n")
 	page.WriteString("| Record | The saved result of one paid test run: one binding, one task. |\n")
 	page.WriteString("| Band | The grade a record gives its setup. `certified`: good enough to ship. `supported_degraded`: it works, but worse. `not_supported`: do not ship it. |\n\n")
 	page.WriteString("#### The four states\n\n")
-	page.WriteString("A state says whether a saved result still describes the product as it is\ntoday. It says nothing about how well the model did — that is the band.\n\n")
+	page.WriteString("A state says whether a saved result still describes the product as it is\ntoday. It says nothing about how well the model did; that is the band.\n\n")
 	page.WriteString("| State | What it claims |\n|---|---|\n")
 	page.WriteString("| `current` | Still true. Nothing it tested has changed, and there is no test case it missed. |\n")
 	page.WriteString("| `partial` | Still true about what it tested, but test cases have been added since that it never saw. The `Scenarios` column says how many of each. |\n")
-	page.WriteString("| `stale` | Out of date. Something it tested has changed since — a test case, or the wording the product now sends. The grade no longer describes what ships, and the run has to be paid for again. |\n")
-	page.WriteString("| `absent` | Never tested, on any setup. Not a failure — an honest gap. Its columns are dashes because nothing has measured it. |\n\n")
+	page.WriteString("| `stale` | Out of date. Something it tested has changed since: a test case, or the wording the product now sends. The grade no longer describes what ships, and the run has to be paid for again. |\n")
+	page.WriteString("| `absent` | Never tested on any setup. Its columns are dashes because nothing has measured it. |\n\n")
 	page.WriteString("#### The numbers\n\n")
 	page.WriteString("| Column | What it says |\n|---|---|\n")
 	page.WriteString("| Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |\n")
 	page.WriteString("| Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |\n")
 	page.WriteString("| Reliability | Passed divided by Runs. 1.00 is every attempt. |\n")
-	page.WriteString("| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back — not a pass/fail split. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |\n")
+	page.WriteString("| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back. This is a different split from pass/fail. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |\n")
 	page.WriteString("| Scenarios | How many of the site's test cases the saved result still covers, out of how many the site has today. |\n")
 	page.WriteString("| Record p50, p95 | How long answers took: the middle one, and a slow one (only 1 in 20 was slower). Both belong to the whole test run, not to the single site whose table they appear in, so a run covering several sites shows the same pair on each. |\n")
-	page.WriteString("| Slowest p95 | The worst p95 of any run in that row — never an average of them. Averaging these numbers would invent a figure nothing actually measured. |\n")
+	page.WriteString("| Slowest p95 | The worst p95 of any run in that row. It is never an average, because an average of these numbers is a figure nothing measured. |\n")
 	page.WriteString("| `-` | Not measured. No runs is not a reliability of zero, and no timing is not a fast one. Older results carry one stamp for the whole task instead of one per test case, so their `Scenarios` cell is a dash too. |\n\n")
 }
 
@@ -406,16 +406,16 @@ func writeStaleCauses(page *strings.Builder, doc aiCertDoc) {
 		return
 	}
 	page.WriteString("#### Why the stale records went stale\n\n")
-	fmt.Fprintf(page, "Counted per record — one (task, binding) pair — over the %d stale record(s) "+
+	fmt.Fprintf(page, "Counted per record (one task and binding pair) over the %d stale record(s) "+
 		"this build can attribute. A record covers every site its task ships, so the JSON beside this "+
 		"page carries it once per site: its %d `stale_cause` entries are these %d records. A record "+
 		"appears on more than one row below when a change moved a case and the prompt built from it "+
 		"together.\n\n", len(cause), rows, len(cause))
 	page.WriteString("| What moved | Records | What it means |\n|---|---:|---|\n")
-	fmt.Fprintf(page, "| the case | %d | Somebody rewrote the test. Re-certify: the old number "+
-		"measured a different question. |\n", cases)
+	fmt.Fprintf(page, "| the case | %d | The test case changed. Re-certify: the old result "+
+		"measured a different case. |\n", cases)
 	fmt.Fprintf(page, "| **the prompt this build sends** | %d | The product changed. The band "+
-		"describes the NEW prompt, so a drop is the cost of that change and not the model. |\n", prompts)
+		"describes the new prompt, so a drop is the cost of that change and not the model. |\n", prompts)
 	fmt.Fprintf(page, "| how a run is graded | %d | What the judge is asked, or the rule that turns "+
 		"its scores into a grade, changed. A band can shift with neither the test nor the product touched. |\n", graders)
 	if unknown > 0 {
@@ -444,8 +444,8 @@ func writeAICertIndex(page *strings.Builder, sites []aiCertSite) {
 	page.WriteString("best band, then the best reliability, then the fastest.\n\n")
 	page.WriteString("Read the band beside it before running anything on it. `certified` is a safe\n")
 	page.WriteString("pick. `supported_degraded` works, but worse. `not_supported` means the best\n")
-	page.WriteString("model anyone has measured on that site still is not good enough to ship — it\n")
-	page.WriteString("names work to do, not a model to choose. A dash means every result for that\n")
+	page.WriteString("model anyone has measured on that site still is not good enough to ship, so it\n")
+	page.WriteString("names work to do. A dash means every result for that\n")
 	page.WriteString("site is out of date or missing, and the State column says which.\n\n")
 }
 
@@ -479,10 +479,10 @@ func aiCertSiteAnchor(siteKey string) string {
 func writeAICertBindings(page *strings.Builder, bindings []aiCertBinding) {
 	page.WriteString("### Certification by provider and model\n\n")
 	page.WriteString("One row per binding, folded over every site it measured. Sites is how many\n")
-	page.WriteString("shipped sites this binding has been run against, not how many exist; the\n")
-	page.WriteString("state columns split those sites by whether the measurement still describes\n")
-	page.WriteString("what this build sends, and the band columns split the same sites by the\n")
-	page.WriteString("verdict each reached. Each record's own p50 and p95 are in the site tables.\n\n")
+	page.WriteString("shipped sites this binding has been run against. The state columns split\n")
+	page.WriteString("those sites by whether the measurement still describes what this build sends,\n")
+	page.WriteString("and the band columns split the same sites by the verdict each reached. Each\n")
+	page.WriteString("record's own p50 and p95 are in the site tables.\n\n")
 	page.WriteString("| Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |\n")
 	page.WriteString("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, b := range bindings {
@@ -521,7 +521,7 @@ func writeAICertStale(page *strings.Builder, sites []aiCertSite) {
 	page.WriteString("record never saw does not make it stale; that is `partial`.\n\n")
 	page.WriteString("*Predates per-scenario stamps* means the record carries one stamp for the\n")
 	page.WriteString("whole task and nothing finer, so it can only say that something it measured\n")
-	page.WriteString("moved — never which case. Re-certifying it costs the whole task; a record\n")
+	page.WriteString("moved, and never which case. Re-certifying it costs the whole task; a record\n")
 	page.WriteString("with per-scenario stamps names the cases, and costs only those.\n\n")
 	page.WriteString("Re-certify with `make e2e-ai TASK=<task> MODEL=<provider:model>` (paid: real\n")
 	page.WriteString("model, real network).\n\n")
@@ -570,7 +570,7 @@ func writeAICertTaskContext(page *strings.Builder, sites []aiCertSite, task stri
 }
 
 func writeAICertSite(page *strings.Builder, site aiCertSite) {
-	fmt.Fprintf(page, "<details>\n<summary><code>%s</code> — %d scenario(s), %d record(s), best state %s</summary>\n\n",
+	fmt.Fprintf(page, "<details>\n<summary><code>%s</code>: %d scenario(s), %d record(s), best state %s</summary>\n\n",
 		site.Key, len(site.Scenarios), len(site.Records), site.BestState)
 	fmt.Fprintf(page, "##### `%s`\n\n", site.Key)
 	fmt.Fprintf(page, "Scope a run of it can claim: `%s`.\n\n", site.Scope)

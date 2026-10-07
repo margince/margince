@@ -13,8 +13,10 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 )
 
 func (w *siteDeepReadWorker) Work(ctx context.Context, job *river.Job[SiteDeepReadArgs]) (workErr error) {
@@ -37,15 +39,15 @@ func (w *siteDeepReadWorker) Work(ctx context.Context, job *river.Job[SiteDeepRe
 		}
 	}()
 	err := w.run(workCtx, job.Args)
-	var deferral *ai.BudgetDeferralError
-	if !errors.As(err, &deferral) {
+	until, deferred := ai.DeferredUntil(err)
+	if !deferred {
 		return jobs.FaultContext(ctx, err)
 	}
 	now := time.Now()
 	if w.now != nil {
 		now = w.now()
 	}
-	delay := deferral.NextAttemptAt.Sub(now)
+	delay := until.Sub(now)
 	if delay < 0 {
 		delay = 0
 	}
@@ -53,14 +55,18 @@ func (w *siteDeepReadWorker) Work(ctx context.Context, job *river.Job[SiteDeepRe
 }
 
 func (w *siteDeepReadWorker) deferForBudget(ctx context.Context, readID ids.UUID, cause error) (bool, error) {
-	var deferral *ai.BudgetDeferralError
-	if !errors.As(cause, &deferral) {
+	until, deferred := ai.DeferredUntil(cause)
+	if !deferred {
 		return false, nil
 	}
 	tctx, cancel := terminalCtx(ctx)
 	defer cancel()
-	if err := w.contacts.DeferSiteRead(tctx, readID, deferral.NextAttemptAt); err != nil {
-		return true, errors.Join(cause, fmt.Errorf("recording budget deferral on the dossier: %w", err))
+	detail := contacts.SiteReadBudgetDetail
+	if errors.Is(cause, ai.ErrProviderDown) {
+		detail = providerwait.Detail
+	}
+	if err := w.contacts.DeferSiteRead(tctx, readID, until, detail); err != nil {
+		return true, errors.Join(cause, fmt.Errorf("recording the deferral on the dossier: %w", err))
 	}
 	return true, cause
 }

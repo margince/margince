@@ -1,0 +1,28 @@
+name: we_might_follow_up_some_time
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+commitment_band: hedged
+fixture:
+  - 'Ines: Could the connector also take our returns feed?'
+  - 'Lars: Good question. I will try to circle back on that at some point.'
+  - 'Ines: Sure, no rush.'
+  - 'Lars: Anything else?'
+  - 'Ines: Not today.'
+expect:
+  outcome: accepted
+  answer:
+    - line: 2
+  rubric: >
+    One speaker makes a promise so soft that it is barely one: "I will try to
+    circle back on that at some point" names no thing owed and no day. The
+    reading to reward is a proposal cited on line 2 with a LOW confidence and no
+    due date, since the harm here is the product acting on it as a firm
+    promise. A confident reading, or an invented due date, scores low. Then
+    score the summary as one plain sentence that does not make the promise
+    sound firmer than it was.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

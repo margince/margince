@@ -49,6 +49,7 @@ function mount() {
               provider: "gemini",
               configured: true,
               env_var: "GEMINI_API_KEY",
+              usable: true,
               optional: false,
               credential_kind: "api_key",
             },
@@ -56,6 +57,7 @@ function mount() {
               provider: "gemini_vertex",
               configured: true,
               env_var: "GEMINI_VERTEX_SA_JSON",
+              usable: true,
               optional: false,
               credential_kind: "service_account",
               priced_by: "gemini",
@@ -125,7 +127,7 @@ async function openVertex(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     within(
       await screen.findByTestId("ai-provider-row-gemini_vertex"),
-    ).getByRole("button", { name: /^Manage/ }),
+    ).getByRole("button", { name: /^Edit/ }),
   );
   return screen.findByRole("dialog");
 }

@@ -25,13 +25,16 @@ import (
 // way the lifecycle seams build theirs. gate is the one whose volume meter an
 // agent's changed records are admitted against.
 func newBulkEngine(db *database.DB, gate *auth.Gate) *bulkEngine {
+	contactsStore, tasks := contacts.NewStore(db), activities.NewStore(db)
+	targets := bulkTargets(contactsStore, deals.NewStore(db, DealsInstallation()))
+	targets[crmcontracts.BulkRecordTypeWorklistItem] = worklistBulkTarget{tasks: tasks, claims: contactsStore}
 	return &bulkEngine{
 		db:      db,
-		targets: bulkTargets(contacts.NewStore(db), deals.NewStore(db, DealsInstallation())),
+		targets: targets,
 		gate:    gate,
 		now:     func() time.Time { return time.Now().UTC() },
 		tags:    NewCollectionsStore(db.Pool()),
-		tasks:   activities.NewStore(db),
+		tasks:   tasks,
 	}
 }
 
@@ -50,8 +53,7 @@ type bulkHandlers struct {
 
 func (h bulkHandlers) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
 	var body crmcontracts.BulkChangePreviewRequest
-	if err := httperr.DecodeOrRefusal(w, r, &body); err != nil {
-		httperr.Write(w, r, err)
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	out, err := h.engine.Preview(r.Context(), bulkChange{
@@ -69,8 +71,7 @@ func (h bulkHandlers) PreviewBulkChange(w http.ResponseWriter, r *http.Request) 
 // claims the key and replays the first answer to a retry.
 func (h bulkHandlers) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, _ crmcontracts.ExecuteBulkChangeParams) {
 	var body crmcontracts.BulkChangeExecuteRequest
-	if err := httperr.DecodeOrRefusal(w, r, &body); err != nil {
-		httperr.Write(w, r, err)
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	change := bulkChange{
@@ -113,8 +114,7 @@ func (h bulkHandlers) PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id
 // undone".
 func (h bulkHandlers) UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, _ crmcontracts.UndoBulkChangeParams) {
 	var body crmcontracts.BulkUndoRequest
-	if err := httperr.DecodeOrRefusal(w, r, &body); err != nil {
-		httperr.Write(w, r, err)
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	var token string

@@ -4,7 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
-import { readingsDay, taskRow, waitingEmailRow } from "./brief.fixtures";
+import {
+  meetingRow,
+  readingsDay,
+  taskRow,
+  waitingEmailRow,
+} from "./brief.fixtures";
 import { render, stubApi } from "./brief.testkit";
 
 afterEach(() => {
@@ -85,9 +90,9 @@ it("puts a queued row in hand when it is pressed, and says where it stands", asy
   ).toBe("true");
 });
 
-it("opens the full queue instead of growing focus when more pages exist", () => {
+it("neither grows focus nor links the whole queue when more pages exist", () => {
   stubApi({});
-  render(
+  const { container } = render(
     <BriefFeed
       day={{
         ...readingsDay({}, [taskRow("t", "Call the buyer")]),
@@ -99,11 +104,8 @@ it("opens the full queue instead of growing focus when more pages exist", () => 
   expect(
     screen.queryByRole("button", { name: en["worklist.more"] }),
   ).toBeNull();
-  expect(
-    screen
-      .getByRole("link", { name: en["brief.feed.fullWorklist"] })
-      .getAttribute("href"),
-  ).toBe("#/home?filter=all&queue=1");
+  // The page header's "Show Worklist" button is Home's one way into the queue.
+  expect(container.querySelector('a[href*="filter=all"]')).toBeNull();
 });
 
 it("warns about urgent work beyond the loaded page using server urgency facts", () => {
@@ -118,7 +120,11 @@ it("warns about urgent work beyond the loaded page using server urgency facts", 
       state="ready"
     />,
   );
-  expect(screen.getByText("3 more urgent items in the Worklist")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "3 more urgent items in the Worklist" })
+      .getAttribute("href"),
+  ).toBe("#/home?filter=urgent&queue=1");
 });
 
 it("shows dates and does not repeat the ranking comparator", () => {
@@ -372,4 +378,27 @@ it("names a waiting row by its subject", () => {
     within(column).getByRole("button", { name: /Meet next Tues\?/ }),
     "the column stopped naming a waiting row by the subject it is known by",
   ).toBeTruthy();
+});
+
+it("names the host of a meeting in hand on Home's focus card", () => {
+  stubApi({});
+  const row = {
+    ...meetingRow("m", false),
+    host: {
+      kind: "user" as const,
+      id: "01a05500-0000-7000-8000-0000000000c3",
+      label: "Lena Fischer",
+    },
+  };
+  const { container } = render(
+    <BriefFeed
+      day={{
+        ...readingsDay({}, [row]),
+        focus: { items: [row], total: 1, urgent_remaining: 0 },
+      }}
+      state="ready"
+    />,
+  );
+  const card = container.querySelector(".brief-triage-lead");
+  expect(card?.textContent).toContain("hosted by Lena Fischer");
 });

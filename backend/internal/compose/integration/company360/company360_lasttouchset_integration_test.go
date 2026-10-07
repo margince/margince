@@ -96,7 +96,7 @@ func TestTheSetLastTouchRefusesAReaderWithoutTheActivityGrant(t *testing.T) {
 	}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, noActivity)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := company360svc.LastTouchFor(ctx, tx, []ids.CompanyID{ids.From[ids.CompanyKind](company)}, company360svc.AssembleOptions{})
+		_, err := company360svc.LastTouchFor(ctx, tx, []ids.CompanyID{ids.From[ids.CompanyKind](company)}, company360Clock, company360svc.AssembleOptions{})
 		return err
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -112,7 +112,7 @@ func lastTouchFor(ctx context.Context, t *testing.T, e *integration.Env, compani
 	}
 	var out map[ids.CompanyID]company360svc.LastTouch
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		touched, err := company360svc.LastTouchFor(ctx, tx, wanted, company360svc.AssembleOptions{})
+		touched, err := company360svc.LastTouchFor(ctx, tx, wanted, company360Clock, company360svc.AssembleOptions{})
 		out = touched
 		return err
 	}); err != nil {

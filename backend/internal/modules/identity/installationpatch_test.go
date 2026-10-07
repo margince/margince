@@ -28,8 +28,13 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 	// missed here either. A hand-written literal would have the same gap as
 	// the encoder it is checking.
 	filled := reflect.New(patchType).Elem()
+	operationsField, _ := patchType.FieldByName("Operations")
 	for i := range patchType.NumField() {
 		field := filled.Field(i)
+		if i == operationsField.Index[0] {
+			field.Set(reflect.ValueOf(filledOperationPatch(t)))
+			continue
+		}
 		if field.Kind() != reflect.Pointer {
 			t.Fatalf("%s is %s, want a pointer — a sparse patch marks absence with nil",
 				patchType.Field(i).Name, field.Kind())
@@ -84,10 +89,10 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 		t.Fatalf("encoding a fully-populated patch: %v", err)
 	}
 
-	if len(encoded) != patchType.NumField() {
+	if want := patchType.NumField() - 1 + operationsField.Type.NumField(); len(encoded) != want {
 		t.Errorf("the encoder produced %d writes for %d patch fields — "+
 			"a field it does not encode is one that silently stops saving",
-			len(encoded), patchType.NumField())
+			len(encoded), want)
 	}
 
 	// Every write carries bytes, and no key appears twice. A duplicated entry

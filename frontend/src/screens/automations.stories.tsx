@@ -243,6 +243,19 @@ export const AdminCard: Story = {
   },
 };
 
+// The library's verb opens the create dialog seeded from the template.
+export const CreatingFromATemplate: Story = {
+  render: AdminCard.render,
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const use = await within(canvasElement).findAllByRole("button", {
+      name: "Use template",
+    });
+    await user.click(use[0]);
+    await within(canvasElement.ownerDocument.body).findByRole("dialog");
+  },
+};
+
 // The card in dark. The library's hairlines are `--borderSubtle` between rows
 // and the recipe line is `--textMeta` under a description — the two pairs
 // most likely to disappear into the card when the ground goes dark, and both are

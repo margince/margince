@@ -3,10 +3,10 @@
 
 package company360
 
-// What the account's open signals say, read once for the three surfaces that
-// ask: the strip states the worst, the health section counts the commitments,
-// and the contradiction rule asks whether the contract ended. Three reads
-// would let them describe three different instants of the same account.
+// What the account's open signals say, read once for the two surfaces that
+// ask: the strip states the worst, and the contradiction rule asks whether the
+// contract ended. Two reads would let them describe two different instants of
+// the same account.
 
 import (
 	"context"
@@ -21,13 +21,11 @@ import (
 )
 
 // signalFacts is what the open signals say about the account. Readable is
-// false when the caller may not read signals at all, which is why the counts
-// are not enough on their own: zero commitments and no permission to see them
-// are different answers, and the page must not present one as the other.
+// false when the caller may not read signals at all: nothing standing and no
+// permission to see it are different answers.
 type signalFacts struct {
-	Readable        bool
-	OpenCommitments int
-	ContractEnded   bool
+	Readable      bool
+	ContractEnded bool
 	// ContractEndedSaid and ContractEndedAt are the newest open contract_ended
 	// signal's own sentence and when it was read. They are what the
 	// contradiction rule cites, so a reader checks the conflict against the
@@ -48,13 +46,9 @@ type signalHeadline struct {
 	Summary  string
 }
 
-// readSignalFacts counts the things one side said they would do and nobody has
-// closed — open `commitment_made` signals on this account.
-//
-// It reports counted=false rather than zero when the caller cannot read
-// signals, following pendingApprovals' shape in this package: zero would say
-// the account owes nothing, which is a claim about the account rather than
-// about what this reader was allowed to see.
+// readSignalFacts reads what the account's open signals say: the worst one
+// standing, and whether the contract ended. A caller who may not read signals
+// gets Readable false rather than an account with nothing standing.
 func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (signalFacts, error) {
 	if !auth.ReadGranted(ctx, "signal") {
 		return signalFacts{}, nil
@@ -78,17 +72,15 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (s
 	facts := signalFacts{Readable: true}
 	var kind, severity, summary, endedSaid *string
 	var endedAt *time.Time
-	// One read serves three readers: the strip states the worst, the health
-	// section counts the commitments, and the contradiction rule asks whether
-	// the contract ended — and what the mail that says so said. Three queries
-	// would let them describe three instants.
+	// One read serves two readers: the strip states the worst, and the
+	// contradiction rule asks whether the contract ended — and what the mail
+	// that says so said. Two queries would let them describe two instants.
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
 		WITH open_signals AS (
 			SELECT s.id, s.kind, s.severity, s.summary, s.detected_at FROM signal s
 			 WHERE %[1]s AND s.status = 'open' AND s.archived_at IS NULL AND %[2]s
 		)
-		SELECT (SELECT count(*) FROM open_signals WHERE kind = 'commitment_made'),
-		       ended.summary, ended.detected_at,
+		SELECT ended.summary, ended.detected_at,
 		       worst.kind, worst.severity, worst.summary
 		  FROM (SELECT 1) one
 		  LEFT JOIN LATERAL (
@@ -102,7 +94,7 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (s
 			          detected_at DESC, id DESC
 			 LIMIT 1) worst ON true`,
 		signals.OfCompanyWhere(companyPos), scope), args...).
-		Scan(&facts.OpenCommitments, &endedSaid, &endedAt,
+		Scan(&endedSaid, &endedAt,
 			&kind, &severity, &summary); err != nil {
 		return signalFacts{}, fmt.Errorf("read the account's open signals: %w", err)
 	}

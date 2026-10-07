@@ -6,7 +6,7 @@
 package gates
 
 // Every count that becomes a relationship-strength number counts the shared
-// UNIT, not rows.
+// unit, not rows.
 //
 // A channel message arrives as one row per line, so an afternoon of chat is
 // dozens of rows and one conversation. relstrength.InteractionUnitSQL is what
@@ -213,7 +213,8 @@ func relstrengthConsts(t *testing.T, pkg goPackage, group string) map[string]str
 	consts := map[string]string{}
 	for _, file := range pkg.files {
 		if !gatekit.References(file.ast, relstrengthImport, "InteractionUnitSQL") &&
-			!gatekit.References(file.ast, relstrengthImport, "InteractionKindSQLGroup") {
+			!gatekit.References(file.ast, relstrengthImport, "InteractionKindSQLGroup") &&
+			!gatekit.References(file.ast, relstrengthImport, "InteractionCountsSQL") {
 			continue
 		}
 		ast.Inspect(file.ast, func(node ast.Node) bool {
@@ -232,7 +233,9 @@ func relstrengthConsts(t *testing.T, pkg goPackage, group string) map[string]str
 			switch selector.Sel.Name {
 			case "InteractionUnitSQL":
 				consts[spec.Names[0].Name] = unitSentinel
-			case "InteractionKindSQLGroup":
+			// InteractionCountsSQL filters on the same kind group, plus the
+			// meeting status test, so it qualifies a statement the same way.
+			case "InteractionKindSQLGroup", "InteractionCountsSQL":
 				consts[spec.Names[0].Name] = group
 			}
 			return true

@@ -17,10 +17,21 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // Latency percentiles and OpenRouter's own name read the same in every
+  // language, as does a raw key = value line the summary falls back to.
+  "aiFigures.col.p50",
+  "aiFigures.col.p95",
+  "aiFigures.line.p50",
+  "aiServing.openRouter",
+  "aiServing.openRouterDocs",
+  "aiServing.say.raw",
   // The name of the network, offered as a profile field in the research drawer.
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
   "contact.research.field.linkedin",
+  // Quoted words between quotation marks, which Vietnamese writes as English
+  // does; only the words inside change, and they are the speaker's own.
+  "commitment.quote",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",

@@ -57,7 +57,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "contact-moment-ladder-v4"
+const ruleVersion = "contact-moment-ladder-v5"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -83,35 +83,44 @@ const prefillIntent = "intent"
 // dismissal the viewer has already made against the same evidence.
 //
 // It runs LAST among the sections so it can read what the others gathered.
-func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, out *crmcontracts.Contact360) error {
-	var readErr error
+func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions, out *crmcontracts.Contact360) error {
+	putAway, err := s.momentDismissals(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
 	dismissed := func(moment crmcontracts.ContactMoment) bool {
-		if readErr != nil {
-			return false
-		}
-		put, err := s.momentDismissed(ctx, tx, contactID, moment)
-		if err != nil {
-			readErr = err
-		}
-		return put
+		stored, ok := putAway[moment.ClaimKey]
+		return ok && stored == moment.EvidenceFingerprint
 	}
-	moment := deriveMomentPast(ctx, now, out, dismissed)
-	if readErr != nil {
-		return readErr
+	// A reader who may not read activity sees no email to cite, so their
+	// promise cards stay as they are.
+	var sent *wroteTo
+	latest, found, err := lastWroteTo(ctx, tx, contactID, now, opts)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return err
 	}
+	if found {
+		sent = &latest
+	}
+	zone, err := recordZone(ctx, tx)
+	if err != nil {
+		return err
+	}
+	moment := deriveMomentPast(ctx, now, out, dismissed, proposer(ctx, out, sent, zone, dismissed))
 	momentaction.Withhold(ctx, &moment)
 	out.Moment = &moment
 	return nil
 }
 
-// momentDismissed asks whether this viewer has already put this moment away
-// AND the evidence has not moved since.
+// momentDismissals reads the moments this viewer has put away on this contact,
+// as the fingerprint each was showing, keyed by claim key.
 //
-// The fingerprint comparison is the whole mechanism. A dismissal keyed on the
-// moment's path alone survives the world changing underneath it: the reader
-// dismisses "she went quiet", a reply arrives, and the page stays silent about
-// the thing that just changed. Keyed on the evidence, the dismissal re-arms.
-func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, moment crmcontracts.ContactMoment) (bool, error) {
+// A moment counts as dismissed only while its fingerprint still matches. A
+// dismissal keyed on the moment's path alone survives the world changing
+// underneath it: the reader dismisses "she went quiet", a reply arrives, and
+// the page stays silent about the thing that just changed. Keyed on the
+// evidence, the dismissal re-arms.
+func (s *Service) momentDismissals(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (map[string]string, error) {
 	// A dismissal belongs to a contact's screen, so a call carrying no user has
 	// none to honour. An agent reading through a passport must not consume the
 	// granting human's: it sees every moment. This is a fact about the caller,
@@ -123,30 +132,35 @@ func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, contactID ids.
 	// it does not do. auth.RequireHuman is what tells the two apart.
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) {
-		return false, nil
+		return map[string]string{}, nil
 	}
 	if err := auth.RequireHuman(ctx); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return false, nil
+			return map[string]string{}, nil
 		}
-		return false, err
+		return nil, err
 	}
-	var stored string
-	// (user_id, contact_id, claim_key) is the table's primary key, so the three
-	// keys name at most one row and QueryRow cannot be reading the first of
-	// several.
-	err := tx.QueryRow(ctx, `
-		SELECT evidence_fingerprint
+	rows, err := tx.Query(ctx, `
+		SELECT claim_key, evidence_fingerprint
 		FROM contact_moment_dismissal
-		WHERE user_id = $1 AND contact_id = $2 AND claim_key = $3`,
-		viewer.UserID, contactID, moment.ClaimKey).Scan(&stored)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
+		WHERE user_id = $1 AND contact_id = $2`,
+		viewer.UserID, contactID)
 	if err != nil {
-		return false, fmt.Errorf("read moment dismissal: %w", err)
+		return nil, fmt.Errorf("read moment dismissals: %w", err)
 	}
-	return stored == moment.EvidenceFingerprint, nil
+	defer rows.Close()
+	putAway := map[string]string{}
+	for rows.Next() {
+		var key, fingerprint string
+		if err := rows.Scan(&key, &fingerprint); err != nil {
+			return nil, fmt.Errorf("read moment dismissals: %w", err)
+		}
+		putAway[key] = fingerprint
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read moment dismissals: %w", err)
+	}
+	return putAway, nil
 }
 
 // deriveMoment walks the ladder in ADR-0096's fixed order and returns the first
@@ -160,7 +174,8 @@ func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, contactID ids.
 // inputs this build does not have, and a rule that cannot fire belongs nowhere
 // on the page.
 func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
-	return deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false })
+	return deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false },
+		func(moment crmcontracts.ContactMoment) crmcontracts.ContactMoment { return moment })
 }
 
 // deriveMomentPast walks the same ladder and skips the rungs whose card this
@@ -179,8 +194,10 @@ func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact
 func deriveMomentPast(
 	ctx context.Context, now time.Time, page *crmcontracts.Contact360,
 	dismissed func(crmcontracts.ContactMoment) bool,
+	propose func(crmcontracts.ContactMoment) crmcontracts.ContactMoment,
 ) crmcontracts.ContactMoment {
-	for _, rung := range momentLadder {
+	for _, plain := range momentLadder {
+		rung := proposing(plain, propose)
 		moment, ok := rung(ctx, now, page)
 		if !ok || !dismissed(moment) {
 			if ok {
@@ -201,13 +218,16 @@ func deriveMomentPast(
 	return nothingNeededMoment(ctx, now, page)
 }
 
+// ladderRung answers one rung's question over the assembled page.
+type ladderRung = func(context.Context, time.Time, *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool)
+
 // momentLadder is the ladder itself, named so a test can walk every rung.
 //
 // A rule that is only reachable through deriveMoment can only be tested by
 // constructing a page that makes it win, and the rungs below it then never run
 // at all - which is how three dead buttons sat on untested rungs while a test
 // claiming to be a general rule covered two.
-var momentLadder = []func(context.Context, time.Time, *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool){
+var momentLadder = []ladderRung{
 	meetingPrepMoment,    // 1. a meeting within 72 hours
 	reEngagedMoment,      // 2. new inbound after a material quiet period
 	overduePromiseMoment, // 4. a promise of ours is past its date, from mail or the task list

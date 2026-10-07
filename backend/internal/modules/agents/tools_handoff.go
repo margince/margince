@@ -30,7 +30,6 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -116,10 +115,6 @@ func (t prepareHandoff) Spec() mcp.ToolSpec {
 			"project_id":{"type":"string","format":"uuid","description":"The project being handed to delivery"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PreparedHandoff](),
-		// The view renders the same answer with the gaps beside the facts they
-		// are about, which is the comparison a contact makes when deciding
-		// whether the work is ready to hand over.
-		UI: &mcp.ToolUI{ResourceURI: apps.HandoffURI},
 	}
 }
 

@@ -20,8 +20,11 @@ func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
 	var p strings.Builder
 	p.WriteString("# What the assistant can be relied on to do\n\n")
 	p.WriteString("<!-- Generated together with mcp-tool-coverage.json; do not edit by hand. -->\n\n")
-	p.WriteString(r.Note + "\n\n")
-	p.WriteString("**This page is generated, and an edit made here is lost.**\n\n")
+	writeCoverageIntro(&p, r)
+	writeCoverageAssistants(&p, r)
+	writeCoverageJobs(&p, r)
+	p.WriteString("---\n\n## For engineers\n\nEverything below is the detail behind the two tables above: " +
+		"which tools each job requires, every run's numbers, and what no job tests yet.\n\n")
 	writeCoverageHowToRead(&p)
 	writeCoverageTotals(&p, r)
 	writeCoverageSurfaces(&p, r)
@@ -43,23 +46,20 @@ func writeCoverageHowToRead(p *strings.Builder) {
 	p.WriteString("| Word | What it means |\n|---|---|\n")
 	p.WriteString("| Tool | One action the assistant can take, such as `send_email` or `run_report`. |\n")
 	p.WriteString("| Case | One use case, driven end to end by a real assistant against a seeded " +
-		"installation — the shape a user meets, not a single step. |\n")
-	p.WriteString("| Requires | The case FAILS if the assistant never calls this tool. This is what " +
+		"installation: the shape a user meets, rather than a single step. |\n")
+	p.WriteString("| Requires | The case fails if the assistant never calls this tool. This is what " +
 		"coverage means here. |\n")
 	p.WriteString("| Permitted | The case allows the tool without needing it. A case can pass having " +
-		"never touched a tool it permits, so **permission is not coverage**. |\n")
-	p.WriteString("| Required as one of a set | Some questions have more than one honest engine, so " +
-		"a case can require `A` **or** `B` and fail if neither is called. Every run reaches for one " +
-		"of the set, and any one member can go uncalled — which is neither of the two words above. |\n")
+		"never touched a tool it permits, so a permitted tool is not covered by that case. |\n")
+	p.WriteString("| Required as one of a set | Some questions can be answered by more than one tool, so " +
+		"a case can require `A` or `B` and fails if neither is called. Every run reaches for one " +
+		"of the set, and any one member can go uncalled, so this is neither of the two words above. |\n")
 	p.WriteString("| Driven | At least one case requires this tool. A tool no case requires is " +
-		"**untried, not broken** — nothing has ever asked an assistant to reach for it. |\n")
+		"untried: nothing has ever asked an assistant to reach for it, so nothing says it is broken. |\n")
 	p.WriteString("| Reliability | Of the runs on the cases that require this tool, the share that " +
 		"passed. Each case is run several times because the lane is not deterministic. |\n")
-	p.WriteString("| Bar | Each case carries its own `pass_at` — how many of its runs must pass. " +
+	p.WriteString("| Bar | Each case carries its own `pass_at`: how many of its runs must pass. " +
 		"Cases are not equally hard, so one shared number would flatter the easy ones. |\n\n")
-	p.WriteString("This page does not grade single steps or name a best model per site — that is\n")
-	p.WriteString("[ai-certification.md](ai-certification.md), a different lane asking a different " +
-		"question. Read it beside this one.\n\n")
 }
 
 func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
@@ -76,14 +76,14 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 
 	if len(r.Models) == 0 {
 		p.WriteString("> **No model has a committed run.** Every case below says `not run` rather " +
-			"than a rate — nobody has paid for the answer yet, and an empty lane is not a failing one.\n\n")
+			"than a rate: nobody has paid for the answer yet, and an empty lane is not a failing one.\n\n")
 		return
 	}
 
 	p.WriteString("## By model\n\n")
 	p.WriteString("Which model drove the lane, and how it went. The tool columns further down are " +
-		"the same for every model — what a case REQUIRES is the scenario's property, not the " +
-		"driver's — so what changes here is whether the driving succeeded.\n\n")
+		"the same for every model, because what a case requires belongs to the scenario. " +
+		"What changes here is whether the driving succeeded.\n\n")
 	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |\n" +
 		"|---|---:|---:|---:|---:|---:|\n")
 	for _, m := range r.Models {
@@ -108,7 +108,7 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## The use cases\n\n")
 	p.WriteString("One row per case per model that ran it. A case nobody has run appears once, " +
-		"marked `not run`, rather than being dropped — a case missing from this table would read " +
+		"marked `not run`, rather than being dropped: a case missing from this table would read " +
 		"as a case that does not exist.\n\n")
 	p.WriteString("| Case | Model | Result | Passed | Bar | Criteria | Requires |\n" +
 		"|---|---|---|---:|---:|---|---|\n")
@@ -116,7 +116,7 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 		criteria := criteriaNames(c.Name, c.Criteria, r.Criteria)
 		link := fmt.Sprintf("[%s](../../e2e/llm/scenarios/%s)", c.Name, c.File)
 		if len(c.ByModel) == 0 {
-			fmt.Fprintf(p, "| %s | — | not run | — | — | %s | %s |\n",
+			fmt.Fprintf(p, "| %s | - | not run | - | - | %s | %s |\n",
 				link, criteria, requiresColumn(c))
 			continue
 		}
@@ -143,7 +143,7 @@ func writeCoverageCriteria(p *strings.Builder, r mcpToolCoverage) {
 		"different criteria that share a digit, which is why every row below names its case.\n\n")
 	p.WriteString("| Case | # | Criterion | What it asks |\n|---|---:|---|---|\n")
 	for _, c := range r.Criteria {
-		fmt.Fprintf(p, "| `%s` | %d | **%s** | %s |\n", c.Case, c.Number, c.Name, c.Statement)
+		fmt.Fprintf(p, "| `%s` | %d | %s | %s |\n", c.Case, c.Number, c.Name, c.Statement)
 	}
 	p.WriteString("\n")
 }
@@ -217,9 +217,9 @@ func writeCoverageFailing(p *strings.Builder, r mcpToolCoverage) {
 // that is the bill being paid for the untried thing.
 func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## 4. What no use case requires\n\n")
-	p.WriteString("**Untried by THIS lane, which is not the same as ungraded.** The `Graded by` " +
+	p.WriteString("A tool this lane has not tried may still be graded. The `Graded by` " +
 		"column names the certification tasks whose\n")
-	p.WriteString("corpus tests the tool anyway — that lane asks which tool a goal should reach " +
+	p.WriteString("corpus tests the tool anyway. That lane asks which tool a goal should reach " +
 		"for, and which plausible neighbour it must\n")
 	p.WriteString("avoid, which this lane cannot express at all: it sees that a name appeared, " +
 		"never whether it was the right first reach.\n\n")
@@ -252,14 +252,9 @@ func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
 // referenced was not in this repository.
 func criteriaNames(caseName string, numbers []int, catalog []criterionRow) string {
 	if len(numbers) == 0 {
-		return "—"
+		return "-"
 	}
-	named := map[int]string{}
-	for _, c := range catalog {
-		if c.Case == caseName {
-			named[c.Number] = c.Name
-		}
-	}
+	named := criterionNames(caseName, catalog)
 	out := make([]string, 0, len(numbers))
 	for _, n := range numbers {
 		if name, ok := named[n]; ok {
@@ -269,6 +264,17 @@ func criteriaNames(caseName string, numbers []int, catalog []criterionRow) strin
 		out = append(out, fmt.Sprintf("**%d**", n))
 	}
 	return strings.Join(out, "<br>")
+}
+
+// criterionNames is one case's criteria by number.
+func criterionNames(caseName string, catalog []criterionRow) map[int]string {
+	named := map[int]string{}
+	for _, c := range catalog {
+		if c.Case == caseName {
+			named[c.Number] = c.Name
+		}
+	}
+	return named
 }
 
 // requiresColumn renders what a case demands, with an any-of group written as
@@ -284,7 +290,7 @@ func requiresColumn(c caseRow) string {
 		parts = append(parts, strings.Join(backticked(group), " or "))
 	}
 	if len(parts) == 0 {
-		return "—"
+		return "-"
 	}
 	return strings.Join(parts, ", ")
 }
@@ -299,9 +305,9 @@ func requiresColumn(c caseRow) string {
 // called. Neither existing section can say that, which is why this one exists.
 func writeCoverageOneOfASet(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## 3. What a case requires only as one of a set\n\n")
-	p.WriteString("The case fails if NONE of the set is called, and passes having called any one of " +
+	p.WriteString("The case fails if no member of the set is called, and passes having called any one of " +
 		"them. So a run may never touch the tool named here,\n")
-	p.WriteString("and the case's pass rate belongs to the set rather than to this row — which is " +
+	p.WriteString("and the case's pass rate belongs to the set rather than to this row. That is " +
 		"why no reliability is printed for it above.\n\n")
 	p.WriteString("| Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |\n" +
 		"|---|---:|---|---|---|---|\n")
@@ -333,7 +339,7 @@ func backticked(in []string) []string {
 // joinOrDash renders a list as backticked names, or a dash when it is empty.
 func joinOrDash(in []string) string {
 	if len(in) == 0 {
-		return "—"
+		return "-"
 	}
 	return strings.Join(backticked(in), ", ")
 }

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { emailDetailKey } from "./emaildetail";
+import { EmailEnvelope, emailDetailKey } from "./emaildetail";
 import { EmailText } from "./emailtext";
 import { Heading } from "./heading";
 import { SurfaceState } from "./surfacestate";
@@ -140,16 +140,14 @@ function SourceEmailBody({
   const subject = presentation.summary.subject?.trim() || t("email.noSubject");
   return (
     <section className="sourceemail">
-      <Heading size="small" className="sourceemail__label">
-        {t("tasks.sourceEmail")}
-      </Heading>
-      <p className="sourceemail__subject">{subject}</p>
-      <p className="sourceemail__when">
-        {formatWhen(presentation.occurred_at)}
-      </p>
-      <div className="sourceemail__body">
-        <EmailText body={presentation.body ?? ""} />
+      <div className="sourceemail__envelope">
+        <Heading size="small" className="sourceemail__label">
+          {t("tasks.sourceEmail")}
+        </Heading>
+        <p className="sourceemail__subject">{subject}</p>
+        <EmailEnvelope presentation={presentation} formatWhen={formatWhen} />
       </div>
+      <EmailText body={presentation.body ?? ""} />
     </section>
   );
 }

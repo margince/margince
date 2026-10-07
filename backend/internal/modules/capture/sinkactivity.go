@@ -40,14 +40,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// separately files one message under three different times, and the reply
 	// event then claims to describe an activity it disagrees with. fields is a
 	// value copy, so settling it here settles it for every one of them.
-	if fields.Kind == meetingKind && s.resolveInvitation != nil {
-		id, found, err := s.resolveInvitation(ctx, tx, rec.NaturalKey, rec.Raw)
-		if err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if found {
-			return datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}, false, counterpartyDecision{}, nil
-		}
+	invited, found, err := s.invitationAlreadyFiled(ctx, tx, rec, fields)
+	if err != nil || found {
+		return invited, false, counterpartyDecision{}, err
 	}
 	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
 	// Whose credential carried this record, asked ONCE and carried to both the
@@ -174,6 +169,11 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			// advances the watermark and no later pass retries it.
 			return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)
 		}
+		// Before this seat's own import and participant rows: the claim asks who
+		// the STORED row names as sender, and this capture is about to add itself.
+		if err := s.claimOwnSentMailTx(ctx, tx, id, rec); err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
 		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
@@ -223,27 +223,12 @@ func (s *Sink) finishNewActivity(
 	// when staging ran ahead of that gate. And a replayed message writes no
 	// second copy: every pull minted fresh keys and then skipped the insert, so
 	// a routine backfill left an unreferenced object per attachment per pass.
-	// A thread the classifier has already judged private stores no files at
-	// all. Decided here, before staging, because this is the last point where
-	// the bodies are still only in memory: once stageParts has run they are in
-	// the object store, and the raw original points at them rather than
-	// carrying them.
-	private, verdict, err := threadIsPrivateTx(ctx, tx, rec)
+	// A private message stores no bytes, only the files' names. Decided here,
+	// before staging, because this is the last point where the bodies are
+	// still only in memory: once stageParts has run they are in the object
+	// store, and the raw original points at them rather than carrying them.
+	rec, err := s.keepParts(ctx, tx, id, rec, fields)
 	if err != nil {
-		return counterpartyDecision{}, err
-	}
-	if private {
-		var withheld int
-		rec, withheld = stripPersonalParts(rec)
-		if err := s.personalPartsWithheld(ctx, tx, rec, withheld, verdict); err != nil {
-			return counterpartyDecision{}, err
-		}
-	}
-	staged, err := s.stageParts(ctx, rec)
-	if err != nil {
-		return counterpartyDecision{}, err
-	}
-	if err := s.recordParts(ctx, tx, id, rec, fields, staged); err != nil {
 		return counterpartyDecision{}, err
 	}
 	if err := s.logPartDrops(ctx, tx, rec); err != nil {
@@ -265,6 +250,10 @@ func (s *Sink) finishNewActivity(
 	// attendees. On anything inbound it is the sender's text.
 	if err := StampFurtherParticipants(ctx, tx, id, fields.Kind, fields.ChannelProvider,
 		ParticipantListAttested(rec), rec.Participants); err != nil {
+		return counterpartyDecision{}, err
+	}
+	if err := StampSeatsPastTheCap(ctx, tx, id, fields.Kind,
+		ParticipantListAttested(rec), rec.WithheldParties); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// And the names those rows just recorded, for an attendee who is ALREADY a

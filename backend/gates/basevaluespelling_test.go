@@ -5,8 +5,8 @@
 
 package gates
 
-// One deal's base-currency value is spelled twice, in two packages that cannot
-// import each other, and this is what stops the two from drifting.
+// One deal's base-currency value is computed in two packages that cannot import
+// each other, and the two computations must agree.
 //
 // The drift that matters is not cosmetic. The expression decides three things a
 // reader would never suspect were decisions: that a closed deal keeps the rate

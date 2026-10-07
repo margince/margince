@@ -130,40 +130,44 @@ export function MergeAction<Survivor extends { id: string }>({
       >
         {label}
       </Button>
-      <Modal open={open} onClose={close} labelledBy={headingId}>
+      <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {label}
         </Heading>
-        <p className="mergeaction-lede">{t("merge.pickTarget")}</p>
-        <SearchField
-          placeholder={t("merge.searchPlaceholder")}
-          aria-label={t("merge.searchPlaceholder")}
-          value={term}
-          onChange={(event) => {
-            setTerm(event.target.value);
-            setTarget(null);
-          }}
-        />
-        <ErrorLine error={searchFailure} />
-        <ul className="mergeaction-candidates">
-          {candidates.map((candidate) => (
-            <li key={candidate.id}>
-              <Button
-                className="candidate-option"
-                aria-pressed={target?.id === candidate.id}
-                onClick={() => setTarget(candidate)}
-              >
-                {candidate.name}
-              </Button>
-            </li>
-          ))}
-        </ul>
-        {target && (
-          <p className="mergeaction-confirm">
-            {t("merge.confirm", { source: sourceName, target: target.name })}
-          </p>
-        )}
-        <ErrorLine error={mutation.error} />
+        <div className="form-stack">
+          <p>{t("merge.pickTarget")}</p>
+          <SearchField
+            placeholder={t("merge.searchPlaceholder")}
+            aria-label={t("merge.searchPlaceholder")}
+            value={term}
+            onChange={(event) => {
+              setTerm(event.target.value);
+              setTarget(null);
+            }}
+          />
+          <ErrorLine error={searchFailure} />
+          {candidates.length > 0 && (
+            <ul className="mergeaction-candidates">
+              {candidates.map((candidate) => (
+                <li key={candidate.id}>
+                  <Button
+                    className="candidate-option"
+                    aria-pressed={target?.id === candidate.id}
+                    onClick={() => setTarget(candidate)}
+                  >
+                    {candidate.name}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {target && (
+            <p>
+              {t("merge.confirm", { source: sourceName, target: target.name })}
+            </p>
+          )}
+          <ErrorLine error={mutation.error} />
+        </div>
         <div className="actions">
           <Button onClick={close} disabled={mutation.isPending}>
             {t("create.cancel")}

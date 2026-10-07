@@ -144,11 +144,15 @@ func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx, asOf time.Time
 	if err != nil {
 		return 0, err
 	}
-	// Only a measurement is remembered: the compiled horizon standing in for
-	// one that ran out of time would otherwise be served for the hour as if
-	// this installation had been measured.
-	if measured && wsErr == nil {
-		s.horizons.remember(ws, asOf, s.now(), days)
+	// The compiled horizon standing in for a measurement is remembered too, but
+	// briefly, so a read of several pages does not re-run a measurement that
+	// just ran out of time.
+	if wsErr == nil {
+		ttl := waitingHorizonTTL
+		if !measured {
+			ttl = waitingHorizonFallbackTTL
+		}
+		s.horizons.remember(ws, asOf, s.now(), days, ttl)
 	}
 	return days, nil
 }

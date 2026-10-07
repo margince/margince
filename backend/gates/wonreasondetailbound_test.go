@@ -7,7 +7,7 @@
 
 package gates
 
-// The paperless-win detail's length bound is ONE number, in three places that
+// The paperless-win detail's length bound is one number, in three places that
 // each need it.
 //
 // `api/crm.yaml` publishes it, so every generated client truncates to it. The

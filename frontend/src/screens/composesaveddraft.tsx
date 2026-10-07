@@ -14,7 +14,7 @@ import { ifMatch } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { paragraphsFrom } from "../design-system/richtext";
-import { type Toast, useToast } from "../design-system/toast";
+import { type Toast, useOwnToast, useToast } from "../design-system/toast";
 import { replySubject } from "../format/replysubject";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
@@ -58,13 +58,15 @@ export function savedDraftAnchor(input: {
   return input.entityId ? { type: input.entityType, id: input.entityId } : null;
 }
 
-function draftKey(anchor: SavedDraftAnchor | null) {
+export function draftKey(anchor: SavedDraftAnchor | null) {
   return ["mail-draft", anchor?.type ?? "", anchor?.id ?? ""] as const;
 }
 
 // A 404 is the ordinary answer: no draft here, or an anchor this reader can no
 // longer see, which the server reports as one thing on purpose.
-async function readDraft(anchor: SavedDraftAnchor): Promise<MailDraft | null> {
+export async function readDraft(
+  anchor: SavedDraftAnchor,
+): Promise<MailDraft | null> {
   const { data, error, response } = await api.GET("/mail-drafts", {
     params: { query: { anchor_type: anchor.type, anchor_id: anchor.id } },
   });
@@ -246,16 +248,13 @@ export function useSavedDraft(input: {
   // text alone and only holds the version, so the next save replaces it. A
   // composer reopened still holding the saved words is a restored one too.
   const decided = useRef(new Set<string>());
-  // The "Draft saved" toast is sticky, and every later toast queues behind it.
   // Reopening the composer puts the draft back on screen with its own Delete,
-  // so the toast has said its piece and would otherwise hold the queue.
-  const savedToastUp = useRef(false);
+  // so the "Draft saved" toast, if it is still up, has said its piece.
+  const savedToast = useOwnToast();
   const sends = useRef(0);
   useEffect(() => {
-    if (!open || !savedToastUp.current) return;
-    savedToastUp.current = false;
-    toast.dismiss();
-  }, [open, toast]);
+    if (open) savedToast.withdraw();
+  }, [open, savedToast]);
   const onRestore = input.onRestore;
   const typed = wroteSomething(fields, defaults);
   useEffect(() => {
@@ -305,12 +304,11 @@ export function useSavedDraft(input: {
       if (ask.sends !== sends.current) return;
       queryClient.setQueryData(draftKey(ask.anchor), saved);
       setChangedElsewhere(false);
-      savedToastUp.current = true;
-      toast.show(t("compose.savedDraftSaved"), {
+      savedToast.show(t("compose.savedDraftSaved"), {
         action: {
+          kind: "undo",
           label: t("compose.savedDraftDelete"),
           onAct: () => {
-            savedToastUp.current = false;
             deleteFromToast({
               queryClient,
               toast,
@@ -437,10 +435,16 @@ export function SavedDraftNotices({ draft }: Readonly<{ draft: SavedDraft }>) {
     );
   }
   if (!draft.restored) return null;
+  // An agent's words are marked as an agent's until the reader saves over
+  // them, so they are read before they are sent.
+  const byAgent = draft.held?.agent_drafted === true;
   return (
     <Callout
       kind="standing"
-      title={t("compose.savedDraftRestored")}
+      tone={byAgent ? "ai" : "info"}
+      title={t(
+        byAgent ? "compose.savedDraftByAgent" : "compose.savedDraftRestored",
+      )}
       actions={
         <Button onClick={draft.remove} pending={draft.removing}>
           {t("compose.savedDraftRemove")}

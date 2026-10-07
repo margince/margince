@@ -7,19 +7,18 @@ import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { today } from "../format/calendarday";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { borrowedRows, useAiModelCatalogue } from "./ai-models";
+import { usePriceSync } from "./ai-price-sync";
 import { pricingPageFor } from "./ai-provider-links";
 import { providerName } from "./ai-provider-names";
 import type { ProviderUse } from "./ai-routing-query";
-import {
-  type ModelPriceRefresh,
-  ProviderRefreshLine,
-} from "./rate-catalogue-refresh";
+import { ProviderRefreshLine } from "./rate-catalogue-refresh";
 import { type BoundModel, PriceForm } from "./rate-manual";
 import { RemovePriceDialog } from "./rate-remove";
 import "./ai-settings.css";
@@ -29,8 +28,8 @@ type SheetRow = components["schemas"]["AiModelRate"];
 
 export type ProviderUsage = ProviderUse;
 
-// Whether a vendor can be called (`usable`) crossed with whether routing binds
-// it. Four readings, and the two worth a reader's attention are the off-diagonal
+// Whether a vendor can be called (`usable`, the server's answer) crossed with
+// whether routing binds it. Four readings, and the two worth a reader's attention are the off-diagonal
 // ones: a binding with nothing to call it with fails closed, and a keyed vendor
 // nothing is bound to is ready to take a binding.
 export type ProviderState = "active" | "ready" | "needs_key" | "inactive";
@@ -39,7 +38,7 @@ export function providerState(
   status: ProviderStatus,
   usage: ProviderUsage | undefined,
 ): ProviderState {
-  const usable = status.configured || status.optional || status.env_var === "";
+  const usable = status.usable;
   if (usage) return usable ? "active" : "needs_key";
   return usable ? "ready" : "inactive";
 }
@@ -70,28 +69,23 @@ export const STATE_TONE = {
 export function ProviderSheet({
   status,
   usage,
-  refresh,
   connection,
+  figures,
   onClose,
 }: Readonly<{
   status: ProviderStatus;
   usage: ProviderUsage | undefined;
-  refresh: ModelPriceRefresh;
   connection: ReactNode;
+  // What this vendor's calls did, between how it is reached and what it costs.
+  figures?: ReactNode;
   onClose: () => void;
 }>) {
   const t = useT();
   const titleId = useId();
   const state = providerState(status, usage);
   return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy={titleId}
-      placement="right"
-      size="wide"
-    >
-      <div className="drawer-head">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
+      <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {providerName(status.provider, t)}
         </Heading>
@@ -103,21 +97,21 @@ export function ProviderSheet({
               : t("aiProviders.notUsed")}
           </span>
         </p>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         <section className="ai-sheet-section">
           <Heading size="small" className="t-h3">
             {t("aiProviders.connection")}
           </Heading>
           {connection}
         </section>
+        {figures}
         <ProviderPrices
           provider={status.provider}
           pricedBy={status.priced_by}
           usage={usage}
-          refresh={refresh}
         />
-      </div>
+      </DrawerBody>
     </Modal>
   );
 }
@@ -141,17 +135,19 @@ function ProviderPrices({
   provider,
   pricedBy,
   usage,
-  refresh,
 }: Readonly<{
   provider: string;
   pricedBy?: string;
   usage: ProviderUsage | undefined;
-  refresh: ModelPriceRefresh;
 }>) {
   const t = useT();
   const canRead = useCan("ai_model_rate", "read");
   const canWrite = useCanUpsert("ai_model_rate");
   const sheet = useAiModelCatalogue(canRead);
+  const sync = usePriceSync(canRead);
+  const lastLine = sync.data?.last_run?.report.providers.find(
+    (p) => p.provider === provider,
+  );
   // The row being edited, `{}` for a new price, nothing while the table shows.
   const [form, setForm] = useState<{
     initial?: SheetRow;
@@ -227,7 +223,7 @@ function ProviderPrices({
               </>
             ) : null}
           </p>
-          <ProviderRefreshLine refresh={refresh} provider={provider} />
+          <ProviderRefreshLine line={lastLine} />
           {canWrite &&
             unpriced.map((m) => (
               <p key={`${m.lane}/${m.model}`} className="t-sub">
@@ -311,6 +307,9 @@ function PriceTable({
                   <Badge tone="info">
                     {t("aiRates.manual.from", { date: r.effective_date })}
                   </Badge>
+                ) : null}
+                {r.source === "manual" ? (
+                  <Badge>{t("aiProviders.setByHand")}</Badge>
                 ) : null}
                 {r.provider !== provider ? (
                   <Badge>

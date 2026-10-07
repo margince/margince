@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -73,12 +74,13 @@ const sourceStagedApproval = "approval"
 
 // approvalSentences is what each staged kind asks the reader about.
 var approvalSentences = map[string]string{
-	"coldstart":           "magic.action.approval_coldstart",
-	"send_email":          "magic.action.approval_send_email",
-	"advance_deal":        "magic.action.approval_advance_deal",
-	"promote_lead":        "magic.action.approval_promote_lead",
-	"overnight":           "magic.action.approval_overnight",
-	"transcript_proposal": "magic.action.approval_transcript_proposal",
+	"coldstart":             "magic.action.approval_coldstart",
+	"send_email":            "magic.action.approval_send_email",
+	"advance_deal":          "magic.action.approval_advance_deal",
+	"promote_lead":          "magic.action.approval_promote_lead",
+	"overnight":             "magic.action.approval_overnight",
+	"commitment_task":       "magic.action.approval_commitment_task",
+	kindCaptureCounterparty: "magic.action.approval_capture_counterparty",
 }
 
 // sentenceForKind answers what one proposal asks about, and answers for a kind
@@ -92,8 +94,15 @@ func sentenceForKind(kind string) string {
 	if key, ok := approvalSentences[kind]; ok {
 		return key
 	}
-	return "magic.action.approval_pending"
+	return genericApprovalSentence
 }
+
+// genericApprovalSentence names the kind rather than the subject.
+const genericApprovalSentence = "magic.action.approval_pending"
+
+// kindCaptureCounterparty is the sender a capture could not place, offered as
+// a new contact.
+const kindCaptureCounterparty = approvalsubject.KindCounterparty
 
 // pendingLine dresses one staged decision, or refuses it.
 //
@@ -120,6 +129,12 @@ func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
 		return crmcontracts.MagicLine{}, false
 	}
 	values := map[string]string{"kind": a.Kind}
+	sentence := sentenceForKind(a.Kind)
+	if a.TargetLabel == nil && sentence == approvalSentences[kindCaptureCounterparty] {
+		// Its sentence names who wrote; a proposal staged before it carried a
+		// name has none to give.
+		sentence = genericApprovalSentence
+	}
 	if a.TargetLabel != nil {
 		// The caption frozen at staging time, which is what the approver was
 		// shown; re-resolving it here would name whatever the record became.
@@ -131,7 +146,7 @@ func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
 		OccurredAt: a.CreatedAt,
 		Lane:       crmcontracts.MagicLineLaneMagicLaneNeedsYou,
 		Summary: crmcontracts.MagicSentence{
-			Key:    sentenceForKind(a.Kind),
+			Key:    sentence,
 			Values: &values,
 		},
 		Consequence: &consequence,

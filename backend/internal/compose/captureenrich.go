@@ -21,7 +21,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -194,9 +193,9 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	var advanced int
 	for _, cand := range candidates {
 		if err := e.enrichOne(wsCtx, cand); err != nil {
-			if isBudgetStop(err) {
-				e.log.InfoContext(wsCtx, "signature enrich: budget exhausted, stopping the pass")
-				// No continuation: the budget is what stopped this pass, and a
+			if ai.IsDeferral(err) {
+				e.log.InfoContext(wsCtx, "signature enrich: work deferred, stopping the pass")
+				// No continuation: the deferral is what stopped this pass, and a
 				// follow-on would hit the same wall immediately. The nightly
 				// cycle is the right owner of work the budget deferred.
 				return false, nil
@@ -224,8 +223,6 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	// continuation existed.
 	return advanced > 0 && len(candidates) == e.limit, nil
 }
-
-func isBudgetStop(err error) bool { return errors.Is(err, ai.ErrBudgetDeferred) }
 
 // unparseableReply reports the one drop reason that means the model failed
 // rather than the signature being silent — the distinction the read cursor

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { DateFormatsProvider } from "../app/dateformats";
 import { InstallationSettingsCard } from "./installation-settings";
+import { defaultOperations } from "./operationsettings.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -25,6 +26,8 @@ const SETTINGS = {
   sign_in_providers: [],
   max_upload_bytes: 25000000,
   dead_work_banner_hours: 24,
+  oauth_access_token_ttl_minutes: 43_200,
+  operations: defaultOperations,
   forecast_forward_measure: "commit_evidence",
   timezone: "Europe/Berlin",
   base_currency: "EUR",

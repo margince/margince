@@ -238,6 +238,9 @@ func visibleParentClause(ctx context.Context, arg func(any) int) (string, error)
 // renders as, so a disjunction arm stays a valid boolean expression.
 const scopeUnbounded = "TRUE"
 
+// scopeNothing is a scope clause that admits no row.
+const scopeNothing = "FALSE"
+
 // documentParentKinds are the record kinds whose visibility is a row-scope
 // clause over their own columns. `activity` is not one of them — its scope is
 // the link walk — so it gets its own arm in activityParentClause rather than

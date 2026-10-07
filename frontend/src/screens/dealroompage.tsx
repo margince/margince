@@ -295,6 +295,7 @@ function ExpiryDialog({
       open={open}
       onClose={onClose}
       title={t("roompage.setExpiry")}
+      intent="form"
       confirmLabel={t("access.save")}
       pending={set.isPending}
       error={set.isError ? problemMessageOf(set.error, t) : null}

@@ -337,7 +337,7 @@ func approvalNoticeFor(
 // must reach the same rows this wrote: two spellings of this string would leave
 // a settled card's lines standing with nothing failing.
 func approvalNoticeDedupeKey(approvalID ids.UUID) string {
-	return notices.KindApprovalPending + ":" + approvalID.String()
+	return notices.ApprovalNoticeKey(approvalID)
 }
 
 // approvalNoticeTarget is the record the card is about, when it is about one. A

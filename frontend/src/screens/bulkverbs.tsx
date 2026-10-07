@@ -20,7 +20,12 @@ import { TagVerbs } from "./bulktag";
 import { TaskVerb } from "./bulktask";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 
-type BulkRecordType = components["schemas"]["BulkRecordType"];
+// The record lists' types: a Worklist item has its own bar
+// (worklist.bulkdone.tsx) and takes none of these verbs.
+type BulkRecordType = Exclude<
+  components["schemas"]["BulkRecordType"],
+  "worklist_item"
+>;
 type BulkVerb = components["schemas"]["BulkVerb"];
 
 /**

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -113,5 +114,70 @@ func TestCaptureSettingsStore(t *testing.T) {
 	}
 	if auditCount() != 1 {
 		t.Fatal("an empty patch must write no audit row")
+	}
+}
+
+// The website-reading limits ride the same store and the same gate as the
+// auto-enrich switch: every role reads them, only the update grant changes
+// them, each change is audited, and one PATCH commits all of its fields or
+// none of them.
+func TestTheWebsiteReadingLimitsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
+	e := integration.SetupSearch(t)
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})
+	rep := captureSettingsCtx(e, principal.ObjectGrant{Read: true})
+
+	got, err := store.Get(rep)
+	if err != nil {
+		t.Fatalf("rep read: %v", err)
+	}
+	defaults := capturemod.SiteReadLimits{
+		MaxPages:    capturemod.DefaultSiteReadMaxPages,
+		MaxMiB:      capturemod.DefaultSiteReadMaxMiB,
+		WallSeconds: capturemod.DefaultSiteReadWallSeconds,
+	}
+	if got.AutoEnrichDailyCap != capturemod.DefaultAutoEnrichDailyCap || got.SiteRead != defaults {
+		t.Fatalf("an untouched installation reads cap %d and limits %+v, want the declared defaults", got.AutoEnrichDailyCap, got.SiteRead)
+	}
+
+	dailyCap, pages := 2000, 20
+	if _, err := store.Update(rep, capturemod.SettingsPatch{AutoEnrichDailyCap: &dailyCap}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("rep update err = %v, want permission denied", err)
+	}
+
+	audits := func() int {
+		var n int
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(context.Background(),
+				`SELECT count(*) FROM audit_log WHERE entity_type = 'capture_settings'`).Scan(&n)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	before := audits()
+	updated, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrichDailyCap: &dailyCap, SiteReadMaxPages: &pages})
+	if err != nil {
+		t.Fatalf("admin update: %v", err)
+	}
+	if updated.AutoEnrichDailyCap != dailyCap || updated.SiteRead.MaxPages != pages {
+		t.Fatalf("update returned cap %d and pages %d, want %d and %d", updated.AutoEnrichDailyCap, updated.SiteRead.MaxPages, dailyCap, pages)
+	}
+	if n := audits() - before; n != 2 {
+		t.Fatalf("changing two limits wrote %d audit rows, want one per setting", n)
+	}
+
+	// One field out of range refuses the whole patch, the valid field with it.
+	tooLong, fewer := capturemod.MaxSiteReadWallSeconds+1, 5
+	_, err = store.Update(admin, capturemod.SettingsPatch{SiteReadMaxPages: &fewer, SiteReadWallSeconds: &tooLong})
+	var invalid settings.InvalidValue
+	if !errors.As(err, &invalid) || invalid.Setting != capturemod.SiteReadWallSeconds.Key() {
+		t.Fatalf("an out-of-range wall gave %v, want the wall's own refusal", err)
+	}
+	if reread, err := store.Get(rep); err != nil || reread.SiteRead.MaxPages != pages {
+		t.Fatalf("after the refused patch the page limit reads %d (err %v), want the %d that stood", reread.SiteRead.MaxPages, err, pages)
+	}
+	if n := audits() - before; n != 2 {
+		t.Fatalf("a refused patch wrote %d more audit rows, want none", n-2)
 	}
 }

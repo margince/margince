@@ -23,6 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -40,6 +41,18 @@ type bulkUndoPlan struct {
 	tasks map[openapi_types.UUID]bulkCreatedTask
 	// taggings is the tag assignment add_tag made on each record.
 	taggings map[openapi_types.UUID]openapi_types.UUID
+	// members is each record's list membership as remove_from_list took it.
+	members map[openapi_types.UUID]collections.RemovedMember
+}
+
+// membershipOf answers the list membership remove_from_list took from a
+// record; a forward change has no plan and knows none.
+func (p *bulkUndoPlan) membershipOf(id openapi_types.UUID) (collections.RemovedMember, bool) {
+	if p == nil {
+		return collections.RemovedMember{}, false
+	}
+	was, known := p.members[id]
+	return was, known
 }
 
 // bulkCreatedTask is one task create_task filed, at the version it left it.
@@ -108,6 +121,7 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		ownersBefore: make(map[openapi_types.UUID]*openapi_types.UUID, len(op.result.Changed)),
 		tasks:        map[openapi_types.UUID]bulkCreatedTask{},
 		taggings:     map[openapi_types.UUID]openapi_types.UUID{},
+		members:      map[openapi_types.UUID]collections.RemovedMember{},
 	}
 	items := make([]crmcontracts.BulkItem, len(op.result.Changed))
 	for i, outcome := range op.result.Changed {
@@ -115,6 +129,9 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		plan.ownersBefore[outcome.ID] = outcome.OwnerBefore
 		if outcome.TaskID != nil {
 			plan.tasks[outcome.ID] = bulkCreatedTask{id: *outcome.TaskID, version: outcome.TaskVersion}
+		}
+		if outcome.MemberAddedAt != nil {
+			plan.members[outcome.ID] = collections.RemovedMember{Note: outcome.MemberNote, AddedAt: *outcome.MemberAddedAt}
 		}
 		if outcome.TaggableID != nil {
 			plan.taggings[outcome.ID] = *outcome.TaggableID
@@ -201,7 +218,11 @@ func handBack(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID)},
 		After:  crmcontracts.BulkRecordState{OwnerId: before},
 	}
-	return sample, crmcontracts.BulkSkip{}, target.reassign(ctx, tx, id, ids.From[ids.UserKind](owner), item.Version)
+	reassigner, err := reassignerOf(target)
+	if err != nil {
+		return crmcontracts.BulkSampleRow{}, crmcontracts.BulkSkip{}, err
+	}
+	return sample, crmcontracts.BulkSkip{}, reassigner.reassign(ctx, tx, id, ids.From[ids.UserKind](owner), item.Version)
 }
 
 // undoSkipFor is bulkSkipFor for an undo, where a version that moved means the

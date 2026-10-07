@@ -46,11 +46,12 @@ type Handlers struct {
 	// starts honest-unconfigured; the API composition root replaces it from
 	// the same routing decision that builds the model path.
 	publicProfile PublicProfile
-	// refreshRouting and refreshCatalogue are what the price refresh reads: the
-	// bindings that say which models to price, and the broker's list that
-	// prices them. Nil on a role that composed neither, which answers 501.
-	refreshRouting   *RoutingStore
-	refreshCatalogue *ModelCatalogue
+	// priceSync is the engine behind the refresh route and /ai/price-sync. Nil on a
+	// role that composed none, which answers 501.
+	priceSync *PriceSync
+	// providers is the process's record of which providers are answering, the
+	// same book the Router reads when it refuses a call.
+	providers *providerBook
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the
@@ -63,6 +64,7 @@ func NewHandlers(db *database.DB, budget BudgetPolicy) Handlers {
 		voice: NewVoiceStore(db), meter: NewMeter(db), budget: budget,
 		calls: NewCallReadStore(db), rates: NewRateStore(db),
 		feedback:      NewFeedbackStore(db),
+		providers:     sharedProviderHealth,
 		publicProfile: NewPublicProfile("unconfigured", RoutingConfig{}),
 	}
 }

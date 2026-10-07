@@ -232,7 +232,7 @@ export function Background({
   }
   return (
     <Disclosure summary={t("contact.meeting.background")}>
-      <div className="mb-background">
+      <div className="form-stack mb-background">
         {context && (
           <SentenceList
             sentences={context.sentences}

@@ -71,6 +71,11 @@ var admissionVocabulary = sync.OnceValues(func() (map[string][]string, error) {
 	return rules, nil
 })
 
+// undeclaredSuffix marks a vocabulary class that a view with declared actions
+// is exempt from: the call method is refused everywhere a view has no action,
+// and the frontend validator reads the same suffix.
+const undeclaredSuffix = "Undeclared"
+
 // titlePattern extracts the document's own title.
 //
 // A narrow regexp rather than a parser: this is HTML, not a language, and one
@@ -79,7 +84,8 @@ var admissionVocabulary = sync.OnceValues(func() (map[string][]string, error) {
 // the toolchain for it.
 var titlePattern = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
 
-// admit judges one document.
+// admit judges one document. hasActions waives the classes named for an
+// undeclared action, for a view whose actions.json entry is non-empty.
 //
 // A non-empty findings slice means REFUSE, and it names every reason rather than
 // the first: an operator reading one at a time re-deploys once per finding.
@@ -87,7 +93,7 @@ var titlePattern = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
 // titleMismatch is REPORTED, never a refusal. Comparing the Go catalog's title
 // to the document's is two hand-spellings across a language boundary, and a copy
 // edit on one side must not take a view down.
-func admit(doc string, wantTitle string) (findings []string, titleMismatch bool) {
+func admit(doc string, wantTitle string, hasActions bool) (findings []string, titleMismatch bool) {
 	rules, err := admissionVocabulary()
 	if err != nil {
 		// Fail closed, and say so on the document rather than swallowing it: a
@@ -95,7 +101,10 @@ func admit(doc string, wantTitle string) (findings []string, titleMismatch bool)
 		return []string{err.Error()}, false
 	}
 	lowered := strings.ToLower(doc)
-	for _, tokens := range rules {
+	for class, tokens := range rules {
+		if hasActions && strings.HasSuffix(class, undeclaredSuffix) {
+			continue
+		}
 		for _, token := range tokens {
 			if contains(doc, lowered, token) {
 				findings = append(findings, token)

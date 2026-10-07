@@ -15,7 +15,7 @@ import "./rates.css";
 type ProviderRefresh = components["schemas"]["AiModelRateProviderRefresh"];
 type Outcome = ProviderRefresh["outcome"];
 
-// The outcome is a wire string the server closes over five members; the tone
+// The outcome is a wire string the server closes over seven members; the tone
 // says how the run went for THIS provider, not how good the news is. A vendor
 // that publishes no price list is `info`, a fact rather than a fault.
 const OUTCOME_TONE = {
@@ -25,14 +25,15 @@ const OUTCOME_TONE = {
   not_listed: "warning",
   unreachable: "danger",
   not_bound: "default",
+  not_configured: "default",
 } as const satisfies Record<
   Outcome,
   "success" | "default" | "info" | "warning" | "danger"
 >;
 
 /**
- * The refresh mutation, held by the Providers card so its button sits in the
- * header and each vendor's answer reaches that vendor's sheet.
+ * The refresh mutation, held by the Model prices card and the usage page's
+ * price list; each vendor's answer reaches its sheet through the last run.
  *
  * It runs inline, so unlike the currency sheet's refresh the answer is here
  * rather than in the approvals inbox: a price the catalogue states is written
@@ -48,9 +49,12 @@ export function useRefreshModelPrices() {
       }
       return data;
     },
-    // The lanes read their prices from the same sheet this just wrote.
+    // The sheet and the card's last run both just changed.
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["ai-model-rates"] }),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["ai-model-rates"] }),
+        queryClient.invalidateQueries({ queryKey: ["ai-price-sync"] }),
+      ]),
   });
 }
 
@@ -112,15 +116,13 @@ export function RefreshSummary({
   );
 }
 
-/** What the last refresh did for ONE vendor, or nothing before there was one. */
+/** What the last sync did for ONE vendor, or nothing before there was one. */
 export function ProviderRefreshLine({
-  refresh,
-  provider,
-}: Readonly<{ refresh: ModelPriceRefresh; provider: string }>) {
+  line,
+}: Readonly<{ line: ProviderRefresh | undefined }>) {
   const t = useT();
-  const line = refresh.data?.providers.find((p) => p.provider === provider);
   if (!line) {
-    return <ErrorLine error={refresh.error} inline />;
+    return null;
   }
   return (
     <span className="rates-refresh-detail" role="status">
@@ -155,6 +157,20 @@ function ProviderCounts({ provider }: Readonly<{ provider: ProviderRefresh }>) {
         <span className="t-caption">
           {plural("aiRates.refresh.unchangedCount", provider.unchanged, {
             count: formatNumber(provider.unchanged, locale),
+          })}
+        </span>
+      ) : null}
+      {provider.added > 0 ? (
+        <span className="t-caption">
+          {plural("aiRates.refresh.addedCount", provider.added, {
+            count: formatNumber(provider.added, locale),
+          })}
+        </span>
+      ) : null}
+      {provider.kept > 0 ? (
+        <span className="t-caption">
+          {plural("aiRates.refresh.keptCount", provider.kept, {
+            count: formatNumber(provider.kept, locale),
           })}
         </span>
       ) : null}

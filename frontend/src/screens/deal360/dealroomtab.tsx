@@ -291,6 +291,7 @@ function OpenRoomCard({
         open={creating}
         onClose={() => setCreating(false)}
         title={t("room.create.open")}
+        intent="form"
         confirmLabel={t("room.create.confirm")}
         confirmDisabled={title.trim() === ""}
         pending={create.isPending}

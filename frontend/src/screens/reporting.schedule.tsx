@@ -32,6 +32,7 @@ export function ReportingScheduleDialog({
   const t = useT();
   const { locale } = useLocale();
   const id = useId();
+  const formId = useId();
   const client = useQueryClient();
   const [definition, setDefinition] = useState<Input>(
     schedule?.definition ?? {
@@ -100,9 +101,13 @@ export function ReportingScheduleDialog({
     }),
   );
   return (
-    <Modal open onClose={onClose} labelledBy={id}>
+    <Modal open onClose={onClose} labelledBy={id} intent="form">
+      <Heading size="large" id={id} className="t-h2 modal-title">
+        {t("reporting.schedule")} · {report.name}
+      </Heading>
       <form
-        className="reporting-dialog"
+        id={formId}
+        className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
           write.mutate({
@@ -112,9 +117,6 @@ export function ReportingScheduleDialog({
           });
         }}
       >
-        <Heading id={id} as="h2" size="medium">
-          {t("reporting.schedule")} · {report.name}
-        </Heading>
         <p>
           {report.selection.scope.label} · {t(`reporting.${report.audience}`)} ·{" "}
           {timezone}
@@ -183,38 +185,45 @@ export function ReportingScheduleDialog({
               type="time"
               value={definition.local_time}
               onChange={(event) =>
-                setDefinition({ ...definition, local_time: event.target.value })
+                setDefinition({
+                  ...definition,
+                  local_time: event.target.value,
+                })
               }
             />
           )}
         </Field>
         <ErrorLine error={write.error} />
-        <div className="reporting-dialog-actions">
-          <Button variant="ghost" onClick={onClose}>
-            {t("reporting.cancel")}
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={write.isPending}
-            onClick={() =>
-              write.mutate({
-                reportId: report.id,
-                previous: schedule,
-                input: { ...definition, enabled: false },
-              })
-            }
-          >
-            {t("reporting.savePaused")}
-          </Button>
-          <Button type="submit" disabled={write.isPending || !ready}>
-            {t(
-              schedule?.definition.enabled
-                ? "reporting.updateSchedule"
-                : "reporting.activateSchedule",
-            )}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t("reporting.cancel")}
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={write.isPending}
+          onClick={() =>
+            write.mutate({
+              reportId: report.id,
+              previous: schedule,
+              input: { ...definition, enabled: false },
+            })
+          }
+        >
+          {t("reporting.savePaused")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          disabled={write.isPending || !ready}
+        >
+          {t(
+            schedule?.definition.enabled
+              ? "reporting.updateSchedule"
+              : "reporting.activateSchedule",
+          )}
+        </Button>
+      </div>
     </Modal>
   );
 }

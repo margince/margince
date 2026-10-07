@@ -5,7 +5,8 @@
 
 package gates
 
-// Pool-sharing discipline for the module suites, as a fitness function.
+// Module suites share the test process's pool per DSN rather than opening a
+// pool per test.
 //
 // internal/platform/testdb.Pool hands a test PROCESS one pool per DSN, and the
 // connections are the cost: a package's tests run sequentially against one clone

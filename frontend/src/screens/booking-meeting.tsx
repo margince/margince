@@ -167,9 +167,7 @@ export function BookingMeetingScreen({
                 {cancelable && (
                   <ConfirmModal
                     open={cancelOpen}
-                    onClose={() => {
-                      if (!change.isPending) setCancelOpen(false);
-                    }}
+                    onClose={() => setCancelOpen(false)}
                     title={t("scheduling.cancel")}
                     confirmLabel={t("scheduling.cancel")}
                     confirmVariant="danger"

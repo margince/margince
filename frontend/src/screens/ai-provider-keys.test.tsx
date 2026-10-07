@@ -37,12 +37,14 @@ const LISTED = {
       provider: "gemini",
       configured: true,
       env_var: "GEMINI_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai",
       configured: false,
       env_var: "OPENAI_API_KEY",
+      usable: false,
       optional: false,
     },
   ],
@@ -89,7 +91,7 @@ async function openSheet(
   await user.click(
     within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     ),
   );
   return screen.findByTestId(`ai-provider-key-${provider}`);
@@ -129,6 +131,19 @@ afterEach(() => {
 });
 
 describe("AiProviderKeysCard", () => {
+  it("no longer carries the price refresh — it moved to the Model prices card", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor({ ...KEY_EDITOR, ai_model_rate: ["read", "create", "update"] })
+        .fetchMock,
+    );
+    render(<AiProviderKeysCard />);
+    await screen.findByTestId("ai-provider-row-gemini");
+    expect(
+      screen.queryByRole("button", { name: "Refresh model prices" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("says which vendors hold a key and which do not", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
@@ -140,13 +155,13 @@ describe("AiProviderKeysCard", () => {
     expect(
       within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
         "button",
-        { name: /^Manage/ },
+        { name: /^Edit/ },
       ),
     ).toBeTruthy();
     expect(
       within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
         "button",
-        { name: /^Manage/ },
+        { name: /^Edit/ },
       ),
     ).toBeTruthy();
     // And no paste field until a sheet is opened and asked for one. Six open
@@ -162,6 +177,7 @@ describe("AiProviderKeysCard", () => {
       provider: "jev_compatible",
       configured: false,
       env_var: "JEV_COMPATIBLE_API_KEY",
+      usable: true,
       optional: true,
     };
     vi.stubGlobal(
@@ -182,7 +198,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -207,7 +223,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -230,7 +246,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -262,7 +278,7 @@ describe("AiProviderKeysCard", () => {
     const { client } = render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -289,7 +305,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -310,7 +326,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     // Removing is behind the row's own verb, with the paste field: it is a
@@ -344,7 +360,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     await openKey(user, "gemini");
@@ -368,7 +384,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -413,7 +429,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     // Refused, not hidden: an operator who must ask somebody else to rotate a
@@ -444,7 +460,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const row = await openKey(user, "openai");

@@ -47,12 +47,9 @@ const clockScanBatchLimit = 200
 // here rather than growing an if/else chain, so adding a THIRD
 // ActivityScan-driven handler later is one map entry, not a new branch.
 //
-// A handler with no entry here — renewal_reminder, today — rides a
-// different anchor entirely (a custom field's value, not a last-touch
-// timestamp) and has no candidate source wired at all; see its own doc
-// in handlers_clock.go for why. scanWorkspace below skips it
-// honestly rather than mishandling it as an ActivityScan consumer it
-// is not.
+// renewal_reminder has no entry here: it is anchored on a custom
+// date field's value, not a last-touch timestamp, so its candidates come
+// from dateFieldScanHandlers below.
 var activityScanHandlers = map[string]clockDaysExtractor{
 	noActivityReminderName: noActivityDays,
 	checkInCadenceName:     checkInCadenceDays,

@@ -30,12 +30,15 @@ type attentionTasks struct{ store *activities.Store }
 // built from a second copy of these arms would answer a different question from
 // the page it sits beside, one arm at a time.
 //
+// asOf is what the store ages overdue tasks out of the Worklist against, so the
+// page and its count drop the same ones.
+//
 // The false answer means "no reader to answer for", which is a page of nothing
 // rather than a refusal.
 func openTasksDueBy(
-	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, Worklist: true}
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
@@ -67,14 +70,14 @@ func openTasksDueBy(
 }
 
 func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.Task, error) {
 	// The store answers "open and due by then" itself, so the limit bounds the
 	// rows that QUALIFY. This used to read ten times the lane and narrow
 	// afterwards, which put the bound on the wrong set: a pile of completed
 	// tasks filled the scan, the overdue promise underneath never reached the
 	// reader, and the day rendered clear while the work was still there.
-	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
 	if !ok {
 		return nil, nil
 	}
@@ -87,7 +90,7 @@ func (t attentionTasks) OpenForViewer(
 	for _, row := range rows {
 		open = append(open, taskFromActivity(row))
 	}
-	return open, nil
+	return t.markReadOnly(ctx, open)
 }
 
 // UpcomingForViewer reads the work due after the day's end, to a horizon.
@@ -97,9 +100,9 @@ func (t attentionTasks) OpenForViewer(
 // and the window is closed at both ends in the QUERY, so the limit bounds rows
 // that qualify rather than a wider set narrowed afterwards.
 func (t attentionTasks) UpcomingForViewer(
-	ctx context.Context, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.Task, error) {
-	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
 	if !ok {
 		return nil, nil
 	}
@@ -113,5 +116,22 @@ func (t attentionTasks) UpcomingForViewer(
 	for _, row := range rows {
 		upcoming = append(upcoming, taskFromActivity(row))
 	}
-	return upcoming, nil
+	return t.markReadOnly(ctx, upcoming)
+}
+
+// markReadOnly flags the tasks the reader may see and not change, asked of the
+// whole page in one read.
+func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task) ([]attention.Task, error) {
+	named := make([]ids.UUID, len(tasks))
+	for i, task := range tasks {
+		named[i] = task.ID
+	}
+	writable, err := t.store.WritableTasks(ctx, named)
+	if err != nil {
+		return nil, err
+	}
+	for i := range tasks {
+		tasks[i].ReadOnly = !writable[tasks[i].ID]
+	}
+	return tasks, nil
 }

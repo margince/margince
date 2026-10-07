@@ -107,9 +107,9 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
     document.querySelector(".worklist-row-about a")?.getAttribute("href"),
   ).toBe("#/contacts/01a05500-0000-7000-8000-000000000009");
   const touch = document.querySelector(".worklist-row-touch");
-  expect(touch?.textContent).toContain("Last inbound");
+  expect(touch?.textContent).toContain("Last from this contact");
   expect(touch?.textContent).toContain("03/09/2026");
-  expect(touch?.textContent).toContain("Last outbound Never");
+  expect(touch?.textContent).toContain("Last to this contact Never");
 });
 
 // A row whose contact the reader may see but whose activity they may not:

@@ -5,7 +5,8 @@
 
 package gates
 
-// "Which activities belong to this account" has ONE answer, spelled twice.
+// "Which activities belong to this account" is computed in two places, and they
+// must agree.
 //
 // It has to be spelled twice: the timeline list, the account view and the
 // roll-up ask it from `activities`, the context walk asks it from `search`, and

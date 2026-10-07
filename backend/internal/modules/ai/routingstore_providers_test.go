@@ -25,7 +25,7 @@ func storedOnBroker() RoutingConfig {
 	return RoutingConfig{
 		Profile: ProfileEUHosted,
 		Providers: map[string]ProviderSettings{providerOpenAICompatible: {
-			BaseURL: brokerHost, Upstream: &OpenRouterRouting{Only: []string{"mistral/eu"}},
+			BaseURL: brokerHost, Upstream: &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}},
 		}},
 		Tiers: map[Tier]ProviderConfig{
 			TierPremium:    {Provider: providerOpenAICompatible, Model: "mistralai/mistral-small-2603"},
@@ -62,7 +62,7 @@ func TestReplace_OldClientEqualHostIsAccepted(t *testing.T) {
 	next := oldClientWrite(func(tiers map[Tier]ProviderConfig) {
 		lane := tiers[TierPremium]
 		lane.BaseURL = "HTTPS://OpenRouter.ai/api/"
-		lane.Routing = &OpenRouterRouting{Only: []string{"mistral/eu"}, Sort: "throughput"}
+		lane.Routing = &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}, Sort: &OpenRouterSort{By: "throughput"}}}
 		tiers[TierPremium] = lane
 	})
 
@@ -71,7 +71,7 @@ func TestReplace_OldClientEqualHostIsAccepted(t *testing.T) {
 		t.Fatalf("an old client re-sending the provider's own host and pins was refused: %v", err)
 	}
 	premium := stored.Tiers[TierPremium]
-	if premium.BaseURL != "" || premium.Routing == nil || premium.Routing.pins() != nil || premium.Routing.Sort != "throughput" {
+	if premium.BaseURL != "" || premium.Routing == nil || premium.Routing.pins() != nil || premium.Routing.Provider.Sort.By != "throughput" {
 		t.Errorf("premium stored as %+v (routing %+v), want no host, no pins, and its own sort kept", premium, premium.Routing)
 	}
 	if got := stored.Providers[providerOpenAICompatible].BaseURL; got != brokerHost {
@@ -79,29 +79,40 @@ func TestReplace_OldClientEqualHostIsAccepted(t *testing.T) {
 	}
 }
 
-func TestReplace_OldClientLiftsWhenProviderHasNone(t *testing.T) {
+// A tier's host filter is never lifted onto a connection that has none: it
+// decides who may read every tier's requests, so a write sets it on the
+// connection or not at all. The host still lifts, as it always did.
+func TestReplace_ATierPinIsRefusedWhenTheConnectionHasNone(t *testing.T) {
 	t.Parallel()
 	current := storedOnBroker()
 	current.Providers = nil
 	next := oldClientWrite(func(tiers map[Tier]ProviderConfig) {
 		for tier, lane := range tiers {
 			lane.BaseURL = brokerHost
-			lane.Routing = &OpenRouterRouting{Only: []string{"mistral/eu"}}
+			lane.Routing = &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}
 			tiers[tier] = lane
 		}
 	})
 
-	stored, served, err := next.replacing(current)
-	if err != nil {
-		t.Fatalf("replacing: %v", err)
+	_, _, err := next.replacing(current)
+
+	wantConnectionKeyRefusal(t, err, "tiers.cheap_cloud.routing.provider.only")
+}
+
+// wantConnectionKeyRefusal asserts err refuses path as a key that belongs on
+// the connection, with the code that sends the admin to the provider sheet.
+func wantConnectionKeyRefusal(t *testing.T, err error, path string) {
+	t.Helper()
+	var faults routingFaults
+	if !errors.As(err, &faults) {
+		t.Fatalf("err = %v, want a refusal per path", err)
 	}
-	entry := stored.Providers[providerOpenAICompatible]
-	if entry.BaseURL != brokerHost || entry.Upstream == nil || !slices.Equal(entry.Upstream.Only, []string{"mistral/eu"}) {
-		t.Errorf("provider entry = %+v, want the lanes' host and pin lifted onto it", entry)
+	for _, f := range faults {
+		if f.Path == path && f.Code == CodeMovedToProvider && strings.Contains(f.Message, "set on the connection") {
+			return
+		}
 	}
-	if got := served.Tiers[TierPremium]; got.BaseURL != brokerHost || !slices.Equal(got.Routing.Only, []string{"mistral/eu"}) {
-		t.Errorf("served premium = %+v, want it to read the lifted host and pin", got)
-	}
+	t.Fatalf("faults %+v do not refuse %s as a connection key", faults, path)
 }
 
 func TestReplace_OldClientDifferentHostIsMovedToProvider(t *testing.T) {
@@ -121,23 +132,23 @@ func TestReplace_OldClientDifferentPinsAreMovedToProvider(t *testing.T) {
 	t.Parallel()
 	next := oldClientWrite(func(tiers map[Tier]ProviderConfig) {
 		lane := tiers[TierCheapCloud]
-		lane.Routing = &OpenRouterRouting{Only: []string{"nebius/eu"}}
+		lane.Routing = &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"nebius/eu"}}}
 		tiers[TierCheapCloud] = lane
 	})
 
 	_, _, err := next.replacing(storedOnBroker())
 
-	wantRefusal(t, err, CodeMovedToProvider, "tier cheap_cloud", "pins")
+	wantConnectionKeyRefusal(t, err, "tiers.cheap_cloud.routing.provider.only")
 }
 
 // Pins are a set of hosts: the same hosts in another order are the provider's.
 func TestReplace_OldClientPinsInAnotherOrderAreAccepted(t *testing.T) {
 	t.Parallel()
 	current := storedOnBroker()
-	current.Providers[providerOpenAICompatible].Upstream.Only = []string{"mistral/eu", "nebius/eu"}
+	current.Providers[providerOpenAICompatible].Upstream.Provider.Only = []string{"mistral/eu", "nebius/eu"}
 	next := oldClientWrite(func(tiers map[Tier]ProviderConfig) {
 		lane := tiers[TierPremium]
-		lane.Routing = &OpenRouterRouting{Only: []string{"nebius/eu", "mistral/eu"}}
+		lane.Routing = &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"nebius/eu", "mistral/eu"}}}
 		tiers[TierPremium] = lane
 	})
 
@@ -224,7 +235,7 @@ func TestReplace_AbsentUpstreamSurvivesARoundTrip(t *testing.T) {
 	if r := stored.canonical().Tiers[TierPremium].Routing; r != nil {
 		t.Errorf("an absent routing reads back as %+v", r)
 	}
-	if r := served.Tiers[TierPremium].Routing; r == nil || r.Sort == "" {
+	if r := served.Tiers[TierPremium].Routing; r == nil || r.Provider.Sort.By == "" {
 		t.Errorf("served premium routing = %+v, want the product default under the provider's pin", r)
 	}
 }
@@ -243,7 +254,7 @@ func TestReplace_EmptyUpstreamSurvivesARoundTrip(t *testing.T) {
 	if r := stored.canonical().Tiers[TierPremium].Routing; r == nil || !r.IsEmpty() {
 		t.Errorf("`{}` reads back as %+v, want `{}`", r)
 	}
-	if r := served.Tiers[TierPremium].Routing; r == nil || r.Sort != "" || !slices.Equal(r.Only, []string{"mistral/eu"}) {
+	if r := served.Tiers[TierPremium].Routing; r == nil || r.Provider.Sort != nil || !slices.Equal(r.Provider.Only, []string{"mistral/eu"}) {
 		t.Errorf("served premium routing = %+v, want the provider's pin and no default", r)
 	}
 }
@@ -256,10 +267,10 @@ func TestReplace_WriteWithoutProvidersKeepsStoredPins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("replacing: %v", err)
 	}
-	if up := stored.Providers[providerOpenAICompatible].Upstream; up == nil || !slices.Equal(up.Only, []string{"mistral/eu"}) {
+	if up := stored.Providers[providerOpenAICompatible].Upstream; up == nil || !slices.Equal(up.Provider.Only, []string{"mistral/eu"}) {
 		t.Errorf("provider upstream = %+v after a write that sent no providers, want the stored pin kept", up)
 	}
-	if r := served.Embeddings.Routing; r == nil || !slices.Equal(r.Only, []string{"mistral/eu"}) {
+	if r := served.Embeddings.Routing; r == nil || !slices.Equal(r.Provider.Only, []string{"mistral/eu"}) {
 		t.Errorf("served embeddings routing = %+v, want the stored pin", r)
 	}
 }
@@ -321,7 +332,7 @@ func TestSetProviderSettings_BoundHostChangeMovesTheVersion(t *testing.T) {
 		t.Fatalf("finalize: %v", err)
 	}
 
-	_, served, err := storedOnBroker().withProviderSettings(providerOpenAICompatible, ProviderSettings{BaseURL: "https://eu.openrouter.ai/api", Upstream: &OpenRouterRouting{Only: []string{"mistral/eu"}}})
+	_, served, err := storedOnBroker().withProviderSettings(providerOpenAICompatible, ProviderSettings{BaseURL: "https://eu.openrouter.ai/api", Upstream: &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}})
 	if err != nil {
 		t.Fatalf("changing the bound host: %v", err)
 	}
@@ -415,7 +426,7 @@ func TestGet_LiftsAStoredOldShapeRow(t *testing.T) {
 	old := storedOnBroker()
 	old.Providers = nil
 	for tier, lane := range old.Tiers {
-		lane.BaseURL, lane.Routing = brokerHost, &OpenRouterRouting{Only: []string{"mistral/eu"}, Sort: "throughput"}
+		lane.BaseURL, lane.Routing = brokerHost, &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}, Sort: &OpenRouterSort{By: "throughput"}}}
 		old.Tiers[tier] = lane
 	}
 	old.Embeddings.BaseURL = brokerHost
@@ -425,7 +436,7 @@ func TestGet_LiftsAStoredOldShapeRow(t *testing.T) {
 	if entry := got.Providers[providerOpenAICompatible]; entry.BaseURL != brokerHost || entry.Upstream == nil {
 		t.Errorf("provider entry = %+v, want the lanes' host and pin lifted onto it", entry)
 	}
-	if lane := got.Tiers[TierPremium]; lane.BaseURL != "" || lane.Routing == nil || lane.Routing.Sort != "throughput" || lane.Routing.pins() != nil {
+	if lane := got.Tiers[TierPremium]; lane.BaseURL != "" || lane.Routing == nil || lane.Routing.Provider.Sort.By != "throughput" || lane.Routing.pins() != nil {
 		t.Errorf("premium = %+v (routing %+v), want only its serving preferences left on it", lane, lane.Routing)
 	}
 }

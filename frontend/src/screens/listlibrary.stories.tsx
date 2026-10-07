@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { ListLibrary } from "./listlibrary";
 import {
   listsMe,
@@ -59,5 +60,29 @@ export const NoListsYet: Story = {
         <ListLibrary />
       </StoryProviders>
     );
+  },
+};
+
+/** New Shortlist pressed: its name, what it is for, its record type and audience. */
+export const StartingAShortlist: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
+      "GET /lists": () => jsonResponse({ data: [], page: { has_more: false } }),
+    });
+    return (
+      <StoryProviders>
+        <ListLibrary />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "New Shortlist",
+      }),
+    );
+    await within(document.body).findByRole("dialog");
   },
 };

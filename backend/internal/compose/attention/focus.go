@@ -83,5 +83,8 @@ func (s *Service) nameWorklistRows(ctx context.Context, rows []crmcontracts.Work
 	if err := s.nameTheCompanies(ctx, rows); err != nil {
 		return err
 	}
+	if err := s.nameTheEmployers(ctx, rows); err != nil {
+		return err
+	}
 	return s.nameTheOwners(ctx, rows)
 }

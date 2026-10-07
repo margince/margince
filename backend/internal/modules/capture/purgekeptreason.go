@@ -57,14 +57,15 @@ func (s *PurgeSubject) noteWithheld(reason string, id ids.UUID) {
 // request because it outlives the request's resolution.
 // shieldedAs is the reason the shield's own arm reports — the floor names it,
 // because only the floor knows whether it measured anything.
-func withheldReason(shielded, shieldedAs string, underRequest bool) string {
-	clause := `CASE
+//
+// Every arm, with no way to ask for fewer: which purge is running says nothing
+// about what the installation owes somebody outside it, and the wider arms are the
+// ones that were missing it — a workspace purge destroys every seat's copy at once
+// and the personal sweep destroys on a timer with nobody confirming.
+func withheldReason(shielded, shieldedAs string) string {
+	return `CASE
 		WHEN a.restricted_at IS NOT NULL THEN '` + withheldByHold + `'
-		WHEN (` + shielded + `) THEN '` + shieldedAs + `'`
-	if underRequest {
-		clause += `
-		WHEN (` + underAnOpenRequest + `) THEN '` + withheldByRequest + `'`
-	}
-	return clause + `
+		WHEN (` + shielded + `) THEN '` + shieldedAs + `'
+		WHEN (` + underAnOpenRequest + `) THEN '` + withheldByRequest + `'
 		ELSE '' END`
 }

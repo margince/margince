@@ -132,7 +132,7 @@ func (s *Store) OpenBuyerThread(ctx context.Context, sess Session, in OpenThread
 }
 
 // ReplyAsBuyer appends to an open thread of the session's room.
-func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUID, body, source string) (crmcontracts.DealRoomThread, error) {
+func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUID, body, source string, requestID *ids.UUID) (crmcontracts.DealRoomThread, error) {
 	if sess.ID == ids.Nil {
 		return crmcontracts.DealRoomThread{}, apperrors.ErrPermissionDenied
 	}
@@ -150,7 +150,7 @@ func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUI
 		if err := ensureThreadStillVisible(ctx, tx, sess, threadID); err != nil {
 			return err
 		}
-		out, err = replyTx(ctx, tx, room, threadID, body, source, threadAuthor{participantID: &sess.ParticipantID})
+		out, err = replyTx(ctx, tx, room, threadID, body, source, threadAuthor{participantID: &sess.ParticipantID}, requestID)
 		return err
 	})
 	return out, err

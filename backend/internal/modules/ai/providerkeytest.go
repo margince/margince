@@ -39,6 +39,9 @@ const (
 	KeyTestNoEndpoint KeyTestReason = "no_endpoint"
 	// KeyTestAuthFailed means the vendor refused the credential.
 	KeyTestAuthFailed KeyTestReason = "auth_failed"
+	// KeyTestPermissionDenied means the vendor accepted the credential and
+	// refused the call: a missing role or an API the account has not enabled.
+	KeyTestPermissionDenied KeyTestReason = "permission_denied"
 	// KeyTestRateLimited means the vendor is throttling the credential, which
 	// says nothing about whether it is valid.
 	KeyTestRateLimited KeyTestReason = "rate_limited"
@@ -88,7 +91,14 @@ func (s *RoutingStore) TestProviderKey(ctx context.Context, provider string) (Ke
 	if err != nil {
 		return KeyTest{}, err
 	}
-	return probeProviderKey(ctx, cfg, provider, s.resolvedKeys(ctx), keyProbes{SelectBrain, selectDecider}), nil
+	tested := probeProviderKey(ctx, cfg, provider, s.resolvedKeys(ctx), keyProbes{SelectBrain, selectDecider})
+	if tested.OK && !tested.Unconfirmed {
+		// The vendor just answered with this key: whatever the tracker holds
+		// against the provider is out of date, and waiting for the next call to
+		// find that out would keep a fixed provider reported down.
+		sharedProviderHealth.forget(provider) //nolint:contextcheck // the clear is queued and written by the drain goroutine, which owns its own deadline by design
+	}
+	return tested, nil
 }
 
 // probeProviderKey is the test itself, over a routing document already read.
@@ -131,7 +141,7 @@ func probeProviderKey(
 	defer cancel()
 	models, err := lister.ListModels(asked)
 	if err != nil {
-		out.Reason = keyTestFailure(err)
+		out.Reason = vendorKeyTestFailure(provider, err)
 		return out
 	}
 	out.OK, out.ModelCount, out.Counted = true, len(models), true
@@ -149,10 +159,6 @@ func probeDecisionKey(
 ) KeyTest {
 	out := KeyTest{Provider: provider}
 	lane := boundDecisionLane(cfg, provider)
-	if decisionLaneForbidden(cfg.Profile, lane) {
-		out.Reason = KeyTestProfileForbids
-		return out
-	}
 	client, err := build(lane, keys)
 	if err != nil {
 		out.Reason = keyTestRefusal(unavailableFor(err))
@@ -162,7 +168,7 @@ func probeDecisionKey(
 	defer cancel()
 	count, counted, err := client.probeKey(asked, provider)
 	if err != nil {
-		out.Reason = keyTestFailure(err)
+		out.Reason = vendorKeyTestFailure(provider, err)
 		return out
 	}
 	out.OK, out.ModelCount, out.Counted = true, count, counted
@@ -191,13 +197,23 @@ func keyTestRefusal(state ModelAvailability) KeyTestReason {
 // geminiKeyInvalid is the ErrorInfo reason Google APIs give a bad API key.
 const geminiKeyInvalid = "API_KEY_INVALID"
 
-// keyTestFailure reads a vendor's refusal. Only the status is trusted: 401 and
-// 403 are the credential, 429 is the vendor's throttle, and everything else —
+// keyTestFailure reads a vendor's refusal. Only the status is trusted: 401 is
+// the credential, 403 the account's permissions, 429 the throttle, and else —
 // a timeout, a 5xx, a 404 from a host that is not the vendor — is unreachable.
 //
 // Gemini is the exception: it answers an invalid key with 400 and names it
 // API_KEY_INVALID in the error's structured details. The code, not the status,
 // decides — a 400 from a proxy in front of it is not a refused key.
+// vendorKeyTestFailure keeps a 403 a refused key at an endpoint an operator runs:
+// only a named vendor's 403 reliably means the key was accepted.
+func vendorKeyTestFailure(provider string, err error) KeyTestReason {
+	reason := keyTestFailure(err)
+	if d, _ := providerByName(provider); reason == KeyTestPermissionDenied && d.egress == egressOperatorEndpoint {
+		return KeyTestAuthFailed
+	}
+	return reason
+}
+
 func keyTestFailure(err error) KeyTestReason {
 	var refused *listStatusError
 	if !errors.As(err, &refused) {
@@ -208,8 +224,10 @@ func keyTestFailure(err error) KeyTestReason {
 		return KeyTestAuthFailed
 	}
 	switch refused.status {
-	case http.StatusUnauthorized, http.StatusForbidden:
+	case http.StatusUnauthorized:
 		return KeyTestAuthFailed
+	case http.StatusForbidden:
+		return KeyTestPermissionDenied
 	case http.StatusTooManyRequests:
 		return KeyTestRateLimited
 	default:

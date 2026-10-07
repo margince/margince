@@ -5,7 +5,7 @@
 
 package gates
 
-// A company's NAME is the axis on which two records of one company converge, so
+// A company's name is the axis on which two records of one company converge, so
 // every rename has to ask whether it just created a duplicate.
 //
 // `recheckCompanyNameForDuplicates` is called from a handful of places that each had

@@ -85,6 +85,7 @@ func buildSchema(root reflect.Type, docs docIndex) (object, error) {
 // until the server refuses to start.
 func structNode(t reflect.Type, docs docIndex) (object, error) {
 	props := &object{}
+	var required []string
 	for i := range t.NumField() {
 		f := t.Field(i)
 		if inlined(f) {
@@ -104,13 +105,50 @@ func structNode(t reflect.Type, docs docIndex) (object, error) {
 		if err != nil {
 			return object{}, err
 		}
+		node, mandatory, err := constrain(node, f)
+		if err != nil {
+			return object{}, fmt.Errorf("%s.%s: %w", t.Name(), f.Name, err)
+		}
+		if mandatory {
+			required = append(required, name)
+		}
 		props.set(name, node)
 	}
 	var out object
 	out.set("type", "object")
 	out.set("additionalProperties", false)
+	if len(required) > 0 {
+		out.set("required", required)
+	}
 	out.set("properties", props)
 	return out, nil
+}
+
+// constrain applies a field's `schema:` tag: the checks the loader makes that
+// a shape alone cannot say. "required" makes the key mandatory and, on a list,
+// non-empty; "date-time" asks for an RFC 3339 instant. The tag restates what
+// validate() refuses, so the editor flags it before a boot does — and only
+// that: a tag the loader does not enforce would flag valid config.
+func constrain(node object, f reflect.StructField) (object, bool, error) {
+	tag, ok := f.Tag.Lookup("schema")
+	if !ok {
+		return node, false, nil
+	}
+	mandatory := false
+	for _, opt := range strings.Split(tag, ",") {
+		switch opt {
+		case "required":
+			mandatory = true
+			if f.Type.Kind() == reflect.Slice {
+				node.set("minItems", 1)
+			}
+		case "date-time":
+			node.set("format", "date-time")
+		default:
+			return object{}, false, fmt.Errorf("unknown schema tag option %q — teach constrain, do not guess", opt)
+		}
+	}
+	return node, mandatory, nil
 }
 
 // fieldNode renders one field, documented from the Go source above it.

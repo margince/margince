@@ -5,7 +5,7 @@
 
 package gates
 
-// The staleness rule lives in the SCHEMA, and this holds it there.
+// The staleness rule lives in the schema, and this holds it there.
 //
 // A company whose address moved must not keep answering radius queries from
 // where it used to be. The first cut enforced that in Go, in the two address

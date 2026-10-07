@@ -184,6 +184,8 @@ type oidcClaims struct {
 	// sign-in adapters hand on, never an error, because most Google tokens
 	// carry no such claim and a token naming no groups simply grants nothing.
 	Groups []string `json:"groups"`
+	// GivenName is the standard `given_name` claim; absent decodes as "".
+	GivenName string `json:"given_name"`
 }
 
 // Verify returns the decoded claims only for a well-formed, correctly-signed

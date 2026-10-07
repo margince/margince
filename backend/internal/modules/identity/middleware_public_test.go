@@ -61,3 +61,12 @@ func TestIsOIDCLoginRequest(t *testing.T) {
 		t.Fatal("the OIDC routes are GET-only in the contract; POST must not bypass the session gate")
 	}
 }
+
+func TestStatusIsExplicitlyPublic(t *testing.T) {
+	if !isPublicRequest(httptest.NewRequest(http.MethodGet, "/v1/status", nil)) {
+		t.Fatal("the status probe must pass the session gate for external uptime monitors")
+	}
+	if isPublicRequest(httptest.NewRequest(http.MethodPost, "/v1/status", nil)) {
+		t.Fatal("the status probe must expose GET anonymously, not every method on its path")
+	}
+}

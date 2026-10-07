@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import { RelationshipsTab } from "./relationshiprows";
 import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
@@ -66,6 +67,17 @@ export const WithRelationships: Story = {
         <RelationshipsTab scope={{ contact_id: "p-1" }} />
       </StoryProviders>
     );
+  },
+};
+
+/** The add form, open: the counterparty search above the edge's own fields. */
+export const Adding: Story = {
+  ...WithRelationships,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByTestId("add-relationship"),
+    );
+    await screen.findByRole("dialog");
   },
 };
 

@@ -187,13 +187,30 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			boundRungs = append(boundRungs, t)
 		}
 	}
-	var lastErr error
+	var lastErr, skipped error
 	var lastTier Tier
 	for i, t := range boundRungs {
 		// The rail's lease covers one model call, and this is the next one.
 		lc.renewRailLease(ctx)
-		out, callErr := b.clients[t].Complete(ctx, req)
+		// Each rung gets its own deadline, so one slow host spends at most its
+		// share and the walk still reaches the rung above it.
+		callCtx, cancel := context.WithTimeout(ctx, r.callSettings(lc, task).AttemptTimeout)
+		out, callErr := b.clients[t].Complete(callCtx, req)
+		cancel()
 		if callErr != nil {
+			// A rung whose provider is blocked made no call: it is skipped, not
+			// traced or metered as a failure of this request, and it never
+			// replaces what a rung that WAS called answered.
+			if refusedUncalled(callErr) {
+				// An account refused for lack of credit ends the walk, as the
+				// refusal itself does: skipping on would bill a premium rung
+				// for every call while the configured one is empty.
+				if lastErr == nil && blockedForCredit(callErr) {
+					return model.Response{}, t, false, callErr
+				}
+				skipped = earlier(skipped, callErr)
+				continue
+			}
 			lastErr, lastTier = callErr, t
 			// A refused account is the operator's to fix, and only the rung
 			// that hit it knows so. The walk keeps just `lastErr`, so an
@@ -227,6 +244,9 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			if i < len(boundRungs)-1 {
 				lc.append(r.traceForFailedRung(b, *trace, t, callErr, start))
 				trace.AttemptReason = attemptReasonProviderError
+				if isDeadline(callErr) {
+					trace.AttemptReason = attemptReasonTimeout
+				}
 			}
 			continue
 		}
@@ -248,6 +268,9 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		}
 		return out, t, true, nil
 	}
+	if lastErr == nil && skipped != nil {
+		return model.Response{}, "", false, skipped
+	}
 	if lastErr != nil {
 		// lastTier names the rung whose failure the caller sees, so the
 		// trace records where the walk died instead of an empty tier.
@@ -262,9 +285,41 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		if errors.Is(lastErr, model.ErrOutputWithheld) || errors.Is(lastErr, model.ErrRequestRejected) {
 			return model.Response{}, lastTier, false, lastErr
 		}
+		// A walk that ends on the failure that blocked its provider (or kept
+		// it blocked, when the call was the probe) is a deferral already: the
+		// tracked client dressed it as one, and the item did nothing wrong.
+		var down *ProviderDownError
+		if errors.As(lastErr, &down) {
+			return model.Response{}, lastTier, false, lastErr
+		}
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}
 	return model.Response{}, "", false, nil
+}
+
+// stampConfigs points each attempt at the snapshot of what it was sent with,
+// planting each distinct snapshot once. Best-effort enrichment: a working call
+// is still traced when a config-dimension write fails, just without a
+// config_hash on the attempts that snapshot covers.
+func (r *Router) stampConfigs(ctx context.Context, b *binding, lc *logicalCall) {
+	settings := r.callSettings(lc, lc.terminal().Task)
+	planted := map[string]bool{}
+	for i := range lc.attempts {
+		snap := b.snapshotFor(lc.attempts[i].Tier, lc.attempts[i].Kind, settings)
+		ok, tried := planted[snap.Hash]
+		if !tried {
+			err := r.calls.EnsureConfig(ctx, snap)
+			if err != nil {
+				r.log.WarnContext(ctx, "ai: ensuring config snapshot failed — tracing without config_hash", "err", err)
+			}
+			ok = err == nil
+			planted[snap.Hash] = ok
+		}
+		if ok {
+			hash := snap.Hash
+			lc.attempts[i].ConfigHash = &hash
+		}
+	}
 }
 
 // rejectedAgainAbove reports whether callErr rejected the request and the next
@@ -429,17 +484,7 @@ func (r *Router) flush(ctx context.Context, b *binding, lc *logicalCall) {
 		return
 	}
 	if b.configHash != "" {
-		if err := r.calls.EnsureConfig(ctx, b.configSnapshot); err != nil {
-			// Best-effort enrichment: a working call must still be traced
-			// even when the config-dimension write fails — just without a
-			// config_hash this once.
-			r.log.WarnContext(ctx, "ai: ensuring config snapshot failed — tracing without config_hash", "err", err)
-		} else {
-			hash := b.configHash
-			for i := range lc.attempts {
-				lc.attempts[i].ConfigHash = &hash
-			}
-		}
+		r.stampConfigs(ctx, b, lc)
 	}
 	if err := r.calls.Record(ctx, lc.attempts); err != nil {
 		r.log.ErrorContext(ctx, "ai: recording call trace failed", "task", string(term.Task), "err", err)

@@ -28,6 +28,7 @@ const SHEET = [
     cache_read_per_mtok: "0.075",
     cache_write_per_mtok: "0.3833",
     effective_date: "2026-08-01",
+    source: "seed" as const,
   },
   {
     provider: "gemini",
@@ -38,6 +39,7 @@ const SHEET = [
     cache_read_per_mtok: "0",
     cache_write_per_mtok: "0",
     effective_date: "2026-08-01",
+    source: "seed" as const,
   },
 ];
 

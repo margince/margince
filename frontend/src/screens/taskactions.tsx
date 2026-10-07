@@ -17,12 +17,14 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { CLAIM_SETTLED_KEYS } from "./activitykeys";
+import { provenanceOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
@@ -318,13 +320,13 @@ export function TaskDetailModal({
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} placement="right">
-      <div className="drawer-head task-detail-head">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
         </Heading>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
         <ErrorLine error={query.error} />
         {task && (
@@ -356,6 +358,11 @@ export function TaskDetailModal({
               {task.assignee_id && (
                 <EntityRef kind="user" id={task.assignee_id} />
               )}
+              {/* A task an agent wrote says so, so a reader knows it was
+                  read out of a conversation rather than typed by a colleague. */}
+              {provenanceOf(task.captured_by).kind === "agent" && (
+                <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+              )}
             </div>
             {!task.is_done && !readOnly && (
               <div className="form-actions task-detail-actions">
@@ -379,7 +386,7 @@ export function TaskDetailModal({
             )}
           </div>
         )}
-      </div>
+      </DrawerBody>
       {openSource && (
         <SourceActivity
           activityId={openSource}
@@ -408,27 +415,29 @@ function SourceActivity({
   const query = useActivity(activityId);
   const meeting: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {meeting?.subject ?? t("tasks.source")}
-      </Heading>
-      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-      <ErrorLine error={query.error} />
-      {meeting && (
-        <div className="form-stack">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {meeting?.subject ?? t("tasks.source")}
+        </Heading>
+        {meeting && (
           <p className="t-caption">
             {formatDateTime(meeting.occurred_at, locale, recordZone)}
           </p>
-          {/* The transcript, as it was captured. `pre-wrap` because a
-              transcript is line-per-turn and reflowing it into a paragraph
-              takes away the one structure it has. */}
-          {meeting.body && (
-            <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-              {meeting.body}
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </DrawerHead>
+      <DrawerBody>
+        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+        <ErrorLine error={query.error} />
+        {/* The transcript, as it was captured. `pre-wrap` because a
+            transcript is line-per-turn and reflowing it into a paragraph
+            takes away the one structure it has. */}
+        {meeting?.body && (
+          <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
+            {meeting.body}
+          </p>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }
@@ -559,9 +568,9 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The contact's own card lists the same open claims, so a drawer standing
-      // on them would keep showing a promise that has just been settled.
-      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      for (const queryKey of CLAIM_SETTLED_KEYS) {
+        queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }

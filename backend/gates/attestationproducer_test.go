@@ -5,7 +5,8 @@
 
 package gates
 
-// Attestation-minting fitness function (ADR-0072 §1). The T1
+// The only call that mints outbound correspondence attestation,
+// WithOwnerAttestation, stays in one place. The T1
 // correspondence-positive gate spares an address from transactional
 // suppression, and its whole safety rests on connector.Counterparty's
 // outbound attestation being something a connector cannot state for itself.
@@ -43,13 +44,21 @@ import (
 // finding nothing and passing forever, guarding an invariant that had moved.
 // This pins the name AND the signature the walk assumes, so either changing
 // stops the compile here, where the walk is, rather than retiring it in silence.
-var _ func(bool) connector.Counterparty = connector.Counterparty{}.WithOwnerAttestation
+var (
+	_ func(bool) connector.Counterparty           = connector.Counterparty{}.WithOwnerAttestation
+	_ func(string, string) connector.Counterparty = connector.Counterparty{}.AsSentBySeat
+)
 
 const (
 	// The sole sanctioned minter, relative to the backend module root.
 	attestationMinter = "internal/modules/capture/mailmap"
 	// The port's constructor — the one way into the unexported field.
 	attestationCall = "WithOwnerAttestation"
+	// The second way in carries the PROVIDER's filing over to mail the seat
+	// sent from another address of theirs, and is sanctioned in one file: the
+	// sink step that has checked that address against the seat's own.
+	reattestationSite = "internal/modules/capture/sentfromownaddress.go"
+	reattestationCall = "AsSentBySeat"
 )
 
 func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
@@ -70,9 +79,7 @@ func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
 			return nil
 		}
 		slashed := filepath.ToSlash(path)
-		if strings.HasPrefix(slashed, attestationMinter+"/") {
-			return nil
-		}
+		minterFile := strings.HasPrefix(slashed, attestationMinter+"/")
 		// Parsed with mode 0 so build constraints are ignored: a file excluded
 		// on this platform still has to obey the rule.
 		fset := gatekit.SourceFileSet()
@@ -85,7 +92,12 @@ func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
 			if !ok {
 				return true
 			}
-			if sel, isSel := call.Fun.(*ast.SelectorExpr); isSel && sel.Sel.Name == attestationCall {
+			sel, isSel := call.Fun.(*ast.SelectorExpr)
+			if !isSel {
+				return true
+			}
+			if (sel.Sel.Name == attestationCall && !minterFile) ||
+				(sel.Sel.Name == reattestationCall && slashed != reattestationSite) {
 				offenders = append(offenders, fset.Position(sel.Pos()).String())
 			}
 			return true
@@ -96,13 +108,13 @@ func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
 		t.Fatalf("walking the backend tree: %v", err)
 	}
 	if len(offenders) > 0 {
-		t.Errorf("%s is called outside %s:\n  %s\n\n"+
+		t.Errorf("%s is called outside %s, or %s outside %s:\n  %s\n\n"+
 			"That call mints the T1 correspondence gate's only evidence (ADR-0072 §1). It may be made\n"+
 			"ONLY where the message's authorship and a provider's own filing of it are both known —\n"+
 			"which is what the mail mapper does. Minting it anywhere else lets whatever supplied that\n"+
 			"argument whitelist an arbitrary address past transactional suppression.\n\n"+
 			"To produce an attested record, build it through capture/mailmap (Parse → AttestSentByOwner),\n"+
 			"passing your provider's own filing of the message — never a value derived from its content.",
-			attestationCall, attestationMinter, strings.Join(offenders, "\n  "))
+			attestationCall, attestationMinter, reattestationCall, reattestationSite, strings.Join(offenders, "\n  "))
 	}
 }

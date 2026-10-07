@@ -388,7 +388,7 @@ func dateValue(r ranked) *crmcontracts.WorklistValue {
 		return &crmcontracts.WorklistValue{Kind: valueNone}
 	}
 	at := r.deadlineAt
-	return &crmcontracts.WorklistValue{Kind: "date", Date: &at}
+	return &crmcontracts.WorklistValue{Kind: valueDate, Date: &at}
 }
 
 func moneyValue(r ranked) *crmcontracts.WorklistValue {

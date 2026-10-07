@@ -1,15 +1,14 @@
 # Your day and your week
 
-**Home** is where a day starts in Margince. It has two views — **Morning** and
-**Weekly** — and two scopes, **Mine** and **Team**. The team scope appears only
-for a seat whose row scope reaches past its own records.
+**Home** is where a day starts in Margince. It has two views, **Morning** and
+**Weekly**, and two scopes, **Mine** and **Team**. The team scope appears only
+if you can see records beyond your own.
 
 The Worklist is Margince's ranked to-do list: one queue of everything waiting on
-you — buyers to answer, tasks due, promises made, deals at risk and items to
-review — in the order the server ranks them. It lives on **Home**: press **Show
-Worklist** and it opens as a panel over the page (**Hide Worklist** closes it).
-It has no sidebar row of its own, and old `#/worklist` links land in the same
-place.
+you (buyers to answer, tasks due, promises made, deals at risk and items to
+review), in the order Margince ranks them. It lives on **Home**.
+Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it.
+It has no sidebar row of its own.
 
 ## Common daily tasks
 
@@ -48,14 +47,15 @@ The undo is scoped the way the verb was: undoing your own snooze never brings ba
 ### How do I see all my tasks?
 To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the **Tasks** pill under **Work type**.
 Tasks are grouped by when they are due: overdue and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading.
+A task more than 30 days overdue leaves the Worklist and its counts. A pin keeps it there while the pin is one of your 50 newest. The task stays open, keeps its due date, and still shows on the record it is on.
 A company also has a **Tasks** tab with its own tasks; a contact has no Tasks tab.
 Also called: my to-dos, tasks due today, open tasks, task list.
 
 ### How do I complete a task?
-To complete a task in Margince, press **Done** on it — on its Worklist row, or on the task in the record's list of next steps.
+To complete a task in Margince, press **Done** on its Worklist row, or on the task in the record's list of next steps.
 1. Open **Home** → **Show Worklist**, or open the contact, company or deal the task is on.
 2. Press **Done**. The task is marked "Task completed".
-3. Not ready yet? Press **Snooze 1 day** to move its due date a day later, or open the task and pick a day under **Move to**.
+3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick a day under **Move to**.
 **Snooze 1 day** adds a day to the task's own due date, so it is not shown on an undated task. If completing fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### How do I plan my week?
@@ -76,7 +76,7 @@ A lead record does not enter the Worklist by being created, imported or assigned
 A planned task linked to a lead or an inbound request can enter through the task
 or waiting-message queue. Choose prospects in **Leads**, then schedule outreach.
 
-The Worklist is one ranked list. **The order is the server's**, and the screen
+The Worklist is one ranked list. Margince sets the order, and the screen
 never re-sorts it.
 
 ### The three bands
@@ -89,44 +89,44 @@ Worklist items are grouped into bands, drawn in this order:
 | **Keep momentum** | "No agreed work is drifting." |
 | **Prospecting** | "No prospecting work waiting." |
 
-Review work is the fourth kind, and it does not draw a band in the queue — it has
+Review work is the fourth kind. It does not draw a band in the queue; it has
 its own panel beneath, headed **To review**.
 
-A band you have cleared still shows its heading and says so — but only when the
-whole day is loaded. Half a day cannot honestly report an empty band.
+A band you have cleared still shows its heading and says so, but only when the
+whole day is loaded.
 
 Within a band, work due tomorrow, this week or later carries its own heading.
 Overdue and today's work sits under the band heading, because that is what the
 band already means.
 
-**A crowded row moves down, never up.** When one band fills, its overflow drops
+A crowded row moves down, never up. When one band fills, its overflow drops
 to Keep momentum rather than being promoted past work that was already urgent.
 
 ### Why a row is where it is
 Each Worklist row explains itself three ways, in sentences rather than under headings:
 
-- **The facts that put it there** — a buyer wrote last, a promise is due, a
+- **The facts that put it there**: a buyer wrote last, a promise is due, a
   meeting is soon, nobody has replied in so many days.
 - **Why it outranks the row below**, written out: "Ranked above the next item
   because you pinned it."
 - **What happens if you leave it**: "If ignored, the buyer keeps waiting."
 
-Ranking is a fixed ladder of comparisons, not a score: a pin first, then the
-band, then whether the row was crowded, then what **kind** of work it is — waiting on
-somebody, a promise, a risk to real money, something agreed, something blocking
-a colleague, or routine — then its deadline, then expected revenue, and so on
-down. **Levels are hard.** Nothing
-adds up into a single number you cannot take apart.
+Ranking is a fixed ladder of comparisons instead of a score. A pin comes first,
+then the band, then whether the row was crowded. Next comes what **kind** of work
+it is: waiting on somebody, a promise, a risk to real money, something agreed,
+something blocking a colleague, or routine. Then its deadline, then expected
+revenue, and so on down. Each level decides before the next one is looked at.
+Nothing adds up into a single number you cannot take apart.
 
 ### Pinning
 
 A pin moves a Worklist row to the top of your Worklist and keeps it there. It
-is yours alone — pinning reorders what you can already read, and changes nothing
+is yours alone: pinning reorders what you can already read, and changes nothing
 for anybody else. Urgency is unchanged. The act is still written to the audit
 log.
 
 **A pin never expires.** It survives the row it names, and nothing takes one off
-for you — with one exception: only your 50 most recent pins take effect, so
+for you. The one exception: only your 50 most recent pins take effect, so
 pinning a fifty-first makes your oldest stop counting.
 
 ### Taking something off the list
@@ -136,15 +136,15 @@ distances:
 
 | Verb | What it does | Who it affects |
 |---|---|---|
-| **Snooze** | Comes back tomorrow, in 3 days, in 7 — or when they reply | **Your list only** |
+| **Snooze** | Comes back tomorrow, in 3 days, in 7, or when they reply | **Your list only** |
 | **Not mine** | "Removed from your list. The owner still sees it." | **Your list only** |
 | **Not a customer** | "Removed from every list." | **Everybody** |
 
 "Not a customer" is judged on the **thread**, not the message, so the next reply
 in it arrives already judged.
 
-Each confirms what it did — "Back on your list tomorrow.", "Back on your list
-when they reply." — and each offers **Undo**. The undo is scoped the way the verb
+Each confirms what it did ("Back on your list tomorrow.", "Back on your list
+when they reply.") and each offers **Undo**. The undo is scoped the way the verb
 was: clearing your own snooze never re-admits a thread a colleague ruled out for
 the whole company.
 
@@ -156,25 +156,21 @@ The Worklist holds still while you work it. When something arrives or is dealt
 with underneath you, a notice headed **List changed** says which: "{arrived} new
 since you opened the list. Refresh to add them."
 
-It is an event, not a warning — the page is correct, merely incomplete. The
-Refresh button appears only when something actually arrived.
+The page is still correct, only incomplete. The
+Refresh button appears only when something arrived.
 
 ### How complete is this?
 The Worklist footer says how complete the list is, in one of two ways:
 
-- **"{shown} of {considered} shown"** — a plain fraction.
-- **"{shown} shown · {sources} sources have more"** — where a source stopped at
+- **"{shown} of {considered} shown"**: a plain fraction.
+- **"{shown} shown · {sources} sources have more"**: a source stopped at
   its reading limit.
 
-The second one prints **no fraction**, deliberately. The denominator would be a
-floor, and "200 of 200 shown · 1 source has more" contradicts itself.
+The second shows no fraction, because the total is not known.
 
 If a source could not be read at all, a callout headed **Worklist incomplete**
-names it above the queue. And the empty state changes with it — not "Nothing is
-waiting on you." but **"No items in the sources that loaded."**
-
-That distinction is the page in miniature. A quiet day and an unread source look
-identical unless the product says which it means.
+names it above the queue. The empty state then reads **"No items in the sources
+that loaded."** instead of "Nothing is waiting on you."
 
 ### Handled for you
 
@@ -190,35 +186,35 @@ it was.
 
 ## For a team lead
 
-A team lead in Margince sees more on Home and in the Worklist, for a seat whose
-scope reaches past its own records, and where it appears matters.
+A team lead in Margince, or anyone who can see records beyond their own, sees
+more on Home and in the Worklist.
 
-On **Home → Team** you get the team board and the coaching suggestions. The other
-two live in the Worklist panel, which carries its own **Whose work** dial —
-**Mine**, **Unassigned**, **Team**, **All** — and **Hidden from the Worklist**
+On **Home → Team** you get the team board and the coaching suggestions. The rest
+lives in the Worklist panel, which carries its own **Whose work** dial
+(**Mine**, **Unassigned**, **Team**, **All**). **Hidden from the Worklist**
 appears only at **All**.
 
-**Team exceptions** — team work that has crossed a line: a first reply is late,
+**Team exceptions**: team work that has crossed a line: a first reply is late,
 revenue at risk, nobody has taken it, or the same thing keeps failing. Each row
 names **what it was judged against**, so the threshold is visible rather than
 implied. You can take a row on from here.
 
-**Team work needing attention** — a row per teammate: waiting on a reply, deals
+**Team work needing attention**: a row per teammate: waiting on a reply, deals
 at risk, past due, promises due. Unassigned work gets its own row.
 
-**Coaching suggestions** — at most one suggestion per teammate, and the most
-urgent kind rather than the biggest number.
+**Coaching suggestions**: at most one suggestion per teammate, and the most
+urgent kind instead of the biggest number.
 
-**Hidden from the Worklist** — five reasons work is held back, each with what it
+**Hidden from the Worklist**: the reasons work is held back, each with what it
 costs you: **Too old for the Worklist** ("No one decided this. The sender wrote
 months ago and got no answer."), **Not linked to a record**, **From your
 company’s domains**, **Marked not sales work**, or **Set aside by you**.
 
-When there is nothing held back, it says so and it is good news: "Nothing is
+When nothing is held back, it says: "Nothing is
 hidden. Every waiting customer reaches a Worklist."
 
-You can also add a note to a teammate's Worklist with **Add note** — "A short
-note that appears in their Worklist."
+You can also add a note to a teammate's Worklist with **Add note** ("A short
+note that appears in their Worklist.").
 
 ## The weekly review
 
@@ -229,7 +225,7 @@ regenerate: the counts are what they were.
 If there is none yet: "No weekly review yet. The first one is created on the
 Monday after your first full week."
 
-Above everything sits the rule the whole page is built on:
+Above everything sits this rule:
 
 > **Recorded CRM work for this closed week. Missing records do not establish
 > inactivity.**
@@ -237,31 +233,28 @@ Above everything sits the rule the whole page is built on:
 ### What it counts
 The weekly review counts won, lost, stage changes, tasks completed and carried over, plan commitments
 kept, recorded lead responses, and meetings with a linked follow-up. Each shows
-against the prior week — and where there is no prior week, the comparison is
-**omitted** rather than shown as a change from zero.
+against the prior week. Where there is no prior week, the comparison is
+left out instead of shown as a change from zero.
 
 Behind a disclosure sit the deeper readings: a scorecard, the forecast outlook
 and how the week moved it, and the observations.
 
 ### The scorecard
 
-**Leads and meetings** — leads moved forward, recorded responses (with how many
+**Leads and meetings**: leads moved forward, recorded responses (with how many
 breached the target), meetings held (with booked and no-show beneath).
 
-**Deals** — stage advances and regressions, median days in stage, how many open
+**Deals**: stage advances and regressions, median days in stage, how many open
 deals carry a next step, how many have more than one contact, how many carry a
 firm close date, and forecast upgrades against downgrades.
 
-Two rows appear only when they have something to say, and both exist to stop you
-reading a number as complete when it is not:
+Two rows appear only when a count is incomplete:
 
-- **Meetings without history** — "Before history began · counts are minimums".
-- **Deals not rebuilt** — "Affected by an erasure · counts are minimums".
+- **Meetings without history**: "Before history began · counts are minimums".
+- **Deals not rebuilt**: "Affected by an erasure · counts are minimums".
 
-That second one is the honest edge of the whole feature. To count a population
-as it stood on Friday, the product rewinds each deal through its own history. If
-any step of that rewind sits behind an erasure, the deal is not counted at all
-and is reported separately — rather than being counted wrongly.
+Deals affected by an erasure cannot be counted for the week. They are listed
+separately.
 
 ### Observations to review
 
@@ -269,14 +262,14 @@ and is reported separately — rather than being counted wrongly.
 deals it was read from, and each tagged: **Positive outcome**, **Unsuccessful
 outcome**, **Pattern**, or **Experiment**.
 
-The caveat is part of the feature, not a disclaimer bolted on: "These
+Each carries this caveat: "These
 observations describe associations in recorded work; they do not establish what
 caused the outcome."
 
-Two empty states, and they mean different things: **"This week has not been
-analyzed yet."** and **"Not enough recorded evidence for useful observations."** The second
-has a floor behind it — fewer than three citable rows and no model is asked at
-all.
+Two empty states mean different things. **"This week has not been
+analyzed yet."** means the analysis has not run. **"Not enough recorded evidence
+for useful observations."** means there were fewer than three citable records, so
+no model was asked.
 
 An installation with no AI model configured still gets the whole review. It
 simply never gets the observations or the written summary, and says so.
@@ -292,11 +285,10 @@ changes**, and if some fail, the ones that failed stay ticked with a count.
 
 ### The four states
 
-**Open**, **Done**, **Dropped** — and **Missed**.
+**Open**, **Done**, **Dropped** and **Missed**.
 
-You set the first three. **You cannot mark yourself missed**: that is written by
-the week closing, on anything still open. It is the week's verdict, not
-something you declare about yourself.
+You set the first three. You cannot mark a commitment missed: Margince marks open
+commitments missed when the week closes.
 
 **Dropped** is your decision, and it counts as neither kept nor owed.
 
@@ -305,7 +297,7 @@ something you declare about yourself.
 expect could go wrong, in your own words") and **Available capacity** ("Anything
 the calendar does not show, such as leave, travel or a launch").
 
-Each has **three** states rather than two: **Not written yet**, **"Nothing to
+Each has three states: **Not written yet**, **"Nothing to
 name"**, or the text. An unanswered question and an answer of "nothing" are
 different facts.
 
@@ -320,7 +312,7 @@ To ask your lead for help, press **Ask for help** on a commitment, answer
 nothing has come back, the row reads "Help requested · awaiting a response". The answer arrives on that same row, with the name of whoever wrote
 it.
 
-Know how this actually travels: **nothing in the product notifies your lead.**
+**Nothing in the product notifies your lead.**
 The request is found when they open your plan, or on the next Monday, where it
 becomes the first thing on their agenda for you. If you need an answer sooner
 than that, ask them directly as well.
@@ -328,8 +320,8 @@ than that, ask them directly as well.
 (An installation that has wired its own automation to Margince's events can be
 told about the ask; nothing built in does that.)
 
-A lead may answer a commitment and nothing else — not settle it, reword it, or
-drop it.
+A lead may answer a commitment and nothing else. A lead cannot settle it,
+reword it or drop it.
 
 ## The team's week
 
@@ -338,24 +330,22 @@ A team's week in Margince is on **Home → Weekly** with the scope set to
 meetings with a recorded next step, commitments kept, won and lost, and how many
 members were counted.
 
-**Monday agenda** — one line per teammate, in priority order, each with the
+**Monday agenda**: one line per teammate, in priority order. Each line gives the
 reason it is there: asked for help, response targets missed, plan commitments
 missed, deal recovery, worth copying, follow-up evidence missing, or no priority
 identified. **Copy agenda** copies it to the clipboard in one press.
 
-Two honest notes carried on the page itself:
+The page carries two notes about missing data:
 
 - Where snapshots are missing: "Snapshots are missing for {count} team members.
   These figures cover {counted} members." It is never hidden behind a
   disclosure.
 - Where nobody was measured: "No member snapshots are available for this week.
-  Performance is not measured." — rather than a page of zeroes.
+  Performance is not measured." The page does not show zeroes.
 
-A team's week is for the team's lead, and for a role that oversees every team —
-Admin and Management out of the box. Reaching every record is not enough: a
+A team's week is for the team's lead, and for a role that oversees every team
+(Admin and Management out of the box). Reaching every record is not enough: a
 read-only seat sees the whole workspace and its team's live work on Morning, and
 is still not offered the team's week. The week's picker lists the teams you
-lead, or every team if your role oversees them all. A seat that may open no team's week is told plainly that this is not
-theirs. A lead asking about a team they are not on gets **not found** — exactly
-what a team that does not exist returns, so who leads what cannot be mapped by
-trying.
+lead, or every team if your role oversees them all. A seat that may open no team's week is told that this is not
+theirs. A lead asking about a team they are not on gets **not found**.

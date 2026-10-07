@@ -114,7 +114,15 @@ func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyM
 	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
 	}
-	return fuzzyCompany(ctx, tx, c)
+	claimants, err := nameDomainClaimant(ctx, tx, c)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
+	match, err := fuzzyCompany(ctx, tx, c)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
+	return rankNameDomainClaimantFirst(match, claimants), nil
 }
 
 // DedupeCompanyForCreate is PO-F-2 for a path that is about to MINT a
@@ -158,6 +166,32 @@ func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, excl
 		  AND ($2::uuid IS NULL OR company_id <> $2)
 		ORDER BY company_id
 		LIMIT 2`, lowered, exclude)
+}
+
+// nameDomainClaimant answers the company that claims the domain the
+// candidate's display name spells, as a rival for review. A company minted
+// from mail is filed under its domain, so that name is a claim on the domain
+// even when no company_domain row says so. It never routes: two records on one
+// domain are a human's call, and the own company is never a rival.
+// It answers at most one: a live domain belongs to one company.
+func nameDomainClaimant(ctx context.Context, tx pgx.Tx, c CompanyCandidate) ([]CompanyCandidateScore, error) {
+	domain, ok := displayNameDomain(c.DisplayName)
+	if !ok {
+		return nil, nil
+	}
+	owners, err := exactOwners[ids.CompanyID](ctx, tx, entityCompany, `
+		SELECT d.company_id FROM company_domain d
+		  JOIN company c ON c.id = d.company_id
+		 WHERE d.domain = $1 AND d.archived_at IS NULL
+		   AND NOT c.is_anchor
+		   AND ($2::uuid IS NULL OR d.company_id <> $2)`, domain, c.ExcludeID)
+	if err != nil || len(owners) == 0 {
+		return nil, err
+	}
+	return []CompanyCandidateScore{{
+		CompanyID: owners[0], Confidence: identityConflictConfidence,
+		MatchedField: laneDomain, CandidateValue: c.DisplayName, IncumbentValue: domain,
+	}}, nil
 }
 
 // fuzzyCompany scores name similarity over the trigram-restricted

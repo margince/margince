@@ -10,6 +10,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { approvalHref } from "../screens/approvaldrawer";
 import {
   LoadMoreButton,
   problemMessageOf,
@@ -276,15 +277,19 @@ function NoticeRow({
   settling: boolean;
 }>) {
   const t = useT();
-  const route = recordRoute(notice.target?.type, notice.target?.id);
+  // A notice asking for a decision opens that decision; any other names a record.
+  const href =
+    notice.target?.type === "approval"
+      ? approvalHref(notice.target.id)
+      : recordHref(notice.target?.type, notice.target?.id);
   const settled = notice.read_at !== undefined;
   return (
     <li className={settled ? "notifrow notifrow-settled" : "notifrow"}>
       <div className="notifrow-head">
-        {route ? (
+        {href ? (
           <a
             className="entity-link notifrow-subject"
-            href={routeHash(route)}
+            href={href}
             onClick={onActivate}
           >
             {notice.subject}
@@ -316,4 +321,9 @@ function NoticeRow({
       )}
     </li>
   );
+}
+
+function recordHref(type?: string, id?: string): string | undefined {
+  const route = recordRoute(type, id);
+  return route ? routeHash(route) : undefined;
 }

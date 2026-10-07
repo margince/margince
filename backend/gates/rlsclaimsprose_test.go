@@ -111,16 +111,13 @@ func ignoredTrees(t *testing.T) map[string]bool {
 // migrations: an applied version never re-runs, so editing one changes what a
 // fresh installation is told while every deployed catalog keeps the old text,
 // and the two then disagree silently. The correction goes in a new migration,
-// which each reason names. The fourth is a changelog entry about the release
-// that genuinely had the control.
+// which each reason names.
 var proseExempt = gatekit.Waive(map[string]string{
 	"../backend/migrations/core/0001_baseline.up.sql: COMMENT ON COLUMN org_dossier.user_id IS 'The reader this assembly was generated for. Written into every read explicitly — RLS binds the workspace, not the reader.';": "an APPLIED version, which never re-runs — editing it would change what a fresh installation is told while every deployed catalog kept this sentence. Corrected by migration 1788751821_a_dossier_names_its_reader_not_a_policy",
 
 	"../backend/migrations/core/0001_baseline.up.sql: COMMENT ON SCHEMA ext IS 'Extension tables (ADR-0069): ext_<name>_<table>, applied by the migrate role from each enabled unit''s own migrations. Tenant isolation is FORCE RLS plus a workspace-bound policy per table, NOT ownership — a per-unit ext_<name> owner role exists only in the pre-merge migration gate (issue #628). The core owns public; nothing here is core data.';": "the same applied baseline, and this comment was already corrected by migration 1787905400_the_ext_schema_says_what_bounds_a_unit",
 
 	"../backend/migrations/core/1787905400_the_ext_schema_says_what_bounds_a_unit.down.sql: COMMENT ON SCHEMA ext IS 'Extension tables (ADR-0069): ext_<name>_<table>, applied by the migrate role from each enabled unit''s own migrations. Tenant isolation is FORCE RLS plus a workspace-bound policy per table, NOT ownership — a per-unit ext_<name> owner role exists only in the pre-merge migration gate (issue #628). The core owns public; nothing here is core data.';": "the DOWN half of the migration that corrected the claim above: restoring the prior text is what a rollback IS",
-
-	"../CHANGELOG.md: `FORCE ROW LEVEL SECURITY` requires, and a runbook": "a record of what shipped in a release that HAD row-level security — correcting its tense would falsify the record",
 })
 
 // deniesTheControl spots a sentence that names the control in order to say it

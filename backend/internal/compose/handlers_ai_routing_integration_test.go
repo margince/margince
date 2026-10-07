@@ -126,7 +126,7 @@ func TestReadingTheBindingAndWritingItBackKeepsEveryResidencyPin(t *testing.T) {
 		lanes[string(tier)] = binding
 	}
 	for lane, binding := range lanes {
-		if binding.Routing == nil || !slices.Equal(binding.Routing.Only, []string{"mistral/eu"}) {
+		if binding.Routing == nil || !slices.Equal(binding.Routing.Provider.Only, []string{"mistral/eu"}) {
 			t.Errorf("%s routing = %+v after GET → PUT, want the stored only: [mistral/eu] kept", lane, binding.Routing)
 		}
 	}
@@ -179,7 +179,7 @@ func TestRepointingALaneKeepsItsProvidersPinsButNotItsServingPreferences(t *test
 	if err != nil {
 		t.Fatalf("serving the stored binding: %v", err)
 	}
-	if r := served.Tiers[ai.TierPremium].Routing; r == nil || !slices.Equal(r.Only, []string{"mistral/eu"}) || r.Sort == "" {
+	if r := served.Tiers[ai.TierPremium].Routing; r == nil || !slices.Equal(r.Provider.Only, []string{"mistral/eu"}) || r.Provider.Sort == nil {
 		t.Errorf("served premium routing = %+v, want the provider's pin over the product default", r)
 	}
 }

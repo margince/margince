@@ -321,10 +321,10 @@ type microsoftOIDCVerifierAdapter struct {
 	matchIdentity func(oidcClaims) error
 }
 
-func (a microsoftOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, groups []string, err error) {
+func (a microsoftOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (identity.OIDCClaims, error) {
 	claims, err := a.v.verifyAs(ctx, idToken, a.matchIdentity)
 	if err != nil {
-		return "", "", false, nil, err
+		return identity.OIDCClaims{}, err
 	}
 	address := claims.Email
 	// The UPN fallback is for WORK accounts only, and the reason it is safe is
@@ -338,7 +338,10 @@ func (a microsoftOIDCVerifierAdapter) Verify(ctx context.Context, idToken string
 	if address == "" && !strings.EqualFold(claims.Tid, microsoftConsumerTenant) {
 		address = claims.PreferredUsername
 	}
-	return address, claims.Sub, address != "", claims.Groups, nil
+	return identity.OIDCClaims{
+		Email: address, Subject: claims.Sub, EmailVerified: address != "",
+		Groups: claims.Groups, GivenName: claims.GivenName,
+	}, nil
 }
 
 // microsoftAuthorityURL builds one of the directory's endpoints. One function

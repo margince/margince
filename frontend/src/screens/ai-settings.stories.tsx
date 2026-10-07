@@ -106,14 +106,25 @@ function story(
       "GET /ai/provider-keys": () =>
         jsonResponse({
           providers: [
-            { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-            { provider: "openai", configured: true, env_var: "OPENAI_API_KEY" },
+            {
+              provider: "gemini",
+              configured: true,
+              env_var: "GEMINI_API_KEY",
+              usable: true,
+            },
+            {
+              provider: "openai",
+              configured: true,
+              env_var: "OPENAI_API_KEY",
+              usable: true,
+            },
             // Bound by the premium lane and holding nothing — the join the
             // header's second line reports and the lane row's pill repeats.
             {
               provider: "anthropic",
               configured: false,
               env_var: "ANTHROPIC_API_KEY",
+              usable: false,
             },
           ],
         }),

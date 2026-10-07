@@ -5,8 +5,6 @@ make on its own. The agent does not do it: it writes the intention down and puts
 it in front of a human, who accepts, edits or rejects it. The product calls the
 waiting items **Approvals**.
 
-This page is about what lands there and how you answer it.
-
 ## Answering approvals
 
 ### How do I approve an action in Margince?
@@ -39,7 +37,7 @@ An approval in Margince expires after **72 hours** by default if nobody decides 
 Also called: approval timed out, missed an approval, stale approval.
 
 ### Who approves agent actions?
-An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change themselves. You only see approvals whose target you can see and whose effect you could perform. No agent may approve its own proposal or one staged for somebody else. An administrator has no override beyond their own permissions.
+An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change themselves. You only see approvals whose target you can see and whose effect you could perform. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override beyond their own permissions.
 Also called: approver, who signs off, permission to approve.
 
 ### How do I stop Margince making automatic changes?
@@ -57,7 +55,7 @@ Also called: revert the AI, roll back an agent edit, reverse an automatic change
 
 An approval card in Margince holds four things:
 
-1. **What is proposed**: the exact change, in full.
+1. **What is proposed**: the change itself, in full.
 2. **The evidence it was formed on**: the records, the passage, the snippet.
 3. **How confident** the proposal is: high, medium or low.
 4. **Who proposed it**: the agent, tagged "Automated by {agent}", with the
@@ -69,9 +67,9 @@ shows the raw proposal.
 
 ## What can become an approval
 
-Below is every kind of approval the product can raise. Note the word *can*:
-which of these you actually see depends on what your agents attempt, and on
-whether your installation has set stricter floors. See
+Below is every kind of approval the product can raise. Which of these you see
+depends on what your agents attempt, and on whether your installation has set
+stricter rules. See
 [Agents, passports and what they may do](agents-and-passports.md#what-actually-waits-for-a-human)
 for which actions wait by default.
 
@@ -106,23 +104,22 @@ for which actions wait by default.
 
 ## Automatic changes: what answers itself
 
-Automatic changes are the exception to everything below: **not every proposal
-waits.**
+Automatic changes are the exception to everything below: some proposals do not
+wait.
 
 Three kinds of change can apply on their own, without an approval being
 decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
-This is per seat, not company-wide, and it is **on by default**. The switches
+This is set per seat, and it is **on by default**. The switches
 are at **Settings → Agents**, under **Automatic changes**, which says: "Automatic
 changes start on. Existing settings are kept. Each switch applies to your work,
 not the whole team."
 
-Beside each switch is your own track record with that kind of proposal: "So
-far: {clean} approved as proposed, {edited} approved after edits, {rejected}
-rejected." The grain is deliberate: approving fourteen close-date confirmations
-is evidence about close dates and none at all about outbound mail, so each kind
-earns its own standing.
+Each switch shows your own track record with that kind of proposal.
+It reads: "So far: {clean} approved as proposed, {edited} approved after edits, {rejected}
+rejected." Each kind keeps its own record, because approving many close-date
+changes says nothing about outbound mail.
 
 Turning a switch off sends that kind back to your approvals, where the rest of
 this page applies.
@@ -131,74 +128,75 @@ this page applies.
 
 An approval has three answers.
 
-**Accept.** The proposed change commits, in one transaction that also writes
-the audit record. When it changed a record, the toast offers **Undo on
+**Accept.** Margince applies the change and records it in the audit log. When
+it changed a record, the toast offers **Undo on
 record**, which opens that record's history to reverse it. A kind that sends
 mail or names no record has nothing to put back, so it offers no undo. A new
 contact, company or deal is taken back from its "Created" entry in the record's
 history.
 
-**Approve edited.** You change the payload first (retype the subject line,
-correct a value) and *the edited version is what executes*. Not the original.
-This is a real edit, not a comment.
+**Approve edited.** You change the proposal first (retype the subject line,
+correct a value), and *the edited version is what runs*, in place of the
+original.
 
-**Reject.** Nothing commits. No record changes. The app asks for no reason; the
-API accepts one, and a reason given is kept on the decision's audit record.
+**Reject.** Nothing is applied and no record changes. The app asks for no
+reason. When an agent rejects with a reason, the reason is kept in the audit
+log.
 
-A rejection is a decision, not a free action. It demands exactly the same
-authority approving does, and it is recorded exactly the same way.
+Rejecting needs the same authority as approving, and it is recorded the same
+way.
 
 ## Who can decide an approval
 
-Two rules decide who may answer an approval, and they matter more than they
-look.
+Two rules decide who may answer an approval.
 
-**You can only decide what you could have done yourself.** Your approvals are
-not the whole table: they are what *you* may decide. An item whose target you
-cannot see, or whose effect you could not perform, is simply absent. It is not
-listed and then refused, because listing it would tell you the record exists.
+**You decide only what you could do yourself.** Your approvals list shows what
+*you* may decide. An item whose target you cannot see, or whose effect you
+could not perform, is not listed at all, because listing it would tell you the
+record exists.
 
 Opening such a card by its link answers "not found", the same as an
 out-of-scope record does.
 
-**Nobody releases their own proposal.** An agent may not approve a card its own
-credential staged. It may still reject it.
+**Agents approve their own proposals only if undoable.** On your word, an agent
+may approve a proposal it staged for you only in a narrow case. The change must
+be one that would have applied by itself except that a human had edited the
+record earlier. It may not close a deal, relink, merge tags, change field
+definitions, send anything, or do anything your installation requires a human for.
+And it must happen in a conversation, never on a schedule. The decision is
+recorded as yours, given through that agent.
+Everything else it proposed is yours to release here, or through a passport you
+minted by hand for that purpose. It may always reject its own proposal.
 
-A colleague's own direct action needs no approval: a human doing the thing
-themselves *is* the confirmation.
+A colleague's own direct action needs no approval: someone doing the thing
+themselves is the confirmation.
 
 ## Editing, versions and clashes
 
 If the record changed underneath an approval while it waited, the app says
 "This record changed after it was staged. Stage it again before deciding." and
-offers **Reload**, rather than letting you approve a proposal formed against
-state that no longer exists.
+offers **Reload**, so you never approve a proposal based on an older version of
+the record.
 
 If someone else got there first, you see "Already decided. Nothing left to do."
-Deciding twice is not possible; the second attempt is refused rather than
-quietly repeated.
+Deciding twice is not possible; the second attempt is refused.
 
 ## Expiry
 
 **An approval expires after 72 hours** by default if nobody decides it.
 
-Three days rather than one is a deliberate choice. At 24 hours, a proposal
-raised on Friday afternoon had auto-rejected before anyone could have seen it,
-and the rejection is silent, so the only evidence was work that quietly did not
-happen. Three days carries Friday afternoon to Monday afternoon.
+Three days lets a proposal raised on Friday afternoon wait until Monday
+afternoon.
 
 An expired card shows as **Expired**. A pending card shows a countdown:
 "expires in {countdown}".
 
-The reasoning behind expiry is that a week-old intention should not be executed
-against today's records. It should be proposed again, against the state it can
-actually see.
+Expiry exists because a week-old intention should not run against today's
+records. The agent proposes again, against the record as it is now.
 
-**One kind never expires: a stopped scheduled message.** The message itself is
-being held and nothing else will reap it, so the card waits until somebody
-answers, however long that takes. A card that expired here would leave a
-message waiting with nothing asking about it, which is exactly the silent stop
-the card exists to prevent.
+**One kind never expires: a stopped scheduled message.** The message is held
+until somebody answers, however long that takes. If the card expired, the
+message would stay stopped with nothing asking about it.
 
 Individual cards may carry a shorter or longer window than 72 hours where the
 thing they are about deserves one: a proposal about a deal closing tomorrow
@@ -210,11 +208,11 @@ A bundle is several proposals produced by one action. Reading a company's
 website, for example, can produce facts about the company *and* contacts found
 on it. Those arrive as a **bundle** and can be decided together.
 
-A bundle is a grouping, not a second thing to have permission over. Each member
+A bundle only groups proposals; it needs no permission of its own. Each member
 is still decided on its own terms: its own verdict, its own audit record, its
 own effect. So:
 
-- Deciding a bundle is **not** all-or-nothing. The result reports each member
+- Deciding a bundle is not all-or-nothing. The result reports each member
   separately.
 - A member that has expired, or that someone already answered, or whose change
   fails to land, is reported on its own instead of taking the rest down with it.
@@ -233,8 +231,8 @@ yourself.
 2. **Log activity**, and choose **Meeting**.
 3. Give it a **Subject** you will recognise later, then tick **This text is a
    transcript** and paste the transcript into the body. The tick matters: it
-   routes the text through the normaliser that numbers the lines, and those line
-   numbers are what the evidence below points at.
+   numbers the transcript lines, and the evidence below points at those
+   numbers.
 4. **Log**.
 5. Open **History** and find the meeting. Margince queues a reading when you
    log a transcript. If no reading is underway or complete, click **Read
@@ -249,8 +247,7 @@ yourself.
 9. **Accept** to create the task, or **Reject**. An accepted proposal becomes an
    ordinary task on the contact and on their company.
 
-What this does **not** do: it does not send anything or create tasks without
-your approval. Reading the transcript proposes next steps; accepting a proposal
+It does not send anything or create tasks without your approval. Reading the transcript proposes next steps; accepting a proposal
 is what creates its task.
 
 ## Where approvals show up
@@ -264,13 +261,3 @@ Staged items surface where the work is:
   approval** panel.
 - Sharing a record that requires approval tells you so at the moment you do it:
   "This share takes effect only after approval. It is not applied yet."
-
-## The point of all this
-
-An approval card is not a speed bump. It is the record of a decision: who
-proposed what, on what evidence, who answered, when, and why. That record is
-what makes it safe to let an agent work inside your customer data rather than
-beside it.
-
-If you approve everything without reading it, you have not made the product
-faster. You have only moved where the mistake gets made.

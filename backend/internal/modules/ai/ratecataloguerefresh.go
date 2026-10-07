@@ -3,13 +3,12 @@
 
 package ai
 
-// The catalogue refresh: re-price, from OpenRouter's own published list, the
-// models this installation actually calls. Only a broker publishes prices in a
-// model-list API, so every other provider reports that its prices are set by
-// hand instead of being guessed at.
+// The price sync's store half: apply a plan over every price source in one
+// transaction, and say per provider what it did.
 
 import (
 	"context"
+	"errors"
 	"maps"
 	"slices"
 	"sort"
@@ -37,26 +36,30 @@ const (
 	RefreshUnreachable RefreshOutcome = "unreachable"
 	// RefreshNotBound means nothing the provider serves is bound or on the sheet.
 	RefreshNotBound RefreshOutcome = "not_bound"
+	// RefreshNotConfigured means the provider holds no usable key, so it was not touched.
+	RefreshNotConfigured RefreshOutcome = "not_configured"
 )
 
-// ProviderRefresh is one provider's line of a refresh report.
+// ProviderRefresh is one provider's line of a sync report. Tagged because the
+// last run is stored as a setting and read back by a later build.
 type ProviderRefresh struct {
-	Provider  string
-	Outcome   RefreshOutcome
-	Updated   int
-	Unchanged int
-	// Unlisted is the bound models the catalogue does not name at all, in id
-	// order: a misspelt id, or a model the broker retired. Not the same as a
-	// model it names without a price, which is a price to set by hand.
-	Unlisted []string
+	Provider  string         `json:"provider"`
+	Outcome   RefreshOutcome `json:"outcome"`
+	Updated   int            `json:"updated"`
+	Unchanged int            `json:"unchanged"`
+	// Added is the models priced for the first time; Kept the hand-set ones left alone.
+	Added int `json:"added"`
+	Kept  int `json:"kept"`
+	// Unlisted is the models on the sheet the catalogue does not name, in id order.
+	Unlisted []string `json:"unlisted"`
 	// Models is the ids written this run, in id order.
-	Models []string
+	Models []string `json:"models"`
 }
 
 // RateRefreshReport lists every provider this build knows, chat adapters
 // first and decision-only adapters after, in registry order.
 type RateRefreshReport struct {
-	Providers []ProviderRefresh
+	Providers []ProviderRefresh `json:"providers"`
 }
 
 // catalogueTarget is one model the refresh may re-price. lane is empty for a
@@ -65,10 +68,6 @@ type catalogueTarget struct {
 	provider, modelID string
 	lane              Lane
 }
-
-// brokerProviders are the providers an OpenRouter binding can carry. A model
-// of any other provider is not priced by OpenRouter's list, whatever its id.
-var brokerProviders = []string{providerOpenAICompatible, providerJevCompatible}
 
 // catalogueTargets is the scope of a refresh: the OpenRouter-hosted models the
 // routing document binds, plus the openai_compatible models already on the
@@ -173,11 +172,10 @@ func rateInput(row ModelRateRow) SetModelRateInput {
 	}
 }
 
-// RefreshFromCatalogue writes today's catalogue price for every in-scope model
-// whose price in force differs, in one transaction so a failed write leaves the
-// sheet as it was. A model at its catalogue price writes nothing and leaves no
-// audit row, so pressing the button twice is the same as pressing it once.
-func (s *RateStore) RefreshFromCatalogue(ctx context.Context, cfg RoutingConfig, catalogue AvailableModels) (RateRefreshReport, error) {
+// SyncPrices writes today's catalogue price for every in-scope model whose price
+// in force differs, and hands the report to record in the same transaction, so a
+// failed run leaves neither prices nor a record of having run.
+func (s *RateStore) SyncPrices(ctx context.Context, src PriceSources, record func(context.Context, pgx.Tx, RateRefreshReport) error) (RateRefreshReport, error) {
 	if err := auth.RequireAny(ctx, "ai_model_rate", principal.ActionCreate, principal.ActionUpdate); err != nil {
 		return RateRefreshReport{}, err
 	}
@@ -185,58 +183,29 @@ func (s *RateStore) RefreshFromCatalogue(ctx context.Context, cfg RoutingConfig,
 	if err != nil {
 		return RateRefreshReport{}, err
 	}
-	inForce := make(map[[2]string]ModelRateRow, len(sheet))
-	for _, row := range sheet {
-		inForce[[2]string{row.Provider, row.ModelID}] = row
-	}
-	listed := make(map[string]AvailableModel, len(catalogue.Models))
-	for _, m := range catalogue.Models {
-		listed[m.ID] = m
-	}
-
-	lines := map[string]*ProviderRefresh{}
-	var writes []SetModelRateInput
-	for _, t := range catalogueTargets(cfg, sheet) {
-		line := lines[t.provider]
-		if line == nil {
-			line = &ProviderRefresh{Provider: t.provider}
-			lines[t.provider] = line
-		}
-		entry, ok := listed[t.modelID]
-		if !ok {
-			if t.lane != "" && catalogue.Unavailable == "" {
-				line.Unlisted = append(line.Unlisted, t.modelID)
-			}
-			continue
-		}
-		next, ok := cataloguePrice(entry, t)
-		if !ok {
-			continue
-		}
-		if cur, has := inForce[[2]string{t.provider, t.modelID}]; has && sameMicroUSD(rateInput(cur), next) {
-			line.Unchanged++
-			continue
-		}
-		writes = append(writes, next)
-		line.Updated++
-		line.Models = append(line.Models, t.modelID)
-	}
+	plan := planPriceSync(src, sheet)
+	var report RateRefreshReport
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		for _, w := range writes {
-			if _, err := s.SetModelRateInTx(ctx, tx, w); err != nil {
+		for _, w := range plan.writes {
+			_, err := s.SetModelRateInTx(ctx, tx, w)
+			switch {
+			case errors.Is(err, errHandSetSinceRead):
+				plan.yielded(w)
+			case err != nil:
 				return err
 			}
 		}
-		return nil
+		// Built after the writes, so the recorded run says what was written.
+		report = reportProviders(plan.lines, src.Broker.Unavailable != "")
+		return record(ctx, tx, report)
 	}); err != nil {
 		return RateRefreshReport{}, err
 	}
-	return reportProviders(lines, catalogue.Unavailable != ""), nil
+	return report, nil
 }
 
-// reportProviders gives every known provider one line. A provider a broker can
-// carry reports what the run did; any other publishes no price list at all.
-func reportProviders(lines map[string]*ProviderRefresh, catalogueDown bool) RateRefreshReport {
+// reportProviders gives every known provider one line, in registry order.
+func reportProviders(lines map[string]*ProviderRefresh, brokerDown bool) RateRefreshReport {
 	names := KnownProviders()
 	for _, d := range DecisionProviders() {
 		if !slices.Contains(names, d) {
@@ -245,30 +214,44 @@ func reportProviders(lines map[string]*ProviderRefresh, catalogueDown bool) Rate
 	}
 	out := make([]ProviderRefresh, 0, len(names))
 	for _, name := range names {
-		line, ok := lines[name]
-		switch {
-		case !slices.Contains(brokerProviders, name):
-			line = &ProviderRefresh{Provider: name, Outcome: RefreshNotAvailable}
-		case !ok:
-			line = &ProviderRefresh{Provider: name, Outcome: RefreshNotBound}
-		case catalogueDown:
-			line.Outcome, line.Updated, line.Unchanged, line.Models = RefreshUnreachable, 0, 0, nil
-		case line.Updated > 0:
-			line.Outcome = RefreshUpdated
-		case line.Unchanged > 0:
-			line.Outcome = RefreshUnchanged
-		case len(line.Unlisted) > 0:
-			line.Outcome = RefreshNotListed
-		default:
-			line.Outcome = RefreshNotAvailable
-		}
-		if line.Models == nil {
-			line.Models = []string{}
-		}
-		if line.Unlisted == nil {
-			line.Unlisted = []string{}
-		}
-		out = append(out, *line)
+		out = append(out, reportLine(name, lines[name], brokerDown))
 	}
 	return RateRefreshReport{Providers: out}
+}
+
+func reportLine(name string, planned *ProviderRefresh, brokerDown bool) ProviderRefresh {
+	_, vendor := modelsDevKeyFor(name)
+	line := ProviderRefresh{Provider: name}
+	if planned != nil {
+		line = *planned
+	}
+	switch {
+	case !vendor && !brokerPriced(name):
+		line = ProviderRefresh{Provider: name, Outcome: RefreshNotAvailable}
+	case planned == nil:
+		line.Outcome = RefreshNotBound
+	case line.Outcome != "":
+		// Decided while planning: out of scope, or its catalogue was unreadable.
+	case brokerPriced(name) && brokerDown:
+		line = ProviderRefresh{Provider: name, Outcome: RefreshUnreachable}
+	case line.Updated+line.Added > 0:
+		line.Outcome = RefreshUpdated
+	case line.Unchanged+line.Kept > 0:
+		line.Outcome = RefreshUnchanged
+	case len(line.Unlisted) > 0:
+		line.Outcome = RefreshNotListed
+	case vendor:
+		// Keyed, but nothing on its sheet and nothing its key lists to price.
+		line.Outcome = RefreshNotBound
+	default:
+		line.Outcome = RefreshNotAvailable
+	}
+	// The wire promises lists, never null.
+	if line.Models == nil {
+		line.Models = []string{}
+	}
+	if line.Unlisted == nil {
+		line.Unlisted = []string{}
+	}
+	return line
 }

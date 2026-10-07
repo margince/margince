@@ -314,6 +314,39 @@ func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
 	}
 }
 
+// A mail a colleague holds a request on stays in the queue for this reader, so
+// it must stay in the read the set-aside figure is the difference against.
+func TestASetAsideFigureIsNotShortenedByARequestAColleagueHolds(t *testing.T) {
+	colleague := setupLoad(t)
+	first, firstAddress := colleague.mailContact(t, "first", "workspace")
+	second, secondAddress := colleague.mailContact(t, "second", "workspace")
+	held := seedEmailRequestFiledUnder(t, colleague, "Send the report", "commitment", OwedVerdictAsksUs, firstAddress,
+		[]ActivityLinkInput{contactLink(first), contactLink(second)},
+		mailParticipants{Cc: []string{firstAddress, secondAddress}})
+	remindedOn(t, colleague, held, false)
+	// The request pass dates its work by the package's fixed instant; the queue
+	// reads against the wall clock, so the mail is moved inside its horizon.
+	colleague.exec(t, `UPDATE activity SET occurred_at = now() - interval '2 days' WHERE id = $1`, held)
+
+	e := setupLoad(t)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	before := hiddenNow(t, e)
+	if before.Shown == 0 {
+		t.Fatal("the mail the colleague holds a request on is not in this reader's queue, so the test shows nothing")
+	}
+	aside := e.seedWait(t, "Set aside", "contact_id", contact)
+	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)
+		VALUES ($1, $2, 'not_mine', 'system')`, aside, e.rep)
+
+	got := moved(before, hiddenNow(t, e))
+
+	if got.SetAside != 1 || got.Shown != 0 {
+		t.Fatalf("one message set aside moved the figures to %+v, want set aside 1 and nothing shown", got)
+	}
+}
+
 // A queue at the scan cap cannot have its hidden work measured, and says so.
 //
 // The cap is on the shared statement, so the strict read and every relaxed read

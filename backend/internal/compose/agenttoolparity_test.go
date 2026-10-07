@@ -378,6 +378,9 @@ func TestSiblingVerbsAgreeOnTheIDTheyName(t *testing.T) {
 //   - from, to — forecast_movement's two periods.
 //   - approval_id — the staged call being redeemed, not the record it touches.
 //
+// candidate_id is the one entry that is no record at all: it names the
+// review-queue pair a dedupe verb settles.
+//
 // A DECLARED FIXTURE rather than a waiver, and the distinction is the one
 // gatekit draws. A waiver is a ratified COST asked about an offender, so it
 // decays when the offence goes; this map is asked BEFORE the subject is known —
@@ -399,6 +402,7 @@ var notTheRecordsOwnID = map[string]string{
 	"approval_id":  "the staged call being redeemed",
 	"host_user_id": "whose calendar a meeting is booked on",
 	"assignee_id":  "who a task is for",
+	"candidate_id": "the review-queue pair a dedupe verb settles, which is neither of its records",
 }
 
 // requiredRecordID is the one required uuid argument naming the record this verb

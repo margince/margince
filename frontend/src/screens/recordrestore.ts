@@ -17,6 +17,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import type { EntityKind } from "../app/entity";
 import { throwProblem } from "./common";
@@ -38,7 +39,7 @@ export type RestorePress = Readonly<{
 // at all: last-write-wins is not a choice an undo may make on somebody else's
 // later edit.
 export function useRecordRestore(handlers: {
-  onSuccess: () => void;
+  onSuccess: (entry: components["schemas"]["AuditHistoryEntry"]) => void;
   onError: (error: unknown) => void;
 }) {
   return useMutation({

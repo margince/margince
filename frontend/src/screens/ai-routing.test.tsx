@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
-import { reachableProviders } from "./ai-binding-editor";
+import { reachableProviders } from "./ai-provider-reach";
 import { AiRoutingCard } from "./ai-routing";
 import {
   BOUND,
@@ -97,11 +97,17 @@ describe("AiRoutingCard", () => {
   it("asks for a key first when no provider has one", async () => {
     const backend = backendFor(ROUTING_EDITOR, UNBOUND, {
       providerKeys: [
-        { provider: "gemini", configured: false, env_var: "GEMINI_API_KEY" },
+        {
+          provider: "gemini",
+          configured: false,
+          env_var: "GEMINI_API_KEY",
+          usable: false,
+        },
         {
           provider: "anthropic",
           configured: false,
           env_var: "ANTHROPIC_API_KEY",
+          usable: false,
         },
       ],
     });
@@ -706,6 +712,7 @@ describe("reachableProviders", () => {
       provider: "gemini",
       configured: true,
       env_var: "G",
+      usable: true,
       optional: false,
       credential_kind: apiKey,
     },
@@ -713,6 +720,7 @@ describe("reachableProviders", () => {
       provider: "openai",
       configured: false,
       env_var: "O",
+      usable: false,
       optional: false,
       credential_kind: apiKey,
     },
@@ -720,6 +728,7 @@ describe("reachableProviders", () => {
       provider: "jev_compatible",
       configured: false,
       env_var: "J",
+      usable: true,
       optional: true,
       credential_kind: apiKey,
     },

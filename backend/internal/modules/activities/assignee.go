@@ -72,6 +72,34 @@ func ensureSeatHoldsWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID,
 	return nil
 }
 
+// SeatCanHoldAutomaticWork reports whether an automatic writer may give this seat a
+// task, by ASKING the check the writer itself applies.
+//
+// Asking rather than writing and recovering: a refused write aborts the caller's
+// transaction, so a writer that tried and fell back would be continuing inside a
+// transaction Postgres has already given up on. A caller that must choose between
+// writing a task and proposing one has to know before it writes.
+//
+// The same call the writer makes, not a second query agreeing with it — a copy here
+// would answer "yes" to a seat the write then refuses, which is the failure this
+// exists to prevent.
+func SeatCanHoldAutomaticWork(ctx context.Context, tx pgx.Tx, seat ids.UserID) (bool, error) {
+	err := ensureAssigneeCanHoldWork(ctx, tx, &seat)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, apperrors.ErrNotFound):
+		// Not there, not active, or archived — the writer's own answer, and not an
+		// error for a caller who is deciding rather than asserting.
+		return false, nil
+	}
+	var agent *AgentAssigneeError
+	if errors.As(err, &agent) {
+		return false, nil
+	}
+	return false, err
+}
+
 // AgentAssigneeError refuses work aimed at an agent seat.
 //
 // A field fault rather than a not-found: the seat EXISTS and the caller may well

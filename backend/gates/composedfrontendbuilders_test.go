@@ -5,8 +5,8 @@
 
 package gates
 
-// Four builders compile the composed SPA — the make lane, the release image and
-// the desktop bundle on each platform — and every one of them must install the
+// Four builders compile the composed SPA (the make lane, the release image and
+// the desktop bundle on each platform), and every one of them must install the
 // composed workspace before it does.
 //
 // That install is the ONLY thing that gives a unit's frontend layer its own

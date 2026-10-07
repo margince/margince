@@ -260,9 +260,4 @@ const envTemplate = `# Margince settings.
 # ---------------------------------------------------------------------------
 # MARGINCE_LOG_LEVEL=info
 # MARGINCE_LOG_FORMAT=text
-
-# ---------------------------------------------------------------------------
-# Agent access tokens (MCP). 0 = the 30-day default, maximum 2160h (90 days).
-# ---------------------------------------------------------------------------
-# MARGINCE_OAUTH_ACCESS_TOKEN_TTL=720h
 `

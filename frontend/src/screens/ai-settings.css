@@ -199,14 +199,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-top: var(--space-3);
-}
-
-/* Air between a credential's reading and the field it opens. Without it the
- * field's own label sat directly under the last line of the summary and the two
- * read as one block instead of a reading and the thing it opened. */
-.ai-provider + * {
-  margin-top: var(--space-4);
 }
 
 /* Under the lanes: what the model lists are as of, and the way to move them on.
@@ -358,28 +350,312 @@
   gap: var(--space-2);
 }
 
-/* A chain of models, one per line: providers in one column so the ids start on
- * one edge, and the arrow under the mark of the step that hands over. */
-.ai-modelchain {
-  display: grid;
-  grid-template-columns: 11.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
+/* The task table reads as the rows of the cards above it: no header row on
+ * screen (a screen reader still has it), and its first and last cells sit on
+ * the card's edges, so every Edit on the page ends on one line. */
+.ai-task-table thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.ai-modelchain-arrow {
-  justify-self: center;
+.ai-task-table :is(th, td):first-child {
+  padding-inline-start: 0;
+}
+
+.ai-task-table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+/* A task row is its name and nothing under it; the rest opens from the name. */
+.ai-task-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-task-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-task-details-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.ai-model-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.ai-model-facts dt {
   color: var(--textSecondary);
 }
 
-/* On a phone the provider column would leave the model id no room, so the
- * chain stacks: each mark over its id, the arrow between the steps. */
+.ai-model-facts dd {
+  margin: 0;
+}
+
+.ai-model-id {
+  overflow-wrap: anywhere;
+}
+
+/* One vendor's line of the last price sync: name in the providers' column, then what the run did. */
+.ai-price-sync-line {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* On a phone the vendor's name sits above what the run did for it. */
 @media (max-width: 720px) {
-  .ai-modelchain {
+  .ai-price-sync-line {
     grid-template-columns: minmax(0, 1fr);
   }
+}
 
-  .ai-modelchain-arrow {
-    justify-self: start;
+/* A section head that carries dials or links on its trailing edge: the title
+ * and what acts on it on one line, wrapping under it on a narrow sheet. */
+.ai-figures-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ai-figures-dials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ai-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* A count that is a failure, in the danger ink: a figure, not a message. */
+.ai-figures-bad {
+  color: var(--dangerText);
+}
+
+/* The connection's privacy rules: four ticks in two columns, then the lists. */
+.ai-openrouter-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.ai-openrouter-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.ai-openrouter-toggle {
+  align-items: flex-start;
+}
+
+.ai-openrouter-help {
+  display: block;
+}
+
+/* The serving editor beside its field reference; the summary under both. */
+.ai-serving {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-serving-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-4);
+}
+
+.ai-serving-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* In a dialog the row below sets this space; the disclosure's margin would
+   add to it. */
+.modal .ai-serving-summary > .disclosure {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .ai-serving-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.ai-serving-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+.ai-serving-note {
+  margin: 0;
+}
+
+.ai-serving-problems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ai-serving-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-serving-lines li {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2);
+}
+
+.ai-serving-lines li > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-serving-reference {
+  max-height: 24rem;
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.ai-serving-reference dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-serving-reference dd {
+  margin: 0;
+}
+
+/* A task's outcome: the headline, the bar, then one card per step. */
+.ai-outcome-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-outcome-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.ai-outcome-big {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-outcome-passed,
+.ai-latency-near {
+  color: var(--warningText);
+}
+
+/* Latency against the timeout: two marks and a limit line on one track. */
+.ai-latency {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-latency-title {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-latency-track {
+  position: relative;
+  height: var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+}
+
+.ai-latency-mark {
+  position: absolute;
+  top: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.ai-latency-p95 {
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ai-latency-limit {
+  position: absolute;
+  top: calc(var(--space-1) * -1);
+  bottom: calc(var(--space-1) * -1);
+  width: 2px;
+  background: var(--danger);
+}
+
+.ai-latency-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-task-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.ai-task-facts dd {
+  margin: 0;
+}
+
+/* A provider's health: the badge above the two lines that explain it. */
+.ai-provider-health {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
 }

@@ -170,10 +170,7 @@ func newEmbedReindexRunner(t *testing.T, e *apptest.AppEnv, embedder search.Embe
 	ApplyRiverSchema(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		Embedder:          embedder,
+		Embedder: embedder,
 	})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)

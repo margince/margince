@@ -376,7 +376,7 @@ func TestOnlyTheObligationAdmitsThreadlessMail(t *testing.T) {
 	}
 	// Every reader of the waiting query asks the same obligation, because the
 	// query carries it rather than taking it from its caller.
-	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[12]s", "%[18]s")) {
+	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[11]s", "%[17]s")) {
 		t.Fatal("the waiting query no longer carries owedSQL, so the lane and the badge can disagree")
 	}
 }

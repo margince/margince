@@ -26,10 +26,10 @@ without becoming CRM activities. Titles, attendees and descriptions are not
 returned by the public availability API. A missing calendar, invalid response,
 failed page or exhausted pagination bound refuses availability.
 
-Local reservations and pending reschedules are included. New reservations store
+Local reservations and pending reschedules are included. Reservations store
 their exact duration; the exclusion constraint uses half-open intervals so
-adjacent meetings can coexist. Older reservations retain their historical
-one-hour exclusion until explicitly changed. Calendar capture preserves the
+adjacent meetings can coexist. A reservation stored without a duration keeps a
+one-hour exclusion until it is changed. Calendar capture preserves the
 provider's duration when it is supplied.
 
 A search entirely beyond the booking horizon or before minimum notice returns a
@@ -60,26 +60,23 @@ proposal's choice travels with it to the guest's acceptance, and a public
 booking follows the host's setting.
 
 Google Calendar receives a conference request keyed to the invitation's stable
-request ID, so a retried create cannot ask for a second Google Meet. For Outlook
-the calendar's own default online meeting provider is read and sent as
-`onlineMeetingProvider` with `isOnlineMeeting` set, because Graph applies none
-by itself: Microsoft Teams for a work or school account, and no link for a
-calendar that offers none. Only
-creation asks for a link; a reschedule keeps the conference the event already
+request ID, so a retried create cannot ask for a second Google Meet. For Outlook,
+Margince reads the calendar's own default online meeting provider and sends it
+as `onlineMeetingProvider` with `isOnlineMeeting` set, because Graph applies
+none by itself. That is Microsoft Teams for a work or school account, and no
+link for a calendar that offers none. Only creation asks for a link; a reschedule keeps the conference the event already
 has, and never rewrites an Outlook event's body, where Outlook keeps the join
 details.
 
 The link is read from the provider's answer. Google may still be creating it,
-in which case the event is read again for a few seconds and no longer; a link
+in which case the event is read again for a few seconds and no longer. A link
 still pending, or a read that fails, leaves the delivered meeting without a link
-rather than failing it. A calendar that
-creates no link has still delivered the invitation: the meeting is
-**confirmed** without a link, and the host can add one in the calendar. The
-public booking page names the calendar's video app (Google Meet or Microsoft
-Teams) whenever new meetings ask for a link, even for a calendar that turns out
-to offer none, and guest reads carry the join link but never which provider the
-host uses. A
-telephone number, physical address or an existing conferencing link can still
+rather than failing it. A calendar that creates no link has still delivered the
+invitation: the meeting is **confirmed** without a link, and the host can add
+one in the calendar. The public booking page names the calendar's video app
+(Google Meet or Microsoft Teams) whenever new meetings ask for a link, even for
+a calendar that turns out to offer none. Guest reads carry the join link but
+never which provider the host uses. A telephone number, physical address or an existing conferencing link can still
 be entered as the location.
 
 Creating an invitation commits one activity, its delivery command, audit and
@@ -116,16 +113,16 @@ Times can be selected and browsed, but confirmation is disabled and the preview
 makes no booking requests. Visitors still cannot book a paused page.
 
 The host name is read from the current Account display name on every profile read,
-including anonymous pages and personal proposals. Legacy name overrides and incoming
-`host_name` values are ignored. Names exceeding the published 200-character bound are abbreviated.
+including anonymous pages and personal proposals. A stored name override or an
+incoming `host_name` value is ignored. Names exceeding the published 200-character bound are abbreviated.
 
 Company name and logo come from the current anchor company, including on personal
-proposals. Old per-host company overrides are ignored. The logo remains public even if all booking pages are paused. The anonymous
+proposals. A per-host company override is ignored. The logo remains public even if all booking pages are paused. The anonymous
 logo route serves only that company's normalized PNG; it cannot address other companies or
 read their profiles. Removing or replacing the anchor mark changes the public
 image without each host saving their settings again.
 
-Minimum notice is entered in hours and stored in the API's existing minutes.
+Minimum notice is entered in hours and stored in minutes.
 24 hours means a full day ahead, rather than a midnight cutoff. The location
 field accepts a physical address or an existing Google Meet, Zoom or Teams link;
 a generated link comes from the video call setting above, never from the location.
@@ -210,15 +207,13 @@ HTTP replay storage likewise excludes proposal URLs and management tokens.
 
 ## Deployment
 
-The exact-interval migration rebuilds the booking exclusion constraint and takes
-an exclusive activity-table lock. Schedule a maintenance window; the three-second
-lock timeout makes a busy deployment fail rather than wait indefinitely. This is
-not an online, zero-lock migration. Shipped migrations remain unchanged.
+Migration `1790401426_bookings_reserve_their_exact_interval` rebuilds the
+booking exclusion constraint and takes an exclusive activity-table lock.
+Schedule a maintenance window for it; its three-second lock timeout makes a busy
+deployment fail rather than wait indefinitely.
 
 Microsoft calendarView responses are requested in UTC and their returned
 instants are authoritative, including all-day boundaries. A response that ignores
 the timezone request is refused rather than guessed in the host's timezone.
 Provider-account certification should include all-day events in a non-UTC
 calendar and both daylight-saving transitions.
-
-Booking-page holders see the current Account name, including while bookings are paused.

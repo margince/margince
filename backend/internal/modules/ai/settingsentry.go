@@ -57,7 +57,7 @@ var Routing = settings.Define[RoutingConfig](
 
 // Definitions is the ai module's contribution to the settings registry.
 func Definitions() []settings.Definition {
-	return append([]settings.Definition{Routing, BudgetSettings}, keyDefinitions()...)
+	return append([]settings.Definition{Routing, TaskOverridesSetting, BudgetSettings, PriceSyncSettings, PriceSyncLastRun}, keyDefinitions()...)
 }
 
 // validateStoredRouting holds a stored binding to the same bar the file always
@@ -75,11 +75,8 @@ func validateStoredRouting(cfg RoutingConfig) error {
 	if cfg.zero() {
 		return cfg.validateProviderEntries()
 	}
-	resolved, err := cfg.finalize()
-	if err != nil {
-		return err
-	}
-	return resolved.ResidencyGap()
+	_, err := cfg.finalize()
+	return err
 }
 
 // Unconfigured reports whether this config binds nothing at all — the state an

@@ -259,3 +259,14 @@ export function isRecordRead(key: QueryKey): boolean {
 // key do not fail loudly: they fail as a drawer that quietly stops refreshing
 // after somebody changes who may read the message.
 export { emailDetailKey as emailPresentationKey } from "../design-system/emaildetail";
+
+/** The cache prefix every deal's watch card reads under. */
+export const DEAL_COMMITMENTS_KEY = ["deal-commitments"] as const;
+
+/** What a settled claim leaves stale: the contact's own page and a deal's watch
+ *  card list the same open claims. Read by the single settle and the bulk one. */
+export const CLAIM_SETTLED_KEYS: readonly QueryKey[] = [
+  ["contact"],
+  ["contact360"],
+  DEAL_COMMITMENTS_KEY,
+];

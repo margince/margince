@@ -6,7 +6,7 @@ for `frontend/src/i18n/de.ts`, and the sibling `en.json` for each extension's
 [ui-copy-style.md](ui-copy-style.md) binds it too. This page states only what
 German adds or changes: address, grammar, mechanics, inclusive language and one
 German word per concept. It is the page the next German author reads, and the
-one a Vietnamese translator reads to know which German choices are deliberate.
+one a Vietnamese translator reads to know which German choices are intended.
 
 Part of it is mechanical. `frontend/src/i18n/copy-style-de.test.ts` holds the
 mechanics, `frontend/src/i18n/address-register.test.ts` holds the address, over
@@ -28,8 +28,8 @@ the author's judgement, and a reviewer reads a German change against this page.
   "Lade neu".
 - **Nothing added, nothing dropped.** No fact, feature, promise or limitation
   the English does not carry.
-- **Claim strength is kept exactly.** Legal, privacy, consent, retention,
-  licence and AI-notice text keeps every qualifier: can and may (kann, darf),
+- **Claim strength is kept.** Legal, privacy, consent, retention, licence
+  and AI-notice text keeps every qualifier. That covers can and may (kann, darf),
   designed to (ausgelegt auf, dafür gedacht), intended to (vorgesehen), subject
   to (vorbehaltlich, abhängig von), where applicable (soweit anwendbar),
   typically (in der Regel). "Designed to support compliance" never becomes
@@ -37,7 +37,7 @@ the author's judgement, and a reviewer reads a German change against this page.
 - **Product and brand names stay as they are**: Margince, Gradion, Google
   Workspace, Microsoft 365, Voice DNA. So do URLs, code, identifiers and
   placeholders.
-- **A vendor's own label follows the vendor's German UI**, even where it
+- **Vendor labels follow the vendor's German UI**, even where it
   departs from this page: Microsoft's "Geheimer Clientschlüssel" gives
   Clientschlüssel beside Client-ID, and its "Verzeichnis-ID (Mandant)" keeps
   Mandant for the Entra tenant.
@@ -178,16 +178,17 @@ the English opens lowercase ("Über Partner" for "via partner").
 
 Keep the English terms German B2B readers use: Deal, Pipeline, Forecast, Lead,
 Follow-up, Dashboard, Workflow, Tag, Commit, Best Case, Legal Hold, Buying
-Center, Passport, Connector, Deal Room, Thread, Worklist, API, Webhook, Release,
-Embedding, and Token for model tokens and for a credential the vendor or the
-product calls a token (Bot-Token, Einrichtungs-Token, Lizenz-Token). Everything
+Center, Passport, Connector, Deal Room, Thread, Worklist, API, Webhook, Release
+and Embedding. Token also stays, for model tokens and for a credential the
+vendor or the product calls a token (Bot-Token, Einrichtungs-Token,
+Lizenz-Token). Everything
 else is German: Einstellungen, Suche, hochladen, herunterladen, Termin, Aufgabe,
 Bericht, speichern.
 
 ## Length
 
-The English ceilings apply, with a German compound counted as one word: 3 words
-for a button, label, menu item, tab or badge; 6 for a title or heading; one
+The English ceilings apply, with a German compound counted as one word. A
+button, label, menu item, tab or badge gets 3 words; a title or heading 6; one
 sentence of about 100 characters for a hint; two sentences of about 200
 characters for a message. Legal text is exempt. A value over its ceiling says
 why; meaning is never truncated to fit. Where correct German is still longer
@@ -258,7 +259,8 @@ gives, because it is ordinary German in another sense.
 
 Terms that carry over unchanged, so no second word is needed: Lead, Commit,
 Best Case, Follow-up, Entwurf, Notiz, Verlauf, Datensatz, Feldhistorie,
-Aufbewahrung, Lizenz, Angebot, Abschlussdatum, Deal-Wert.
+Aufbewahrung, Lizenz, Angebot, Abschlussdatum, Deal-Wert, Champion (the buying
+committee role, as on the role picker).
 
 ## What the gate holds
 
@@ -284,26 +286,31 @@ source file, key and value. Placeholders are removed before the word rules run.
 | Retired vocabulary | A word in code format in the Vocabulary table's Never column, as a whole word, case-sensitive, outside the keys it names with a reason |
 
 A last test compares the code-format words of the Never column with the words
-the test retires and fails a difference in either direction, so a word the
-table marks as gated is gated and the gate retires nothing the table does not
-mark.
+the test retires, and fails a difference in either direction. A word the table
+marks as gated is gated, and the gate retires nothing the table does not mark.
 
 `frontend/src/i18n/address-register.test.ts` holds the address: no Sie, Ihr or
 Ihnen outside the four outsider families, and no capitalised du-pronoun
 mid-sentence. A sentence opening with "Sie" as she or they is rephrased, since
 the capital cannot be read off the page.
 
-`frontend/src/i18n/record-noun.test.ts` holds the record noun in `de.ts`: a key
-that names the record type and does not say Kontakt, the whole word Person or
-Personen in a key outside its German human-sense list, and a listed key that no
-longer says it.
+`frontend/src/i18n/record-noun.test.ts` holds the record noun in `de.ts`. It
+fails a key that names the record type and does not say Kontakt. It fails the
+whole word Person or Personen in a key outside its German human-sense list, and
+a listed key that no longer says it.
 
-None of them can see the rest of this page: word order, tone, sentence case,
-articles, periods, slot grammar, the imperative form, claim strength, du used
-where nobody needed addressing, a neutral value beside a du value on one
-surface, an edge space the English value does not have, number format and
-ranges, spelled dates, compact units, gendered singulars other than the listed
-nouns, a retired word inside a closed compound (Firmenkontingent), the plain
-words of the Never column, mein or mir used as the product's voice, length
-ceilings and message shapes. Those are the author's and the reviewer's
-judgement.
+None of them can see the rest of this page. These are the author's and the
+reviewer's judgement:
+
+- word order, tone, sentence case, articles, periods, slot grammar and the
+  imperative form
+- claim strength
+- du used where nobody needed addressing, and a neutral value beside a du value
+  on one surface
+- an edge space the English value does not have
+- number format and ranges, spelled dates and compact units
+- gendered singulars other than the listed nouns
+- a retired word inside a closed compound (Firmenkontingent), and the plain
+  words of the Never column
+- mein or mir used as the product's voice
+- length ceilings and message shapes

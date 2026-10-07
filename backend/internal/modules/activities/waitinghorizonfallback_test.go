@@ -56,7 +56,7 @@ func horizonStore() (*Store, ids.WorkspaceID) {
 	return NewStore(database.BindTo(nil, ws)).WithClock(func() time.Time { return horizonNoon }), ws
 }
 
-func TestATimedOutHorizonMeasurementAnswersTheCompiledHorizonAndIsNotRemembered(t *testing.T) {
+func TestATimedOutHorizonMeasurementAnswersTheCompiledHorizonAndIsRememberedOnlyBriefly(t *testing.T) {
 	store, ws := horizonStore()
 	tx := &scriptedHorizonTx{scan: failsWith("57014")}
 
@@ -71,8 +71,12 @@ func TestATimedOutHorizonMeasurementAnswersTheCompiledHorizonAndIsNotRemembered(
 	if strings.Join(tx.executed, "\n") != strings.Join(want, "\n") {
 		t.Errorf("the transaction ran %q, want %q — the savepoint is what leaves it usable", tx.executed, want)
 	}
-	if days, ok := store.horizons.lookup(ws, horizonNoon, horizonNoon); ok {
-		t.Errorf("the compiled horizon was remembered as a measurement (%d days)", days)
+	if days, ok := store.horizons.lookup(ws, horizonNoon, horizonNoon); !ok || days != waitingHorizonDays {
+		t.Errorf("the compiled horizon was not remembered for the next page: (%d, %v)", days, ok)
+	}
+	later := horizonNoon.Add(waitingHorizonFallbackTTL)
+	if days, ok := store.horizons.lookup(ws, later, later); ok {
+		t.Errorf("the compiled horizon was still served as a measurement after %s (%d days)", waitingHorizonFallbackTTL, days)
 	}
 }
 

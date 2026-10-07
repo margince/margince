@@ -2,10 +2,8 @@
 # config/presets/openrouter_cloud_eu.yaml — every lane, chat and embeddings, on
 # Mistral's EU endpoint.
 #
-# The `eu_hosted` profile this preset declares is a promise, and
-# TestAResidencyPresetPinsEveryLaneToAnEURegion holds it: every lane here must be
-# served under an EU-region endpoint in `only:`, which the provider's `upstream`
-# names once for all of them. Without it the broker serves a model from any
+# Every lane here is served under an EU-region endpoint in `only:`, which the
+# provider's `upstream` names once for all of them. Without it the broker serves a model from any
 # region — including a model with no EU endpoint at all, which it then serves
 # from somewhere else without failing.
 #
@@ -60,7 +58,8 @@ seeds:
       openai_compatible:
         base_url: https://openrouter.ai/api
         upstream:
-          only: [mistral/eu]
+          provider:
+            only: [mistral/eu]
     tiers:
       # Every tier writes `routing:` out rather than inheriting the product
       # default, and the reason is not style. That default filters on
@@ -76,7 +75,8 @@ seeds:
         provider: openai_compatible
         model: mistralai/ministral-8b-2512
         routing:
-          require_parameters: true
+          provider:
+            require_parameters: true
       # A DIFFERENT model from the rung above it, and that is the point rather
       # than an accident of shopping. mistral-small-2603 answers better here —
       # ministral-14b breaks a multi-paragraph email body across JSON string
@@ -93,17 +93,20 @@ seeds:
         provider: openai_compatible
         model: mistralai/ministral-14b-2512
         routing:
-          require_parameters: true
+          provider:
+            require_parameters: true
       premium:
         provider: openai_compatible
         model: mistralai/mistral-medium-3-5
         routing:
-          require_parameters: true
+          provider:
+            require_parameters: true
       frontier:
         provider: openai_compatible
         model: mistralai/mistral-small-2603
         routing:
-          require_parameters: true
+          provider:
+            require_parameters: true
     # KNOWN GAP: like its sibling, this preset cannot serve document_extract.
     # That task sends a PDF, and the OpenAI-compatible wire's declarable
     # carriage is text and image only — the adapter refuses the attachment
@@ -113,5 +116,5 @@ seeds:
       provider: openai_compatible
       model: mistralai/mistral-embed-2312
       dimensions: 1024
-    # No `decisions:` lane: eu_hosted refuses an OpenRouter or TypeSafe decision
-    # endpoint, since neither can be pinned to an EU host.
+    # No `decisions:` lane: neither an OpenRouter nor a TypeSafe decision
+    # endpoint can be pinned to an EU host.

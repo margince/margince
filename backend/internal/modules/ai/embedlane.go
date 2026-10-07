@@ -63,6 +63,11 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 
 	start := r.now()
 	res, err := b.embedder.Embed(embedCtx, req)
+	if refusedUncalled(err) {
+		// No call was made to a provider already known to be down, so there is
+		// nothing to trace, and a caller tells a deferral from a failed lane.
+		return model.Embeddings{}, err
+	}
 	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, CacheOff: r.cacheOff, LatencyMS: r.now().Sub(start).Milliseconds()}
 	if err == nil {
 		// Stamp the SAME token estimate the meter records below onto the

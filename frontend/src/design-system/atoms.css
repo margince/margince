@@ -187,7 +187,8 @@
 .empty-body p + p {
   margin-top: var(--space-2);
 }
-.empty-action {
+/* A step past the card's gap: the verb stands apart from the sentence above. */
+.empty-instructional > .empty-action {
   margin-top: var(--space-1);
 }
 
@@ -204,7 +205,7 @@
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: 22px;
-  width: min(440px, calc(100vw - 40px));
+  width: min(var(--dialogConfirmWidth), calc(100vw - 40px));
   /* A form taller than the viewport (create/edit with repeatable rows) must
      scroll inside the dialog — without a bound the overlay centres it and the
      action buttons overflow off-screen, unreachable. */
@@ -257,10 +258,8 @@
   > :is(h1, h2, h3, .modal-title):first-child {
   padding-inline-end: calc(var(--controlHeight) + var(--space-4));
 }
-/* Roomier variant for content-dense dialogs (e.g. the cert-scenario export's
-   YAML + response previews) that read cramped at the compact form width. */
-.modal-wide {
-  width: min(720px, calc(100vw - 40px));
+.modal-form {
+  width: min(var(--dialogFormWidth), calc(100vw - 40px));
 }
 /* The LIGHTBOX: a stored file, read at the size of the screen.
  *
@@ -271,7 +270,7 @@
  * does, and `overflow: hidden` keeps the document's scroll inside the stage
  * rather than moving the box. */
 .modal-full {
-  width: min(1240px, calc(100vw - 48px));
+  width: min(var(--dialogFullWidth), calc(100vw - 48px));
   height: calc(100dvh - 48px);
   max-height: calc(100dvh - 48px);
   display: flex;
@@ -314,11 +313,8 @@
   }
 }
 
-/* The right-anchored drawer: the composer and the evidence receipt. Anchored to
-   the trailing edge so the record behind stays legible as context. The width is
-   a share of the viewport with both ends pinned — below 320px a form field
-   stops being usable, above 460px the drawer starts covering the page it is
-   meant to sit beside.
+/* The right-anchored drawer, anchored to the trailing edge so the record
+   behind stays legible as context.
 
    The drawer FLOATS rather than being welded to the edge: one --space-4 gap on
    its three outer sides, so the scrim runs all the way round it and the record
@@ -331,7 +327,7 @@
   padding: var(--space-4);
 }
 .modal-drawer {
-  width: clamp(320px, 36vw, 560px);
+  width: min(var(--drawerWidth), calc(100vw - var(--space-4) * 2));
   /* The glass less the gap it floats in, as a LENGTH, and it has to be one.
      `height: 100%` is 100% of the overlay's grid row, and that row is
      auto-sized: it stretches to the TALLER of the viewport and the drawer's own
@@ -348,54 +344,30 @@
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
 }
-/* A drawer that keeps its head and foot as bands to its own edge needs the
-   corners clipped, or the two sticky bands square off the radius they sit in.
-   `clip` rather than `hidden`: it clips without making the drawer a scroll
-   container, which is the body's job below. An unbanded drawer is one scrolling
-   column and keeps `.modal`'s own `overflow-y: auto` — taking its scrollbar
-   away would bury the end of a long form. */
+/* A banded drawer scrolls only its body, so head and foot stay put. Not
+   `hidden`: it would make the drawer a second scroll container. */
 .modal-drawer:has(> .drawer-head) {
   overflow: clip;
+  display: flex;
+  flex-direction: column;
 }
-/* The WIDE drawer: research, the composer and the meeting brief.
- *
- * All three are surfaces a rep works IN rather than glances at — a numbered
- * claim list with its quotes, a message being written, a brief read minutes
- * before a room — and at 460px each of those wraps into a column too narrow to
- * read. The upper bound is 52% of the viewport so the drawer grows with the
- * screen it sits on, and stops at 860px because past that it stops being a
- * margin and becomes the page.
- *
- * 52vw rather than the original 30vw because of what the widest of these
- * drawers now holds: the meeting brief's preparation panels put an objective,
- * a risk and its response, and a three-column close plan side by side, and at
- * 384px (30vw of a 1280 laptop) the three columns had 100px each. A reader
- * two minutes from a room reads the first screen or nothing, so the width is
- * set by what must fit on it.
- *
- * Header and footer are STICKY: the close control and the commit button are
- * the two things a reader must always be able to reach, and a long claim list
- * would otherwise scroll both of them away. */
+.modal-drawer:has(> .drawer-head) > .drawer-body {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+}
+/* The READING drawer: its bands are sticky so close and commit stay in reach
+   however long the body runs. */
 .modal-drawer-wide {
-  width: clamp(360px, 52vw, 860px);
+  width: min(var(--drawerReadingWidth), calc(100vw - var(--space-4) * 2));
   display: flex;
   flex-direction: column;
   padding: 0;
 }
-/* The SPLIT drawer: a reply, with the conversation it answers beside it.
- *
- * A reply written over the top of the thread it answers is the failure this
- * width exists to fix — the centred box covered the timeline, and the wide
- * drawer has room for one column, not two. It stops at 1040px for the same
- * reason the wide one stops at 560: past that the drawer has stopped being a
- * margin on the record and become the page.
- *
- * Below the fold width the two columns cannot both be read, so the layout
- * collapses to one and the conversation folds into a disclosure above the
- * form (composethread.css). The width follows it down rather than holding a
- * two-column measure with one column in it. */
-.modal-drawer-split {
-  width: clamp(360px, 62vw, 1040px);
+/* In a dialog the stack's gap is the only space between its rows; a row's own
+   margin would add to it. Declared before `.modal .actions`, so its margin wins. */
+.modal .form-stack > * {
+  margin-block: 0;
 }
 
 /* The zero padding above belongs to the head/body/foot split: those three
@@ -408,6 +380,11 @@
 .modal-drawer:not(.modal-drawer-wide) > .drawer-head {
   margin-bottom: var(--space-3);
 }
+/* The room a field's focus glow draws in, which the body's scroll would clip. */
+.modal-drawer:not(.modal-drawer-wide) > .drawer-body {
+  margin: calc(var(--space-1) * -1);
+  padding: var(--space-1);
+}
 .modal-drawer-wide > .drawer-head {
   position: sticky;
   top: 0;
@@ -417,8 +394,6 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 .modal-drawer-wide > .drawer-body {
-  flex: 1;
-  overflow-y: auto;
   padding: var(--space-5);
 }
 .modal-drawer-wide > .drawer-foot {
@@ -431,6 +406,35 @@
   padding: var(--space-4) var(--space-5);
   background: var(--bgElevated);
   border-top: 1px solid var(--borderSubtle);
+}
+/* A form or drawer whose body is one `.form-stack` scrolls that body, keeping
+   title and action row in reach. Not a drawer band: the bands pin themselves. */
+@media (min-width: 721px) {
+  :where(.modal-form, .modal-drawer):where(
+    :has(> .form-stack:not(.drawer-body) + .actions)
+  ) {
+    display: flex;
+    flex-direction: column;
+  }
+  :where(.modal-form, .modal-drawer):where(
+      :has(> .form-stack:not(.drawer-body) + .actions)
+    )
+    > .form-stack:where(:not(.drawer-body)) {
+    flex: 0 1 auto;
+    min-block-size: 0;
+    overflow-y: auto;
+    /* The room a field's focus glow draws in, which the scroll would clip. */
+    margin: calc(var(--space-1) * -1);
+    padding: var(--space-1);
+  }
+  /* The stack scrolls when it overflows, so no row may shrink to fit it. */
+  :where(.modal-form, .modal-drawer):where(
+      :has(> .form-stack:not(.drawer-body) + .actions)
+    )
+    > .form-stack:where(:not(.drawer-body))
+    > * {
+    flex-shrink: 0;
+  }
 }
 /* On a phone a dialog is a full-screen sheet (plan §10.3). The 40px inset that
  * frames it on a desktop wastes the only two dimensions a phone is short of,
@@ -445,8 +449,9 @@
   .overlay-right {
     padding: 0;
   }
-  .modal,
-  .modal-wide,
+  /* A confirm stays a card over the scrim: it asks one question about the
+     page it covers, and the page has to stay in view for that. */
+  .modal:where(:not(.modal-confirm)),
   .modal-drawer {
     width: 100vw;
     max-width: 100vw;
@@ -576,6 +581,11 @@
   }
 }
 
+/* Outside a dialog nothing else spaces an action row from the stack above it. */
+.form-stack + .actions {
+  margin-top: var(--space-3);
+}
+
 /* The row wraps rather than running off a narrow dialog, and only between the
    lead verbs and the pair: Cancel and the confirm never part. */
 .modal .actions {
@@ -675,8 +685,8 @@
    behind it. Declared here rather than by each host, because every host that
    styled it reached a slightly different answer and the same record then drew
    one figure two ways.
-   No ink of its own: it inherits the host's, so the figure goes quiet beside a
-   quiet label and dark beside a pressed one. The minimum width is what keeps a
+   Its own ink, not the host's: a quiet label's --textSecondary reads under
+   4.5:1 on the chip in dark, so the figure stays primary. The minimum width is what keeps a
    column of chips the same size from 1 to 99, and the centring is what keeps
    the digit in the middle of it. */
 .optioncount {
@@ -687,6 +697,7 @@
   padding-inline: var(--space-1);
   border-radius: var(--r-xs);
   background: var(--bgChip);
+  color: var(--textPrimary);
   font: var(--fontBodySmall);
 }
 
@@ -702,6 +713,7 @@
      thing that CAN take a second line, so it does. */
   flex-wrap: wrap;
   background: var(--bgChip);
+  color: var(--textPrimary);
   border-radius: var(--r-sm);
   padding: 3px;
   gap: 2px;
@@ -826,6 +838,7 @@
 
 .kbd {
   background: var(--bgChip);
+  color: var(--textPrimary);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
   border-radius: var(--r-xs);

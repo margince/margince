@@ -5,8 +5,7 @@
 
 package gates
 
-// Which address a contact is known by is ONE question, and it used to have
-// three answers.
+// Which address a contact is known by is one question with one answer.
 //
 // A contact carries a LIST of addresses, each with a position and an is_primary
 // flag, some archived — so naming one is a decision, and the decision is the

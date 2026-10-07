@@ -37,14 +37,9 @@ import (
 // refusal would arrive after the slowest part of the run.
 const embedBatchSize = 32
 
-// The knowledge module's own numbers, re-exported rather than restated so a
-// process role can name them without importing the module. A copied value here
-// would be a second definition of the floor and the limit, and the whole point
-// of the probe is that it ranks by the same two the SQL does.
-const (
-	CorpusProbeFloor = knowledge.DefaultMinSimilarity
-	CorpusProbeLimit = knowledge.RetrieveLimit
-)
+// CorpusProbeLimit re-exports the knowledge module's limit rather than
+// restating it: the probe must rank by the same number the SQL does.
+const CorpusProbeLimit = knowledge.RetrieveLimit
 
 // CorpusProbe is one question asked of the shipped handbook.
 type CorpusProbe struct {
@@ -59,7 +54,9 @@ type CorpusProbe struct {
 	// WorkDir holds the vector cache, and is gitignored: it carries the
 	// handbook's prose in numeric form.
 	WorkDir string
-	Floor   float64
+	// Floor overrides the binding's measured floor, as a corpus's own number
+	// does; nil ranks by the floor production would use for this binding.
+	Floor *float64
 }
 
 // CorpusProbePassage is one retrieved passage, flattened for a caller that must
@@ -75,6 +72,8 @@ type CorpusProbePassage struct {
 type CorpusProbeResult struct {
 	Banner        string
 	EmbedIdentity string
+	// Floor is the one applied: the override when given, else the binding's.
+	Floor float64
 	// Embedded is the whole corpus, not the ranked slice: an empty ranking means
 	// opposite things at ten embedded passages and at four hundred.
 	Embedded int
@@ -110,9 +109,10 @@ func ProbeCorpusRetrieval(ctx context.Context, probe CorpusProbe) (CorpusProbeRe
 	if err != nil {
 		return CorpusProbeResult{}, err
 	}
-	ranked := knowledge.RankInMemory(question, corpus, probe.Floor)
+	floor := knowledge.EffectiveFloor(probe.Floor, identity)
+	ranked := knowledge.RankInMemory(question, corpus, floor)
 	result := CorpusProbeResult{
-		Banner: banner, EmbedIdentity: identity, Embedded: len(corpus),
+		Banner: banner, EmbedIdentity: identity, Floor: floor, Embedded: len(corpus),
 		Passages: flattenProbePassages(ranked),
 	}
 	if len(ranked) == 0 {

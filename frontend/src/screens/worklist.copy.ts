@@ -1,3 +1,4 @@
+import { heldText } from "./worklist.held";
 import { sourceName } from "./worklist.sources";
 
 export { sourceName } from "./worklist.sources";
@@ -43,14 +44,15 @@ type T = ReturnType<typeof useT>;
 // reader in English, so what travels is `{kind, value}` and the phrase is the
 // client's to write.
 
-// Which record an item points at, as an address the router understands.
-//
-// Through `recordRoute`, which is the one place the product decides whether a
+// Which record an item or a receipt points at, as a router address. Through
+// `recordRoute`, which is the one place the product decides whether a
 // typed reference off the wire may be linked at all — the approval undo and the
 // notification centre ask it too. A switch written here would be a second
 // spelling of the record types, and the reader it sent to a page that does not
 // exist would have no way of telling which copy was wrong.
-export function subjectHref(item: WorklistItem): string | undefined {
+export function subjectHref(
+  item: Pick<WorklistItem, "subject">,
+): string | undefined {
   const route = recordRoute(item.subject?.type, item.subject?.id);
   return route === undefined ? undefined : routeHash(route);
 }
@@ -152,7 +154,10 @@ function valueText(
         ? null
         : formatMoney(value.minor, value.currency, locale);
     case "days":
-      return value.days == null ? null : formatNumber(value.days, locale);
+    case "count": {
+      const figure = value.days ?? value.count;
+      return figure == null ? null : formatNumber(figure, locale);
+    }
     case "level":
       return value.level == null ? null : formatNumber(value.level, locale);
     default:
@@ -160,22 +165,18 @@ function valueText(
   }
 }
 
-// The reasons that read differently with a figure in them and whose figure is
-// a currency amount, not a count — a money figure never needs the reader's
-// plural rule, which is what sets these apart from DAYS_VALUED_REASONS below.
-// Spelled as a set rather than inferred from whether a value arrived: a value
-// can travel for a reason whose sentence has nowhere to put it, and a key
-// composed from that would not exist.
+// Reasons that read with an amount or a moment, needing no plural rule (counts
+// are DAYS_VALUED_REASONS). A set, since a key composed for a reason whose
+// sentence has nowhere to put an arrived value would not exist.
 const VALUED_REASONS = {
   expected_revenue: true,
   material: true,
   below_material: true,
-  // The lead's own deadline, which is a MOMENT rather than a figure: valueText
-  // renders a date value in the reader's locale and zone, so the sentence says
-  // when without this file composing one.
+  // MOMENTS rather than figures: valueText renders a date in the reader's zone.
   response_due_soon: true,
+  first_asked: true,
+  meeting_booked: true,
 } as const;
-
 type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
@@ -188,6 +189,7 @@ function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
 const DAYS_VALUED_REASONS = {
   waiting_days: true,
   quiet_days: true,
+  earlier_requests: true,
 } as const;
 
 function daysValued(
@@ -298,11 +300,11 @@ export function reasonText(
   if (
     value !== null &&
     daysValued(reason.kind) &&
-    reason.value?.kind === "days" &&
-    reason.value.days != null
+    (reason.value?.days ?? reason.value?.count) != null
   ) {
     const base = `worklist.because.${reason.kind}.value` as const;
-    return translatePlural(locale, base, reason.value.days, { value });
+    const figure = reason.value?.days ?? reason.value?.count ?? 0;
+    return translatePlural(locale, base, figure, { value });
   }
   if (value !== null && valued(reason.kind)) {
     return t(`worklist.because.${reason.kind}.value` as const, { value });
@@ -404,7 +406,7 @@ export function dealFactsText(
 }
 
 // Notices retain the original change date even when delivery happens later.
-// Meetings use the reader's clock; tasks use the agreed deadline's record zone.
+// A meeting's start uses the reader's clock; a held meeting and a task, the record's.
 //
 // Today's meeting shows the CLOCK TIME and nothing else — a rep reads this at
 // their desk on the morning it matters, and "today" is the frame they are
@@ -426,6 +428,8 @@ export function whenText(
 ): string | null {
   if (item.source === "notice" && item.notice_origin)
     return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
+  const held = heldText(item, t, locale, record);
+  if (held) return held;
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;
   }
@@ -441,14 +445,10 @@ export function whenText(
   return t(key, { when: momentText(item.due_at, locale, zone, now) });
 }
 
-// Which sentence the moment goes in — and null for a row whose `due_at` is not
-// a clock the reader is racing.
-//
-// An approval's `due_at` is when the proposal LAPSES, which is a fact about the
-// staged work rather than a deadline the rep owes; the contract says so where
-// the field is declared. Drawing it as "due" would turn "this offer goes stale"
-// into "you are late", which is the row telling the reader something untrue
-// about their own day.
+// Which sentence the moment goes in, or null for a row whose `due_at` is not a
+// clock the reader is racing. An approval's `due_at` is when the proposal
+// LAPSES (the contract says so): drawn as "due", "this offer goes stale" would
+// read as "you are late", which is untrue about the reader's own day.
 function whenKeyFor(
   item: WorklistItem,
 ): "worklist.when.starts" | "worklist.when.due" | null {

@@ -30,7 +30,9 @@ func TestRecordMeasuresMatchesTheRungItGrades(t *testing.T) {
 		"another thinking level": {func(r *Record) { r.ThinkingLevel = "high" }, false},
 		"other site thinking":    {func(r *Record) { r.SiteThinking = map[string]string{"brief": "high"} }, false},
 		"a decision record":      {func(r *Record) { r.Kind = KindDecision }, false},
-		"another upstream":       {func(r *Record) { r.CandidateUpstream = &ai.OpenRouterRouting{Only: []string{"mistral/eu"}} }, false},
+		"another upstream": {func(r *Record) {
+			r.CandidateUpstream = &ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"mistral/eu"}}}
+		}, false},
 	} {
 		t.Run(name, func(t *testing.T) {
 			rec := base

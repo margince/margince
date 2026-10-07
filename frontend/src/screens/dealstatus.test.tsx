@@ -95,7 +95,15 @@ function serve({
 
 // A card whose lead verdict sentence cites a record, so the head's receipts
 // have something to render.
-function serveCited() {
+function serveCited(
+  evidence: Record<string, string>[] = [
+    {
+      entity_type: "activity",
+      entity_id: MAIL,
+      name: "Slots for the pilot review",
+    },
+  ],
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -108,18 +116,7 @@ function serveCited() {
             verdict: {
               standing: "blocked",
               because: {
-                sentences: [
-                  {
-                    text: "Nobody sent the times.",
-                    evidence: [
-                      {
-                        entity_type: "activity",
-                        entity_id: MAIL,
-                        name: "Slots for the pilot review",
-                      },
-                    ],
-                  },
-                ],
+                sentences: [{ text: "Nobody sent the times.", evidence }],
               },
             },
             generated_at: "2026-08-24T00:00:00Z",
@@ -205,6 +202,20 @@ describe("Deal360 leads with the call", () => {
     const cites = document.querySelectorAll(".r360-verdict .co-brief-cites");
     expect(cites.length).toBeGreaterThan(0);
     expect(cites[0].textContent).not.toBe("");
+  });
+
+  it("draws a cited fact as text, because the deal page has no receipt drawer", async () => {
+    serveCited([
+      { entity_type: "fact", entity_id: "f-1", name: "Headcount" },
+      { entity_type: "deal", entity_id: DEAL, name: "PIM rollout Phase 2" },
+    ]);
+    renderCard();
+    await screen.findByText("Blocked");
+    expect(screen.getByText("Headcount").tagName).toBe("SPAN");
+    expect(screen.queryByRole("button", { name: "Headcount" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "PIM rollout Phase 2" }),
+    ).toBeInTheDocument();
   });
 
   it("puts the rest of the reasoning in the fold, not nowhere", async () => {

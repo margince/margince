@@ -84,28 +84,29 @@ seeds:
         # once. Copy the WHOLE seeds block — lifting a single tier out of this
         # file leaves an alias with nothing to point at.
         routing: &consumer_serving
-          # sort: throughput for the reason the product default has it — it is
-          # the lever that collapses the broker's latency tail
-          # (docs/reference/openrouter.md).
-          sort: throughput
-          # fp8, NOT the product default's [fp16, bf16]. The question this file
-          # asks is what a consumer box produces, and a consumer box does not
-          # run bf16 — it runs a 4- to 8-bit quant. fp8 is the closest precision
-          # served for BOTH ids below with tools and structured output intact;
-          # fp4 exists for the 31B and not for the MoE, so pinning it would
-          # leave this tier with no endpoint at all. It is one step from what an
-          # operator will really run, and the direction of the error is known:
-          # the sovereign run at Q4 should score at or below this.
-          #
-          # Pinning ONE level rather than listing several is what makes repeats
-          # comparable — two answers from one model id at fp8 and at bf16 are
-          # two models for every purpose except billing.
-          quantizations: [fp8]
-          # Keeps a structured-output or tool request away from a host that
-          # cannot honour it. It matters more here than on a frontier binding:
-          # the fp8 endpoints for these ids are a short list, and one of them
-          # serves no tools.
-          require_parameters: true
+          provider:
+            # sort: throughput for the reason the product default has it — it is
+            # the lever that collapses the broker's latency tail
+            # (docs/reference/openrouter.md).
+            sort: throughput
+            # fp8, NOT the product default's [fp16, bf16]. The question this file
+            # asks is what a consumer box produces, and a consumer box does not
+            # run bf16 — it runs a 4- to 8-bit quant. fp8 is the closest precision
+            # served for BOTH ids below with tools and structured output intact;
+            # fp4 exists for the 31B and not for the MoE, so pinning it would
+            # leave this tier with no endpoint at all. It is one step from what an
+            # operator will really run, and the direction of the error is known:
+            # the sovereign run at Q4 should score at or below this.
+            #
+            # Pinning ONE level rather than listing several is what makes repeats
+            # comparable — two answers from one model id at fp8 and at bf16 are
+            # two models for every purpose except billing.
+            quantizations: [fp8]
+            # Keeps a structured-output or tool request away from a host that
+            # cannot honour it. It matters more here than on a frontier binding:
+            # the fp8 endpoints for these ids are a short list, and one of them
+            # serves no tools.
+            require_parameters: true
       # cheap_cloud leads 17 tasks, and one of them is agent_loop — a cumulative
       # reason-act window fed 7 tools. TOOL CALLING is therefore this tier's
       # hard requirement, not a nicety, and it is the thing to watch in the

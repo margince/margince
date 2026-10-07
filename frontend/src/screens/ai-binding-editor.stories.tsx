@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentProps } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { en } from "../i18n/en";
 import { BindingEditor } from "./ai-binding-editor";
 import type { RoutingRead } from "./ai-routing-query";
@@ -16,6 +17,38 @@ import {
 } from "./story-utils";
 
 type Routing = components["schemas"]["AiRouting"];
+
+// `ai_routing:update` is what a manager holds and a reader lacks; the dialog's
+// Recent calls read on `ai_diagnostics`, which both seats hold.
+const MANAGER: GrantSpec = {
+  ai_routing: ["read", "update"],
+  ai_diagnostics: ["read"],
+  ai_budget: ["read"],
+};
+const READER: GrantSpec = {
+  ai_routing: ["read"],
+  ai_diagnostics: ["read"],
+  ai_budget: ["read"],
+};
+
+const LAST_WEEK = {
+  window: "7d",
+  group: "model",
+  rows: [
+    {
+      key: "gemini-3.5-flash",
+      calls: 43,
+      failed: 0,
+      timeouts: 0,
+      p50_ms: 1300,
+      p95_ms: 2600,
+      tokens_in: 38700,
+      tokens_out: 12900,
+      cost_microusd: 10000,
+      unpriced: 0,
+    },
+  ],
+};
 
 const ROUTING: Routing = {
   profile: "eu_hosted",
@@ -35,6 +68,7 @@ const KEYS = [
     provider: "gemini",
     configured: true,
     env_var: "GEMINI_API_KEY",
+    usable: true,
     optional: false,
     credential_kind: "api_key" as const,
   },
@@ -42,6 +76,7 @@ const KEYS = [
     provider: "anthropic",
     configured: false,
     env_var: "ANTHROPIC_API_KEY",
+    usable: false,
     optional: false,
     credential_kind: "api_key" as const,
   },
@@ -57,6 +92,7 @@ const SHEET = [
     cache_read_per_mtok: "0",
     cache_write_per_mtok: "0",
     effective_date: "2026-08-12",
+    source: "seed" as const,
   },
 ];
 
@@ -94,9 +130,14 @@ function routingRead(): Response {
   return response;
 }
 
-function editor(put: RouteMap[string] = routingRead) {
+function editor(
+  put: RouteMap[string] = routingRead,
+  allow: GrantSpec = MANAGER,
+) {
   return (args: ComponentProps<typeof BindingEditor>) => {
     installFetchStub({
+      "GET /me": () => jsonResponse(meFixture({ allow })),
+      "GET /ai/call-stats": () => jsonResponse(LAST_WEEK),
       "GET /ai/routing": routingRead,
       "PUT /ai/routing": put,
       ...Object.fromEntries(
@@ -157,7 +198,10 @@ export const KeyMissing: Story = {
   },
 };
 
-export const ReadOnlySeat: Story = { args: { canManage: false } };
+export const ReadOnlySeat: Story = {
+  args: { canManage: false },
+  render: editor(routingRead, READER),
+};
 
 export const SaveRefused: Story = {
   render: editor(() => jsonResponse(REFUSAL, 422)),

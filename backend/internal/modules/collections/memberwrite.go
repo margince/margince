@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -44,6 +45,15 @@ type MemberChange struct {
 	EntityID   ids.UUID
 	Note       *string
 	Reason     string
+	// AddedAt puts a member back with the time it was first added; nil is now.
+	AddedAt *time.Time
+}
+
+// RemovedMember is what a removal took off the list, so an undo can put the
+// member back as it was.
+type RemovedMember struct {
+	Note    *string
+	AddedAt time.Time
 }
 
 // ErrAlreadyMember and ErrNotMember are a change that would change nothing.
@@ -72,7 +82,8 @@ func (s *Store) RemoveMember(ctx context.Context, listID ids.ListID, change Memb
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return s.RemoveMemberTx(ctx, tx, listID, change)
+		_, err := s.RemoveMemberTx(ctx, tx, listID, change)
+		return err
 	})
 }
 
@@ -109,13 +120,14 @@ func addMemberTx(ctx, admit context.Context, tx pgx.Tx, listID ids.ListID, chang
 	}
 	var out memberRow
 	err = rowScanMember(tx.QueryRow(ctx, `
-		INSERT INTO list_member (list_id, entity_type, entity_id, added_by, note)
-		VALUES (@list_id, @entity_type, @entity_id, @added_by, @note)
+		INSERT INTO list_member (list_id, entity_type, entity_id, added_by, note, created_at)
+		VALUES (@list_id, @entity_type, @entity_id, @added_by, @note, COALESCE(@added_at, now()))
 		ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING
 		RETURNING id, list_id, entity_type, entity_id, added_by, created_at, note`,
 		pgx.StrictNamedArgs{
 			listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID,
 			"added_by": actor, "note": change.Note,
+			"added_at": change.AddedAt,
 		}), &out)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return memberRow{}, ErrAlreadyMember
@@ -128,24 +140,27 @@ func addMemberTx(ctx, admit context.Context, tx pgx.Tx, listID ids.ListID, chang
 
 // RemoveMemberTx removes one record from a Shortlist on the caller's
 // transaction.
-func (s *Store) RemoveMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID, change MemberChange) error {
+func (s *Store) RemoveMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID, change MemberChange) (RemovedMember, error) {
 	if err := admitMemberChange(ctx, tx, listID, change); err != nil {
-		return err
+		return RemovedMember{}, err
 	}
 	actor, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return err
+		return RemovedMember{}, err
 	}
-	tag, err := tx.Exec(ctx,
-		`DELETE FROM list_member WHERE list_id = @list_id AND entity_type = @entity_type AND entity_id = @entity_id`,
-		pgx.StrictNamedArgs{listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID})
+	var removed RemovedMember
+	err = tx.QueryRow(ctx, `
+		DELETE FROM list_member WHERE list_id = @list_id AND entity_type = @entity_type AND entity_id = @entity_id
+		RETURNING note, created_at`,
+		pgx.StrictNamedArgs{listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID},
+	).Scan(&removed.Note, &removed.AddedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return RemovedMember{}, ErrNotMember
+	}
 	if err != nil {
-		return err
+		return RemovedMember{}, err
 	}
-	if tag.RowsAffected() == 0 {
-		return ErrNotMember
-	}
-	return recordMemberChange(ctx, tx, listID, change, memberRemoved, actor)
+	return removed, recordMemberChange(ctx, tx, listID, change, memberRemoved, actor)
 }
 
 // admitMemberChange asks every gate a membership change passes: the list

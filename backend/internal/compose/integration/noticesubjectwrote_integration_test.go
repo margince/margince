@@ -40,10 +40,17 @@ func withAddress(t *testing.T, e *apptest.AppEnv, contactID, email string) {
 // source: unknown_legacy, written by a connector.
 func capturedUnknown(t *testing.T, e *apptest.AppEnv, name string) string {
 	t.Helper()
+	return capturedUnknownBy(t, e, name, "connector:gmail")
+}
+
+// capturedUnknownBy is capturedUnknown with the writer named: a connector, or
+// the counterparty verdict that mints contacts from captured mail afterwards.
+func capturedUnknownBy(t *testing.T, e *apptest.AppEnv, name, capturedBy string) string {
+	t.Helper()
 	contact := contactAcquiredAs(t, e, name, "unknown_legacy")
 	if _, err := e.Owner.Exec(context.Background(), `
-		UPDATE contact_acquisition_evidence SET captured_by = 'connector:gmail' WHERE contact_id = $1`,
-		contact); err != nil {
+		UPDATE contact_acquisition_evidence SET captured_by = $2 WHERE contact_id = $1`,
+		contact, capturedBy); err != nil {
 		t.Fatalf("stating capture wrote the acquisition: %v", err)
 	}
 	return contact
@@ -212,5 +219,56 @@ func TestAnUnknownASeatStatedStaysOwed(t *testing.T) {
 
 	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
 		t.Errorf("a seat-stated unknown moved to %q after they wrote, want it still open", state)
+	}
+}
+
+// The counterparty verdict mints contacts from captured mail after the fact,
+// and its unknown is capture's own as much as a connector's is.
+func TestTheirMailSettlesTheCaseOfAContactTheVerdictMade(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := capturedUnknownBy(t, e, "Verdict Made", "agent:capture_counterparty_verdict")
+	withAddress(t, e, contact, "verdict.made@customer.test")
+	driveNoticeCase(t, e, contact)
+
+	driveCapturedMail(t, e, capturedMailFrom(t, e, "verdict.made@customer.test", false))
+
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "exempt_with_reason" {
+		t.Errorf("a verdict-made contact who wrote to us has a %q case, want exempt_with_reason", state)
+	}
+}
+
+// Their mail was captured before the verdict made the contact: no duty opens,
+// for a verdict-made contact as for a connector-made one.
+func TestTheirEarlierMailOpensNoCaseForAContactTheVerdictMade(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := capturedUnknownBy(t, e, "Verdict Early", "agent:capture_counterparty_verdict")
+	withAddress(t, e, contact, "verdict.early@customer.test")
+	capturedMailFrom(t, e, "verdict.early@customer.test", false)
+
+	driveNoticeCase(t, e, contact)
+
+	if _, state, _, found := noticeCaseFor(t, e, contact); found && state == "open" {
+		t.Error("a verdict-made contact who had already written to us was given an open notice case")
+	}
+}
+
+// A contact withdrawn before its contact.created was handled had its duties
+// ended; the late event must not open a fresh one.
+func TestALateContactCreatedOpensNoCaseForAWithdrawnContact(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := capturedUnknown(t, e, "Withdrawn Early")
+	withAddress(t, e, contact, "withdrawn.early@customer.test")
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE contact SET archived_at = now() WHERE id = $1`, contact); err != nil {
+		t.Fatal(err)
+	}
+
+	driveNoticeCase(t, e, contact)
+
+	if _, _, _, found := noticeCaseFor(t, e, contact); found {
+		t.Error("a contact archived before contact.created was handled was given a notice case")
 	}
 }

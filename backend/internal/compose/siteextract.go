@@ -208,8 +208,8 @@ func reprofileOverWholeCrawl(
 	if profiled == 0 || len(pages) < profiled*profileGrowthFactor {
 		return current, false
 	}
-	if firstErr != nil && errors.As(firstErr, new(*ai.BudgetDeferralError)) {
-		// The workspace is over its token threshold. A second, larger call
+	if firstErr != nil && ai.IsDeferral(firstErr) {
+		// The workspace is over its token threshold or the provider is blocked. A second, larger call
 		// against the same exhausted budget buys nothing and defers again.
 		return current, false
 	}

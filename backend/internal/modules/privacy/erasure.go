@@ -386,14 +386,18 @@ func anonymizeSubjectRows(
 // purgeContactDerivedRows deletes what the system DERIVED about the subject and
 // keyed on their contact id.
 //
-// The four tables share a posture that makes them one step rather than four:
+// The five tables share a posture that makes them one step rather than five:
 // none is anonymizable. An embedding is an opaque vector of the text, a
 // provenance row says where a now-erased field came from, an enrichment row
 // holds the subject's title and employer with the verbatim sentence it was
 // read from, and a correction verdict is what a human typed over what the
-// system inferred. Nulling any of them leaves a row asserting something about
-// a contact nobody may now assert anything about, so all four are deleted.
+// system inferred, and a cached brief is what a model wrote about them. Nulling
+// any of them leaves a row asserting something about a contact nobody may now
+// assert anything about, so all five are deleted.
 func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, subjects []ids.UUID) error {
+	if err := purgeSubjectBriefCache(ctx, tx, contactID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM embedding WHERE entity_type = 'contact' AND entity_id = $1`, contactID); err != nil {
 		return err

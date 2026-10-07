@@ -24,6 +24,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -124,19 +125,32 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 // creation doors, and a contact created by a path predating them has none.
 // Recording a duty from no evidence would be inventing one.
 func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
+	// The contact's own lock first, as a retraction takes it: a contact a
+	// verdict withdrew before this event was handled had its duties ended, and
+	// opening one now would put it back on the worklist.
+	var archived bool
+	if err := tx.QueryRow(ctx, `
+		SELECT archived_at IS NOT NULL FROM contact WHERE id = $1 FOR UPDATE`, contactID).Scan(&archived); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("read whether this contact is still kept: %w", err)
+	}
+	if archived {
+		return nil
+	}
 	// The same lock settleSender takes first, so the two decide in order.
 	if err := lockAcquisitionsTx(ctx, tx, contactID); err != nil {
 		return err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.kind, coalesce(a.occurred_at, a.captured_at),
-		       starts_with(a.captured_by, 'connector:')
-		  FROM contact_acquisition_evidence a
-		 WHERE a.contact_id = $1
+		SELECT e.id, e.kind, coalesce(e.occurred_at, e.captured_at),`+capturedAcquisition+`
+		  FROM contact_acquisition_evidence e
+		 WHERE e.contact_id = $1
 		   AND NOT EXISTS (
 		         SELECT 1 FROM privacy_notice_case c
-		          WHERE c.acquisition_id = a.id)
-		 ORDER BY a.captured_at, a.id`, contactID)
+		          WHERE c.acquisition_id = e.id)
+		 ORDER BY e.captured_at, e.id`, contactID)
 	if err != nil {
 		return fmt.Errorf("read the acquisitions this contact arrived by: %w", err)
 	}

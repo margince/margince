@@ -348,15 +348,17 @@ function AddConsumerMailDialog({
   // here with the control it refuses — a reason outside the dialog is a reason
   // a reader inside it never gets.
   const carveOutDenialId = useId();
+  const formId = useId();
   const [domain, setDomain] = useState("");
   const [kind, setKind] = useState<Kind>("extra");
   const typed = domain.trim();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("consumerMail.addTitle")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(e) => {
           e.preventDefault();
@@ -406,19 +408,20 @@ function AddConsumerMailDialog({
             {problemMessageOf(add.error, t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={add.isPending || typed === ""}
-          >
-            {t("consumerMail.add")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={add.isPending || typed === ""}
+        >
+          {t("consumerMail.add")}
+        </Button>
+      </div>
     </Modal>
   );
 }

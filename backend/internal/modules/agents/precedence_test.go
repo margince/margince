@@ -111,6 +111,9 @@ type recordingApprovals struct {
 	// already holds: the call is not staged again, and the refusal has to tell
 	// the agent to SPEND the approval rather than wait for one.
 	alreadyApproved bool
+	// releasable replays an engine that says the calling credential may answer
+	// what it stages itself.
+	releasable bool
 }
 
 func (r *recordingApprovals) StageCall(_ context.Context, in StageRequest) (ids.ApprovalID, bool, error) {
@@ -128,6 +131,10 @@ func (r *recordingApprovals) StageVolumeRelease(_ context.Context, in VolumeRele
 	default:
 		return ids.New[ids.ApprovalKind](), true, nil
 	}
+}
+
+func (r *recordingApprovals) ReleasableByCaller(context.Context, StageRequest) bool {
+	return r.releasable
 }
 
 func (r *recordingApprovals) Redeem(_ context.Context, id ids.ApprovalID, tool, hash string) (int64, bool, error) {

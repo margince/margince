@@ -113,7 +113,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if where, err = appendRequestReviewClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
+	if where, err = appendCustomerMeetingClause(ctx, in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
 	where = append(where, activityRowClauses(in, arg)...)
+	where = append(where, worklistClauses(in, readerOrNobody(ctx), arg)...)
 	keyset, err := timelineKeyset(in, sorted, arg)
 	if err != nil {
 		return nil, "", nil, nil, err
@@ -159,9 +163,6 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 	}
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)
-	}
-	if in.Worklist {
-		where = append(where, auth.LiveIntakeTaskClause("a"))
 	}
 	return append(where, openTaskWindowClauses(in, arg)...)
 }

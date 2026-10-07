@@ -28,6 +28,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { subjectHref } from "./worklist.copy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { listReadState } from "./worklist.listread";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
@@ -108,12 +109,7 @@ export function HandledForYouPanel() {
                   {
                     key: "subject",
                     header: t("worklist.handled.about"),
-                    // Only where the act named a record. Not every approval is
-                    // about one, and an absent subject is a real state — the row
-                    // reads as its summary alone rather than inventing something
-                    // to point at.
-                    render: (row: Receipt) =>
-                      row.subject?.label ?? t("worklist.handled.noRecord"),
+                    render: (row: Receipt) => <ReceiptRecord receipt={row} />,
                   },
                   {
                     key: "when",
@@ -144,5 +140,22 @@ export function HandledForYouPanel() {
         </SurfaceState>
       </PanelBody>
     </Panel>
+  );
+}
+
+// The record an act changed, named and linked so the reader can judge Undo
+// against Accept. A subject without a label is one the reader may not read: it
+// gets neither the name nor a link, only the fact that a record was involved.
+function ReceiptRecord({ receipt }: { readonly receipt: Receipt }) {
+  const t = useT();
+  const subject = receipt.subject;
+  if (!subject) return <>{t("worklist.handled.noRecord")}</>;
+  if (!subject.label) return <>{t("worklist.handled.hiddenRecord")}</>;
+  const href = subjectHref(receipt);
+  if (!href) return <>{subject.label}</>;
+  return (
+    <a className="entity-link" href={href}>
+      {subject.label}
+    </a>
   );
 }

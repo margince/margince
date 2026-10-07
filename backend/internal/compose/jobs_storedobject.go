@@ -25,9 +25,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -73,18 +73,30 @@ func (w *storedObjectReapWorker) reapWorkspace(ctx context.Context, workspace id
 	// no actor, and every read and write below is RBAC-gated. The pass is the
 	// installation's own bookkeeping, not any seat's.
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "stored_object_reap_worker")
-	store := activities.NewStore(InstallationDB(w.pool))
-	before := w.now().UTC().Add(-activities.ProvisionalObjectGrace)
-	orphans, err := store.ListOrphanedObjects(ctx, before, storedObjectReapBatch)
+	db := InstallationDB(w.pool)
+	ledger := storedobjects.NewLedger(db)
+	before := w.now().UTC().Add(-storedobjects.ProvisionalObjectGrace)
+	provisional, err := ledger.ListProvisional(ctx, before, storedObjectReapBatch)
 	if err != nil {
 		return err
 	}
-	for _, orphan := range orphans {
+	// The fault from an unowned kind is held until the rest of the pass has run: the
+	// orphans already adjudicated are still orphans, and a kind nobody owns must not
+	// keep every other kind's bytes alive.
+	settled, adjudicateErr := adjudicate(ctx, db, provisional)
+	// A key an owning row DOES carry is a clear that never ran. Its bytes stay and
+	// its intent goes, so it stops occupying a slot in every later pass's limit.
+	for _, adopted := range settled.adopted {
+		if err := ledger.Retire(ctx, adopted); err != nil {
+			return err
+		}
+	}
+	for _, orphan := range settled.orphans {
 		// The BYTES first, then the ledger row. The other order would forget an
 		// object that is still there, which is the state this whole ledger
 		// exists to make impossible — a failed delete leaves the key and the
 		// next pass tries again.
-		if err := w.blob.Delete(ctx, orphan.StorageKey); err != nil {
+		if err := w.blob.Delete(ctx, orphan); err != nil {
 			// One key that will not delete must not stop the rest: a bucket
 			// that refuses one object still holds the others, and every one of
 			// them is a subject's file an erasure cannot reach. The key stays
@@ -93,11 +105,11 @@ func (w *storedObjectReapWorker) reapWorkspace(ctx context.Context, workspace id
 				"workspace", workspace.String(), "err", err)
 			continue
 		}
-		if err := store.RetireOrphanedObject(ctx, orphan.StorageKey); err != nil {
+		if err := ledger.Retire(ctx, orphan); err != nil {
 			return err
 		}
 	}
-	return nil
+	return adjudicateErr
 }
 
 // storedObjectReaperFor answers nil for a role that composed no object store.

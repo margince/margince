@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
@@ -26,6 +27,7 @@ import {
   humanizeKind,
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
+import "./approvalrow.css";
 import { QueryGate, throwProblem } from "./common";
 import "./common.css";
 
@@ -125,21 +127,25 @@ export function ApprovalDetailModal({
     },
   });
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {t("decision.detail")}
-      </Heading>
-      {open && (
-        <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
-          {(approval) => (
-            <ApprovalDetailBody
-              approval={approval}
-              locale={locale}
-              zone={zone}
-            />
-          )}
-        </QueryGate>
-      )}
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={headingId} className="t-h2">
+          {t("decision.detail")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        {open && (
+          <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
+            {(approval) => (
+              <ApprovalDetailBody
+                approval={approval}
+                locale={locale}
+                zone={zone}
+              />
+            )}
+          </QueryGate>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }
@@ -187,10 +193,8 @@ function ApprovalDetailBody({
   // nothing else to show, so they are the content.
   const rawPayload = <RawPayload change={change} />;
   return (
-    <div className="approval-detail">
-      {approval.summary && (
-        <p className="approval-detail-lead t-body">{approval.summary}</p>
-      )}
+    <div className="form-stack">
+      {approval.summary && <p className="t-body">{approval.summary}</p>}
       {named.length > 0
         ? named.map((entry) => (
             <FieldLine
@@ -206,7 +210,7 @@ function ApprovalDetailBody({
       <EvidenceList evidence={approval.evidence} />
       {named.length > 0 && (
         <Disclosure summary={t("decision.detailTechnical")}>
-          <div className="approval-detail">{rawPayload}</div>
+          <div className="form-stack">{rawPayload}</div>
         </Disclosure>
       )}
     </div>
@@ -370,7 +374,7 @@ export function StagedEditor({
 }>) {
   const t = useT();
   return (
-    <div className="approval-editor">
+    <div className="form-stack approval-editor">
       {fields.map((entry) => (
         <Field
           key={entry.field}
@@ -422,7 +426,6 @@ export function StagedEditor({
         </Field>
       ))}
       <ActionRow
-        className="approval-gate"
         primary={
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second

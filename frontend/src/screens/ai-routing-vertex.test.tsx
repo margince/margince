@@ -216,7 +216,7 @@ afterEach(() => {
 // the embeddings lane may name one of its own, so the location field — and
 // everything it asks Google — is exercised there.
 describe("a gemini_vertex lane", () => {
-  it("lists locations grouped EU, US, Other, Global, refusing the non-resident ones under eu_hosted", async () => {
+  it("lists locations grouped EU, US, Other, Global and refuses none of them", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backendFor().fetchMock);
     render(<AiRoutingCard />);
@@ -230,38 +230,13 @@ describe("a gemini_vertex lane", () => {
       "EU residentEU · EU (multi-region) (eu)",
       "EU residentEU · europe-west1",
       "EU residentEU · Netherlands (europe-west4)",
-      "Not residentUS · US (multi-region) (us) — outside the EU",
-      "Not residentOther · London (europe-west2) — outside the EU",
-      "Not residentGlobal · Global (global) — outside the EU",
+      "Not residentUS · US (multi-region) (us)",
+      "Not residentOther · London (europe-west2)",
+      "Not residentGlobal · Global (global)",
     ]);
-    const london = within(screen.getByRole("listbox")).getByRole("option", {
-      name: /London/,
-    });
-    expect(london).toHaveAttribute("aria-disabled", "true");
-    expect(
-      within(screen.getByRole("listbox")).getByRole("option", {
-        name: /Netherlands/,
-      }),
-    ).not.toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("offers every location under a profile that promises no EU inference", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal(
-      "fetch",
-      backendFor({ routing: { ...VERTEX_ROUTING, profile: "cloud_frontier" } })
-        .fetchMock,
-    );
-    render(<AiRoutingCard />);
-
-    const lane = await openLane(user, "ai-routing-embeddings");
-    await user.click(
-      await within(lane).findByRole("combobox", { name: "Location" }),
-    );
-    const london = within(screen.getByRole("listbox")).getByRole("option", {
-      name: "Other · London (europe-west2)",
-    });
-    expect(london).not.toHaveAttribute("aria-disabled", "true");
+    for (const option of options) {
+      expect(option).not.toHaveAttribute("aria-disabled", "true");
+    }
   });
 
   it("says it is asking while the locations are loading, and still shows the stored one", async () => {

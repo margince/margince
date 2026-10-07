@@ -289,7 +289,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// to them, from the same reader the contact's own page uses.
 		WithContactTouch(attentionContactTouch{pool: pool}).
 		// And the same pair for a row about an account, from the company page's reader.
-		WithCompanyTouch(attentionCompanyTouch{pool: pool}).
+		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
+		// Which account a meeting row's contact works for, from the employer
+		// read every contact page carries.
+		WithContactEmployers(contacts.NewStore(db)).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page

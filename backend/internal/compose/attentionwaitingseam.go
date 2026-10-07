@@ -141,6 +141,9 @@ func (w attentionWaiting) asWaitingCustomers(
 			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs,
 			ActionUnconfirmed: row.OwedVerdict == "",
 			OwnerID:           row.OwnerID,
+			EarlierRequests:   row.EarlierRequests,
+			FirstAskedAt:      row.FirstAskedAt,
+			MeetingBookedAt:   row.MeetingBookedAt,
 		})
 	}
 	return out
@@ -221,15 +224,27 @@ func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]a
 	return keepWaitingCustomers(kept), cut, nil
 }
 
-// keepWaitingCustomers removes repetitive incidental mail. Confirmed requests
-// retain their source identities: matching subjects, including within a thread,
-// do not prove that two asks describe the same unfinished work.
+// keepWaitingCustomers removes repetitive incidental mail, and shows one card
+// per conversation: a conversation's unanswered requests fold into its newest,
+// which carries how many earlier ones there are and when the first arrived.
+// Folding is presentation only. Each request keeps its own identity and
+// settles on its own; a set-aside on the card reaches the earlier ones too
+// (activities.setReaderState).
 func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingReply {
 	kept := make([]activities.WaitingReply, 0, len(rows))
 	seen := make(map[string]bool, len(rows))
+	cardOf := make(map[string]int, len(rows))
 	for _, row := range rows {
 		if capture.IsMachineAddress(row.Sender) && row.OwedVerdict != activities.OwedVerdictAsksUs {
 			continue
+		}
+		if row.OwedVerdict == activities.OwedVerdictAsksUs && row.ThreadKey != "" {
+			conversation := row.Kind + "\x00" + row.ChannelProvider + "\x00" + row.ThreadKey
+			if at, folded := cardOf[conversation]; folded {
+				foldIntoCard(&kept[at], row)
+				continue
+			}
+			cardOf[conversation] = len(kept)
 		}
 		if row.Subject != "" && row.OwedVerdict != activities.OwedVerdictAsksUs {
 			key := row.Sender + "\x00" + row.Subject
@@ -241,6 +256,31 @@ func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingRe
 		kept = append(kept, row)
 	}
 	return kept
+}
+
+// foldIntoCard adds an earlier request to its conversation's card. The card is
+// the newest request, whichever order the rows arrive in.
+//
+// Either side may already be a card: the lane folds each scan page and then the
+// pages together, so the counts and first dates of both are merged.
+func foldIntoCard(card *activities.WaitingReply, other activities.WaitingReply) {
+	count := card.EarlierRequests + other.EarlierRequests + 1
+	first := earliestAsk(*card, other)
+	if other.OccurredAt.After(card.OccurredAt) {
+		*card = other
+	}
+	card.EarlierRequests, card.FirstAskedAt = count, first
+}
+
+// earliestAsk is when the first request among two cards arrived.
+func earliestAsk(a, b activities.WaitingReply) time.Time {
+	first := a.OccurredAt
+	for _, at := range []time.Time{a.FirstAskedAt, b.FirstAskedAt, b.OccurredAt} {
+		if !at.IsZero() && at.Before(first) {
+			first = at
+		}
+	}
+	return first
 }
 
 // emailRows reads the canonical email row behind each waiting message that is

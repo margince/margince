@@ -36,8 +36,9 @@ const (
 	// company domain. Deterministic, no score. The caller's policy decides
 	// whether that blocks (API) or lands on the incumbent (capture).
 	DecisionExactCollision DedupeDecision = "exact_collision"
-	// DecisionFuzzyReview is a near-match at or above the threshold: a
-	// human compares the two records side by side. Never a merge.
+	// DecisionFuzzyReview is a near-match at or above the threshold, or a
+	// company named after a domain another company claims: a human compares
+	// the two records side by side. Never a merge.
 	DecisionFuzzyReview DedupeDecision = "fuzzy_review"
 	// DecisionNameCollisionReview is two records written with exactly the same
 	// name and no key in common. Like the fuzzy tier it is a question for a

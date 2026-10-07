@@ -17,6 +17,7 @@ const row = {
   cache_read_per_mtok: "0",
   cache_write_per_mtok: "0",
   effective_date: "2026-09-29",
+  source: "seed" as const,
 };
 
 function story(refuse = false) {

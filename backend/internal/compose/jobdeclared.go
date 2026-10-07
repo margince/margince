@@ -33,7 +33,7 @@ import (
 func writeDeclaredInfo(w io.Writer) error {
 	const name = "margince_job_declared_info"
 	if err := writeFamilyHeader(w, name,
-		"Every job kind the contract declares, present whether or not the job table currently holds a row of it -- the catalogue an alert joins against, so an idle kind can be told apart from one nobody wired. The value is always 1. queue is absent where a kind's insert options belong to its callers rather than to the contract; timeout_seconds is -1 where the kind deliberately runs without a deadline, and absent where the wall clock is an operator's dial and so is not stated by the declaration at all."); err != nil {
+		"Every job kind the contract declares, present whether or not the job table currently holds a row of it -- the catalogue an alert joins against, so an idle kind can be told apart from one nobody wired. The value is always 1. queue is absent where a kind's insert options belong to its callers rather than to the contract; timeout_seconds is -1 where the kind deliberately runs without a deadline."); err != nil {
 		return err
 	}
 	for kind, spec := range jobs.Declared() {
@@ -120,12 +120,6 @@ func fanOutUnitName(u jobs.FanOutUnit) string {
 // what the declaration exists for: a deliberate absence is -1, the value
 // TimeoutPolicy.Duration itself hands River.
 //
-// An {operator: …} policy is not stated by the file — api/jobs.yaml calls it
-// "not knowable here at all", and the value is computed at the worker's
-// registration from a dial the exposition process does not hold. It is
-// reported as unstated, so the label is absent rather than carrying a guess
-// an alert would then act on.
-//
 // A deadline shorter than the second this label counts in is floored at one
 // rather than truncated: truncation would spell a real deadline as the very
 // zero the arms above exist to keep off the wire.
@@ -133,12 +127,10 @@ func declaredTimeoutSeconds(p jobs.TimeoutPolicy) (int64, bool) {
 	switch {
 	case p.None:
 		return -1, true
-	case p.FromOperator():
-		return 0, false
 	case p.Fixed > 0:
 		return max(int64(p.Fixed/time.Second), 1), true
 	}
-	// A policy that is none of the three is a Spec nobody declared, whose
+	// A policy that is neither is a Spec nobody declared, whose
 	// zero timeout is River's silent minute under another name. Publishing
 	// nothing says that much honestly; publishing a number would not.
 	return 0, false

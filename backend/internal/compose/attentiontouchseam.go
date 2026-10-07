@@ -38,14 +38,17 @@ func (r attentionContactTouch) LastTouch(
 
 // attentionCompanyTouch is the same seam for a row about an account, through
 // the company page's set reader.
-type attentionCompanyTouch struct{ pool *pgxpool.Pool }
+type attentionCompanyTouch struct {
+	pool *pgxpool.Pool
+	now  attention.Clock
+}
 
 func (r attentionCompanyTouch) LastTouch(
 	ctx context.Context, companyIDs []ids.UUID,
 ) (map[ids.UUID]attention.TouchMoments, error) {
 	return touchMomentsThrough(ctx, r.pool, companyIDs,
 		func(ctx context.Context, tx pgx.Tx, wanted []ids.CompanyID) (map[ids.CompanyID]company360.LastTouch, error) {
-			return company360.LastTouchFor(ctx, tx, wanted, company360.AssembleOptions{})
+			return company360.LastTouchFor(ctx, tx, wanted, r.now(), company360.AssembleOptions{})
 		},
 		func(touch company360.LastTouch) attention.TouchMoments {
 			return attention.TouchMoments{LastInbound: touch.InboundAt, LastOutbound: touch.OutboundAt}

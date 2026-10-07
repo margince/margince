@@ -83,6 +83,9 @@ type Registry struct {
 	// language writes every staged summary in the installation's base
 	// language (summarycopy.go). Nil writes English.
 	language baselanguage.Resolver
+	// seats names the owner every served record row carries (queryowner.go).
+	// Nil leaves owners unnamed but still disclosed.
+	seats SeatNamer
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -353,7 +356,7 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 		// that is the real answer, not "needs approval".
 		return err
 	}
-	id, alreadyApproved, err := r.approvals.StageCall(ctx, StageRequest{
+	req := StageRequest{
 		Tool:           tool,
 		ProposedChange: args,
 		DiffHash:       diffHash,
@@ -363,11 +366,13 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 		CoTargetType:   info.CoTargetType,
 		CoTargetID:     info.CoTargetID,
 		Summary:        info.Summary,
-	})
+	}
+	id, alreadyApproved, err := r.approvals.StageCall(ctx, req)
 	if err != nil {
 		return err
 	}
 	return &workflow.StagedApprovalError{
 		ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: info.Summary,
+		ReleasableByCaller: r.approvals.ReleasableByCaller(ctx, req),
 	}
 }

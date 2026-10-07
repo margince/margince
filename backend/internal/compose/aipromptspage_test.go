@@ -136,7 +136,7 @@ type isolation string
 const (
 	// declaredOnePerCall: the site's own comment says it judges one item per
 	// call and why. Held by declaredIsolation below.
-	declaredOnePerCall isolation = "ONE per call (declared in code)"
+	declaredOnePerCall isolation = "one per call (declared in code)"
 	// severalFencedItems: this call carried more than one separately fenced
 	// region, so a hostile item had a neighbour in the prompt.
 	severalFencedItems isolation = "several fenced items"
@@ -456,36 +456,32 @@ func renderAIPromptsPage(doc promptDocument) string {
 	// for a human; the comment is what the gate reads.
 	b.WriteString("<!-- Generated: do not edit by hand. -->\n\n")
 	b.WriteString("# The prompts this build sends\n\n")
-	b.WriteString("Generated. Do not edit by hand — run\n")
+	b.WriteString("Regenerate with\n")
 	b.WriteString("`cd backend && go test ./internal/compose/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts`.\n\n")
 	b.WriteString("Every instruction below was read off a real request, by driving that site's\n")
-	b.WriteString("own certification case over its own committed fixture. It is what production\n")
-	b.WriteString("sends, not a transcription of it.\n\n")
+	b.WriteString("own certification case over its own committed fixture, so it is the text\n")
+	b.WriteString("production sends.\n\n")
 	b.WriteString("The data boundary is a random marker minted per call; it is shown here as a\n")
 	b.WriteString("fixed placeholder so this page does not change on every run. Why it is random,\n")
 	b.WriteString("and what follows from it, is in\n")
 	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md).\n\n")
 
 	b.WriteString("## What one real call carried\n\n")
-	b.WriteString("**isolation** is derived from the request, not judged. It says whether a\n")
-	b.WriteString("hostile item had a NEIGHBOUR in the same prompt to argue about.\n\n")
+	b.WriteString("**isolation** is derived from the request. It says whether a hostile item\n")
+	b.WriteString("had a neighbour in the same prompt to argue about.\n\n")
 	b.WriteString("| value | meaning |\n|---|---|\n")
-	b.WriteString("| `ONE per call (declared in code)` | the site's own comment says it judges one item per call, and why. Two sites. |\n")
+	b.WriteString("| `" + string(declaredOnePerCall) + "` | the site's own comment says it judges one item per call, and why. Two sites. |\n")
 	b.WriteString("| `several fenced items` | this call carried more than one separately fenced region. |\n")
-	b.WriteString("| `one fenced item` | this call carried at most one. **This does not mean one author** — a single fenced region can hold a whole thread two parties wrote. |\n\n")
+	b.WriteString("| `one fenced item` | this call carried at most one. A single fenced region can still hold a whole thread two parties wrote. |\n\n")
 	b.WriteString("Whether the parties in a prompt are mutually untrusted is the question that\n")
-	b.WriteString("actually decides safety, and it cannot be read off a request. The test for it\n")
-	b.WriteString("is in [prompt-shape.md](../explanation/prompt-shape.md); no column here answers\n")
-	b.WriteString("it, and an earlier revision of this page that tried was wrong twice.\n\n")
-	b.WriteString("**spans in this scenario** is a measurement, not a capacity.\n\n")
-	b.WriteString("**This is not the site's batch capacity.** It is what one scenario produced.\n")
-	b.WriteString("`capture_classify` asks about ten messages in production and shows 1 here,\n")
-	b.WriteString("because its fixture holds one message. Read this as \"what a real call looked\n")
-	b.WriteString("like\", never as \"what this site is willing to accept\".\n\n")
-	b.WriteString("What it does show honestly: where a request carries SEVERAL untrusted spans,\n")
-	b.WriteString("a hostile item has neighbours it could speak for — the hazard\n")
-	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md) frames. A 0 means no fenced\n")
-	b.WriteString("region was found in that call at all.\n\n")
+	b.WriteString("decides safety, and it cannot be read off a request. The test for it is in\n")
+	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md); no column here answers it.\n\n")
+	b.WriteString("**spans in this scenario** is what one scenario produced, and says nothing\n")
+	b.WriteString("about the site's batch capacity. `capture_classify` asks about ten messages in\n")
+	b.WriteString("production and shows 1 here, because its fixture holds one message.\n\n")
+	b.WriteString("Where a request carries several untrusted spans, a hostile item has neighbours\n")
+	b.WriteString("it could speak for: the hazard [prompt-shape.md](../explanation/prompt-shape.md)\n")
+	b.WriteString("frames. A 0 means no fenced region was found in that call at all.\n\n")
 	b.WriteString("| task | site | isolation | spans in this scenario | calls |\n|---|---|---|---:|---:|\n")
 	for _, p := range doc.Sites {
 		fmt.Fprintf(&b, "| `%s` | `%s` | %s | %d | %d |\n", p.Task, p.Site, p.Isolation, p.SpansInScenario, p.Calls)
@@ -501,7 +497,7 @@ func renderAIPromptsPage(doc promptDocument) string {
 	for _, p := range doc.Sites {
 		fmt.Fprintf(&b, "### `%s` / `%s`\n\n", p.Task, p.Site)
 		if p.SystemBytes > 0 {
-			fmt.Fprintf(&b, "`system %s B (~%s tok)` — rules %s B · boundary %s B · after boundary %s B · "+
+			fmt.Fprintf(&b, "`system %s B (~%s tok)`: rules %s B · boundary %s B · after boundary %s B · "+
 				"**cacheable %d%%**\n\n",
 				thousands(p.SystemBytes), thousands(p.SystemTokens), thousands(p.RulesBytes),
 				thousands(p.BoundaryBytes), thousands(p.AfterBoundaryBytes), p.CacheablePercent)

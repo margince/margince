@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -81,11 +82,14 @@ func transcriptSystemFor(fence promptfence.Fence, lang string) string {
 	return transcriptSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("line")
 }
 
-// TranscriptProposer reads a transcript and stages what it says was promised.
+// TranscriptProposer reads a transcript and hands each promise in it to the
+// commitment rule.
 type TranscriptProposer struct {
 	pool     *pgxpool.Pool
 	brain    completer
-	approval *approvals.Service
+	dispatch *CommitmentDispatcher
+	users    *identity.Service
+	contacts *contacts.Store
 	now      func() time.Time
 	log      *slog.Logger
 }
@@ -96,7 +100,11 @@ type TranscriptProposer struct {
 func NewTranscriptProposer(
 	pool *pgxpool.Pool, brain completer, approval *approvals.Service, now func() time.Time, log *slog.Logger,
 ) *TranscriptProposer {
-	return &TranscriptProposer{pool: pool, brain: brain, approval: approval, now: now, log: log}
+	return &TranscriptProposer{
+		pool: pool, brain: brain, dispatch: NewCommitmentDispatcher(pool, approval),
+		users: identity.NewService(pool), contacts: contacts.NewStore(InstallationDB(pool)),
+		now: now, log: log,
+	}
 }
 
 // proposedStep is one next step as the model reports it.
@@ -161,6 +169,9 @@ func transcriptRequest(lines []string, meetingDay string, lang string) model.Req
 			`Use "" when the transcript states no deadline, and when what it states is `+
 			`ambiguous: an empty due date is a next step nobody dated, and a guessed one `+
 			`is a deadline nobody agreed to. `+
+			`"confidence" is a number from 0 to 1 for how firmly the transcript commits the speaker: `+
+			`a plain "I will" with a thing and a day is 0.9 or more, while "I'll try", `+
+			`"at some point" or "maybe" names no real commitment and is 0.3 or less. `+
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
 		meetingDay, maxTranscriptProposals, len(lines))
 

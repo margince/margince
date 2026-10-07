@@ -70,6 +70,11 @@ func TestReplyDraftUsesTheSelectedMessageAndReadableThreadContext(t *testing.T) 
 	if strings.Count(content, "Selected proposal") != 1 || strings.Contains(content, `"thread":"inbound_mail"`) {
 		t.Fatalf("outbound anchor duplicated or treated as inbound: %s", content)
 	}
+	// The anchor's own date, so the gap is sized from a day rather than from
+	// the band's name.
+	if !strings.Contains(content, `"occurred_at":"2026-09-01T09:00:00Z"`) {
+		t.Fatalf("the selected message's date never reached the model: %s", content)
+	}
 }
 
 // A text-only adapter is still governed by the HTTP surface's selected subject.

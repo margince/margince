@@ -13,7 +13,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useToast } from "../design-system/toast";
+import { undoAction, useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
@@ -248,13 +248,13 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={formTitleId}
+        intent="form"
       >
         <InviteUserForm
           titleId={formTitleId}
           onInvited={(member) => {
-            // The dialog closes on the write that landed, never before it: a
-            // refused invite has to leave the address and the name where the
-            // admin typed them.
+            // Closes on the write that landed: a refused invite keeps what the
+            // admin typed.
             setOpen(false);
             qc.invalidateQueries({ queryKey: ["users-admin"] });
             // An invite spends a seat, so the capacity readings move with it.
@@ -436,7 +436,7 @@ function MemberRow({
       // A true inverse, and both halves are already on this row: `reactivate`
       // restores exactly what `deactivate` took away, with nothing to re-supply.
       toast.show(t("users.deactivated", { name: member.email }), {
-        action: { label: t("common.undo"), onAct: () => reactivate.mutate() },
+        action: undoAction(t("common.undo"), () => reactivate.mutate()),
       });
     },
     onError,

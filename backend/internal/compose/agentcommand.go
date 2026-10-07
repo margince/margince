@@ -199,6 +199,11 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	opRemoveOfferLineItem: removeOfferLineItemCommand,
 	"createOffer":         createOfferCommand,
 
+	// The two review-queue verbs (commanddedupe.go): auto-execute, and filed
+	// here for the reason the group above is.
+	"disposeDedupeCandidate": dismissDuplicateCommand,
+	"undoDedupeDisposition":  reopenDuplicateCommand,
+
 	// The fourteen single-purpose commands over sixteen routes
 	// (agentcommandsend.go, agentcommandlifecycle.go, agentcommandrecord.go,
 	// agentcommandauto.go), and the first family where EVERY entry has a real

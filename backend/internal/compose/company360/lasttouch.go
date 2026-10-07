@@ -42,7 +42,11 @@ type LastTouch struct {
 // It walks the links the timeline does, so the header can never disagree with
 // the list under it, and it carries the caller's activity row scope, so a rep
 // sees the last message THEY may read rather than the account's true last one.
-func LastTouchFor(ctx context.Context, tx pgx.Tx, companyIDs []ids.CompanyID, opts AssembleOptions) (map[ids.CompanyID]LastTouch, error) {
+// A message dated after now has not been sent yet, so it is neither side's last
+// word: a scheduled send must not hide the real last one.
+func LastTouchFor(
+	ctx context.Context, tx pgx.Tx, companyIDs []ids.CompanyID, now time.Time, opts AssembleOptions,
+) (map[ids.CompanyID]LastTouch, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -69,6 +73,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, companyIDs []ids.CompanyID, op
 		reached += " AND " + scope
 	}
 	reached += opts.projectScope(arg)
+	reached += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
 	// An ordered LIMIT-1 arm per direction rather than a FILTERed max(): an
 	// aggregate sees every qualifying row, each arm stops at the newest, so the
 	// cost per company is bounded by how far back that message is.

@@ -123,8 +123,9 @@ func TestAnyOtherDecisionServerIsProbedWithAnEmptyDecision(t *testing.T) {
 		http.StatusOK:                  KeyTestUnreachable,
 		http.StatusFound:               KeyTestUnreachable,
 		http.StatusUnauthorized:        KeyTestAuthFailed,
-		http.StatusForbidden:           KeyTestAuthFailed,
-		http.StatusBadGateway:          KeyTestUnreachable,
+		// An operator's endpoint: its 403 may be a bad key, so it reads as one.
+		http.StatusForbidden:  KeyTestAuthFailed,
+		http.StatusBadGateway: KeyTestUnreachable,
 	} {
 		host := &scriptedHost{t: t, answer: func(r *http.Request) (int, string) {
 			body, err := io.ReadAll(r.Body)
@@ -204,23 +205,6 @@ func TestJevOnAnOpenRouterHostIsNotAskedTheBrokersKeyRoute(t *testing.T) {
 		providerJev, cloudKeyFor(providerJev, "tk"), host.probes())
 	if !strings.HasPrefix(host.asked[0], "GET https://openrouter.ai/api/v1/models ") {
 		t.Fatalf("asked %v", host.asked)
-	}
-}
-
-// eu_hosted refuses to bind TypeSafe's own API or OpenRouter's decisions
-// endpoint; a test of either says so rather than reporting a key it could
-// never use as connected, and dials nothing.
-func TestEUHostedRefusesADecisionLaneItWouldNotBind(t *testing.T) {
-	for _, tc := range []struct{ provider, endpoint string }{
-		{providerJev, ""},
-		{providerJevCompatible, "https://openrouter.ai/api/alpha/decisions"},
-	} {
-		cfg := decisionBound(tc.provider, tc.endpoint)
-		cfg.Profile = ProfileEUHosted
-		got := probeProviderKey(context.Background(), cfg, tc.provider, cloudKeyFor(tc.provider, "k"), stubBuilder)
-		if got.Reason != KeyTestProfileForbids {
-			t.Errorf("%s at %q: got %+v, want profile_forbids", tc.provider, tc.endpoint, got)
-		}
 	}
 }
 

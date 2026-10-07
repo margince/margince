@@ -5,23 +5,21 @@
 Every table this product keeps, what each column is, and how the records point
 at each other.
 
-**This page set is generated and an edit made here is lost.** It is rendered
-from the schema the migrations build (`backend/migrations/testdata/head_catalog.txt`),
+Rendered from the schema the migrations build (`backend/migrations/testdata/head_catalog.txt`),
 the field descriptions in the API contract (`backend/api/crm.yaml`), and the
-module that owns each table's writes. Nothing a reader has to keep in step by
-hand is on it.
-
-Changing the model means changing one of those three, and the gate that renders
-this fails on the same run — so regenerate it with the change that moved it:
+module that owns each table's writes. Changing the model means changing one of
+those three, and the gate that renders this fails on the same run, so
+regenerate it with the change that moved it:
 
     cd backend && go test ./gates -run EntityModel -update-entity-model
 
-A column that reads only `Required text` or `Optional text` has no description
-anywhere in the tree — the catalog knows its type and nothing has said what it
-is for. Give it one by adding a `description:` to the matching field in
-`backend/api/crm.yaml`, and the next regeneration picks it up.
+A column whose last cell is empty has no description anywhere in the tree: the
+catalog knows its type and nothing has said what it is for. Give it one by
+adding a `description:` to the matching field in `backend/api/crm.yaml`, and
+the next regeneration picks it up. A foreign-key column names its target; what
+happens when the parent is deleted is in the table's **Points at** list.
 
-For WHY the schema is shaped this way rather than what it holds, read
+For why the schema is shaped this way rather than what it holds, read
 [explanation/architecture.md](../../explanation/architecture.md) and
 [explanation/write-backbone.md](../../explanation/write-backbone.md). For which
 module to put a change in, read [modules.md](../modules.md).
@@ -30,23 +28,23 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 293 |
-| Columns | 3483 |
-| Foreign keys | 472 |
+| Tables | 294 |
+| Columns | 3501 |
+| Foreign keys | 475 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
 
-Ranked by how many foreign keys point at them, so this list follows the schema rather than anybody's idea of what matters.
+Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 126 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 41 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 24 | 126 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 42 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 40 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 22 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 36 | 13 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 36 | 14 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
@@ -88,7 +86,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 25 |
+| [activities](activities.md) | 24 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -101,7 +99,7 @@ erDiagram
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 36 |
-| [consent](consent.md) | 17 |
+| [consent](consent.md) | 18 |
 | [contacts](contacts.md) | 39 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
@@ -116,7 +114,7 @@ erDiagram
 | [knowledge](knowledge.md) | 3 |
 | [migration](migration.md) | 2 |
 | [notices](notices.md) | 3 |
-| [platform](platform.md) | 9 |
+| [platform](platform.md) | 10 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
 | [reporting](reporting.md) | 10 |
@@ -154,11 +152,11 @@ erDiagram
 | [`ai_call_config`](ai.md#ai_call_config) | ai | 6 | 1 |
 | [`ai_call_payload`](ai.md#ai_call_payload) | ai | 5 | 0 |
 | [`ai_feedback`](ai.md#ai_feedback) | ai | 15 | 0 |
-| [`ai_model_rate`](ai.md#ai_model_rate) | ai | 10 | 0 |
+| [`ai_model_rate`](ai.md#ai_model_rate) | ai | 11 | 0 |
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 22 | 126 |
+| [`app_user`](identity.md#app_user) | identity | 24 | 126 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 3 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -168,7 +166,7 @@ erDiagram
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 8 | 0 |
-| [`attachment`](activities.md#attachment) | activities | 26 | 6 |
+| [`attachment`](activities.md#attachment) | activities | 27 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 12 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 14 | 2 |
 | [`auth_token`](identity.md#auth_token) | identity | 7 | 0 |
@@ -207,6 +205,7 @@ erDiagram
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 17 | 2 |
+| [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 11 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
 | [`company`](contacts.md#company) | contacts | 43 | 40 |
@@ -228,7 +227,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 32 | 41 |
+| [`contact`](contacts.md#contact) | contacts | 32 | 42 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
@@ -254,13 +253,13 @@ erDiagram
 | [`deal_risk_day`](deals.md#deal_risk_day) | deals | 7 | 1 |
 | [`deal_risk_verdict`](deals.md#deal_risk_verdict) | deals | 2 | 0 |
 | [`deal_room`](dealrooms.md#deal_room) | dealrooms | 14 | 6 |
-| [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 9 | 0 |
+| [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 10 | 0 |
 | [`deal_room_document`](dealrooms.md#deal_room_document) | dealrooms | 12 | 2 |
 | [`deal_room_engagement`](dealrooms.md#deal_room_engagement) | dealrooms | 6 | 0 |
 | [`deal_room_invitation`](dealrooms.md#deal_room_invitation) | dealrooms | 14 | 0 |
 | [`deal_room_participant`](dealrooms.md#deal_room_participant) | dealrooms | 13 | 5 |
 | [`deal_room_session`](dealrooms.md#deal_room_session) | dealrooms | 10 | 0 |
-| [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 15 | 1 |
+| [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 16 | 1 |
 | [`deal_stage_evidence`](deals.md#deal_stage_evidence) | deals | 19 | 1 |
 | [`deal_stage_history`](deals.md#deal_stage_history) | deals | 19 | 2 |
 | [`deal_status_card`](compose.md#deal_status_card) | compose | 6 | 0 |
@@ -297,7 +296,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 36 | 13 |
+| [`lead`](contacts.md#lead) | contacts | 36 | 14 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 8 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
@@ -311,7 +310,7 @@ erDiagram
 | [`list_member_event`](collections.md#list_member_event) | collections | 10 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
 | [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
-| [`mail_draft`](activities.md#mail_draft) | activities | 13 | 0 |
+| [`mail_draft`](activities.md#mail_draft) | activities | 14 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_invitation`](activities.md#meeting_invitation) | activities | 19 | 1 |
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |
@@ -383,7 +382,7 @@ erDiagram
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
 | [`stage_progression_outcome`](deals.md#stage_progression_outcome) | deals | 19 | 0 |
 | [`stage_progression_policy`](deals.md#stage_progression_policy) | deals | 18 | 0 |
-| [`stored_object_intent`](activities.md#stored_object_intent) | activities | 2 | 0 |
+| [`stored_object_intent`](platform.md#stored_object_intent) | platform | 3 | 0 |
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
 | [`tag`](collections.md#tag) | collections | 9 | 2 |

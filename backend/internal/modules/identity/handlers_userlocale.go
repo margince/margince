@@ -6,8 +6,6 @@ package identity
 import (
 	"net/http"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -33,11 +31,5 @@ func (h Handlers) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.User{
-		Id:          openapi_types.UUID(seat.UserID.UUID),
-		Email:       openapi_types.Email(seat.Email),
-		DisplayName: seat.DisplayName,
-		Status:      "active",
-		Locale:      contractLocale(seat.Locale),
-	})
+	httperr.WriteJSON(w, http.StatusOK, seatUser(seat))
 }

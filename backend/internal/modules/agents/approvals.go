@@ -47,6 +47,10 @@ type Approvals interface {
 	// credential — and one shared shape would leave every caller of the common
 	// method passing empty halves that have no meaning for it.
 	StageVolumeRelease(ctx context.Context, in VolumeReleaseRequest) (id ids.ApprovalID, staged bool, err error)
+	// ReleasableByCaller says whether the calling credential could approve the
+	// call it is staging — an undoable change on an attended session — so the
+	// answer it is handed offers the relay only when that move works.
+	ReleasableByCaller(ctx context.Context, in StageRequest) bool
 	// Redeem answers the version the approval was pinned to, so a transport
 	// that forwards the authorized call can bind its own write to it. pinned
 	// is false when the approval carried none — a create, or a target type

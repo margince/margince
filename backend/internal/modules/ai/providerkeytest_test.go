@@ -130,7 +130,7 @@ func TestKeyTest_ReachesAnEmbeddingsOnlyServer(t *testing.T) {
 func TestAVendorRefusalIsToldApartByItsStatus(t *testing.T) {
 	cases := map[int]KeyTestReason{
 		http.StatusUnauthorized:        KeyTestAuthFailed,
-		http.StatusForbidden:           KeyTestAuthFailed,
+		http.StatusForbidden:           KeyTestPermissionDenied,
 		http.StatusTooManyRequests:     KeyTestRateLimited,
 		http.StatusInternalServerError: KeyTestUnreachable,
 		http.StatusNotFound:            KeyTestUnreachable,
@@ -219,6 +219,10 @@ func TestAClientWithNoListIsNotPublished(t *testing.T) {
 
 type unlistedClient struct{ model.Client }
 
+func (unlistedClient) Health() model.ProviderHealthStatus {
+	return model.ProviderHealthStatus{Health: model.HealthOK}
+}
+
 func TestEveryPickerStateHasAKeyTestReading(t *testing.T) {
 	cases := map[ModelAvailability]KeyTestReason{
 		AvailabilityNoKey:          KeyTestNoKey,
@@ -274,5 +278,19 @@ func TestGeminisKeyCodeOnAnotherStatusKeepsThatStatusReading(t *testing.T) {
 func TestAnErrorCodeIsAdmittedOnlyAsACode(t *testing.T) {
 	if got := errorInfoReason(strings.NewReader(`{"error":{"details":[{"reason":"key sk-live-abc is bad"}]}}`)); got != "" {
 		t.Fatalf("prose was read as a code: %q", got)
+	}
+}
+
+// A 403 from an endpoint an operator runs says nothing certain about the key, so
+// it stays a refusal of the key; only a named vendor's 403 means "permissions".
+func TestAnOperatorEndpointsForbiddenStaysARefusedKey(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	t.Cleanup(srv.Close)
+	got := probeProviderKey(context.Background(), boundAt(providerOpenAICompatible, srv.URL), providerOpenAICompatible,
+		cloudKeyFor(providerOpenAICompatible, "k"), stubBuilder)
+	if got.OK || got.Reason != KeyTestAuthFailed {
+		t.Errorf("got %+v, want auth_failed", got)
 	}
 }

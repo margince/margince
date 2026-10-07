@@ -120,3 +120,14 @@ export const ReadOnly: Story = {
   play: openFieldSales,
   render: story({ role_admin: ["read"] }, ["ops"]),
 };
+
+export const NewRoleDialog: Story = {
+  render: story(ROLE_ADMIN, ["admin"]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "New role" }),
+    );
+    await within(document.body).findByRole("dialog");
+  },
+};

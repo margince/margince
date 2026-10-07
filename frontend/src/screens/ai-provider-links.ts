@@ -20,7 +20,11 @@ const PRICING_PAGES: Readonly<Record<string, string>> = {
 // bare suffix match would take `notopenrouter.ai` for the broker.
 export function isOpenRouter(baseUrl: string): boolean {
   try {
-    const host = new URL(baseUrl).hostname.toLowerCase();
+    const url = new URL(baseUrl);
+    // The scheme as well as the host, as the server's IsOpenRouterHost reads it:
+    // a host it cannot send to is not the broker.
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    const host = url.hostname.toLowerCase();
     return host === "openrouter.ai" || host.endsWith(".openrouter.ai");
   } catch {
     return false;

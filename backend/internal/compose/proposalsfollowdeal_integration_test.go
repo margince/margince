@@ -285,7 +285,7 @@ func (e *reconcileEnv) readTranscriptFor(
 	var id ids.ApprovalID
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT id FROM approval WHERE kind = $1 AND target_entity_id = $2 AND status = 'pending'`,
-		TranscriptProposalKind, activity.UUID).Scan(&id); err != nil {
+		CommitmentTaskKind, activity.UUID).Scan(&id); err != nil {
 		t.Fatalf("no transcript card staged on the meeting: %v", err)
 	}
 	return id

@@ -1,14 +1,14 @@
-# The company record page — one gated read, per-viewer prose, honest omissions
+# The company record page: one gated read, per-viewer prose, named omissions
 
 The account page a rep opens on a company: who works there, what is open, what
 moved, what to do next, and a written brief over all of it. It is the largest
-composite surface in the product and it is assembled almost entirely in
-`internal/compose` — thirteen gated section reads inside one transaction, plus
-two cross-module orchestration groups that own view state of their own.
+composite surface in the product, and it is assembled almost entirely in
+`internal/compose`: gated section reads inside one transaction (listed below),
+plus two cross-module orchestration groups that own view state of their own.
 
 ## The shape at a glance
 
-Six endpoints serve one screen. Which one owns which part:
+Several endpoints serve one screen. Which one owns which part:
 
 ```text
                     the company record screen (companies.tsx)
@@ -36,161 +36,155 @@ Six endpoints serve one screen. Which one owns which part:
 `GET /companies/{id}/360` serves the whole page. Everything below is one
 composite read assembled inside a single `database.WithWorkspaceTx`, and the
 response carries the `as_of` stamp of that read. The isolation level is Read
-Committed — the platform's posture — so a concurrent commit can land between two
-sections; the stamp is what keeps that honest rather than hidden. No section
-opens a second transaction, which is why every module store the assembly calls
-exposes a transaction-taking variant of its read.
+Committed (the platform's posture), so a concurrent commit can land between two
+sections; the stamp makes that visible. No section opens a second transaction,
+which is why every module store the assembly calls exposes a
+transaction-taking variant of its read.
 
 **Authorization is per section.** Reading the company is mandatory, and its
 refusal is the whole read's refusal (403/404 as usual). Every other section
-needs its own object grant, and a section refused with
+needs its own object grant. A section refused with
 `apperrors.ErrPermissionDenied` is **omitted from the payload and named in
-`sections_omitted`** — never returned as an empty array. That distinction is the
-whole honesty mechanism of the page:
+`sections_omitted`**, never sent as an empty array, so the UI can show "hidden
+from you" instead of an empty list. Empty arrays would look like an account with
+no contacts, no deals and no history, and the rep would believe them.
 
-> "you may not see this" and "there is none" are different answers, and a UI
-> that conflates them lies to the rep.
-
-Empty arrays would be indistinguishable from an account with no contacts, no
-deals and no history — and would be *believed*. The named-omission vocabulary
-lets every card on the screen say **"hidden from you"** instead of drawing a
-blank list. The section names are spelled once
-(`company360/assemble.go`) and are simultaneously the contract's
-`sections_omitted` enum and the keys the assembly reasons about, so a rename
-cannot leave the two halves disagreeing:
+The section names are spelled once (`company360/assemble.go`). They are both
+the contract's `sections_omitted` enum and the keys the assembly reasons about,
+so a rename cannot leave the two halves disagreeing:
 
 `contacts` · `strength` · `deals` · `projects` · `activities` · `last_touch` ·
 `state_strip` · `health` · `next_steps` · `next_meeting` · `tags` ·
 `list_memberships` · `pending_approvals` · `since_last_visit` · `suggestions`
 
 They run in a fixed order, so two reads of the same account produce the same
-`sections_omitted` list. Any error that is **not** a permission refusal fails
-the whole read: a section that broke for a real reason must never be reported as
-one the caller may not see.
+`sections_omitted` list. Any error that is not a permission refusal fails the
+whole read: a section that broke for a real reason must never be reported as one
+the caller may not see.
 
-Two further rules keep the read from lying by construction:
+Two further rules keep the read accurate by construction:
 
-- **Nested collections are summaries, not paging surfaces** — and they are not
-  all the same shape. The *paged* summaries (contacts, deals, activities, pending
+- **Nested collections are summaries, not paging surfaces**, and they do not
+  share one shape. The *paged* summaries (contacts, deals, activities, pending
   approvals, next steps) carry at most 25 rows with `page.has_more`, and
-  `page.next_cursor` is always null: page two comes from the endpoint that owns
+  `page.next_cursor` is always null. Page two comes from the endpoint that owns
   that collection (`GET /activities`, `GET /deals`, `GET /relationships`,
   `GET /approvals`), each with its own cursor vocabulary. Tags and list
-  memberships are **plain arrays** with no page metadata at all, and suggestions
-  report what they left out through `suggestions_dropped` rather than a page
-  object.
+  memberships are **plain arrays** with no page metadata at all, and
+  suggestions report what they left out through `suggestions_dropped` instead
+  of a page object.
 - **Every section prunes to the caller's row scope** with the same
   `platform/auth` predicates the module lists use, so a section can never
   out-see the dedicated endpoint it summarizes. Where a section reports linked
-  ids, those ids carry *their own* scope — a task reachable through a visible
+  ids, those ids carry *their own* scope: a task reachable through a visible
   contact must not hand back the id of a deal the caller may not read.
 
 ## The work in flight, and the account brief behind it
 
 The overview's lead card is **the account's work in flight**
-(`frontend/src/screens/companywork.tsx`): one line per open deal, one per live
-project, each carrying at most ONE reason it needs a contact — an overdue task,
-or a commitment they made to us that is still open. The reasons are decorated
-server-side (`compose/company360/workattention.go`) in three set-based queries, and
-rendered through i18n templates over typed fields. Nothing on the card is
-model-written, which is what makes each line checkable against the record it
-links to. When nothing is in flight the growth-fit panel takes the slot.
+(`frontend/src/screens/companywork.tsx`): one line per open deal and one per live
+project. Each line carries at most one reason it needs attention: an overdue
+task, or a commitment they made to us that is still open. The reasons are decorated
+server-side (`compose/company360/workattention.go`) in three set-based queries,
+and rendered through i18n templates over typed fields. Nothing on the card is
+model-written, so each line can be checked against the record it links to. When
+nothing is in flight the growth-fit panel takes the slot.
 
-It replaced a written account brief in that position. On an account carrying
-several engagements the brief blended them: correspondence about one project
-became a sentence about another, and a figure read out of the blend had nowhere
-to be checked. A deal and a project are two stories, and the card's structure
-says so — two groups under their own subheads, never interleaved.
+A written brief does not hold that position, because on an account carrying
+several engagements a brief blends them. Correspondence about one project
+becomes a sentence about another, and a figure read out of the blend has nowhere
+to be checked. A deal and a project are two stories, and the card shows them as
+two groups under their own subheads, never interleaved.
 
-`GET /companies/{id}/brief` (and `POST` for an explicit rewrite) still
-serves that brief and is **deprecated**: no screen renders it. It stays because
+`GET /companies/{id}/brief` (and `POST` for an explicit rewrite) still serves a
+brief and is **deprecated**: no screen renders it. It stays because
 `POST …/ask` is served from the same handlers and the same assembly. It lives in
 `internal/compose/companybrief` and owns one table, `company_brief`.
 
-**Assembled AS the caller.** The brief's input comes from running the 360
-itself, as the requesting principal, inside the normal gates — the `Assembler`
-seam is injected rather than imported, so the package composes one seam instead
-of re-deriving the gated reads itself. A brief can therefore only describe records
-that caller could open themselves, and `sections_omitted` rides into the input
-so the writer is told to stay silent about those subjects rather than inferring
+**Assembled as the caller.** The brief's input comes from running the 360
+itself, as the requesting principal, inside the normal gates. The `Assembler`
+seam is injected, not imported, so the package composes one seam instead of
+re-deriving the gated reads itself. A brief can therefore only describe records
+that caller could open themselves. `sections_omitted` rides into the input, so
+the writer is told to stay silent about those subjects instead of inferring
 around the gap.
 
 **Why not one shared brief per account?** It has no correct version. A shared
 brief written from the union of everyone's visibility would leak scoped deals
-and activities to a restricted reader; one written from the intersection would
+and activities to a restricted reader. One written from the intersection would
 degrade to the lowest common scope and tell the account owner *less* than the
-page already shows them. Per-viewer is not caution, it is the only shape that is
-both safe and useful — so the cache is keyed `(workspace_id, user_id,
-company_id)`.
+page already shows them. So the cache is per viewer, keyed `(workspace_id,
+user_id, company_id)`.
 
 **Cached on the inputs, not on the record.** The key is a SHA-256 over the
 prompt version, the routing version, and the JSON-encoded assembled input
 (`companybrief/input.go`). Facts, deals, activities and grants all move without
-touching the `company` row, so a key derived from that row's version would
-serve a brief describing a pipeline the account no longer has — indefinitely.
-Folding the routing version in means re-pointing the model lane rewrites briefs
-rather than leaving text attributed to a model that no longer writes it.
+touching the `company` row, so a key derived from that row's version would serve
+a brief describing a pipeline the account no longer has, indefinitely. Folding
+the routing version in means re-pointing the model lane rewrites briefs instead
+of leaving text attributed to a model that no longer writes it.
 
 A cached brief whose fingerprint no longer matches is **rewritten before the
-request answers**, so a brief that arrives is current. The faster alternative —
-serve the stale one and refresh behind the request — trades that guarantee away
-and needs a regeneration that outlives the request; it is not what this does and
-nothing in the contract claims it.
+request answers**, so a brief that arrives is current. Serving the stale one and
+refreshing behind the request would be faster, but it would give up that
+guarantee and need a regeneration that outlives the request. The code does not
+do that, and nothing in the contract claims it.
 
-**It degrades rather than fails.** With no model lane configured, or the
+**It degrades instead of failing.** With no model lane configured, the
 workspace's AI budget exhausted, or a reply the validator refuses, the brief
 falls back to a deterministic structured summary over the same inputs
-(`companybrief/deterministic.go`) — identity, pipeline, each stalled deal on its own
-line, the last touch, open tasks, then what the company *is* from its curated
-profile fields. Every deterministic sentence cites the record it came from
-exactly as the model path does, so the card renders and behaves identically
-regardless of which path wrote it. `generated_by` names which one it was, because a reader
-deciding how much to trust a sentence needs to know.
+(`companybrief/deterministic.go`). It covers identity, pipeline, each stalled
+deal on its own line, the last touch, open tasks, then what the company *is*
+from its curated profile fields. Every deterministic sentence cites the record
+it came from the same way the model path does, so the card renders and behaves
+identically whichever path wrote it. `generated_by` names which one it was,
+because a reader deciding how much to trust a sentence needs to know.
 
 The prompt treats every activity subject and body as **untrusted quoted data**
-behind a nonce fence — quoted between one-time random delimiters, so text inside
-it cannot pose as part of the prompt; the same discipline the site-read prompts
-use. This text
-arrived from outside the workspace and must never be read as instruction. The
-model runtime behind it is [ai-runtime.md](ai-runtime.md).
+behind a nonce fence: quoted between one-time random delimiters, so text inside
+it cannot pose as part of the prompt. The site-read prompts use the same
+discipline. This text arrived from outside the workspace and must never be read
+as instruction. The model runtime behind it is [ai-runtime.md](ai-runtime.md).
 
 Both the brief and Ask are **human-only** (`x-agent-access: human-only`,
-`security: [{ cookieAuth: [] }]`, and `auth.RequireHuman` at the service): a
-brief is a reading aid for a contact, and an agent reading records through a
+`security: [{ cookieAuth: [] }]`, and `auth.RequireHuman` at the service). A
+brief is a reading aid for a human, and an agent reading records through a
 passport has the records themselves.
 
 ## Ask
 
 `POST /companies/{id}/ask` answers **one of three prepared questions** about
-the account — `whats_open`, `meeting_prep`, `whats_changed`. The question is
-*chosen, not typed*, and that is the design rather than a stopgap: each prepared
-question names the slice of the account its answer may be written from, which is
-what lets every sentence carry a citation the reader can open. A free-text box
-would need retrieval that can prove what it did **not** find, and a box that
-quietly answered from a subset would read exactly like one that searched
-everything.
+the account: `whats_open`, `meeting_prep`, `whats_changed`. The question is
+*chosen, not typed*, by design. Each prepared question names the slice of the
+account its answer may be written from, which lets every sentence carry a
+citation the reader can open. A free-text box would need retrieval that can
+prove what it did not find, and a box that answered from a subset without saying
+so would read like one that searched everything.
 
-An unknown question is a 422, never a default — silently answering a different
-question than the one asked is indistinguishable from answering the asked one
-badly.
+An unknown question is a 422, never a default: answering a different question
+than the one asked looks the same as answering the asked one badly.
 
-Ask reuses the brief's machinery entirely: the same per-viewer input, the same
-nonce fence, the same grounding filter, the same deterministic floor. The
-difference between the three answers is one instruction string each. The shared
-system prompt is strict about grounding — state only what the summary states;
-never infer a cause, mood, intent or next step it does not contain; cite the ids
-the summary gave; ids go in `evidence` and never in a sentence's text; if the
-summary does not answer the question, return an empty array rather than a
-sentence that talks around it; and say nothing at all about anything named in
-`sections_omitted`. Nothing is cached: a question is asked and read once. The
-company profile is deliberately withheld from Ask — those are approved prose
-statements, and none of the three questions is about them.
+Ask reuses the brief's machinery: the same per-viewer input, the same nonce
+fence, the same grounding filter, the same deterministic floor. The three
+answers differ by one instruction string each. The shared system prompt is
+strict about grounding:
+
+- state only what the summary states;
+- never infer a cause, mood, intent or next step it does not contain;
+- cite the ids the summary gave, in `evidence` and never in a sentence's text;
+- if the summary does not answer the question, return an empty array instead of
+  a sentence that talks around it;
+- say nothing at all about anything named in `sections_omitted`.
+
+Nothing is cached: a question is asked and read once. Ask does not receive the
+company profile, because those are approved prose statements and none of the
+three questions is about them.
 
 ## Suggestions
 
 The `suggestions` section is what the account looks like it needs, computed from
-its own records. **There is no model in this path.** Four rules, derived from the
-contract enum rather than re-spelled:
+its own records. **There is no model in this path.** The rules are derived from
+the contract enum, not re-spelled:
 
 | Kind | The rule |
 |---|---|
@@ -200,349 +194,355 @@ contract enum rather than re-spelled:
 | `lifecycle_conflict` | a standing `contract_ended` signal while the record still reads as a live customer or an open opportunity |
 
 Every rule is a comparison a rep could make themselves, and **each suggestion
-carries the rule in the words they read** (`reason` — "the rule that fired, in
-the words the rep reads. Never a score."), plus the `evidence` records it fired
-on and, where the server can name one, an `action` that opens a governed surface
-prefilled from that evidence (`draft_reply` opens the composer on the unanswered
-message, `open_deal` opens the stalled deal, `add_task` writes the step the
-server prepared, through the same `POST /tasks` the task form uses). A rule
-that cannot name an action carries `null` and
-the card advises without offering a button — a control that does nothing teaches
-the reader to stop pressing them, and so does a button the page cannot perform:
-the page's handler is total over the action kinds, so a kind it has no surface
-for fails the build rather than swallowing the click.
+carries the rule in the words they read** (`reason`: "the rule that fired, in
+the words the rep reads. Never a score."). It also carries the `evidence`
+records it fired on and, where the server can name one, an `action` that opens
+a governed surface prefilled from that evidence. `draft_reply` opens the
+composer on the unanswered message, `open_deal` opens the stalled deal, and
+`add_task` writes the step the server prepared, through the same `POST /tasks`
+the task form uses. A rule that cannot name an action carries `null`, and the
+card advises without offering a button, because a control that does nothing
+teaches the reader to stop pressing them. The page's handler is total over the
+action kinds, so a kind it has no surface for fails the build instead of
+swallowing the click.
 
 **A citation is a receipt, not a label.** Beside the record it points at, each
-piece of evidence carries what the rule read from it: the record's own words
-(`quote` — a message's opening line, the signal's sentence, verbatim and never
-a paraphrase), the instant it is dated (`at` — when the message was sent, when
-the deal was last worked) and where the words came from (`origin` — "Email you
-sent", "Open deal, last worked"). The chip is labelled with the record's name
-and, rested on, opens exactly that. The words ride the activity's audience
-test and the row does not: a message whose content this reader may not see
-still counts as the newest exchange, and its chip carries the date and the
-channel with no quote. None of it reaches the fingerprint — a subject edited
-after the fact must not resurrect a dismissal. The vocabulary lives in
-`suggestioncites.go`.
-A model could phrase these more warmly; it could not make them **checkable**, and
-checkable is what lets a rep disagree with the *reason* rather than with a
-verdict they cannot inspect.
+piece of evidence carries what the rule read from it:
+
+- `quote`: the record's own words (a message's opening line, the signal's
+  sentence), verbatim and never a paraphrase;
+- `at`: the instant it is dated (when the message was sent, when the deal was
+  last worked);
+- `origin`: where the words came from ("Email you sent", "Open deal, last
+  worked").
+
+The chip is labelled with the record's name and, rested on, opens that record.
+The words ride the activity's audience test and the row does not: a message
+whose content this reader may not see still counts as the newest exchange, and
+its chip carries the date and the channel with no quote. None of it reaches the
+fingerprint, so a subject edited after the fact cannot resurrect a dismissal.
+The vocabulary lives in `suggestioncites.go`. A model could phrase these more
+warmly but could not make them checkable, and checkable lets a rep disagree with
+the *reason* instead of with a verdict they cannot inspect.
 
 Nothing is staged and nothing is sent. Each rule runs under the same row-scope
-predicates as the section it concerns and only when the caller holds that
-section's grant, so a suggestion can only point at records they can open, and a
-missing grant produces silence rather than advice inferred from the gap. The
-card offers at most three, and the remainder is reported in
-`suggestions_dropped` — a silent cap reads as "that is everything". The cap is
-applied server-side so the dropped count and the rows shown can never describe
-different lists.
+predicates as the section it concerns, and only when the caller holds that
+section's grant. A suggestion can only point at records they can open, and a
+missing grant produces silence instead of advice inferred from the gap. The card
+offers at most three, and the remainder is reported in `suggestions_dropped`,
+because a silent cap reads as "that is everything". The cap is applied
+server-side so the dropped count and the rows shown always describe the same
+list.
 
-**Dismissals are per user.** `POST /companies/{id}/suggestions/dismiss`
-takes the suggestion's `fingerprint` — a hash over the kind, subject and records
-it fired on, not over the kind alone. So advice stays gone *while the situation
-holds* and **re-arms by itself when the evidence changes**, because the situation
-is then genuinely a new one. A row is written only for a fingerprint the rules
-currently produce for this account and this caller, which is what bounds the
-table: one row per suggestion a human actually clicked. The two obvious
-alternatives both fail — accepting any well-formed fingerprint makes the
-endpoint an authenticated write sink, and capping the stored count silently
-deletes the earliest judgments so a rep working through a long list has
-dismissed advice come back.
+**Dismissals are per user.** `POST /companies/{id}/suggestions/dismiss` takes
+the suggestion's `fingerprint`: a hash over the kind, subject and records it
+fired on, not over the kind alone. So advice stays gone *while the situation
+holds* and **re-arms by itself when the evidence changes**, because the
+situation is then a new one. A row is written only for a fingerprint the rules
+currently produce for this account and this caller, which bounds the table at
+one row per suggestion a human clicked. The two obvious alternatives both fail.
+Accepting any well-formed fingerprint makes the endpoint an authenticated write
+sink. Capping the stored count deletes the earliest judgments without telling
+anyone, so a rep working through a long list sees dismissed advice come back.
 
 ## What needs you, and the one answer it gives
 
-The needs list has three producers — the moment leads it, the suggestions
-follow, the manual moves come last — and the reader takes the top of it as the
-verdict. The moment fires on **owed promises only**; everything else arrives
-through the suggestions or the scan's findings. Two rules stop the list
-disagreeing with itself, each held where it sees what the other cannot:
+The needs list has three producers: the moment leads it, the suggestions follow,
+and the manual moves come last. The reader takes the top of it as the verdict.
+The moment fires on **owed promises only**; everything else arrives through the
+suggestions or the scan's findings. Two rules stop the list disagreeing with
+itself, each held where it sees what the other cannot:
 
-- **The quiet card claims only the promises it read** — *"Nothing is owed to
-  this account"*, never "nothing needs you today", a claim about work it did
-  not look at, in the payload carrying the rows contradicting it. Every client
-  reads it, the tool surface included, so the bound is the server's.
-- **A quiet card is not a row when the list has other rows** (`momentIsARow`) —
-  only the client can apply this, because the scan's findings arrive on their
+- **The quiet card claims only what it read.** It says *"Nothing is owed to
+  this account"*, never "nothing needs you today". The second would be a claim
+  about work it did not look at, in the payload carrying the rows that
+  contradict it. Every client reads it, the tool surface included, so the bound
+  is the server's.
+- **A quiet card is no row beside others** (`momentIsARow`).
+  Only the client can apply this, because the scan's findings arrive on their
   own read. The row goes only where the list holds something, and what it holds
   *is* the answer.
 
-The 360 is also a **live read** (FE-PARAM-5): every 60 seconds while the tab
-has focus, because a page read once on arrival goes stale silently — a stale
-"what needs you" looks like a current one. A cadence, not a stream; the
+The 360 is also a **live read**: every 60 seconds while the tab has focus,
+because a page read once on arrival goes stale without any sign, and a stale
+"what needs you" looks like a current one. It is a cadence, not a stream; the
 contract serves no push. A read is live for the key it reads under
 (`isRecordRead`), not because its screen opted in, so the contact, project and
-deal records are live too — including the deal's outstanding requests and tasks. Its server-side fingerprint and model-call floor govern prose regeneration.
+deal records are live too, including the deal's outstanding requests and tasks.
 
 ## The account scan
 
 The rules say what the *records* show. The account scan is what the
-*exchanges* say, read by a model — and it is the one model call the page
-makes on its own account, so how it is bounded is the whole design.
+*exchanges* say, read by a model. It is the one model call the page makes on its
+own account, so the design is mostly about how it is bounded.
 
 **What it reads.** The scan's input is the reader's own composite read (the
-brief's projection of it — the same deals, tasks and subjects, so the two
-surfaces cannot disagree about what a record is called) plus the last twenty
-exchanges with their own words, each body cut at 1,200 characters and the
-cut reported. The words are read under the activity **content** gate, not the
-discover gate: a message the reader may know exists but may not read is not
-in the input, so the model cannot quote it, and a reader with no activity
-grant is refused rather than shown a quiet account.
+brief's projection of it: the same deals, tasks and subjects, so the two
+surfaces cannot disagree about what a record is called). It adds the last twenty
+exchanges with their own words, each body cut at 1,200 characters and the cut
+reported. The words are read under the activity **content** gate, not the
+discover gate. A message the reader may know exists but may not read is not in
+the input, so the model cannot quote it, and a reader with no activity grant is
+refused instead of shown a quiet account.
 
-**What it may say.** Four *read* kinds, beside the four rule kinds:
+**What it may say.** Four *read* kinds sit beside the four rule kinds:
 `commitment_unmet` (we said we would do something and nothing says it
 happened), `question_unanswered` (they asked and no later message of ours
-answers), `risk_raised` and `need_raised`. A finding names one message by an
-id the model was handed and quotes it verbatim. The reply schema is built per
-call with that reader's message ids as the citation enum, so a fabricated id
-fails the provider's own validation; the parser then holds every finding to
-the input — the kind, the id, the quote as a whitespace-folded substring of
-that message's text (`claims.Quoted`, shared with the field extract and the
-corpus ask), no id in the prose — and drops one whole rather than showing it
-with its citation stripped. What survives is the same suggestion shape the
-rules produce, `written_by: model`, carrying the message's subject, date,
-channel and the quote as its receipt, and a fingerprint from the same helper
-the rules use (`company360.SuggestionFingerprint`).
+answers), `risk_raised` and `need_raised`. A finding names one message by an id
+the model was handed and quotes it verbatim. The reply schema is built per call
+with that reader's message ids as the citation enum, so a fabricated id fails
+the provider's own validation. The parser then holds every finding to the input:
+the kind, the id, the quote as a whitespace-folded substring of that message's
+text (`claims.Quoted`, shared with the field extract and the corpus ask), and no
+id in the prose. A finding that fails is dropped whole, never shown with its
+citation stripped. What survives is the same suggestion shape the rules produce,
+`written_by: model`, carrying the message's subject, date, channel and the quote
+as its receipt. Its fingerprint comes from the same helper the rules use
+(`company360.SuggestionFingerprint`).
 
-**One list, one dismissal.** `GET …/scan` answers the merged advice: the
-rules run live through `company360.Service.UndismissedAdvice`, the model's stored
-findings are filtered through `KeepUndismissed`, the two are deduplicated by
-fingerprint, capped at five with the cap reported. Dismissing a finding goes
-through the same endpoint as dismissing a rule's row: the 360's dismissal
-asks the scan, through `RecogniseScanFindings`, whether a fingerprint its
-rules do not raise is one the reader's stored scan does.
+**One list, one dismissal.** `GET …/scan` answers the merged advice. The rules
+run live through `company360.Service.UndismissedAdvice`, the model's stored
+findings are filtered through `KeepUndismissed`, and the two are deduplicated by
+fingerprint and capped at five with the cap reported. Dismissing a finding goes
+through the same endpoint as dismissing a rule's row: the 360's dismissal asks
+the scan, through `RecogniseScanFindings`, whether a fingerprint its rules do
+not raise is one the reader's stored scan does.
 
 **On demand, never a sweep.** Opening the page calls `POST …/scan` once. The
-server fingerprints the input — the floor and prompt versions, the routing
-version read live, the language, the encoded input — and answers with the
-stored findings when it matches, the same findings marked `stale` when the
-account moved but the reader's last read is younger than the **one-hour
-rescan floor**, and a queued read otherwise. A read in flight is returned as
-it stands rather than started twice; `force` skips the floor and the
+server fingerprints the input (the floor and prompt versions, the routing
+version read live, the language, the encoded input). It answers with the stored
+findings when the fingerprint matches. When the account moved but the reader's
+last read is younger than the **one-hour rescan floor**, it answers with the
+same findings marked `stale`. Otherwise it queues a read. A read in flight is
+returned as it stands instead of started twice; `force` skips the floor and the
 fingerprint, never the in-flight check. A reader who never opens an account
 never pays for it, and a busy inbox does not re-read the account on every
 message.
 
-**The row is the carrier.** `company_scan` holds one row per (reader, account):
-the read in flight — `status` in the AI activity rail's own vocabulary,
-attempt, lease-bearing timestamps, `next_attempt_at` for a budget deferral —
-and the last findings that settled, kept while a new read runs so the page
-is never blank exactly when the account is busiest. The api role writes the
-row and the `account_scan` job in one transaction; the worker role claims the
-row, re-binds the **reader's own principal** (their grants, teams and seat
-through `identity.EffectiveAuthority`, never a system principal with their
-name on it — a system principal reads every audience away) with the row id
-as the correlation id, reads, and settles. Every transition announces itself
-on the rail with the account's name as the subject, so the reader who opened
-three accounts and moved on finds out which is ready. A budget deferral
-parks the row and snoozes the job; no lane, or a reply the grounding refused
-whole, settles `degraded` with a reason the reader can read, and the rules'
-rows stand alone. An account with no exchange the reader may read settles
-`done` and not `degraded`: the read covered everything it was ever going to,
-and `read` saying nought exchanges beside `generated_by` saying the rules
-wrote the advice is the whole of what happened. `degraded` reaches the rail's
-faults arm, which holds the orb amber until somebody acknowledges it, so
-degrading an empty account would raise a warning on every account nobody has
-written to yet — which every account is, on the day it is added.
+**The row is the carrier.** `company_scan` holds one row per (reader, account).
+It carries the read in flight (`status` in the AI activity rail's own
+vocabulary, attempt, lease-bearing timestamps, `next_attempt_at` for a budget
+deferral) and the last findings that settled. Those are kept while a new read
+runs, so the page is never blank when the account is busiest. The api role
+writes the row and the `account_scan` job in one transaction. The worker role
+claims the row and re-binds the **reader's own principal**: their grants, teams
+and seat through `identity.EffectiveAuthority`, never a system principal with
+their name on it, because a system principal reads every audience away. It uses
+the row id as the correlation id, reads, and settles.
+
+Every transition announces itself on the rail with the account's name as the
+subject, so a reader who opened three accounts and moved on finds out which is
+ready. A budget deferral parks the row and snoozes the job. No lane, or a reply
+the grounding refused whole, settles `degraded` with a reason the reader can
+read, and the rules' rows stand alone. An account with no exchange the reader
+may read settles `done`, not `degraded`: the read covered everything it was
+going to, and `read` reporting zero exchanges beside `generated_by` saying the
+rules wrote the advice is the whole of what happened. `degraded` reaches the
+rail's faults arm, which holds the orb amber until somebody acknowledges it.
+Degrading an empty account would raise a warning on every account nobody has
+written to yet, which is every account on the day it is added.
 
 **The page.** While the read runs, the needs list keeps the rules' rows and
-draws the `AiPending` row above them — the indigo tile breathing, the answer's
-ragged lines — polled every three seconds until the row settles. Then the
-merged list replaces the 360's own rows, and the foot says who wrote them,
-how many exchanges and deals were read, that the account has moved since
-where it has, or why the model did not write them.
+draws the `AiPending` row above them (the indigo tile breathing, the answer's
+ragged lines), polled every three seconds until the row settles. Then the merged
+list replaces the 360's own rows, and the foot says who wrote them, how many
+exchanges and deals were read, that the account has moved since (where it has),
+or why the model did not write them.
 
 ## The state strip and health
 
-Both replaced a single 0-100 relationship score the header used to lead with.
-That number was a MAX over the account's contacts, so one talkative contact
-spoke for the whole account, and nobody could scale it.
+A single relationship score over the account's contacts would let one talkative
+contact speak for the whole account, and nobody could say what scale it was on.
+So the header leads with readings instead.
 
-**The state strip** is the three readings the overview leads with. The *account*
-half (lifecycle, relationship types) needs no grant beyond the company the
-caller already read. *Engagement* (last inbound, last outbound, a derived state)
-rides the timeline grant; *commercial* (open count, stalled count) rides the deal
-grant; the *signal* slot carries the worst thing standing open. Each is **null
-when refused rather than zero** — "no open deals" and "you may not see the deals"
-are different facts, and only one of them is about the account. Null on the
-signal slot deliberately covers both "nothing is wrong" and "you may not read
+**The state strip** is the three readings the overview leads with. The
+*account* half (lifecycle, relationship types) needs no grant beyond the company
+the caller already read. Each other reading rides its own grant. *Engagement* (last inbound, last outbound, a derived
+state) rides the timeline grant; *commercial* (open count, stalled count) rides
+the deal grant; the *signal* slot carries the worst thing standing open. Each is
+**null when refused, never zero**, because "no open deals" and "you may not see
+the deals" are different facts, and only one of them is about the account. Null
+on the signal slot covers both "nothing is wrong" and "you may not read
 signals": a strip that reassured someone who cannot look would be answering a
 question it has no standing to answer.
 
-Last-inbound and last-outbound are two timestamps rather than one "last touch"
-because **which side wrote last is the question** — an account we mailed a
+Last-inbound and last-outbound are two timestamps instead of one "last touch"
+because **which side wrote last is the question**. An account we mailed a
 fortnight ago with no reply and one that wrote to us this morning have the same
 last-touch date and opposite meanings. Both walk the same three links the
 timeline walks, so the header can never disagree with the list beneath it, and
-both carry the caller's activity row scope, so a rep sees the last message *they*
-may read.
+both carry the caller's activity row scope, so a rep sees the last message
+*they* may read.
 
-**Health** decomposes the relationship into parts a reader can act on: days
-since last inbound, active contacts (contacts who have actually interacted —
-a roster of ten who never replied is not ten ways in), reply balance over the
-90-day window, `single_threaded` (one contact carrying the whole relationship is
-the one shape a rep can fix before it costs them the account, so it is named
-rather than scored), and open commitments. Same rule again: every part is null
-when it cannot be computed, because zero is a claim about the account.
+**Health** decomposes the relationship into parts a reader can act on:
 
-The signals *card* is separate — it reads `GET /signals` itself with
-`status=open`, so it owns its own loading/unavailable/empty states rather than
+- days since last inbound;
+- active contacts (contacts who have interacted; a roster of ten who never
+  replied is not ten ways in);
+- reply balance over the 90-day window;
+- `single_threaded`: one contact carrying the whole relationship is the one
+  shape a rep can fix before it costs them the account, so it is named instead
+  of scored;
+- open commitments.
+
+The same rule applies: every part is null when it cannot be computed, because
+zero is a claim about the account.
+
+The signals *card* is separate. It reads `GET /signals` itself with
+`status=open`, so it owns its own loading/unavailable/empty states instead of
 inheriting the 360's.
 
 ## The visit baseline
 
 `since_last_visit` is what changed on the account since **this caller** last
 acknowledged seeing it: new activities, deal stage moves, pending proposals.
-Each is null when the corresponding grant is absent — "not counted" stays
+Each is null when the corresponding grant is absent, so "not counted" stays
 distinct from "counted as zero".
 
-**The baseline moves forward only through an explicit operation**,
-`POST /companies/{id}/view-ack`. A GET that advanced it as a side effect
-would destroy the very answer the caller opened the page to read, and would make
-a prefetch indistinguishable from a visit. The upsert is monotonic —
-`GREATEST(stored, now)` — so a slow tab's late-arriving ack can never rewind a
-newer one; two tabs on the same account converge on the later visit instead of
-racing the baseline backwards.
+**The baseline moves only on an explicit call**,
+`POST /companies/{id}/view-ack`. A GET that advanced it as a side effect would
+destroy the answer the caller opened the page to read, and would make a prefetch
+look like a visit. The upsert is monotonic (`GREATEST(stored, now)`), so a slow
+tab's late-arriving ack can never rewind a newer one; two tabs on the same
+account converge on the later visit instead of racing the baseline backwards.
 
-It is **human-only, and that gate is load-bearing rather than defence in depth**.
-An agent principal carries the granting human's id as its `UserID` (that is how
-row scope works for passports), so "resolve the acting user" would happily write
-a baseline marking an account as *seen* by a human who never opened it —
-consuming their unread marker on their behalf.
+It is **human-only**, and that gate is required, not defence in depth. An agent
+principal carries the granting human's id as its `UserID` (that is how row scope
+works for passports). So "resolve the acting user" would write a baseline
+marking an account as *seen* by a human who never opened it, consuming their
+unread marker on their behalf.
 
 **The client dwell-gates it.** `useAcknowledgeCompanyView` waits
-`VIEW_ACK_DWELL_MS` — 5 seconds — with the account open before firing, and
-leaving cancels the timer: opening a record and bouncing straight back out is
-not reading it, and an ack from that would mark unread activity as seen. Only an
-*assembled* 360 counts as a visit. Success deliberately does **not**
-invalidate the 360 query: the "new
-since your last visit" line describes the visit in progress, and refetching it
-out from under the reader would erase the thing they opened the page to see.
-When in doubt the baseline stays put — showing an item twice is a smaller wrong
-than hiding one — so a failed ack is not even surfaced as an error.
+`VIEW_ACK_DWELL_MS` (5 seconds) with the account open before firing, and leaving
+cancels the timer. Opening a record and bouncing straight back out is not
+reading it, and an ack from that would mark unread activity as seen. Only an
+*assembled* 360 counts as a visit. Success does **not** invalidate the 360
+query: the "new since your last visit" line describes the visit in progress, and
+refetching it out from under the reader would erase what they opened the page to
+see. When in doubt the baseline stays put, because showing an item twice is a
+smaller wrong than hiding one, so a failed ack is not surfaced as an error.
 
 ## The logo
 
-`Company.logo_url` points at `GET /companies/{id}/logo`. The mark is
-resolved during a deep read from the page that read already fetched — its
-`og:image` and its declared icons — so a face for every company costs no
-third-party logo API and no new egress beyond the asset itself. Candidates are
-tried in a fixed order (at most 8), sized between 32px and 300px on the long
-edge, and rejected past an aspect ratio that says "banner" rather than "mark".
-The chain prefers the square icons a site declares, because this mark is drawn
-inside a round avatar on every record card.
+`Company.logo_url` points at `GET /companies/{id}/logo`. The mark is resolved
+during a deep read from the page that read already fetched (its `og:image` and
+its declared icons), so a face for every company costs no third-party logo API
+and no new egress beyond the asset itself. Candidates are tried in a fixed order
+(at most 8), sized between 32px and 300px on the long edge, and rejected past an
+aspect ratio that says "banner" instead of "mark". The chain prefers the square
+icons a site declares, because this mark is drawn inside a round avatar on every
+record card.
 
-Everything stored is **re-encoded once, at store time**: the endpoint always
+Everything stored is **re-encoded once, at store time**. The endpoint always
 answers `image/png`, whatever the source format was, so no third-party markup is
 ever served from this origin. The response is served `nosniff` with
 `Content-Security-Policy: default-src 'none'; sandbox` and a short private
-cache. A human's uploaded logo is never replaced by one a machine found — the
-write takes a row lock and checks `field_provenance` under it, so the
-precedence rule holds on the run where it matters and not merely on the quiet
-ones.
+cache. A human's uploaded logo is never replaced by one a machine found: the
+write takes a row lock and checks `field_provenance` under it, so the precedence
+rule holds on the concurrent run as well as the quiet ones.
 
 **This requires object storage.** `MARGINCE_BLOBSTORE_ENDPOINT` and its
 companions (see [../reference/configuration.md](../reference/configuration.md))
-are what enable it. With no blob store configured the resolve lane returns
-before it fetches anything, so no `logo_object_key` is ever written and the
-endpoint answers 404 for every company; a deployment that *had* a store and lost
-it gets `501 not_implemented` on the records that still name an object. **All
-three answers render the same thing**, and that is the point: 404 also covers
-"invisible to the caller" and "does not exist", so distinguishing them would
-leak which companies exist.
+enable it. With no blob store configured, the resolve lane returns before it
+fetches anything, so no `logo_object_key` is ever written and the endpoint
+answers 404 for every company. A deployment that *had* a store and lost it
+answers `501 not_implemented` for records that still name an object. All three
+answers render the same thing, because 404 also covers "invisible to the
+caller" and "does not exist", and telling them apart would leak which companies
+exist.
 
-The floor is the **deterministic monogram** — `Avatar` derives initials from the
+The floor is the **deterministic monogram**. `Avatar` derives initials from the
 name and, when tinted, picks one of six tone pairs from a stable hash over the
 name's code points, so the same record reads the same colour everywhere without
-storing one. The monogram is not a fallback of last resort: it renders
-*underneath* the image, so it is what shows while the logo loads, what is left if
-the image fails, and what a company without a resolved logo simply has. A
-company is never a broken image or an empty slot.
+storing one. The monogram renders *underneath* the image, so it is what shows
+while the logo loads, what is left if the image fails, and what a company
+without a resolved logo has. A company is never a broken image or an empty slot.
 
 ### The installation's second mark
 
-The record above wears ONE picture. The installation's own company wears two,
-because the sidebar draws it at two widths: the wide lockup an open panel has
-room for, and a **square icon** for the 56px rail, where a wordmark scaled into
-a 32px box is a row of illegible strokes.
+The record above wears one picture. The installation's own company wears two,
+because the sidebar draws it at two widths. The wide lockup fits an open panel.
+A **square icon** serves the 56px rail, where a wordmark scaled into a 32px box
+is a row of illegible strokes.
 
 The icon is a second pair of columns on the same row (`logo_icon_object_key`,
 `logo_icon_origin`), read back as `CompanyProfile.logo_icon_url` and streamed
-from `GET /companies/{id}/logo/icon` on exactly the terms above — same
-re-encode, same headers, same 404 for absent, invisible and non-existent alike.
-Two writers reach it: the cold-start website read, and `uploadCompanyLogoIcon`.
-A contact's upload outranks the read, under the same provenance check the wide
-mark's writers take, so this slot has a machine writer to hold off and holds it
-off the same way. Every company but the anchor answers 404 for it.
+from `GET /companies/{id}/logo/icon` on the terms above: same re-encode, same
+headers, same 404 for absent, invisible and non-existent alike. Two writers
+reach it: the cold-start website read, and `uploadCompanyLogoIcon`. A user's
+upload outranks the read, under the same provenance check the wide mark's
+writers take. Every company but the anchor answers 404 for it.
 
-**The cold-start read resolves both marks.** The onboarding read is the one
-read whose company is drawn at two widths, so it runs two chains over the seed
-page it already fetched. The **lockup** comes from what the page itself calls
-its logo: the schema.org `logo` its JSON-LD declares, then the `<img>` elements
-it labels as one — in the alt text, the class, the id or the file name. That
-harvest deliberately reads the page body, which the icon harvest refuses to,
-because a lockup lives nowhere else and the label is the evidence; the mark is
-shown to the reader reviewing the dossier before any record wears it. It is
-stored aspect-preserved at the upload path's edge, so both writers of the wide
-slot store the same shape. The **badge** comes from the chain above — the
-apple-touch-icon, the favicons, `/favicon.ico`, the `og:image` last — and only
-a square result is stored as one. The badge chain runs first, because it is
-the face every installation had before the lockup existed and the lane runs
-under one deadline: a slow lockup fetch must never cost the company the mark
-it used to get.
+**The cold-start read resolves both marks.** The onboarding read is the one read
+whose company is drawn at two widths, so it runs two chains over the seed page
+it already fetched.
+
+- The **lockup** comes from what the page itself calls its logo: the schema.org
+  `logo` its JSON-LD declares, then the `<img>` elements it labels as one (in
+  the alt text, the class, the id or the file name). This harvest reads the page
+  body, which the icon harvest does not, because a lockup lives nowhere else and
+  the label is the evidence. The reader reviewing the dossier sees the mark
+  before any record wears it. It is stored aspect-preserved at the upload path's
+  edge, so both writers of the wide slot store the same shape.
+- The **badge** comes from the chain above (the apple-touch-icon, the favicons,
+  `/favicon.ico`, the `og:image` last), and only a square result is stored as
+  one.
+
+The badge chain runs first, because the lane runs under one deadline and a slow
+lockup fetch must never cost the company its square mark.
 
 When no lockup resolves, the badge fills the wide slot and the icon slot stays
-empty — exactly what every installation had before. When the lockup is itself
-square, or the chain's best mark is not, no badge is stored either: the
-collapsed rail falls back to the wide mark on its own, so a second copy would
-be bytes stored for nothing. Both marks wait on the dossier
-(`site_read.logo_object_key`, `site_read.logo_icon_object_key`) and the
+empty. When the lockup is itself square, or the chain's best mark is not, no
+badge is stored either: the collapsed rail falls back to the wide mark on its
+own, so a second copy would be bytes stored for nothing. Both marks wait on the
+dossier (`site_read.logo_object_key`, `site_read.logo_icon_object_key`), and the
 confirmation binds each to its slot on the record, slot by slot under the
-human-precedence rule. Enrichment reads of every other company keep
-resolving the one square-preferring mark: a wordmark letterboxed into a record
+human-precedence rule. Enrichment reads of every other company keep resolving
+the one square-preferring mark, because a wordmark letterboxed into a record
 card's round avatar would be the illegible row of strokes the badge exists to
 avoid. `worker siteread` reports both slots and every candidate each one tried.
 
 The two slots are chosen and cleared separately in settings, and the collapsed
-rail falls back to the wide mark when there is no icon — which is what every
-installation did before the slot existed.
+rail falls back to the wide mark when there is no icon.
 
 ## The connections card
 
 `GET /companies/{id}/graph` is a **second** read serving the same page: the
 account's one-hop neighbourhood as an explicit node/edge set the browser draws.
-Separate from the 360 because a client that wants the profile does not always
-want the graph, and because its unit of authorization is a **node group** rather
-than a section — but the same posture: one transaction, one instant, per-group
-grants, and a cap that reports what it left out. Groups are `contacts`, `deals`,
-`intro_path` and `our_side`, named in `groups_omitted` when refused.
+It is separate from the 360 because a client that wants the profile does not
+always want the graph, and because its unit of authorization is a **node group**
+instead of a section. The posture is the same: one transaction, one instant,
+per-group grants, and a cap that reports what it left out. Groups are
+`contacts`, `deals`, `intro_path` and `our_side`, named in `groups_omitted` when
+refused.
 
-**One hop means one edge from the account.** A contact's other employers, a
-deal's other accounts and a partner's own partners are not walked: a second hop
+**One hop means one edge from the account**. A contact's other employers, a
+deal's other accounts and a partner's own partners are not walked. A second hop
 is a different read with a different cost, and a card that sometimes went two
-hops would have no honest cap.
+hops could not state a cap.
 
-The display caps are what fits a picture a rep reads at a glance — 15 contacts,
-10 deals, 10 related companies, 10 colleagues — with a scan bound of 500 on
+The display caps are what fits a picture a rep reads at a glance: 15 contacts,
+10 deals, 10 related companies, 10 colleagues. A scan bound of 500 applies to
 the one group whose display order the database cannot know (contacts are ordered
 by a relationship strength computed after the read). Stakeholder contacts have
 no cap of their own; they are bounded by the deals already selected.
 
-`dropped_count` is why the read stays proportional to the account rather than to
-the caps: it is counted over each group's **whole membership**, not over the rows
-in hand. A truncated graph reporting no count reads as the whole neighbourhood,
-and a count taken from a bounded read would understate it — so the caps bound
-the rows returned and the per-contact work done on them (the part that grows
-fast), while an exact remainder costs one index range scan per account. It stays
-true past the 500-contact scan bound too.
+`dropped_count` keeps the read proportional to the account instead of to the
+caps. It is counted over each group's **whole membership**, not over the rows in
+hand. A truncated graph reporting no count reads as the whole neighbourhood, and
+a count taken from a bounded read would understate it. So the caps bound the
+rows returned and the per-contact work done on them (the part that grows fast),
+while an exact remainder costs one index range scan per account. It stays true
+past the 500-contact scan bound too.
 
-Graph mechanics beyond the card — the strength model, the warm-intro resolver,
-our-side edges — are [relationship-graph.md](relationship-graph.md).
+Graph mechanics beyond the card (the strength model, the warm-intro resolver,
+our-side edges) are in [relationship-graph.md](relationship-graph.md).
 
 ## View state is not record fact
 
 Three tables behind this page live in `compose` subpackages, and all three are
-written **without an audit row and without an outbox event** — the saved-view
-ruling, gated by `backend/gates/tableownership_test.go`:
+written **without an audit row or outbox event**. This is the
+saved-view ruling, gated by `backend/gates/tableownership_test.go`:
 
 | Table | Owner | What it is |
 |---|---|---|
@@ -551,18 +551,17 @@ ruling, gated by `backend/gates/tableownership_test.go`:
 | `company_brief` | `internal/compose/companybrief` | the per-user brief cache |
 
 This is the exception to [write-backbone.md](write-backbone.md)'s
-non-negotiable domain-row + `audit_log` + `event_outbox` shape, and it is narrow
-by construction. Each of the three is written on a *view* action (a visit, a
-click, a regeneration), readable by nobody but its own user, actionable by no
-consumer, and — in the brief's case — derived content regenerable at any time.
-None of them is a fact about the record. An audit trail of who looked at what,
-emitted onto the bus, would be surveillance rather than provenance; the ruling is
-recorded inline against each entry so the gate is self-contained on a clean
-checkout.
+domain-row + `audit_log` + `event_outbox` shape, and it is narrow by
+construction. Each of the three is written on a *view* action (a visit, a click,
+a regeneration), readable by nobody but its own user, actionable by no consumer,
+and, in the brief's case, derived content regenerable at any time. None of them
+is a fact about the record. An audit trail of who looked at what, emitted onto
+the bus, would be surveillance and not provenance. The ruling is recorded inline
+against each entry so the gate is self-contained on a clean checkout.
 
 Both `compose` subpackages otherwise obey the composition-layer charter: they
-coordinate modules (company, contact, relationship, deal, activity, tag,
-list, approval, signal) and durably own no business entity. See
+coordinate modules (company, contact, relationship, deal, activity, tag, list,
+approval, signal) and durably own no business entity. See
 [composition-layer.md](composition-layer.md).
 
 ## Where the code lives
@@ -581,7 +580,7 @@ list, approval, signal) and durably own no business entity. See
 | The account scan's job, and its wiring into both roles | `backend/internal/compose/jobs_accountscan.go` |
 | The visit baseline (`user_record_view`) | `backend/internal/compose/company360/viewbaseline.go` |
 | The account card, the row every record page draws it as, and the moment vocabulary they read it with | `backend/internal/compose/company360/moment.go`, `frontend/src/screens/record360/today.tsx`, `frontend/src/screens/record360/moment.ts` |
-| The live record cadence (FE-PARAM-5), and which reads it recognises | `frontend/src/app/queryclient.ts`, `frontend/src/screens/activitykeys.ts` |
+| The live record cadence, and which reads it recognises | `frontend/src/app/queryclient.ts`, `frontend/src/screens/activitykeys.ts` |
 | The connections graph | `backend/internal/compose/company360/{graph,graphreads,graphplace,graphourside}.go` |
 | HTTP transport | `backend/internal/compose/company360/handlers.go` |
 | The brief: cache, input, fingerprint | `backend/internal/compose/companybrief/{service,input}.go` |
@@ -591,7 +590,7 @@ list, approval, signal) and durably own no business entity. See
 | Logo resolve (candidates, normalize, store; the cold start's lockup and slot decision) | `backend/internal/compose/{sitelogo,sitelogocandidates,sitelockup}.go` |
 | Logo row, provenance precedence, `LogoURL` | `backend/internal/modules/contacts/companylogo.go` |
 | Logo streaming handler | `backend/internal/modules/contacts/handlers_company.go` |
-| Contract | `backend/api/crm.yaml` — `/companies/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
+| Contract | `backend/api/crm.yaml`: `/companies/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
 | Table-ownership ruling | `backend/gates/tableownership_test.go` |
 | The screen | `frontend/src/screens/companies.tsx` (`CompanyScreen`) |
 | The scan on the page: ensure on open, poll, the pending row | `frontend/src/screens/accountscan.tsx`, `companytoday.tsx` |
@@ -599,13 +598,12 @@ list, approval, signal) and durably own no business entity. See
 | The connections comparison | `frontend/src/screens/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
 | Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |
 
+
 ## Where to go next
 
-[relationship-graph.md](relationship-graph.md) (the graph beneath
-the connections card) · [company-context.md](company-context.md) (the
-*installation's* own company — a different subject with a similar name) ·
-[authorization.md](authorization.md) (the grants and row scopes every section
-asks) · [composition-layer.md](composition-layer.md) (why this lives in compose)
-· [ai-runtime.md](ai-runtime.md) (the model lane behind the brief and Ask) ·
-[../reference/configuration.md](../reference/configuration.md) (object storage
-for the logo).
+- [relationship-graph.md](relationship-graph.md): the graph beneath the connections card.
+- [company-context.md](company-context.md): the *installation's* own company, a different subject with a similar name.
+- [authorization.md](authorization.md): the grants and row scopes every section asks.
+- [composition-layer.md](composition-layer.md): why this lives in compose.
+- [ai-runtime.md](ai-runtime.md): the model lane behind the brief and Ask.
+- [../reference/configuration.md](../reference/configuration.md): object storage for the logo.

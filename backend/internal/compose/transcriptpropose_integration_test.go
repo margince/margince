@@ -29,7 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -43,12 +43,14 @@ const transcriptBody = "Dana: Thanks for walking us through the rollout plan.\n"
 	"Priya: I'll send the revised pricing over by Friday.\n" +
 	"Dana: Perfect, we'll review it then."
 
-// transcriptPerms is a rep who may create activities and read the timeline —
-// exactly what confirming a next step needs and no more.
+// transcriptPerms is a rep who may create activities, read the timeline and
+// update a contact — exactly what confirming a promise needs and no more: the
+// task, and the claim on the customer's record that points at it.
 var transcriptPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"activity":              {Create: true, Read: true, Update: true},
+		"contact":               {Read: true, Update: true},
 		"deal":                  {Read: true},
 		"pipeline":              {Read: true},
 		"installation_settings": {Read: true},
@@ -96,8 +98,7 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	e := &transcriptEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t)}
 	e.ctx = e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms)
 	e.svc = approvals.NewService(e.DB())
-	e.svc.WithEffect(TranscriptProposalKind,
-		transcriptProposalEffect(e.svc, e.Activities, identity.NewService(e.Pool)))
+	e.svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(e.svc, e.Activities, e.Contacts))
 
 	subject := "Rollout call"
 	sourceSystem := "transcript"
@@ -122,7 +123,12 @@ func (e *transcriptEnv) read(t *testing.T, brain completer) activities.Transcrip
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
-	if err := proposer.Read(e.ctx, e.Activities, started.ID, e.activity); err != nil {
+	// The worker's own principal, as production binds it: the reader acting
+	// for the rep who asked. A test reading as the rep would pass gates the
+	// worker never faces and fail ones it always passes.
+	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS),
+		"human:"+e.Rep1.String(), started.ID)
+	if err := proposer.Read(worker, e.Activities, started.ID, e.activity); err != nil {
 		t.Fatalf("reading the transcript: %v", err)
 	}
 	done, err := e.Activities.GetTranscriptRead(e.ctx, e.activity, started.ID)
@@ -162,8 +168,8 @@ func TestATranscriptReadingStagesACitedProposalAndWritesNothingYet(t *testing.T)
 	if err != nil {
 		t.Fatalf("reading back the staged proposal: %v", err)
 	}
-	if staged.Kind != TranscriptProposalKind {
-		t.Errorf("want kind %q, got %q", TranscriptProposalKind, staged.Kind)
+	if staged.Kind != CommitmentTaskKind {
+		t.Errorf("want kind %q, got %q", CommitmentTaskKind, staged.Kind)
 	}
 	evidence := storedEvidence(t, staged.Evidence)
 	if len(evidence) != 1 {
@@ -222,6 +228,14 @@ func TestConfirmingATranscriptProposalCreatesTheTaskExactlyOnce(t *testing.T) {
 	}
 	if after := e.taskCount(t); after != before+1 {
 		t.Errorf("a re-driven decision must create nothing more; count is now %d", after)
+	}
+	// Reading the meeting again finds the promise already a task. It used to
+	// stage it afresh, and a second approval wrote a second task.
+	if again := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)}); len(again.ProposalIDs) != 0 {
+		t.Errorf("a promise that is already a task was proposed again (%d proposals)", len(again.ProposalIDs))
+	}
+	if after := e.taskCount(t); after != before+1 {
+		t.Errorf("reading the meeting again wrote another task; count is now %d", after)
 	}
 
 	subject := e.wsString(t, `SELECT subject FROM activity WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
@@ -669,76 +683,99 @@ func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
 	}
 }
 
-// The colleague a transcript names gets the task.
+// A promise a named colleague made, read confidently, is their task at once.
 //
 // The owner arrived as prose and went into the task's BODY and nowhere else, so
-// the task said whose promise it was and belonged to nobody: it appeared on no
-// assignee's list, and reminded no one.
-func TestTheNamedColleagueGetsTheTask(t *testing.T) {
+// the task said whose promise it was and belonged to nobody. Now it is theirs,
+// and it says the reader wrote it rather than a human.
+func TestAConfidentPromiseByANamedColleagueIsTheirTaskWithoutAsking(t *testing.T) {
 	e := setupTranscript(t)
 	// One seat with a name a transcript could state. The harness gives all
-	// three humans the display name "Rep", which is the ambiguous case the
-	// next test uses.
+	// three humans the display name "Rep", which is the ambiguous case below.
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman")})
-	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
-	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
-		t.Fatalf("approving the proposal: %v", err)
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
+	if len(read.ProposalIDs) != 0 {
+		t.Fatalf("a confident promise by a named colleague was put to a human (%d proposals)", len(read.ProposalIDs))
 	}
-
-	assignee := e.wsString(t, `SELECT coalesce(assignee_id::text, '') FROM activity
-		WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
-	if assignee == "" {
-		t.Fatal("the task belongs to nobody, so it is on no list and reminds no one")
-	}
-	if assignee != e.Rep2.String() {
-		t.Errorf("the task went to %s, want the colleague the transcript named", assignee)
+	task := e.wsString(t, `SELECT coalesce(assignee_id::text, '') || ' ' || captured_by || ' ' || source_system
+		FROM activity WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if want := e.Rep2.String() + " " + transcriptProposalActor + " " + activities.CommitmentTaskSource; task != want {
+		t.Errorf("the task reads %q, want it held by the colleague, written by the reader, keyed as a commitment (%q)",
+			task, want)
 	}
 }
 
-// A name that could be two colleagues assigns to NEITHER.
-//
-// A promise given to the wrong colleague is worse than one given to nobody: the
-// wrong colleague does not do it, and the right one never learns it was theirs.
-// The body still names who promised, so a contact can route it.
-func TestAnAmbiguousOwnerLeavesTheTaskUnassigned(t *testing.T) {
+// A promise read unsurely is proposed to the colleague who made it, and
+// accepting it gives it to them.
+func TestAnUnsurePromiseIsProposedToTheColleagueWhoMadeIt(t *testing.T) {
+	e := setupTranscript(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	if len(read.ProposalIDs) != 1 {
+		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
+	}
+	if e.taskCount(t) != 0 {
+		t.Fatal("an unsure promise was written as a task before anybody accepted it")
+	}
+	priya := e.As(e.Rep2, []ids.UUID{e.Team1}, transcriptPerms)
+	if _, err := e.svc.Decide(priya, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {
+		t.Fatalf("the colleague accepting their own promise: %v", err)
+	}
+	assignee := e.wsString(t, `SELECT coalesce(assignee_id::text, '') FROM activity
+		WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if assignee != e.Rep2.String() {
+		t.Errorf("the accepted task went to %q, want the colleague who made the promise", assignee)
+	}
+}
+
+// A name that could be two colleagues names NEITHER, so the promise is proposed
+// and accepting it makes it the accepter's. A promise given to the wrong
+// colleague is worse than one the reader takes on and can hand over: the wrong
+// colleague does not do it, and the right one never learns it was theirs.
+func TestAnAmbiguousOwnerIsProposedAndTheAccepterHoldsIt(t *testing.T) {
 	e := setupTranscript(t)
 	// The harness's three humans all display as "Rep".
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Rep")})
-	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
-	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Rep", 0.9)})
+	if len(read.ProposalIDs) != 1 {
+		t.Fatalf("a promise nobody could be named for must be proposed, got %d proposals", len(read.ProposalIDs))
+	}
+	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {
 		t.Fatalf("approving the proposal: %v", err)
 	}
-
-	assigned := e.WsCount(t, `SELECT count(*) FROM activity
-		WHERE kind = 'task' AND assignee_id IS NOT NULL`)
-	if assigned != 0 {
-		t.Errorf("%d task(s) were assigned on a name three colleagues answer to", assigned)
+	assignee := e.wsString(t, `SELECT coalesce(assignee_id::text, '') FROM activity
+		WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if assignee != e.Rep1.String() {
+		t.Errorf("the accepted task went to %q, want the rep who accepted it", assignee)
 	}
 	body := e.wsString(t, `SELECT body FROM activity WHERE kind = 'task'
 		ORDER BY created_at DESC LIMIT 1`)
 	if !strings.Contains(body, "Rep") {
-		t.Error("an unassigned task must still name who promised, or nobody can route it")
+		t.Error("the task must still name who promised, so the holder can hand it on")
 	}
 }
 
-// A name nobody answers to assigns to nobody, and does not fall back to the
-// contact who approved it. Approving a proposal is answering a question about
-// somebody else's commitment, not volunteering for it.
-func TestAnOutsidersPromiseIsNotGivenToTheApprover(t *testing.T) {
+// A promise the CUSTOMER made is filed on them and watched. It is never a task
+// and never a question: nobody here can do it.
+func TestACustomersPromiseIsWatchedAndNeverATask(t *testing.T) {
 	e := setupTranscript(t)
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Frédéric de Gombert")})
-	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
-	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
-		t.Fatalf("approving the proposal: %v", err)
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Frédéric de Gombert"})
+	if err != nil {
+		t.Fatalf("creating the customer: %v", err)
 	}
+	integration.LinkActivity(t, e.owner, e.activity.UUID, "contact", ids.UUID(contact.Id))
 
-	assigned := e.WsCount(t, `SELECT count(*) FROM activity
-		WHERE kind = 'task' AND assignee_id IS NOT NULL`)
-	if assigned != 0 {
-		t.Errorf("%d task(s) were assigned for a promise made by somebody outside "+
-			"the installation", assigned)
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Frédéric de Gombert", 0.9)})
+	if len(read.ProposalIDs) != 0 || e.taskCount(t) != 0 {
+		t.Fatalf("the customer's promise became %d proposal(s) and %d task(s); it must become neither",
+			len(read.ProposalIDs), e.taskCount(t))
+	}
+	watched := e.WsCount(t, `SELECT count(*) FROM conversation_claim
+		WHERE kind = 'commitment_theirs' AND contact_id = $1 AND source_activity_id = $2`,
+		contact.Id, e.activity.UUID)
+	if watched != 1 {
+		t.Errorf("want the customer's promise filed once on their record, got %d claims", watched)
 	}
 }
 
@@ -746,11 +783,11 @@ func TestAnOutsidersPromiseIsNotGivenToTheApprover(t *testing.T) {
 //
 // Line 3 is where this suite's transcript states the promise, so every case
 // cites it and the line is not a parameter.
-func ownedReply(t *testing.T, owner string) string {
+func ownedReply(t *testing.T, owner string, confidence float64) string {
 	t.Helper()
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": owner,
-		"due_date": "", "source_lines": []int{3}, "confidence": 0.9,
+		"due_date": "", "source_lines": []int{3}, "confidence": confidence,
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -762,24 +799,24 @@ func ownedReply(t *testing.T, owner string) string {
 // else who shares it, and a writer cannot tell which from the string.
 //
 // The near-miss is the dangerous shape: a substring search finds exactly one
-// row, so a resolver that took its first candidate would assign the work
+// row, so a resolver that took its first candidate would hand the work out
 // confidently and wrongly. Only an exact name or email resolves.
 func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 
 	// "Priya" narrows the roster to exactly her, and still must not resolve.
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya")})
-	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
-	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya", 0.9)})
+	if len(read.ProposalIDs) != 1 {
+		t.Fatalf("a first name must leave the promise to a human, got %d proposals", len(read.ProposalIDs))
+	}
+	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {
 		t.Fatalf("approving the proposal: %v", err)
 	}
-
-	assigned := e.WsCount(t, `SELECT count(*) FROM activity
-		WHERE kind = 'task' AND assignee_id IS NOT NULL`)
-	if assigned != 0 {
-		t.Errorf("%d task(s) were assigned on a first name — the one match a "+
-			"substring search finds is not the one a contact meant", assigned)
+	given := e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND assignee_id = $1`, e.Rep2)
+	if given != 0 {
+		t.Errorf("%d task(s) went to the one colleague a first name happens to match", given)
 	}
 }
 
@@ -841,7 +878,7 @@ func (b erasingBrain) Complete(context.Context, model.Request) (model.Response, 
 // a transcript that is gone gets the same answer.
 func TestAReadingWhoseTranscriptWasErasedMidCallStagesNothing(t *testing.T) {
 	e := setupTranscript(t)
-	before := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, TranscriptProposalKind)
+	before := e.WsCount(t, `SELECT count(*) FROM approval`)
 
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
@@ -869,7 +906,7 @@ func TestAReadingWhoseTranscriptWasErasedMidCallStagesNothing(t *testing.T) {
 			"for the job to retry against the same absence", err)
 	}
 
-	after := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, TranscriptProposalKind)
+	after := e.WsCount(t, `SELECT count(*) FROM approval`)
 	if after != before {
 		t.Errorf("%d transcript proposals were staged over an erased body; the approvals inbox now "+
 			"quotes words a tombstone says were destroyed", after-before)

@@ -21,6 +21,7 @@ import (
 // it eligible for the sovereign zero-egress profile — the router
 // refuses to bind a sovereign deployment to anything else.
 type ollamaClient struct {
+	model.NoHealth
 	http         *http.Client
 	baseURL      string
 	defaultModel string

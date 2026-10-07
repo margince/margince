@@ -50,10 +50,7 @@ const (
 func relaxationFor(rule HiddenRule, reader ids.UUID) (waitingRelaxation, bool) {
 	switch rule {
 	case HiddenRuleSetAside:
-		// The zero reader matches no reader_state row, which is how the
-		// set-aside figure is taken — the rule is relaxed by forgetting whose
-		// set-asides they were.
-		return waitingRelaxation{reader: ids.UUID{}}, true
+		return waitingRelaxation{reader: reader, keepSetAside: true}, true
 	case HiddenRuleNotSales:
 		return waitingRelaxation{reader: reader, keepNotSales: true}, true
 	case HiddenRulePastHorizon:
@@ -133,7 +130,8 @@ func (s *Store) HiddenWaitingRows(
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded); err != nil {
+				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
+				&row.MeetingBookedAt); err != nil {
 				return err
 			}
 			out = append(out, row)

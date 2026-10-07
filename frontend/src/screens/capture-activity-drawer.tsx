@@ -44,7 +44,7 @@ export function CaptureActivityDrawer({
   message?: TraceEntry;
   /**
    * Opens the message itself. The page owns that drawer and CLOSES this one
-   * first: two `Modal placement="right"` sheets at once are two focus traps
+   * first: two drawer `Modal`s at once are two focus traps
    * and two Escape handlers over one another, so the reader moves from the
    * trace to the message rather than stacking them.
    */
@@ -70,7 +70,7 @@ export function CaptureActivityDrawer({
       open
       onClose={onClose}
       labelledBy="capture-pipeline-title"
-      placement="right"
+      intent="drawer"
     >
       <Heading size="large" id="capture-pipeline-title" className="modal-title">
         {t("pipeline.title")}

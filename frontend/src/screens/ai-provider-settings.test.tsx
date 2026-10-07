@@ -67,12 +67,14 @@ function backend(
               provider: "openai_compatible",
               configured: true,
               env_var: "OPENAI_COMPATIBLE_API_KEY",
+              usable: true,
               optional: false,
             },
             {
               provider: "gemini_vertex",
               configured: true,
               env_var: "GEMINI_VERTEX_SA_JSON",
+              usable: true,
               optional: false,
               credential_kind: "service_account",
             },
@@ -80,6 +82,7 @@ function backend(
               provider: "jev_compatible",
               configured: false,
               env_var: "JEV_COMPATIBLE_API_KEY",
+              usable: true,
               optional: true,
             },
           ],
@@ -284,13 +287,16 @@ describe("a provider's settings on its sheet", () => {
     await within(sheet).findByRole("combobox", { name: "Service" });
     expect(within(sheet).queryByText("Only these hosts")).toBeNull();
     await user.click(
+      within(sheet).getByRole("checkbox", { name: /Zero data retention/ }),
+    );
+    await user.click(
       within(sheet).getByRole("button", { name: "Save connection" }),
     );
 
     await waitFor(() =>
       expect(puts[0]?.body).toEqual({
         base_url: "https://openrouter.ai/api",
-        upstream: { only: ["mistral/eu"] },
+        upstream: { zdr: true, only: ["mistral/eu"] },
       }),
     );
   });
