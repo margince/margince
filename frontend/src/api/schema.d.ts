@@ -47372,6 +47372,8 @@ export interface operations {
                 stage_id?: string;
                 owner_id?: string;
                 company_id?: string;
+                /** @description Full-text query over the deal's name and description, plus a substring match on the name. */
+                q?: string;
                 status?: "open" | "won" | "lost";
                 /**
                  * @description One of the forecast's named buckets. The same `deal.forecast_category` the forecast

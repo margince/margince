@@ -3419,6 +3419,7 @@ export const de = {
     "Nur geladene Deals. Die Summen der zuständigen Person darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
+  "deals.totalsNoSearch": "Nur geladene Deals. Keine Summe während der Suche.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Beliebiger Partner",
   "deals.filterMotion": "Geschäftsart",
@@ -3435,7 +3436,6 @@ export const de = {
   "deals.filterStalledAll": "Alle Deals",
   "deals.filterOwnerAll": "Alle Zuständigen",
   "deals.filterPartnerAll": "Alle Quellen",
-  "deals.sortNewest": "Neueste",
   "deals.unit": "Deals",
   "deals.bulkStage": "In Phase verschieben",
   "deals.bulkStagePick": "Phase wählen",

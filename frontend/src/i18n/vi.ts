@@ -3387,6 +3387,7 @@ export const vi = {
   "deals.totalsOwnerNotMeasurable":
     "Chỉ phần đã tải — bạn không được xem tổng của người phụ trách này",
   "deals.totalsNoTagFilter": "Chỉ phần đã tải — không có tổng khi lọc theo thẻ",
+  "deals.totalsNoSearch": "Chỉ phần đã tải — không có tổng khi đang tìm kiếm",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
   "deals.filterMotion": "Loại giao dịch",
@@ -3403,7 +3404,6 @@ export const vi = {
   "deals.filterStalledAll": "Mọi deal",
   "deals.filterOwnerAll": "Mọi người phụ trách",
   "deals.filterPartnerAll": "Mọi nguồn",
-  "deals.sortNewest": "Mới nhất",
   "deals.unit": "deal",
   "deals.bulkStage": "Chuyển sang giai đoạn",
   "deals.bulkStagePick": "Chọn giai đoạn",
