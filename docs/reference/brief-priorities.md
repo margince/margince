@@ -41,7 +41,7 @@ the order. Clients keep that order.
 A close date Margince set for now is a reason to confirm or change the forecast. It is not
 evidence of a customer promise. Cards keep the for-now flag and the forecast group, even when there
 is no forecast. The deal work reading reports the deal value it knows in the queue a user picked.
-It says plainly that the number may not be complete. It includes opportunities and also recovery, and
+It says plainly that the number may not be complete. It includes new deals and also recovery, and
 it is not a forecast that counts risk, or expected revenue.
 
 Only a task written by the lead SLA escalation copies a dated first response row. Other tasks

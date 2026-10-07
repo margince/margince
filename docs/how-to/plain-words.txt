@@ -1001,7 +1001,8 @@ sovereign
 space
 specification
 speed
-spelling
+spell
+spellings
 spend
 spine
 split

@@ -61,7 +61,8 @@ app
 appear
 appearance
 applicable
-apply
+applied
+applies
 approval
 approve
 april
@@ -109,7 +110,7 @@ background
 backup
 badge
 ban
-band
+bands
 bar
 base
 basis
@@ -135,7 +136,7 @@ board
 body
 book
 bookable
-booking
+bookings
 bookkeeping
 bookmark
 bot
@@ -446,7 +447,7 @@ final
 finance
 financial
 find
-finding
+findings
 finish
 fire
 first
@@ -514,7 +515,7 @@ has
 have
 head
 header's
-heading
+headings
 health
 healthy
 held
@@ -660,7 +661,8 @@ me
 mean
 measure
 medium
-meeting
+meet
+meetings
 member
 membership
 mention
@@ -734,8 +736,8 @@ observation
 of
 off
 offboard
-offer
 offer's
+offered
 office
 offline
 often
@@ -904,7 +906,7 @@ reaction
 reactivate
 read
 reader's
-reading
+readings
 ready
 real
 reason
@@ -946,7 +948,9 @@ reorder
 rep
 repeat
 replace
-reply
+replied
+replies
+replying
 report
 request
 require
@@ -1027,7 +1031,7 @@ serve
 service
 session
 set
-setting
+settings
 settle
 setup
 several
@@ -1154,7 +1158,7 @@ then
 there
 these
 they
-thing
+things
 this
 those
 thread
