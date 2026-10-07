@@ -6,17 +6,21 @@
 // there, and what changed. The members are the record list's own rows, narrowed by
 // list_id, so the page is never one request per member (listmembers.tsx).
 
-import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { navigate } from "../app/router";
-import { Button, PendingBody } from "../design-system/atoms";
+import { useArrivalFocus } from "../design-system/arrivalfocus";
+import { Button, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "./common";
 import { customColumnLabel, useFilterVocabulary } from "./filterdata";
+import { FocusedPending, FocusedState } from "./filterhead";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import { filterSentence, useSentenceWords } from "./filtersentence";
 import { ListChangeSummary } from "./listchanges";
@@ -24,14 +28,18 @@ import { ListHistoryPanel } from "./listhistory";
 import {
   ListHealthBadge,
   ListKindBadge,
-  RECORD_TYPE_LABEL,
+  ListRecordsCount,
 } from "./listlibrary";
 import { useMemberColumns } from "./listmembercolumns";
-import { MEMBER_SOURCES, MemberRows, type MemberSource } from "./listmembers";
+import {
+  isMemberSource,
+  MEMBER_SOURCES,
+  MembersPanel,
+  useListExport,
+} from "./listmembers";
 import { ArchiveListAction } from "./listrules";
 import {
   type List,
-  type ListRecordType,
   useArchiveList,
   useList,
   useListsAvailable,
@@ -43,45 +51,21 @@ import { useListAudienceLabel } from "./listsharing";
 import "./lists.css";
 import { decode } from "./segmentpredicate";
 
-function isMemberSource(type: ListRecordType): type is MemberSource {
-  return type in MEMBER_SOURCES;
-}
-
 export function ListScreen({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const available = useListsAvailable();
   if (!available) {
     return (
-      <ListState>
-        <p className="lists-note">{t("lists.unavailable")}</p>
-      </ListState>
+      <FocusedState title={t("lists.page")} sentence={t("lists.unavailable")} />
     );
   }
   return <ListBody listID={listID} />;
 }
 
-/**
- * The page before it has a list to name. It heads itself, so it still prints
- * the one heading a page owes a reader navigating by heading.
- */
-function ListState({ children }: Readonly<{ children: ReactNode }>) {
-  const t = useT();
-  return (
-    <div className="wrap lists-page">
-      <Heading size="xlarge">{t("lists.page")}</Heading>
-      {children}
-    </div>
-  );
-}
-
 /** The page while its list, or the session that decides lists, is read. */
 export function ListPending() {
   const t = useT();
-  return (
-    <ListState>
-      <PendingBody label={t("lists.loading")} lines={6} />
-    </ListState>
-  );
+  return <FocusedPending title={t("lists.page")} label={t("lists.loading")} />;
 }
 
 function ListBody({ listID }: Readonly<{ listID: string }>) {
@@ -92,21 +76,17 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
     return <ListPending />;
   }
   if (list.isError) {
-    return (
-      <ListState>
-        <p className="lists-note">{t("lists.gone")}</p>
-      </ListState>
-    );
+    return <FocusedState title={t("lists.page")} sentence={t("lists.gone")} />;
   }
   return (
     <div className="wrap lists-page">
-      <ListHead list={list.data} />
+      {/* Archive list, Restore and "Look after it" each remove the button that
+          was pressed by changing the notice, so a fresh head takes the focus
+          that would otherwise fall to <body>. */}
+      <ListHead key={noticeOf(list.data) ?? "none"} list={list.data} />
       <ListNotices list={list.data} />
-      <MembersPanel list={list.data} />
-      <ListHistoryPanel
-        listID={list.data.id}
-        live={list.data.list_type === "dynamic"}
-      />
+      <ListMembers list={list.data} />
+      <ListHistoryPanel list={list.data} />
     </div>
   );
 }
@@ -129,6 +109,84 @@ function useVisitOnce(listID: string, readThisMount: boolean) {
 }
 
 function ListHead({ list }: Readonly<{ list: List }>) {
+  const name = useArrivalFocus<HTMLHeadingElement>();
+  const exporting = useListExport(list);
+  return (
+    <header className="lists-head">
+      <div className="lists-head-row">
+        <div className="lists-head-title">
+          <Heading size="xlarge" ref={name} tabIndex={-1}>
+            {list.name}
+          </Heading>
+          <ListKindBadge list={list} />
+          {/* The archived notice wins over a health notice, so the health
+              is said here instead. */}
+          {noticeOf(list) === "archived" && <ListHealthBadge list={list} />}
+        </div>
+        <ListHeadActions list={list} exporting={exporting} />
+      </div>
+      <ErrorLine error={exporting.run.error} />
+      {list.purpose && <p className="lists-note">{list.purpose}</p>}
+      <ListFilterLine list={list} />
+      <ListSinceVisit list={list} />
+      <div className="lists-head-facts">
+        <ListFacts list={list} />
+      </div>
+    </header>
+  );
+}
+
+/**
+ * The verb any reader can use leads, then the steward's, then the menu of
+ * rarer ones. Export CSV arrives once the members are read, so the group holds
+ * its place while they load: folded, it is a row of its own (lists.css).
+ */
+function ListHeadActions({
+  list,
+  exporting,
+}: Readonly<{ list: List; exporting: ReturnType<typeof useListExport> }>) {
+  const t = useT();
+  const changeable = list.can_edit && !list.archived_at;
+  if (
+    !exporting.offered &&
+    !exporting.awaited &&
+    !mayEditFilter(list) &&
+    !changeable
+  ) {
+    return null;
+  }
+  return (
+    <div className="lists-head-actions">
+      {exporting.offered && (
+        <Button
+          variant="ghost"
+          pending={exporting.run.isPending}
+          onClick={() =>
+            exporting.run.mutate({
+              listId: list.id,
+              recordType: list.entity_type,
+            })
+          }
+        >
+          {t("filters.exportCsv")}
+        </Button>
+      )}
+      <EditFilterAction list={list} />
+      {changeable && (
+        <OverflowMenu label={t("filters.library.rowMore", { name: list.name })}>
+          <ListSettingsAction list={list} />
+          <ArchiveListAction list={list} />
+        </OverflowMenu>
+      )}
+    </div>
+  );
+}
+
+/**
+ * What the list is, laid out as the record heads lay out theirs. While the
+ * ownerless notice says nobody looks after the list, it names no steward here.
+ */
+function ListFacts({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -136,51 +194,41 @@ function ListHead({ list }: Readonly<{ list: List }>) {
   const exports = (list.dependencies ?? []).filter(
     (use) => use.kind === "export",
   );
-  const lastExport = exports[0];
+  const latest = exports.reduce<(typeof exports)[number] | undefined>(
+    (last, use) =>
+      last === undefined ||
+      Date.parse(use.occurred_at) > Date.parse(last.occurred_at)
+        ? use
+        : last,
+    undefined,
+  );
   return (
-    <header className="lists-head">
-      <div className="lists-head-title">
-        <Heading size="xlarge">{list.name}</Heading>
-        <ListKindBadge list={list} />
-        <ListHealthBadge list={list} />
-      </div>
-      {list.purpose && <p className="lists-note">{list.purpose}</p>}
-      <ListFilterLine list={list} />
-      <p className="t-caption">
-        {t("lists.head.facts", {
-          type: t(RECORD_TYPE_LABEL[list.entity_type]),
-          visible:
-            list.visible_count == null
-              ? "—"
-              : formatNumber(list.visible_count, locale),
-          sharing: audienceOf(list),
-          steward: list.steward_name ?? t("lists.noSteward"),
-        })}
-      </p>
-      <ListCheckLine list={list} />
-      {lastExport && (
-        <p className="t-caption">
+    <RecordFacts>
+      <Fact label={t("lists.col.recordType")}>
+        <ListRecordsCount list={list} />
+      </Fact>
+      <Fact label={t("lists.sharingLabel")}>{audienceOf(list)}</Fact>
+      {noticeOf(list) !== "ownerless" && (
+        <Fact label={t("lists.fact.steward")}>
+          {list.steward_name ?? t("lists.noSteward")}
+        </Fact>
+      )}
+      {latest && (
+        <Fact label={t("lists.fact.exported")}>
           {plural("lists.head.exported", exports.length, {
             count: formatNumber(exports.length, locale),
-            when: formatDateTime(lastExport.occurred_at, locale, viewerZone()),
+            when: formatDateTime(latest.occurred_at, locale, viewerZone()),
           })}
-        </p>
+        </Fact>
       )}
-      {list.can_edit && !list.archived_at && (
-        <div className="card-actions">
-          <ListSettingsAction list={list} />
-          <EditFilterAction list={list} />
-          <ArchiveListAction list={list} />
-        </div>
-      )}
-    </header>
+    </RecordFacts>
   );
 }
 
 /**
  * What a Live List selects, as one sentence, once the vocabulary names its
- * fields: a bare count cannot finish "where …". A Shortlist has no filter, and
- * a definition this page cannot read says nothing rather than something wrong.
+ * fields. A Shortlist has no filter, and a definition this page cannot read
+ * says nothing rather than something wrong.
  */
 function ListFilterLine({ list }: Readonly<{ list: List }>) {
   const t = useT();
@@ -199,66 +247,67 @@ function ListFilterLine({ list }: Readonly<{ list: List }>) {
   return (
     <p className="t-caption">
       {t("lists.filterLine", {
-        records: t(RECORD_TYPE_LABEL[list.entity_type]),
         sentence: filterSentence(tree, fields, words),
       })}
     </p>
   );
 }
 
-/**
- * When a Live List was last checked for who joined and left, and what it
- * gained and lost since the reader's last visit. A Shortlist says nothing.
- */
-function ListCheckLine({ list }: Readonly<{ list: List }>) {
+/** What a Live List gained and lost since the reader's last visit. */
+function ListSinceVisit({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const { locale } = useLocale();
   if (list.list_type !== "dynamic") {
     return null;
   }
-  const check = list.last_check;
-  const pulse = list.since_last_visit;
-  const changes = list.changes_since_visit;
   const type = list.entity_type;
-  const when = check
-    ? formatDateTime(check.checked_at, locale, viewerZone())
-    : "";
+  const pulse = list.since_last_visit;
+  if (list.changes_since_visit) {
+    return (
+      <ListChangeSummary
+        summary={list.changes_since_visit}
+        onOpen={
+          isMemberSource(type)
+            ? (id) => navigate({ screen: MEMBER_SOURCES[type].screen, id })
+            : undefined
+        }
+      />
+    );
+  }
+  if (!pulse || pulse.entered + pulse.left === 0) {
+    return null;
+  }
   return (
-    <>
-      <p className="t-caption">
-        {!check
-          ? t("lists.head.notChecked")
-          : check.outcome === "too_large"
-            ? t("lists.head.tooLarge", { when })
-            : t("lists.head.lastChecked", { when })}
-      </p>
-      {changes ? (
-        <ListChangeSummary
-          summary={changes}
-          onOpen={
-            isMemberSource(type)
-              ? (id) => navigate({ screen: MEMBER_SOURCES[type].screen, id })
-              : undefined
-          }
-        />
-      ) : (
-        pulse &&
-        pulse.entered + pulse.left > 0 && (
-          <p className="t-caption">
-            {t("lists.head.pulse", {
-              entered: formatNumber(pulse.entered, locale),
-              left: formatNumber(pulse.left, locale),
-            })}
-          </p>
-        )
-      )}
-    </>
+    <p className="t-caption">
+      {t("lists.head.pulse", {
+        entered: formatNumber(pulse.entered, locale),
+        left: formatNumber(pulse.left, locale),
+      })}
+    </p>
   );
+}
+
+type ListNotice = "archived" | "invalid" | "retired_field" | "ownerless";
+
+/** The one standing state the list's notice speaks for, most pressing first. */
+function noticeOf(list: List): ListNotice | null {
+  if (list.archived_at) {
+    return "archived";
+  }
+  if (
+    list.health === "invalid" ||
+    list.health === "retired_field" ||
+    list.health === "ownerless"
+  ) {
+    return list.health;
+  }
+  return null;
 }
 
 /**
  * What the list says about itself: archived, broken, looked after by nobody,
- * or filtering on a field that was retired.
+ * or filtering on a field that was retired. Every reader reads why; only those
+ * allowed to act see the verb that fixes it.
  */
 function ListNotices({ list }: Readonly<{ list: List }>) {
   const t = useT();
@@ -266,7 +315,8 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   const me = useMe();
   const update = useUpdateList();
   const archive = useArchiveList();
-  if (list.archived_at) {
+  const notice = noticeOf(list);
+  if (notice === "archived") {
     return (
       <Callout
         tone="info"
@@ -282,11 +332,12 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
           ) : undefined
         }
       >
-        {t("lists.archived.body")}
+        <p>{t("lists.archived.body")}</p>
+        <ErrorLine error={archive.error} />
       </Callout>
     );
   }
-  if (list.health === "invalid") {
+  if (notice === "invalid") {
     return (
       <Callout
         tone="danger"
@@ -299,7 +350,7 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
       </Callout>
     );
   }
-  if (list.health === "retired_field") {
+  if (notice === "retired_field") {
     const fields = list.retired_fields ?? [];
     return (
       <Callout
@@ -315,7 +366,7 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
       </Callout>
     );
   }
-  if (list.health !== "ownerless") {
+  if (notice !== "ownerless") {
     return null;
   }
   const myID = me.data?.user.id;
@@ -340,12 +391,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
         ) : undefined
       }
     >
-      {t("lists.ownerless.body")}
+      <p>{t("lists.ownerless.body")}</p>
+      <ErrorLine error={update.error} />
     </Callout>
   );
 }
 
-function MembersPanel({ list }: Readonly<{ list: List }>) {
+function ListMembers({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const joined = useMemo(
     () => new Set(list.joined_since_visit ?? []),
@@ -363,15 +415,11 @@ function MembersPanel({ list }: Readonly<{ list: List }>) {
   }
   const source = MEMBER_SOURCES[list.entity_type];
   return (
-    <Panel title={t("lists.members.title")}>
-      <PanelBody>
-        <MemberRows
-          list={list}
-          source={list.entity_type}
-          onOpen={(row) => navigate({ screen: source.screen, id: row.id })}
-          columns={columns}
-        />
-      </PanelBody>
-    </Panel>
+    <MembersPanel
+      list={list}
+      source={list.entity_type}
+      onOpen={(row) => navigate({ screen: source.screen, id: row.id })}
+      columns={columns}
+    />
   );
 }

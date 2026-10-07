@@ -10690,13 +10690,11 @@ export const vi = {
   "lists.gone":
     "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
-  "lists.head.facts":
-    "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y: {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
-  "lists.filterLine": "Bộ lọc: {records} có {sentence}",
-  "lists.head.exported_one":
-    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
-  "lists.head.exported_other":
-    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
+  "lists.filterLine": "Bộ lọc: {sentence}",
+  "lists.head.exported_one": "{count} lần, lần gần nhất vào {when}",
+  "lists.head.exported_other": "{count} lần, lần gần nhất vào {when}",
+  "lists.fact.steward": "Phụ trách",
+  "lists.fact.exported": "Đã xuất",
   "lists.archived.title":
     "Danh s\u00e1ch n\u00e0y \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
   "lists.archived.body":
@@ -10794,10 +10792,10 @@ export const vi = {
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label":
     "{entered} bản ghi vào và {left} bản ghi rời đi kể từ lần bạn xem trước",
-  "lists.head.lastChecked": "Kiểm tra lần cuối {when}",
-  "lists.head.notChecked":
+  "lists.history.lastChecked": "Kiểm tra lần cuối {when}",
+  "lists.history.notChecked":
     "Chưa được kiểm tra. Bản ghi vào và rời đi được ghi nhận từ lần kiểm tra đầu tiên.",
-  "lists.head.tooLarge":
+  "lists.history.tooLarge":
     "Kiểm tra lần cuối {when}. Danh sách khớp quá nhiều bản ghi nên không ghi nhận được bản ghi nào vào hay rời đi.",
   "lists.head.pulse": "Kể từ lần bạn xem trước: {entered} vào, {left} rời đi",
   "lists.members.new": "Mới",
@@ -10805,12 +10803,13 @@ export const vi = {
   "lists.members.addedBy": "Th\u00eam b\u1edfi",
   "lists.members.addedOn": "Ng\u00e0y th\u00eam",
   "lists.members.note": "Ghi ch\u00fa",
-  "lists.history.entered": "Đã vào, tính đến {when}",
-  "lists.history.left": "Đã rời đi, tính đến {when}",
+  "lists.history.entered": "Đã vào",
+  "lists.history.left": "Đã rời đi",
   "lists.history.reason.filterChanged": "sau khi bộ lọc thay đổi",
   "lists.history.checker": "Lần kiểm tra định kỳ (15 phút một lần)",
   "lists.history.liveNote":
-    "Việc kiểm tra chạy 15 phút một lần và ưu tiên các danh sách lâu nhất chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết lần kiểm tra gần nhất. Bản ghi vào hay rời đi được ghi nhận tại lần kiểm tra phát hiện ra thay đổi đó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
+    "Danh sách được kiểm tra 15 phút một lần, thưa hơn khi có rất nhiều danh sách. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
+  "lists.history.howChecks": "Cách kiểm tra danh sách",
   "lists.editFilter": "S\u1eeda b\u1ed9 l\u1ecdc",
   "lists.filterCannotOpen": "Không thể mở bộ lọc của danh sách này tại đây.",
   "lists.savedTo": "Đã lưu vào “{name}”",

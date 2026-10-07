@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useMemberColumns } from "./listmembercolumns";
-import { MemberRows } from "./listmembers";
+import { MembersPanel } from "./listmembers";
 import {
   chosenListing,
   LIVE_ID,
@@ -18,8 +18,8 @@ import {
 import type { List } from "./lists.queries";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// A list's members with what a reader can do to them: tick rows for the bulk
-// bar, select every member, or export the list. A Shortlist's columns say who
+// A list's members as one Panel: Select all in its head, and the table as its
+// own content, ticked rows feeding the bulk bar. A Shortlist's columns say who
 // chose each member; a Live List's show the fields its filter names.
 const meta: Meta = {
   title: "Records/List members",
@@ -34,7 +34,7 @@ const NOBODY_NEW: ReadonlySet<string> = new Set();
 function Members({ list }: Readonly<{ list: List }>) {
   const columns = useMemberColumns(list, NOBODY_NEW);
   return (
-    <MemberRows
+    <MembersPanel
       list={list}
       source="company"
       onOpen={() => {}}
@@ -75,4 +75,19 @@ export const LiveListMembers: Story = {
       </StoryProviders>
     );
   },
+};
+
+// The table sheds its own box on the Panel ground, so in dark no elevated
+// rectangle or shadow is left behind it, and the Display band reads recessed.
+export const LiveListMembersDark: Story = {
+  ...LiveListMembers,
+  globals: { theme: "dark" },
+};
+
+// At phone width only the title gives way in the head, and the rows fold into
+// the table's own phone layout. `uat-phone` drives the capture gate to 390px.
+export const ShortlistMembersPhone: Story = {
+  ...ShortlistMembers,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

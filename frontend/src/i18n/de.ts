@@ -10804,11 +10804,11 @@ export const de = {
   "lists.gone":
     "Diese Liste gibt es nicht, oder sie ist nicht mit dir geteilt.",
   "lists.unnamed": "Ohne Namen",
-  "lists.head.facts":
-    "{type} \u00b7 {visible} f\u00fcr dich sichtbar \u00b7 wer sie finden kann: {sharing} \u00b7 verantwortlich: {steward}",
-  "lists.filterLine": "Filter: {records}, für die gilt: {sentence}",
-  "lists.head.exported_one": "{count}-mal exportiert, zuletzt am {when}",
-  "lists.head.exported_other": "{count}-mal exportiert, zuletzt am {when}",
+  "lists.filterLine": "Filter: {sentence}",
+  "lists.head.exported_one": "{count}-mal, zuletzt am {when}",
+  "lists.head.exported_other": "{count}-mal, zuletzt am {when}",
+  "lists.fact.steward": "Verantwortlich",
+  "lists.fact.exported": "Exportiert",
   "lists.archived.title": "Diese Liste ist archiviert",
   "lists.archived.body":
     "Bis zur Wiederherstellung ist die Liste schreibgesch\u00fctzt. Mitglieder und Verlauf bleiben erhalten.",
@@ -10895,10 +10895,10 @@ export const de = {
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label":
     "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
-  "lists.head.lastChecked": "Zuletzt geprüft {when}",
-  "lists.head.notChecked":
+  "lists.history.lastChecked": "Zuletzt geprüft {when}",
+  "lists.history.notChecked":
     "Noch nicht geprüft. Wer hinzukommt und wegfällt, wird ab der ersten Prüfung festgehalten.",
-  "lists.head.tooLarge":
+  "lists.history.tooLarge":
     "Zuletzt geprüft {when}. Die Liste enthält zu viele Datensätze, um festzuhalten, wer hinzukam und wegfiel.",
   "lists.head.pulse":
     "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
@@ -10907,12 +10907,13 @@ export const de = {
   "lists.members.addedBy": "Hinzugef\u00fcgt von",
   "lists.members.addedOn": "Hinzugef\u00fcgt am",
   "lists.members.note": "Notiz",
-  "lists.history.entered": "Hinzugekommen, Stand {when}",
-  "lists.history.left": "Weggefallen, Stand {when}",
+  "lists.history.entered": "Hinzugekommen",
+  "lists.history.left": "Weggefallen",
   "lists.history.reason.filterChanged": "nachdem der Filter geändert wurde",
   "lists.history.checker": "Die 15-Minuten-Prüfung",
   "lists.history.liveNote":
-    "Die Prüfung läuft alle 15 Minuten und nimmt sich zuerst die Listen vor, die am längsten nicht geprüft wurden. Bei sehr vielen Listen kann eine Liste daher länger warten; „Zuletzt geprüft“ zeigt, wann es war. Wer hinzukam oder wegfiel, wird zum Zeitpunkt der Prüfung festgehalten, die die Änderung bemerkt hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
+    "Listen werden alle 15 Minuten geprüft, bei sehr vielen Listen seltener. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
+  "lists.history.howChecks": "Prüfablauf anzeigen",
   "lists.editFilter": "Filter bearbeiten",
   "lists.filterCannotOpen":
     "Der Filter dieser Liste lässt sich hier nicht öffnen.",

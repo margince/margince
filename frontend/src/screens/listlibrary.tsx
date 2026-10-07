@@ -51,7 +51,7 @@ export const LIST_RECORD_TYPES = [
   "lead",
 ] as const satisfies readonly ListRecordType[];
 
-export const RECORD_TYPE_LABEL: Record<ListRecordType, MessageKey> = {
+const RECORD_TYPE_LABEL: Record<ListRecordType, MessageKey> = {
   contact: "lists.type.contact",
   company: "lists.type.company",
   deal: "lists.type.deal",
@@ -246,38 +246,46 @@ function LibraryKind({ item }: Readonly<{ item: LibraryItem }>) {
 }
 
 /**
- * How many records a list holds that this reader can see, in its noun. A
- * saved view counts nothing until it is opened, and a list the server could
- * not count says only its type: never a dash and never a zero. A Live List's
- * pulse stands either way, since it counts past changes rather than members.
+ * How many records a list holds that this reader can see, in its noun. A list
+ * the server could not count says only its type: never a dash and never a zero.
  */
-function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
+export function ListRecordsCount({
+  list,
+}: Readonly<{ list: Pick<List, "entity_type" | "visible_count"> }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const type = resourceOf(item);
-  if (item.kind === "view") {
+  const type = list.entity_type;
+  const count = list.visible_count;
+  if (count == null) {
     return <span>{t(RECORD_TYPE_LABEL[type])}</span>;
   }
-  const count = item.list.visible_count;
-  const records =
-    count == null
-      ? null
-      : plural(RECORDS_COUNT_LABEL[type], count, {
-          count: formatNumber(count, locale),
-        });
+  const records = plural(RECORDS_COUNT_LABEL[type], count, {
+    count: formatNumber(count, locale),
+  });
+  return (
+    <>
+      <span aria-hidden="true">{records}</span>
+      <span className="sr-only">
+        {t("filters.library.recordsSeen", { records })}
+      </span>
+    </>
+  );
+}
+
+/**
+ * A library row's records: a saved view counts nothing until it is opened. A
+ * Live List's pulse shows whether or not the list could be counted, since it
+ * counts past changes rather than members.
+ */
+function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
+  const t = useT();
+  if (item.kind === "view") {
+    return <span>{t(RECORD_TYPE_LABEL[resourceOf(item)])}</span>;
+  }
   return (
     <span className="library-records">
-      {records === null ? (
-        <span>{t(RECORD_TYPE_LABEL[type])}</span>
-      ) : (
-        <>
-          <span aria-hidden="true">{records}</span>
-          <span className="sr-only">
-            {t("filters.library.recordsSeen", { records })}
-          </span>
-        </>
-      )}
+      <ListRecordsCount list={item.list} />
       {item.list.list_type === "dynamic" && <ListPulseBadge list={item.list} />}
     </span>
   );
