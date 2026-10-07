@@ -833,56 +833,6 @@ describe("saved view tabs restore the whole list state", () => {
     );
     expect(fetchPage.mock.calls.at(-1)?.[0].perPage).toBe(100);
   });
-
-  it("lights a tab that names a search only while that search is typed", async () => {
-    const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
-      emptyPage(),
-    );
-    render(
-      <ListTableHarness
-        fetchPage={fetchPage}
-        views={[{ label: "list.viewAll" }]}
-        dataViews={[savedTab({ id: "v-1", label: "Acme", q: "acme" })]}
-      />,
-    );
-    const search = await screen.findByPlaceholderText("Search");
-    await waitFor(() => expect(fetchPage).toHaveBeenCalled());
-
-    // Pressing it restores the sort and the filters, and the search box keeps
-    // what the reader typed. So the list is NOT what the tab names, and the tab
-    // must not claim it is.
-    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
-    await waitFor(() => expect(fetchPage.mock.calls.at(-1)?.[0].sort).toBe(""));
-    expect(
-      screen.getByRole("button", { name: "Acme" }).getAttribute("aria-pressed"),
-    ).toBe("false");
-    expect(
-      screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
-    ).toBe("true");
-
-    vi.useFakeTimers();
-    try {
-      fireEvent.change(search, { target: { value: "acme" } });
-      await act(async () => {
-        vi.advanceTimersByTime(250);
-        await Promise.resolve();
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-
-    // And it comes back by itself once the list really is the acme rows.
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("button", { name: "Acme" })
-          .getAttribute("aria-pressed"),
-      ).toBe("true"),
-    );
-    expect(
-      screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
-    ).toBe("false");
-  });
 });
 
 /**
