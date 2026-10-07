@@ -4051,6 +4051,9 @@ export const vi = {
   "create.region": "Tỉnh / vùng",
   "create.postalCode": "Mã bưu chính",
   "create.country": "Quốc gia (ISO-3166, ví dụ DE)",
+  "lead.fillFromContact": "Điền từ liên hệ",
+  "lead.fillFromContactSearch": "Tìm liên hệ theo tên hoặc email",
+  "lead.create.fromContact": "Đã điền từ liên hệ này.",
   "create.companyName": "Công ty",
   "create.companyPicked": "Gắn liên hệ vào công ty có sẵn này.",
   "create.companyNew":

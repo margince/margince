@@ -4203,6 +4203,9 @@ export const en = {
   "create.region": "State or region",
   "create.postalCode": "Postal code",
   "create.country": "Country code (ISO 3166)",
+  "lead.fillFromContact": "Fill from a contact",
+  "lead.fillFromContactSearch": "Search contacts by name or email",
+  "lead.create.fromContact": "Filled in from this contact.",
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
