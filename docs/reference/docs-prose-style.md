@@ -88,23 +88,33 @@ A page whose first line is `<!-- prose:plain -->` is held to a stricter bar, che
 
 | Rule | Limit |
 |---|---|
-| Vocabulary | Only words in `docs/reference/plain-words.txt` or `docs/reference/technical-names.txt` |
+| Vocabulary | Only words in the area's word list or the glossary (`docs/reference/glossary.md`) |
 | Sentence length | 20 words in a numbered step, 25 in any other sentence |
 | Paragraph length | 6 sentences |
 | Page length | Only when the marker sets it: `<!-- prose:plain max-words=1000 -->` |
 
-`plain-words.txt` holds general English words and is capped at 999 entries: all plain pages share fewer
-than 1,000 simple words. `technical-names.txt` holds names a reader must learn anyway, such as products,
-protocols and file names. A general word also covers its regular forms, so a page may write `deals` or
-`connected` when the list holds `deal` and `connect`; a technical name matches only as written. Inline code
-is not checked, and neither is link text that contains a `.` or a `/`, such as a path or a host.
+Each docs area has its own list of general English words. The target is 999 entries, so a reader of one
+area meets fewer than 1,000 simple words. An area whose pages needed more when they joined starts with a
+higher cap in `docsplainwords_test.go`, and that cap only goes down. The lists are: `docs/how-to/plain-words.txt` (with the tutorial),
+`docs/explanation/plain-words.txt`, `docs/reference/plain-words.txt`, `docs/handbook/plain-words.txt`, `docs/plain-words.txt` for the entry pages a
+newcomer opens first (README, CONTRIBUTING, SECURITY, SUPPORT and the docs index), and
+`docs/plain-words-project.txt` for every other plain page. Names a reader must learn anyway, such as products,
+protocols and file names, live in one shared glossary, `docs/reference/glossary.md`, each with a meaning of at
+least three words. A name is a proper name, an acronym or a code identifier. An ordinary word, even a
+technical one such as `schema`, goes in a word list, so it counts against the cap. Names the pages used
+before they joined the bar sit in the glossary's last section without a meaning; after that, the section
+only shrinks. A general word also covers its regular forms, so a page may write `deals` or `connected`
+when the list holds `deal` and `connect`. An irregular form such as `built` is listed as it is spelled. A
+glossary term matches only as written. Inline code is not checked, nor is link text
+that contains a `.` or a `/`, such as a path or a host. A bold UI label and a quoted screen message are not
+checked either: they must match the screen word for word, so they count as names.
 
 A page a newcomer reads first should also stay short, so it sets `max-words`. `README.md` must carry
 `max-words=1000` or lower. Any other page, such as an index or a long guide, may leave `max-words` out; the
 vocabulary, sentence and paragraph rules still apply to it.
 
-To use a new word, first look for a listed word that says the same thing. If none does, add it to the right
-list in the same pull request, in sorted order. A word that no plain page uses any more must leave the list,
+To use a new word, first look for a listed word that says the same thing. If none does, add it to the area's list in
+the same pull request, in sorted order, or add a real technical name to the glossary with its meaning. A word that no plain page uses any more must leave the list,
 so the vocabulary cannot grow by accident.
 
 The rules come from two places. ASD-STE100 Simplified Technical English is the standard for maintenance

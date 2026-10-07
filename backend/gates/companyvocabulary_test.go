@@ -98,7 +98,12 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/migrations/testdata/rbac_baseline_era_defaults.json": "pinned byte for byte to the " +
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
 	"CHANGELOG.md": "entries say what they said when they were written",
-	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
+	"docs/plain-words-project.txt": "a plain word list holds every word its pages use, " +
+		"and a page that quotes a word to avoid puts it here; the pages themselves are checked",
+	"docs/how-to/plain-words.txt":      "the same, for the how-to pages",
+	"docs/explanation/plain-words.txt": "the same, for the explanation pages",
+	"docs/reference/plain-words.txt":   "the same, for the reference pages",
+	"sbom-schemas":                     "a vendored SPDX schema, not ours to rename",
 	".github/workflows/release.yml": "a GitHub organisation — the account a repository belongs " +
 		"to, not this record type",
 	"sonar-project.properties": "`sonar.organization` is the scanner's own mandatory property, " +
