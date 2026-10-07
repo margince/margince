@@ -131,13 +131,19 @@ func matchExpression(entity string, headPos, tailPos int, hasFragment bool) stri
 // wholeWordsExpression matches the text bound at pos as whole words, in every
 // parse the entity's index speaks (see matchExpression).
 func wholeWordsExpression(entity string, pos int) string {
-	whole := fmt.Sprintf(
-		`websearch_to_tsquery('simple', f_unaccent($%[1]d)) || websearch_to_tsquery('simple', f_fold_apostrophes($%[1]d))`,
-		pos)
+	whole := simpleWholeWords(pos)
 	if entity == entityActivity {
 		whole += stemmedParses(pos)
 	}
 	return whole
+}
+
+// simpleWholeWords matches the text bound at pos as whole, unstemmed words:
+// unaccented, OR-ed with the apostrophe-collapsed parse.
+func simpleWholeWords(pos int) string {
+	return fmt.Sprintf(
+		`websearch_to_tsquery('simple', f_unaccent($%[1]d)) || websearch_to_tsquery('simple', f_fold_apostrophes($%[1]d))`,
+		pos)
 }
 
 // stemmedParses ORs the German and English parse of the text bound at pos onto
@@ -154,7 +160,8 @@ func stemmedParses(pos int) string {
 //
 // Normalisation 32 maps ts_rank_cd to rank/(rank+1), in [0, 1), so the
 // whole-word bonus of 1 is a strict tier, the rank still orders each tier, and
-// no own-text score falls below zero, where the employer arm ranks.
+// no own-text score falls below zero, where the employer arm ranks. The bonus
+// is unstemmed: a shared stem would lift "studies" level with "study".
 func scoreExpression(entity, alias string, headPos, tailPos int, hasFragment bool) string {
 	rank := fmt.Sprintf(`ts_rank_cd(%s.search_tsv, %s, 32)`,
 		alias, matchExpression(entity, headPos, tailPos, hasFragment))
@@ -162,5 +169,5 @@ func scoreExpression(entity, alias string, headPos, tailPos int, hasFragment boo
 		return rank
 	}
 	return fmt.Sprintf(`((%s.search_tsv @@ (%s))::int + %s)`,
-		alias, wholeWordsExpression(entity, tailPos), rank)
+		alias, simpleWholeWords(tailPos), rank)
 }

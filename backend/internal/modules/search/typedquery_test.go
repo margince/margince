@@ -286,4 +286,8 @@ func TestTheScoreLiftsTheFragmentAsAWholeWord(t *testing.T) {
 	if score := scoreExpression(entityContact, "t", 1, 0, false); strings.Contains(score, "::int") {
 		t.Fatalf("a query with no fragment is scored for one: %s", score)
 	}
+	bonus, _, _ := strings.Cut(scoreExpression(entityActivity, "t", 1, 2, true), "::int")
+	if strings.Contains(bonus, "english") || strings.Contains(bonus, "german") {
+		t.Fatalf("the activity bonus is stemmed, so \"studies\" earns it for \"study\": %s", bonus)
+	}
 }

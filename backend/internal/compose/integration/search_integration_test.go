@@ -191,6 +191,28 @@ func TestAnExactNameOutranksLongerNamesSharingItsPrefix(t *testing.T) {
 	}
 }
 
+// English notes stem "study" and "studies" alike, so both match "study"; only
+// one carries the word itself, and it leads although the other repeats its own
+// in the subject as well as the body, which ranks it higher.
+func TestAWholeWordOutranksAWordSharingOnlyItsStem(t *testing.T) {
+	e := SetupSearch(t)
+	literal := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
+		VALUES ($1, 'note', 'Kickoff', 'We agreed on a pilot study.', 'en', 'manual', 'human:x')`)
+	stemmed := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
+		VALUES ($1, 'note', 'Case studies', 'More studies, studies and studies.', 'en', 'manual', 'human:x')`)
+
+	page, err := e.Store.Search(e.Admin(), search.Input{Query: "study", Types: []string{"activity"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Hits) != 2 || page.Hits[1].ID != stemmed {
+		t.Fatalf("hits = %+v, want both notes, the one saying only \"studies\" second", page.Hits)
+	}
+	if page.Hits[0].ID != literal {
+		t.Fatalf("hits = %+v, want the note saying \"study\" first", page.Hits)
+	}
+}
+
 func TestSearchHitsCarryTheCallersRowScope(t *testing.T) {
 	e := SetupSearch(t)
 	// A contact is readable by every seat with the grant; a capture-private
