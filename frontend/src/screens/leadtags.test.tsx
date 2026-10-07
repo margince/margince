@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { LEAD_LIST_KEY } from "./leadkeys";
 import { LeadsScreen } from "./leads";
@@ -34,6 +35,9 @@ describe("a lead's tags", () => {
           user: { id: "u-me", email: "me@example.test", display_name: "Me" },
           roles: ["rep"],
           teams: [],
+          authorization: meFixture({
+            allow: { lead: ["read"], tag: ["read"] },
+          }).authorization,
         });
       }
       if (/\/leads\?/.test(url)) {

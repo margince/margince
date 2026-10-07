@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 82,
     "system_frame_tokens": 586,
-    "tokens": 29114,
+    "tokens": 29117,
     "median_tool_tokens": 292,
     "mean_tool_tokens": 354
   },
@@ -392,7 +392,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 143
+      "tokens": 144
     },
     {
       "name": "whoami",
@@ -404,7 +404,7 @@
     },
     {
       "name": "get_tag",
-      "tokens": 87
+      "tokens": 88
     },
     {
       "name": "read_import_report",

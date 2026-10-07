@@ -85,6 +85,28 @@ describe("the tag page names what carries the word", () => {
 
   // A group the word is not on draws nothing. Three cards, two of them
   // reporting zero, is what made the page read as an inventory of absences.
+  it("lists and opens the leads that carry the word", async () => {
+    installFetchStub({
+      [`GET /tags/${TAG}`]: tagRead({
+        contacts: 0,
+        companies: 0,
+        deals: 0,
+        leads: 1,
+      }),
+      "GET /leads": () =>
+        jsonResponse({ data: [{ id: "l-1", full_name: "Jonas Weber" }] }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    expect(await screen.findByText("Leads (1)")).toBeInTheDocument();
+    await userEvent.setup().click(await screen.findByText("Jonas Weber"));
+    expect(window.location.hash).toBe("#/leads/l-1");
+  });
+
   it("draws no group for a type nothing carries", async () => {
     installFetchStub({
       [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),

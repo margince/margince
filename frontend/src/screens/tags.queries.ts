@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
+import { RECORD_LIST_KEY } from "./recordlistkeys";
 
 // The reads and writes behind the record page's tag panel.
 
@@ -15,15 +16,10 @@ export type Tag = components["schemas"]["Tag"];
 /** The record types the tags panel serves. */
 export type TaggableType = "contact" | "company" | "deal" | "lead";
 
-/** The list cache each type's rows, and so their tag chips, are held under. */
-const LIST_KEY: Record<TaggableType, string> = {
-  contact: "contacts",
-  company: "companies",
-  deal: "deals",
-  lead: "leads",
-};
-
-/** The panel and every list drawing this record's chips go stale together. */
+/**
+ * The panel, every list drawing this record's chips, and the tag page and its
+ * counts all go stale together: each shows who carries the word.
+ */
 function invalidateTagged(
   queryClient: ReturnType<typeof useQueryClient>,
   entityType: TaggableType,
@@ -32,7 +28,11 @@ function invalidateTagged(
   void queryClient.invalidateQueries({
     queryKey: ["record-tags", entityType, entityID],
   });
-  void queryClient.invalidateQueries({ queryKey: [LIST_KEY[entityType]] });
+  void queryClient.invalidateQueries({
+    queryKey: [RECORD_LIST_KEY[entityType]],
+  });
+  void queryClient.invalidateQueries({ queryKey: ["tag"] });
+  void queryClient.invalidateQueries({ queryKey: ["tag-records"] });
 }
 
 /**

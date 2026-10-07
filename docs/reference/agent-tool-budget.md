@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 82 | 1900 | 1298 | 3784 | 11% | 19426 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 82 | 2746 | 1824 | 5156 | 15% | 18054 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 29114 |  |  | 88% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 29117 |  |  | 88% |  |  |  |
 
 ### `morning_brief`
 
@@ -230,10 +230,10 @@ listing once. Read a row as what that tool costs a menu.
 | `remove_tag` | 166 |  |
 | `read_project_360` | 156 |  |
 | `read_approval` | 154 |  |
-| `get_record_tags` | 143 |  |
+| `get_record_tags` | 144 |  |
 | `whoami` | 129 |  |
 | `list_tags` | 95 |  |
-| `get_tag` | 87 |  |
+| `get_tag` | 88 |  |
 | `read_import_report` | 77 |  |
 | `read_import_run` | 67 |  |
 

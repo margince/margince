@@ -165,7 +165,7 @@ describe("the tag vocabulary card", () => {
     expect(none.querySelector("[class*='tagpill-dot']")).toBeNull();
   });
 
-  // The count is three row-scoped queries per tag on the server, so drawing it
+  // The count is four row-scoped queries per tag on the server, so drawing it
   // for every row would spend hundreds opening the card to answer a question
   // about the one word being retired.
   it("counts a word's records only when asked", async () => {

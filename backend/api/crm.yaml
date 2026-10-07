@@ -9250,6 +9250,7 @@ paths:
             How several `tag_id` values combine. `any` selects a record carrying at least one
             of them, `all` a record carrying every one, `none` a record carrying not one.
 
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
       responses:
         '200':
           description: A page of leads.
@@ -48034,8 +48035,8 @@ components:
         carried_by:
           type: [integer, 'null']
           description: >
-            For a `tag` hit only: how many contacts, companies and deals carry this word, as
-            THIS caller may see them — the same three types the tag page counts and the
+            For a `tag` hit only: how many contacts, companies, deals and leads carry this
+            word, as THIS caller may see them — the same types the tag page counts and the
             filters offer, not every type `taggable` admits. It is what tells a searcher
             whether the word is worth opening before they open it. Null on every other hit
             type, and null when no count was taken.

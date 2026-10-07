@@ -3462,7 +3462,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 143,
+      "tokens": 144,
       "agents": [],
       "required_by_cases": [
         "case31_wrong_word_on_the_record"
@@ -3526,7 +3526,7 @@
     },
     {
       "name": "get_tag",
-      "tokens": 87,
+      "tokens": 88,
       "agents": [],
       "required_by_cases": [
         "case32_two_words_for_one_thing"

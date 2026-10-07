@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 251.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 65345 |
+| Approx. wire tokens | 65348 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -6903,11 +6903,11 @@ written from. (Governance: runs immediately; requires passport scope "read".)
 **Get a record's tags**
 
 ```text
-Read the tags on one contact, company or deal, with who applied each and when. Those three record
-types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty
-for that reason — NOT because the record carries no tags, and it must not be reported as none. An
-archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope
-"read".)
+Read the tags on one contact, company, deal or lead, with who applied each and when. Those four
+record types only. `withheld` true means the vocabulary is not visible to this caller, so the list
+is empty for that reason — NOT because the record carries no tags, and it must not be reported as
+none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport
+scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7076,7 +7076,7 @@ archived tag stays on whatever carries it. (Governance: runs immediately; requir
 **Get a tag**
 
 ```text
-Read one tag and how many contacts, companies and deals carry it. The counts cover those three
+Read one tag and how many contacts, companies, deals and leads carry it. The counts cover those four
 record types only. They say how much retiring or merging the word would touch; the records
 themselves come from list_records. (Governance: runs immediately; requires passport scope "read".)
 ```

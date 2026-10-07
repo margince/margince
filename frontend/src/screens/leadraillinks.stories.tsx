@@ -128,3 +128,34 @@ export const AttachingAProject: Story = {
     await panel.findByRole("option", { name: /Beacon rollout/ });
   },
 };
+
+/**
+ * The lead's tags in its rail, applied and removable by a reader who may change
+ * the lead — the same panel a contact, an account and a deal carry.
+ */
+export const Tagged: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /leads/l-1": () => jsonResponse(lead({ writable: true })),
+      "GET /me": meRoute({ lead: ["read", "update"], tag: ["read"] }),
+      "GET /records/lead/l-1/tags": () =>
+        jsonResponse({
+          data: [
+            {
+              tag_id: "t-1",
+              name: "Product A",
+              color: "teal",
+              archived: false,
+              assigned_at: "2026-09-01T08:00:00Z",
+            },
+          ],
+          withheld: false,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LeadScreen id="l-1" />
+      </StoryProviders>
+    );
+  },
+};

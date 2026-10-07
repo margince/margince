@@ -10,16 +10,16 @@
   "totals": {
     "tools": 82,
     "resources": 9,
-    "tool_catalog_bytes": 257823,
+    "tool_catalog_bytes": 257834,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 65345,
+    "approx_wire_tokens_total": 65348,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 67279,
+      "description_bytes": 67290,
       "input_schema_bytes": 58058,
       "output_schema_bytes": 112198,
-      "description_plus_input_schema_bytes": 125337
+      "description_plus_input_schema_bytes": 125348
     }
   },
   "tools": {
@@ -6144,7 +6144,7 @@
           "readOnlyHint": true,
           "title": "Get a record's tags"
         },
-        "description": "Read the tags on one contact, company or deal, with who applied each and when. Those three record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Read the tags on one contact, company, deal or lead, with who applied each and when. Those four record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -6308,7 +6308,7 @@
           "readOnlyHint": true,
           "title": "Get a tag"
         },
-        "description": "Read one tag and how many contacts, companies and deals carry it. The counts cover those three record types only. They say how much retiring or merging the word would touch; the records themselves come from list_records. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Read one tag and how many contacts, companies, deals and leads carry it. The counts cover those four record types only. They say how much retiring or merging the word would touch; the records themselves come from list_records. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
