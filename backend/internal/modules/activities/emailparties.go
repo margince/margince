@@ -107,6 +107,7 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 		contactaddress.ReachableOrder+` LIMIT 1) own_pe ON p.id IS NOT NULL
 		 WHERE ap.activity_id = $1
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc')
+		   AND NOT `+unstatedContactSQL("ap")+`
 		 ORDER BY CASE ap.role
 		            WHEN 'from' THEN 1 WHEN 'to' THEN 2 WHEN 'cc' THEN 3 ELSE 4
 		          END, ap.created_at, ap.id`, args...)
