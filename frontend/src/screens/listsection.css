@@ -59,3 +59,16 @@
   display: flex;
   gap: var(--space-2);
 }
+
+/* A destructive verb inside a row is outlined: a filled red button repeated
+   down a column is the loudest thing on the page for the rarest action. The
+   confirm dialog it opens keeps the fill, where the reader has chosen it. */
+.listsection-rowverbs .btn-danger {
+  background: transparent;
+  color: var(--dangerText);
+  box-shadow: inset 0 0 0 1px var(--dangerBorder);
+}
+.listsection-rowverbs .btn-danger:hover:not(:disabled) {
+  background: var(--dangerBg);
+  filter: none;
+}

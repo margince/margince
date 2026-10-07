@@ -1591,6 +1591,11 @@ function ResetDataCard() {
   const workspaceName = me.data?.workspace_name ?? "";
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
+  // Only the company's own name arms the button. Without a name to compare
+  // against (/me not resolved) any non-empty text does, because the server
+  // still refuses a mismatch.
+  const typedNameMatches =
+    workspaceName === "" ? typed.trim() !== "" : typed === workspaceName;
   // What the last reset actually cleared — null until one has run, so the
   // danger zone stays quiet on first render rather than implying a result
   // nobody triggered.
@@ -1681,7 +1686,7 @@ function ResetDataCard() {
         // The typed confirmation gates whether the reset may START; the input
         // is still editable while it runs, and a reader who clears it mid-write
         // would otherwise re-arm the gate on a control that is already going.
-        confirmDisabled={!reset.isPending && typed.trim() === ""}
+        confirmDisabled={!reset.isPending && !typedNameMatches}
         onConfirm={() => reset.mutate()}
         pending={reset.isPending}
         error={reset.error ? problemMessageOf(reset.error, t) : null}

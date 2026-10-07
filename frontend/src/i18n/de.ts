@@ -6668,8 +6668,8 @@ export const de = {
   // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile
   // der Karte öffnet einen Dialog mit allen noch verfügbaren Anbietern, jeder
   // mit dem Satz, den er braucht.
-  "connectors.addConnection": "Connector hinzufügen",
-  "connectors.addOpen": "Connector hinzufügen",
+  "connectors.addConnection": "Konto hinzufügen",
+  "connectors.addOpen": "Konto hinzufügen",
   "connectors.connect": "Verbinden",
   "connectors.connectProvider": "{provider} verbinden",
   "connectors.rosterLabel": "Aktive Connectors",
@@ -11929,7 +11929,7 @@ export const de = {
   "lead.readings.answered": "Beantwortet",
   "stageAutomation.title": "Phasenautomatisierung",
   "stageAutomation.intro":
-    "Ergebnisse der Phasenwechsel, die Margince vorgeschlagen hat. Dieser Bericht ändert nichts; er ist der Beleg dafür, einen Übergang Deals automatisch verschieben zu lassen.",
+    "Ergebnisse der Phasenwechsel, die Margince vorgeschlagen hat. Die Tabelle ist der Beleg; mit den Schaltern darunter lässt sich ein Übergang Deals automatisch verschieben.",
   "stageAutomation.pipeline": "Pipeline",
   "stageAutomation.transition": "\u00dcbergang",
   "stageAutomation.reviewed": "Geprüft",

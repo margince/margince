@@ -1188,6 +1188,19 @@ describe("count line", () => {
     );
     expect(screen.getByText(/1 to 25 of 60 rows, sorted by Name/)).toBeTruthy();
   });
+
+  it("says an empty list is empty without naming an order", () => {
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "name", onChange: () => {} }}
+      />,
+    );
+    expect(screen.queryByText(/sorted by/)).toBeNull();
+  });
 });
 
 describe("a row as a link", () => {

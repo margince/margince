@@ -176,7 +176,7 @@ describe("ResetDataCard (danger zone)", () => {
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 
-  it("enables the confirm button once the input is non-empty and POSTs the typed confirmation", async () => {
+  it("enables the confirm button only when the typed text is the company name, then POSTs it", async () => {
     const user = userEvent.setup();
     const posted: unknown[] = [];
     vi.stubGlobal(
@@ -201,7 +201,9 @@ describe("ResetDataCard (danger zone)", () => {
     expect(confirmButton).toHaveProperty("disabled", true);
 
     const input = within(dialog).getByRole("textbox");
-    await user.type(input, "Acme Inc");
+    await user.type(input, "Acme");
+    expect(confirmButton).toHaveProperty("disabled", true);
+    await user.type(input, " Inc");
     expect(confirmButton).toHaveProperty("disabled", false);
 
     await user.click(confirmButton);
@@ -211,7 +213,7 @@ describe("ResetDataCard (danger zone)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
-  it("surfaces the server's confirmation-mismatch message on a 422", async () => {
+  it("still surfaces the server's refusal on a 422, for instance when the company was renamed meanwhile", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
@@ -230,7 +232,7 @@ describe("ResetDataCard (danger zone)", () => {
     );
     const dialog = await screen.findByRole("dialog");
     const input = within(dialog).getByRole("textbox");
-    await user.type(input, "Wrong Name");
+    await user.type(input, "Acme Inc");
     await user.click(
       within(dialog).getByRole("button", { name: /reset all data/i }),
     );

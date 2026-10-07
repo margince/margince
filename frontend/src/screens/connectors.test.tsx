@@ -191,9 +191,9 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
 // a pick therefore opens the dialog first and scopes its queries to it.
 async function openAddDialog() {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Add connector" }),
+    await screen.findByRole("button", { name: "Add account" }),
   );
-  return screen.getByRole("dialog", { name: "Add connector" });
+  return screen.getByRole("dialog", { name: "Add account" });
 }
 
 beforeEach(() => {
@@ -305,7 +305,7 @@ describe("the connected-inboxes card", () => {
       within(row).getByText(/No mailbox or calendar is connected yet/),
     ).toBeTruthy();
     expect(row.closest(".settinglist")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Add connector" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add account" })).toBeTruthy();
   });
 
   it("offers every provider from the dialog when nothing is connected", async () => {
@@ -337,7 +337,7 @@ describe("the connected-inboxes card", () => {
     expect(
       await screen.findByRole("dialog", { name: "Connect IMAP mailbox" }),
     ).toBeTruthy();
-    expect(screen.queryByRole("dialog", { name: "Add connector" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Add account" })).toBeNull();
   });
 
   it("offers reconnect only for a connection that needs re-auth", async () => {
@@ -663,7 +663,7 @@ describe("the OAuth return outcome", () => {
   });
 });
 
-// The "Add connector" affordance (Task 1): one verb in the card's header
+// The "Add account" affordance (Task 1): one verb in the card's header
 // opens a dialog listing the providers still addable, each with the sentence
 // its choice needs. An OAuth pick connects+redirects, IMAP hands over to the
 // inline form, and a 501 from a specific provider's connect renders an honest
@@ -764,7 +764,7 @@ describe("add a connection", () => {
     ]);
     render(<ConnectorsCard />);
     await screen.findByText("Google Calendar"); // a roster row label
-    expect(screen.queryByRole("button", { name: "Add connector" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add account" })).toBeNull();
   });
 });
 

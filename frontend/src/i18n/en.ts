@@ -6815,8 +6815,8 @@ export const en = {
   // it needs. `addOpen` names the act of OPENING that list, and the picks inside
   // it name the act of connecting — so no two buttons on the surface read the
   // same while both are on screen.
-  "connectors.addConnection": "Add connector",
-  "connectors.addOpen": "Add connector",
+  "connectors.addConnection": "Add account",
+  "connectors.addOpen": "Add account",
   "connectors.connect": "Connect",
   "connectors.connectProvider": "Connect {provider}",
   "connectors.rosterLabel": "Active connectors",
@@ -12080,7 +12080,7 @@ export const en = {
   "lead.readings.answered": "Answered",
   "stageAutomation.title": "Stage automation",
   "stageAutomation.intro":
-    "Outcomes of the stage moves Margince proposed. This report changes nothing; it is the evidence for letting a transition move deals automatically.",
+    "Outcomes of the stage moves Margince proposed. The table is the evidence; the switches below it let a transition move deals automatically.",
   "stageAutomation.pipeline": "Pipeline",
   "stageAutomation.transition": "Transition",
   "stageAutomation.reviewed": "Reviewed",
