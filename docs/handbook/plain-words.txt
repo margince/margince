@@ -63,7 +63,6 @@ appearance
 applicable
 applied
 applies
-apply
 approval
 approve
 april
@@ -111,7 +110,6 @@ background
 backup
 badge
 ban
-band
 bands
 bar
 base
@@ -738,7 +736,6 @@ observation
 of
 off
 offboard
-offer
 offer's
 offered
 office
@@ -953,7 +950,6 @@ repeat
 replace
 replied
 replies
-reply
 replying
 report
 request
@@ -1162,7 +1158,6 @@ then
 there
 these
 they
-thing
 things
 this
 those
