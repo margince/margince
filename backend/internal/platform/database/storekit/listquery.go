@@ -88,7 +88,8 @@ type SortField struct {
 func Column(kind string) SortField { return SortField{Kind: kind} }
 
 // SortVocabulary merges a resource's fixed core sortable fields with the
-// workspace's active custom columns. Retired columns left ActiveColumns, so
+// workspace's active custom columns, less a multiselect: its value is an array,
+// which a one-value keyset cursor cannot continue. Retired columns left ActiveColumns, so
 // they leave the vocabulary — and its 422 — for free.
 func SortVocabulary(core map[string]SortField, active []fieldcatalog.Column) map[string]SortField {
 	vocab := make(map[string]SortField, len(core)+len(active))
@@ -96,6 +97,9 @@ func SortVocabulary(core map[string]SortField, active []fieldcatalog.Column) map
 		vocab[name] = field
 	}
 	for _, c := range active {
+		if c.Type == fieldcatalog.TypeMultiselect {
+			continue
+		}
 		vocab[c.Name] = Column(c.Type)
 	}
 	return vocab
@@ -160,13 +164,25 @@ func ParseListSort(ctx context.Context, spec *string, vocab map[string]SortField
 	return sorted, nil
 }
 
+// sortKeyPrefixChars bounds a text sort's key. The cursor carries the last
+// row's key and travels in a URL, so an unbounded one makes a long value's next
+// page unrequestable. The ordering itself uses the bounded key, so the page and
+// its continuation still agree exactly; rows that share this many leading
+// characters order among themselves by the (created_at, id) tie-breaker.
+const sortKeyPrefixChars = 256
+
 // orderExpr is what this sort orders and continues by: the field's own
-// expression, or the column of its name.
+// expression, or the column of its name, cut to sortKeyPrefixChars when it is
+// a single text value (an array or another kind is left whole).
 func (s *ListSort) orderExpr() string {
-	if s.expr != "" {
-		return s.expr
+	expr := s.expr
+	if expr == "" {
+		expr = quoteColumnIdentifier(s.name)
 	}
-	return quoteColumnIdentifier(s.name)
+	if s.kind == fieldcatalog.TypeText || s.kind == fieldcatalog.TypePicklist {
+		return fmt.Sprintf("left(%s, %d)", expr, sortKeyPrefixChars)
+	}
+	return expr
 }
 
 // OrderBy renders the ORDER BY clause: the sort field first (NULLS LAST
