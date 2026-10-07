@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -88,6 +89,28 @@ func TestATechnicalCauseIsNamedWithoutBeingQuoted(t *testing.T) {
 			Op: "/records/" + secretish[2], Status: 503, Class: errors.New("upstream"),
 		},
 		class: "provider_server_error",
+	}, {
+		name:  "a site refusing the read as a bot",
+		cause: fmt.Errorf("site deep read: %w", &webread.StatusError{Status: 403, URL: "https://" + secretish[0] + "/"}),
+		class: "site_refused_the_read",
+	}, {
+		name:  "a site that answers its throttle",
+		cause: &webread.StatusError{Status: 429, URL: "https://" + secretish[0] + "/"},
+		class: "site_refused_the_read",
+	}, {
+		name:  "a page the site no longer has",
+		cause: &webread.StatusError{Status: 404, URL: "https://" + secretish[0] + "/about"},
+		class: "site_page_unreadable",
+	}, {
+		// Not retried by the crawl, so not described as retried here: the site-read
+		// record calls these a client error, and the job says the same.
+		name:  "an answer the crawl does not retry",
+		cause: &webread.StatusError{Status: 401, URL: "https://" + secretish[0] + "/"},
+		class: "site_page_unreadable",
+	}, {
+		name:  "a site that broke",
+		cause: &webread.StatusError{Status: 502, URL: "https://" + secretish[0] + "/"},
+		class: "site_server_error",
 	}} {
 		t.Run(c.name, func(t *testing.T) {
 			got := Fault(c.cause)
