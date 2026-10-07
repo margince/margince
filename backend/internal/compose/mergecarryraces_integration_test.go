@@ -47,7 +47,7 @@ func (c *carryEnv) parkContactMerge(t *testing.T, retired, survivor ids.ContactI
 	t.Helper()
 	ask := c.ask(t, survivor, c.e.Rep1, nil)
 	return c.parkMerge(t, `SELECT 1 FROM intro_request WHERE id = $1 FOR UPDATE`, ask, func() error {
-		_, err := c.contacts.MergeContact(c.admin, retired, survivor)
+		_, err := c.contacts.MergeContact(c.admin, retired, survivor, nil)
 		return err
 	})
 }
@@ -340,7 +340,7 @@ func TestAnAskCompletedWhileTheMergeWaitsIsNotCancelled(t *testing.T) {
 		UPDATE intro_request SET status = 'introduced', introduced_at = now(),
 		       version = version + 1, updated_at = now()
 		 WHERE id = $1`, completing, func() error {
-		_, err := c.contacts.MergeContact(c.admin, retired, survivor)
+		_, err := c.contacts.MergeContact(c.admin, retired, survivor, nil)
 		return err
 	})
 	if err := merge.holder.Commit(context.Background()); err != nil {

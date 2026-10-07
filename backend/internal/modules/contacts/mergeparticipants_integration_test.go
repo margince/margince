@@ -97,7 +97,7 @@ func TestAMergeMovesTheParticipantRowsOntoTheSurvivor(t *testing.T) {
 	e.seedParticipantOn(ctx, t, shared, survivor.ContactID, "cc", "")
 	e.seedParticipantOn(ctx, t, shared, retired.ContactID, "cc", "")
 
-	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID); err != nil {
+	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 

@@ -84,7 +84,7 @@ func TestAMergeCarriesTheDismissalsAReaderAlreadyGave(t *testing.T) {
 		INSERT INTO relationship_nudge_dismissal (contact_id, reader_id, dismissed_until, set_by)
 		VALUES ($1, $2, now() + interval '30 days', 'human:x')`, retired.ContactID, reader)
 
-	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID); err != nil {
+	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -154,7 +154,7 @@ func TestAMergeCarriesOpenWorkAndDropsTheStaleBrief(t *testing.T) {
 		       ($1, $3, 'fp-survivor', '{}'::jsonb, 'deterministic')`,
 		reader, retired.ContactID, survivor.ContactID)
 
-	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID); err != nil {
+	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 

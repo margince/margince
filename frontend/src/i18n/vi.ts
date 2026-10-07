@@ -11457,6 +11457,8 @@ export const vi = {
     "Sự kiện kích hoạt lần chạy này không còn nữa. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
   "worklist.verb.completeFailed": "Không thể hoàn thành nhiệm vụ này.",
+  "worklist.verb.completeStale":
+    "Nhiệm vụ này đã thay đổi kể từ khi bạn mở, nên chưa được hoàn thành ở đây. Danh sách đã được làm mới.",
   "worklist.verb.pin": "Ghim",
   "worklist.verb.pinHint":
     "Đưa mục này lên đầu danh sách của riêng bạn, khi nó còn nằm trong những mục bạn ghim gần đây nhất. Đổi thứ tự của bạn, không đổi mức gấp.",

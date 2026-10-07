@@ -11559,6 +11559,8 @@ export const de = {
     "Der Eintrag wurde nicht als gesehen markiert. Versuche es erneut.",
   "worklist.verb.completeFailed":
     "Die Aufgabe wurde nicht abgeschlossen. Versuche es erneut.",
+  "worklist.verb.completeStale":
+    "Diese Aufgabe hat sich seit dem Öffnen geändert und wurde hier nicht abgeschlossen. Die Liste wurde aktualisiert.",
   "worklist.verb.pin": "Anheften",
   "worklist.verb.pinHint":
     "Setzt den Eintrag an den Anfang deiner Worklist, solange er zu deinen letzten Anheftungen gehört. Die Dringlichkeit bleibt unverändert.",

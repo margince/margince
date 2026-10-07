@@ -18,6 +18,7 @@ import {
   useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
+import { completeFailureKey } from "./taskwritefollowup";
 import {
   BriefAct,
   type BriefAnswer,
@@ -888,10 +889,9 @@ function TaskComplete({
                 },
               }),
             // A rejected PATCH otherwise leaves the button idle with nothing
-            // on screen to say so — the same rendering a click that did
-            // nothing would leave, and the reader has no reason to try again.
-            onError: () =>
-              toast.show(t("worklist.verb.completeFailed"), { tone: "danger" }),
+            // on screen to say so, and the reader has no reason to try again.
+            onError: (error) =>
+              toast.show(t(completeFailureKey(error)), { tone: "danger" }),
           },
         )
       }
