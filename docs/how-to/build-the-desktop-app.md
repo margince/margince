@@ -1,177 +1,164 @@
+<!-- prose:plain -->
 # Build the desktop app
 
-Build the self-contained folder a non-technical user runs on macOS or Windows
-with no Docker and no services to configure: Postgres, the event bus, the api, the
-worker and the SPA, started by one launcher and used in a browser.
+Build the folder that holds everything, for a user who does not write code, on macOS or Windows. It needs no
+Docker and no services to set up. Postgres, the event bus, the API, the worker and the web app start from
+one launcher, and the user works in a browser.
 
-Why it is shaped this way (the custom Postgres, the update contract, why the
-two platforms differ where they do, the known limits) is in
-[explanation/desktop-distribution.md](../explanation/desktop-distribution.md).
+Why it has this shape is in [explanation/desktop-distribution.md](../explanation/desktop-distribution.md).
+That page covers the custom Postgres, the update contract, why the two systems are different where they are,
+and the limits.
 
-## Will it run on my computer?
+## Will it run on this machine?
 
 What a **user** needs. Building it needs more; see the next section.
 
 | | macOS bundle | Windows bundle |
 |---|---|---|
-| **OS** | macOS 13 Ventura or newer | Windows 10 or newer. Server 2016+ shares that kernel and is expected to work, but **is untested**: nothing has launched the bundle there |
-| **Architecture** | Whatever the build machine was; the bundle is **not** universal. An Apple-silicon build does not run on an Intel Mac at all; an Intel build runs on Apple silicon under Rosetta 2. `make desktop-dist` prints which one it produced | x64 only. Windows on ARM has x64 emulation, but no ARM build is produced and none is tested |
-| **Must already be installed** | Nothing | The [Microsoft Visual C++ x64 redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe). Present on most machines, **not** bundled |
-| **Admin rights** | Not needed | Not needed. Running as an administrator also works: `pg_ctl` drops the privileges Postgres refuses to start with |
-| **First-launch warning** | Ad-hoc signed, so a copy downloaded through a browser is quarantined and Gatekeeper refuses it **once**: right-click → **Open**, and the bundle clears the rest itself (see below). Copying by `cp`, USB or AirDrop sets no quarantine and needs none of this | Unsigned, so SmartScreen blocks it: **More info** → **Run anyway** |
-| **Where it is put** | Path must be short: the database socket path has a 103-byte system limit, and the launcher measures it and says so | Anywhere. There is no socket, so no limit |
-| **Browser** | Chrome/Edge 111+, Firefox 114+, or Safari 16.4+ (Safari 16.4 is available back to macOS 11, so it is reachable on every supported version) | Chrome/Edge 111+ or Firefox 114+ |
+| **OS** | macOS 13 Ventura or newer | Windows 10 or newer. Server 2016+ shares that system core and should work, but **is not tested**: no one has started the bundle there |
+| **Chip** | The same as the build machine; the bundle does **not** run on every chip. A build on Apple silicon does not run on an Intel Mac at all. An Intel build runs on Apple silicon under Rosetta 2. `make desktop-dist` prints which one it made | `x64` only. Windows on ARM can run `x64` code, but no ARM build is made and none is tested |
+| **Must already be installed** | Nothing | The Microsoft Visual C++ files in [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe). Most machines have it, but it is **not** in the bundle |
+| **Admin rights** | Not needed | Not needed. Running as an admin also works: `pg_ctl` drops the rights that Postgres refuses to start with |
+| **Warning on first start** | Signed by the build machine only. So a copy from a browser download is marked, and Gatekeeper refuses it **once**. Right-click → **Open**, and the bundle clears the rest itself (see below). A copy made with `cp`, USB or AirDrop is not marked and needs none of this | Not signed, so SmartScreen blocks it: **More info** → **Run anyway** |
+| **Where it is put** | The path must be short. The database socket path has a system limit of 103 bytes, and the launcher measures it and says so | Any folder. There is no socket, so no limit |
+| **Browser** | Chrome or Edge 111+, Firefox 114+, or Safari 16.4+ (Safari 16.4 runs on macOS 11 and later, so every supported version can reach it) | Chrome or Edge 111+, or Firefox 114+ |
 
-The OS floors are enforced: `MACOSX_DEPLOYMENT_TARGET` is pinned to 13.0 and
-**the build fails** if any shipped binary requires newer, so it cannot inherit
-the build machine's macOS. On Windows the floor is PostgreSQL 16's own
-(Windows 10 or newer), which Go and the MSYS2 runtime also share.
+The oldest OS versions are held by the build. `MACOSX_DEPLOYMENT_TARGET` is pinned to 13.0, and **the build
+fails** if any shipped binary needs a newer one. So the bundle cannot take on the macOS version of the build
+machine. On Windows the oldest version is the one PostgreSQL 16 needs (Windows 10 or newer). Go and
+`MSYS2` need the same.
 
-Both need roughly 1 GB free for the folder plus the database, and neither
-writes a single byte outside its own folder: no installer, no registry keys,
-no `~/Library`, no `%APPDATA%`.
+Both need about 1 GB free for the folder and the database. Neither writes a single byte outside its own
+folder: no installer, no registry keys, no `~/Library`, no `%APPDATA%`.
 
 ## Or download one already built
 
-Two places, for two different needs.
+There are two places, for two different needs.
 
-### A release, for a build meant to be kept
+### A release, for a build you keep
 
-The [releases page](https://github.com/margince/margince/releases)
-carries both bundles as assets on every release that was cut with them
-(`margince-macos-<version>.tar.gz` and `margince-windows-<version>.zip`), with
-the first-launch steps in the release notes. Release assets do not expire:
-pick a version, download its build.
+The [releases page](https://github.com/margince/margince/releases) carries both bundles as files on every
+release that was made with them (`margince-macos-<version>.tar.gz` and `margince-windows-<version>.zip`). The
+release notes hold the first-start steps. Release files are kept for good: pick a version, and download its build.
 
-Cutting one is a manual dispatch of the **Release** workflow from the Actions
-tab. Ordinary merges to main do not build desktop bundles, because each one
-compiles Postgres from source and a merge answers no new question about it. A
-downloadable build exists because somebody decided it should.
+To make one, start the **Release** workflow by hand from the Actions tab. A normal merge to main does not
+build desktop bundles. Each bundle builds Postgres from source, and a merge asks no new question about it. A
+build to download exists because someone decided it should.
 
 ### A run artifact, for testing a change
 
-Each platform also has a CI lane that publishes the folder as a run artifact, so
-testing a branch needs no toolchain at all. The runner also proves the lane
-still works, since neither half can be built on the other platform. These expire
-after 14 days.
+Each system also has a CI lane that publishes the folder as a run artifact. So testing a branch needs no build
+tools at all. The lane also proves that it still works, since neither half can be built on the other system.
+These files are removed after 14 days.
 
 | Workflow | Runner | Artifact |
 |---|---|---|
-| `desktop-macos` | `macos-latest` (Apple silicon) | `margince-macos-<sha>`: a **tarball**, because artifact upload does not preserve the executable bit |
-| `desktop-windows` | `windows-latest` (x64) | `margince-windows-<sha>`: a plain folder |
+| `desktop-macos` | `macos-latest` (Apple silicon) | `margince-macos-<sha>`: a **tarball**, because the artifact does not keep the file mode that makes a file run |
+| `desktop-windows` | `windows-latest` (`x64`) | `margince-windows-<sha>`: a plain folder |
 
-Both run automatically when `desktop/**` changes on a pull request, by hand from
-the Actions tab, and as reusable workflows called by **Release** when it is
-cutting a downloadable build. It is the same lane either way, so a release
-bundle cannot differ from the one a pull request was checked against. Download
-from the run page, or:
+Both start on their own when `desktop/**` changes on a pull request. They also run by hand from the Actions tab,
+and as workflows that **Release** calls when it makes a build to download. It is the same lane each time, so a
+release bundle cannot be different from the one a pull request was checked against. Download from the run page,
+or:
 
 ```
 gh run download <run-id> -n margince-macos-<sha>
 tar -xzf margince-macos.tar.gz          # keeps the +x bit and the signatures
 ```
 
-Neither build is signed for distribution, so the first launch still needs the
-Gatekeeper or SmartScreen step below.
+Neither build is signed for release, so the first start still needs the Gatekeeper or SmartScreen step below.
 
 ## What building it needs
 
-**Each platform builds on itself.** Neither half cross-builds: the macOS lane
-compiles Postgres and Valkey with the Xcode tools, and pgvector on Windows has
-no build system other than `nmake` against MSVC.
+**Each system builds on itself.** Neither half builds for the other. The macOS lane builds Postgres and Valkey
+with the Xcode tools. On Windows, pgvector has no build system other than `nmake` against MSVC.
 
 | | Build host | Also needs |
 |---|---|---|
-| macOS | Apple silicon or Intel; the bundle inherits the builder's architecture | Xcode Command Line Tools (`xcode-select --install`), Go, node+pnpm |
-| Windows | x64 | [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with the "Desktop development with C++" workload (for pgvector), [MSYS2](https://www.msys2.org/) with `base-devel gcc` (for the event bus), Go, node+pnpm |
+| macOS | Apple silicon or Intel; the bundle takes the chip of the build machine | Xcode Command Line Tools (`xcode-select --install`), Go, Node and pnpm |
+| Windows | `x64` | [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with the `Desktop development with C++` part (for pgvector), [msys2.org](https://www.msys2.org/) with `base-devel gcc` (for the event bus), Go, Node and pnpm |
 
-## Build it — macOS
+## Build it on macOS
 
 ```
 make desktop
 ```
 
-The result is `build/desktop/margince/` (~128 MB). The first run compiles
-Postgres and pgvector from source and takes about five minutes; later runs
-skip that and finish in seconds, because Postgres changes only when its
-pinned version does.
+The result is `build/desktop/margince/` (about 128 MB). The first run builds Postgres and pgvector from source
+and takes about five minutes. Later runs skip that and finish in seconds, because Postgres changes only when
+its pinned version does.
 
 | Target | What it does |
 |---|---|
-| `make desktop` | The whole folder. Reuses an already-built Postgres and bus |
-| `make desktop-rebuild` | Force everything, including Postgres and the bus |
-| `make desktop-postgres` | Just the relocatable Postgres 16 + pgvector + contrib (~5 min) |
-| `make desktop-valkey` | Just the event bus |
-| `make desktop-app` | Just api/worker/migrate + frontend + launcher |
-| `make desktop-dist` | Just assemble and verify signatures |
-| `make desktop-clean` | Remove `build/desktop/` entirely |
+| `make desktop` | The whole folder. Uses a Postgres and bus that are already built |
+| `make desktop-rebuild` | Builds everything, including Postgres and the bus |
+| `make desktop-postgres` | Only the Postgres 16 that can move between folders, with pgvector and `contrib` (about 5 minutes) |
+| `make desktop-valkey` | Only the event bus |
+| `make desktop-app` | Only `api`, `worker` and `migrate`, the frontend and the launcher |
+| `make desktop-dist` | Only puts the folder together and checks the signatures |
+| `make desktop-clean` | Removes all of `build/desktop/` |
 
-Rerun `make desktop-postgres` after bumping the pinned Postgres or pgvector
-version in `desktop/build/build-postgres.sh`; the checksums are pinned there
-and a mismatch fails the build instead of using a cached tarball.
+Run `make desktop-postgres` again after you change the pinned Postgres or pgvector version in
+`desktop/build/build-postgres.sh`. The checksums are pinned there. A wrong checksum fails the build; it does not
+use a tarball from an earlier run.
 
-## Build it — Windows
+## Build it on Windows
 
-Run this **on Windows**. PowerShell is the entry point because a Windows build
-host is not required to have GNU make:
+Run this **on Windows**. PowerShell is the way in, because a Windows build host does not need GNU make:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File desktop\build\build-windows.ps1
 ```
 
-The result is `build\desktop\margince-windows\`. The first run downloads a
-310 MB PostgreSQL archive and compiles pgvector and Redis; later runs reuse
-both and finish in the time the Go and frontend builds take. Add `-Force` to
-rebuild them anyway.
+The result is `build\desktop\margince-windows\`. The first run downloads PostgreSQL, a file of 310 MB, and
+builds pgvector and Redis. Later runs use both again, and finish in the time the Go and frontend builds take.
+Add `-Force` to build them again anyway.
 
-If `make` and `pwsh` are available, the same lane has wrapper targets:
+If `make` and `pwsh` are there, the same lane has make targets that call the scripts:
 
 | Target | Script | What it does |
 |---|---|---|
-| `make desktop-win` | `build-windows.ps1` | The whole folder. Reuses a staged Postgres and bus |
-| `make desktop-win-rebuild` | `build-windows.ps1 -Force` | Force everything |
-| `make desktop-win-postgres` | `build-postgres.ps1` | Stage PostgreSQL 16, compile pgvector against it (needs MSVC) |
-| `make desktop-win-bus` | `build-bus.ps1` | The event bus: Redis 7.2 built under MSYS2 |
-| `make desktop-win-app` | `build-app.ps1` | api/worker/migrate + frontend + launcher |
-| `make desktop-win-dist` | `build-dist.ps1` | Assemble the folder and verify it runs standalone |
-| `make desktop-clean` | (none) | Remove `build/desktop/` entirely, both platforms |
+| `make desktop-win` | `build-windows.ps1` | The whole folder. Uses a Postgres and bus that are already in place |
+| `make desktop-win-rebuild` | `build-windows.ps1 -Force` | Builds everything |
+| `make desktop-win-postgres` | `build-postgres.ps1` | Puts PostgreSQL 16 in place and builds pgvector against it (needs MSVC) |
+| `make desktop-win-bus` | `build-bus.ps1` | The event bus: Redis 7.2 built under `MSYS2` |
+| `make desktop-win-app` | `build-app.ps1` | `api`, `worker` and `migrate`, the frontend and the launcher |
+| `make desktop-win-dist` | `build-dist.ps1` | Puts the folder together and checks that it runs alone |
+| `make desktop-clean` | (none) | Removes all of `build/desktop/`, for both systems |
 
-The pinned versions and checksums live at the top of each script. A mismatch
-fails the build instead of using a cached download.
+The pinned versions and checksums live at the top of each script. A wrong checksum fails the build; it does not
+use a download from an earlier run.
 
 ## Run it
 
 ### macOS
 
-**Copy the folder somewhere short first.** The database uses a unix socket
-inside the folder, and the path has a 103-byte system limit. The repo's own
-`build/desktop/margince/` is usually past the limit (how far depends on where
-you cloned). The launcher then refuses to start, names the limit and the
-measured length, and tells you to move the folder.
+**Copy the folder to a short path first.** The database uses a socket file inside the folder, and the path has a
+system limit of 103 bytes. The repository's own `build/desktop/margince/` is in most cases past the limit (by how much
+depends on where you put the repository). The launcher then refuses to start. It names the limit and the measured length,
+and tells you to move the folder.
 
 ```
 cp -R build/desktop/margince ~/Margince
 cd ~/Margince && ./margince
 ```
 
-Or double-click **Start Margince.command** in Finder, which is what a
-non-technical user does.
+Or click twice on `Start Margince.command` in Finder, which is what a user who does not write code does.
 
-**A downloaded copy warns once.** The build is ad-hoc
-signed (Developer ID signing and notarization need a paid Apple account), so
-Gatekeeper refuses it: right-click → **Open** → **Open**, or approve it in
-System Settings → Privacy & Security.
+**A downloaded copy warns once.** The build is signed by the build machine only, because Developer ID signing
+and notarization need an Apple account that costs money. So Gatekeeper refuses it: right-click → **Open** → **Open**, or
+approve it in System Settings → Privacy & Security.
 
-It warns once for the whole bundle. The browser marks the download, the
-unarchiver copies that mark onto everything it extracts, and Gatekeeper asks
-when a program is *executed*. An untreated bundle would put a separate dialog in
-front of `initdb`, `postgres`, `valkey-server`, `migrate`, `api` and `worker` as
-the stack comes up, each one blocking the boot. The starter clears the mark from
-the launcher, and the launcher clears it from `runtime/` before it spawns
-anything, which leaves the single dialog above. Neither touches `data/`.
+It warns once for the whole bundle. The browser marks the download, and the tool that opens the download copies that
+mark to every file it takes out. Gatekeeper asks when a program is *run*.
 
-A copy that never went through a browser (`cp`, a USB stick, AirDrop) is not
-marked and shows nothing. To clear an already-downloaded folder yourself:
+Without help, a bundle would show a separate
+dialog for `initdb`, `postgres`, `valkey-server`, `migrate`, `api` and `worker` as the stack comes up. Each one
+would block the start. The starter clears the mark from the launcher, and the launcher clears it from
+`runtime/` before it starts anything. That leaves the single dialog above. Neither touches `data/`.
+
+A copy that never passed through a browser (`cp`, USB, AirDrop) has no mark and shows nothing. To clear a
+folder you already downloaded, run:
 
 ```
 xattr -dr com.apple.quarantine ~/Margince/runtime
@@ -179,55 +166,49 @@ xattr -dr com.apple.quarantine ~/Margince/runtime
 
 ### Windows
 
-There is no socket and so no path limit; copy the folder anywhere:
+There is no socket, so there is no path limit; copy it to any folder:
 
 ```powershell
 Copy-Item -Recurse build\desktop\margince-windows $HOME\Margince
 & $HOME\Margince\margince.exe
 ```
 
-Or double-click **Start Margince.cmd**, which opens it in its own window.
-**The first launch shows a SmartScreen warning**: the build is unsigned, and
-Authenticode signing needs a purchased certificate. "More info" → "Run anyway".
+Or click twice on `Start Margince.cmd`, which runs it in its own command prompt. **The first start shows a
+SmartScreen warning**: the build is not signed, and Authenticode signing needs a certificate that costs money. "More info"
+→ "Run anyway".
 
-### Either way
+### On both systems
 
-It prints the address, opens the browser and runs until Ctrl-C. The first
-launch generates the configuration, initialises the database and applies the
-whole migration history, so it takes a few seconds longer than later ones.
+It prints the address, opens the browser, and runs until Ctrl-C. The first start makes the settings, sets up
+the database and applies the whole migration history. So it takes some seconds longer than later starts.
 
-It prints the sign-in email and, **on the first launch only**, the generated
-password. Later launches point at `data/admin-password`, which is the only
-copy.
+It prints the sign-in email and, **on the first start only**, the generated password. Later starts point at
+`data/admin-password`, which is the only copy.
 
-## Configure it
+## Set it up
 
-Everything optional is off by default. Turn features on in `margince.env`
-next to the launcher. The first run generates it with every supported setting
-documented and commented out. It doubles as the reference for what exists:
-Gmail/Outlook capture, outbound webhooks, log level, the port, and the
-credentials that drive the AI surfaces.
+Every feature you can add is off by default. Turn features on in `margince.env`, next to the launcher. The first
+run writes that file with every supported setting written out and turned off in a comment. So it is also the
+list of what exists. That is Gmail and Outlook capture, outbound webhooks, log level, the port, and the keys
+that run the AI features.
 
-Attachments and company logos are **not** in that list: they already work.
-The launcher keeps their bytes in `data/blobs` inside the folder, with the
-database and the rest of the user's records, so an update leaves them alone. Set
-`MARGINCE_BLOBSTORE_PATH` to move them elsewhere, or
-`MARGINCE_BLOBSTORE_ENDPOINT` to keep them in an S3-compatible service instead;
-the endpoint takes precedence when both are set. No S3 server is bundled and
-none is needed.
+Attachments and company logos are **not** in that list: they already work. The launcher keeps their bytes in
+`data/blobs` inside the folder, with the database and the rest of the user's records. So an update leaves them
+alone.
 
-A **backup** is `data/` plus wherever the objects are. Left at the default
-they are inside `data/`, so a copy of that directory is the whole installation's
-records. Point `MARGINCE_BLOBSTORE_PATH` somewhere else and a copy of `data/` is
-a database whose attachment rows name bytes it does not contain.
-`margince.yaml` and `margince.env` sit beside `data/` and are part of a restore
-too: they are not regenerated, and `margince.yaml` decides the company this
-database belongs to.
+Set `MARGINCE_BLOBSTORE_PATH` to move them to another place. Or set `MARGINCE_BLOBSTORE_ENDPOINT` to keep
+them in a service that works like `S3`. The endpoint comes first when both are set. No `S3` server comes in the
+bundle, and none is needed.
 
-A local store lacks what a service gives: no replication, no versioning, no
-signed URLs, and no sharing between machines of its own. Put the directory on a
-mount two machines see and they see the same bytes, but nothing here arranges
-that or keeps them consistent. For one user's installation that is enough; for
+**To back up**, copy `data/` and the place where the objects are. At the default they are inside `data/`, so a copy
+of that folder is all the records of the installation. If you point `MARGINCE_BLOBSTORE_PATH` to another place,
+a copy of `data/` is a database whose attachment rows name bytes it does not hold. `margince.yaml` and
+`margince.env` are beside `data/` and are part of a restore too. They are not made again, and `margince.yaml`
+decides which company this database is for.
+
+A local store does not give what a service gives. It keeps no copies on other servers and no versions. It has
+no signed links, and no sharing between machines of its own. Put the folder where two machines can see it, and
+they see the same bytes. But nothing here sets that up or keeps them in step. For one user's installation that is enough; for
 anything more, set the endpoint.
 
 ```
@@ -236,35 +217,29 @@ ANTHROPIC_API_KEY=sk-ant-...
 MARGINCE_PORT=8801
 ```
 
-Restart to apply. A malformed line refuses the start and names the file and
-line instead of being skipped. Field reference:
-[reference/configuration.md](../reference/configuration.md).
+Start it again to apply. A bad line stops the start and names the file and line; it is never skipped. Field
+reference: [reference/configuration.md](../reference/configuration.md).
 
-Company name, currency and timezone live in `margince.yaml`. Both files are
-created once and never overwritten, so your edits survive a restart and an
-update.
+Company name, currency and time zone live in `margince.yaml`. Both files are made once and never written over,
+so your edits stay when you start it again and when you update.
 
-**On Windows, check the timezone.** Windows records its own zone identifier
-instead of the IANA name this field takes. A Windows installation is therefore
-created as `UTC`, and the value is yours to correct once.
+**On Windows, check the time zone.** Windows records its own zone name, not the IANA name this field takes. So a
+Windows installation is made with `UTC`, and you must correct the value once.
 
-For a real model, open **Settings → AI** in the running app: bind each tier, and
-put the provider's key under **Model provider keys**. Both halves are needed: a
-key with no tier bound to its vendor changes nothing. A servable stored binding
-outranks the launcher's offline fake, so it takes effect without a restart,
-within the routing refresh interval, and there is no file to place. See
+For a real model, open **Settings → AI** in the running app. Bind each tier, and put the provider's key under
+**Model provider keys**. You need both: a key for a provider that no tier uses changes nothing. A stored binding that
+can serve comes before the stand-in model of the launcher. So it works without a new start, within the
+time the routes take to read it, and there is no file to place. See
 [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md).
 
 ## Update an installation
 
-Replace **the launcher, the starter script, and `runtime/`**. Leave
-`margince.yaml`, `margince.env` and `data/` alone: they are the user's, and
-`data/` is the database.
+Replace **the launcher, the starter script, and `runtime/`**. Leave `margince.yaml`, `margince.env` and
+`data/` alone: they are the user's, and `data/` is the database.
 
-**Quit it first**, so nothing is holding the database while its binaries are
-swapped. Then delete `runtime/` before copying the new one. Copying over the
-top leaves behind any file the new version dropped, and a stale library beside
-a new binary is a failure with no obvious cause.
+**Quit it first**, so nothing holds the database while its binaries change. Then delete `runtime/` before you
+copy the new one. A copy over the top leaves behind any file the new version dropped. An old library file beside
+a new binary is a failure with no clear cause.
 
 ```
 # macOS
@@ -282,8 +257,7 @@ Copy-Item -Force build\desktop\margince-windows\margince.exe $HOME\Margince\
 Copy-Item -Force "build\desktop\margince-windows\Start Margince.cmd" $HOME\Margince\
 ```
 
-An update replaces only those three things. Replacing the whole folder would
-destroy the records.
+An update replaces only those three things. If you replace the whole folder, you erase the records.
 
 ## Start over
 
@@ -295,31 +269,29 @@ rm -rf ~/Margince/data ~/Margince/margince.yaml ~/Margince/margince.env
 Remove-Item -Recurse -Force $HOME\Margince\data, $HOME\Margince\margince.yaml, $HOME\Margince\margince.env
 ```
 
-The next launch bootstraps a fresh installation with a new password. To
-remove everything, delete the folder; nothing is stored outside it.
+The next start sets up a new installation with a new password. To remove everything, delete the folder; nothing
+is stored outside it.
 
 ## When something goes wrong
 
-Logs are in `data/logs/`: `api.log`, `worker.log`, `postgres.log`, `bus.log`.
-The launcher's own output covers startup and shutdown only; each service
-writes its own file.
+Logs are in `data/logs/`: `api.log`, `worker.log`, `postgres.log`, `bus.log`. The output of the launcher covers
+start and stop only; each service writes its own file.
 
-| Symptom | Cause |
+| What you see | Cause |
 |---|---|
-| "the installation folder is too deeply nested" | macOS only: the socket path exceeds 103 bytes. Move the folder closer to your home directory |
-| "address already in use" | Another program holds the port, or a previous instance is still running. Quit it, or set `MARGINCE_PORT` |
-| "expected KEY=value" | A malformed line in `margince.env`, named with its line number |
-| "a database from a previous session is still running" | Windows: a launcher was killed without stopping Postgres and the stray could not be stopped. Sign out and back in |
-| Windows SmartScreen blocks the first launch | The build is unsigned. "More info" → "Run anyway" |
-| Windows: "VCRUNTIME140.dll was not found" | The [Microsoft Visual C++ redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) is not installed, and the bundle does not include it |
-| Attachments or logos fail | No object storage. Set `MARGINCE_BLOBSTORE_*` |
-| AI answers look canned | Nothing is bound, or the bound vendor holds no key, so the offline fake is driving the AI surfaces. Open **Settings → AI**: bind each tier, and put the vendor's key in under **Model provider keys** |
-| "no licence is configured and this installation is production" | `MARGINCE_ENV` was set to `production` in `margince.env` without a `MARGINCE_LICENSE` beside it. Supply the token, or remove the override and let the default `dev` posture stand |
-| Dates and times look wrong on Windows | The first run defaulted to `UTC`. Set `timezone` in `margince.yaml` |
+| `"the installation folder is too deeply nested"` | macOS only: the socket path is over 103 bytes. Move the folder to a shorter path in your home folder |
+| `"address already in use"` | Another program holds the port, or a copy from before is still running. Quit it, or set `MARGINCE_PORT` |
+| `"expected KEY=value"` | A bad line in `margince.env`, named with its line number |
+| `"a database from a previous session is still running"` | Windows: a launcher was ended before it stopped Postgres, and the Postgres it left behind could not be stopped. Sign out and back in |
+| Windows SmartScreen blocks the first start | The build is not signed. "More info" → "Run anyway" |
+| Windows: `"VCRUNTIME140.dll was not found"` | The Microsoft Visual C++ files in [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe) are not installed, and the bundle does not include it |
+| Attachments or logos fail | No object store. Set `MARGINCE_BLOBSTORE_*` |
+| AI answers look canned | No tier has a model, or the provider of that model has no key. So the stand-in model of the launcher runs the AI features. Open **Settings → AI**: bind each tier, and put the provider's key under **Model provider keys** |
+| `"no licence is configured and this installation is production"` | `MARGINCE_ENV` was set to `production` in `margince.env` with no `MARGINCE_LICENSE` beside it. Give the token, or remove that line so the default `dev` mode applies |
+| Dates and times look wrong on Windows | The first run set the time zone to `UTC`. Set `timezone` in `margince.yaml` |
 
-To stop a stuck instance, find it by the port it listens on instead of by
-name. On macOS it is started as `./margince`, so a `pkill -f` on the full path
-will not match it. **Substitute your own port** if `margince.env` sets
+To stop a copy that does not stop, find it by its port, not by its name. On macOS it starts as
+`./margince`, so a `pkill -f` on the full path does not match it. **Use your own port** if `margince.env` sets
 `MARGINCE_PORT`; 8800 is only the default.
 
 ```
