@@ -94,6 +94,7 @@ func TestDailyUseBudgets(t *testing.T) {
 	measurements := make([]BudgetMeasurement, 0, len(rows))
 	results := make([]DailyResult, 0, len(rows))
 	for _, row := range applySampleFloor(rows) {
+		row.Measurement.Allowed5xx = row.Result.Status5xx > 0 && allows5xx(row.Result.Flow, row.Result.Row)
 		if scale != 1 {
 			row.Measurement.Caveat = fmt.Sprintf("development scale %g", scale)
 		}

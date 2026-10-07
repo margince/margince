@@ -91,6 +91,7 @@ type measurement struct {
 	Verdict       string  `json:"verdict,omitempty"`
 	KnownIssue    int     `json:"known_issue,omitempty"`
 	Status5xx     int     `json:"status_5xx,omitempty"`
+	Allowed5xx    bool    `json:"allowed_5xx,omitempty"`
 	Status422     int     `json:"status_422,omitempty"`
 	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
 	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`

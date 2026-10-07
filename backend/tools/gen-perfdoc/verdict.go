@@ -40,8 +40,11 @@ type judgement struct {
 // judge reads a stored verdict when the bench wrote one and computes it from
 // the numbers otherwise, so a record written before verdicts were stored
 // renders as it always did.
+//
+// A server error is a failure unless the bench marked it allowed on a row it
+// recorded against a known issue; only then does the issue's verdict stand.
 func judge(m measurement) judgement {
-	if m.Status5xx > 0 {
+	if m.Status5xx > 0 && (!m.Allowed5xx || m.Verdict != storedOverKnown) {
 		return judgement{fmt.Sprintf("**FAILED**: %d server errors", m.Status5xx), sevFailed}
 	}
 	switch m.Verdict {

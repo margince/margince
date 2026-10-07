@@ -109,8 +109,10 @@ An over-budget row fails the run. If an open issue already tracks it, add an ent
 table: the flow and the issue number, plus the row name when only that row is slow. An entry naming a row
 covers that row alone, and the flow's other rows are still judged; an entry without one covers every row
 of the flow. The run then records "over budget" against that issue and passes. When everything an entry
-covers comes back within budget for every seat at full scale, the run fails and asks you to remove the
-entry. Any 5xx fails the run, and a 422 is allowed only on a flow listed for it.
+covers comes back at or under 80% of its budget for every seat at full scale, the run fails and asks you
+to remove the entry. The margin keeps a row near the line from flipping between the two each run. A 5xx
+fails the run unless the entry covering its row sets `Allow5xx`, which is rare and kept for an issue whose
+evidence shows the server errors as its own symptom. A 422 is allowed only on a flow listed for it.
 
 ## 6. Know what each pass catches
 

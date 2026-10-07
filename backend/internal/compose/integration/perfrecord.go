@@ -108,9 +108,12 @@ type BudgetMeasurement struct {
 	Seat string `json:"seat,omitempty"`
 	Flow string `json:"flow,omitempty"`
 	// Verdict is a DailyVerdict string; gen-perfdoc refuses any other value.
-	Verdict       string  `json:"verdict,omitempty"`
-	KnownIssue    int     `json:"known_issue,omitempty"`
-	Status5xx     int     `json:"status_5xx,omitempty"`
+	Verdict    string `json:"verdict,omitempty"`
+	KnownIssue int    `json:"known_issue,omitempty"`
+	Status5xx  int    `json:"status_5xx,omitempty"`
+	// Allowed5xx marks server errors a known issue lists as its own symptom;
+	// the gate let them pass, so the page reads them against that issue.
+	Allowed5xx    bool    `json:"allowed_5xx,omitempty"`
 	Status422     int     `json:"status_422,omitempty"`
 	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
 	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`

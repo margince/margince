@@ -298,7 +298,7 @@ func morningLoadRow(m morningLoad) dailyRow {
 		Measurement: row,
 		Result: DailyResult{
 			Flow: "morning_load", Row: "morning_load_cheap_route", Seat: "team", Verdict: verdict, Issue: issue,
-			Status5xx: m.S5xx, Status422: m.S422,
+			Status5xx: m.S5xx, Status422: m.S422, P95: m.CheapP95, Budget: Load1Budget,
 		},
 	}
 }

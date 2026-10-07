@@ -121,3 +121,21 @@ func TestThousandsAreGroupedInThrees(t *testing.T) {
 		}
 	}
 }
+
+func TestAnAllowedServerErrorOnAListedRowRendersAgainstItsIssue(t *testing.T) {
+	burst := measurement{
+		Name: "morning_load_cheap_route", Flow: "morning_load", Seat: "team", P95Ms: 700, BudgetMs: 150, Samples: 40,
+		Verdict: storedOverKnown, KnownIssue: 7068, Status5xx: 1, Allowed5xx: true,
+	}
+	if got := verdict(burst); got != "over budget (#7068)" {
+		t.Errorf("budgets page verdict %q, want the listed issue, not a failure", got)
+	}
+	if got := dailyNotes(burst); !strings.Contains(got, "1 server errors") {
+		t.Errorf("notes %q; the server errors must still be counted", got)
+	}
+	unallowed := burst
+	unallowed.Allowed5xx = false
+	if got := verdict(unallowed); got != "**FAILED**: 1 server errors" {
+		t.Errorf("verdict %q; a 5xx no entry allows must still read as a failure", got)
+	}
+}
