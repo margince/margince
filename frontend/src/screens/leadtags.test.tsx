@@ -10,6 +10,7 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { LEAD_LIST_KEY } from "./leadkeys";
 import { LeadsScreen } from "./leads";
 import { jsonResponse } from "./story-utils";
 import { useApplyTag } from "./tags.queries";
@@ -63,7 +64,7 @@ describe("a lead's tags", () => {
   it("leave the lead list stale once one is applied, so its chips redraw", async () => {
     vi.stubGlobal("fetch", async () => jsonResponse({}, 201));
     const client = new QueryClient();
-    client.setQueryData(["leads", { q: "" }], { data: [] });
+    client.setQueryData([...LEAD_LIST_KEY, { q: "" }], { data: [] });
     const wrapper = ({ children }: Readonly<{ children: ReactNode }>) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
@@ -73,8 +74,8 @@ describe("a lead's tags", () => {
 
     await act(() => result.current.mutateAsync(TAG_A));
 
-    expect(client.getQueryState(["leads", { q: "" }])?.isInvalidated).toBe(
-      true,
-    );
+    expect(
+      client.getQueryState([...LEAD_LIST_KEY, { q: "" }])?.isInvalidated,
+    ).toBe(true);
   });
 });
