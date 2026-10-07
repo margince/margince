@@ -122,6 +122,7 @@ func (e *DuplicateContactLeadError) Error() string {
 	return "a live lead is already worked from this contact"
 }
 
+// Is maps the refusal onto the shared conflict sentinel, as its siblings do.
 func (e *DuplicateContactLeadError) Is(target error) bool { return target == apperrors.ErrConflict }
 
 // ensureContactNotWorked is the contact key's refusal. A contact with no email

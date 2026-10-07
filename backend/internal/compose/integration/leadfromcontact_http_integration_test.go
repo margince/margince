@@ -109,7 +109,7 @@ func TestAContactWithoutAnAddressIsWorkedThroughOneLead(t *testing.T) {
 	if first.FromContactID != dana {
 		t.Fatalf("the lead records from_contact_id %q, want the contact %q", first.FromContactID, dana)
 	}
-	assertContactLeadRefused(t, e, "a retried create", func() int {
+	assertContactLeadRefused(t, "a retried create", func() int {
 		var refusal problemWithExisting
 		status := e.Call(t, "POST", "/v1/leads", AnyMap{"contact_id": dana, "source": "manual"}, nil, &refusal)
 		return refusal.check(t, status, first.ID)
@@ -134,7 +134,7 @@ func TestAContactWithoutAnAddressIsWorkedThroughOneLead(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/leads", AnyMap{"contact_id": dana, "source": "manual"}, nil, &second); status != http.StatusCreated {
 		t.Fatalf("a lead from the contact after the first was closed = %d, want 201", status)
 	}
-	assertContactLeadRefused(t, e, "reopening the closed lead", func() int {
+	assertContactLeadRefused(t, "reopening the closed lead", func() int {
 		var refusal problemWithExisting
 		status := e.Call(t, "POST", "/v1/leads/"+first.ID+"/reopen", AnyMap{}, nil, &refusal)
 		return refusal.check(t, status, second.ID)
@@ -149,7 +149,7 @@ func TestAContactWithoutAnAddressIsWorkedThroughOneLead(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/leads", AnyMap{"contact_id": dana, "source": "manual"}, nil, &third); status != http.StatusCreated {
 		t.Fatalf("a lead from the contact after the second was promoted = %d, want 201", status)
 	}
-	assertContactLeadRefused(t, e, "demoting the promoted lead", func() int {
+	assertContactLeadRefused(t, "demoting the promoted lead", func() int {
 		var refusal problemWithExisting
 		status := e.Call(t, "POST", "/v1/leads/"+second.ID+"/demote", AnyMap{"reason": "qualified too early"}, nil, &refusal)
 		return refusal.check(t, status, third.ID)
@@ -171,7 +171,7 @@ func (p problemWithExisting) check(t *testing.T, status int, want string) int {
 	return status
 }
 
-func assertContactLeadRefused(t *testing.T, e *apptest.AppEnv, what string, call func() int) {
+func assertContactLeadRefused(t *testing.T, what string, call func() int) {
 	t.Helper()
 	if status := call(); status != http.StatusConflict {
 		t.Fatalf("%s = %d, want 409 naming the live lead", what, status)
