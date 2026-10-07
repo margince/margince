@@ -10,6 +10,9 @@
 -- The added clause is relstrength.NotCalledOffSQL("a") verbatim, in every arm,
 -- held there by backend/gates/lastactivitymeetingrule_test.go. A booked meeting
 -- still counts, whenever it is dated, as it does for contact strength.
+--
+-- Stored values are refolded by 1791342035, in its own transaction, so the
+-- trigger swap's lock on activity is not held while every record is visited.
 SET LOCAL lock_timeout = '3s';
 
 CREATE OR REPLACE FUNCTION last_activity_of_deal(did uuid) RETURNS timestamptz
@@ -86,32 +89,3 @@ CREATE TRIGGER activity_last_activity
 	   OR old.kind IS DISTINCT FROM new.kind
 	   OR old.meeting_status IS DISTINCT FROM new.meeting_status)
 	EXECUTE FUNCTION trg_activity_last_activity();
-
--- Through move_last_activity, so a clock move bumps no version and stamps no
--- updated_at. Only records whose value moves are written, in id order.
-DO $$
-DECLARE
-  r record;
-BEGIN
-  FOR r IN
-    SELECT id FROM deal
-     WHERE last_activity_at IS DISTINCT FROM last_activity_of_deal(id)
-     ORDER BY id
-  LOOP
-    PERFORM move_last_activity('deal'::regclass, r.id);
-  END LOOP;
-  FOR r IN
-    SELECT id FROM contact
-     WHERE last_activity_at IS DISTINCT FROM last_activity_of_contact(id)
-     ORDER BY id
-  LOOP
-    PERFORM move_last_activity('contact'::regclass, r.id);
-  END LOOP;
-  FOR r IN
-    SELECT id FROM company
-     WHERE last_activity_at IS DISTINCT FROM last_activity_of_company(id)
-     ORDER BY id
-  LOOP
-    PERFORM move_last_activity('company'::regclass, r.id);
-  END LOOP;
-END $$;

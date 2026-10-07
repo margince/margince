@@ -1,7 +1,8 @@
 -- Reverse of the up migration: a called-off meeting counts toward
 -- last_activity_at on deals, contacts and companies again, and the trigger
--- stops firing on kind and meeting_status. Stored values are refolded under
--- the restored rule.
+-- stops firing on kind and meeting_status. Stored values stay as 1791342035
+-- left them and refold under the restored rule as each record's activities
+-- next change.
 SET LOCAL lock_timeout = '3s';
 
 CREATE OR REPLACE FUNCTION last_activity_of_deal(did uuid) RETURNS timestamptz
@@ -68,30 +69,3 @@ CREATE TRIGGER activity_last_activity
 	   OR old.audience IS DISTINCT FROM new.audience
 	   OR old.origin IS DISTINCT FROM new.origin)
 	EXECUTE FUNCTION trg_activity_last_activity();
-
-DO $$
-DECLARE
-  r record;
-BEGIN
-  FOR r IN
-    SELECT id FROM deal
-     WHERE last_activity_at IS DISTINCT FROM last_activity_of_deal(id)
-     ORDER BY id
-  LOOP
-    PERFORM move_last_activity('deal'::regclass, r.id);
-  END LOOP;
-  FOR r IN
-    SELECT id FROM contact
-     WHERE last_activity_at IS DISTINCT FROM last_activity_of_contact(id)
-     ORDER BY id
-  LOOP
-    PERFORM move_last_activity('contact'::regclass, r.id);
-  END LOOP;
-  FOR r IN
-    SELECT id FROM company
-     WHERE last_activity_at IS DISTINCT FROM last_activity_of_company(id)
-     ORDER BY id
-  LOOP
-    PERFORM move_last_activity('company'::regclass, r.id);
-  END LOOP;
-END $$;
