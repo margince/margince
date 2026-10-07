@@ -1410,15 +1410,16 @@ describe("LeadsScreen — rich create (P-15)", () => {
       }
       return emptyPage();
     });
+    const user = userEvent.setup();
     render(<LeadsScreen />);
-    await userEvent.click(await screen.findByTestId("new-record"));
+    await user.click(await screen.findByTestId("new-record"));
     const form = within(screen.getByRole("dialog"));
-    await userEvent.type(form.getByLabelText("Full name *"), "Otto Fischer");
-    await userEvent.type(form.getByLabelText("Email"), "otto@example.test");
+    await user.type(form.getByLabelText("Full name *"), "Otto Fischer");
+    await user.type(form.getByLabelText("Email"), "otto@example.test");
     const linkedin = "https://linkedin.com/in/otto";
-    await userEvent.type(form.getByLabelText("LinkedIn URL"), linkedin);
-    await userEvent.type(form.getByLabelText("Company"), "Otto Fischer GmbH");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await user.type(form.getByLabelText("LinkedIn URL"), linkedin);
+    await user.type(form.getByLabelText("Company"), "Otto Fischer GmbH");
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toMatchObject({

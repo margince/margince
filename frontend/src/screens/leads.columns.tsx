@@ -1,7 +1,7 @@
 // The lead table's columns. The company has a column of its own rather than a
 // caption behind the name: a queue of hundreds of leads is worked company by
-// company, so the company has to be readable, sortable and never truncated by a
-// long name.
+// company, so the company has to be readable and sortable, and a long name in
+// front of it can no longer push it off the row.
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { CellStrip, type ListColumn } from "../design-system/listtable";
@@ -52,7 +52,12 @@ export function leadColumns(
     {
       key: "company",
       header: t("create.companyName"),
-      cell: (lead: Lead) => <span>{lead.company_name ?? ""}</span>,
+      // The full name on hover: the table ellipsizes every cell alike.
+      cell: (lead: Lead) => (
+        <span title={lead.company_name ?? undefined}>
+          {lead.company_name ?? ""}
+        </span>
+      ),
       sort: "company_name",
     },
     {
