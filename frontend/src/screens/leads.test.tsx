@@ -1412,20 +1412,19 @@ describe("LeadsScreen — rich create (P-15)", () => {
     });
     render(<LeadsScreen />);
     await userEvent.click(await screen.findByTestId("new-record"));
-    await userEvent.type(screen.getByLabelText("Full name *"), "Otto Fischer");
-    await userEvent.type(screen.getByLabelText("Email"), "otto@example.test");
-    await userEvent.type(
-      screen.getByLabelText("LinkedIn URL"),
-      "https://linkedin.com/in/otto",
-    );
-    await userEvent.type(screen.getByLabelText("Company"), "Otto Fischer GmbH");
+    const form = within(screen.getByRole("dialog"));
+    await userEvent.type(form.getByLabelText("Full name *"), "Otto Fischer");
+    await userEvent.type(form.getByLabelText("Email"), "otto@example.test");
+    const linkedin = "https://linkedin.com/in/otto";
+    await userEvent.type(form.getByLabelText("LinkedIn URL"), linkedin);
+    await userEvent.type(form.getByLabelText("Company"), "Otto Fischer GmbH");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toMatchObject({
       full_name: "Otto Fischer",
       email: "otto@example.test",
-      linkedin_url: "https://linkedin.com/in/otto",
+      linkedin_url: linkedin,
       company_name: "Otto Fischer GmbH",
       owner_id: "u-9",
       source: "manual",

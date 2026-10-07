@@ -53,7 +53,7 @@
 2420 frontend/src/screens/deals.test.tsx
 2703 frontend/src/screens/compose.tsx
 2170 frontend/src/screens/settings.tsx
-2727 frontend/src/screens/leads.test.tsx
+2726 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
 3195 frontend/src/screens/deals.tsx
 512 frontend/src/design-system/relationshipmap.tsx
@@ -77,7 +77,7 @@
 607 frontend/src/screens/knowledge.tsx
 618 frontend/src/screens/onboarding-connect-panels.tsx
 625 frontend/src/screens/retention.tsx
-624 frontend/src/screens/leads.list.tsx
+521 frontend/src/screens/leads.list.tsx
 617 frontend/src/screens/partners.tsx
 661 frontend/src/screens/record360/citations.tsx
 529 frontend/src/screens/contractform.tsx
