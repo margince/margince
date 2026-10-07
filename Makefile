@@ -1282,7 +1282,7 @@ comment-density:
 test-comment-budget:
 	@./scripts/test-check-comment-budget.sh
 ## comment-prose — every comment line a change adds meets the docs prose bar:
-## no em-dash habit, none of the over-used words, no capitals for emphasis.
+## no em dashes, none of the over-used words, no capitals for emphasis.
 comment-prose:
 	@./scripts/check-comment-prose.sh
 ## test-comment-prose — prove the prose gate fails each tell and honours each exemption.

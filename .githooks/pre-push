@@ -100,6 +100,9 @@ if [[ -n "$lane_paths" ]]; then
 	fi
 fi
 
+# Comment prose reads TypeScript too, so it runs before the Go-only early exit.
+"$root/scripts/check-comment-prose.sh"
+
 # Changed-and-still-present Go files, excluding generated code. extensions/,
 # fixtures/ and desktop/ are each their own module and would otherwise escape the
 # bar entirely — a first-party unit ships the same product as backend/, and the
@@ -129,7 +132,6 @@ fi
 # they explain. It sits beside the craft gate because it holds the one thing
 # that gate's ceilings deliberately do not count.
 "$root/scripts/check-comment-budget.sh"
-"$root/scripts/check-comment-prose.sh"
 
 # The whole-tree deterministic gates that are cheap enough to run on every
 # push (sub-second greps): catch an RLS-bypassing store statement or a

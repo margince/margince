@@ -116,7 +116,7 @@ Kubernetes, React, Go and Terraform each stay under 1,000 words.
 
 ## Comments in code
 
-A comment line that a change adds to Go or TypeScript meets the same bar as a page: no em-dash habit, none
+A comment line that a change adds to Go or TypeScript has no em dashes, none
 of the banned words, no capitals for emphasis, no "X is not Y. It is Z." and no change history.
 `make comment-prose` checks the diff against `origin/main` in the pre-push hook and in CI. Comments a change
 does not touch are left alone, so the tree improves file by file. Directives such as `//go:build` and
