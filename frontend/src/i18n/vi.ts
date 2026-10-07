@@ -9605,6 +9605,7 @@ export const vi = {
   "capturePurge.done": "Đóng",
   "capturePurge.failed":
     "Việc xóa chưa hoàn tất. Một số thư có thể đã bị xóa vĩnh viễn. Hãy kiểm tra lại xem còn lại những gì.",
+  "capturePurge.refused": "Việc xóa bị từ chối nên chưa có gì bị hủy.",
   "capturePurge.wouldDestroy_one": "{count} thư sẽ bị xóa vĩnh viễn.",
   "capturePurge.wouldDestroy_other": "{count} thư sẽ bị xóa vĩnh viễn.",
   "capturePurge.destroyed_one": "Đã xóa vĩnh viễn {count} thư.",
