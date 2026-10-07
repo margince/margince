@@ -18,8 +18,8 @@ import (
 func TestALeadCarriesATagAndTheListNarrowsToIt(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	tagged := createTaggableLead(t, e, "Anna Example", "Northwind Traders")
-	untagged := createTaggableLead(t, e, "Ben Sample", "Contoso Ltd")
+	tagged := createQuickFindLead(t, e, "Anna Example", "Northwind Traders")
+	untagged := createQuickFindLead(t, e, "Ben Sample", "Contoso Ltd")
 
 	var tag struct {
 		ID string `json:"id"`
@@ -76,18 +76,4 @@ func TestALeadCarriesATagAndTheListNarrowsToIt(t *testing.T) {
 			t.Fatalf("tag_id%s row tags = %+v, want the applied tag", sort, page.Data[0].Tags)
 		}
 	}
-}
-
-func createTaggableLead(t *testing.T, e *apptest.AppEnv, name, company string) string {
-	t.Helper()
-	var lead struct {
-		ID string `json:"id"`
-	}
-	status := e.Call(t, "POST", "/v1/leads", AnyMap{
-		"full_name": name, "company_name": company, "source": "manual",
-	}, nil, &lead)
-	if status != http.StatusCreated {
-		t.Fatalf("create lead %q = %d", name, status)
-	}
-	return lead.ID
 }
