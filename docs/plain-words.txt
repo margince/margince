@@ -1,4 +1,4 @@
-# General words the root, index and other plain pages may use; base forms, sorted. See docs/reference/docs-prose-style.md#plain-pages. Cap: 999.
+# General words the root, index and other plain pages may use; sorted, and a listed word also covers its regular forms. See docs/reference/docs-prose-style.md#plain-pages. Cap: 999.
 a
 about
 above
@@ -6,6 +6,7 @@ accept
 access
 account
 accountable
+act
 action
 add
 admin

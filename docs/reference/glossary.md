@@ -8,7 +8,6 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 
 | Term | Meaning |
 |---|---|
-| Act | Part of a law's name, as in the EU Cyber Resilience Act. |
 | AI | Artificial intelligence: the language models Margince calls. |
 | Apache | The Apache License 2.0, which each release becomes after two years. |
 | API | The HTTP interface the server offers, defined in `backend/api/crm.yaml`. |
@@ -64,5 +63,5 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 
 ## Names without a meaning yet
 
-These names joined before every name had to carry a meaning. Move a name up into the table when you write
-its meaning, and delete it here. No name may be added here.
+The pages used these names before they joined the plain-words bar. Move a name up into the table when you
+write its meaning, and delete it here. A name new to the docs goes in the table, never here.

@@ -1,1 +1,1 @@
-# General words a plain page under docs/how-to/ may use; base forms, sorted. See docs/reference/docs-prose-style.md#plain-pages. Cap: 999.
+# General words a plain page under docs/how-to/ may use; sorted, and a listed word also covers its regular forms. See docs/reference/docs-prose-style.md#plain-pages.

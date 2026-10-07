@@ -100,9 +100,12 @@ higher cap in `docsplainwords_test.go`, and that cap only goes down. The lists a
 newcomer opens first (README, CONTRIBUTING, SECURITY, SUPPORT and the docs index), and
 `docs/plain-words-project.txt` for every other plain page. Names a reader must learn anyway, such as products,
 protocols and file names, live in one shared glossary, `docs/reference/glossary.md`, each with a meaning of at
-least three words. Names that joined before that rule sit in its last section without a meaning;
-that section only shrinks. A general word also covers its regular forms, so a page may write `deals` or `connected`
-when the list holds `deal` and `connect`; a glossary term matches only as written. Inline code is not checked, nor is link text
+least three words. A name is a proper name, an acronym or a code identifier. An ordinary word, even a
+technical one such as `schema`, goes in a word list, so it counts against the cap. Names the pages used
+before they joined the bar sit in the glossary's last section without a meaning; after that, the section
+only shrinks. A general word also covers its regular forms, so a page may write `deals` or `connected`
+when the list holds `deal` and `connect`. An irregular form such as `built` is listed as it is spelled. A
+glossary term matches only as written. Inline code is not checked, nor is link text
 that contains a `.` or a `/`, such as a path or a host. A bold UI label and a quoted screen message are not
 checked either: they must match the screen word for word, so they count as names.
 

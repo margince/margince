@@ -1,1 +1,1 @@
-# General words a handbook plain page may use; base forms, sorted. See docs/reference/docs-prose-style.md#plain-pages. Cap: 999.
+# General words a handbook plain page may use; sorted, and a listed word also covers its regular forms. See docs/reference/docs-prose-style.md#plain-pages.
