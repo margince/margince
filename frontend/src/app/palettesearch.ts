@@ -44,8 +44,11 @@ export const PALETTE_PER_TYPE = 3;
 
 // Whether an answer for `asked` still speaks to `typed`: one extends the other,
 // as typing on or backspacing does, rather than the box having changed subject.
+// Case-blind, as the search itself is.
 function sameSubject(asked: string, typed: string): boolean {
-  return typed.startsWith(asked) || asked.startsWith(typed);
+  const a = asked.toLocaleLowerCase();
+  const b = typed.toLocaleLowerCase();
+  return b.startsWith(a) || a.startsWith(b);
 }
 
 // What the live search arm has to say: the rows it found, and whether it is

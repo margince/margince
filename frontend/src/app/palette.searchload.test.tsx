@@ -230,6 +230,21 @@ describe("words typed before the pause after an earlier answer", () => {
     expect(screen.getByRole("button", { name: "Acme GmbH" })).toBeTruthy();
   });
 
+  it("keeps the earlier hits when only the case changes", async () => {
+    const user = steppedClock();
+    vi.stubGlobal("fetch", answering("Acme GmbH"));
+    renderPalette();
+    const box = screen.getByRole("searchbox");
+
+    await user.type(box, "acme");
+    await pause();
+    await screen.findByRole("button", { name: "Acme GmbH" });
+    await user.clear(box);
+    await user.type(box, "ACME");
+
+    expect(screen.getByRole("button", { name: "Acme GmbH" })).toBeTruthy();
+  });
+
   it("drops the earlier failure once the words change subject", async () => {
     const user = steppedClock();
     vi.stubGlobal(
