@@ -334,6 +334,10 @@ describe("the deals list narrows like every other record list", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", stubBackend({ deals: [deal({})], dealUrls }));
     render(<DealsScreen />);
+    // The list opens unnarrowed, which is what All names, so All is lit.
+    await waitFor(() =>
+      expect(viewTab("All").getAttribute("aria-pressed")).toBe("true"),
+    );
 
     await user.click(await screen.findByRole("button", { name: "Mine" }));
 

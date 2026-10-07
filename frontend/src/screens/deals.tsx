@@ -2264,7 +2264,7 @@ export function DealsScreen({
           acquisitionSources: acquisitionSources,
           retiredSuffix: t("deal.acquisitionRetired"),
         })}
-        views={[...standardViews(viewerId)]}
+        views={[...standardViews(viewerId, { sort: "" })]}
         emptyNote={mineEmptyNote({
           t,
           state: dealsListState,
