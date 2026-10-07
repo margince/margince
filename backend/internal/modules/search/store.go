@@ -251,25 +251,27 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 
 // rank runs the ranking statement and reads its hits.
 func rank(ctx context.Context, tx pgx.Tx, statement string, args []any) ([]Hit, error) {
-	// A generic plan holds the query text as a parameter, so it rebuilds every
-	// tsquery for each row it matches and scores; a custom plan folds each once.
-	if _, err := tx.Exec(ctx, `SELECT set_config('plan_cache_mode', 'force_custom_plan', true)`); err != nil {
-		return nil, fmt.Errorf("search: planning the ranking with its literals: %w", err)
-	}
-	rows, err := tx.Query(ctx, statement, args...)
+	var hits []Hit
+	err := withCustomPlans(ctx, tx, func() error {
+		rows, err := tx.Query(ctx, statement, args...)
+		if err != nil {
+			return rankingFault(ctx, err)
+		}
+		defer rows.Close()
+		// Through the SAME judgement, because this is where the cancellation
+		// usually lands. pgx returns from Query before the rows are read, so a
+		// statement stopped mid-result reports through the iteration — the
+		// ceiling would otherwise surface as a raw fault from the scan and the
+		// arm above would only ever catch a statement killed before it started
+		// returning.
+		hits, err = scanHits(rows)
+		if err != nil {
+			return rankingFault(ctx, err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, rankingFault(ctx, err)
-	}
-	defer rows.Close()
-	// Through the SAME judgement, because this is where the cancellation
-	// usually lands. pgx returns from Query before the rows are read, so a
-	// statement stopped mid-result reports through the iteration — the
-	// ceiling would otherwise surface as a raw fault from the scan and the
-	// arm above would only ever catch a statement killed before it started
-	// returning.
-	hits, err := scanHits(rows)
-	if err != nil {
-		return nil, rankingFault(ctx, err)
+		return nil, err
 	}
 	return hits, nil
 }

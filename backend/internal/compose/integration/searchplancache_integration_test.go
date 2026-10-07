@@ -80,3 +80,44 @@ func TestARepeatedSearchIsNeverGenericallyPlanned(t *testing.T) {
 			"every run must be custom-planned, or each row rebuilds the tsquery", generic, custom, runs)
 	}
 }
+
+// A search joined to an ambient snapshot leaves the snapshot's plan cache mode
+// as it found it. The snapshot sets its own non-default value first, so a
+// restore to the server default would fail here as surely as a leak would.
+func TestASearchInsideASnapshotLeavesItsPlanCacheModeAlone(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	if _, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
+		FullName: "Henrike Vossberg", Source: "manual",
+	}); err != nil {
+		t.Fatalf("seeding the contact: %v", err)
+	}
+	store := search.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
+
+	err := database.WithWorkspaceSnapshot(admin, e.Pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `SELECT set_config('plan_cache_mode', 'force_generic_plan', true)`); err != nil {
+				t.Fatalf("setting the snapshot's own plan cache mode: %v", err)
+			}
+			page, err := store.Search(ctx, search.Input{Query: "vossberg", Types: []string{"contact"}})
+			if err != nil {
+				t.Fatalf("search: %v", err)
+			}
+			if len(page.Hits) != 1 {
+				t.Fatalf("search found %d hits, want the one seeded contact", len(page.Hits))
+			}
+			var after string
+			if err := tx.QueryRow(ctx, `SELECT current_setting('plan_cache_mode')`).Scan(&after); err != nil {
+				t.Fatalf("reading the plan cache mode after the search: %v", err)
+			}
+			if after != "force_generic_plan" {
+				t.Fatalf("the snapshot's plan cache mode is %q after a search, want its own %q: "+
+					"a joined search must not re-plan every later lane", after, "force_generic_plan")
+			}
+			return nil
+		})
+	})
+	if err != nil {
+		t.Fatalf("the snapshot failed: %v", err)
+	}
+}
