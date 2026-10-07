@@ -3152,7 +3152,7 @@ export const de = {
   "lead.evidenceNote": "Notiz zum Beleg (optional)",
   "lead.segregationTitle": "Leads bleiben von Kontakten getrennt",
   "lead.segregation":
-    "Ein Lead wird erst zum Kontakt, wenn du ihn qualifizierst.",
+    "Qualifizierst du einen Lead, wird er zum Kontakt. Einen vorhandenen Kontakt öffnest du und wählst Als Lead bearbeiten.",
   "lead.segregationDismiss": "Hinweis ausblenden",
   "list.emptyMine": "Keine {unit}, für die du zuständig bist.",
   "list.showAll": "Alle anzeigen",
@@ -10177,6 +10177,7 @@ export const de = {
     "Keine Adresse und kein Thread, auf den geantwortet werden kann.",
   "contact.action.call": "Anrufen",
   "contact.action.meetings": "Termine",
+  "contact.action.workAsLead": "Als Lead bearbeiten",
   "contact.action.addTask": "Aufgabe hinzufügen",
   "contact.action.research": "Recherche",
 

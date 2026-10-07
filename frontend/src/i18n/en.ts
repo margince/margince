@@ -3209,7 +3209,8 @@ export const en = {
   "lead.trigger.humanQualify": "Qualified manually",
   "lead.evidenceNote": "Evidence note (optional)",
   "lead.segregationTitle": "Leads are kept separate from contacts",
-  "lead.segregation": "A lead becomes a contact only when you qualify it.",
+  "lead.segregation":
+    "Qualifying a lead makes it a contact. To work a contact you already have, open it and choose Work as a lead.",
   "lead.segregationDismiss": "Dismiss this notice",
   "list.emptyMine": "No {unit} owned by you.",
   "list.showAll": "Show all",
@@ -10306,6 +10307,7 @@ export const en = {
   "contact.action.noTransport": "No address and no thread to reply to.",
   "contact.action.call": "Call",
   "contact.action.meetings": "Meetings",
+  "contact.action.workAsLead": "Work as a lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
 

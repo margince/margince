@@ -38,10 +38,28 @@ func TestALeadFromAContactTakesWhatTheContactKnows(t *testing.T) {
 		CompanyName string `json:"company_name"`
 	}
 	var lead leadWire
+	var created struct {
+		ID string `json:"id"`
+	}
 	if status := e.Call(t, "POST", "/v1/leads", AnyMap{
 		"contact_id": captured.Contact.ID, "source": "manual",
 	}, nil, &lead); status != http.StatusCreated {
 		t.Fatalf("create lead from contact = %d", status)
+	}
+	// The same person asked for twice is the lead already held, named in the
+	// refusal so the screen that asked can open it.
+	var duplicate struct {
+		Details struct {
+			ExistingID string `json:"existing_id"`
+		} `json:"details"`
+	}
+	if status := e.Call(t, "POST", "/v1/leads", AnyMap{
+		"contact_id": captured.Contact.ID, "source": "manual",
+	}, nil, &duplicate); status != http.StatusConflict || duplicate.Details.ExistingID == "" {
+		t.Fatalf("a second lead from the same contact = %d %+v, want 409 naming the first", status, duplicate)
+	}
+	if status := e.Call(t, "GET", "/v1/leads/"+duplicate.Details.ExistingID, nil, nil, &created); status != http.StatusOK {
+		t.Fatalf("GET the lead the refusal named = %d", status)
 	}
 	want := leadWire{"Anna Example", "anna@northwind.example", "Head of Operations", "Northwind Traders"}
 	if lead != want {

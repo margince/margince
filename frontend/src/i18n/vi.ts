@@ -3124,7 +3124,7 @@ export const vi = {
   "lead.segregationTitle":
     "Khách hàng tiềm năng được giữ tách biệt với Liên hệ",
   "lead.segregation":
-    "Chỉ trở thành liên hệ trong CRM khi bạn xác nhận đủ điều kiện.",
+    "Xác nhận đủ điều kiện sẽ biến lead thành liên hệ. Với liên hệ đã có, hãy mở liên hệ và chọn Theo dõi như lead.",
   "lead.segregationDismiss": "Ẩn thông báo này",
   "list.emptyMine": "Bạn không có {unit} nào được giao.",
   "list.showAll": "Hiện tất cả",
@@ -10057,6 +10057,7 @@ export const vi = {
     "Không có địa chỉ và không có cuộc trò chuyện nào để trả lời.",
   "contact.action.call": "Gọi",
   "contact.action.meetings": "Lịch hẹn",
+  "contact.action.workAsLead": "Theo dõi như lead",
   "contact.action.addTask": "Thêm việc",
   "contact.action.research": "Nghiên cứu",
 
