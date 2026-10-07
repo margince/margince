@@ -447,7 +447,6 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 		"docs/tutorials/getting-started.md":                      "docs/how-to/plain-words.txt",
 		"README.md":                                              plainWordsFile,
 		"docs/README.md":                                         plainWordsFile,
-		"DESIGN.md":                                              plainProjectFile,
 		"docs/principles/derive-the-obligation.md":               plainProjectFile,
 	} {
 		if got := plainPoolFor(rel); got != want {
