@@ -7,7 +7,6 @@ import type { MessageKey } from "./en";
 export const de = {
   "reporting.latestSnapshot": "Letzter Snapshot",
   "reporting.contextDetails": "Berichtsdetails",
-  "reporting.pipelineFilter": "Offene Pipeline · erwarteter Abschluss",
   "reporting.targetRemaining": "{amount} fehlen zum Ziel",
   "reporting.targetExceeded": "{amount} über dem Ziel",
   "reporting.targetPeriodSummary": "{actual} von {target} · {percent} %",
@@ -54,7 +53,6 @@ export const de = {
   "reporting.remaining": "Verbleibend",
   "reporting.ownerMetric": "{metric} nach Teammitglied",
   "reporting.quarterStart": "Wähle den ersten Monat des Geschäftsquartals.",
-  "reporting.additional": "Weitere Auswertungen",
   "reporting.settings": "Berichtseinstellungen",
   "reporting.execution.skipped": "Übersprungen",
   "reporting.execution.suspended": "Pausiert",
@@ -81,6 +79,7 @@ export const de = {
   "reporting.capturePending":
     "Stand vorgemerkt. Er erscheint hier, sobald er bereit ist.",
   "reporting.createReport": "Aus Performance erstellen",
+  "reporting.newCustomReport": "Neuer eigener Bericht",
   "reporting.observations_one": "Beobachtung: {count}",
   "reporting.observations_other": "Beobachtungen: {count}",
   "reporting.observationsUnavailable": "Stichprobengröße nicht verfügbar",
@@ -4766,7 +4765,7 @@ export const de = {
   "analytics.reportDeals": "Offene Deals nach Phase",
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
-  "analytics.sectionPipeline": "Pipeline-Analyse",
+  "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Leistung",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",
@@ -4775,6 +4774,24 @@ export const de = {
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
   "analytics.sectionQuestions": "Eigene Berichte",
+  "analytics.sectionReports": "Berichte",
+  "analytics.setup": "Einrichtung",
+  "analytics.attention": "Braucht deine Aufmerksamkeit",
+  "analytics.attentionChecks_one": "1 Prüfung zur Einschätzung offen",
+  "analytics.attentionChecks_other": "{count} Prüfungen zur Einschätzung offen",
+  "analytics.attentionChecksDetail":
+    "Beantworte sie, bevor du die Einschätzung aktualisierst.",
+  "analytics.attentionChecksAction": "In Forecast prüfen",
+  "analytics.attentionUnpriced":
+    "{priced} von {eligible} offenen Deals sind bepreist",
+  "analytics.attentionUnpricedDetail":
+    "Ein Deal ohne Preis trägt nichts zum Forecast bei.",
+  "analytics.attentionUnpricedAction": "Forecast öffnen",
+  "analytics.attentionCoverage_one":
+    "1 Datenquelle wurde nicht vollständig geprüft",
+  "analytics.attentionCoverage_other":
+    "{count} Datenquellen wurden nicht vollständig geprüft",
+  "analytics.attentionCoverageAction": "Datenabdeckung ansehen",
   "analytics.reportDealsByStage": "Alle Deals nach Phase",
   "analytics.reportLeadsByStatus": "Leads nach Status",
   "analytics.reportActivitiesByKind": "Aktivitäten nach Art",
