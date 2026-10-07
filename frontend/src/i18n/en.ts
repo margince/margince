@@ -9619,6 +9619,10 @@ export const en = {
     "Waiting now: every model this task can use is blocked.",
   "aiTasks.deferral.nowInteractive":
     "Failing now: every model this task can use is blocked.",
+  "aiTasks.deferral.degrades":
+    "When every model this task can use is down, out of credit or refusing its key, it still answers from its own facts, without a model, instead of failing.",
+  "aiTasks.deferral.nowDegrades":
+    "Answering from its own facts now: every model this task can use is blocked.",
   "aiTasks.deferral.skipping":
     "A blocked provider is skipped, and the next model in line answers.",
   "aiTasks.embeddingsEdit":

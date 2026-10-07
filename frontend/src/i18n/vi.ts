@@ -9396,6 +9396,10 @@ export const vi = {
     "Đang chờ: mọi mô hình tác vụ này dùng được đều bị chặn.",
   "aiTasks.deferral.nowInteractive":
     "Đang lỗi: mọi mô hình tác vụ này dùng được đều bị chặn.",
+  "aiTasks.deferral.degrades":
+    "Khi mọi mô hình của tác vụ này ngừng hoạt động, hết hạn mức hoặc bị từ chối khóa, tác vụ vẫn trả lời từ dữ kiện của chính nó mà không cần mô hình, thay vì thất bại.",
+  "aiTasks.deferral.nowDegrades":
+    "Đang trả lời từ dữ kiện của chính nó: mọi mô hình tác vụ này dùng được đều bị chặn.",
   "aiTasks.deferral.skipping":
     "Nhà cung cấp bị chặn sẽ được bỏ qua, và mô hình kế tiếp sẽ trả lời.",
   "aiTasks.embeddingsEdit":
