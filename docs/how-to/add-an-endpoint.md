@@ -14,8 +14,8 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
    - `x-mcp-tool: { verb, record_type, tier: auto_execute|confirmation_required|dynamic, scope: read|draft|write|send|enrich }`.
      It opens the operation as an agent tool under the rules, at
      that tier, and it spends that passport limit. Or:
-   - `x-agent-access: human-only`, which refuses agents (for example consent, data requests and
-     issuing a passport). Or `auth-bootstrap` (sign-in and session code).
+   - `x-agent-access: human-only`, which refuses agents (for example consent, data requests and passport
+     issue). Or `auth-bootstrap` (sign-in and session code).
 
    The generator **fails** on a data-changing operation with neither, so an endpoint with no tier cannot
    ship.

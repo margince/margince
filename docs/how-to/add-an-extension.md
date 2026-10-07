@@ -28,8 +28,8 @@ review on its own.
 
 1. **Create the module folder** `extensions/<name>/`.
    The folder name is the real unit name and must match the `Name` you declare.
-   It follows the rule `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 32 characters.
-   That is parts of small letters and digits, joined by a single hyphen.
+   It follows the rule `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 32 letters.
+   That is parts in small letters, joined by a single hyphen.
    The name keys SQL names and URL paths, so the start refuses any other name.
 
 2. **Add its `go.mod`**, its own module, path `github.com/margince/margince/extensions/<name>`:
@@ -101,7 +101,7 @@ review on its own.
 A country pack gives **rules, never code**: the core retention engine reads it. So the values you
 declare must be ones a core engine already knows:
 
-- **`Code`** is an `ISO 3166-1 alpha-2` code in small letters, and no other unit may use it. A code the `de` pack (or
+- **`Code`** is a `ISO 3166-1 alpha-2` code in small letters, and no other unit may use it. A code the `de` pack (or
   any other unit that is on) already holds stops the start.
 - **`RetentionClassName`** comes from the **closed set**: `commercial_correspondence`, `accounting_records`.
   You give a *floor* for a class the core knows; you do not make up a class. Adding a new kind of class is a
@@ -654,7 +654,7 @@ It also holds the body, what it replies to, and a key that stops copies.
 Return a `Receipt` that names the provider's own message id.
 The outbound rules of the tier still apply: you may not spend an outbound scope from a tool or a job tick.
 
-- **`Provider` is `snake_case`**, with the rule of `channel_provider` (`^[a-z][a-z0-9_]*$`, at most 32 characters).
+- **`Provider` is `snake_case`**, with the rule of `channel_provider` (`^[a-z][a-z0-9_]*$`, at most 32 letters).
   The ingress system uses `kebab-case` instead. `deal-room` is a legal ingress system, and not a legal provider.
 - **You must set `Live` when `Send` is set.** For one member, and *without spending the key*, it answers
   whether the connection still works. Answer `false` for a sure "no", and the delivery parks where a human can

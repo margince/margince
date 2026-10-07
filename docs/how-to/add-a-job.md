@@ -143,8 +143,8 @@ never one job row that loops over every workspace.
    - A fan-out over every workspace calls
      `dispatchWith(ctx, workspaces, insert, workspaceSweepOpts(ChildArgs{}.Kind()), argsFor)`. Pass the
      insert of a transaction you already hold when the fan-out must join it. It inserts the whole fan-out as
-     one `InsertMany`. A fan-out that is partly inserted, fails and runs again would run the workspaces
-     whose child jobs already passed.
+     one `InsertMany`. A part fan-out that fails and runs again would run the workspaces whose child jobs
+     already passed.
    - A pass that runs each workspace in this process calls `runPerWorkspace(ctx, pool, run)`. It tries
      every workspace and joins the failures.
    - A fan-out per connection or per build loops over `dispatchOne(ctx, args, callerOpts)`. The child's
@@ -173,7 +173,7 @@ The failures you meet first, in the order you would meet them:
 | `make gen` | `kind "x": is a dispatcher that fans out to nothing` / `fans_out_to "y", whose role is "dispatcher"` | A dispatcher must declare `fans_out_to` and `fan_out_unit`, and the child must be `role: worker` |
 | `make gen` | `kind "x": declares a cadence but its role is "worker"` | No clock ever starts a worker that runs from the queue. Move the `cadence` to the dispatcher |
 | `make gen` | `kind "x": opts_owner is fan_out but no max_attempts is declared` | The fan-out helper reads that number, and nothing else gives it. Without it, River tries 25 times and says nothing |
-| `make gen` | `kind "x": args field "F" is declared a scalar with no reason` | A value that is not an id must say why it is safe in a table that GDPR Article 17 erasure never reaches |
+| `make gen` | `kind "x": args field "F" is declared a scalar with no reason` | A value that is not an id must say why it is safe in a table that the GDPR Article 17 erase never reaches |
 | `go build` | `CloseDateWorkspaceArgs does not satisfy declaredJobArgs` | The kind is not in `api/jobs.yaml`, or you have not run `make gen` since you declared it |
 | `golangci-lint` | `register through addDeclaredWorker — a kind absent from api/jobs.yaml is not in declaredJobArgs, and a direct registration also escapes jobs.Govern and the boot-time totality check` | You called the River register API, not `addDeclaredWorker` |
 | `golangci-lint` | `a periodic tick is api/jobs.yaml's to declare — give the kind a cadence: and let periodicFor build it` | You reached the River `PeriodicJobBundle` from inside a worker |

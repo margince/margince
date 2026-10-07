@@ -46,13 +46,12 @@ Two files, one board. `dealroomthreads.tsx` draws for both sides and takes the v
   Until that exists, the tile draws the type mark on `--bg3`. Then the threads in place, the contact card, the
   last block, and the mark (`Wordmark`). Three of its parts are **new parts of the contract**, one pull request each
   after the new style:
-  - `"New since your last visit"`: compares document and thread times with the buyer's `last_seen_at` as it was
-    when the page opened. The buyer view carries none of these times today. So the contract must add
-    them, and say what the buyer sees the first time.
+  - `"New since your last visit"`: derived from the member's `last_seen_at`, against the document and thread
+    times the view already carries, with no schema change.
   - **Next steps written by the seller**: a `next_steps` list on the room beside `welcome_message`, edited on
     the seller page under Title and welcome.
-  - **`"Book a call"`**: a link to the `#/book/<hostSlug>` page of the room's steward, the
-    user a buyer goes to for help. If the steward has none, the link does not show. The composers stay only for `comment`, and a seller preview stays read-only.
+  - **`"Book a call"`**: a link to the `#/book/<hostSlug>` page of the owner of the room.
+    If the owner has none, the link does not show. The composers stay only for `comment`, and a seller preview stays read-only.
 
   The four states keep their text (`buyer.deadTitle` and the link request form, `buyer.pausedTitle`,
   `buyer.expiredTitle`, `buyer.closedNote`) and the preview banner. `buyer-column > * { flex: none }` stays (the
