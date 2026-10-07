@@ -150,3 +150,23 @@ export type Point = Readonly<{ x: number; y: number }>;
 export function motePath(nodes: readonly CrawlNode[], offset: Point): Point[] {
   return nodes.map((node) => ({ x: node.x + offset.x, y: node.y + offset.y }));
 }
+
+/**
+ * Where the motes fly to: the Core's centre, in the layer's own space, or null
+ * when there is nothing to fly to.
+ *
+ * A Core folded out of a short room is still in the tree with a 0x0 box, whose
+ * centre would read as the window's corner. No box, no target.
+ */
+export function moteHome(
+  core: Readonly<{ left: number; top: number; width: number; height: number }>,
+  origin: Point,
+): Point | null {
+  if (core.width === 0 || core.height === 0) {
+    return null;
+  }
+  return {
+    x: core.left + core.width / 2 - origin.x,
+    y: core.top + core.height / 2 - origin.y,
+  };
+}
