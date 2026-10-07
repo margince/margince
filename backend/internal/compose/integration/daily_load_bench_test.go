@@ -21,8 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 )
 
-// The morning load's pacing: background polls as the app shell sends them,
-// a cheap route timed twice as often, and a bound on the whole start.
+// The morning load's pacing: background polls, a cheap route timed four times
+// as often, and a bound on the whole start, which repeats until the cheap route
+// has dailySamples samples.
 const (
 	dailyPollEvery  = 2 * time.Second
 	dailyCheapEvery = 500 * time.Millisecond
@@ -36,6 +37,7 @@ type morningLoad struct {
 	S5xx, S422                   int
 	PoolWaitTotal, PoolWaitMax   time.Duration
 	Acquires                     int64
+	PoolSize                     int32
 }
 
 // dailyLoadTally collects what every goroutine of the load saw; any refusal
@@ -61,7 +63,7 @@ func (l *dailyLoadTally) admit(seat, row string, r dailyResponse, err error, abs
 	case err != nil:
 		l.problems = append(l.problems, fmt.Sprintf("%s: %v", seat, err))
 	case r.status >= 200 && r.status < 300:
-	case unwiredAnswer(r.status, r.body):
+	case unwiredAnswer(r.call.Path, r.status, r.body):
 		l.unwired++
 	case r.status >= 500, r.status == http.StatusUnprocessableEntity:
 		if r.status >= 500 {
@@ -103,7 +105,8 @@ func morningJourney(in dailyInput) []dailyLoadCall {
 
 // runMorningLoad starts every seat's day at once, with the admin's session as
 // background traffic never reported as a seat, and times a cheap route on a
-// session of its own throughout. absent names the latency rows with no data.
+// session of its own throughout. Sessions start their journey again until the
+// cheap route has its samples. absent names the latency rows with no data.
 func runMorningLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus, absent map[string]bool) morningLoad {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), dailyLoadBound)
@@ -129,7 +132,14 @@ func runMorningLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus, abs
 
 	var wg sync.WaitGroup
 	for _, in := range inputs {
-		wg.Go(func() { runMorningSession(ctx, e, in, tally, absent) })
+		wg.Go(func() {
+			for {
+				runMorningSession(ctx, e, in, tally, absent)
+				if ctx.Err() != nil || tally.cheapSamples() >= dailySamples {
+					return
+				}
+			}
+		})
 	}
 	wg.Wait()
 	close(done)
@@ -148,7 +158,7 @@ func runMorningLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus, abs
 	for path, first := range tally.errorsBy {
 		t.Logf("morning load: GET %s answered %s", path, first)
 	}
-	stats, err := search.MeasureQuery("morning_load_cheap_route", Perf2Budget, tally.cheap)
+	stats, err := search.MeasureQuery("morning_load_cheap_route", Load1Budget, tally.cheap)
 	if err != nil {
 		t.Fatalf("the cheap route was never timed during the morning load: %v", err)
 	}
@@ -158,7 +168,14 @@ func runMorningLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus, abs
 		PoolWaitTotal: after.EmptyAcquireWaitTime() - before.EmptyAcquireWaitTime(),
 		PoolWaitMax:   worst,
 		Acquires:      after.AcquireCount() - before.AcquireCount(),
+		PoolSize:      e.Pool.Config().MaxConns,
 	}
+}
+
+func (l *dailyLoadTally) cheapSamples() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.cheap)
 }
 
 func teamOf(s Seats, seat Seat) string {
@@ -202,7 +219,7 @@ func pollMorning(ctx context.Context, e *apptest.AppEnv, s Seat, tally *dailyLoa
 	ticker := time.NewTicker(dailyPollEvery)
 	defer ticker.Stop()
 	for {
-		for _, call := range []dailyCall{{"ai_activity", "/v1/me/ai-activity"}, {"connectors", "/v1/connectors"}} {
+		for _, call := range []dailyCall{{Name: "ai_activity", Path: dailyAIActivityPath()}, {Name: "connectors", Path: "/v1/connectors"}} {
 			status, body, _, err := s.fetch(ctx, e.TS.URL, call.Path)
 			tally.admit(s.Name, "poll_"+call.Name, dailyResponse{call, status, body}, err, nil)
 		}
@@ -221,7 +238,7 @@ func pollMorning(ctx context.Context, e *apptest.AppEnv, s Seat, tally *dailyLoa
 func timeCheapRoute(ctx context.Context, e *apptest.AppEnv, s Seat, tally *dailyLoadTally, done <-chan struct{}) {
 	ticker := time.NewTicker(dailyCheapEvery)
 	defer ticker.Stop()
-	call := dailyCall{"me", "/v1/me"}
+	call := dailyCall{Name: "me", Path: "/v1/me"}
 	for {
 		status, body, elapsed, err := s.fetch(ctx, e.TS.URL, call.Path)
 		tally.admit("cheap route", "cheap_me", dailyResponse{call, status, body}, err, nil)
@@ -267,15 +284,15 @@ func meanEmptyWait(from, to *pgxpool.Stat) time.Duration {
 	return (to.EmptyAcquireWaitTime() - from.EmptyAcquireWaitTime()) / time.Duration(waits)
 }
 
-// morningLoadRow records the load against PERF-2, for the whole team as one seat.
+// morningLoadRow records the load against LOAD-1, for the whole team as one seat.
 func morningLoadRow(m morningLoad) dailyRow {
-	verdict, issue := JudgeDaily("morning_load", m.CheapP95, Perf2Budget, m.CheapSamples)
-	row := MeasurementFrom("PERF-2", "morning_load_cheap_route", m.CheapP50, m.CheapP95, m.CheapP99, Perf2Budget, m.CheapSamples)
+	verdict, issue := JudgeDaily("morning_load", m.CheapP95, Load1Budget, m.CheapSamples)
+	row := MeasurementFrom("LOAD-1", "morning_load_cheap_route", m.CheapP50, m.CheapP95, m.CheapP99, Load1Budget, m.CheapSamples)
 	row.Seat, row.Flow, row.Verdict, row.KnownIssue = "team", "morning_load", string(verdict), issue
 	row.Status5xx, row.Status422 = m.S5xx, m.S422
 	row.PoolWaitMs = float64(m.PoolWaitTotal) / float64(time.Millisecond)
 	row.PoolWaitMaxMs = float64(m.PoolWaitMax) / float64(time.Millisecond)
-	row.Acquires = m.Acquires
+	row.Acquires, row.PoolSize = m.Acquires, m.PoolSize
 	return dailyRow{
 		Measurement: row,
 		Result: DailyResult{
@@ -291,6 +308,14 @@ func morningLoadRow(m morningLoad) dailyRow {
 func runFirstLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus) (worklist, palette time.Duration) {
 	t.Helper()
 	rebooted := e.Reboot(t)
+	defer rebooted.Close()
+	// One connection is dialled before timing, so the first request measures the
+	// app's cold caches rather than the first connection to Postgres.
+	conn, err := rebooted.Pool.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("warming the rebooted pool: %v", err)
+	}
+	conn.Release()
 	rep := s.Reps[slices.IndexFunc(s.Reps, func(r Seat) bool { return r.UserID == c.MedianRepID })]
 	first := func(path string) time.Duration {
 		status, body, elapsed := rep.Get(t, rebooted, path)
@@ -310,6 +335,7 @@ func firstLoadRows(t *testing.T, worklist, palette time.Duration) []dailyRow {
 	row := func(id, name string, d, budget time.Duration) dailyRow {
 		m := MeasurementFrom(id, name, d, d, d, budget, 1)
 		m.Seat, m.Verdict = "rep", string(DailyNotGated)
+		m.Note = "one connection dialled before timing; the app's caches start empty"
 		t.Logf("perfbench [daily]: %s rep first=%s budget=%s samples=1 %s", name, d, budget, DailyNotGated)
 		return dailyRow{Measurement: m, Result: DailyResult{Flow: name, Seat: "rep", Verdict: DailyNotGated}}
 	}

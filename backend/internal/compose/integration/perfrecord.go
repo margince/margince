@@ -115,6 +115,24 @@ type BudgetMeasurement struct {
 	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
 	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`
 	Acquires      int64   `json:"acquires,omitempty"`
+	PoolSize      int32   `json:"pool_size,omitempty"`
+	// Note says what a reader should know about a row without doubting its
+	// verdict; anything that does cast doubt on it is a Caveat.
+	Note string `json:"note,omitempty"`
+}
+
+// CorpusFacts is what a seeded bench ran over, so the pages state the size
+// from the record rather than from a number typed into the renderer.
+type CorpusFacts struct {
+	Scale      float64 `json:"scale"`
+	Contacts   int     `json:"contacts"`
+	Companies  int     `json:"companies"`
+	Deals      int     `json:"deals"`
+	Leads      int     `json:"leads"`
+	Projects   int     `json:"projects"`
+	Activities int     `json:"activities"`
+	Reps       int     `json:"reps"`
+	Managers   int     `json:"managers"`
 }
 
 // PerfRecord is one target's whole run: the machine, the day, and every budget
@@ -126,6 +144,7 @@ type PerfRecord struct {
 	MeasuredOn string              `json:"measured_on"`
 	Machine    MachineFacts        `json:"machine"`
 	Budgets    []BudgetMeasurement `json:"budgets"`
+	Corpus     *CorpusFacts        `json:"corpus,omitempty"`
 }
 
 // RecordingEnabled reports whether this run should leave a record.
@@ -145,7 +164,11 @@ func RecordingEnabled() bool { return os.Getenv("MARGINCE_BENCH_RECORD") == "1" 
 // record it is how a page goes stale while every run looks green.
 func WritePerfRecord(t *testing.T, target string, postgres string, budgets []BudgetMeasurement) {
 	t.Helper()
-	record := PerfRecord{
+	writePerfRecordTo(t, PerfRecordDir(t), newPerfRecord(target, postgres, budgets))
+}
+
+func newPerfRecord(target, postgres string, budgets []BudgetMeasurement) PerfRecord {
+	return PerfRecord{
 		Target: target,
 		// The DAY, not the instant. A record that changed on every run would
 		// churn the committed page for no reader's benefit; the day is what
@@ -154,15 +177,18 @@ func WritePerfRecord(t *testing.T, target string, postgres string, budgets []Bud
 		Machine:    readMachineFacts(postgres),
 		Budgets:    budgets,
 	}
+}
+
+func writePerfRecordTo(t *testing.T, dir string, record PerfRecord) {
+	t.Helper()
 	body, err := json.MarshalIndent(record, "", "  ")
 	if err != nil {
-		t.Fatalf("rendering the %s perf record: %v", target, err)
+		t.Fatalf("rendering the %s perf record: %v", record.Target, err)
 	}
-	dir := PerfRecordDir(t)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatalf("creating %s: %v", dir, err)
 	}
-	path := filepath.Join(dir, target+".json")
+	path := filepath.Join(dir, record.Target+".json")
 	if err := os.WriteFile(path, append(body, '\n'), 0o600); err != nil {
 		t.Fatalf("writing %s: %v", path, err)
 	}

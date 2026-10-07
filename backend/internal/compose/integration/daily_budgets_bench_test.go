@@ -8,20 +8,27 @@ package integration
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // The daily-use budgets (p95, per seat). PERF-1 and PERF-7 are declared beside
-// their own benches; these are the screens only bench-daily measures.
+// their own benches; these are the screens only bench-daily measures. LOAD-1
+// is the cheap route while every seat starts at once, judged on its own ID.
 const (
 	Perf2Budget  = 150 * time.Millisecond
 	Perf8Budget  = time.Second
 	Perf9Budget  = 300 * time.Millisecond
 	Perf10Budget = time.Second
+	Load1Budget  = 150 * time.Millisecond
 )
 
 // DailyVerdict is the recorded outcome of one flow for one seat; gen-perfdoc
@@ -47,6 +54,7 @@ type KnownIssue struct {
 var DailyKnownIssues = []KnownIssue{
 	{Flow: "worklist", Issue: 4912},
 	{Flow: "palette_search_prefix", Issue: 7037},
+	{Flow: "morning_load", Issue: 7068},
 }
 
 // DailyResult is one flow measured for one seat, as the gate judges it.
@@ -114,6 +122,7 @@ func DailyGate(results []DailyResult, scale float64) error {
 
 // staleKnownIssues names each listed flow that was measured and came in within
 // budget for every seat; a seat with no data or no gate says nothing either way.
+// A row that drew a 422 was refused, not served fast, so it is never "within".
 func staleKnownIssues(results []DailyResult) []string {
 	var stale []string
 	for _, known := range DailyKnownIssues {
@@ -123,7 +132,7 @@ func staleKnownIssues(results []DailyResult) []string {
 				continue
 			}
 			measured++
-			if r.Verdict == DailyWithin {
+			if r.Verdict == DailyWithin && r.Status422 == 0 {
 				within++
 			}
 		}
@@ -132,6 +141,27 @@ func staleKnownIssues(results []DailyResult) []string {
 		}
 	}
 	return stale
+}
+
+// applySampleFloor turns every gated row with fewer than dailySamples samples
+// into "no data": a p95 of a handful of tries is a guess, never a verdict.
+func applySampleFloor(rows []dailyRow) []dailyRow {
+	for i := range rows {
+		r := &rows[i]
+		if r.Result.Verdict == DailyNoData || r.Result.Verdict == DailyNotGated || r.Measurement.Samples >= dailySamples {
+			continue
+		}
+		r.Result.Verdict, r.Result.Issue = DailyNoData, 0
+		r.Measurement.Verdict, r.Measurement.KnownIssue = string(DailyNoData), 0
+		r.Measurement.Note = joinNotes(fmt.Sprintf("%d samples, under the floor of %d: no p95 is claimed",
+			r.Measurement.Samples, dailySamples), r.Measurement.Note)
+	}
+	return rows
+}
+
+func joinNotes(notes ...string) string {
+	kept := slices.DeleteFunc(notes, func(n string) bool { return n == "" })
+	return strings.Join(kept, "; ")
 }
 
 // dailyScale reads the corpus multiplier; 1 is the published mid-market tier.
@@ -246,5 +276,107 @@ func TestTheDailyScaleRefusesAValueThatSeedsNothing(t *testing.T) {
 		if _, err := dailyScale(); err == nil || !strings.Contains(err.Error(), dailyScaleEnv) {
 			t.Fatalf("%s=%q: got %v; want an error naming the variable", dailyScaleEnv, raw, err)
 		}
+	}
+}
+
+func TestTheMorningLoadIsJudgedOnItsOwnBudgetAgainstItsIssue(t *testing.T) {
+	v, issue := JudgeDaily("morning_load", 700*time.Millisecond, Load1Budget, 40)
+	if v != DailyOverKnown || issue != 7068 {
+		t.Fatalf("got %q #%d, want over budget against #7068", v, issue)
+	}
+}
+
+func TestARefusedRowNeverCountsAsBackUnderBudget(t *testing.T) {
+	err := DailyGate([]DailyResult{
+		{Flow: "palette_search_prefix", Seat: "rep", Verdict: DailyWithin, Status422: 4, Allow422: true},
+		{Flow: "palette_search_prefix", Seat: "manager", Verdict: DailyWithin},
+	}, 1)
+	if err != nil {
+		t.Fatalf("a 422 is a refusal, not a fast answer; the row for #7037 must stay: %v", err)
+	}
+}
+
+func TestARowUnderTheSampleFloorIsNoDataNeverAVerdict(t *testing.T) {
+	short := MeasurementFrom("LOAD-1", "morning_load_cheap_route", 0, 700*time.Millisecond, 0, Load1Budget, 14)
+	short.Verdict, short.KnownIssue = string(DailyOverKnown), 7068
+	rows := applySampleFloor([]dailyRow{
+		{Measurement: short, Result: DailyResult{Flow: "morning_load", Seat: "team", Verdict: DailyOverKnown, Issue: 7068, Status5xx: 1}},
+		{Measurement: BudgetMeasurement{Samples: 30, Verdict: string(DailyWithin)}, Result: DailyResult{Verdict: DailyWithin}},
+		{Measurement: BudgetMeasurement{Samples: 1, Verdict: string(DailyNotGated)}, Result: DailyResult{Verdict: DailyNotGated}},
+	})
+	floored := rows[0]
+	if floored.Result.Verdict != DailyNoData || floored.Measurement.Verdict != string(DailyNoData) || floored.Measurement.KnownIssue != 0 {
+		t.Fatalf("14 samples judged %q (record %q, #%d); want no data", floored.Result.Verdict, floored.Measurement.Verdict, floored.Measurement.KnownIssue)
+	}
+	if !strings.Contains(floored.Measurement.Note, "14 samples, under the floor of 30") || floored.Result.Status5xx != 1 {
+		t.Fatalf("note %q, 5xx %d; want the floor named and the server error kept for the gate", floored.Measurement.Note, floored.Result.Status5xx)
+	}
+	if rows[1].Result.Verdict != DailyWithin || rows[2].Result.Verdict != DailyNotGated {
+		t.Fatalf("a full row and an ungated one must keep their verdicts: %q, %q", rows[1].Result.Verdict, rows[2].Result.Verdict)
+	}
+}
+
+func TestACorpusWhoseMedianRepOwnsNoProjectIsRefused(t *testing.T) {
+	if missing := missingMedianKinds([]string{"deal", "company", "contact"}); !slices.Equal(missing, []string{"project"}) {
+		t.Fatalf("got %v; the flows open the median rep's own project, so a corpus without one must fail the pick", missing)
+	}
+	if missing := missingMedianKinds(dailyMedianKinds); len(missing) != 0 {
+		t.Fatalf("got %v; a rep owning every kind misses nothing", missing)
+	}
+}
+
+func TestOnlyAnOptionalCallsNotFoundIsNoData(t *testing.T) {
+	logo := dailyCall{Name: "logo", Path: "/v1/companies/1/logo", Optional: true}
+	if untimed, err := probeAbsent(logo, http.StatusNotFound, nil); !untimed || err != nil {
+		t.Fatalf("an optional 404 → untimed %v, err %v; want no data", untimed, err)
+	}
+	record := dailyCall{Name: "deal", Path: "/v1/deals/1"}
+	if _, err := probeAbsent(record, http.StatusNotFound, nil); err == nil || !strings.Contains(err.Error(), "/v1/deals/1") {
+		t.Fatalf("got %v; a 404 on a corpus-backed read must fail the run naming the path", err)
+	}
+}
+
+func TestOnlyAnAllowlistedRouteMayAnswerNotImplemented(t *testing.T) {
+	unwired := []byte(`{"code":"not_implemented","message":"not wired"}`)
+	for path, want := range map[string]bool{
+		"/v1/digest":                true,
+		"/v1/connectors":            true,
+		"/v1/digest?since=1":        true,
+		"/v1/deals/1":               false,
+		"/v1/analytics/framework":   false,
+		"/v1/connectors/1/messages": false,
+	} {
+		if got := unwiredAnswer(path, http.StatusNotImplemented, unwired); got != want {
+			t.Errorf("unwiredAnswer(%s) = %v, want %v", path, got, want)
+		}
+		untimed, err := probeAbsent(dailyCall{Path: path}, http.StatusNotImplemented, unwired)
+		if untimed != want || err != nil {
+			t.Errorf("probeAbsent(%s, 501) = %v, %v; want %v and no error", path, untimed, err, want)
+		}
+	}
+}
+
+func TestOnlyTimedSamplesAreTallied(t *testing.T) {
+	failing := dailyFlow{Name: "contact_360"}
+	var tally dailyTally
+	_, err := dailySampling(1, func(counted bool) ([]time.Duration, error) {
+		r := dailyResponse{dailyCall{Path: "/v1/contacts/1/360"}, http.StatusInternalServerError, nil}
+		return []time.Duration{time.Millisecond}, failing.admit(r, tallied(&tally, counted))
+	})
+	if err != nil || tally.s5xx != dailySamples {
+		t.Fatalf("err %v, %d server errors tallied; want %d, one per sample and none from the %d warm-ups", err, tally.s5xx, dailySamples, dailyWarmups)
+	}
+}
+
+func TestTheProbeIsNeverTallied(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	seat := Seat{Name: "rep-a1", Role: "rep", Client: srv.Client()}
+	call := dailyCall{Path: "/v1/contacts/1/360"}
+	timed, _, tally := probeCalls(t, &apptest.AppEnv{TS: srv}, dailyFlow{Name: "contact_360"}, seat, []dailyCall{call})
+	if len(timed) != 1 || tally.s5xx != 0 {
+		t.Fatalf("timed %v, %d server errors tallied; the probe checks an answer and never counts it", timed, tally.s5xx)
 	}
 }

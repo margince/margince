@@ -24,15 +24,16 @@ here changes until somebody measures by hand.
 | ID | Operation | Published budget | Measured p95 | Verdict | Measured on |
 |---|---|---|---|---|---|
 | `PERF-1` | Record open (contact/company/deal) | < 100 ms server | 3.2 ms | within budget | 2026-08-15 |
-| `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 95.0 ms | within budget | 2026-10-07 |
+| `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 7.0 ms | within budget | 2026-10-07 |
 | `PERF-3` | Search (full-text) | < 200 ms |  | **not measured** |  |
 | `PERF-4` | Save/mutation | < 150 ms server | 151 ms | **OVER BUDGET** | 2026-08-15 |
 | `PERF-5` | AI baseline action (summary/draft) | first token < 1.5 s |  | **not measured** |  |
 | `PERF-6` | Cold start (single binary) | < 2 s |  | **not measured** |  |
 | `PERF-7` | Context-graph assembly | < 300 ms at mid-market |  | **not measured** |  |
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 3100 ms | over budget (#4912) | 2026-10-07 |
-| `PERF-9` | Analytics screen | < 300 ms |  | **not measured** |  |
+| `PERF-9` | Analytics screen | < 300 ms |  | no data | 2026-10-07 |
 | `PERF-10` | Search as the screen calls it | < 1 s | 420 ms | within budget | 2026-10-07 |
+| `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 240 ms | over budget (#7068) | 2026-10-07 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 |  | **not measured** |  |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived |  | **not measured** |  |
 
@@ -44,16 +45,18 @@ omitted, because a budget missing from this page reads as one that holds.
 ## Daily use (`make bench-daily`)
 
 The screens a rep and a manager open every day, timed over HTTP as the screen calls them.
-A row with no data answered 404 on every try; a row not gated is reported without a budget.
+A row with no data had nothing to time, and its note says why; a row not gated is reported without a budget.
 
 | measurement | seat | p50 | p95 | budget | samples | verdict | notes |
 |---|---|---|---|---|---|---|---|
 | `worklist` | rep | 2900 ms | 3100 ms | 1000 ms | 30 | over budget (#4912) |  |
 | `palette_search` | manager | 180 ms | 420 ms | 1000 ms | 30 | within budget |  |
 | `palette_search` | rep | 120 ms | 210 ms | 1000 ms | 30 | within budget |  |
-| `home_digest` | rep |  |  | 1000 ms | 0 | no data |  |
+| `home_digest` | rep |  |  | 1000 ms | 0 | no data | answers 501 until a mail connector is configured |
+| `app_shell_notices` | rep | 5.0 ms | 7.0 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `analytics_evaluate` | rep |  |  | 300 ms | 12 | no data | 12 samples, under the floor of 30: no p95 is claimed |
 | `worklist_first_load` | rep | 5200 ms | 5200 ms | 1000 ms | 1 | not gated |  |
-| `morning_load_cheap_route` | team | 40.0 ms | 95.0 ms | 150 ms | 120 | within budget | pool wait 1250 ms in all, 48.0 ms at most, over 3200 acquires |
+| `morning_load_cheap_route` | team | 60.0 ms | 240 ms | 150 ms | 40 | over budget (#7068) | pool wait 1250 ms in all, 48.0 ms at most, over 3200 acquires on a pool of 16 |
 
 ## Machines
 

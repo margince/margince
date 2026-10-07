@@ -104,10 +104,10 @@ func findMeasurement(records map[string]record, budget publishedBudget) (found, 
 	return ungated, seenUngated
 }
 
-// p95Cell leaves a row with no samples blank, because a zero would read as
-// instant.
+// p95Cell leaves a row with no data blank: a zero would read as instant, and
+// a few samples under the floor would read as a p95 the run never claimed.
 func p95Cell(m measurement) string {
-	if m.Samples == 0 && m.Verdict != "" {
+	if m.Verdict == storedNoData || m.Samples == 0 && m.Verdict != "" {
 		return ""
 	}
 	return millis(m.P95Ms)
@@ -151,12 +151,12 @@ func renderDaily(b *strings.Builder, records map[string]record) {
 		return
 	}
 	b.WriteString("The screens a rep and a manager open every day, timed over HTTP as the screen calls them.\n")
-	b.WriteString("A row with no data answered 404 on every try; a row not gated is reported without a budget.\n\n")
+	b.WriteString("A row with no data had nothing to time, and its note says why; a row not gated is reported without a budget.\n\n")
 	b.WriteString("| measurement | seat | p50 | p95 | budget | samples | verdict | notes |\n")
 	b.WriteString("|---|---|---|---|---|---|---|---|\n")
 	for _, m := range r.Budgets {
 		p50 := millis(m.P50Ms)
-		if m.Samples == 0 {
+		if p95Cell(m) == "" {
 			p50 = ""
 		}
 		fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s | %d | %s | %s |\n",
@@ -165,9 +165,12 @@ func renderDaily(b *strings.Builder, records map[string]record) {
 	b.WriteString("\n")
 }
 
-// dailyNotes carries the counts a verdict alone does not show.
+// dailyNotes carries the row's note and the counts a verdict alone does not show.
 func dailyNotes(m measurement) string {
 	var notes []string
+	if m.Note != "" {
+		notes = append(notes, m.Note)
+	}
 	if m.Status5xx > 0 {
 		notes = append(notes, fmt.Sprintf("%d server errors", m.Status5xx))
 	}
@@ -175,8 +178,8 @@ func dailyNotes(m measurement) string {
 		notes = append(notes, fmt.Sprintf("%d refused as too broad (422)", m.Status422))
 	}
 	if m.Acquires > 0 {
-		notes = append(notes, fmt.Sprintf("pool wait %s in all, %s at most, over %d acquires",
-			millis(m.PoolWaitMs), millis(m.PoolWaitMaxMs), m.Acquires))
+		notes = append(notes, fmt.Sprintf("pool wait %s in all, %s at most, over %d acquires on a pool of %d",
+			millis(m.PoolWaitMs), millis(m.PoolWaitMaxMs), m.Acquires, m.PoolSize))
 	}
 	return strings.Join(notes, "; ")
 }

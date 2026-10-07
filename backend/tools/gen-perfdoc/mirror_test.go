@@ -20,16 +20,27 @@ import (
 var integrationDir = filepath.Join("..", "..", "internal", "compose", "integration")
 
 func TestTheMeasurementMirrorsTheRecordersJSONFields(t *testing.T) {
-	recorder := structTags(t, filepath.Join(integrationDir, "perfrecord.go"), "BudgetMeasurement")
+	assertMirrors(t, "BudgetMeasurement", reflect.TypeFor[measurement](), 8)
+}
+
+func TestTheRecordAndItsCorpusMirrorTheRecorders(t *testing.T) {
+	assertMirrors(t, "PerfRecord", reflect.TypeFor[record](), 5)
+	assertMirrors(t, "CorpusFacts", reflect.TypeFor[corpus](), 9)
+}
+
+// assertMirrors holds one recorder struct and its renderer twin to the same
+// JSON tags; atLeast fails a parse that found fewer fields than exist.
+func assertMirrors(t *testing.T, recorderType string, twin reflect.Type, atLeast int) {
+	t.Helper()
+	recorder := structTags(t, filepath.Join(integrationDir, "perfrecord.go"), recorderType)
 	var renderer []string
-	typ := reflect.TypeFor[measurement]()
-	for i := range typ.NumField() {
-		renderer = append(renderer, typ.Field(i).Tag.Get("json"))
+	for i := range twin.NumField() {
+		renderer = append(renderer, twin.Field(i).Tag.Get("json"))
 	}
 	slices.Sort(recorder)
 	slices.Sort(renderer)
-	if len(recorder) < 8 || !slices.Equal(recorder, renderer) {
-		t.Errorf("BudgetMeasurement tags %v\nmeasurement tags      %v\nthe two sides of the record must match", recorder, renderer)
+	if len(recorder) < atLeast || !slices.Equal(recorder, renderer) {
+		t.Errorf("%s tags %v\n%s tags %v\nthe two sides of the record must match", recorderType, recorder, twin.Name(), renderer)
 	}
 }
 

@@ -32,12 +32,18 @@ const (
 	dailySamples = 30
 )
 
-// dailyEmptyCaveat marks a row timed over an answer with nothing in it, which
+// dailyEmptyNote marks a row timed over an answer with nothing in it, which
 // says how fast an empty list is and nothing about the screen with data.
-const dailyEmptyCaveat = "empty on the seeded corpus"
+const dailyEmptyNote = "empty on the seeded corpus"
 
-// dailyCall is one request a screen sends; Name tells its row apart from the flow's others.
-type dailyCall struct{ Name, Path string }
+// dailyCall is one request a screen sends; Name tells its row apart from the
+// flow's others. Optional marks a read the seeded corpus has nothing behind
+// (a brief, a review, a logo), whose 404 is "no data"; anywhere else a 404 means
+// the bench asked for something the corpus should hold, and fails the run.
+type dailyCall struct {
+	Name, Path string
+	Optional   bool
+}
 
 // dailyFlow is one screen as the frontend calls it. PerCall times each call
 // as its own row; a Journey is a search, then the page it opens, in parallel.
@@ -78,39 +84,56 @@ var dailyFlows = []dailyFlow{
 	{Name: "lists", ID: "PERF-2", Budget: Perf2Budget, PerCall: true, Calls: listCalls},
 	{Name: "record_open", ID: "PERF-1", Budget: perf1RecordOpenBudget, PerCall: true, Calls: recordOpenCalls},
 	{Name: "contact_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: func(in dailyInput) []dailyCall {
-		return []dailyCall{{"", "/v1/contacts/" + in.ContactID + "/360"}}
+		return []dailyCall{{Path: "/v1/contacts/" + in.ContactID + "/360"}}
 	}},
 	{Name: "search_to_deal", Journey: true, Calls: func(in dailyInput) []dailyCall {
 		page := "/v1/deals/" + in.DealID
 		return []dailyCall{
 			paletteCall("search", in.DealName),
-			{"deal", page},
-			{"offers", page + "/offers"},
-			{"documents", page + "/documents"},
-			{"coverage", page + "/coverage"},
-			{"commitments", page + "/commitments"},
+			{Name: "deal", Path: page},
+			{Name: "offers", Path: page + "/offers"},
+			{Name: "documents", Path: page + "/documents"},
+			{Name: "coverage", Path: page + "/coverage"},
+			{Name: "commitments", Path: page + "/commitments"},
 		}
 	}},
 	{Name: "search_to_company", Journey: true, Calls: func(in dailyInput) []dailyCall {
 		page := "/v1/companies/" + in.CompanyID
 		return []dailyCall{
 			paletteCall("search", in.CompanyName),
-			{"company", page},
-			{"facts", page + "/facts"},
-			{"documents", page + "/documents"},
-			{"logo", page + "/logo"},
+			{Name: "company", Path: page},
+			{Name: "facts", Path: page + "/facts"},
+			{Name: "documents", Path: page + "/documents"},
+			{Name: "logo", Path: page + "/logo", Optional: true},
 		}
 	}},
 	{Name: "analytics", ID: "PERF-9", Budget: Perf9Budget, PerCall: true, Calls: analyticsCalls},
 }
 
+// appShellCalls are the reads App.tsx, the shell and its agent rail send on load
+// for a rep or a manager; reads the shell gates on an admin-only grant are left out.
 func appShellCalls(dailyInput) []dailyCall {
 	return []dailyCall{
-		{"me", "/v1/me"},
-		{"notices", "/v1/notices"},
-		{"approvals", "/v1/approvals?status=pending&limit=50"},
-		{"custom_fields", "/v1/custom-fields?object=contact"},
+		{Name: "capabilities", Path: "/v1/auth/capabilities"},
+		{Name: "me", Path: "/v1/me"},
+		{Name: "company_context", Path: "/v1/company/context/capabilities"},
+		{Name: "installation_settings", Path: "/v1/installation/settings"},
+		{Name: "connectors", Path: "/v1/connectors"},
+		{Name: "approvals", Path: "/v1/approvals?status=pending&limit=50"},
+		{Name: "assistant_profile", Path: "/v1/assistant/profile"},
+		{Name: "ai_activity", Path: dailyAIActivityPath()},
+		{Name: "notices", Path: "/v1/notices"},
 	}
+}
+
+// dailyAIActivityPath is the agent rail's activity read: one kinds parameter per
+// kind it narrates (displayedKinds in ai-activity-speak.ts), in the screen's order.
+func dailyAIActivityPath() string {
+	args := url.Values{"kinds": {
+		"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "summarize", "account_scan",
+		"draft_reply", "offer_draft", "weekly_review", "weekly_learnings", "transcript_propose", "voice_build",
+	}}
+	return "/v1/me/ai-activity?" + args.Encode()
 }
 
 // worklistCalls sends the scope the screen opens on: a rep's own queue, a manager's team.
@@ -119,25 +142,25 @@ func worklistCalls(in dailyInput) []dailyCall {
 	if in.Seat.Role == "manager" {
 		scope = "team"
 	}
-	return []dailyCall{{"", "/v1/worklist?scope=" + scope + "&filter=all"}, {"handled", "/v1/worklist/handled"}}
+	return []dailyCall{{Path: "/v1/worklist?scope=" + scope + "&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 }
 
 func homeCalls(in dailyInput) []dailyCall {
 	calls := []dailyCall{
-		{"brief", "/v1/brief"},
-		{"worklist", "/v1/worklist?scope=mine&filter=all"},
-		{"digest", "/v1/digest"},
-		{"weekly_reviews", "/v1/weekly-reviews"},
+		{Name: "brief", Path: "/v1/brief", Optional: true},
+		{Name: "worklist", Path: "/v1/worklist?scope=mine&filter=all"},
+		{Name: "digest", Path: "/v1/digest", Optional: true},
+		{Name: "weekly_reviews", Path: "/v1/weekly-reviews", Optional: true},
 	}
 	if in.Seat.Role == "manager" {
-		calls = append(calls, dailyCall{"weekly_reviews_team", "/v1/weekly-reviews/team?team=" + in.Team})
+		calls = append(calls, dailyCall{Name: "weekly_reviews_team", Path: "/v1/weekly-reviews/team?team=" + in.Team, Optional: true})
 	}
 	return calls
 }
 
 // paletteCall is the command palette's request: three hits per type, colleagues included.
 func paletteCall(name, q string) dailyCall {
-	return dailyCall{name, "/v1/search?q=" + url.QueryEscape(q) + "&per_type=3&with_employees=true"}
+	return dailyCall{Name: name, Path: "/v1/search?q=" + url.QueryEscape(q) + "&per_type=3&with_employees=true"}
 }
 
 func paletteCalls(in dailyInput) []dailyCall {
@@ -156,37 +179,37 @@ func prefixCalls(dailyInput) []dailyCall {
 
 func resultsCalls(dailyInput) []dailyCall {
 	return []dailyCall{
-		{"all", "/v1/search?q=contract&per_type=5&with_employees=true"},
-		{"activity", "/v1/search?q=contract&types=activity&limit=50&with_employees=true"},
+		{Name: "all", Path: "/v1/search?q=contract&per_type=5&with_employees=true"},
+		{Name: "activity", Path: "/v1/search?q=contract&types=activity&limit=50&with_employees=true"},
 	}
 }
 
 func listCalls(in dailyInput) []dailyCall {
 	var calls []dailyCall
 	for _, list := range []string{"companies", "contacts", "deals", "leads"} {
-		calls = append(calls, dailyCall{list, "/v1/" + list + "?limit=50"},
-			dailyCall{list + "_q", "/v1/" + list + "?q=" + url.QueryEscape(in.ListPrefix) + "&limit=50"})
+		calls = append(calls, dailyCall{Name: list, Path: "/v1/" + list + "?limit=50"},
+			dailyCall{Name: list + "_q", Path: "/v1/" + list + "?q=" + url.QueryEscape(in.ListPrefix) + "&limit=50"})
 	}
 	return calls
 }
 
 func recordOpenCalls(in dailyInput) []dailyCall {
 	return []dailyCall{
-		{"contact", "/v1/contacts/" + in.ContactID},
-		{"company", "/v1/companies/" + in.CompanyID},
-		{"deal", "/v1/deals/" + in.DealID},
-		{"project", "/v1/projects/" + in.ProjectID},
+		{Name: "contact", Path: "/v1/contacts/" + in.ContactID},
+		{Name: "company", Path: "/v1/companies/" + in.CompanyID},
+		{Name: "deal", Path: "/v1/deals/" + in.DealID},
+		{Name: "project", Path: "/v1/projects/" + in.ProjectID},
 	}
 }
 
 // analyticsCalls are the five requests the analytics screen sends before it draws.
 func analyticsCalls(in dailyInput) []dailyCall {
 	return []dailyCall{
-		{"context", "/v1/analytics/context"},
-		{"metrics", "/v1/analytics/metrics"},
-		{"framework", "/v1/analytics/framework"},
-		{"pipelines", "/v1/pipelines"},
-		{"evaluate", "/v1/analytics/evaluate?" + in.EvaluateArgs},
+		{Name: "context", Path: "/v1/analytics/context"},
+		{Name: "metrics", Path: "/v1/analytics/metrics"},
+		{Name: "framework", Path: "/v1/analytics/framework"},
+		{Name: "pipelines", Path: "/v1/pipelines"},
+		{Name: "evaluate", Path: "/v1/analytics/evaluate?" + in.EvaluateArgs},
 	}
 }
 
@@ -233,6 +256,15 @@ func (f dailyFlow) admit(r dailyResponse, tally *dailyTally) error {
 	return fmt.Errorf("GET %s answered %d: %s", r.call.Path, r.status, clipBody(r.body))
 }
 
+// tallied is the tally a round counts into: the row's own for a sample, a
+// discarded one for a warm-up, whose answers are still checked.
+func tallied(row *dailyTally, counted bool) *dailyTally {
+	if counted {
+		return row
+	}
+	return &dailyTally{}
+}
+
 func clipBody(body []byte) string {
 	const keep = 400
 	if len(body) > keep {
@@ -270,14 +302,19 @@ func fetchRound(s Seat, base string, calls []dailyCall, parallel bool) ([]dailyR
 	return out, nil
 }
 
-// dailyUnwiredCaveat names a no-data row whose operation this composition
-// does not serve: digest and connectors are wired only with a mail connector.
-const dailyUnwiredCaveat = "answers 501 until a mail connector is configured"
+// dailyUnwiredNote names a no-data row whose operation this composition does
+// not serve: the harness configures no mail connector, and these routes are
+// wired only with one. Any other 501 is a server fault and fails the run.
+const dailyUnwiredNote = "answers 501 until a mail connector is configured"
 
-// unwiredAnswer is the generated 501 an operation answers when nothing wired
-// it: the composition's posture, not a server fault, and nothing to time.
-func unwiredAnswer(status int, body []byte) bool {
-	return status == http.StatusNotImplemented && bytes.Contains(body, []byte(`"code":"not_implemented"`))
+var dailyUnwiredRoutes = []string{"/v1/digest", "/v1/connectors"}
+
+// unwiredAnswer is the generated 501 of a route on dailyUnwiredRoutes: the
+// composition's posture, not a server fault, and nothing to time.
+func unwiredAnswer(path string, status int, body []byte) bool {
+	route, _, _ := strings.Cut(path, "?")
+	return status == http.StatusNotImplemented && slices.Contains(dailyUnwiredRoutes, route) &&
+		bytes.Contains(body, []byte(`"code":"not_implemented"`))
 }
 
 // dailyAbsent is a call with nothing to time, and the status that said so.
@@ -286,19 +323,23 @@ type dailyAbsent struct {
 	status int
 }
 
-// probeCalls asks each call once before timing. A 404 is the screen's own
-// "nothing yet" and an unwired 501 has nothing behind it: either call leaves
-// the timed set and becomes a no-data row.
+// probeCalls asks each call once before timing. An optional call's 404 is the
+// screen's own "nothing yet" and an unwired 501 has nothing behind it: either
+// leaves the timed set as a no-data row. The probe's answers are not counted.
 func probeCalls(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, calls []dailyCall) (timed []dailyCall, absent []dailyAbsent, tally dailyTally) {
 	t.Helper()
 	tally.empty = true
 	for _, call := range calls {
 		status, body, _ := s.Get(t, e, call.Path)
-		if status == http.StatusNotFound || unwiredAnswer(status, body) {
+		untimed, err := probeAbsent(call, status, body)
+		if err != nil {
+			t.Fatalf("seat %s, flow %s: %v", s.Name, f.Name, err)
+		}
+		if untimed {
 			absent = append(absent, dailyAbsent{call, status})
 			continue
 		}
-		if err := f.admit(dailyResponse{call, status, body}, &tally); err != nil {
+		if err := f.admit(dailyResponse{call, status, body}, &dailyTally{}); err != nil {
 			t.Fatalf("seat %s, flow %s: %v", s.Name, f.Name, err)
 		}
 		timed = append(timed, call)
@@ -314,6 +355,18 @@ func probeCalls(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, calls []da
 		}
 	}
 	return timed, absent, tally
+}
+
+// probeAbsent reports whether a probe's answer leaves its call untimed, and
+// refuses a 404 on any call not marked Optional.
+func probeAbsent(call dailyCall, status int, body []byte) (bool, error) {
+	switch {
+	case unwiredAnswer(call.Path, status, body), status == http.StatusNotFound && call.Optional:
+		return true, nil
+	case status == http.StatusNotFound:
+		return false, fmt.Errorf("GET %s answered 404 on a read the seeded corpus backs: %s", call.Path, clipBody(body))
+	}
+	return false, nil
 }
 
 // emptyAnswer is an empty JSON list, or an object whose lists are all empty
@@ -345,16 +398,17 @@ func emptyAnswer(body []byte) bool {
 
 // dailySampling times warm-ups and then samples of one round. A round returns
 // one duration per row it times, which is why it is not benchRuns: a journey
-// times its search, its page and the whole from one round.
-func dailySampling(rows int, round func() ([]time.Duration, error)) ([][]time.Duration, error) {
+// times its search, its page and the whole from one round. counted is false
+// for a warm-up, whose answers are checked but never tallied.
+func dailySampling(rows int, round func(counted bool) ([]time.Duration, error)) ([][]time.Duration, error) {
 	for i := range dailyWarmups {
-		if _, err := round(); err != nil {
+		if _, err := round(false); err != nil {
 			return nil, fmt.Errorf("warm-up %d: %w", i+1, err)
 		}
 	}
 	samples := make([][]time.Duration, rows)
 	for i := range dailySamples {
-		durations, err := round()
+		durations, err := round(true)
 		if err != nil {
 			return nil, fmt.Errorf("sample %d: %w", i+1, err)
 		}
@@ -390,7 +444,7 @@ func measureDailyRow(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, name 
 	if len(timed) == 0 {
 		return rows
 	}
-	samples, err := dailySampling(1, func() ([]time.Duration, error) {
+	samples, err := dailySampling(1, func(counted bool) ([]time.Duration, error) {
 		start := time.Now()
 		answered, err := fetchRound(s, e.TS.URL, timed, false)
 		elapsed := time.Since(start)
@@ -398,7 +452,7 @@ func measureDailyRow(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, name 
 			return nil, err
 		}
 		for _, r := range answered {
-			if err := f.admit(r, &tally); err != nil {
+			if err := f.admit(r, tallied(&tally, counted)); err != nil {
 				return nil, err
 			}
 		}
@@ -422,8 +476,9 @@ func runDailyJourney(t *testing.T, e *apptest.AppEnv, f dailyFlow, in dailyInput
 		t.Fatalf("seat %s, %s: the palette search answered 404", s.Name, f.Name)
 	}
 	page, absent, pageTally := probeCalls(t, e, f, s, calls[1:])
+	pageNote := "the page's calls, in parallel: " + strings.Join(callNames(page), ", ")
 	rows := dailyAbsentRows(t.Log, f, "PERF-1", f.Name+"_page", s, perf1RecordOpenBudget, absent, false)
-	samples, err := dailySampling(3, func() ([]time.Duration, error) {
+	samples, err := dailySampling(3, func(counted bool) ([]time.Duration, error) {
 		start := time.Now()
 		found, err := fetchRound(s, e.TS.URL, calls[:1], false)
 		searched := time.Now()
@@ -436,12 +491,12 @@ func runDailyJourney(t *testing.T, e *apptest.AppEnv, f dailyFlow, in dailyInput
 			return nil, err
 		}
 		for _, r := range found {
-			if err := f.admit(r, &searchTally); err != nil {
+			if err := f.admit(r, tallied(&searchTally, counted)); err != nil {
 				return nil, err
 			}
 		}
 		for _, r := range opened {
-			if err := f.admit(r, &pageTally); err != nil {
+			if err := f.admit(r, tallied(&pageTally, counted)); err != nil {
 				return nil, err
 			}
 		}
@@ -453,7 +508,7 @@ func runDailyJourney(t *testing.T, e *apptest.AppEnv, f dailyFlow, in dailyInput
 	return append(rows,
 		dailyMeasuredRow(t, s, dailyRowSpec{flow: f.Name, id: "PERF-10", name: f.Name + "_search", budget: Perf10Budget, gated: true},
 			samples[0], searchTally),
-		dailyMeasuredRow(t, s, dailyRowSpec{flow: f.Name, id: "PERF-1", name: f.Name + "_page", budget: perf1RecordOpenBudget, gated: true},
+		dailyMeasuredRow(t, s, dailyRowSpec{flow: f.Name, id: "PERF-1", name: f.Name + "_page", budget: perf1RecordOpenBudget, gated: true, note: pageNote},
 			samples[1], pageTally),
 		dailyMeasuredRow(t, s, dailyRowSpec{flow: f.Name, id: "PERF-10", name: f.Name + "_total", budget: Perf10Budget + perf1RecordOpenBudget},
 			samples[2], dailyTally{empty: searchTally.empty && pageTally.empty}))
@@ -470,8 +525,9 @@ func dailyAbsentRows(log func(...any), f dailyFlow, id, name string, s Seat, bud
 		}
 		m := MeasurementFrom(id, rowName, 0, 0, 0, budget, 0)
 		m.Seat, m.Flow, m.Verdict = s.Role, f.Name, string(DailyNoData)
+		m.Note = "answers 404: nothing of this kind on the seeded corpus"
 		if a.status == http.StatusNotImplemented {
-			m.Caveat = dailyUnwiredCaveat
+			m.Note = dailyUnwiredNote
 		}
 		log(fmt.Sprintf("perfbench [daily]: %s %s GET %s answered %d samples=0 %s", rowName, s.Role, a.call.Path, a.status, DailyNoData))
 		rows = append(rows, dailyRow{
@@ -485,9 +541,17 @@ func dailyAbsentRows(log func(...any), f dailyFlow, id, name string, s Seat, bud
 
 // dailyRowSpec names a row and how it is judged; an ungated row is recorded beside the budget, never against it.
 type dailyRowSpec struct {
-	flow, id, name  string
-	budget          time.Duration
-	allow422, gated bool
+	flow, id, name, note string
+	budget               time.Duration
+	allow422, gated      bool
+}
+
+func callNames(calls []dailyCall) []string {
+	names := make([]string, len(calls))
+	for i, call := range calls {
+		names[i] = call.Name
+	}
+	return names
 }
 
 // dailyMeasuredRow folds a row's samples into the record and the gate's
@@ -508,15 +572,17 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 	m.Status5xx, m.Status422 = tally.s5xx, tally.s422
 	switch {
 	case tally.empty:
-		m.Caveat = dailyEmptyCaveat
+		m.Note = joinNotes(spec.note, dailyEmptyNote)
 	case len(tally.emptyCalls) > 0:
-		m.Caveat = strings.Join(tally.emptyCalls, ", ") + " " + dailyEmptyCaveat
+		m.Note = joinNotes(spec.note, strings.Join(tally.emptyCalls, ", ")+" "+dailyEmptyNote)
+	default:
+		m.Note = spec.note
 	}
 	if tally.first5xx != "" {
 		t.Logf("perfbench [daily]: %s %s server error: %s", name, s.Role, tally.first5xx)
 	}
 	t.Logf("perfbench [daily]: %s %s p50=%s p95=%s p99=%s budget=%s samples=%d %s 5xx=%d 422=%d %s",
-		name, s.Role, stats.P50, stats.P95, stats.P99, budget, stats.Samples, verdict, tally.s5xx, tally.s422, m.Caveat)
+		name, s.Role, stats.P50, stats.P95, stats.P99, budget, stats.Samples, verdict, tally.s5xx, tally.s422, m.Note)
 	return dailyRow{
 		Measurement: m,
 		Result: DailyResult{
@@ -545,15 +611,14 @@ func newDailyInput(t *testing.T, e *apptest.AppEnv, s Seat, team string, c Daily
 	return in
 }
 
-// medianOwned returns the index of the corpus row the median rep owns, or the
-// first row when they own none of that kind (the corpus guarantees deals,
-// companies and contacts; a project may belong to a teammate).
+// medianOwned returns the index of the corpus row the median rep owns;
+// pickCorpus guarantees one of each kind, so finding none is a broken corpus.
 func medianOwned(t *testing.T, e *apptest.AppEnv, sql string, ids []string, rep string) int {
 	t.Helper()
 	var id string
 	err := e.Owner.QueryRow(context.Background(), sql+` LIMIT 1`, ids, rep).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return 0
+		t.Fatalf("the median rep owns none of the corpus rows %q picks; the flows would open a teammate's record", sql)
 	}
 	if err != nil {
 		t.Fatalf("finding the median rep's record: %v", err)

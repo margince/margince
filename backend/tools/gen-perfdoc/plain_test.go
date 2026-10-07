@@ -86,8 +86,38 @@ func TestAServerErrorIsRedEvenWithinBudget(t *testing.T) {
 
 func TestADevelopmentScaleRunIsNeverGreen(t *testing.T) {
 	trial := measurement{Name: "lists", Seat: "rep", P95Ms: 40, BudgetMs: 150, Samples: 30, Verdict: storedWithin, Caveat: "development scale 0.05"}
-	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{trial}}})
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{trial}, Corpus: &corpus{Scale: 0.05}}})
 	if strings.Contains(page, "| A list of 50 records | 🟢") || !strings.Contains(page, "This run is a trial.") {
 		t.Errorf("a development-scale pass must not read as fast:\n%s", page)
+	}
+}
+
+func TestANoteNeverMakesARunATrial(t *testing.T) {
+	noted := measurement{Name: "lists", Flow: "lists", Seat: "rep", P95Ms: 40, BudgetMs: 150, Samples: 30, Verdict: storedWithin, Note: "empty on the seeded corpus"}
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{noted}, Corpus: &corpus{Scale: 1}}})
+	if strings.Contains(page, "This run is a trial.") || !strings.Contains(page, "| A list of 50 records | 🟢 Under a quarter of a second |") {
+		t.Errorf("a note informs and never doubts a verdict:\n%s", page)
+	}
+	if got := verdict(noted); got != storedWithin {
+		t.Errorf("budgets page verdict %q, want %q", got, storedWithin)
+	}
+}
+
+func TestTheTestCompanyIsDescribedFromTheRecord(t *testing.T) {
+	page := renderPlain(fixtureRecords(t))
+	want := "The test company has 250,000 contacts at 10,000 companies, 25,000 deals, 100,000 leads,\n500 projects and 500,000 activities, owned by 12 reps under 2 managers."
+	if !strings.Contains(page, want) {
+		t.Errorf("the details must state the record's corpus; want\n%s", want)
+	}
+	if strings.Contains(renderPlain(map[string]record{}), "contacts at") {
+		t.Error("with no record the page must not state a corpus size")
+	}
+}
+
+func TestThousandsAreGroupedInThrees(t *testing.T) {
+	for n, want := range map[int]string{0: "0", 999: "999", 1000: "1,000", 250000: "250,000", 1234567: "1,234,567"} {
+		if got := thousands(n); got != want {
+			t.Errorf("thousands(%d) = %q, want %q", n, got, want)
+		}
 	}
 }

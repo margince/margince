@@ -159,8 +159,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
-- [benchmark.md](reference/benchmark.md): how fast the screens a rep and a manager open each day
-  are, in plain words. Generated.
+- [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
+  with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.
 - [ci-workflows.md](reference/ci-workflows.md): the GitHub workflows that run next to the merge check.
 - [platform-toolkit.md](reference/platform-toolkit.md): shared code for every module.

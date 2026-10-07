@@ -39,7 +39,8 @@ type publishedBudget struct {
 	measuredBy []string
 }
 
-// The published set, in the order acceptance-standards.md lists it. Hand-kept
+// The published set, in the order acceptance-standards.md lists it, then the
+// budgets a bench declares beside its own cases (LOAD-1, bench-daily). Hand-kept
 // against the spec on purpose: it is the CLAIM side of the page, and deriving
 // it from the records would let a budget disappear from the page simply by
 // nobody measuring it — which is the failure this whole page exists to prevent.
@@ -54,6 +55,7 @@ var published = []publishedBudget{
 	{"PERF-8", "Worklist and Home, as the screen calls them", "< 1 s", []string{dailyTarget}},
 	{"PERF-9", "Analytics screen", "< 300 ms", []string{dailyTarget}},
 	{"PERF-10", "Search as the screen calls it", "< 1 s", []string{dailyTarget}},
+	{"LOAD-1", "A cheap request while the team starts at once", "< 150 ms", []string{dailyTarget}},
 	{"CAP-PARAM-1", "Capture to timeline", "60 s p95", []string{"bench-capture"}},
 	{"MOBILE-AC-2", "Record open, perceived, Fast-3G", "< 300 ms perceived", []string{"bench-mobile"}},
 }
@@ -93,6 +95,21 @@ type measurement struct {
 	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
 	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`
 	Acquires      int64   `json:"acquires,omitempty"`
+	PoolSize      int32   `json:"pool_size,omitempty"`
+	Note          string  `json:"note,omitempty"`
+}
+
+// corpus mirrors CorpusFacts in perfrecord.go: what a seeded bench ran over.
+type corpus struct {
+	Scale      float64 `json:"scale"`
+	Contacts   int     `json:"contacts"`
+	Companies  int     `json:"companies"`
+	Deals      int     `json:"deals"`
+	Leads      int     `json:"leads"`
+	Projects   int     `json:"projects"`
+	Activities int     `json:"activities"`
+	Reps       int     `json:"reps"`
+	Managers   int     `json:"managers"`
 }
 
 type record struct {
@@ -100,6 +117,7 @@ type record struct {
 	MeasuredOn string        `json:"measured_on"`
 	Machine    machine       `json:"machine"`
 	Budgets    []measurement `json:"budgets"`
+	Corpus     *corpus       `json:"corpus,omitempty"`
 }
 
 const (

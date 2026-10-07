@@ -11,7 +11,7 @@ import (
 )
 
 // German, English and Vietnamese, so "co", "con", "contr" match across words as in a real
-// inbox. Every name is assembled from these parts; none names a real person.
+// inbox. Every name is assembled from these parts; none names anyone real.
 var (
 	dailyGermanFirst = []string{
 		"Anna", "Lukas", "Jonas", "Lena", "Felix", "Marie", "Paul", "Sophie", "Jan", "Laura",
@@ -128,9 +128,9 @@ var dailySentences = map[string][]string{
 	},
 }
 
-// dailyPersonNames pairs names within one culture, so a person reads as one culture's name
+// dailyContactNames pairs names within one culture, so a contact reads as one culture's name
 // and writes in its language; a culture weighs as many pairs as its parts make.
-func dailyPersonNames() (firsts, lasts, languages []string) {
+func dailyContactNames() (firsts, lasts, languages []string) {
 	for _, culture := range []struct {
 		language    string
 		first, last []string

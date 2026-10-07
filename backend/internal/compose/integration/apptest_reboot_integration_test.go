@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package apptest_test
+package integration
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func TestRebootServesTheSameDatabaseThroughAFreshPool(t *testing.T) {
 	}
 	// A seat client built for the first server carries its session over, as
 	// a browser does across a restart: the jar keys cookies by host, not port.
-	if status := getStatus(t, before.Client, after.TS.URL+"/v1/contacts/"+contact.ID); status != http.StatusOK {
+	if status := rebootGetStatus(t, before.Client, after.TS.URL+"/v1/contacts/"+contact.ID); status != http.StatusOK {
 		t.Fatalf("the pre-reboot client reading through the new server → %d, want 200", status)
 	}
 	if status := before.Call(t, "GET", "/v1/contacts/"+contact.ID, nil, nil, nil); status != http.StatusOK {
@@ -44,7 +44,33 @@ func TestRebootServesTheSameDatabaseThroughAFreshPool(t *testing.T) {
 	}
 }
 
-func getStatus(t *testing.T, client *http.Client, url string) int {
+func TestClosingARebootedAppStopsItAndLeavesTheOriginalServing(t *testing.T) {
+	before := apptest.SetupApp(t)
+	before.BootstrapWorkspace(t)
+	after := before.Reboot(t)
+
+	after.Close()
+
+	if conn, err := after.Pool.Acquire(context.Background()); err == nil {
+		conn.Release()
+		t.Fatal("the rebooted pool still hands out connections after Close")
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, after.TS.URL+"/v1/me", nil)
+	if err != nil {
+		t.Fatalf("building request: %v", err)
+	}
+	if resp, err := before.Client.Do(req); err == nil {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("closing response body: %v", err)
+		}
+		t.Fatal("the rebooted server still answers after Close")
+	}
+	if status := before.Call(t, "GET", "/v1/me", nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("the original env after closing its reboot → %d, want 200: Close reached the shared pool", status)
+	}
+}
+
+func rebootGetStatus(t *testing.T, client *http.Client, url string) int {
 	t.Helper()
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
@@ -54,6 +80,8 @@ func getStatus(t *testing.T, client *http.Client, url string) int {
 	if err != nil {
 		t.Fatalf("GET %s: %v", url, err)
 	}
-	apptest.CloseBody(t, resp)
+	if err := resp.Body.Close(); err != nil {
+		t.Errorf("closing response body: %v", err)
+	}
 	return resp.StatusCode
 }

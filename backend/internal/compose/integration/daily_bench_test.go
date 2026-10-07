@@ -8,8 +8,8 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -86,37 +86,57 @@ func TestDailyUseBudgets(t *testing.T) {
 		}
 		m := runMorningLoad(t, e, seats, corpus, absent)
 		t.Logf("perfbench [daily]: morning_load team cheap p50=%s p95=%s samples=%d 5xx=%d 422=%d pool wait %s total, %s worst mean, %d acquires on a pool of %d",
-			m.CheapP50, m.CheapP95, m.CheapSamples, m.S5xx, m.S422, m.PoolWaitTotal, m.PoolWaitMax, m.Acquires, e.Pool.Config().MaxConns)
+			m.CheapP50, m.CheapP95, m.CheapSamples, m.S5xx, m.S422, m.PoolWaitTotal, m.PoolWaitMax, m.Acquires, m.PoolSize)
 		rows = append(rows, morningLoadRow(m))
 	})
 
 	// The record is written before the gate: a breach is the run a reader most needs to see.
 	measurements := make([]BudgetMeasurement, 0, len(rows))
 	results := make([]DailyResult, 0, len(rows))
-	for _, row := range rows {
+	for _, row := range applySampleFloor(rows) {
 		if scale != 1 {
-			row.Measurement.Caveat = strings.TrimSuffix(fmt.Sprintf("development scale %g; %s", scale, row.Measurement.Caveat), "; ")
+			row.Measurement.Caveat = fmt.Sprintf("development scale %g", scale)
 		}
 		measurements = append(measurements, row.Measurement)
 		results = append(results, row.Result)
 	}
-	WritePerfRecord(t, "bench-daily", benchPostgresVersion(e.Owner), measurements)
+	record := newPerfRecord("bench-daily", benchPostgresVersion(e.Owner), measurements)
+	record.Corpus = dailyCorpusFacts(scale, seats)
+	writePerfRecordTo(t, dailyRecordDir(t, scale), record)
 	if err := DailyGate(results, scale); err != nil {
 		t.Fatalf("daily-use budget gate is red: %v", err)
 	}
 }
 
+// dailyRecordDir is where a run at this scale leaves its record. A development
+// run writes under the git-ignored dev/, which gen-perfdoc never reads, so it
+// cannot rewrite the published record or the pages rendered from it.
+func dailyRecordDir(t *testing.T, scale float64) string {
+	t.Helper()
+	if scale == 1 {
+		return PerfRecordDir(t)
+	}
+	return filepath.Join(PerfRecordDir(t), "dev")
+}
+
+// dailyCorpusFacts is the corpus the run measured, from the tier it seeded.
+func dailyCorpusFacts(scale float64, seats Seats) *CorpusFacts {
+	n := dailyTier.scaled(scale)
+	return &CorpusFacts{
+		Scale: scale, Contacts: n.Contacts, Companies: n.Companies, Deals: n.Deals, Leads: n.Leads,
+		Projects: n.Projects, Activities: n.Activities, Reps: len(seats.Reps), Managers: len(seats.Managers),
+	}
+}
+
 // assertDailyReviewFocus holds the run to what makes its numbers mean
-// anything: enough samples, a seat that sees data, and no flow timed empty.
+// anything: a seat that sees data, and no flow timed empty. The sample floor
+// is applySampleFloor's, on every row before the record is written.
 func assertDailyReviewFocus(t *testing.T, rows []dailyRow) {
 	t.Helper()
 	answered, timedEmpty, sample := map[string]bool{}, map[string]bool{}, map[string][]byte{}
 	for _, row := range rows {
 		m := row.Measurement
 		key := m.Flow + " for the " + m.Seat
-		if gated := row.Result.Verdict != DailyNoData && row.Result.Verdict != DailyNotGated; gated && m.Samples < dailySamples {
-			t.Errorf("%s (%s) took %d samples, want at least %d", m.Name, m.Seat, m.Samples, dailySamples)
-		}
 		answered[key] = answered[key] || !row.Empty
 		timedEmpty[key] = timedEmpty[key] || row.Empty && row.Result.Verdict != DailyNoData
 		if sample[key] == nil {

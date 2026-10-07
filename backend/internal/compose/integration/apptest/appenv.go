@@ -56,6 +56,8 @@ type AppEnv struct {
 	// wiring is the suite's extra compose options, kept so Reboot recomposes
 	// the same application rather than the default one.
 	wiring func(origin string) []compose.Option
+	// ownPool is set on an env from Reboot, whose pool no other env shares.
+	ownPool bool
 }
 
 // SetupApp boots the default harness server — no schema pool, so the
@@ -140,8 +142,17 @@ func (e *AppEnv) Reboot(t *testing.T) *AppEnv {
 		t.Fatalf("opening the rebooted app pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, wiring: e.wiring}
+	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, wiring: e.wiring, ownPool: true}
 	return next.serve(t, e.Client.Jar)
+}
+
+// Close stops the server now rather than at test end, and the pool when Reboot
+// opened it; SetupApp's pool is shared by the package and outlives any one env.
+func (e *AppEnv) Close() {
+	e.TS.Close()
+	if e.ownPool {
+		e.Pool.Close()
+	}
 }
 
 // serve composes the harness handler over e.Pool, starts it behind TLS and

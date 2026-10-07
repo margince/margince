@@ -233,7 +233,7 @@ func (s dailySeeder) companies() {
 // contacts are spread round-robin over the companies, so contact i works at
 // company ((i-1) mod companies)+1 and i±companies is a colleague there.
 func (s dailySeeder) contacts() {
-	firsts, lasts, languages := dailyPersonNames()
+	firsts, lasts, languages := dailyContactNames()
 	s.exec("contact ordinals", `CREATE TEMP TABLE daily_seed_contact AS
 	      SELECT p.i, public.uuidv7() AS id, p.owner_id, p.company_i, p.private,
 	             ($4::text[])[p.name_n] AS first_name, ($5::text[])[p.name_n] AS last_name,
@@ -325,7 +325,7 @@ func (s dailySeeder) stakeholders() {
 }
 
 func (s dailySeeder) leads() {
-	firsts, lasts, _ := dailyPersonNames()
+	firsts, lasts, _ := dailyContactNames()
 	s.exec("lead", `INSERT INTO lead (full_name, email, title, company_name, status, score, owner_id, source, captured_by, created_at)
 	      SELECT l.first || ' ' || l.last,
 	             lower(regexp_replace(public.f_unaccent(l.first || '.' || l.last), '[^A-Za-z0-9.]+', '', 'g'))
@@ -343,14 +343,17 @@ func (s dailySeeder) leads() {
 	s.analyze("lead")
 }
 
-// projects run at the first companies, one each, owned by the company owner.
+// projects run at companies taken one per owning rep in turn, owned by the
+// company owner, so every rep who owns a company owns a project to open.
 func (s dailySeeder) projects() {
 	s.exec("project", `INSERT INTO project (name, key, company_id, owner_id, phase, started_at, target_end_date,
 	                                       source, captured_by)
 	      SELECT c.stem || ' ' || ($1::text[])[1 + c.i % cardinality($1::text[])], 'DP-' || c.i, c.id, c.owner_id,
 	             (ARRAY['initiative','pursuing','delivering'])[1 + c.i % 3],
 	             current_date - (c.i % 200), current_date + (c.i % 300), 'manual', 'human:' || c.owner_id
-	      FROM daily_seed_company c WHERE c.i <= $2 ORDER BY c.i`, dailyProjectWords, s.n.Projects)
+	      FROM (SELECT sc.*, row_number() OVER (PARTITION BY sc.owner_id ORDER BY sc.i) AS turn
+	            FROM daily_seed_company sc) c
+	      ORDER BY c.turn, c.i LIMIT $2`, dailyProjectWords, s.n.Projects)
 	s.analyze("project")
 }
 
@@ -524,12 +527,17 @@ func (s dailySeeder) pickCorpus(seats Seats) DailyCorpus {
 	      WHERE p.owner_id = rep.id AND NOT p.private ORDER BY p.i`)
 	c.ProjectIDs, _ = pick("project", `SELECT pr.id, pr.name FROM daily_seed_company sc
 	      JOIN project pr ON pr.company_id = sc.id WHERE pr.owner_id = rep.id ORDER BY sc.i`)
-	for _, kind := range []string{"deal", "company", "contact"} {
-		if !slices.Contains(medianOwns, kind) {
-			s.t.Fatalf("the median rep owns no %s in the corpus; the flows would never open one of theirs", kind)
-		}
+	if missing := missingMedianKinds(medianOwns); len(missing) > 0 {
+		s.t.Fatalf("the median rep owns no %s in the corpus; the flows would never open one of theirs", strings.Join(missing, ", "))
 	}
 	return c
+}
+
+// dailyMedianKinds are the records the flows open from the median rep's own.
+var dailyMedianKinds = []string{"deal", "company", "contact", "project"}
+
+func missingMedianKinds(owned []string) []string {
+	return slices.DeleteFunc(slices.Clone(dailyMedianKinds), func(kind string) bool { return slices.Contains(owned, kind) })
 }
 
 // dailyCensus counts the tables the tier sizes. The anchor company is the

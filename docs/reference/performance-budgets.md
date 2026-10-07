@@ -33,6 +33,7 @@ here changes until somebody measures by hand.
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s |  | **not measured** |  |
 | `PERF-9` | Analytics screen | < 300 ms |  | **not measured** |  |
 | `PERF-10` | Search as the screen calls it | < 1 s |  | **not measured** |  |
+| `LOAD-1` | A cheap request while the team starts at once | < 150 ms |  | **not measured** |  |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 61.0 ms | within budget | 2026-09-11 |
 

@@ -49,7 +49,9 @@ func TestTheBudgetsTableListsTheDailyBudgetsWithTheWorstStoredVerdict(t *testing
 	page := render(fixtureRecords(t))
 	for _, want := range []string{
 		"| `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 3100 ms | over budget (#4912) | 2026-10-07 |",
-		"| `PERF-9` | Analytics screen | < 300 ms |  | **not measured** |  |",
+		"| `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 7.0 ms | within budget | 2026-10-07 |",
+		"| `PERF-9` | Analytics screen | < 300 ms |  | no data | 2026-10-07 |",
+		"| `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 240 ms | over budget (#7068) | 2026-10-07 |",
 		"| `PERF-10` | Search as the screen calls it | < 1 s | 420 ms | within budget | 2026-10-07 |",
 	} {
 		if !strings.Contains(page, want) {
@@ -60,17 +62,37 @@ func TestTheBudgetsTableListsTheDailyBudgetsWithTheWorstStoredVerdict(t *testing
 
 func TestADailyRowIsListedPerSeatWithItsOwnVerdict(t *testing.T) {
 	page := render(fixtureRecords(t))
-	section := page[strings.Index(page, "## Daily use (`make bench-daily`)"):]
+	_, section, found := strings.Cut(page, "## Daily use (`make bench-daily`)")
+	if !found {
+		t.Fatal("the page has no daily-use section")
+	}
 	for _, want := range []string{
 		"| `worklist` | rep | 2900 ms | 3100 ms | 1000 ms | 30 | over budget (#4912) |",
 		"| `palette_search` | manager | 180 ms | 420 ms | 1000 ms | 30 | within budget |",
-		"| `home_digest` | rep |  |  | 1000 ms | 0 | no data |",
+		"| `home_digest` | rep |  |  | 1000 ms | 0 | no data | answers 501 until a mail connector is configured |",
+		"| `analytics_evaluate` | rep |  |  | 300 ms | 12 | no data | 12 samples, under the floor of 30: no p95 is claimed |",
+		"| `app_shell_notices` | rep | 5.0 ms | 7.0 ms | 150 ms | 30 | within budget | empty on the seeded corpus |",
 		"| `worklist_first_load` | rep | 5200 ms | 5200 ms | 1000 ms | 1 | not gated |",
-		"pool wait 1250 ms in all, 48.0 ms at most, over 3200 acquires",
+		"pool wait 1250 ms in all, 48.0 ms at most, over 3200 acquires on a pool of 16",
 	} {
 		if !strings.Contains(section, want) {
 			t.Errorf("the daily-use section lacks\n%s", want)
 		}
+	}
+}
+
+func TestADevelopmentRecordBesideThePublishedOnesIsNeverRead(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "dev"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	trial := `{"target": "bench-daily", "measured_on": "2026-10-07", "budgets": [], "corpus": {"scale": 0.05}}`
+	if err := os.WriteFile(filepath.Join(dir, "dev", "bench-daily.json"), []byte(trial), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	records, err := loadRecords(dir)
+	if err != nil || len(records) != 0 {
+		t.Fatalf("got %v, %v; a development run's record under dev/ must never reach the pages", records, err)
 	}
 }
 
@@ -84,7 +106,10 @@ func TestARecordWithoutStoredVerdictsRendersAsBefore(t *testing.T) {
 
 func TestTheHeaderNamesEveryTargetAndTheWeeklyJob(t *testing.T) {
 	page := render(fixtureRecords(t))
-	header := page[:strings.Index(page, "## The budgets")]
+	header, _, found := strings.Cut(page, "## The budgets")
+	if !found {
+		t.Fatal("the page has no budgets table")
+	}
 	for _, target := range []string{"bench-perf", "bench-record", "bench-capture", "bench-mobile", "bench-daily", "bench-perf-check", "bench-mobile-check"} {
 		if !strings.Contains(header, "`make "+target+"`") && !strings.Contains(header, "`"+target+"`") {
 			t.Errorf("the header does not name %s", target)
