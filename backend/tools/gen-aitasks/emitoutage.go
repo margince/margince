@@ -45,6 +45,8 @@ func outageCell(def taskDef) string {
 		return "not in use yet"
 	case def.ExecutionMode == "background":
 		return "waits for the provider's next check; the attempt is not spent"
+	case def.OnOutage == "degrades":
+		return "answers from its own facts instead of failing"
 	default:
 		return "fails at once with a 503 naming the cause"
 	}
@@ -80,7 +82,8 @@ Three rules decide every row:
   outage never parks mail as unsure or burns an enrichment's retries. An
   interactive task fails fast with ` + "`" + `provider_unavailable` + "`" + `,
   ` + "`" + `provider_out_of_credit` + "`" + ` or ` + "`" + `provider_unauthorized` + "`" + `, telling the user to
-  contact their administrator.
+  contact their administrator, unless its contract declares ` + "`" + `on_outage: degrades` + "`" + `:
+  it then answers from the record's own facts, with no model, instead.
 - **A decision model** is tried first and never waited on. If its call fails,
   the task's own ladder answers.
 

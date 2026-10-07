@@ -58,6 +58,41 @@ const (
 	PurgeMailboxDeletion PurgeReason = "mailbox_deletion"
 )
 
+// requireActivityPurge is the authority to destroy captured mail: a contact's
+// own act or a named system pass carrying out a decision a contact already made,
+// never an agent, which has no standing to destroy correspondence. RequireHuman
+// reads no grant at all, so on its own it would let a read-only seat destroy
+// mail; the object grant is what the sibling that erases a contact takes too.
+func requireActivityPurge(ctx context.Context) error {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
+	return auth.Require(ctx, "activity", principal.ActionDelete)
+}
+
+// requireContactAnonymise is the same grant the subject-request eraser takes for
+// the same act.
+func requireContactAnonymise(ctx context.Context) error {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
+	return auth.Require(ctx, "contact", principal.ActionDelete)
+}
+
+// CheckPurgeAuthority asks what a purge will ask when it runs: the mail grant
+// always, and the contact grant when it will anonymise contacts. A preview takes
+// it too, so it refuses where the confirm would instead of promising a
+// destruction the caller then cannot make.
+func (s *RetentionService) CheckPurgeAuthority(ctx context.Context, anonymising bool) error {
+	if err := requireActivityPurge(ctx); err != nil {
+		return err
+	}
+	if anonymising {
+		return requireContactAnonymise(ctx)
+	}
+	return nil
+}
+
 // PurgeActivities destroys the named messages and everything they left behind.
 //
 // One transaction per activity, not one for all of them. A purge can name
@@ -72,30 +107,9 @@ const (
 // executor is idempotent, and a second purge of the same rule reports zero
 // rather than failing.
 func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, reason PurgeReason) (int, error) {
-	// Gated here rather than only at the seam that assembles the purge. This is
-	// exported, so a second caller can reach it, and "the caller checked"
-	// is exactly the assumption that stops being true when somebody writes that
-	// second caller. Destroying mail is a contact's own act or a named system
-	// pass acting on a decision a contact already made — never an ambient one.
-	// auth.RequireHuman, which admits a contact, a connector and the system
-	// sweep, and refuses an AGENT — an agent has no standing to destroy
-	// correspondence, and whatever it concluded reaches a contact first. The
-	// system arm is what lets the personal-verdict sweep carry out a decision a
-	// contact already made.
-	//
-	// Gated here rather than only at the seam that assembles the purge: this is
-	// exported, so a second caller can reach it, and "the caller checked" is
-	// exactly the assumption that stops being true when somebody writes that
-	// second caller.
-	if err := auth.RequireHuman(ctx); err != nil {
-		return 0, err
-	}
-	// The OBJECT grant too. RequireHuman refuses an agent and reads no grant at
-	// all, so on its own it would let a read-only seat destroy correspondence:
-	// the sibling that erases a contact for a subject request takes
-	// auth.Require(ctx, "contact", ActionDelete) for the same act, and this is
-	// the same act on a different object.
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+	// Gated here, not only at the seam that assembles the purge: this is
+	// exported, so a second caller can reach it.
+	if err := requireActivityPurge(ctx); err != nil {
 		return 0, err
 	}
 	destroyed := 0
@@ -154,11 +168,7 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 // way too many, and the one that gets less use is the one that quietly stops
 // covering a column.
 func (s *RetentionService) AnonymiseContacts(ctx context.Context, contacts []ids.UUID, reason PurgeReason) (int, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return 0, err
-	}
-	// The same grant the subject-request eraser takes for the same act.
-	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+	if err := requireContactAnonymise(ctx); err != nil {
 		return 0, err
 	}
 	done := 0

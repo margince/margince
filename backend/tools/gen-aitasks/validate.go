@@ -89,6 +89,15 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 	default:
 		return fmt.Errorf("task %q: execution_mode must be \"interactive\" or \"background\", got %q", name, def.ExecutionMode)
 	}
+	switch def.OnOutage {
+	case "":
+	case "degrades":
+		if def.ExecutionMode != "interactive" {
+			return fmt.Errorf("task %q: on_outage degrades needs execution_mode interactive — a background task waits for its provider and has no answer to degrade to", name)
+		}
+	default:
+		return fmt.Errorf("task %q: on_outage must be \"degrades\" or absent, got %q", name, def.OnOutage)
+	}
 	switch def.Status {
 	case statusShipped:
 		if len(def.Sites) == 0 {

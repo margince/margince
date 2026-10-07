@@ -191,19 +191,24 @@ type embedDef struct {
 // cost-unit rule name), and an optional doc string carried through
 // to the generated constant's comment.
 type taskDef struct {
-	Ladder            []string           `yaml:"ladder"`
-	ExecutionMode     string             `yaml:"execution_mode"`
-	OnBudgetExhausted string             `yaml:"on_budget_exhausted"`
-	Status            string             `yaml:"status"`
-	Sites             []siteDef          `yaml:"sites"`
-	NoPayload         bool               `yaml:"no_payload"`
-	LocalOnly         bool               `yaml:"local_only"`
-	Decision          bool               `yaml:"decision"`
-	CompanyContext    *companyContextDef `yaml:"company_context"`
-	CostUnit          string             `yaml:"cost_unit"`
-	Doc               string             `yaml:"doc"`
-	DisplayName       string             `yaml:"display_name"`
-	Summary           string             `yaml:"summary"`
+	Ladder            []string `yaml:"ladder"`
+	ExecutionMode     string   `yaml:"execution_mode"`
+	OnBudgetExhausted string   `yaml:"on_budget_exhausted"`
+	// OnOutage is what an interactive task does once no model can answer:
+	// "degrades" says it answers from the record's own facts and reports so,
+	// and absent means it fails fast. A background task waits, so it declares
+	// nothing.
+	OnOutage       string             `yaml:"on_outage"`
+	Status         string             `yaml:"status"`
+	Sites          []siteDef          `yaml:"sites"`
+	NoPayload      bool               `yaml:"no_payload"`
+	LocalOnly      bool               `yaml:"local_only"`
+	Decision       bool               `yaml:"decision"`
+	CompanyContext *companyContextDef `yaml:"company_context"`
+	CostUnit       string             `yaml:"cost_unit"`
+	Doc            string             `yaml:"doc"`
+	DisplayName    string             `yaml:"display_name"`
+	Summary        string             `yaml:"summary"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its
@@ -436,6 +441,17 @@ func writeRoutingTables(b *strings.Builder, c contract, taskNames []string) {
 	for _, name := range taskNames {
 		mode := "ExecutionMode" + pascalCase(c.Tasks[name].ExecutionMode)
 		fmt.Fprintf(b, "\t%s: %s,\n", taskConst(name), mode)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// taskDegradesOnOutage lists the interactive tasks that answer from the record's\n")
+	b.WriteString("// own facts once no model can, compiled from on_outage. Every other interactive\n")
+	b.WriteString("// task fails fast, and a background task waits.\n")
+	b.WriteString("var taskDegradesOnOutage = map[Task]bool{\n")
+	for _, name := range taskNames {
+		if c.Tasks[name].OnOutage == "degrades" {
+			fmt.Fprintf(b, "\t%s: true,\n", taskConst(name))
+		}
 	}
 	b.WriteString("}\n\n")
 
