@@ -532,7 +532,7 @@ func dailyAbsentRows(log func(...any), f dailyFlow, id, name string, s Seat, bud
 		log(fmt.Sprintf("perfbench [daily]: %s %s GET %s answered %d samples=0 %s", rowName, s.Role, a.call.Path, a.status, DailyNoData))
 		rows = append(rows, dailyRow{
 			Measurement: m,
-			Result:      DailyResult{Flow: f.Name, Seat: s.Role, Verdict: DailyNoData},
+			Result:      DailyResult{Flow: f.Name, Row: rowName, Seat: s.Role, Verdict: DailyNoData},
 			Empty:       true,
 		})
 	}
@@ -565,7 +565,7 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 	}
 	verdict, issue := DailyNotGated, 0
 	if spec.gated {
-		verdict, issue = JudgeDaily(flow, stats.P95, budget, stats.Samples)
+		verdict, issue = JudgeDaily(flow, name, stats.P95, budget, stats.Samples)
 	}
 	m := MeasurementFrom(id, name, stats.P50, stats.P95, stats.P99, budget, stats.Samples)
 	m.Seat, m.Flow, m.Verdict, m.KnownIssue = s.Role, flow, string(verdict), issue
@@ -586,7 +586,7 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 	return dailyRow{
 		Measurement: m,
 		Result: DailyResult{
-			Flow: flow, Seat: s.Role, Verdict: verdict, Issue: issue,
+			Flow: flow, Row: name, Seat: s.Role, Verdict: verdict, Issue: issue,
 			Status5xx: tally.s5xx, Status422: tally.s422, Allow422: spec.allow422,
 		},
 		Empty:  tally.empty,

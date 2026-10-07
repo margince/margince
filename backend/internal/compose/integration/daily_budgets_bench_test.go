@@ -43,53 +43,78 @@ const (
 	DailyNotGated  DailyVerdict = "not gated"
 )
 
-// KnownIssue ties a flow already over budget to the open issue tracking it.
+// KnownIssue ties a flow, or one row of it when Row is set, already over
+// budget to the open issue tracking it.
 type KnownIssue struct {
-	Flow  string
-	Issue int
+	Flow, Row string
+	Issue     int
 }
 
-// DailyKnownIssues lists flows already over budget, each tracked by an open
-// issue; remove a row when its issue closes.
+// covers reports whether the entry lists this row of this flow.
+func (k KnownIssue) covers(flow, row string) bool {
+	if k.Row != "" {
+		return k.Row == row
+	}
+	return k.Flow == flow
+}
+
+// subject names the row when one is set, else the flow, as the gate's messages print it.
+func subject(flow, row string) string {
+	if row != "" {
+		return "row " + row
+	}
+	return "flow " + flow
+}
+
+// DailyKnownIssues lists flows and rows already over budget, each tracked by
+// an open issue; remove a row when its issue closes.
 var DailyKnownIssues = []KnownIssue{
 	{Flow: "worklist", Issue: 4912},
+	{Flow: "home", Row: "home_worklist", Issue: 4912},
+	{Flow: "lists", Row: "lists_contacts_q", Issue: 7082},
 	{Flow: "palette_search_prefix", Issue: 7037},
 	{Flow: "morning_load", Issue: 7068},
 }
 
-// DailyResult is one flow measured for one seat, as the gate judges it.
+// DailyResult is one row of a flow measured for one seat, as the gate judges it.
 type DailyResult struct {
-	Flow, Seat string
-	Verdict    DailyVerdict
-	Issue      int
-	Status5xx  int
-	Status422  int
+	Flow, Row, Seat string
+	Verdict         DailyVerdict
+	Issue           int
+	Status5xx       int
+	Status422       int
 	// Allow422 marks a flow whose query_too_broad refusal is the known issue itself.
 	Allow422 bool
 }
 
 const dailyScaleEnv = "MARGINCE_BENCH_DAILY_SCALE"
 
-func knownIssueFor(flow string) int {
+// knownIssueFor prefers an entry naming the row over one covering its whole flow.
+func knownIssueFor(flow, row string) int {
+	issue := 0
 	for _, known := range DailyKnownIssues {
-		if known.Flow == flow {
+		if !known.covers(flow, row) {
+			continue
+		}
+		if known.Row != "" {
 			return known.Issue
 		}
+		issue = known.Issue
 	}
-	return 0
+	return issue
 }
 
-// JudgeDaily returns the verdict for one flow's p95 and, when it is over budget
+// JudgeDaily returns the verdict for one row's p95 and, when it is over budget
 // and listed, the issue that tracks it. A p95 equal to the budget is over, as
 // gen-perfdoc renders it.
-func JudgeDaily(flow string, p95, budget time.Duration, samples int) (DailyVerdict, int) {
+func JudgeDaily(flow, row string, p95, budget time.Duration, samples int) (DailyVerdict, int) {
 	switch {
 	case samples == 0:
 		return DailyNoData, 0
 	case p95 < budget:
 		return DailyWithin, 0
 	}
-	if issue := knownIssueFor(flow); issue != 0 {
+	if issue := knownIssueFor(flow, row); issue != 0 {
 		return DailyOverKnown, issue
 	}
 	return DailyOver, 0
@@ -102,13 +127,13 @@ func DailyGate(results []DailyResult, scale float64) error {
 	var problems []string
 	for _, r := range results {
 		if r.Verdict == DailyOver {
-			problems = append(problems, fmt.Sprintf("flow %s is over budget for %s and no open issue lists it", r.Flow, r.Seat))
+			problems = append(problems, fmt.Sprintf("%s is over budget for %s and no open issue lists it", subject(r.Flow, r.Row), r.Seat))
 		}
 		if r.Status5xx > 0 {
-			problems = append(problems, fmt.Sprintf("flow %s answered %d server errors for %s", r.Flow, r.Status5xx, r.Seat))
+			problems = append(problems, fmt.Sprintf("%s answered %d server errors for %s", subject(r.Flow, r.Row), r.Status5xx, r.Seat))
 		}
 		if r.Status422 > 0 && !r.Allow422 {
-			problems = append(problems, fmt.Sprintf("flow %s was refused %d times with 422 for %s", r.Flow, r.Status422, r.Seat))
+			problems = append(problems, fmt.Sprintf("%s was refused %d times with 422 for %s", subject(r.Flow, r.Row), r.Status422, r.Seat))
 		}
 	}
 	if scale == 1 {
@@ -120,7 +145,7 @@ func DailyGate(results []DailyResult, scale float64) error {
 	return errors.New(strings.Join(problems, "; "))
 }
 
-// staleKnownIssues names each listed flow that was measured and came in within
+// staleKnownIssues names each listed flow or row that was measured and came in within
 // budget for every seat; a seat with no data or no gate says nothing either way.
 // A row that drew a 422 was refused, not served fast, so it is never "within".
 func staleKnownIssues(results []DailyResult) []string {
@@ -128,7 +153,7 @@ func staleKnownIssues(results []DailyResult) []string {
 	for _, known := range DailyKnownIssues {
 		measured, within := 0, 0
 		for _, r := range results {
-			if r.Flow != known.Flow || r.Verdict == DailyNoData || r.Verdict == DailyNotGated {
+			if !known.covers(r.Flow, r.Row) || r.Verdict == DailyNoData || r.Verdict == DailyNotGated {
 				continue
 			}
 			measured++
@@ -137,7 +162,7 @@ func staleKnownIssues(results []DailyResult) []string {
 			}
 		}
 		if measured > 0 && within == measured {
-			stale = append(stale, fmt.Sprintf("flow %s is within budget for every seat: remove the row for #%d", known.Flow, known.Issue))
+			stale = append(stale, fmt.Sprintf("%s is within budget for every seat: remove the row for #%d", subject(known.Flow, known.Row), known.Issue))
 		}
 	}
 	return stale
@@ -179,14 +204,14 @@ func dailyScale() (float64, error) {
 }
 
 func TestADailyFlowWithinItsBudgetPasses(t *testing.T) {
-	v, issue := JudgeDaily("lists", 90*time.Millisecond, Perf2Budget, 30)
+	v, issue := JudgeDaily("lists", "lists_contacts", 90*time.Millisecond, Perf2Budget, 30)
 	if v != DailyWithin || issue != 0 {
 		t.Fatalf("got %q #%d, want within budget and no issue", v, issue)
 	}
 }
 
 func TestAKnownSlowFlowIsRecordedAgainstItsIssueAndPasses(t *testing.T) {
-	v, issue := JudgeDaily("worklist", 3*time.Second, Perf8Budget, 30)
+	v, issue := JudgeDaily("worklist", "worklist", 3*time.Second, Perf8Budget, 30)
 	if v != DailyOverKnown || issue != 4912 {
 		t.Fatalf("got %q #%d, want over budget against #4912", v, issue)
 	}
@@ -196,7 +221,7 @@ func TestAKnownSlowFlowIsRecordedAgainstItsIssueAndPasses(t *testing.T) {
 }
 
 func TestAnUnlistedSlowFlowFailsTheRunNamingTheFlow(t *testing.T) {
-	v, _ := JudgeDaily("record_open", 400*time.Millisecond, 100*time.Millisecond, 30)
+	v, _ := JudgeDaily("record_open", "record_open_deal", 400*time.Millisecond, 100*time.Millisecond, 30)
 	err := DailyGate([]DailyResult{{Flow: "record_open", Seat: "manager", Verdict: v}}, 1)
 	if v != DailyOver || err == nil || !strings.Contains(err.Error(), "record_open") {
 		t.Fatalf("got %q, err %v; want an unlisted breach that fails and names the flow", v, err)
@@ -204,7 +229,7 @@ func TestAnUnlistedSlowFlowFailsTheRunNamingTheFlow(t *testing.T) {
 }
 
 func TestAFlowWithNoSamplesIsNoDataNotAPass(t *testing.T) {
-	if v, _ := JudgeDaily("home_digest", 0, Perf8Budget, 0); v != DailyNoData {
+	if v, _ := JudgeDaily("home", "home_digest", 0, Perf8Budget, 0); v != DailyNoData {
 		t.Fatalf("got %q, want no data", v)
 	}
 }
@@ -259,6 +284,42 @@ func TestADevelopmentScaleRunNeverAsksForARowToGo(t *testing.T) {
 	}
 }
 
+func TestARowLevelEntryMarksOnlyItsRow(t *testing.T) {
+	listed, issue := JudgeDaily("home", "home_worklist", 3*time.Second, Perf8Budget, 30)
+	sibling, _ := JudgeDaily("home", "home_digest", 3*time.Second, Perf8Budget, 30)
+	if listed != DailyOverKnown || issue != 4912 || sibling != DailyOver {
+		t.Fatalf("home_worklist %q #%d, home_digest %q; want only the listed row against #4912", listed, issue, sibling)
+	}
+	err := DailyGate([]DailyResult{
+		{Flow: "home", Row: "home_worklist", Seat: "rep", Verdict: listed, Issue: issue},
+		{Flow: "home", Row: "home_digest", Seat: "rep", Verdict: sibling},
+	}, 1)
+	if err == nil || !strings.Contains(err.Error(), "row home_digest is over budget") || strings.Contains(err.Error(), "home_worklist") {
+		t.Fatalf("got %v; want the unlisted sibling row to fail the run by name, and the listed row not to", err)
+	}
+}
+
+func TestAFlowLevelEntryCoversEveryRowOfItsFlow(t *testing.T) {
+	for _, row := range []string{"worklist", "worklist_handled"} {
+		if v, issue := JudgeDaily("worklist", row, 3*time.Second, Perf8Budget, 30); v != DailyOverKnown || issue != 4912 {
+			t.Errorf("%s: got %q #%d, want over budget against #4912", row, v, issue)
+		}
+	}
+}
+
+func TestARowEntryBackUnderBudgetAsksForItsRowToGo(t *testing.T) {
+	err := DailyGate([]DailyResult{
+		{Flow: "home", Row: "home_worklist", Seat: "rep", Verdict: DailyWithin},
+		{Flow: "home", Row: "home_worklist", Seat: "manager", Verdict: DailyWithin},
+		{Flow: "lists", Row: "lists_contacts_q", Seat: "rep", Verdict: DailyOverKnown, Issue: 7082},
+		{Flow: "lists", Row: "lists_contacts_q", Seat: "manager", Verdict: DailyWithin},
+	}, 1)
+	want := "row home_worklist is within budget for every seat: remove the row for #4912"
+	if err == nil || !strings.Contains(err.Error(), want) || strings.Contains(err.Error(), "#7082") {
+		t.Fatalf("got %v; want %q and no word on #7082, still over for the rep", err, want)
+	}
+}
+
 func TestTheDailyScaleDefaultsToThePublishedTier(t *testing.T) {
 	t.Setenv(dailyScaleEnv, "")
 	if scale, err := dailyScale(); err != nil || scale != 1 {
@@ -280,7 +341,7 @@ func TestTheDailyScaleRefusesAValueThatSeedsNothing(t *testing.T) {
 }
 
 func TestTheMorningLoadIsJudgedOnItsOwnBudgetAgainstItsIssue(t *testing.T) {
-	v, issue := JudgeDaily("morning_load", 700*time.Millisecond, Load1Budget, 40)
+	v, issue := JudgeDaily("morning_load", "morning_load_cheap_route", 700*time.Millisecond, Load1Budget, 40)
 	if v != DailyOverKnown || issue != 7068 {
 		t.Fatalf("got %q #%d, want over budget against #7068", v, issue)
 	}
@@ -378,5 +439,37 @@ func TestTheProbeIsNeverTallied(t *testing.T) {
 	timed, _, tally := probeCalls(t, &apptest.AppEnv{TS: srv}, dailyFlow{Name: "contact_360"}, seat, []dailyCall{call})
 	if len(timed) != 1 || tally.s5xx != 0 {
 		t.Fatalf("timed %v, %d server errors tallied; the probe checks an answer and never counts it", timed, tally.s5xx)
+	}
+}
+
+func TestAFirstLoadRefusalIsRecordedInItsNoteAndNeverFailsTheRun(t *testing.T) {
+	refused := firstTry{Status: 422, Body: []byte(`{"code":"query_too_broad","message":"too broad"}`), Elapsed: 5 * time.Second}
+	row := firstLoadRow(firstLoad{"PERF-10", "search_first_load", Perf10Budget, refused})
+	if row.Measurement.Note != "answered 422 query_too_broad after 5.0 s" || row.Measurement.P95Ms != 5000 {
+		t.Fatalf("note %q p95 %v; want the refusal and its elapsed time", row.Measurement.Note, row.Measurement.P95Ms)
+	}
+	if row.Measurement.Verdict != string(DailyNotGated) {
+		t.Fatalf("verdict %q, want %q", row.Measurement.Verdict, DailyNotGated)
+	}
+	if err := DailyGate([]DailyResult{row.Result}, 1); err != nil {
+		t.Fatalf("a refused first load must not fail the run: %v", err)
+	}
+}
+
+func TestAFirstLoadServerErrorIsRecordedAndFailsTheRun(t *testing.T) {
+	broken := firstTry{Status: 503, Body: []byte(`upstream gone`), Elapsed: 1200 * time.Millisecond}
+	row := firstLoadRow(firstLoad{"PERF-8", "worklist_first_load", Perf8Budget, broken})
+	if row.Measurement.Note != "answered 503 after 1.2 s" || row.Measurement.Status5xx != 1 {
+		t.Fatalf("note %q status_5xx %d; want the status and one server error", row.Measurement.Note, row.Measurement.Status5xx)
+	}
+	if err := DailyGate([]DailyResult{row.Result}, 1); err == nil || !strings.Contains(err.Error(), "worklist_first_load") {
+		t.Fatalf("a server error on the first load must fail the run naming the flow, got %v", err)
+	}
+}
+
+func TestAServedFirstLoadKeepsItsColdCacheNote(t *testing.T) {
+	row := firstLoadRow(firstLoad{"PERF-8", "worklist_first_load", Perf8Budget, firstTry{Status: 200, Elapsed: time.Second}})
+	if !strings.HasPrefix(row.Measurement.Note, "one connection dialled") || row.Result.Status5xx != 0 {
+		t.Fatalf("note %q status_5xx %d; want the cold-cache note and no error", row.Measurement.Note, row.Result.Status5xx)
 	}
 }

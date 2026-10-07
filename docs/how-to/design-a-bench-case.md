@@ -65,9 +65,14 @@ extend the seed with the same care:
   deal links only. Meetings leave `host_user_id` empty because of the overlap constraint.
 - **Bodies are long enough to be TOASTed**, as real mail is. Over short bodies, `search_tsv` stays in
   the row and search looks faster than it is.
-- **Words come from a realistic vocabulary.** Names and business words in several languages, so a prefix
-  such as `co` or `contr` matches as many rows as it does in use. Sequential names (`Contact 17`) make
-  every prefix cheap.
+- **Words follow real mail's frequencies.** Each language's commonest words appear in nearly every body,
+  and thousands of generated words are drawn by rank, so most words are rare. A business word such as
+  `contract` names only the share of activities that `dailyTerms` gives it, a few percent; the
+  generated text never spells one. So `co` matches most mail, `con` much of it and `contr` little, as in
+  use. A vocabulary of a few hundred words makes every search rank most of the table; sequential names
+  (`Contact 17`) make every prefix cheap.
+- **Names appear where the mail is about them**: the contact in an email's greeting, the company in some
+  subjects.
 - **Months are uneven.** A flat spread hides the busy month a date-ranged query lands in.
 - **The census is asserted.** After seeding, the bench counts each table and fails on a short count, so a
   seed step that silently inserts nothing cannot pass as a fast screen.
@@ -100,10 +105,12 @@ When no budget covers a screen, add a new ID beside the others in `daily_budgets
 `backend/tools/gen-perfdoc/main.go`, then regenerate the page. A journey that spans
 two budgets is recorded as one row per budget, plus an ungated row for the whole journey.
 
-An over-budget flow fails the run. If an open issue already tracks it, add a row to the known-issues table
-(flow and issue number). The run then records "over budget" against that issue and passes. When the flow
-comes back within budget for every seat at full scale, the run fails and asks you to remove the row. Any
-5xx fails the run, and a 422 is allowed only on a flow listed for it.
+An over-budget row fails the run. If an open issue already tracks it, add an entry to the known-issues
+table: the flow and the issue number, plus the row name when only that row is slow. An entry naming a row
+covers that row alone, and the flow's other rows are still judged; an entry without one covers every row
+of the flow. The run then records "over budget" against that issue and passes. When everything an entry
+covers comes back within budget for every seat at full scale, the run fails and asks you to remove the
+entry. Any 5xx fails the run, and a 422 is allowed only on a flow listed for it.
 
 ## 6. Know what each pass catches
 
@@ -121,7 +128,8 @@ comes back within budget for every seat at full scale, the run fails and asks yo
 4. **First load after a restart.** The first Worklist and the first search on a fresh API process and
    pool. One pool connection is opened before timing, so the row measures the app's empty caches, not
    the first connection to Postgres. Postgres keeps its buffers, so this is not a cold database either.
-   Recorded, never gated.
+   Recorded, never gated: a refusal such as a 422 goes into the row's note with its elapsed time. A 5xx
+   is noted too and counted as a server error, so it still fails the run.
 
 ## 7. Add the case and run it
 

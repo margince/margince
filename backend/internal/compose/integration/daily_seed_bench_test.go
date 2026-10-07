@@ -64,7 +64,10 @@ const (
 	dailyDealLinkShare  = 0.30
 	dailyWaitingShare   = 0.10
 	dailyThreadLength   = 4
-	dailyParagraphsPool = 160
+	dailyParagraphsPool = 2048
+	dailySubjectsPool   = 1024
+	dailyTermPool       = 16
+	dailyNamedSubjects  = 0.2
 )
 
 var dailyMonthWeights = []int{12, 11, 9, 10, 8, 7, 9, 6, 5, 7, 8, 8}
@@ -359,6 +362,7 @@ func (s dailySeeder) projects() {
 
 // activities: 85% email in four-message threads with the contact's owning rep, 6% meetings,
 // 4% notes, 1% calls, the rest open tasks. A thread ends outbound unless left waiting.
+// Topics are the dailyTerms an activity names, drawn per thread so every reply names them too.
 func (s dailySeeder) activities() {
 	share := func(f float64) int { return int(math.Round(float64(s.n.Activities) * f)) }
 	emails := share(0.85)
@@ -369,11 +373,16 @@ func (s dailySeeder) activities() {
 	s.exec("thread ordinals", `CREATE TEMP TABLE daily_seed_thread AS
 	      SELECT t, 1 + floor(random() * $1)::int AS contact_i,
 	             ($2::int[])[1 + floor(random() * cardinality($2::int[]))::int] * 30 + random() * 30 + 2 AS days_back,
-	             random() < $3 AS waiting, random() < $4 AS limited, floor(random() * 1000)::int AS subject_n
-	      FROM generate_series(1, $5) AS t`, s.n.Contacts, dailyMonths(), dailyWaitingShare, dailyLimitedShare, threads)
+	             random() < $3 AS waiting, random() < $4 AS limited, floor(random() * 100000)::int AS subject_n,
+	             -- Naming t makes the subquery correlated, so each thread draws its own topics.
+	             ARRAY(SELECT k FROM generate_series(1, cardinality($6::float8[])) AS k
+	                   WHERE random() < ($6::float8[])[k] AND t > 0) AS topics
+	      FROM generate_series(1, $5) AS t`,
+		s.n.Contacts, dailyMonths(), dailyWaitingShare, dailyLimitedShare, threads, dailyTermShares())
 	s.analyze("daily_seed_thread")
 	s.exec("activity ordinals", `CREATE TEMP TABLE daily_seed_activity AS
 	      SELECT r.i, public.uuidv7() AS id, r.kind, r.p, r.paragraphs, coalesce(th.subject_n, r.subject_n) AS subject_n,
+	             coalesce(th.topics, r.topics) AS topics, p.first_name AS contact_first, c.stem || ' ' || c.suffix AS company_name,
 	             p.i AS contact_i, p.company_i, p.owner_id AS rep_id, rep.email AS rep_email, p.lang,
 	             CASE WHEN r.kind = 'email' THEN 'daily-thread-' || r.t || '@bench.example' END AS thread_key,
 	             CASE WHEN r.kind = 'email' AND (r.p = $6 - 1 OR r.i = $1)
@@ -393,30 +402,45 @@ func (s dailySeeder) activities() {
 	                   1 + floor(random() * $9)::int AS contact_roll,
 	                   ($10::int[])[1 + floor(random() * cardinality($10::int[]))::int] * 30 + random() * 30 + 1 AS days_back,
 	                   random() AS roll, random() AS deal_roll, random() AS cc_roll, random() * 20 AS jitter,
-	                   1 + floor(-ln(1 - random()) * 4)::int AS paragraphs, floor(random() * 1000)::int AS subject_n
+	                   1 + floor(-ln(1 - random()) * 4)::int AS paragraphs, floor(random() * 100000)::int AS subject_n,
+	                   ARRAY(SELECT k FROM generate_series(1, cardinality($11::float8[])) AS k
+	                         WHERE random() < ($11::float8[])[k] AND i > 0) AS topics
 	            FROM generate_series(1, $5) AS i) r
 	      LEFT JOIN daily_seed_thread th ON r.kind = 'email' AND th.t = r.t
 	      JOIN daily_seed_contact p ON p.i = coalesce(th.contact_i, r.contact_roll)
+	      JOIN daily_seed_company c ON c.i = p.company_i
 	      JOIN daily_seed_rep rep ON rep.id = p.owner_id`,
 		emails, meetings, notes, calls, s.n.Activities, dailyThreadLength, inbound, dailyDealLinkShare,
-		s.n.Contacts, dailyMonths())
+		s.n.Contacts, dailyMonths(), dailyTermShares())
 	s.analyze("daily_seed_activity")
+	s.insertActivities()
+}
+
+// insertActivities writes the text: a subject names the first topic, else the company
+// for some and plain words for the rest; a body greets the contact, names every topic, then reads on.
+func (s dailySeeder) insertActivities() {
+	termSubjects, termSentences := dailyTermPools()
 	s.exec("activity", `INSERT INTO activity (id, kind, subject, body, occurred_at, due_at, assignee_id, direction,
 	                                         meeting_status, duration_seconds, source_system, source_id, source,
 	                                         captured_by, thread_key, audience, language, created_at)
 	      SELECT a.id, a.kind,
 	             CASE a.kind WHEN 'email' THEN CASE WHEN a.p > 0 THEN 'Re: ' ELSE '' END
-	                                           || ($1::text[])[1 + a.subject_n % cardinality($1::text[])]
-	                         WHEN 'task' THEN ($2::text[])[1 + a.subject_n % cardinality($2::text[])]
-	                         WHEN 'meeting' THEN 'Meeting: ' || ($1::text[])[1 + a.subject_n % cardinality($1::text[])]
-	                         WHEN 'call' THEN 'Call: ' || ($1::text[])[1 + a.subject_n % cardinality($1::text[])]
-	                         ELSE 'Notiz: ' || ($1::text[])[1 + a.subject_n % cardinality($1::text[])] END,
-	             -- ORDER BY g.n is what makes the aggregate the subquery's: its arguments name only outer columns.
-	             (SELECT string_agg(CASE a.lang WHEN 'de' THEN ($3::text[])[1 + floor(random() * cardinality($3::text[]))::int]
-	                                            WHEN 'vi' THEN ($5::text[])[1 + floor(random() * cardinality($5::text[]))::int]
-	                                            ELSE ($4::text[])[1 + floor(random() * cardinality($4::text[]))::int] END,
-	                                E'\n\n' ORDER BY g.n)
-	                FROM generate_series(1, CASE WHEN a.kind IN ('email', 'note') THEN least(a.paragraphs, 24) ELSE 1 END) AS g(n)),
+	                         WHEN 'task' THEN ($2::text[])[1 + a.subject_n % cardinality($2::text[])] || ': '
+	                         WHEN 'call' THEN 'Call: ' WHEN 'note' THEN 'Notiz: ' ELSE '' END
+	             || CASE WHEN cardinality(a.topics) > 0 THEN ($3::text[])[(a.topics[1] - 1) * $5::int + 1 + a.subject_n % $5::int]
+	                     WHEN a.subject_n % 1000 < $6::float8 * 1000 THEN a.company_name || ': ' || ($1::text[])[1 + a.subject_n % cardinality($1::text[])]
+	                     ELSE ($1::text[])[1 + a.subject_n % cardinality($1::text[])] END,
+	             concat_ws(E'\n\n',
+	               CASE WHEN a.kind = 'email' THEN CASE a.lang WHEN 'de' THEN 'Hallo ' WHEN 'vi' THEN 'Chào ' ELSE 'Hi ' END
+	                                               || a.contact_first || ',' END,
+	               (SELECT string_agg(($4::text[])[(k - 1) * $5::int + 1 + floor(random() * $5::int)::int], ' ' ORDER BY k)
+	                  FROM unnest(a.topics) AS k),
+	               -- ORDER BY g.n is what makes the aggregate the subquery's: its arguments name only outer columns.
+	               (SELECT string_agg(CASE a.lang WHEN 'de' THEN ($7::text[])[1 + floor(random() * cardinality($7::text[]))::int]
+	                                              WHEN 'vi' THEN ($9::text[])[1 + floor(random() * cardinality($9::text[]))::int]
+	                                              ELSE ($8::text[])[1 + floor(random() * cardinality($8::text[]))::int] END,
+	                                  E'\n\n' ORDER BY g.n)
+	                  FROM generate_series(1, CASE WHEN a.kind IN ('email', 'note') THEN least(a.paragraphs, 24) ELSE 1 END) AS g(n))),
 	             a.occurred_at,
 	             CASE WHEN a.kind = 'task' THEN now() + (a.subject_n % 35 - 7) * interval '1 day' END,
 	             CASE WHEN a.kind = 'task' THEN a.rep_id END,
@@ -427,7 +451,8 @@ func (s dailySeeder) activities() {
 	             CASE WHEN a.kind = 'email' THEN 'email' ELSE 'manual' END,
 	             'human:' || a.rep_id, a.thread_key, a.audience, a.lang, a.occurred_at
 	      FROM daily_seed_activity a ORDER BY a.i`,
-		dailySubjects, dailyTaskSubjects, dailyParagraphs("de", dailyParagraphsPool),
+		dailyPlainSubjects(dailySubjectsPool), dailyTaskVerbs, termSubjects, termSentences, dailyTermPool,
+		dailyNamedSubjects, dailyParagraphs("de", dailyParagraphsPool),
 		dailyParagraphs("en", dailyParagraphsPool), dailyParagraphs("vi", dailyParagraphsPool))
 }
 

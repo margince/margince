@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"slices"
@@ -286,7 +287,7 @@ func meanEmptyWait(from, to *pgxpool.Stat) time.Duration {
 
 // morningLoadRow records the load against LOAD-1, for the whole team as one seat.
 func morningLoadRow(m morningLoad) dailyRow {
-	verdict, issue := JudgeDaily("morning_load", m.CheapP95, Load1Budget, m.CheapSamples)
+	verdict, issue := JudgeDaily("morning_load", "morning_load_cheap_route", m.CheapP95, Load1Budget, m.CheapSamples)
 	row := MeasurementFrom("LOAD-1", "morning_load_cheap_route", m.CheapP50, m.CheapP95, m.CheapP99, Load1Budget, m.CheapSamples)
 	row.Seat, row.Flow, row.Verdict, row.KnownIssue = "team", "morning_load", string(verdict), issue
 	row.Status5xx, row.Status422 = m.S5xx, m.S422
@@ -296,16 +297,24 @@ func morningLoadRow(m morningLoad) dailyRow {
 	return dailyRow{
 		Measurement: row,
 		Result: DailyResult{
-			Flow: "morning_load", Seat: "team", Verdict: verdict, Issue: issue,
+			Flow: "morning_load", Row: "morning_load_cheap_route", Seat: "team", Verdict: verdict, Issue: issue,
 			Status5xx: m.S5xx, Status422: m.S422,
 		},
 	}
 }
 
+// firstTry is one request on a freshly booted app: its answer is recorded, never judged.
+type firstTry struct {
+	Path    string
+	Status  int
+	Body    []byte
+	Elapsed time.Duration
+}
+
 // runFirstLoad boots a fresh handler and pool over the seeded database and
 // times the median rep's first Worklist and first palette search on it, before
 // anything in the new process has warmed. Postgres's own buffers stay warm.
-func runFirstLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus) (worklist, palette time.Duration) {
+func runFirstLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus) (worklist, palette firstTry) {
 	t.Helper()
 	rebooted := e.Reboot(t)
 	defer rebooted.Close()
@@ -317,30 +326,57 @@ func runFirstLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus) (work
 	}
 	conn.Release()
 	rep := s.Reps[slices.IndexFunc(s.Reps, func(r Seat) bool { return r.UserID == c.MedianRepID })]
-	first := func(path string) time.Duration {
+	first := func(path string) firstTry {
 		status, body, elapsed := rep.Get(t, rebooted, path)
-		if status != http.StatusOK {
-			t.Fatalf("first load after a restart: GET %s answered %d: %s", path, status, clipBody(body))
-		}
-		return elapsed
+		return firstTry{Path: path, Status: status, Body: body, Elapsed: elapsed}
 	}
-	worklist = first("/v1/worklist?scope=mine&filter=all")
-	palette = first(paletteCall("contract", "contract").Path)
-	return worklist, palette
+	return first("/v1/worklist?scope=mine&filter=all"), first(paletteCall("contract", "contract").Path)
 }
 
-// firstLoadRows records one try each, ungated: a single sample has no p95.
-func firstLoadRows(t *testing.T, worklist, palette time.Duration) []dailyRow {
+// firstLoadRows records one try each, ungated: a single sample has no p95. A
+// refusal is kept in the row's note; a server error is still counted, so it fails.
+func firstLoadRows(t *testing.T, worklist, palette firstTry) []dailyRow {
 	t.Helper()
-	row := func(id, name string, d, budget time.Duration) dailyRow {
-		m := MeasurementFrom(id, name, d, d, d, budget, 1)
-		m.Seat, m.Verdict = "rep", string(DailyNotGated)
-		m.Note = "one connection dialled before timing; the app's caches start empty"
-		t.Logf("perfbench [daily]: %s rep first=%s budget=%s samples=1 %s", name, d, budget, DailyNotGated)
-		return dailyRow{Measurement: m, Result: DailyResult{Flow: name, Seat: "rep", Verdict: DailyNotGated}}
+	rows := []dailyRow{
+		firstLoadRow(firstLoad{"PERF-8", "worklist_first_load", Perf8Budget, worklist}),
+		firstLoadRow(firstLoad{"PERF-10", "search_first_load", Perf10Budget, palette}),
 	}
-	return []dailyRow{
-		row("PERF-8", "worklist_first_load", worklist, Perf8Budget),
-		row("PERF-10", "search_first_load", palette, Perf10Budget),
+	for _, r := range rows {
+		t.Logf("perfbench [daily]: %s rep first=%.0fms budget=%.0fms samples=1 %s (%s)",
+			r.Measurement.Name, r.Measurement.P95Ms, r.Measurement.BudgetMs, DailyNotGated, r.Measurement.Note)
 	}
+	return rows
+}
+
+// firstLoad is one first-load row: the budget it would answer to and the try it records.
+type firstLoad struct {
+	ID, Name string
+	Budget   time.Duration
+	Try      firstTry
+}
+
+func firstLoadRow(f firstLoad) dailyRow {
+	try := f.Try
+	m := MeasurementFrom(f.ID, f.Name, try.Elapsed, try.Elapsed, try.Elapsed, f.Budget, 1)
+	m.Seat, m.Verdict = "rep", string(DailyNotGated)
+	m.Note = "one connection dialled before timing; the app's caches start empty"
+	if try.Status < 200 || try.Status > 299 {
+		m.Note = fmt.Sprintf("answered %d%s after %.1f s", try.Status, errorEnvelopeCode(try.Body), try.Elapsed.Seconds())
+	}
+	if try.Status >= 500 {
+		m.Status5xx = 1
+	}
+	return dailyRow{Measurement: m, Result: DailyResult{Flow: f.Name, Row: f.Name, Seat: "rep", Verdict: DailyNotGated, Status5xx: m.Status5xx}}
+}
+
+// errorEnvelopeCode is the error envelope's code with a leading space, or nothing
+// when the body carries none, so the note reads "answered 422 query_too_broad".
+func errorEnvelopeCode(body []byte) string {
+	var refusal struct {
+		Code string `json:"code"`
+	}
+	if json.Unmarshal(body, &refusal) != nil || refusal.Code == "" {
+		return ""
+	}
+	return " " + refusal.Code
 }
