@@ -164,20 +164,31 @@ func assertSeatSignedIn(t *testing.T, seatEnv *apptest.AppEnv, seat Seat) {
 // last byte of the body, so a slow serializer counts against the flow.
 func (s Seat) Get(t *testing.T, e *apptest.AppEnv, path string) (status int, body []byte, elapsed time.Duration) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, e.TS.URL+path, nil)
+	status, body, elapsed, err := s.fetch(context.Background(), e.TS.URL, path)
 	if err != nil {
-		t.Fatalf("building GET %s: %v", path, err)
+		t.Fatal(err)
+	}
+	return status, body, elapsed
+}
+
+// fetch is Get for a goroutine, which must report a failure rather than end the test.
+func (s Seat) fetch(ctx context.Context, base, path string) (status int, body []byte, elapsed time.Duration, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+path, nil)
+	if err != nil {
+		return 0, nil, 0, fmt.Errorf("building GET %s: %w", path, err)
 	}
 	start := time.Now()
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		t.Fatalf("seat %s GET %s: %v", s.Name, path, err)
+		return 0, nil, 0, fmt.Errorf("seat %s GET %s: %w", s.Name, path, err)
 	}
-	defer apptest.CloseBody(t, resp)
 	body, err = io.ReadAll(resp.Body)
 	elapsed = time.Since(start)
-	if err != nil {
-		t.Fatalf("seat %s GET %s: reading body: %v", s.Name, path, err)
+	if closeErr := resp.Body.Close(); err == nil {
+		err = closeErr
 	}
-	return resp.StatusCode, body, elapsed
+	if err != nil {
+		return 0, nil, 0, fmt.Errorf("seat %s GET %s: reading body: %w", s.Name, path, err)
+	}
+	return resp.StatusCode, body, elapsed, nil
 }

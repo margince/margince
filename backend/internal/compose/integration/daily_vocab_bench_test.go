@@ -13,46 +13,76 @@ import (
 // German, English and Vietnamese, so "co", "con", "contr" match across words as in a real
 // inbox. Every name is assembled from these parts; none names a real person.
 var (
-	dailyGermanFirst = []string{"Anna", "Lukas", "Jonas", "Lena", "Felix", "Marie", "Paul", "Sophie", "Jan", "Laura",
+	dailyGermanFirst = []string{
+		"Anna", "Lukas", "Jonas", "Lena", "Felix", "Marie", "Paul", "Sophie", "Jan", "Laura",
 		"Tobias", "Katrin", "Stefan", "Julia", "Matthias", "Sabine", "Jürgen", "Ute", "Björn", "Hannah",
-		"Florian", "Carola", "Dominik", "Grete", "Henrik", "Ines", "Konrad", "Mareike", "Nils", "Petra"}
-	dailyGermanLast = []string{"Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker",
+		"Florian", "Carola", "Dominik", "Grete", "Henrik", "Ines", "Konrad", "Mareike", "Nils", "Petra",
+	}
+	dailyGermanLast = []string{
+		"Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker",
 		"Schulz", "Hoffmann", "Koch", "Richter", "Wolf", "Schröder", "Neumann", "Schwarz", "Zimmermann",
-		"Braun", "Krüger", "Hartmann", "Lange", "Werner", "Krause", "Lehmann", "Köhler"}
-	dailyEnglishFirst = []string{"James", "Emily", "Oliver", "Grace", "Thomas", "Chloe", "Daniel", "Sarah",
-		"Michael", "Olivia", "Harry", "Amelia", "George", "Isla", "Samuel", "Megan", "Connor", "Ruth", "Ethan", "Holly"}
-	dailyEnglishLast = []string{"Smith", "Johnson", "Brown", "Taylor", "Wilson", "Evans", "Walker", "Wright",
-		"Clarke", "Hughes", "Cooper", "Turner", "Parker", "Collins", "Morgan"}
-	dailyVietFirst = []string{"Minh", "Linh", "Hương", "Tuấn", "Anh", "Thảo", "Đức", "Lan", "Hiếu", "Trang",
-		"Quang", "Ngọc", "Phương", "Hải", "Thủy", "Khánh", "Long", "Mai", "Bảo", "Vy"}
-	dailyVietLast = []string{"Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Phan", "Vũ", "Đặng", "Bùi", "Đỗ",
-		"Hồ", "Ngô", "Dương", "Lý", "Võ", "Trương", "Đinh", "Lâm"}
+		"Braun", "Krüger", "Hartmann", "Lange", "Werner", "Krause", "Lehmann", "Köhler",
+	}
+	dailyEnglishFirst = []string{
+		"James", "Emily", "Oliver", "Grace", "Thomas", "Chloe", "Daniel", "Sarah",
+		"Michael", "Olivia", "Harry", "Amelia", "George", "Isla", "Samuel", "Megan", "Connor", "Ruth", "Ethan", "Holly",
+	}
+	dailyEnglishLast = []string{
+		"Smith", "Johnson", "Brown", "Taylor", "Wilson", "Evans", "Walker", "Wright",
+		"Clarke", "Hughes", "Cooper", "Turner", "Parker", "Collins", "Morgan",
+	}
+	dailyVietFirst = []string{
+		"Minh", "Linh", "Hương", "Tuấn", "Anh", "Thảo", "Đức", "Lan", "Hiếu", "Trang",
+		"Quang", "Ngọc", "Phương", "Hải", "Thủy", "Khánh", "Long", "Mai", "Bảo", "Vy",
+	}
+	dailyVietLast = []string{
+		"Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Phan", "Vũ", "Đặng", "Bùi", "Đỗ",
+		"Hồ", "Ngô", "Dương", "Lý", "Võ", "Trương", "Đinh", "Lâm",
+	}
 
-	dailyCompanyStems = []string{"Müller", "Nordlicht", "Rhein", "Alpen", "Hanse", "Elbe", "Bavaria", "Schwarzwald",
+	dailyCompanyStems = []string{
+		"Müller", "Nordlicht", "Rhein", "Alpen", "Hanse", "Elbe", "Bavaria", "Schwarzwald",
 		"Saigon", "Mekong", "Hanoi", "Sông Hồng", "Đà Nẵng", "Thames", "Pennine", "Harbour", "Northgate",
-		"Kontor", "Contura", "Conrad", "Continental", "Lindner", "Brückner", "Westfalen", "Atlas", "Meridian"}
-	dailyCompanySectors = []string{"Logistik", "Maschinenbau", "Software", "Trading", "Consulting", "Foods",
-		"Textil", "Energie", "Pharma", "Bau", "Systems", "Solutions", "Digital", "Handel", "Controls", "Contracting"}
+		"Kontor", "Contura", "Conrad", "Continental", "Lindner", "Brückner", "Westfalen", "Atlas", "Meridian",
+	}
+	dailyCompanySectors = []string{
+		"Logistik", "Maschinenbau", "Software", "Trading", "Consulting", "Foods",
+		"Textil", "Energie", "Pharma", "Bau", "Systems", "Solutions", "Digital", "Handel", "Controls", "Contracting",
+	}
 	dailyCompanySuffixes = []string{"GmbH", "AG", "GmbH & Co. KG", "KG", "Ltd", "Co", "JSC", "Co., Ltd.", "plc", "SE"}
-	dailyIndustries      = []string{"Logistics", "Manufacturing", "Software", "Wholesale", "Professional services",
-		"Food and beverage", "Textiles", "Energy", "Life sciences", "Construction"}
-	dailyTitles = []string{"Geschäftsführer", "Einkaufsleiterin", "Head of Procurement", "CFO", "Operations Manager",
-		"Projektleiter", "Sales Director", "Giám đốc", "Trưởng phòng mua hàng", "IT-Leiter", "Controller", "Buyer"}
+	dailyIndustries      = []string{
+		"Logistics", "Manufacturing", "Software", "Wholesale", "Professional services",
+		"Food and beverage", "Textiles", "Energy", "Life sciences", "Construction",
+	}
+	dailyTitles = []string{
+		"Geschäftsführer", "Einkaufsleiterin", "Head of Procurement", "CFO", "Operations Manager",
+		"Projektleiter", "Sales Director", "Giám đốc", "Trưởng phòng mua hàng", "IT-Leiter", "Controller", "Buyer",
+	}
 
-	dailyDealWords = []string{"Rahmenvertrag", "Wartungsvertrag", "Lizenz", "Angebot", "Rollout", "Pilot",
+	dailyDealWords = []string{
+		"Rahmenvertrag", "Wartungsvertrag", "Lizenz", "Angebot", "Rollout", "Pilot",
 		"Renewal", "Expansion", "Implementation", "Support contract", "Hợp đồng bảo trì", "Contract extension",
-		"Consulting retainer", "Controlling Suite"}
-	dailyProjectWords = []string{"Migration", "Einführung", "Rollout", "Phase 2", "Integration", "Onboarding",
-		"Triển khai", "Upgrade"}
-	dailyLeadCompanies = []string{"Kontor Nord", "Saigon Freight", "Pennine Foods", "Alpen Bau", "Mekong Textile",
-		"Rhein Digital", "Harbour Systems", "Elbe Pharma", "Hanoi Controls", "Atlas Contracting"}
+		"Consulting retainer", "Controlling Suite",
+	}
+	dailyProjectWords = []string{
+		"Migration", "Einführung", "Rollout", "Phase 2", "Integration", "Onboarding",
+		"Triển khai", "Upgrade",
+	}
+	dailyLeadCompanies = []string{
+		"Kontor Nord", "Saigon Freight", "Pennine Foods", "Alpen Bau", "Mekong Textile",
+		"Rhein Digital", "Harbour Systems", "Elbe Pharma", "Hanoi Controls", "Atlas Contracting",
+	}
 
-	dailySubjects = []string{"Angebot für den Rahmenvertrag", "Vertrag zur Unterschrift", "Termin nächste Woche",
+	dailySubjects = []string{
+		"Angebot für den Rahmenvertrag", "Vertrag zur Unterschrift", "Termin nächste Woche",
 		"Proposal for the contract renewal", "Invoice and payment terms", "Meeting notes and next steps",
 		"Báo giá hợp đồng mới", "Lịch họp tuần sau", "Rückfrage zur Rechnung", "Contract questions before signing",
-		"Confirmation of the delivery schedule", "Kündigung und Verlängerung", "Controlling report Q3"}
-	dailyTaskSubjects = []string{"Angebot nachfassen", "Send the revised proposal", "Vertrag prüfen",
-		"Call back about the invoice", "Gửi báo giá", "Prepare the contract draft", "Termin bestätigen"}
+		"Confirmation of the delivery schedule", "Kündigung und Verlängerung", "Controlling report Q3",
+	}
+	dailyTaskSubjects = []string{
+		"Angebot nachfassen", "Send the revised proposal", "Vertrag prüfen",
+		"Call back about the invoice", "Gửi báo giá", "Prepare the contract draft", "Termin bestätigen",
+	}
 )
 
 var dailySentences = map[string][]string{

@@ -557,9 +557,12 @@ func assertDailyCensus(t *testing.T, e *apptest.AppEnv, want dailyCounts) {
 		table     string
 		want, got int
 	}{
-		{"contact", want.Contacts, got.Contacts}, {"company", want.Companies, got.Companies},
-		{"deal", want.Deals, got.Deals}, {"lead", want.Leads, got.Leads},
-		{"project", want.Projects, got.Projects}, {"activity", want.Activities, got.Activities},
+		{"contact", want.Contacts, got.Contacts},
+		{"company", want.Companies, got.Companies},
+		{"deal", want.Deals, got.Deals},
+		{"lead", want.Leads, got.Leads},
+		{"project", want.Projects, got.Projects},
+		{"activity", want.Activities, got.Activities},
 	} {
 		if row.got != row.want {
 			off = append(off, fmt.Sprintf("%s: want %d, got %d", row.table, row.want, row.got))
