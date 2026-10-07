@@ -19,7 +19,7 @@ import { DealFiles } from "./dealfiles";
 
 // The deal's Files area as a rep meets it: a captured file says which message
 // it came with and offers Hide, an upload offers Delete, and a hide lands on
-// the deal's own hide route rather than touching the file.
+// the deal's own hide route at once, with an Undo, rather than touching the file.
 
 afterEach(() => {
   cleanup();
@@ -127,15 +127,19 @@ function me() {
 }
 
 /**
- * The backend, recording every write. `refuse` answers one write with a problem
- * document instead of a 204, which is how the refusal arms get driven.
+ * The backend: it records every write and keeps the hide flag, so a hidden row
+ * leaves the default read. `refuse` answers a write with a problem document.
  */
 function stubApi(
   docs: DealDocument[],
   refuse?: (request: Request) => boolean,
 ): { calls: Request[] } {
   const calls: Request[] = [];
+  const hidden = new Set(
+    docs.filter((doc) => doc.hidden).map((doc) => doc.attachment.id),
+  );
   vi.stubGlobal("fetch", (input: Request) => {
+    const url = new URL(input.url);
     if (input.method !== "GET") {
       calls.push(input.clone());
       if (refuse?.(input)) {
@@ -143,15 +147,31 @@ function stubApi(
           jsonResponse({ detail: "the message was deleted" }, 409),
         );
       }
+      const hideOf = /\/documents\/([^/]+)\/hide$/.exec(url.pathname);
+      if (hideOf && input.method === "PUT") {
+        hidden.add(hideOf[1]);
+      } else if (hideOf) {
+        hidden.delete(hideOf[1]);
+      }
       return Promise.resolve(new Response(null, { status: 204 }));
     }
-    const path = new URL(input.url).pathname;
-    if (path.endsWith("/me")) {
+    if (url.pathname.endsWith("/me")) {
       return Promise.resolve(jsonResponse(me()));
     }
-    return Promise.resolve(jsonResponse({ data: docs, page: {} }));
+    const withHidden = url.searchParams.get("include_hidden") === "true";
+    const data = docs
+      .map((doc) => ({ ...doc, hidden: hidden.has(doc.attachment.id) }))
+      .filter((doc) => withHidden || !doc.hidden);
+    return Promise.resolve(jsonResponse({ data, page: {} }));
   });
   return { calls };
+}
+
+async function hideFromMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
+  );
+  await user.click(screen.getByRole("button", { name: en["files.hide"] }));
 }
 
 it("tells a captured file from an upload and says where it came from", async () => {
@@ -165,27 +185,33 @@ it("tells a captured file from an upload and says where it came from", async () 
   expect(screen.getByText(/Uploaded/)).toBeInTheDocument();
 });
 
-it("hides a captured file through the deal's own hide route, never the file", async () => {
+it("hides a captured file at once through the deal's own hide route, never the file", async () => {
   const { calls } = stubApi([captured()]);
   const user = userEvent.setup();
   render(<DealFiles deal={dealOf()} />);
 
-  await user.click(
-    await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
-  );
-  await user.click(screen.getByRole("button", { name: "Hide from this deal" }));
-  // The confirm says what stays: the message, the activity, the library.
-  expect(await screen.findByText(/stay on the activity/)).toBeInTheDocument();
-  const confirm = screen.getByRole("dialog");
-  await user.click(
-    within(confirm).getByRole("button", { name: "Hide from this deal" }),
-  );
+  await hideFromMenu(user);
 
   await waitFor(() => expect(calls).toHaveLength(1));
   expect(calls[0].method).toBe("PUT");
   expect(new URL(calls[0].url).pathname).toBe(
     "/v1/deals/deal-1/documents/att-mail/hide",
   );
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("hands focus to the list the hidden row left, not to the page", async () => {
+  stubApi([captured()]);
+  const user = userEvent.setup();
+  render(<DealFiles deal={dealOf()} />);
+
+  await hideFromMenu(user);
+
+  const empty = await screen.findByText(en["files.empty"]);
+  await waitFor(() => {
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toContainElement(empty);
+  });
 });
 
 it("offers Delete on an upload and no Hide", async () => {
@@ -202,24 +228,14 @@ it("offers Delete on an upload and no Hide", async () => {
   ).not.toBeInTheDocument();
 });
 
-// What a hide SAYS, and the way back it offers. `DELETE .../hide` restores the
-// document exactly as it was, so this is one of the few Undos in this product
-// with a real inverse behind it — and the arm that matters most is the one
-// where that inverse is refused.
+// The Undo is the hide's only way back, so it has to restore the row exactly
+// and has to say so when it cannot.
 it("puts a hidden file back through the Undo the confirmation carries", async () => {
   const { calls } = stubApi([captured()]);
   const user = userEvent.setup();
   render(<DealFiles deal={dealOf()} />);
 
-  await user.click(
-    await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
-  );
-  await user.click(screen.getByRole("button", { name: "Hide from this deal" }));
-  await user.click(
-    within(screen.getByRole("dialog")).getByRole("button", {
-      name: "Hide from this deal",
-    }),
-  );
+  await hideFromMenu(user);
 
   const said = await screen.findByRole("status");
   expect(said).toHaveTextContent(en["dealfiles.hidden"]);
@@ -235,6 +251,26 @@ it("puts a hidden file back through the Undo the confirmation carries", async ()
   expect(await screen.findByRole("status")).toHaveTextContent(
     en["dealfiles.unhidden"],
   );
+  expect(await screen.findByText("MSA-redline.docx")).toBeInTheDocument();
+});
+
+it("keeps a refused hide on screen as a danger toast, since no dialog is open to hold it", async () => {
+  stubApi([captured()], (request) => request.method === "PUT");
+  const user = userEvent.setup();
+  render(<DealFiles deal={dealOf()} />);
+
+  await hideFromMenu(user);
+
+  const said = await screen.findByRole("status");
+  await waitFor(() =>
+    expect(said).toHaveTextContent("the message was deleted"),
+  );
+  expect(said.querySelector(".toast-dot-danger")).not.toBeNull();
+  // Sticky: a self-withdrawing toast draws no dismiss control.
+  expect(
+    within(said).getByRole("button", { name: en["common.close"] }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("MSA-redline.docx")).toBeInTheDocument();
 });
 
 it("says so when the Undo is refused, rather than letting it fail quietly", async () => {
@@ -245,15 +281,7 @@ it("says so when the Undo is refused, rather than letting it fail quietly", asyn
   const user = userEvent.setup();
   render(<DealFiles deal={dealOf()} />);
 
-  await user.click(
-    await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
-  );
-  await user.click(screen.getByRole("button", { name: "Hide from this deal" }));
-  await user.click(
-    within(screen.getByRole("dialog")).getByRole("button", {
-      name: "Hide from this deal",
-    }),
-  );
+  await hideFromMenu(user);
   await user.click(
     within(await screen.findByRole("status")).getByRole("button", {
       name: en["common.undo"],

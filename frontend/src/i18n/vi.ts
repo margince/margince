@@ -4281,9 +4281,6 @@ export const vi = {
   "files.hide": "Ẩn khỏi deal này",
   "files.unhide": "Hiện lại trên deal này",
   "files.delete": "Xóa",
-  "files.hideTitle": "Ẩn {name} khỏi deal này?",
-  "files.hideBody":
-    "Tin nhắn và tệp đính kèm vẫn ở trên hoạt động và trong thư viện của công ty. Chỉ deal này không còn liệt kê nó.",
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
     "Tệp bị gỡ khỏi deal này, và khỏi mọi Deal Room đang chia sẻ nó.",

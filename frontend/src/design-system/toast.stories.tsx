@@ -35,11 +35,17 @@ import {
  * `tone: "danger"`, because the green completion dot the default tone draws
  * says the opposite of what the sentence says.
  *
- * **An action is offered only where an inverse write actually exists.** Most of
- * this product's destructive verbs have none: every `DELETE` is a soft archive
- * with no restore endpoint, and the record-history put-back refuses an archive
- * outright (`not_a_replayable_verb`). An Undo with nothing behind it is worse
- * than no Undo, because the reader stops looking for the real way back.
+ * **An action is offered only where an inverse write actually exists.** A
+ * contact, company or deal archive comes back through
+ * `POST /records/{entity_type}/{id}/history/{audit_id}/restore`, and pipelines,
+ * lists, tags and roles have their own `/restore`; a merge or a send has none.
+ * An Undo with nothing behind it is worse than no Undo, because the reader
+ * stops looking for the real way back.
+ *
+ * **An Undo replaces a confirm only where the inverse is exact**: one call puts
+ * the prior state back with nothing lost, as un-hiding a deal file does. A way
+ * back that re-stamps who added it, drops a note, needs a reason, reaches
+ * someone outside or changes access keeps its `ConfirmModal`.
  */
 const meta: Meta<typeof ToastRegion> = {
   title: "Components/Messaging/Toast",
@@ -61,7 +67,7 @@ type Story = StoryObj<typeof ToastRegion>;
 
 /**
  * Live, because the region's whole subject is timing: a confirmation withdraws
- * itself, one carrying a verb does not, and hovering either stops the clock.
+ * itself, one carrying an Undo lasts longer, and hovering either stops the clock.
  * None of that is visible in a static frame.
  */
 function Bench({
@@ -153,8 +159,8 @@ export const Refusal: Story = {
 export const CarryingAnUndo: Story = {
   render: () => (
     <Bench
-      label="Remove access"
-      message="Access removed for Jana Brandt."
+      label="Hide a file"
+      message="MSA-redline.docx hidden from this deal."
       options={{
         action: { kind: "undo", label: "Undo", onAct: () => {} },
       }}

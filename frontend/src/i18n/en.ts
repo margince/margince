@@ -4430,9 +4430,6 @@ export const en = {
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
   "files.delete": "Delete",
-  "files.hideTitle": "Hide {name} from this deal?",
-  "files.hideBody":
-    "The message and its attachment stay on the activity and in the company library. Only this deal stops listing it.",
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and from any Deal Room sharing it.",
