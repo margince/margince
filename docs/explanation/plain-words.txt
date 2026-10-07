@@ -158,6 +158,7 @@ by
 byte
 cache
 cadence
+calculation
 calendar
 call
 callback
@@ -228,6 +229,7 @@ commercial
 commission
 commit
 common
+communication
 company
 compare
 compile
@@ -325,6 +327,7 @@ die
 diff
 different
 digest
+digit
 direct
 direction
 directory
@@ -461,6 +464,7 @@ floor
 flow
 flush
 focus
+fold
 folder
 follow
 font
@@ -603,6 +607,7 @@ kind
 know
 known
 label
+lack
 ladder
 land
 lane
@@ -672,6 +677,7 @@ map
 mappings
 margin
 mark
+market
 markup
 mask
 match
@@ -794,6 +800,7 @@ page
 pair
 palette
 panel
+panic
 parameter
 parent
 park
@@ -1190,6 +1197,7 @@ too
 tool
 toolchain
 toolkit
+tooltips
 top
 topic
 total
@@ -1281,6 +1289,7 @@ whether
 which
 while
 white
+whitespace
 who
 whole
 whose

@@ -17,9 +17,9 @@ runtime from the first day:
    That builds the request and response types and the `chi` `ServerInterface`.
    They live in `internal/contracts/`, generated and never edited by hand.
 2. `tools/gen-stubs` derives one **501 stub** per contract operation
-   (`internal/compose/stubs_gen.go`). A module handler takes the place of each
-   operation it serves. An operation with no handler answers a clear 501,
-   never a silent 404.
+   (`internal/compose/stubs_gen.go`). Nothing embeds it. `Server` implements
+   the whole interface itself, so an operation with no handler fails the build.
+   A module handler that cannot serve yet answers a clear 501, never a silent 404.
 3. `tools/gen-agentpolicy` derives the agent access table from the contract's
    `x-mcp-tool` and `x-agent-access` notes. It **fails the generate step** for any
    operation that changes data and carries neither. So an endpoint with no

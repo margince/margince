@@ -84,7 +84,7 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   (the list of places that decides), `router.tsx` (hash routing) and
   `palette.tsx` (`⌘K`). After them are `agentrail.tsx` (the agent, at the end
   of the rail), `theme.ts` and `capability.ts`. Last are the advisories the
-  shell shows on every screen (`economybanner.tsx`, `embedreindexbanner.tsx`).
+  shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
 - **`src/screens/`**: one file per surface. A surface gets a *folder* only
   when it is a state machine and not a page. One has one:
   `screens/onboarding-conversation/`. There the conversation machine, each
@@ -109,7 +109,7 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
   `en-US`. The locale only changes how things show: it never changes what is
-  stored, and it never changes a number.
+  stored, and it never changes a calculation.
 - **`src/format/`**: the edge where values turn into text. Money comes in as a
   whole number of `minor` units plus its ISO 4217 code. It is only moved to the
   right size to show it. Each time zone is an IANA name, and a
@@ -213,7 +213,7 @@ The dark rail group in `tokens.css` (`--bgRail`, `--railTop`,
 `--railBottom`, `--railIcon`, `--railIconHover`, `--railIconActive`,
 `--railHover`, `--railActive`, `--overlayScrim`) is for the dark green field
 only. Its comment says it has no theme, `white-alpha` in both themes, which is
-correct for that field. That field is the labels the small rail shows, the bar
+correct for that field. That field is the tooltips the small rail shows, the bar
 of the client surface, and the surfaces for the web site and the deck. A new
 app panel styled from those tokens is styled, in error, as the public web site.
 
