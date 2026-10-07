@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import type { ListColumn } from "../design-system/listtable";
 import { LocaleProvider, useT } from "../i18n";
 import { leadColumns } from "./leads.columns";
@@ -30,7 +31,8 @@ function Cell({
   onColumn,
 }: Readonly<{ columnKey: string; onColumn: (c: ListColumn<Lead>) => void }>) {
   const t = useT();
-  const column = leadColumns(t, "en", "UTC", undefined).find(
+  const zone = useRecordZone();
+  const column = leadColumns(t, "en", zone, undefined).find(
     (c) => c.key === columnKey,
   );
   if (!column) throw new Error(`no ${columnKey} column`);
