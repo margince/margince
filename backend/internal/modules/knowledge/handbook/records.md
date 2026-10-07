@@ -237,7 +237,7 @@ Also called: timeline, activity log, customer history, interaction history.
 To log an activity in Margince, open the contact, company, lead or deal and choose **Log activity** in its header.
 1. Pick the **Type**: Note, Task, Call or Meeting.
 2. Set the **Date** (or **Due date** for a task), and **Assignee** or **Attendees** where you see them.
-3. Enter a **Subject** (required) and the **Details**. If you enter a meeting transcript, tick **This text is a transcript**. You can then paste the text, or use **Or upload a file** (`.txt` only).
+3. Enter a **Subject** (required) and the **Details**. For a meeting record, tick **This text is a transcript**. You can then paste the text, or use **Or upload a file** (`.txt` only).
 4. Choose **Log**.
 Without permission you see "You do not have permission to log activities on this record."
 Also called: add a note, record a call, write a comment.

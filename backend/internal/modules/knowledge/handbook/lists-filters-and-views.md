@@ -102,7 +102,7 @@ Also called: closing this quarter, filter by close date, deals due to close, exp
 ### How do I sort a list, such as deals by value?
 To sort deals by value in Margince, open **Deals**, switch to **Table**, and click the **Value** heading. Or press **Sort** and pick **Value**. The biggest deal comes first. Every list sorts the same way.
 1. Click a column heading, or press **Sort** and pick it under **Sort by**.
-2. Click it again to switch between ascending and descending order.
+2. Click it again to change the order, from small to big or big to small.
 3. The button then names it, for example **Sort: Value**, and the count line adds "sorted by Value".
 4. **Default order** under **Sort by** goes back to the list's own order.
 Also called: order by, biggest deals first, sort by amount, sort A to Z, newest first.
@@ -356,7 +356,7 @@ Yes. **Settings** → **Automations** has three rules that watch a Live List:
 - **Tell me when a record joins or leaves a Live List**: a notice to you.
 <!-- prose:allow bold quotes the rule names as Settings → Automations shows them -->
 - **Add to a Shortlist when a record joins or leaves a Live List**.
-1. Pick the Live List to watch, and choose whether the rule acts when a record joins, leaves, or either. For the Shortlist rule, pick a Shortlist of the same record type. A record already on it stays as it is. The follow-up task is due in 2 days unless you change it.
+1. Pick the Live List to watch, and if the rule acts when a record joins, leaves, or either. For the Shortlist rule, pick a Shortlist of the same record type. A record already on it stays as it is. The follow-up task is due in 2 days unless you change it.
 2. The rule acts after the 15-minute check, once for each record you can see that joined or left.
 3. When one check moves more than 100 records, the rule acts on none of them and pauses itself.
 

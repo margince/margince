@@ -28,7 +28,7 @@ Also called: partner list, partner overview, reseller list.
 
 ### What do the partner fields mean?
 The partner fields in Margince are fixed lists, set on the company's **Partner** tab.
-- **Partner role**: **Hosting** (they run it for their clients), **Consulting** (they help clients and bring you in), **Strategic** (a broader alliance).
+- **Partner role**: **Hosting** (they run it for their clients), **Consulting** (they help clients and bring you in), **Strategic** (a larger business partner).
 - **Certification status**: **Applied** (the first value), **Certified**, **Suspended**. It says nothing else about the company.
 - **Margin tier**: **Intro (15%)**, **Active collaboration (20%)**, **Partner closed (25%)**, or **Not set** until a tier is agreed.
 - **Served segments**: free words, with commas between them.
@@ -65,7 +65,7 @@ To give a partner credit for a deal in Margince, set **via partner** to the part
 If you leave it empty, it reads **Not set (counted as sourced)**. The two fields show only once at least one company is a partner.
 Also called: partner-sourced deal, referral, partner influenced.
 
-A partner's own **Partner** tab lists **Partner deals**: the deals of other companies that came through this partner, sourced or influenced. Each shows the **Customer**, the **Attribution**, the **Deal value** and the **Status**. The partner's own Deals tab does not show them, because each of those deals belongs to its customer. On **Deals**, the **Partner-sourced** and **Partner** filters cut the list down to deals through any partner, or through one.
+A partner's own **Partner** tab lists **Partner deals**: the deals of other companies that this partner brought in. Each shows the **Customer**, the **Attribution**, the **Deal value** and the **Status**. The partner's own Deals tab does not show them, because each of those deals belongs to its customer. On **Deals**, the **Partner-sourced** and **Partner** filters cut the list down to deals through any partner, or through one.
 
 ## Commission
 

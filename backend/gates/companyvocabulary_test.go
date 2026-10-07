@@ -174,6 +174,8 @@ var exempt = gatekit.Waive(map[string]string{
 		"page above, byte for byte",
 	"scripts/handbook-ask/questions.txt": "questions in the words users type, which is the " +
 		"point of the bank: it measures whether the glossary above catches them",
+	"docs/handbook/plain-words.txt": "the handbook's plain word list must admit every word " +
+		"its pages use, and the glossary above uses this one",
 
 	"backend/gates/companyvocabulary_test.go": "this file names the word in order to refuse it",
 })
