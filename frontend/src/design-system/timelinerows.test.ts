@@ -11,11 +11,10 @@ import {
   classesOf,
   compounds,
   rulesOf,
-  selectorList,
 } from "../../scripts/lib/css-rules";
 
-// A row rule that reaches its `li` by anything but `>` also paints every list
-// nested in a row, and the story plays that measure it run in no required lane.
+// A row rule that reaches its `li` by anything but `>` also reaches `li` items
+// nested inside a row, and the story plays that measure it run in no required lane.
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -60,6 +59,27 @@ function judge(selector: string): Verdict {
   return verdict;
 }
 
+// One count per selector alternative that reaches a `.timeline` `li`, as a row
+// or as a leak; the plain-text count below matches once per alternative.
+function parsedReach(selectors: readonly string[]): number {
+  return selectors
+    .flatMap((selector) => alternativesOf(selector))
+    .filter((alternative) => {
+      const parts = compounds(alternative);
+      return parts.some(
+        (part, index) => isLi(part) && parts.slice(0, index).some(isTimeline),
+      );
+    }).length;
+}
+
+function writtenReach(css: string): number {
+  return [
+    ...css
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .matchAll(/\.timeline(?![\w-])[^{},;]*?(?<![\w-])li(?![\w-])/g),
+  ].length;
+}
+
 const sheets = appStylesheets(frontendRoot);
 
 describe("a timeline row rule", () => {
@@ -75,9 +95,12 @@ describe("a timeline row rule", () => {
       [".timeline .tl-thread-messages > li"],
     ],
     [":is(.timeline, .other) li", [".timeline li"]],
-  ])("refuses %s, which reaches a list nested in a row", (selector, leaks) => {
-    expect(judge(selector).leaks).toEqual(leaks);
-  });
+  ])(
+    "refuses %s, which also reaches li items nested inside a row",
+    (selector, leaks) => {
+      expect(judge(selector).leaks).toEqual(leaks);
+    },
+  );
 
   it.each([
     ".timeline > li",
@@ -88,25 +111,28 @@ describe("a timeline row rule", () => {
     expect(judge(selector).leaks).toEqual([]);
   });
 
+  it("counts a selector the parser misses as a census shortfall", () => {
+    const missed = ".timeline > *|li";
+    expect(writtenReach(`${missed} { color: red; }`)).toBe(1);
+    expect(parsedReach([missed])).toBe(0);
+  });
+
   it("reaches only the list's own rows, in every sheet the app ships", () => {
-    const rows = rulesOf(sheets).flatMap((rule) =>
-      selectorList(rule.selector).map((selector) => ({
-        at: `${relative(frontendRoot, rule.file)}: ${selector}`,
-        ...judge(selector),
-      })),
-    );
+    const all = rulesOf(sheets);
+    const parsed = parsedReach(all.map((rule) => rule.selector));
     // Read again as plain text, so a parser that stops recognising a row
     // selector shows up as a short census instead of a clean pass.
-    const written = sheets.flatMap((file) => [
-      ...readFileSync(file, "utf8")
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .matchAll(/\.timeline(?![\w-])[^{},;]*?(?<![\w-])li(?![\w-])/g),
-    ]).length;
-    expect(sheets.length).toBeGreaterThan(0);
-    expect(written).toBeGreaterThan(0);
-    expect(rows.reduce((sum, row) => sum + row.rows, 0)).toBeGreaterThanOrEqual(
-      written,
+    const written = sheets.reduce(
+      (sum, file) => sum + writtenReach(readFileSync(file, "utf8")),
+      0,
     );
-    expect(rows.flatMap((row) => row.leaks.map(() => row.at))).toEqual([]);
+    expect(written).toBeGreaterThan(0);
+    expect(parsed).toBe(written);
+    const leaks = all.flatMap((rule) =>
+      judge(rule.selector).leaks.map(
+        () => `${relative(frontendRoot, rule.file)}: ${rule.selector}`,
+      ),
+    );
+    expect(leaks).toEqual([]);
   });
 });
