@@ -35,7 +35,12 @@ export function WorkAsLeadAction({
   const create = useMutation({
     mutationFn: async (owner: string | undefined): Promise<Lead> => {
       const { data, error } = await api.POST("/leads", {
-        body: { contact_id: contactId, owner_id: owner, source: "manual" },
+        body: {
+          contact_id: contactId,
+          owner_id: owner,
+          status: "new",
+          source: "manual",
+        },
       });
       if (error) {
         throw new ProblemError(error, t);

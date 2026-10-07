@@ -62,7 +62,12 @@ describe("Work as a lead", () => {
 
     await waitFor(() => expect(window.location.hash).toBe("#/leads/l-new"));
     expect(posted).toEqual([
-      { contact_id: "c-ben", owner_id: "u-me", source: "manual" },
+      {
+        contact_id: "c-ben",
+        owner_id: "u-me",
+        status: "new",
+        source: "manual",
+      },
     ]);
   });
 
