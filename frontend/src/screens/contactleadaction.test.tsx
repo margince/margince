@@ -7,7 +7,12 @@ import { WorkAsLeadAction } from "./contactleadaction";
 import { jsonResponse, StoryProviders } from "./story-utils";
 
 /** The backend the action talks to; `answer` decides what the create says. */
-function stubBackend(posted: unknown[], answer: () => Response) {
+function stubBackend(
+  posted: unknown[],
+  answer: () => Response,
+  worked: readonly { id: string }[] = [],
+  lookups: string[] = [],
+) {
   vi.stubGlobal(
     "fetch",
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -30,7 +35,9 @@ function stubBackend(posted: unknown[], answer: () => Response) {
         });
       }
       return jsonResponse({
-        data: [],
+        data: url.includes("from_contact_id=c-ben")
+          ? (lookups.push(url), worked)
+          : [],
         page: { next_cursor: null, has_more: false },
       });
     },
@@ -46,7 +53,8 @@ afterEach(() => {
 describe("Work as a lead", () => {
   it("creates the reader's lead from the contact and opens it", async () => {
     const posted: unknown[] = [];
-    stubBackend(posted, () => jsonResponse({ id: "l-new" }, 201));
+    const lookups: string[] = [];
+    stubBackend(posted, () => jsonResponse({ id: "l-new" }, 201), [], lookups);
     const user = userEvent.setup();
     render(
       <StoryProviders>
@@ -61,6 +69,9 @@ describe("Work as a lead", () => {
     await user.click(button);
 
     await waitFor(() => expect(window.location.hash).toBe("#/leads/l-new"));
+    // The contact now has a lead, so the page asks again rather than keep
+    // offering a second one from its cached answer.
+    await waitFor(() => expect(lookups).toHaveLength(2));
     expect(posted).toEqual([
       {
         contact_id: "c-ben",
@@ -96,5 +107,26 @@ describe("Work as a lead", () => {
     await user.click(button);
 
     await waitFor(() => expect(window.location.hash).toBe("#/leads/l-old"));
+  });
+
+  it("offers the lead a contact is already worked through instead of a second one", async () => {
+    const posted: unknown[] = [];
+    stubBackend(posted, () => jsonResponse({ id: "l-new" }, 201), [
+      { id: "l-open" },
+    ]);
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <WorkAsLeadAction contactId="c-ben" />
+      </StoryProviders>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Open the lead" }),
+    );
+
+    await waitFor(() => expect(window.location.hash).toBe("#/leads/l-open"));
+    expect(screen.queryByRole("button", { name: "Work as a lead" })).toBeNull();
+    expect(posted).toEqual([]);
   });
 });

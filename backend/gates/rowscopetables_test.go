@@ -512,5 +512,11 @@ const (
 	// and its survivor in the same transaction, so the caller was shown to reach
 	// every record the question can resolve to. The read hands back no
 	// reference: the only row returned is the FOR UPDATE row's decided_by_level.
-	modulesTierUnscopedCeiling = 116
+	//
+	// 117: contacts.workedFromContact reads the contact a lead row was worked
+	// from, for the writers that keep one live lead per contact (reopen, demote,
+	// lead merge). They must see the link whether or not the caller may open
+	// the contact, so it is read off the row; it reaches no caller, and every
+	// read of a lead withholds it through withholdUnreadableSourceContacts.
+	modulesTierUnscopedCeiling = 117
 )

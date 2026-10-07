@@ -10086,6 +10086,7 @@ export const vi = {
   "contact.action.call": "Gọi",
   "contact.action.meetings": "Lịch hẹn",
   "contact.action.workAsLead": "Theo dõi như lead",
+  "contact.action.openLead": "Mở lead",
   "contact.action.addTask": "Thêm việc",
   "contact.action.research": "Nghiên cứu",
 

@@ -431,7 +431,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-32 columns · primary key `(id)` · referenced by 42 foreign keys
+32 columns · primary key `(id)` · referenced by 43 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -976,7 +976,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-36 columns · primary key `(id)` · referenced by 14 foreign keys
+37 columns · primary key `(id)` · referenced by 14 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -988,6 +988,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `email` | `text` |  | Lowercased; lead-internal dedupe key. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_response_at` | `timestamp with time zone` |  | First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. |
+| `from_contact_id` | `uuid` |  | The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. |
 | `full_name` | `text` |  |  |
 | `linkedin_url` | `text` |  | Normalized LinkedIn profile URL; the exact-match dedupe key. |
 | `merged_into_id` | `uuid` |  | Set when this lead was merged away into another, and null otherwise. |
@@ -1022,6 +1023,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `disqualify_reason_id` | `lead_disqualify_reason` | the parent cannot be deleted while this row points at it |
+| `from_contact_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `merged_into_id` | `lead` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `project_id` | `project` | deleting the parent keeps this row and clears the link |
@@ -1048,6 +1050,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `idx_lead_candidate_company`: `btree (candidate_company_key) WHERE ((candidate_company_key IS NOT NULL) AND (archived_at IS NULL))`
 - `idx_lead_disqualify_reason`: `btree (disqualify_reason_id) WHERE (disqualify_reason_id IS NOT NULL)`
+- `idx_lead_from_contact`: `btree (from_contact_id) WHERE (from_contact_id IS NOT NULL)`
 - `idx_lead_linkedin`: `btree (linkedin_url) WHERE (linkedin_url IS NOT NULL)`
 - `idx_lead_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
 - `idx_lead_name_trgm`: `gin (f_fold_apostrophes(lower(((COALESCE(full_name, '') || ' ') || COALESCE(company_name, '')))) gin_trgm_ops)`
@@ -1060,6 +1063,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_lead_status_live`: `btree (status) WHERE (archived_at IS NULL)`
 - `lead_pkey`: `unique, btree (id)`
 - `uq_lead_email_dedupe`: `unique, btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))`
+- `uq_lead_from_contact_live`: `unique, btree (from_contact_id) WHERE ((from_contact_id IS NOT NULL) AND (archived_at IS NULL))`
 - `uq_lead_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
 **Triggers**

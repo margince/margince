@@ -46,6 +46,15 @@ export function leadTerminalKey(status: string): QueryKey {
   return [...LEAD_LIST_KEY, "terminal", status];
 }
 
+/**
+ * The live lead a contact is worked through, which the contact page reads.
+ * Under the list prefix, so every lead write that could open or close one
+ * refreshes it.
+ */
+export function contactLeadKey(contactId: string): QueryKey {
+  return [...LEAD_LIST_KEY, "from-contact", contactId];
+}
+
 /** The detail page. Its children — the score and the manual signals below — are prefix-reached from here. */
 export function leadKey(id: string): QueryKey {
   return ["lead", id];

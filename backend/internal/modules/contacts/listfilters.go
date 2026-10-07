@@ -42,6 +42,7 @@ const (
 	filterRelationshipType = "relationship_type"
 	filterStatus           = "status"
 	filterTag              = "tag_id"
+	filterFromContact      = "from_contact_id"
 	filterTagMode          = "tag_mode"
 	filterDomain           = "domain"
 	filterMinScore         = "min_score"
@@ -85,6 +86,7 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 	filterTagMode: storekit.FilterWord(func(in *ListLeadsInput, v *string) {
 		in.TagMode = tagModeOrDefault(v)
 	}),
+	filterFromContact: storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by. An entity

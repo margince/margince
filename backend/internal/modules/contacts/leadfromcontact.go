@@ -6,12 +6,16 @@ package contacts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // contactIDField is the create body's field naming the contact a lead is
@@ -25,16 +29,15 @@ const contactIDField = "contact_id"
 //
 // The contact is read through GetContact, so it carries that read's gates: a
 // contact the caller may not see is refused as not found, and an employer they
-// may not see is simply absent. The contact itself is not linked or changed —
-// a lead stays a separate record until it is qualified.
+// may not see is simply absent. The contact itself is not changed: the lead
+// records it as from_contact_id and stays a separate record until qualified.
 func (s *Store) fillLeadFromContact(ctx context.Context, in CreateLeadInput) (CreateLeadInput, error) {
 	if in.FromContactID == nil {
 		return in, nil
 	}
 	contact, err := s.GetContact(ctx, *in.FromContactID, storekit.LiveOnly)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return in, httperr.Validation(contactIDField, "not_found",
-			"no contact you can read has this id; pick one from the contacts you can see")
+		return in, errNoReadableContact()
 	}
 	if err != nil {
 		return in, err
@@ -95,4 +98,28 @@ func keptOrContactPtr(sent, fromContact *string) *string {
 		return sent
 	}
 	return keptOrContact(sent, *fromContact)
+}
+
+func errNoReadableContact() error {
+	return httperr.Validation(contactIDField, "not_found",
+		"no contact you can read has this id; pick one from the contacts you can see")
+}
+
+// ensureContactStillLive re-asks, under the contact lock ensureContactNotWorked
+// took, whether the contact is live. It was read before the transaction opened,
+// so an erasure landing in between would otherwise leave a fresh lead holding
+// the details it had just removed.
+func ensureContactStillLive(ctx context.Context, tx pgx.Tx, contactID *ids.ContactID) error {
+	if contactID == nil {
+		return nil
+	}
+	var live bool
+	err := tx.QueryRow(ctx, `SELECT archived_at IS NULL FROM contact WHERE id = $1`, contactID).Scan(&live)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !live) {
+		return errNoReadableContact()
+	}
+	if err != nil {
+		return fmt.Errorf("re-read the contact a lead is worked from: %w", err)
+	}
+	return nil
 }

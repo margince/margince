@@ -31654,7 +31654,7 @@ type CreateLeadRequest struct {
 	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
 	CompanyName         *string `json:"company_name,omitempty"`
 
-	// ContactId An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise); it is not linked to the lead or changed. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+	// ContactId An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise). The lead records it as `from_contact_id`, and the contact itself is not changed. A contact already worked through a live lead answers 409 `duplicate_contact_lead` with that lead's id. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
 	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
 	Email     *openapi_types.Email `json:"email,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
@@ -36000,9 +36000,12 @@ type Lead struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
-	FirstResponseAt *time.Time         `json:"first_response_at,omitempty"`
-	FullName        *string            `json:"full_name,omitempty"`
-	Id              openapi_types.UUID `json:"id"`
+	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
+
+	// FromContactId The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. While this lead is live, a second create from the same contact answers 409 `duplicate_contact_lead` naming this lead.
+	FromContactId *openapi_types.UUID `json:"from_contact_id,omitempty"`
+	FullName      *string             `json:"full_name,omitempty"`
+	Id            openapi_types.UUID  `json:"id"`
 
 	// LastActivityAt Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
@@ -51214,6 +51217,10 @@ type ListLeadsParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListLeadsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// FromContactId Only the leads worked from this contact (`from_contact_id` on the lead). The contact
+	// page asks it to find the open lead a contact is already worked through.
+	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
 }
 
 // ListLeadsParamsCapturedByKind defines parameters for ListLeads.
@@ -60394,6 +60401,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "first_response_at")
 	}
 
+	if raw, found := object["from_contact_id"]; found {
+		err = json.Unmarshal(raw, &a.FromContactId)
+		if err != nil {
+			return fmt.Errorf("error reading 'from_contact_id': %w", err)
+		}
+		delete(object, "from_contact_id")
+	}
+
 	if raw, found := object["full_name"]; found {
 		err = json.Unmarshal(raw, &a.FullName)
 		if err != nil {
@@ -60755,6 +60770,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["first_response_at"], err = json.Marshal(a.FirstResponseAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'first_response_at': %w", err)
+		}
+	}
+
+	if a.FromContactId != nil {
+		object["from_contact_id"], err = json.Marshal(a.FromContactId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'from_contact_id': %w", err)
 		}
 	}
 
@@ -92435,6 +92457,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from_contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from_contact_id", r.URL.Query(), &params.FromContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from_contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from_contact_id", Err: err})
 		}
 		return
 	}

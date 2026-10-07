@@ -29,6 +29,7 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 		SLAState:        params.SlaState,
 		Sort:            params.Sort,
 		TagIDs:          uuidArgs(params.TagId),
+		FromContactID:   idArg[ids.ContactKind](params.FromContactId),
 	}
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {

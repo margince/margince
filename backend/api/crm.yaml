@@ -9254,6 +9254,12 @@ paths:
             of them, `all` a record carrying every one, `none` a record carrying not one.
 
             Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+        - name: from_contact_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            Only the leads worked from this contact (`from_contact_id` on the lead). The contact
+            page asks it to find the open lead a contact is already worked through.
       responses:
         '200':
           description: A page of leads.
@@ -42301,6 +42307,14 @@ components:
         source_system: { type: [string, 'null'] }
         source_id: { type: [string, 'null'] }
         promoted_contact_id: { type: [string, 'null'], format: uuid, description: Set on promotion (convenience mirror). }
+        from_contact_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The existing contact this lead was created from (`contact_id` on the create), and
+            null for any other lead. While this lead is live, a second create from the same
+            contact answers 409 `duplicate_contact_lead` naming this lead.
         merged_into_id:
           type: [string, 'null']
           format: uuid
@@ -42394,9 +42408,11 @@ components:
             An existing contact this lead is worked from. Its name, primary email, title,
             LinkedIn profile and current employer fill whichever of those fields this request
             leaves out, so a lead for a contact the CRM already holds is never retyped or left
-            unnamed. The contact must be one the caller may read (422 otherwise); it is not
-            linked to the lead or changed. Not combinable with `source_system` (422): a lead
-            filled from a contact is not an import.
+            unnamed. The contact must be one the caller may read (422 otherwise). The lead
+            records it as `from_contact_id`, and the contact itself is not changed. A contact
+            already worked through a live lead answers 409 `duplicate_contact_lead` with that
+            lead's id. Not combinable with `source_system` (422): a lead filled from a contact
+            is not an import.
         status: { type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.' }
         owner_id: { type: [string, 'null'], format: uuid }
         source_system: { type: [string, 'null'] }

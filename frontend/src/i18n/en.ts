@@ -10334,6 +10334,7 @@ export const en = {
   "contact.action.call": "Call",
   "contact.action.meetings": "Meetings",
   "contact.action.workAsLead": "Work as a lead",
+  "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
 
