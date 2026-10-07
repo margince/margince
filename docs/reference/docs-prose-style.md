@@ -93,8 +93,9 @@ A page whose first line is `<!-- prose:plain -->` is held to a stricter bar, che
 | Paragraph length | 6 sentences |
 | Page length | Only when the marker sets it: `<!-- prose:plain max-words=1000 -->` |
 
-`plain-words.txt` holds general English words and is capped at 999 entries: all plain pages share fewer
-than 1,000 simple words. `technical-names.txt` holds names a reader must learn anyway, such as products,
+`plain-words.txt` holds general English words and is capped at 999 entries: all engineering plain pages
+share fewer than 1,000 simple words. The handbook speaks to the people who use the app, so its pages read
+their own list, `docs/handbook/plain-words.txt`, under the same cap. `technical-names.txt` holds names a reader must learn anyway, such as products,
 protocols and file names. A general word also covers its regular forms, so a page may write `deals` or
 `connected` when the list holds `deal` and `connect`; a technical name matches only as written. Inline code
 is not checked, and neither is link text that contains a `.` or a `/`, such as a path or a host.

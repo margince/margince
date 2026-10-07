@@ -188,13 +188,34 @@ func plainEnrolment(doc string) (enrolled bool, maxWords int) {
 
 func plainTooLong(res plainResult, maxWords int) bool { return maxWords > 0 && res.words > maxWords }
 
-func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
-	t.Parallel()
-	general := readWordList(t, plainWordsFile)
-	names := readWordList(t, technicalNamesFile)
+// plainPools gives a tree its own list of general words. The handbook speaks to
+// the people who use the app, so it does not share the engineering pages' words.
+// The embedded copy of the handbook reads the same list as its source.
+var plainPools = []struct{ prefix, list string }{
+	{"docs/handbook/", "docs/handbook/plain-words.txt"},
+	{"backend/internal/modules/knowledge/handbook/", "docs/handbook/plain-words.txt"},
+	{"", plainWordsFile},
+}
+
+func plainPoolFor(rel string) string {
+	for _, p := range plainPools {
+		if strings.HasPrefix(rel, p.prefix) {
+			return p.list
+		}
+	}
+	return plainWordsFile
+}
+
+// loadPlainPool reads one general list and checks the rules every list keeps.
+func loadPlainPool(t *testing.T, rel string, names []string) plainVocab {
+	t.Helper()
+	general := readWordList(t, rel)
 	if len(general) > plainWordCap {
 		t.Errorf("%s lists %d words; the cap is %d. Replace a word on a page with a listed one before adding another.",
-			plainWordsFile, len(general), plainWordCap)
+			rel, len(general), plainWordCap)
+	}
+	if !sort.StringsAreSorted(general) {
+		t.Errorf("%s is not sorted; keep one word per line in byte order so a diff shows what was added", rel)
 	}
 	vocab := plainVocab{general: map[string]bool{}, names: map[string]bool{}}
 	for _, w := range general {
@@ -203,13 +224,24 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 	for _, w := range names {
 		vocab.names[w] = true
 	}
-	if !sort.StringsAreSorted(general) {
-		t.Errorf("%s is not sorted; keep one word per line in byte order so a diff shows what was added", plainWordsFile)
+	return vocab
+}
+
+func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
+	t.Parallel()
+	names := readWordList(t, technicalNamesFile)
+	pools := map[string]plainVocab{}
+	used := map[string]map[string]bool{}
+	for _, p := range plainPools {
+		if _, ok := pools[p.list]; !ok {
+			pools[p.list] = loadPlainPool(t, p.list, names)
+			used[p.list] = map[string]bool{}
+		}
 	}
 
-	used := map[string]bool{}
 	enrolled := map[string]bool{}
 	limits := map[string]int{}
+	usedNames := map[string]bool{}
 	for _, f := range trackedFiles(t) {
 		if f.symlink || !strings.HasSuffix(f.path, ".md") {
 			continue
@@ -224,16 +256,18 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		}
 		enrolled[f.path] = true
 		limits[f.path] = maxWords
-		res := plainCheck(string(raw), vocab)
+		list := plainPoolFor(f.path)
+		res := plainCheck(string(raw), pools[list])
 		for w := range res.used {
-			used[w] = true
+			used[list][w] = true
+			usedNames[w] = true
 		}
 		if plainTooLong(res, maxWords) {
 			t.Errorf("%s has %d words; its marker allows at most %d. Link to a deeper page instead.", f.path, res.words, maxWords)
 		}
 		for w, n := range res.unknown {
 			t.Errorf("%s uses %q (%d×), which is in neither %s nor %s. Use a listed word, or add a technical name.",
-				f.path, w, n, plainWordsFile, technicalNamesFile)
+				f.path, w, n, list, technicalNamesFile)
 		}
 		for _, s := range res.long {
 			t.Errorf("%s: sentence over the limit (%d words for a numbered step, %d otherwise): %q",
@@ -249,14 +283,16 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 				rel, plainMarker, want)
 		}
 	}
-	for _, list := range []struct {
-		rel   string
-		words []string
-	}{{plainWordsFile, general}, {technicalNamesFile, names}} {
-		for _, w := range list.words {
-			if !used[w] && (list.rel == technicalNamesFile || !used[strings.ToLower(w)]) {
-				t.Errorf("%s lists %q, which no plain page uses; remove it", list.rel, w)
+	for list, vocab := range pools {
+		for w := range vocab.general {
+			if !used[list][w] {
+				t.Errorf("%s lists %q, which no plain page that reads it uses; remove it", list, w)
 			}
+		}
+	}
+	for _, w := range names {
+		if !usedNames[w] {
+			t.Errorf("%s lists %q, which no plain page uses; remove it", technicalNamesFile, w)
 		}
 	}
 }
@@ -307,6 +343,15 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 	}
 	if ok, _ := plainEnrolment("<!-- prose:plain max-words=99999999999999999999 -->\n# A"); ok {
 		t.Error("a marker whose limit does not parse was enrolled")
+	}
+	for rel, want := range map[string]string{
+		"docs/handbook/records.md":                               "docs/handbook/plain-words.txt",
+		"backend/internal/modules/knowledge/handbook/records.md": "docs/handbook/plain-words.txt",
+		"docs/how-to/add-a-job.md":                               plainWordsFile,
+	} {
+		if got := plainPoolFor(rel); got != want {
+			t.Errorf("%s reads %s, want %s", rel, got, want)
+		}
 	}
 	if ok, _ := plainEnrolment("# A\n`<!-- prose:plain -->`"); ok {
 		t.Error("a page quoting the marker below its first line was enrolled")
