@@ -34,6 +34,19 @@ export type SearchResult = Readonly<{ value: string; label: string }>;
  */
 export const SEARCH_DEBOUNCE_MS = 250;
 
+/**
+ * `typed`, held back until it has stood still for SEARCH_DEBOUNCE_MS: as a query
+ * key it is one request per pause, where the raw text is one per keystroke.
+ */
+export function useSettledValue<T>(typed: T): T {
+  const [settled, setSettled] = useState(typed);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(typed), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [typed]);
+  return settled;
+}
+
 export type DebouncedSearch<R extends SearchResult = SearchResult> = Readonly<{
   results: readonly R[];
   pending: boolean;

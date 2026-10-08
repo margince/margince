@@ -100,6 +100,9 @@ if [[ -n "$lane_paths" ]]; then
 	fi
 fi
 
+# Comment prose reads TypeScript too, so it runs before the Go-only early exit.
+"$root/scripts/check-comment-prose.sh"
+
 # Changed-and-still-present Go files, excluding generated code. extensions/,
 # fixtures/ and desktop/ are each their own module and would otherwise escape the
 # bar entirely — a first-party unit ships the same product as backend/, and the

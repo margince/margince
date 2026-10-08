@@ -94,7 +94,7 @@ independent of individual allocations; the difference is shown as **Unallocated*
 
 Use **Export CSV**, beside **Save report**, for the report's current readings, or export a selected frozen
 edition for its archived readings. Exports respect the same permissions and coverage
-as the screen. For a bespoke analysis, open **More analysis → Custom reports** or ask your connected AI
+as the screen. For a bespoke analysis, open **Reports → New custom report** or ask your connected AI
 to use Margince's governed reporting tools.
 
 Metric definitions are available to readers. Administrators open **Reporting setup** separately to configure qualification stages and daily pipeline history.

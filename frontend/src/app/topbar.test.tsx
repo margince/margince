@@ -2,9 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../i18n/en";
+import { FiltersScreen } from "../screens/filters";
+import {
+  type FiltersServer,
+  mountFilters,
+  type Sent,
+} from "../screens/filters.testkit";
+import { LIVE_ID, liveList } from "../screens/lists.fixtures";
 import type { NavSection } from "./nav";
 import { parseHash, type Route } from "./router";
 import {
@@ -308,5 +316,141 @@ describe("Top bar trail", () => {
     renderTopBar({ screen: "ext", id: "ghost" }, { onToggle: ignoreToggle });
     expect(stopTexts()).toEqual(["Not found"]);
     expect(trail().textContent).not.toContain("ghost");
+  });
+});
+
+// A focused filter page and one list sit BELOW the Filters and views library,
+// so their trail leads back to it and ends in the page. A name is the page's
+// own read, watched under the page's own key: the trail asks for nothing, so
+// each case draws the page beside it, as the shell does.
+describe("Top bar trail below Filters and views", () => {
+  const VIEW = {
+    id: "v1",
+    owner_id: "u-1",
+    resource: "contacts",
+    name: "Berlin contacts",
+    shared_scope: "private",
+    query: { filter: { and: [{ field: "city", op: "eq", value: "B" }] } },
+    version: 1,
+  };
+
+  /** The bar and the page the App mounts at `hash`, over one fake server. */
+  function renderAt(hash: string, server: FiltersServer = {}) {
+    const route = parseHash(hash);
+    const mounted = mountFilters(server);
+    renderWith(
+      mounted.client,
+      <>
+        <TopBar
+          route={route}
+          collapsed={false}
+          onToggle={ignoreToggle}
+          onOpenSearch={ignoreSearch}
+        />
+        {route.screen === "lists" ? (
+          <FiltersScreen list={route.id} />
+        ) : (
+          <FiltersScreen id={route.id} view={route.id2} />
+        )}
+      </>,
+    );
+    return mounted;
+  }
+
+  const reads = (seen: readonly Sent[], at: string) =>
+    seen.filter((sent) => sent.method === "GET" && sent.url.endsWith(at));
+
+  it("is the library's own name on the library", () => {
+    renderAt("#/filters");
+    expect(stopTexts()).toEqual(["Filters and views"]);
+    expect(within(trail()).queryByRole("link")).toBeNull();
+  });
+
+  it("leads a new filter back to the library", () => {
+    renderAt("#/filters/contacts");
+    expect(stopTexts()).toEqual(["Filters and views", "New contact filter"]);
+    expect(
+      within(trail())
+        .getByRole("link", { name: "Filters and views" })
+        .getAttribute("href"),
+    ).toBe("#/filters");
+  });
+
+  it("names an opened view once the page has read it, with one read between them", async () => {
+    let release = () => {};
+    const viewsAnswered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { seen } = renderAt("#/filters/contacts/v1", {
+      views: [VIEW],
+      viewsAnswered,
+    });
+    expect(stopTexts()).toEqual(["Filters and views", "Saved view"]);
+    await waitFor(() => expect(reads(seen, "/views/v1")).toHaveLength(1));
+    release();
+    await waitFor(() =>
+      expect(stopTexts()).toEqual(["Filters and views", "Berlin contacts"]),
+    );
+    expect(reads(seen, "/views/v1")).toHaveLength(1);
+  });
+
+  // The page reads a view it cannot open as gone, so the trail does not name it.
+  it.each([
+    ["that was deleted", { archived_at: "2026-06-01T00:00:00Z" }],
+    ["over a record type no builder reads", { resource: "activities" }],
+    ["keeping a list's state and no filter", { query: { list: {} } }],
+  ])("names no view %s", async (_, change) => {
+    renderAt("#/filters/contacts/v1", { views: [{ ...VIEW, ...change }] });
+    expect(await screen.findByText(en["filters.view.gone"])).toBeTruthy();
+    expect(stopTexts()).toEqual(["Filters and views", "Saved view"]);
+  });
+
+  it("leads a Live List's filter back through the list it edits", async () => {
+    const { seen } = renderAt(`#/filters/list/${LIVE_ID}`, {
+      listsOn: true,
+      lists: [liveList],
+    });
+    await waitFor(() =>
+      expect(stopTexts()).toEqual([
+        "Filters and views",
+        liveList.name,
+        "Edit filter",
+      ]),
+    );
+    expect(
+      within(trail())
+        .getByRole("link", { name: liveList.name })
+        .getAttribute("href"),
+    ).toBe(`#/lists/${LIVE_ID}`);
+    expect(reads(seen, `/lists/${LIVE_ID}`)).toHaveLength(1);
+  });
+
+  // The page records a visit only once its own read lands, so a trail that
+  // read the list first would leave the visit unrecorded.
+  it("leads one list back to the library, leaving the visit to the page", async () => {
+    const { written } = renderAt(`#/lists/${LIVE_ID}`, {
+      listsOn: true,
+      lists: [liveList],
+    });
+    await waitFor(() =>
+      expect(stopTexts()).toEqual(["Filters and views", liveList.name]),
+    );
+    await waitFor(() =>
+      expect(
+        written.filter((sent) => sent.url.endsWith(`/lists/${LIVE_ID}/visit`)),
+      ).toHaveLength(1),
+    );
+  });
+
+  // The server refuses every list route while lists are off, so nothing on
+  // the page asks for one and the trail names the page instead.
+  it("reads no list while lists are off", async () => {
+    const { seen } = renderAt(`#/lists/${LIVE_ID}`, {
+      listsOn: false,
+      lists: [liveList],
+    });
+    expect(await screen.findByText(en["lists.unavailable"])).toBeTruthy();
+    expect(stopTexts()).toEqual(["Filters and views", "List"]);
+    expect(reads(seen, `/lists/${LIVE_ID}`)).toEqual([]);
   });
 });

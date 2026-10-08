@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
@@ -78,7 +79,7 @@ func providerRefusal(resp *http.Response, limitSource string, err error) error {
 	if resp.StatusCode != http.StatusTooManyRequests {
 		return providerFaultOf(resp.StatusCode, err)
 	}
-	refused := fmt.Errorf("%w: %w", errProviderRefused, err)
+	refused := unusableAnswer{fmt.Errorf("%w: %w", errProviderRefused, err)}
 	switch refusalKind(limitSource, err.Error(), retryafter.Of(resp)) {
 	case refusalQuota:
 		return fmt.Errorf("%w: %w", ErrProviderQuota, refused)
@@ -88,6 +89,16 @@ func providerRefusal(resp *http.Response, limitSource string, err error) error {
 		return refused
 	}
 }
+
+// unusableAnswer is a refusal that is also the shared sentinel for "an outside
+// service gave no usable answer", so a layer that knows only the shared
+// vocabulary (a job's failure classification, an HTTP status) can say what
+// happened without importing this package.
+type unusableAnswer struct{ error }
+
+func (e unusableAnswer) Unwrap() error { return e.error }
+
+func (e unusableAnswer) Is(target error) bool { return target == apperrors.ErrProviderUnusable }
 
 // What a 429 turned out to be.
 type refusal int

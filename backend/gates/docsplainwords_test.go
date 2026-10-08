@@ -14,6 +14,7 @@ package gates
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,8 +26,9 @@ import (
 
 const (
 	plainMarker        = "prose:plain"
-	plainWordsFile     = "docs/reference/plain-words.txt"
-	technicalNamesFile = "docs/reference/technical-names.txt"
+	plainWordsFile     = "docs/plain-words.txt"
+	plainProjectFile   = "docs/plain-words-project.txt"
+	glossaryFile       = "docs/reference/glossary.md"
 	plainWordCap       = 999
 	plainStepWords     = 20
 	plainSentenceWords = 25
@@ -39,10 +41,14 @@ const (
 var plainRequired = map[string]int{"README.md": 1000}
 
 var (
-	plainToken    = regexp.MustCompile(`\p{L}[\p{L}'’-]*`)
-	plainHeader   = regexp.MustCompile(`^<!--\s*prose:plain(?:\s+max-words=(\d+))?\s*-->$`)
-	plainPathLink = regexp.MustCompile(`\[[^\]\s]*[./][^\]\s]*\]`)
-	plainStepItem = regexp.MustCompile(`^\s*\d+\.\s+`)
+	plainToken  = regexp.MustCompile(`\p{L}[\p{L}'’-]*`)
+	plainHeader = regexp.MustCompile(`^<!--\s*prose:plain(?:\s+max-words=(\d+))?\s*-->$`)
+	// plainScreenText is a bold label or a quoted message: the words the reader
+	// sees on the screen, which a page must copy exactly, so like inline code
+	// they are names and not prose to simplify.
+	plainScreenText = regexp.MustCompile(`\*\*[^*\n]+\*\*|"[^"\n]+"|“[^”\n]+”`)
+	plainPathLink   = regexp.MustCompile(`\[[^\]\s]*[./][^\]\s]*\]`)
+	plainStepItem   = regexp.MustCompile(`^\s*\d+\.\s+`)
 )
 
 func readWordList(t *testing.T, rel string) []string {
@@ -132,7 +138,8 @@ func plainCheck(doc string, vocab plainVocab) plainResult {
 	lines := barLines(doc)
 	for _, l := range lines {
 		// A link whose text is a path or a host names a file, like inline code does.
-		for _, w := range plainToken.FindAllString(plainPathLink.ReplaceAllString(l.text, " CODE "), -1) {
+		text := plainScreenText.ReplaceAllString(plainPathLink.ReplaceAllString(l.text, " CODE "), " CODE ")
+		for _, w := range plainToken.FindAllString(text, -1) {
 			if w == "CODE" {
 				continue
 			}
@@ -188,13 +195,113 @@ func plainEnrolment(doc string) (enrolled bool, maxWords int) {
 
 func plainTooLong(res plainResult, maxWords int) bool { return maxWords > 0 && res.words > maxWords }
 
-func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
-	t.Parallel()
-	general := readWordList(t, plainWordsFile)
-	names := readWordList(t, technicalNamesFile)
-	if len(general) > plainWordCap {
+// plainPools gives each docs area its own list of fewer than 1,000 general
+// words, so a reader of one area meets a small vocabulary. The embedded copy of
+// the handbook reads the same list as its source. The entry pages a newcomer
+// opens first share the root list; every other page reads the project list.
+var plainPools = []struct{ prefix, list string }{
+	{"docs/handbook/", "docs/handbook/plain-words.txt"},
+	{"backend/internal/modules/knowledge/handbook/", "docs/handbook/plain-words.txt"},
+	{"docs/how-to/", "docs/how-to/plain-words.txt"},
+	{"docs/tutorials/", "docs/how-to/plain-words.txt"},
+	{"docs/explanation/", "docs/explanation/plain-words.txt"},
+	{"docs/reference/", "docs/reference/plain-words.txt"},
+	{"README.md", plainWordsFile},
+	{"CONTRIBUTING.md", plainWordsFile},
+	{"SECURITY.md", plainWordsFile},
+	{"SUPPORT.md", plainWordsFile},
+	{"docs/README.md", plainWordsFile},
+	{"", plainProjectFile},
+}
+
+// plainCaps is the most general words each list may hold. 999 is the target: a
+// reader of one area meets fewer than 1,000 simple words. An area whose pages
+// needed more when they joined starts at that size, and its cap only goes down:
+// lower it when a list shrinks, and never raise it.
+var plainCaps = map[string]int{
+	plainWordsFile:                     plainWordCap,
+	"docs/how-to/plain-words.txt":      1300,
+	"docs/explanation/plain-words.txt": 1500,
+	"docs/handbook/plain-words.txt":    1500,
+	"docs/reference/plain-words.txt":   1850,
+	plainProjectFile:                   2500,
+}
+
+// glossaryLegacyMax is how many names may still lack a meaning: the names pages
+// used before they joined the bar. After that it only goes down.
+const glossaryLegacyMax = 1400
+
+const glossaryLegacyHeading = "## Names without a meaning yet"
+
+var glossaryLegacyName = regexp.MustCompile("`([^`]+)`")
+
+var glossaryRow = regexp.MustCompile(`^\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*$`)
+
+// parseGlossary reads the glossary table: each term a plain page may use as a
+// technical name, and a meaning a reader can learn it from.
+func parseGlossary(doc string) (terms []string, problems []string) {
+	seen := map[string]bool{}
+	legacy, inLegacy := 0, false
+	for _, line := range strings.Split(doc, "\n") {
+		if strings.HasPrefix(line, "## ") {
+			inLegacy = strings.TrimSpace(line) == glossaryLegacyHeading
+			continue
+		}
+		if inLegacy {
+			for _, m := range glossaryLegacyName.FindAllStringSubmatch(line, -1) {
+				if seen[m[1]] {
+					problems = append(problems, fmt.Sprintf("%q is listed twice", m[1]))
+				}
+				seen[m[1]] = true
+				terms = append(terms, m[1])
+				legacy++
+			}
+			continue
+		}
+		m := glossaryRow.FindStringSubmatch(strings.TrimSpace(line))
+		if m == nil || m[1] == "Term" || strings.Trim(m[1], "-: ") == "" {
+			continue
+		}
+		term := strings.Trim(m[1], "`")
+		if seen[term] {
+			problems = append(problems, fmt.Sprintf("%q is listed twice", term))
+		}
+		seen[term] = true
+		if len(barWord.FindAllString(m[2], -1)) < 3 {
+			problems = append(problems, fmt.Sprintf("%q needs a meaning of at least three words", term))
+		}
+		terms = append(terms, term)
+	}
+	if legacy > glossaryLegacyMax {
+		problems = append(problems, fmt.Sprintf("%d names lack a meaning; at most %d may. Give a new name a meaning in the table.",
+			legacy, glossaryLegacyMax))
+	}
+	return terms, problems
+}
+
+func plainPoolFor(rel string) string {
+	for _, p := range plainPools {
+		if strings.HasPrefix(rel, p.prefix) {
+			return p.list
+		}
+	}
+	return plainWordsFile
+}
+
+// loadPlainPool reads one general list and checks the rules every list keeps.
+func loadPlainPool(t *testing.T, rel string, names []string) plainVocab {
+	t.Helper()
+	general := readWordList(t, rel)
+	limit, ok := plainCaps[rel]
+	if !ok {
+		limit = plainWordCap
+	}
+	if len(general) > limit {
 		t.Errorf("%s lists %d words; the cap is %d. Replace a word on a page with a listed one before adding another.",
-			plainWordsFile, len(general), plainWordCap)
+			rel, len(general), limit)
+	}
+	if !sort.StringsAreSorted(general) {
+		t.Errorf("%s is not sorted; keep one word per line in byte order so a diff shows what was added", rel)
 	}
 	vocab := plainVocab{general: map[string]bool{}, names: map[string]bool{}}
 	for _, w := range general {
@@ -203,13 +310,31 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 	for _, w := range names {
 		vocab.names[w] = true
 	}
-	if !sort.StringsAreSorted(general) {
-		t.Errorf("%s is not sorted; keep one word per line in byte order so a diff shows what was added", plainWordsFile)
+	return vocab
+}
+
+func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
+	t.Parallel()
+	glossary, err := os.ReadFile(filepath.Join(docsTreeRoot, glossaryFile))
+	if err != nil {
+		t.Fatalf("read %s: %v", glossaryFile, err)
+	}
+	names, problems := parseGlossary(string(glossary))
+	for _, p := range problems {
+		t.Errorf("%s: %s", glossaryFile, p)
+	}
+	pools := map[string]plainVocab{}
+	used := map[string]map[string]bool{}
+	for _, p := range plainPools {
+		if _, ok := pools[p.list]; !ok {
+			pools[p.list] = loadPlainPool(t, p.list, names)
+			used[p.list] = map[string]bool{}
+		}
 	}
 
-	used := map[string]bool{}
 	enrolled := map[string]bool{}
 	limits := map[string]int{}
+	usedNames := map[string]bool{}
 	for _, f := range trackedFiles(t) {
 		if f.symlink || !strings.HasSuffix(f.path, ".md") {
 			continue
@@ -224,16 +349,18 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		}
 		enrolled[f.path] = true
 		limits[f.path] = maxWords
-		res := plainCheck(string(raw), vocab)
+		list := plainPoolFor(f.path)
+		res := plainCheck(string(raw), pools[list])
 		for w := range res.used {
-			used[w] = true
+			used[list][w] = true
+			usedNames[w] = true
 		}
 		if plainTooLong(res, maxWords) {
 			t.Errorf("%s has %d words; its marker allows at most %d. Link to a deeper page instead.", f.path, res.words, maxWords)
 		}
 		for w, n := range res.unknown {
 			t.Errorf("%s uses %q (%d×), which is in neither %s nor %s. Use a listed word, or add a technical name.",
-				f.path, w, n, plainWordsFile, technicalNamesFile)
+				f.path, w, n, list, glossaryFile)
 		}
 		for _, s := range res.long {
 			t.Errorf("%s: sentence over the limit (%d words for a numbered step, %d otherwise): %q",
@@ -249,14 +376,16 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 				rel, plainMarker, want)
 		}
 	}
-	for _, list := range []struct {
-		rel   string
-		words []string
-	}{{plainWordsFile, general}, {technicalNamesFile, names}} {
-		for _, w := range list.words {
-			if !used[w] && (list.rel == technicalNamesFile || !used[strings.ToLower(w)]) {
-				t.Errorf("%s lists %q, which no plain page uses; remove it", list.rel, w)
+	for list, vocab := range pools {
+		for w := range vocab.general {
+			if !used[list][w] {
+				t.Errorf("%s lists %q, which no plain page that reads it uses; remove it", list, w)
 			}
+		}
+	}
+	for _, w := range names {
+		if !usedNames[w] {
+			t.Errorf("%s lists %q, which no plain page uses; remove it", glossaryFile, w)
 		}
 	}
 }
@@ -273,6 +402,9 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 		"1. " + strings.Repeat("word ", 21) + "\n\n" +
 		strings.Repeat("A deal is open. ", 7)
 	res := plainCheck(planted, vocab)
+	if got := plainCheck("Press **Circumnavigate now** to see \"Nothing found\".", vocab).unknown; got["Circumnavigate"]+got["Nothing"] != 0 {
+		t.Errorf("a bold label or a quoted message was judged as prose: %v", got)
+	}
 	if res.unknown["circumnavigated"] == 0 {
 		t.Error("an unlisted word was not reported")
 	}
@@ -307,6 +439,26 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 	}
 	if ok, _ := plainEnrolment("<!-- prose:plain max-words=99999999999999999999 -->\n# A"); ok {
 		t.Error("a marker whose limit does not parse was enrolled")
+	}
+	for rel, want := range map[string]string{
+		"docs/handbook/records.md":                               "docs/handbook/plain-words.txt",
+		"backend/internal/modules/knowledge/handbook/records.md": "docs/handbook/plain-words.txt",
+		"docs/how-to/add-a-job.md":                               "docs/how-to/plain-words.txt",
+		"docs/tutorials/getting-started.md":                      "docs/how-to/plain-words.txt",
+		"README.md":                                              plainWordsFile,
+		"docs/README.md":                                         plainWordsFile,
+		"docs/principles/derive-the-obligation.md":               plainProjectFile,
+	} {
+		if got := plainPoolFor(rel); got != want {
+			t.Errorf("%s reads %s, want %s", rel, got, want)
+		}
+	}
+	if terms, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n\n" +
+		glossaryLegacyHeading + "\n\n`nonce`, `cron`\n"); len(problems) != 0 || len(terms) != 3 {
+		t.Errorf("a meaning row and a legacy name were not both read: %v %v", terms, problems)
+	}
+	if _, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n| boundary | edge |"); len(problems) != 1 {
+		t.Errorf("a glossary row with a two-word meaning was not reported: %v", problems)
 	}
 	if ok, _ := plainEnrolment("# A\n`<!-- prose:plain -->`"); ok {
 		t.Error("a page quoting the marker below its first line was enrolled")

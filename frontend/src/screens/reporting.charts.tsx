@@ -17,6 +17,7 @@ import {
 } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import { ChartContext } from "./reporting.chartcontext";
+import { MetricsTable } from "./reporting.metricstable";
 import {
   blockLabel,
   metricLabel,
@@ -36,18 +37,17 @@ type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 export function ReportingCharts({
   evaluation,
   editionId,
-  pipelineControls,
+  afterSummary,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   editionId?: string;
-  pipelineControls?: ReactNode;
+  // Drawn between the headline readings and the charts: what a reader should
+  // act on before reading further.
+  afterSummary?: ReactNode;
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const amount = (value: number | null | undefined, unit: string) =>
-    reportingAmount(value, unit, evaluation.context.currency, locale);
   const charts = evaluation.charts.filter(
     (chart) =>
       chart.kind !== "metric_reading" &&
@@ -65,35 +65,20 @@ export function ReportingCharts({
   return (
     <div className="reporting-results">
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+      {afterSummary}
       <div className="reporting-grid">
-        {charts.map((chart) => (
-          <Panel
-            key={`${chart.kind}:${chart.metric}`}
-            className={`reporting-panel reporting-panel-${chart.kind}`}
-            title={chartTitle(chart, evaluation, t)}
-          >
-            <PanelBody>
-              {chart.kind === "stage_distribution" && pipelineControls && (
-                <div className="reporting-toolbar">{pipelineControls}</div>
-              )}
-              <ChartContext
-                chart={chart}
-                evaluation={evaluation}
-                editionId={editionId}
-              />
-              {chart.points.length && chart.coverage.status !== "no_data" ? (
-                <ChartBody
-                  chart={chart}
-                  evaluation={evaluation}
-                  onEvidence={onEvidence}
-                />
-              ) : (
-                <EmptyState>
-                  {chart.coverage.reason ?? t("common.empty")}
-                </EmptyState>
-              )}
-              {chart.points.length > 0 &&
-                chart.coverage.status !== "no_data" && (
+        {charts.map((chart) => {
+          const drawn =
+            chart.points.length > 0 && chart.coverage.status !== "no_data";
+          return (
+            <Panel
+              key={`${chart.kind}:${chart.metric}`}
+              className={`reporting-panel reporting-panel-${chart.kind}`}
+              title={chartTitle(chart, evaluation, t)}
+              // The one door from a chart to the records behind it, in the head
+              // beside the title it opens, rather than trailing the figure.
+              titleAction={
+                drawn ? (
                   <Button
                     variant="link"
                     onClick={() =>
@@ -105,64 +90,32 @@ export function ReportingCharts({
                   >
                     {t("reporting.viewRecords")}
                   </Button>
+                ) : undefined
+              }
+            >
+              <PanelBody>
+                <ChartContext
+                  chart={chart}
+                  evaluation={evaluation}
+                  editionId={editionId}
+                />
+                {drawn ? (
+                  <ChartBody
+                    chart={chart}
+                    evaluation={evaluation}
+                    onEvidence={onEvidence}
+                  />
+                ) : (
+                  <EmptyState>
+                    {chart.coverage.reason ?? t("common.empty")}
+                  </EmptyState>
                 )}
-            </PanelBody>
-          </Panel>
-        ))}
+              </PanelBody>
+            </Panel>
+          );
+        })}
       </div>
-      <Disclosure summary={t("reporting.moreMetrics")}>
-        <DataTable
-          label={t("reporting.metrics")}
-          rows={evaluation.metrics}
-          rowKey={(metric) => metric.id}
-          columns={[
-            {
-              key: "metric",
-              header: t("reporting.metrics"),
-              render: (metric) => (
-                <Button
-                  variant="link"
-                  onClick={() => onEvidence(metric.evidence)}
-                >
-                  {metricLabel(metric.id, t)}
-                </Button>
-              ),
-            },
-            {
-              key: "actual",
-              header: t("reporting.actual"),
-              render: (metric) => amount(metric.value, metric.unit),
-            },
-            ...(evaluation.metrics.some((metric) => metric.target != null)
-              ? [
-                  {
-                    key: "target",
-                    header: t("reporting.target"),
-                    render: (metric: ReportingEvaluation["metrics"][number]) =>
-                      metric.target == null
-                        ? "—"
-                        : amount(metric.target, metric.unit),
-                  },
-                ]
-              : []),
-            {
-              key: "status",
-              header: t("reporting.evidence"),
-              render: (metric) => (
-                <Popover
-                  onHover
-                  label={t(`reporting.status.${metric.coverage.status}`)}
-                >
-                  <p>
-                    {metric.coverage.reason ??
-                      t(`reporting.status.${metric.coverage.status}`)}
-                  </p>
-                </Popover>
-              ),
-            },
-          ]}
-        />
-      </Disclosure>
+      <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
     </div>
   );
 }

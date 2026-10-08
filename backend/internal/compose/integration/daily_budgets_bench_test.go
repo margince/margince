@@ -1,0 +1,604 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration && bench
+
+package integration
+
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"slices"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+)
+
+// The daily-use budgets (p95, per seat). PERF-1 and PERF-7 are declared beside
+// their own benches; these are the screens only bench-daily measures. LOAD-1
+// is the cheap route while every seat starts at once, judged on its own ID.
+const (
+	Perf2Budget  = 150 * time.Millisecond
+	Perf8Budget  = time.Second
+	Perf9Budget  = 300 * time.Millisecond
+	Perf10Budget = time.Second
+	Load1Budget  = 150 * time.Millisecond
+)
+
+// DailyVerdict is the recorded outcome of one flow for one seat; gen-perfdoc
+// renders these exact strings, so a change here changes the published page.
+type DailyVerdict string
+
+const (
+	DailyWithin    DailyVerdict = "within budget"
+	DailyOverKnown DailyVerdict = "over budget"
+	DailyOver      DailyVerdict = "over budget (unlisted)"
+	DailyNoData    DailyVerdict = "no data"
+	DailyNotGated  DailyVerdict = "not gated"
+)
+
+// KnownIssue ties a flow, or one row of it when Row is set, already over
+// budget to the open issue tracking it. Allow5xx lets that row's server errors
+// pass the gate, for an issue whose evidence shows them as its own symptom.
+type KnownIssue struct {
+	Flow, Row string
+	Issue     int
+	Allow5xx  bool
+}
+
+// covers reports whether the entry lists this row of this flow.
+func (k KnownIssue) covers(flow, row string) bool {
+	if k.Row != "" {
+		return k.Row == row
+	}
+	return k.Flow == flow
+}
+
+// subject names the row when one is set, else the flow, as the gate's messages print it.
+func subject(flow, row string) string {
+	if row != "" {
+		return "row " + row
+	}
+	return "flow " + flow
+}
+
+// DailyKnownIssues lists flows and rows already over budget, each tracked by
+// an open issue; remove a row when its issue closes.
+var DailyKnownIssues = []KnownIssue{
+	{Flow: "worklist", Issue: 4912},
+	{Flow: "home", Row: "home_worklist", Issue: 4912},
+	{Flow: "lists", Row: "lists_contacts_q", Issue: 7082},
+	{Flow: "palette_search", Row: "palette_search_meeting", Issue: 7037},
+	{Flow: "results_search", Row: "results_search_all", Issue: 7037},
+	{Flow: "contact_360", Issue: 7085},
+	{Flow: "palette_search_prefix", Issue: 7037},
+	{Flow: "morning_load", Issue: 7068, Allow5xx: true},
+}
+
+// DailyResult is one row of a flow measured for one seat, as the gate judges it.
+type DailyResult struct {
+	Flow, Row, Seat string
+	Verdict         DailyVerdict
+	Issue           int
+	Status5xx       int
+	Status422       int
+	P95, Budget     time.Duration
+	// Allow422 marks a flow whose query_too_broad refusal is the known issue itself.
+	Allow422 bool
+}
+
+const dailyScaleEnv = "MARGINCE_BENCH_DAILY_SCALE"
+
+// staleMargin is how far under its budget every seat must come before an entry
+// is called stale: a row hovering at the line must not flap between "list it"
+// and "remove it" from run to run.
+const staleMargin = 0.8
+
+// knownEntryFor prefers an entry naming the row over one covering its whole
+// flow; the zero entry means none covers it.
+func knownEntryFor(flow, row string) KnownIssue {
+	var entry KnownIssue
+	for _, known := range DailyKnownIssues {
+		if !known.covers(flow, row) {
+			continue
+		}
+		if known.Row != "" {
+			return known
+		}
+		entry = known
+	}
+	return entry
+}
+
+func knownIssueFor(flow, row string) int { return knownEntryFor(flow, row).Issue }
+
+// allows5xx reports whether the entry covering this row lets its server errors pass.
+func allows5xx(flow, row string) bool { return knownEntryFor(flow, row).Allow5xx }
+
+// JudgeDaily returns the verdict for one row's p95 and, when it is over budget
+// and listed, the issue that tracks it. A p95 equal to the budget is over, as
+// gen-perfdoc renders it.
+func JudgeDaily(flow, row string, p95, budget time.Duration, samples int) (DailyVerdict, int) {
+	switch {
+	case samples == 0:
+		return DailyNoData, 0
+	case p95 < budget:
+		return DailyWithin, 0
+	}
+	if issue := knownIssueFor(flow, row); issue != 0 {
+		return DailyOverKnown, issue
+	}
+	return DailyOver, 0
+}
+
+// DailyGate fails the run on every unlisted breach, every 5xx outside an
+// Allow5xx entry and every 422 outside a listed flow.
+func DailyGate(results []DailyResult, scale float64) error {
+	var problems []string
+	for _, r := range results {
+		if r.Verdict == DailyOver {
+			problems = append(problems, fmt.Sprintf("%s is over budget for %s and no open issue lists it", subject(r.Flow, r.Row), r.Seat))
+		}
+		if r.Status5xx > 0 && !allows5xx(r.Flow, r.Row) {
+			problems = append(problems, fmt.Sprintf("%s answered %d server errors for %s", subject(r.Flow, r.Row), r.Status5xx, r.Seat))
+		}
+		if r.Status422 > 0 && !r.Allow422 {
+			problems = append(problems, fmt.Sprintf("%s was refused %d times with 422 for %s", subject(r.Flow, r.Row), r.Status422, r.Seat))
+		}
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(problems, "; "))
+}
+
+// DailyAdvisories names each known-issue entry a full-scale run found clear
+// of its budget, for the record to carry. It never fails the run: an entry
+// that could go costs nothing while it stays, and a full run is too long to
+// lose to one quiet morning. A development-scale corpus clears nothing.
+func DailyAdvisories(results []DailyResult, scale float64) []string {
+	if scale != 1 {
+		return nil
+	}
+	return staleKnownIssues(results)
+}
+
+// staleKnownIssues names each listed flow or row that was measured and came in at
+// or below staleMargin of its budget for every seat; a seat with no data or no
+// gate says nothing either way. A row that drew a 422 was refused, not served
+// fast, so it is never clear.
+func staleKnownIssues(results []DailyResult) []string {
+	var stale []string
+	for _, known := range DailyKnownIssues {
+		measured, cleared := 0, 0
+		for _, r := range results {
+			if !known.covers(r.Flow, r.Row) || r.Verdict == DailyNoData || r.Verdict == DailyNotGated {
+				continue
+			}
+			measured++
+			if r.Verdict == DailyWithin && r.Status422 == 0 && float64(r.P95) <= staleMargin*float64(r.Budget) {
+				cleared++
+			}
+		}
+		if measured > 0 && cleared == measured {
+			stale = append(stale, fmt.Sprintf("%s is at or under %.0f%% of its budget for every seat: remove the row for #%d",
+				subject(known.Flow, known.Row), staleMargin*100, known.Issue))
+		}
+	}
+	return stale
+}
+
+// applySampleFloor turns every gated row with fewer than dailySamples samples
+// into "no data": a p95 of a handful of tries is a guess, never a verdict.
+func applySampleFloor(rows []dailyRow) []dailyRow {
+	for i := range rows {
+		r := &rows[i]
+		if r.Result.Verdict == DailyNoData || r.Result.Verdict == DailyNotGated || r.Measurement.Samples >= dailySamples {
+			continue
+		}
+		r.Result.Verdict, r.Result.Issue = DailyNoData, 0
+		r.Measurement.Verdict, r.Measurement.KnownIssue = string(DailyNoData), 0
+		r.Measurement.Note = joinNotes(fmt.Sprintf("%d samples, under the floor of %d: no p95 is claimed",
+			r.Measurement.Samples, dailySamples), r.Measurement.Note)
+	}
+	return rows
+}
+
+func joinNotes(notes ...string) string {
+	kept := slices.DeleteFunc(notes, func(n string) bool { return n == "" })
+	return strings.Join(kept, "; ")
+}
+
+// dailyScale reads the corpus multiplier; 1 is the published mid-market tier.
+// A value that is not a positive number is an error, never a silent default.
+func dailyScale() (float64, error) {
+	raw := os.Getenv(dailyScaleEnv)
+	if raw == "" {
+		return 1, nil
+	}
+	scale, err := strconv.ParseFloat(raw, 64)
+	if err != nil || scale <= 0 {
+		return 0, fmt.Errorf("%s=%q: set a positive number (1 for the published tier, 0.05 for a development run)", dailyScaleEnv, raw)
+	}
+	return scale, nil
+}
+
+func TestADailyFlowWithinItsBudgetPasses(t *testing.T) {
+	v, issue := JudgeDaily("lists", "lists_contacts", 90*time.Millisecond, Perf2Budget, 30)
+	if v != DailyWithin || issue != 0 {
+		t.Fatalf("got %q #%d, want within budget and no issue", v, issue)
+	}
+}
+
+func TestAKnownSlowFlowIsRecordedAgainstItsIssueAndPasses(t *testing.T) {
+	v, issue := JudgeDaily("worklist", "worklist", 3*time.Second, Perf8Budget, 30)
+	if v != DailyOverKnown || issue != 4912 {
+		t.Fatalf("got %q #%d, want over budget against #4912", v, issue)
+	}
+	if err := DailyGate([]DailyResult{{Flow: "worklist", Seat: "rep", Verdict: v, Issue: issue}}, 1); err != nil {
+		t.Fatalf("a listed over-budget flow must not fail the run: %v", err)
+	}
+}
+
+func TestAnUnlistedSlowFlowFailsTheRunNamingTheFlow(t *testing.T) {
+	v, _ := JudgeDaily("record_open", "record_open_deal", 400*time.Millisecond, 100*time.Millisecond, 30)
+	err := DailyGate([]DailyResult{{Flow: "record_open", Seat: "manager", Verdict: v}}, 1)
+	if v != DailyOver || err == nil || !strings.Contains(err.Error(), "record_open") {
+		t.Fatalf("got %q, err %v; want an unlisted breach that fails and names the flow", v, err)
+	}
+}
+
+func TestAFlowWithNoSamplesIsNoDataNotAPass(t *testing.T) {
+	if v, _ := JudgeDaily("home", "home_digest", 0, Perf8Budget, 0); v != DailyNoData {
+		t.Fatalf("got %q, want no data", v)
+	}
+}
+
+func TestAServerErrorFailsEvenWithinBudget(t *testing.T) {
+	err := DailyGate([]DailyResult{{Flow: "contact_360", Seat: "rep", Verdict: DailyWithin, Status5xx: 1}}, 1)
+	if err == nil || !strings.Contains(err.Error(), "contact_360") {
+		t.Fatalf("got %v; a 5xx must fail the run and name the flow", err)
+	}
+}
+
+func TestA422IsAllowedOnlyWhereListed(t *testing.T) {
+	ok := DailyGate([]DailyResult{{Flow: "palette_search_prefix", Seat: "rep", Verdict: DailyOverKnown, Issue: 7037, Status422: 3, Allow422: true}}, 1)
+	bad := DailyGate([]DailyResult{{Flow: "results_search", Seat: "rep", Verdict: DailyWithin, Status422: 1}}, 1)
+	if ok != nil || bad == nil || !strings.Contains(bad.Error(), "results_search") {
+		t.Fatalf("listed 422 err=%v (want nil); unlisted 422 err=%v (want an error naming the flow)", ok, bad)
+	}
+}
+
+func TestAListedFlowBackUnderBudgetForEverySeatAsksForItsRowToGo(t *testing.T) {
+	results := []DailyResult{
+		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin},
+		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin},
+		{Flow: "worklist", Seat: "cold", Verdict: DailyNotGated},
+	}
+	want := "flow worklist is at or under 80% of its budget for every seat: remove the row for #4912"
+	if got := advisoryText(results, 1); got != want {
+		t.Fatalf("got %q; want %q", got, want)
+	}
+	if err := DailyGate(results, 1); err != nil {
+		t.Fatalf("an entry that could go is advice for the record, never a red run: %v", err)
+	}
+}
+
+func TestAListedFlowStillOverForOneSeatKeepsItsRow(t *testing.T) {
+	got := advisoryText([]DailyResult{
+		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin},
+		{Flow: "worklist", Seat: "manager", Verdict: DailyOverKnown, Issue: 4912},
+	}, 1)
+	if got != "" {
+		t.Fatalf("a flow still over for the manager must keep its row: %q", got)
+	}
+}
+
+func TestAListedFlowWithNoMeasuredSeatKeepsItsRow(t *testing.T) {
+	if got := advisoryText([]DailyResult{{Flow: "worklist", Seat: "rep", Verdict: DailyNoData}}, 1); got != "" {
+		t.Fatalf("a flow nobody measured says nothing about its issue: %q", got)
+	}
+}
+
+func TestADevelopmentScaleRunNeverAsksForARowToGo(t *testing.T) {
+	if got := advisoryText([]DailyResult{{Flow: "worklist", Seat: "rep", Verdict: DailyWithin}}, 0.05); got != "" {
+		t.Fatalf("a development-scale corpus cannot clear a known issue: %q", got)
+	}
+}
+
+func TestARowLevelEntryMarksOnlyItsRow(t *testing.T) {
+	listed, issue := JudgeDaily("home", "home_worklist", 3*time.Second, Perf8Budget, 30)
+	sibling, _ := JudgeDaily("home", "home_digest", 3*time.Second, Perf8Budget, 30)
+	if listed != DailyOverKnown || issue != 4912 || sibling != DailyOver {
+		t.Fatalf("home_worklist %q #%d, home_digest %q; want only the listed row against #4912", listed, issue, sibling)
+	}
+	err := DailyGate([]DailyResult{
+		{Flow: "home", Row: "home_worklist", Seat: "rep", Verdict: listed, Issue: issue},
+		{Flow: "home", Row: "home_digest", Seat: "rep", Verdict: sibling},
+	}, 1)
+	if err == nil || !strings.Contains(err.Error(), "row home_digest is over budget") || strings.Contains(err.Error(), "home_worklist") {
+		t.Fatalf("got %v; want the unlisted sibling row to fail the run by name, and the listed row not to", err)
+	}
+}
+
+func TestAFlowLevelEntryCoversEveryRowOfItsFlow(t *testing.T) {
+	for _, row := range []string{"worklist", "worklist_handled"} {
+		if v, issue := JudgeDaily("worklist", row, 3*time.Second, Perf8Budget, 30); v != DailyOverKnown || issue != 4912 {
+			t.Errorf("%s: got %q #%d, want over budget against #4912", row, v, issue)
+		}
+	}
+}
+
+func TestARowEntryBackUnderBudgetAsksForItsRowToGo(t *testing.T) {
+	got := advisoryText([]DailyResult{
+		{Flow: "home", Row: "home_worklist", Seat: "rep", Verdict: DailyWithin},
+		{Flow: "home", Row: "home_worklist", Seat: "manager", Verdict: DailyWithin},
+		{Flow: "lists", Row: "lists_contacts_q", Seat: "rep", Verdict: DailyOverKnown, Issue: 7082},
+		{Flow: "lists", Row: "lists_contacts_q", Seat: "manager", Verdict: DailyWithin},
+	}, 1)
+	want := "row home_worklist is at or under 80% of its budget for every seat: remove the row for #4912"
+	if got != want {
+		t.Fatalf("got %q; want %q and no word on #7082, still over for the rep", got, want)
+	}
+}
+
+func TestTheDailyScaleDefaultsToThePublishedTier(t *testing.T) {
+	t.Setenv(dailyScaleEnv, "")
+	if scale, err := dailyScale(); err != nil || scale != 1 {
+		t.Fatalf("got %v, %v; want 1 and no error", scale, err)
+	}
+	t.Setenv(dailyScaleEnv, "0.05")
+	if scale, err := dailyScale(); err != nil || scale != 0.05 {
+		t.Fatalf("got %v, %v; want 0.05 and no error", scale, err)
+	}
+}
+
+func TestTheDailyScaleRefusesAValueThatSeedsNothing(t *testing.T) {
+	for _, raw := range []string{"0", "-1", "half"} {
+		t.Setenv(dailyScaleEnv, raw)
+		if _, err := dailyScale(); err == nil || !strings.Contains(err.Error(), dailyScaleEnv) {
+			t.Fatalf("%s=%q: got %v; want an error naming the variable", dailyScaleEnv, raw, err)
+		}
+	}
+}
+
+func TestTheMorningLoadIsJudgedOnItsOwnBudgetAgainstItsIssue(t *testing.T) {
+	v, issue := JudgeDaily("morning_load", "morning_load_cheap_route", 700*time.Millisecond, Load1Budget, 40)
+	if v != DailyOverKnown || issue != 7068 {
+		t.Fatalf("got %q #%d, want over budget against #7068", v, issue)
+	}
+}
+
+func TestARefusedRowNeverCountsAsBackUnderBudget(t *testing.T) {
+	got := advisoryText([]DailyResult{
+		{Flow: "palette_search_prefix", Seat: "rep", Verdict: DailyWithin, Status422: 4, Allow422: true},
+		{Flow: "palette_search_prefix", Seat: "manager", Verdict: DailyWithin},
+	}, 1)
+	if got != "" {
+		t.Fatalf("a 422 is a refusal, not a fast answer; the row for #7037 must stay: %q", got)
+	}
+}
+
+func TestARowUnderTheSampleFloorIsNoDataNeverAVerdict(t *testing.T) {
+	short := MeasurementFrom("LOAD-1", "morning_load_cheap_route", 0, 700*time.Millisecond, 0, Load1Budget, 14)
+	short.Verdict, short.KnownIssue = string(DailyOverKnown), 7068
+	rows := applySampleFloor([]dailyRow{
+		{Measurement: short, Result: DailyResult{Flow: "morning_load", Seat: "team", Verdict: DailyOverKnown, Issue: 7068, Status5xx: 1}},
+		{Measurement: BudgetMeasurement{Samples: 30, Verdict: string(DailyWithin)}, Result: DailyResult{Verdict: DailyWithin}},
+		{Measurement: BudgetMeasurement{Samples: 1, Verdict: string(DailyNotGated)}, Result: DailyResult{Verdict: DailyNotGated}},
+	})
+	floored := rows[0]
+	if floored.Result.Verdict != DailyNoData || floored.Measurement.Verdict != string(DailyNoData) || floored.Measurement.KnownIssue != 0 {
+		t.Fatalf("14 samples judged %q (record %q, #%d); want no data", floored.Result.Verdict, floored.Measurement.Verdict, floored.Measurement.KnownIssue)
+	}
+	if !strings.Contains(floored.Measurement.Note, "14 samples, under the floor of 30") || floored.Result.Status5xx != 1 {
+		t.Fatalf("note %q, 5xx %d; want the floor named and the server error kept for the gate", floored.Measurement.Note, floored.Result.Status5xx)
+	}
+	if rows[1].Result.Verdict != DailyWithin || rows[2].Result.Verdict != DailyNotGated {
+		t.Fatalf("a full row and an ungated one must keep their verdicts: %q, %q", rows[1].Result.Verdict, rows[2].Result.Verdict)
+	}
+}
+
+func TestACorpusWhoseMedianRepOwnsNoProjectIsRefused(t *testing.T) {
+	if missing := missingMedianKinds([]string{"deal", "company", "contact"}); !slices.Equal(missing, []string{"project"}) {
+		t.Fatalf("got %v; the flows open the median rep's own project, so a corpus without one must fail the pick", missing)
+	}
+	if missing := missingMedianKinds(dailyMedianKinds); len(missing) != 0 {
+		t.Fatalf("got %v; a rep owning every kind misses nothing", missing)
+	}
+}
+
+func TestOnlyAnOptionalCallsNotFoundIsNoData(t *testing.T) {
+	logo := dailyCall{Name: "logo", Path: "/v1/companies/1/logo", Optional: true}
+	if untimed, err := probeAbsent(logo, http.StatusNotFound, nil); !untimed || err != nil {
+		t.Fatalf("an optional 404 → untimed %v, err %v; want no data", untimed, err)
+	}
+	record := dailyCall{Name: "deal", Path: "/v1/deals/1"}
+	if _, err := probeAbsent(record, http.StatusNotFound, nil); err == nil || !strings.Contains(err.Error(), "/v1/deals/1") {
+		t.Fatalf("got %v; a 404 on a corpus-backed read must fail the run naming the path", err)
+	}
+}
+
+func TestOnlyAnAllowlistedRouteMayAnswerNotImplemented(t *testing.T) {
+	unwired := []byte(`{"code":"not_implemented","message":"not wired"}`)
+	for path, want := range map[string]bool{
+		"/v1/digest":                true,
+		"/v1/connectors":            true,
+		"/v1/digest?since=1":        true,
+		"/v1/deals/1":               false,
+		"/v1/analytics/framework":   false,
+		"/v1/connectors/1/messages": false,
+	} {
+		if got := unwiredAnswer(path, http.StatusNotImplemented, unwired); got != want {
+			t.Errorf("unwiredAnswer(%s) = %v, want %v", path, got, want)
+		}
+		untimed, err := probeAbsent(dailyCall{Path: path}, http.StatusNotImplemented, unwired)
+		if untimed != want || err != nil {
+			t.Errorf("probeAbsent(%s, 501) = %v, %v; want %v and no error", path, untimed, err, want)
+		}
+	}
+}
+
+func TestOnlyTimedSamplesAreTallied(t *testing.T) {
+	failing := dailyFlow{Name: "contact_360"}
+	var tally dailyTally
+	_, err := dailySampling(1, func(counted bool) ([]time.Duration, error) {
+		r := dailyResponse{dailyCall{Path: "/v1/contacts/1/360"}, http.StatusInternalServerError, nil}
+		return []time.Duration{time.Millisecond}, failing.admit(r, tallied(&tally, counted))
+	})
+	if err != nil || tally.s5xx != dailySamples {
+		t.Fatalf("err %v, %d server errors tallied; want %d, one per sample and none from the %d warm-ups", err, tally.s5xx, dailySamples, dailyWarmups)
+	}
+}
+
+func TestTheProbeIsNeverTallied(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	seat := Seat{Name: "rep-a1", Role: "rep", Client: srv.Client()}
+	call := dailyCall{Path: "/v1/contacts/1/360"}
+	timed, _, tally := probeCalls(t, &apptest.AppEnv{TS: srv}, dailyFlow{Name: "contact_360"}, seat, []dailyCall{call})
+	if len(timed) != 1 || tally.s5xx != 0 {
+		t.Fatalf("timed %v, %d server errors tallied; the probe checks an answer and never counts it", timed, tally.s5xx)
+	}
+}
+
+func TestAFirstLoadRefusalIsRecordedInItsNoteAndNeverFailsTheRun(t *testing.T) {
+	refused := firstTry{Status: 422, Body: []byte(`{"code":"query_too_broad","message":"too broad"}`), Elapsed: 5 * time.Second}
+	row := firstLoadRow(firstLoad{"PERF-10", "search_first_load", Perf10Budget, refused})
+	if row.Measurement.Note != "answered 422 query_too_broad after 5.0 s" || row.Measurement.P95Ms != 5000 {
+		t.Fatalf("note %q p95 %v; want the refusal and its elapsed time", row.Measurement.Note, row.Measurement.P95Ms)
+	}
+	if row.Measurement.Verdict != string(DailyNotGated) {
+		t.Fatalf("verdict %q, want %q", row.Measurement.Verdict, DailyNotGated)
+	}
+	if err := DailyGate([]DailyResult{row.Result}, 1); err != nil {
+		t.Fatalf("a refused first load must not fail the run: %v", err)
+	}
+}
+
+func TestAFirstLoadServerErrorIsRecordedAndFailsTheRun(t *testing.T) {
+	broken := firstTry{Status: 503, Body: []byte(`upstream gone`), Elapsed: 1200 * time.Millisecond}
+	row := firstLoadRow(firstLoad{"PERF-8", "worklist_first_load", Perf8Budget, broken})
+	if row.Measurement.Note != "answered 503 after 1.2 s" || row.Measurement.Status5xx != 1 {
+		t.Fatalf("note %q status_5xx %d; want the status and one server error", row.Measurement.Note, row.Measurement.Status5xx)
+	}
+	if err := DailyGate([]DailyResult{row.Result}, 1); err == nil || !strings.Contains(err.Error(), "worklist_first_load") {
+		t.Fatalf("a server error on the first load must fail the run naming the flow, got %v", err)
+	}
+}
+
+func TestAServedFirstLoadKeepsItsColdCacheNote(t *testing.T) {
+	row := firstLoadRow(firstLoad{"PERF-8", "worklist_first_load", Perf8Budget, firstTry{Status: 200, Elapsed: time.Second}})
+	if !strings.HasPrefix(row.Measurement.Note, "one connection dialled") || row.Result.Status5xx != 0 {
+		t.Fatalf("note %q status_5xx %d; want the cold-cache note and no error", row.Measurement.Note, row.Result.Status5xx)
+	}
+}
+
+func TestAServerErrorPassesOnlyOnAnEntryThatAllowsIt(t *testing.T) {
+	allowed := DailyResult{Flow: "morning_load", Row: "morning_load_cheap_route", Seat: "team", Verdict: DailyOverKnown, Issue: 7068, Status5xx: 1}
+	if err := DailyGate([]DailyResult{allowed}, 1); err != nil {
+		t.Fatalf("a 5xx on an entry with Allow5xx must not fail the run: %v", err)
+	}
+	listedOnly := DailyResult{Flow: "worklist", Row: "worklist", Seat: "rep", Verdict: DailyOverKnown, Issue: 4912, Status5xx: 1}
+	unlisted := DailyResult{Flow: "lists", Row: "lists_contacts", Seat: "rep", Verdict: DailyWithin, Status5xx: 1}
+	for _, r := range []DailyResult{listedOnly, unlisted} {
+		if err := DailyGate([]DailyResult{r}, 1); err == nil || !strings.Contains(err.Error(), "answered 1 server errors") {
+			t.Errorf("%s: got %v; a 5xx outside an Allow5xx entry must fail the run", r.Row, err)
+		}
+	}
+}
+
+func TestAListedRowJustUnderItsBudgetKeepsItsEntry(t *testing.T) {
+	got := advisoryText([]DailyResult{
+		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin, P95: 500 * time.Millisecond, Budget: Perf8Budget},
+		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin, P95: 820 * time.Millisecond, Budget: Perf8Budget},
+	}, 1)
+	if got != "" {
+		t.Fatalf("a seat at 82%% of its budget is not clear of the line; the row for #4912 must stay: %q", got)
+	}
+}
+
+func TestAListedRowWellUnderItsBudgetForEverySeatAsksForItsEntryToGo(t *testing.T) {
+	got := advisoryText([]DailyResult{
+		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin, P95: 500 * time.Millisecond, Budget: Perf8Budget},
+		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin, P95: 800 * time.Millisecond, Budget: Perf8Budget},
+	}, 1)
+	if !strings.Contains(got, "remove the row for #4912") {
+		t.Fatalf("got %q; every seat at or below 80%% of its budget must ask for the row to go", got)
+	}
+}
+
+// advisoryText joins a run's advisories the way a test compares them.
+func advisoryText(results []DailyResult, scale float64) string {
+	return strings.Join(DailyAdvisories(results, scale), "; ")
+}
+
+// steadyRound answers every sample of a round with the same duration per row.
+func steadyRound(perRow ...time.Duration) [][]time.Duration {
+	samples := make([][]time.Duration, len(perRow))
+	for row, d := range perRow {
+		samples[row] = slices.Repeat([]time.Duration{d}, dailySamples)
+	}
+	return samples
+}
+
+func TestAnUnlistedBreachIsJudgedOnASecondMeasurement(t *testing.T) {
+	for _, c := range []struct {
+		second time.Duration
+		note   string
+	}{
+		{90 * time.Millisecond, "first measurement p95 152 ms over budget; not confirmed on a second measurement"},
+		{160 * time.Millisecond, "first measurement p95 152 ms over budget; confirmed on a second measurement"},
+	} {
+		specs := []dailyRowSpec{{flow: "lists", name: "lists_contacts", budget: Perf2Budget, gated: true, note: "empty"}}
+		measured := 0
+		got, err := confirmBreaches(specs, steadyRound(152*time.Millisecond), func() ([][]time.Duration, error) {
+			measured++
+			return steadyRound(c.second), nil
+		})
+		if err != nil || measured != 1 || got[0][0] != c.second {
+			t.Fatalf("second p95 %s: err %v, measured again %d times, kept %s; want one more measurement, kept", c.second, err, measured, got[0][0])
+		}
+		if want := "empty; " + c.note; specs[0].note != want {
+			t.Errorf("note %q, want %q", specs[0].note, want)
+		}
+	}
+}
+
+func TestOnlyAnUnlistedGatedBreachIsMeasuredAgain(t *testing.T) {
+	specs := []dailyRowSpec{
+		{flow: "lists", name: "lists_contacts", budget: Perf2Budget, gated: true},
+		{flow: "lists", name: "lists_contacts_q", budget: Perf2Budget, gated: true},
+		{flow: "search_to_deal", name: "search_to_deal_total", budget: Perf10Budget},
+	}
+	first := steadyRound(90*time.Millisecond, 400*time.Millisecond, 5*time.Second)
+	got, err := confirmBreaches(specs, first, func() ([][]time.Duration, error) {
+		t.Fatal("a row within budget, a listed row and an ungated row are never measured again")
+		return nil, nil
+	})
+	if err != nil || !slices.Equal(got[1], first[1]) || specs[1].note != "" {
+		t.Fatalf("err %v, note %q; want the first measurement kept without a note", err, specs[1].note)
+	}
+}
+
+func TestOnlyTheBreachedRowOfARoundTakesTheSecondMeasurement(t *testing.T) {
+	specs := []dailyRowSpec{
+		{flow: "search_to_deal", name: "search_to_deal_search", budget: Perf10Budget, gated: true},
+		{flow: "search_to_deal", name: "search_to_deal_page", budget: perf1RecordOpenBudget, gated: true},
+	}
+	first := steadyRound(1200*time.Millisecond, 40*time.Millisecond)
+	got, err := confirmBreaches(specs, first, func() ([][]time.Duration, error) {
+		return steadyRound(700*time.Millisecond, 60*time.Millisecond), nil
+	})
+	if err != nil || got[0][0] != 700*time.Millisecond || got[1][0] != 40*time.Millisecond || specs[1].note != "" {
+		t.Fatalf("err %v, kept %s and %s, page note %q; want the search re-measured and the page untouched", err, got[0][0], got[1][0], specs[1].note)
+	}
+}

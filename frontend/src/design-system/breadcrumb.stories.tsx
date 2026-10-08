@@ -20,7 +20,9 @@ import { Breadcrumb } from "./breadcrumb";
  * bar draws on a record route (ListToRecord), only the LAST stop gives way when
  * the row runs out of room while the ancestors keep their full width
  * (LongRecordName — read the ellipsis, then hover or tab to it for the whole
- * name), and a glyph rides with the label rather than replacing it (WithIcon).
+ * name), a middle stop that is user data is capped so the page keeps the row
+ * (LongMiddleStop), and a glyph rides with the label rather than replacing it
+ * (WithIcon).
  *
  * Flip the Theme toolbar to check both renderings; every colour is a token.
  */
@@ -85,6 +87,27 @@ export const LongRecordName: Story = {
       <Breadcrumb {...args} />
     </div>
   ),
+};
+
+/**
+ * A middle stop that is user data: the list whose filter the page edits. Its
+ * label stops at a cap and clips under the same tip, so the page it leads to
+ * keeps its place on the row. On a phone it folds away, which Shell/Top bar
+ * frames at 390px.
+ */
+export const LongMiddleStop: Story = {
+  args: {
+    label: LANDMARK,
+    items: [
+      { label: "Filters and views", href: "#/filters" },
+      {
+        label:
+          "Contract manufacturers in Northern Germany and the Benelux, second wave",
+        href: "#/lists/l-1",
+      },
+      { label: "Edit filter" },
+    ],
+  },
 };
 
 /** A glyph leads the stop it belongs to; the label is still the whole name. */

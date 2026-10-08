@@ -169,6 +169,12 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	if err := ensureLeadLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
+	if err := ensureContactNotWorked(ctx, tx, in.FromContactID, nil); err != nil {
+		return crmcontracts.Lead{}, false, err
+	}
+	if err := ensureContactStillLive(ctx, tx, in.FromContactID); err != nil {
+		return crmcontracts.Lead{}, false, err
+	}
 
 	if in.ProjectID != nil {
 		if err := auth.EnsureLinkTarget(ctx, tx, "project", in.ProjectID.UUID); err != nil {
@@ -225,12 +231,14 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
+		in.FromContactID,
 	})
 	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
-		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by`+authorCols+cfCols+`)
-		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15`+authorHolders+cfHolders+`)`,
+		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
+		                   from_contact_id`+authorCols+cfCols+`)
+		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16`+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Race behind the pre-checks: the constraint name tells an
@@ -415,6 +423,11 @@ type ListLeadsInput struct {
 	// Source narrows to one capture source (inbound, webform, referral,
 	// import, crawl, manual, ...): the exact stored value, no prefix match.
 	Source *string
+	// TagIDs narrows to the leads carrying these tags, combined by TagMode.
+	TagIDs  []ids.UUID
+	TagMode storekit.TagMode
+	// FromContactID narrows to the leads worked from one contact.
+	FromContactID *ids.ContactID
 	// SLAState narrows to leads in one first-response state (formulas
 	// §18.1); breached is the overdue queue.
 	SLAState *crmcontracts.ListLeadsParamsSlaState
@@ -436,6 +449,9 @@ func leadUniqueViolation(err error, email *string) (error, bool) {
 	}
 	if name == "uq_lead_email_dedupe" {
 		return &DuplicateLeadError{Email: deref(email)}, true
+	}
+	if name == "uq_lead_from_contact_live" {
+		return &DuplicateContactLeadError{}, true
 	}
 	return apperrors.ErrConflict, true
 }

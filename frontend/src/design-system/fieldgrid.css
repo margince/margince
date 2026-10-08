@@ -103,27 +103,41 @@
   align-items: flex-start;
   gap: var(--space-1);
 }
-/* A handle and the kind of handle it is, on one line: the address or
-   number first, its kind after it as a caption. */
+/* A handle and the kind of handle it is: the address or number first, its
+   kind after it as a caption. */
 .fieldgrid-handle {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-2);
+  column-gap: var(--space-2);
+  row-gap: 0;
   min-width: 0;
+}
+/* Under 5rem an address breaks every few letters, so its kind drops beneath;
+   capped at its own width, or growing would push its kind to the far edge. */
+.fieldgrid-handle > :first-child {
+  flex: 1 1 5rem;
+  max-inline-size: max-content;
 }
 /* An editable value and its evidence mark are true siblings in this slot —
    InlineText makes the value itself the button that starts an edit, so the
-   mark cannot sit inside it and reads beside it instead. Neither is a flex
-   child with a row gap to lean on, so with no space of its own the mark ran
-   straight into the value: "Googleread". The same rung `.vatmark` already
-   takes unconditionally (companyvatmark.css) for the identical shape one
-   field over — kept as two rules rather than one shared selector because
-   `.evmark` (unlike `.vatmark`, which has this one caller) also renders
-   on the company facts rows (`.meta-row-entry`), where the row's own gap
-   spaces it and a margin of its own would double that. Scoped to this slot
-   instead of to `.evmark` itself for that reason. */
-.fieldgrid-value .evmark {
+   mark cannot sit inside it and reads beside it instead. With no space of its
+   own the mark ran straight into the value: "Googleread". The same rung
+   `.vatmark` already takes unconditionally (companyvatmark.css) for the
+   identical shape one field over — kept as two rules rather than one shared
+   selector because `.evmark` (unlike `.vatmark`, which has this one caller)
+   also renders on the company facts rows (`.meta-row-entry`), where the row's
+   own gap spaces it and a margin of its own would double that. Scoped to this
+   slot instead of to `.evmark` itself for that reason. */
+.fieldgrid-value .evmark:not(.fieldgrid-handle > .evmark) {
   margin-inline-start: var(--space-1);
+}
+/* Only the address gives way: the column's inherited `anywhere` would
+   otherwise break a squeezed kind or mark at every letter ("W/or/k"). */
+.fieldgrid-handle > .t-caption,
+.fieldgrid-handle > .evmark {
+  flex: none;
+  white-space: nowrap;
 }
 
 /* The glyph column, opened only by a grid that asked for one. Its own track

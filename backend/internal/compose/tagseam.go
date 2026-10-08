@@ -86,6 +86,7 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 		Contacts:  usage.Contacts,
 		Companies: usage.Companies,
 		Deals:     usage.Deals,
+		Leads:     usage.Leads,
 	}
 	if row.Color != nil {
 		out.Color = *row.Color

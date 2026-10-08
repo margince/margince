@@ -10,6 +10,8 @@ import {
 } from "react";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
+import { navigate, type Route, useHash } from "./router";
+import type { UrlParams } from "./urlstate";
 
 /**
  * Unsaved edits, and what happens when the reader leaves without saving them.
@@ -85,6 +87,57 @@ export function useUnsavedGuard(dirty: boolean, scope?: string): void {
   // that no longer exists, and nothing the reader can do would clear it.
   useEffect(() => () => release?.(token), [release, token]);
 }
+
+/**
+ * Guard `dirty` like `useUnsavedGuard`, and return the one way to leave
+ * without being asked: after a save, or after a question the page already put.
+ *
+ * The guard learns of a release through a state update, and a navigation sent
+ * beside it races that update to the guard. So leaving disarms this claim and
+ * moves only once the guard reads it clear. Its own scope, so a draft held
+ * elsewhere on the page still asks rather than holding the move forever.
+ * Outside a provider nothing is held, and it moves on the next effect.
+ */
+export function useGuardedLeave(
+  dirty: boolean,
+): (route: Route, dials?: UrlParams) => void {
+  const [leaving, setLeaving] = useState<Leaving | null>(null);
+  const scope = useId();
+  useUnsavedGuard(dirty && leaving === null, scope);
+  const held = useHasUnsavedChanges(scope);
+  const hash = useHash();
+
+  // The other draft's question can be answered Keep, which puts the address
+  // back with this page still mounted: its own draft is unsaved again.
+  if (leaving?.sentTo !== undefined) {
+    if (!leaving.arrived && hash === leaving.sentTo) {
+      setLeaving({ ...leaving, arrived: true });
+    } else if (leaving.arrived && hash !== leaving.sentTo) {
+      setLeaving(null);
+    }
+  }
+
+  useEffect(() => {
+    if (leaving && leaving.sentTo === undefined && !held) {
+      navigate(leaving.route, leaving.dials);
+      setLeaving({ ...leaving, sentTo: globalThis.location.hash });
+    }
+  }, [leaving, held]);
+
+  return useCallback(
+    (route: Route, dials?: UrlParams) => setLeaving({ route, dials }),
+    [],
+  );
+}
+
+type Leaving = Readonly<{
+  route: Route;
+  dials?: UrlParams;
+  /** The address the move wrote, once it has. */
+  sentTo?: string;
+  /** Whether that address has been read back since. */
+  arrived?: boolean;
+}>;
 
 /**
  * The window's own question, asked only while something is actually unsaved.

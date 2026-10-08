@@ -76,6 +76,10 @@ var (
 	// other sessions can see: always report. That is exactly the 0139 case, and
 	// 0139 sets the timeout.
 	unresolvableBlockers = regexp.MustCompile(`(?is)\bDROP\s+INDEX\b|\bREINDEX\b`)
+
+	// concurrentlyNext marks the concurrent form of either, which takes SHARE
+	// UPDATE EXCLUSIVE: it waits for other sessions but blocks no writer.
+	concurrentlyNext = regexp.MustCompile(`(?is)^\s+(?:\(.*?\)\s*)?(?:INDEX\s+|TABLE\s+|SCHEMA\s+|DATABASE\s+|SYSTEM\s+)?CONCURRENTLY\b`)
 )
 
 // lockTimeoutBaseline is where this obligation starts: migrations sorting at or
@@ -268,8 +272,10 @@ func firstBlockingIndex(statements string, own map[string]int) int {
 			earliest = i
 		}
 	}
-	if loc := unresolvableBlockers.FindStringIndex(statements); loc != nil {
-		note(loc[0])
+	for _, loc := range unresolvableBlockers.FindAllStringIndex(statements, -1) {
+		if !concurrentlyNext.MatchString(statements[loc[1]:]) {
+			note(loc[0])
+		}
 	}
 	for _, pattern := range blockingStatements {
 		for _, loc := range pattern.FindAllStringSubmatchIndex(statements, -1) {
@@ -363,6 +369,9 @@ func TestTheLockGateReportsWhatItClaimsTo(t *testing.T) {
 		{"ALTER TABLE on a table it did not create", "ALTER TABLE relationship ADD COLUMN note text;", true},
 		{"CREATE INDEX on a table it did not create", "CREATE INDEX i ON relationship (contact_id);", true},
 		{"DROP INDEX acts on something already shipped", "DROP INDEX IF EXISTS idx_old;", true},
+		{"a concurrent drop blocks no writer", "DROP INDEX CONCURRENTLY IF EXISTS idx_old;", false},
+		{"a concurrent reindex blocks no writer", "REINDEX INDEX CONCURRENTLY idx_old;", false},
+		{"a plain drop after a concurrent one still counts", "DROP INDEX CONCURRENTLY IF EXISTS a;\nDROP INDEX b;", true},
 
 		// And the noise that class would bury it under, if the check could not
 		// tell a fresh table from a live one.

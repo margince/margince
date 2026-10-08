@@ -6,9 +6,9 @@
 // there, and what changed. The members are the record list's own rows, narrowed by
 // list_id, so the page is never one request per member (listmembers.tsx).
 
-import { useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Button, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -16,8 +16,9 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "./common";
-import { customColumnLabel } from "./filterdata";
+import { customColumnLabel, useFilterVocabulary } from "./filterdata";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
+import { filterSentence, useSentenceWords } from "./filtersentence";
 import { ListChangeSummary } from "./listchanges";
 import { ListHistoryPanel } from "./listhistory";
 import {
@@ -40,18 +41,47 @@ import {
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
 import "./lists.css";
+import { decode } from "./segmentpredicate";
 
 function isMemberSource(type: ListRecordType): type is MemberSource {
   return type in MEMBER_SOURCES;
 }
 
-export function ListScreen({ listID }: Readonly<{ listID?: string }>) {
+export function ListScreen({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const available = useListsAvailable();
-  if (!available || !listID) {
-    return <p className="wrap lists-note">{t("lists.unavailable")}</p>;
+  if (!available) {
+    return (
+      <ListState>
+        <p className="lists-note">{t("lists.unavailable")}</p>
+      </ListState>
+    );
   }
   return <ListBody listID={listID} />;
+}
+
+/**
+ * The page before it has a list to name. It heads itself, so it still prints
+ * the one heading a page owes a reader navigating by heading.
+ */
+function ListState({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  return (
+    <div className="wrap lists-page">
+      <Heading size="xlarge">{t("lists.page")}</Heading>
+      {children}
+    </div>
+  );
+}
+
+/** The page while its list, or the session that decides lists, is read. */
+export function ListPending() {
+  const t = useT();
+  return (
+    <ListState>
+      <PendingBody label={t("lists.loading")} lines={6} />
+    </ListState>
+  );
 }
 
 function ListBody({ listID }: Readonly<{ listID: string }>) {
@@ -59,10 +89,14 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
   const list = useList(listID);
   useVisitOnce(listID, list.isSuccess && list.isFetchedAfterMount);
   if (list.isPending) {
-    return null;
+    return <ListPending />;
   }
   if (list.isError) {
-    return <p className="wrap lists-note">{t("lists.gone")}</p>;
+    return (
+      <ListState>
+        <p className="lists-note">{t("lists.gone")}</p>
+      </ListState>
+    );
   }
   return (
     <div className="wrap lists-page">
@@ -111,6 +145,7 @@ function ListHead({ list }: Readonly<{ list: List }>) {
         <ListHealthBadge list={list} />
       </div>
       {list.purpose && <p className="lists-note">{list.purpose}</p>}
+      <ListFilterLine list={list} />
       <p className="t-caption">
         {t("lists.head.facts", {
           type: t(RECORD_TYPE_LABEL[list.entity_type]),
@@ -139,6 +174,35 @@ function ListHead({ list }: Readonly<{ list: List }>) {
         </div>
       )}
     </header>
+  );
+}
+
+/**
+ * What a Live List selects, as one sentence, once the vocabulary names its
+ * fields: a bare count cannot finish "where …". A Shortlist has no filter, and
+ * a definition this page cannot read says nothing rather than something wrong.
+ */
+function ListFilterLine({ list }: Readonly<{ list: List }>) {
+  const t = useT();
+  const words = useSentenceWords();
+  const live = list.list_type === "dynamic";
+  const vocabulary = useFilterVocabulary(list.entity_type, live);
+  // Decoding mints a fresh id for every node, so it runs once per definition.
+  const tree = useMemo(
+    () => (live ? decode(list.definition) : null),
+    [live, list.definition],
+  );
+  const fields = vocabulary.data?.fields;
+  if (tree === null || fields === undefined) {
+    return null;
+  }
+  return (
+    <p className="t-caption">
+      {t("lists.filterLine", {
+        records: t(RECORD_TYPE_LABEL[list.entity_type]),
+        sentence: filterSentence(tree, fields, words),
+      })}
+    </p>
   );
 }
 

@@ -49,6 +49,7 @@ type TagDetail struct {
 	Contacts  int `json:"contacts"`
 	Companies int `json:"companies"`
 	Deals     int `json:"deals"`
+	Leads     int `json:"leads"`
 }
 
 // RecordTagsResult is what one record carries. Withheld says the caller may

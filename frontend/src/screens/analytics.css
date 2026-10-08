@@ -1,26 +1,3 @@
-/* The analytics header: the section tabs, and the scope and share controls
-   beside them. The page gutter is `.wrap` (app/shell.css) one level up; this row
-   only spaces its own two children. */
-.analytics-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  /* The tabs can outgrow the row on a narrow screen. Wrapping puts the controls
-     on their own line rather than letting the strip scroll away from them. */
-  flex-wrap: wrap;
-}
-
-/* What the numbers cover and what can be done with them, held together at the
-   row's end. Two children of the header's space-between would put the scope
-   in the middle of the row, where it read as a caption to nothing. */
-.analytics-header-end {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-4);
-}
-
 /* Share view and Shared links, held together as one group of verbs so the
    header's space-between does not push them apart. */
 .analytics-share-actions {
@@ -55,14 +32,16 @@
   flex-direction: column;
 }
 
-/* The forecast's own controls on one row: which period the figures cover, and
-   the verb that records a call about it. */
+/* A section's filters on one row, the population first, with the section's
+   own verb held at the row's end. */
 .analytics-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
+}
+.analytics-toolbar-end {
+  margin-inline-start: auto;
 }
 
 /* What to check beside what was checked. Side by side where the page is wide
@@ -95,4 +74,21 @@
   min-width: 12rem;
   max-width: 20rem;
   flex: 1;
+}
+
+/* One thing that needs the reader: what it is on the left, the door to where
+   it is answered on the right, and the door drops under the words on a phone. */
+.analytics-attention-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.analytics-attention-text {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.analytics-attention-title {
+  font-weight: var(--fontWeightMedium);
 }

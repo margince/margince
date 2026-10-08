@@ -23,15 +23,15 @@ To see your team's pipeline in Margince, open **Analytics** and pick the team in
 Also called: team forecast, my team's deals, manager view, team report.
 
 ### How do I see my pipeline report?
-To see your pipeline report in Margince, click **Analytics** in the sidebar and open the **Pipeline analysis** section.
-1. Click **Analytics**, then the **Pipeline analysis** tab.
-2. Read **Open deals by stage** (deals, value and weighted value per stage), **Forecast categories** and **Open deals per company**.
+To see your pipeline report in Margince, click **Analytics** in the sidebar and open the **Pipeline** tab.
+1. Click **Analytics**, then the **Pipeline** tab.
+2. Read the totals at the top, then **Open deals by stage** (deals, value and weighted value per stage), **Forecast categories** and **Open deals per company**.
 3. Press **Explain this number** on any card to see the deals behind it.
 The **Deals** board itself also shows each stage's total and weighted total in its column header. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
-The main Analytics sections are **Performance**, **Forecast**, **Saved reports** and **Pipeline analysis**. **More analysis** holds **Data coverage** and **Custom reports**. Access determines which sections are available.
-The **Forecast** section is where this period will land. The **Pipeline analysis** section holds the pipeline reports. The **Performance** section shows outcome totals, target progress when assigned, trends and pipeline charts. The **My outcomes** section shows your own open deals and meetings, for a rep only. The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
+The Analytics tabs are **Performance**, **Forecast**, **Pipeline**, **My outcomes**, **Delivery** and **Reports**. The **Setup** menu at the end of the tab row holds **Targets**, **Metric definitions** and **Data coverage**. Access determines which tabs and menu entries are available.
+The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. The **Performance** section shows outcome totals, a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you, target progress when assigned, trends and pipeline charts. The **Reports** section lists saved reports and starts a custom report with **New custom report**; a seat that cannot read saved reports gets a **Custom reports** tab instead. The **My outcomes** section shows your own open deals and meetings, for a rep only. The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
 To share a forecast view in Margince, open **Analytics** → **Forecast**, press **Share view**, choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
@@ -45,7 +45,7 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
 The row leaves the list and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
-**Performance** offers a closed win rate with a minimum cohort and governed CSV export; see [Performance and saved sales reports](sales-reporting.md). To get deal rows out, open **Filters and views** in the sidebar, choose **Deals** as the **Record type**, build a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
+**Performance** offers a closed win rate with a minimum cohort and governed CSV export; see [Performance and saved sales reports](sales-reporting.md). To get deal rows out, open **Filters and views** → **New filter** → **Deals**, build a filter, then choose **⋯** (**More for this filter**) → **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
 
 ## The reporting sections
 
@@ -84,8 +84,8 @@ sentence instead: **"These numbers cover {scope}."**
 Archived teams are never offered.
 
 The scope picker governs Performance, Forecast and Custom reports. Pipeline
-analysis and Delivery report cards use their own record scopes; changing the
-picker does not change those cards.
+and Delivery report cards use their own record scopes; changing the picker does
+not change those cards.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Breaking one down by owner counts only
@@ -125,7 +125,8 @@ report cards.
 
 ## Deals
 
-The **Pipeline analysis** section of Analytics holds the pipeline reports.
+The **Pipeline** section of Analytics holds the pipeline reports, under totals
+for the whole open pipeline.
 
 **Open deals by stage**: one row per stage, in pipeline order: the stage, how
 many deals, unweighted and weighted. Every figure is converted into one base

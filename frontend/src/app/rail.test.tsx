@@ -12,7 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { navigate, type Route } from "./router";
+import { navigate, parseHash, type Route } from "./router";
 import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,
@@ -70,7 +70,7 @@ vi.mock("@composition/extensions", () => ({
 // its own always answers "brief".
 //
 // What the shell composes around this panel — the page title, the top bar's
-// mounting, sign-out — is shell.test.tsx's.
+// mounting — is shell.test.tsx's, and sign-out is shell.signout.test.tsx's.
 
 // Only what a level hides needs the shell's real stylesheet in the document
 // (see mountShellStyles); it outlives cleanup(), so it is taken down here.
@@ -301,6 +301,25 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     const inactive = onBar.container.querySelector(".railmore");
     expect(inactive?.className).not.toContain("active");
     expect(inactive?.getAttribute("aria-current")).toBeNull();
+  });
+
+  // More stands in for the hidden row, so it claims what that row would: the
+  // page on the destination itself, and only "somewhere under it" on a record
+  // or below the Filters and views library, where the trail claims the page.
+  // One list has no row of its own and sits under Filters.
+  it.each([
+    ["companies", "page"],
+    ["companies/c1", "true"],
+    ["filters", "page"],
+    ["filters/companies", "true"],
+    ["filters/list/L1", "true"],
+    ["lists/L1", "true"],
+  ])("has More claim what the hidden row would on #/%s", (address, claim) => {
+    const { container } = render(
+      <WorkspaceRail route={parseHash(`#/${address}`)} />,
+    );
+    const more = container.querySelector(".railmore.active");
+    expect(more?.getAttribute("aria-current")).toBe(claim);
   });
 
   // Open, the sheet renders the real row for that route, which carries

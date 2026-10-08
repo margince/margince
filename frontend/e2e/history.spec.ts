@@ -104,6 +104,7 @@ test("Forward returns to the list Back left", async ({ page }) => {
     (request) =>
       companies(request.url()) && searchOf(request.url()) === "brandt",
   );
+  await expect(page).toHaveURL(/[?&]q=brandt/);
 
   await page
     .getByRole("main")
@@ -166,7 +167,7 @@ test("a section is an address, and Back steps between sections", async ({
   page,
 }) => {
   await page.goto("/#/analytics");
-  await page.getByRole("button", { name: "Pipeline-Analyse" }).click();
+  await page.getByRole("button", { name: "Pipeline", exact: true }).click();
   await expect(page).toHaveURL(/#\/analytics\/pipeline$/);
 
   await page.goBack();

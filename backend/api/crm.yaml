@@ -9233,6 +9233,33 @@ paths:
         - name: q
           in: query
           schema: { type: string }
+        - name: tag_id
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a human types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+        - name: from_contact_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            Only the leads worked from this contact (`from_contact_id` on the lead). The contact
+            page asks it to find the open lead a contact is already worked through.
       responses:
         '200':
           description: A page of leads.
@@ -12523,7 +12550,7 @@ paths:
       - name: entity_type
         in: path
         required: true
-        schema: { type: string, enum: [contact, company, deal] }
+        schema: { type: string, enum: [contact, company, deal, lead] }
       - name: entity_id
         in: path
         required: true
@@ -12534,17 +12561,17 @@ paths:
       x-mcp-tool: { verb: get_record_tags, record_type: tag, tier: auto_execute, scope: read }
       summary: The tags on one record, and who put them there.
       description: |
-        ONE read for all three record types, because the panel that draws them is one
-        component: a per-type block on each record response would be three copies of one
+        ONE read for every advertised record type, because the panel that draws them is one
+        component: a per-type block on each record response would be one copy per type of one
         shape, and they would drift.
 
         Each assignment carries who applied it and when, which the record page shows beside
         the tag. `assigned_by` is absent for assignments made before the product recorded
         it — absent means unknown, never "the system".
 
-        The three advertised types only. `taggable` admits lead and project, and this route
-        refuses them: a read that answered for a type no screen offers would be a surface
-        nobody meant to ship.
+        The advertised types only. `taggable` admits project too, and this route refuses it:
+        a read that answered for a type no screen offers would be a surface nobody meant to
+        ship.
 
         Withheld is not empty. A caller who may read the record but not the tag vocabulary
         gets `withheld: true` and no assignments — distinguishable from a record that simply
@@ -31303,6 +31330,7 @@ components:
         display_name: { type: string }
         summary: { type: string, description: 'What the task does, in plain words.' }
         execution_mode: { type: string }
+        degrades_on_outage: { type: boolean, description: 'An interactive task that answers from the record''s own facts once no model can, and says so in generated_by, rather than failing. False for a task that fails fast and for a background task, which waits.' }
         leading_tier: { type: string }
         normal_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
         effective_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
@@ -42294,6 +42322,8 @@ components:
             record is never acted on by a retention sweep and an Art. 17 erasure against it is
             refused, so a screen that offers either action has to know. Placed and lifted
             through /retention/legal-holds, never by an ordinary edit.
+        # The live tags this row carries, capped, as on the other record lists.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         id: { type: string, format: uuid }
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email, description: Lowercased; lead-internal dedupe key. }
@@ -42323,6 +42353,14 @@ components:
         source_system: { type: [string, 'null'] }
         source_id: { type: [string, 'null'] }
         promoted_contact_id: { type: [string, 'null'], format: uuid, description: Set on promotion (convenience mirror). }
+        from_contact_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The existing contact this lead was created from (`contact_id` on the create), and
+            null for any other lead. While this lead is live, a second create from the same
+            contact answers 409 `duplicate_contact_lead` naming this lead.
         merged_into_id:
           type: [string, 'null']
           format: uuid
@@ -42416,9 +42454,11 @@ components:
             An existing contact this lead is worked from. Its name, primary email, title,
             LinkedIn profile and current employer fill whichever of those fields this request
             leaves out, so a lead for a contact the CRM already holds is never retyped or left
-            unnamed. The contact must be one the caller may read (422 otherwise); it is not
-            linked to the lead or changed. Not combinable with `source_system` (422): a lead
-            filled from a contact is not an import.
+            unnamed. The contact must be one the caller may read (422 otherwise). The lead
+            records it as `from_contact_id`, and the contact itself is not changed. A contact
+            already worked through a live lead answers 409 `duplicate_contact_lead` with that
+            lead's id. Not combinable with `source_system` (422): a lead filled from a contact
+            is not an import.
         status: { type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.' }
         owner_id: { type: [string, 'null'], format: uuid }
         source_system: { type: [string, 'null'] }
@@ -44023,13 +44063,14 @@ components:
       type: object
       description: |
         How many records of each advertised type carry this tag, counted within what the
-        reader may see. Lead and project taggings are storage the product does not advertise
-        and are not counted.
-      required: [contacts, companies, deals]
+        reader may see. Project taggings are storage the product does not advertise and are
+        not counted.
+      required: [contacts, companies, deals, leads]
       properties:
         contacts: { type: integer }
         companies: { type: integer }
         deals: { type: integer }
+        leads: { type: integer }
 
     UpdateTagRequest:
       type: object
@@ -48087,8 +48128,8 @@ components:
         carried_by:
           type: [integer, 'null']
           description: >
-            For a `tag` hit only: how many contacts, companies and deals carry this word, as
-            THIS caller may see them — the same three types the tag page counts and the
+            For a `tag` hit only: how many contacts, companies, deals and leads carry this
+            word, as THIS caller may see them — the same types the tag page counts and the
             filters offer, not every type `taggable` admits. It is what tells a searcher
             whether the word is worth opening before they open it. Null on every other hit
             type, and null when no count was taken.

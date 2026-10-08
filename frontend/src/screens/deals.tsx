@@ -27,7 +27,7 @@ import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
 import { navigate, routeHash } from "../app/router";
-import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
+import { currentParams, replaceDial, useUrlParams } from "../app/urlstate";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
@@ -238,17 +238,6 @@ const VIEW_PARAM = "view";
 // between this screen getting it right and the leads queue sending its drawing
 // choice to the server as a filter.
 const DEAL_SCREEN_DIALS: readonly string[] = [PIPELINE_PARAM, VIEW_PARAM];
-
-/** `params` with one dial set, or removed when the value is empty. */
-function withDialSet(params: UrlParams, key: string, value: string): UrlParams {
-  const next = new Map(params);
-  if (value) {
-    next.set(key, value);
-  } else {
-    next.delete(key);
-  }
-  return next;
-}
 
 // FORECAST_FILTER_VALUES are the four buckets a deal's own column can hold.
 // `slipped` is the report's derivation from a claimed category and a close
@@ -1816,8 +1805,7 @@ function useDealScreenDials({
     );
   };
   const pipelineId = params.get(PIPELINE_PARAM) ?? "";
-  const setPipelineId = (next: string) =>
-    setParams(withDialSet(currentParams(), PIPELINE_PARAM, next));
+  const setPipelineId = (next: string) => replaceDial(PIPELINE_PARAM, next);
   const effectivePipeline: Pipeline | undefined =
     pipelines?.find((p) => p.id === pipelineId) ??
     pipelines?.find((p) => p.is_default) ??
@@ -1833,9 +1821,7 @@ function useDealScreenDials({
   const view: "board" | "table" =
     params.get(VIEW_PARAM) === "table" ? "table" : "board";
   const setView = (next: "board" | "table") =>
-    setParams(
-      withDialSet(currentParams(), VIEW_PARAM, next === "table" ? next : ""),
-    );
+    replaceDial(VIEW_PARAM, next === "table" ? next : undefined);
 
   return {
     query,

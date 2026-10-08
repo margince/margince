@@ -20,7 +20,8 @@ import { describe, expect, it } from "vitest";
 // until some other event happened to refetch it. A refresh that silently
 // refreshes nothing is the shape this holds.
 //
-// The census reads the KEYS the module declares and looks for each one in the
+// The keys live in recordlistkeys.ts, shared with the tag panel's refresh. The
+// census reads the KEYS that module declares and looks for each one in the
 // screens that actually query, rather than pinning the four names here. A
 // fifth claimable kind is therefore covered the day it is added, and a key
 // renamed on the reading side fails here rather than going quiet.
@@ -28,14 +29,14 @@ import { describe, expect, it } from "vitest";
 const here = dirname(fileURLToPath(import.meta.url));
 
 function declaredListKeys(): string[] {
-  const source = readFileSync(resolve(here, "claimrecord.ts"), "utf8");
+  const source = readFileSync(resolve(here, "recordlistkeys.ts"), "utf8");
   const table =
-    /const LIST_KEY: Record<ClaimableRecordType, string> = \{([^}]*)\}/s.exec(
+    /const RECORD_LIST_KEY: Record<ListedRecordType, string> = \{([^}]*)\}/s.exec(
       source,
     );
   if (!table) {
     throw new Error(
-      "claimrecord.ts no longer declares LIST_KEY as an object literal — this census reads it textually",
+      "recordlistkeys.ts no longer declares RECORD_LIST_KEY as an object literal — this census reads it textually",
     );
   }
   return [...table[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
@@ -57,7 +58,7 @@ describe("the key a claim invalidates is a key something reads", () => {
   const corpus = sourcesUnder(resolve(here, ".."))
     .filter(
       (f) =>
-        !f.endsWith("claimrecord.ts") &&
+        !f.endsWith("recordlistkeys.ts") &&
         !f.endsWith("claim-list-key-coverage.test.ts"),
     )
     .map((f) => readFileSync(f, "utf8"))

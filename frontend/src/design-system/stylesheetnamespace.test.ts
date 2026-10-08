@@ -39,6 +39,7 @@ const namespaces = [
   { prefix: "errorboundary-", home: "app/errorboundary.css" },
   { prefix: "historyfields-", home: "screens/historyfields.css" },
   { prefix: "leadsignals-", home: "screens/leadsignals.css" },
+  { prefix: "library-", home: "screens/library.css" },
   { prefix: "listquery-", home: "screens/listquery.css" },
   { prefix: "mergeaction-", home: "screens/merge.css" },
   { prefix: "oauthconsent-", home: "screens/oauthconsent.css" },

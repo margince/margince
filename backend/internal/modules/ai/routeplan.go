@@ -167,6 +167,8 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
 		}
 		if task != TaskEmbeddings {
+			degrades := DegradesOnOutage(task)
+			row.DegradesOnOutage = &degrades
 			decides, defaults := TaskDecides(task), TaskDefaults()
 			row.Decides = &decides
 			row.Defaults = &crmcontracts.AiTaskSettings{
@@ -200,3 +202,7 @@ func unusedTiers(cfg RoutingConfig) []string {
 	slices.Sort(out)
 	return out
 }
+
+// DegradesOnOutage says the task answers from the record's own facts once no
+// model can, rather than failing: what ai-tasks.yaml declares as on_outage.
+func DegradesOnOutage(task Task) bool { return taskDegradesOnOutage[task] }

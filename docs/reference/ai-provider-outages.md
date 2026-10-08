@@ -18,7 +18,8 @@ Three rules decide every row:
   outage never parks mail as unsure or burns an enrichment's retries. An
   interactive task fails fast with `provider_unavailable`,
   `provider_out_of_credit` or `provider_unauthorized`, telling the user to
-  contact their administrator.
+  contact their administrator, unless its contract declares `on_outage: degrades`:
+  it then answers from the record's own facts, with no model, instead.
 - **A decision model** is tried first and never waited on. If its call fails,
   the task's own ladder answers.
 
@@ -42,14 +43,14 @@ does in this state.
 | `capture_counterparty_verdict` | First-time sender check | background | `local_small` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |
 | `cert_judge` | Certification judging | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `cold_start` | Onboarding read | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
-| `corpus_ask` | Document corpus question | interactive | `premium` | fails at once with a 503 naming the cause | — |
-| `deal_health` | Deal status card | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
+| `corpus_ask` | Document corpus question | interactive | `premium` | answers from its own facts instead of failing | — |
+| `deal_health` | Deal status card | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `document_extract` | Document extraction | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
-| `draft_reply` | Reply drafting | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
+| `draft_reply` | Reply drafting | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `enrich` | Signature enrichment | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
-| `growth_fit` | Company fit assessment | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
+| `growth_fit` | Company fit assessment | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `nl_search` | Natural-language search | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
-| `offer_draft` | Offer drafting | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
+| `offer_draft` | Offer drafting | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `owed_verdict` | Unanswered-message triage | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `propose_roles` | Buying-role reading | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `rate_extract` | Exchange rate extraction | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
@@ -59,7 +60,7 @@ does in this state.
 | `site_fact_extract` | Website fact extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `site_triage` | Website triage | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |
 | `stage_evidence_extract` | Stage evidence extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
-| `summarize` | Record summary | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
+| `summarize` | Record summary | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `transcript` | Transcript reading | interactive | `cheap_cloud` → `premium` | not in use yet | — |
 | `transcript_propose` | Meeting follow-up extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `voice_build` | Voice DNA build | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |

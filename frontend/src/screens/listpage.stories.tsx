@@ -12,6 +12,7 @@ import {
   liveHistory,
   liveList,
   liveListing,
+  liveVocabulary,
   members,
   SHORTLIST_ID,
   shortlist,
@@ -31,8 +32,9 @@ type Story = StoryObj;
 
 const page = { has_more: false };
 
-// A Live List a reader can change: members from its filter, each beside the
-// values of the fields the filter names, one of them hidden from this reader.
+// A Live List a reader can change: its filter read as one sentence under its
+// purpose, and members from that filter, each beside the values of the fields
+// the filter names, one of them hidden from this reader.
 export const LiveList: Story = {
   render: () => {
     installFetchStub({
@@ -43,6 +45,7 @@ export const LiveList: Story = {
         jsonResponse({ data: liveHistory, page }),
       "GET /companies": () => jsonResponse({ data: members, page }),
       [`GET /lists/${LIVE_ID}/members`]: listingAnswer(liveListing),
+      "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
     });
     return (
       <StoryProviders>
@@ -83,6 +86,7 @@ export const Archived: Story = {
       [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
       [`GET /lists/${LIVE_ID}/history`]: () => jsonResponse({ data: [], page }),
       "GET /companies": () => jsonResponse({ data: [], page }),
+      "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
     });
     return (
       <StoryProviders>

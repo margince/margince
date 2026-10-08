@@ -433,12 +433,14 @@
    whose indigo drifted off the panel's would tell a reader the two were
    different claims about who wrote what. `.staging-card` is trust.tsx's
    StagingCard and the ground every DecisionCard carries; `.deal-card.staged`
-   is one deal on the board drawn as one. They live in this rule rather than in
-   their own sheets so the family has ONE declaration site — the sheets that
-   draw the rest of those boxes point here. */
+   is one deal on the board drawn as one; `.filter-clause[data-proposed]` is a
+   filter condition a model proposed and the reader has not changed. They live
+   in this rule rather than in their own sheets so the family has ONE
+   declaration site — the sheets that draw the rest of those boxes point here. */
 .panel-ai,
 .staging-card,
-.deal-card.staged {
+.deal-card.staged,
+.filter-clause[data-proposed] {
   border-color: var(--aiMed);
 }
 .panel-ai > .panel-head {
@@ -464,7 +466,8 @@
  * from a recorded fact before reading a word of either. What that ground costs
  * the ink over it is recorded in trust.css, on `.approval-why`. */
 .staging-card,
-.deal-card.staged {
+.deal-card.staged,
+.filter-clause[data-proposed] {
   border-width: 1.5px;
   border-style: dashed;
   background: var(--aiLight);
