@@ -42,17 +42,17 @@ import { problemMessageOf, throwProblem } from "./common";
 // Adding a document to the record the dialog was opened from — an account's
 // document library, or a contact's.
 //
-// WHY THE PARENT IS A QUESTION AND NOT A DEFAULT. A document on the company is
+// Why the parent is a question and not a default: a document on the company is
 // about the company; one on a deal is evidence in that deal, and the only kind the
 // extraction panel offers to read for deal fields, since a deal is the only record
 // the accept can write to.
 //
-// WHY IT TAKES TWO REQUESTS. The upload carries the bytes and the parent; category
+// Why it takes two requests: the upload carries the bytes and the parent; category
 // and title go through `PATCH /attachments/{id}/metadata`. That call can fail with
 // the file already stored, and the dialog says so rather than reporting a failure
 // the reader would answer by uploading the same file twice.
 //
-// WHY THE QUESTION IS ONLY ASKED ON AN ACCOUNT. Deals hang off a company, so an
+// Why the question is only asked on an account: deals hang off a company, so an
 // account can offer its own deals as filing targets. A contact sits on deals at
 // companies they may not work for, so its library files against the contact.
 

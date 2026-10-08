@@ -98,7 +98,7 @@ func (s *Store) mayUpload(ctx context.Context, in AttachmentInput) error {
 
 // UploadAttachment stores an object and records its metadata row. Authority
 // inherits from the parent entity: the caller must hold Update on the parent
-// object type and be able to see the parent row — both are checked BEFORE any
+// object type and be able to see the parent row; both are checked before any
 // bytes are written, so an upload to a hidden or cross-tenant entity cannot
 // land an object (no storage abuse). The object is put before the row commits
 // (a committed row always has its bytes; a failed write leaves at worst an
@@ -199,8 +199,8 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 
 // acceptUploadedFile makes the typed name safe and settles the stored type.
 //
-// The name a stranger or a rep TYPED is made safe before it reaches the column
-// — the same function the capture path runs every sender-supplied name
+// The name a stranger or a rep typed is made safe before it reaches the column,
+// by the same function the capture path runs every sender-supplied name
 // through, for the same reasons: a name is presentational only (nothing opens
 // a file by it), it is read back in a log line, a CSV export and a park
 // reason, and it renders in a list. A path separator, a line break, or a
