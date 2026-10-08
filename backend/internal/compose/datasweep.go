@@ -38,6 +38,9 @@ import (
 //     underneath a running worker.
 var preservedResetTables = map[string]bool{
 	"report_projection_fence": true,
+	// The own-sent-mail repair's one-row bound, seeded by its migration. Mail
+	// captured after a reset is past it, so keeping it never widens the pass.
+	"activity_own_sent_mail_repair_cutoff": true,
 	// The installation's own published wording. Not tenant data: it is the
 	// controller's text, shared across every subject who saw it, and a proof row
 	// surviving the reset would otherwise point at a version the sweep removed.
