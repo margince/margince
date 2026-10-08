@@ -197,6 +197,6 @@
     border-color var(--dur-state) var(--ease-out);
 }
 .stat-strip > button:active:not(:disabled) > .stat-card {
-  background-color: var(--bgCard);
+  background-color: var(--bgInset);
   transition-duration: var(--dur-tap);
 }
