@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -34,6 +35,16 @@ const teamReviewSelect = `
 	       base_currency, reps_unread, numeric_summary
 	  FROM team_weekly_review`
 
+// memberFrozenWeek is one member's frozen week as the team snapshot folds it.
+type memberFrozenWeek struct {
+	counts Counts
+	money  Money
+	help   int
+	// plans is the member review's commitments statement; nil where that week
+	// settled no plan or was frozen before figures carried coverage.
+	plans *crmcontracts.WeeklyFigureCoverage
+}
+
 // memberWeek reads one member's frozen week, and how many commitments they
 // asked for help on.
 //
@@ -41,49 +52,53 @@ const teamReviewSelect = `
 // the snapshot ("this member's week was not counted"), not an error.
 func memberWeek(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, week time.Time,
-) (Counts, Money, int, error) {
+) (memberFrozenWeek, error) {
 	var c Counts
 	var created, won, lost *int64
 	var currency *string
+	var numeric *crmcontracts.WeeklyNumericSummary
 	err := tx.QueryRow(ctx, `
 		SELECT deals_won, deals_lost, deals_moved,
 		       leads_routed, leads_answered_in_target, leads_breached,
 		       meetings_held, meetings_with_next_step,
 		       commitments_due, commitments_kept,
-		       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor, base_currency
+		       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor, base_currency,
+		       numeric_summary
 		  FROM weekly_review WHERE user_id = $1 AND local_week_start = $2`, userID, week).
 		Scan(&c.DealsWon, &c.DealsLost, &c.DealsMoved,
 			&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 			&c.MeetingsHeld, &c.MeetingsWithNextStep,
 			&c.CommitmentsDue, &c.CommitmentsKept,
-			&created, &won, &lost, &currency)
+			&created, &won, &lost, &currency, &numeric)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Counts{}, Money{}, 0, apperrors.ErrNotFound
+		return memberFrozenWeek{}, apperrors.ErrNotFound
 	}
 	if err != nil {
-		return Counts{}, Money{}, 0, fmt.Errorf("weekly: reading a member's week: %w", err)
+		return memberFrozenWeek{}, fmt.Errorf("weekly: reading a member's week: %w", err)
 	}
-	money := Money{}
+	out := memberFrozenWeek{counts: c}
 	if currency != nil {
-		money = Money{
+		out.money = Money{
 			CreatedMinor: deref(created), WonMinor: deref(won), LostMinor: deref(lost),
 			Currency: *currency, Known: true,
 		}
 	}
+	if numeric != nil && numeric.FigureCoverage != nil {
+		out.plans = numeric.FigureCoverage.Commitments
+	}
 	// How many of that week's commitments carried a request for help. Counted
 	// from the plan rather than the review, because the review freezes what the
 	// week came to and not what was asked along the way.
-	var help int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM weekly_plan_commitment c
 		  JOIN weekly_plan p ON p.id = c.plan_id
 		 WHERE p.owner_id = $1 AND p.local_week_start = $2
 		   AND btrim(c.help_requested) <> ''
 		   AND btrim(coalesce(c.manager_response, '')) = ''
-		   AND c.state NOT IN ('done', 'dropped')`, userID, week).Scan(&help); err != nil {
-		return Counts{}, Money{}, 0, fmt.Errorf("weekly: counting a member's requests: %w", err)
+		   AND c.state NOT IN ('done', 'dropped')`, userID, week).Scan(&out.help); err != nil {
+		return memberFrozenWeek{}, fmt.Errorf("weekly: counting a member's requests: %w", err)
 	}
-	return c, money, help, nil
+	return out, nil
 }
 
 // insertTeamReview writes the snapshot unless this team already has one for the

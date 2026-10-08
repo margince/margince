@@ -56,11 +56,7 @@ func (m attentionMeetings) Today(
 		if !meetingStillWorthPreparing(row) {
 			continue
 		}
-		// The store was asked for readable rows only, so a withheld one here
-		// would be a gate that did not hold. Checked rather than assumed: this
-		// lane names the meeting in a reader's brief, and the cost of being
-		// wrong is a subject on a screen it does not belong on.
-		if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+		if !meetingReadable(row) {
 			continue
 		}
 		needsPrep, known := meetingPrep(row)
@@ -80,6 +76,13 @@ func (m attentionMeetings) Today(
 	// newest-first, which is the opposite order for a day still ahead.
 	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
 	return ahead, nil
+}
+
+// meetingReadable re-checks a row the store was asked to return readable only.
+// A withheld one here would be a gate that did not hold, and the cost is a
+// subject on a screen it does not belong on, so it is checked, not assumed.
+func meetingReadable(row crmcontracts.Activity) bool {
+	return row.ContentState == nil || *row.ContentState == crmcontracts.ActivityContentStateAvailable
 }
 
 // applyMeetingScope turns the lane's scope into the store's meeting dials.
@@ -156,7 +159,7 @@ func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
 // every colleague's meeting as unprepared, to a reader who cannot open it to
 // find out. Absent beats wrong: the caller draws nothing.
 func meetingPrep(row crmcontracts.Activity) (needsPrep bool, known bool) {
-	if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+	if !meetingReadable(row) {
 		return false, false
 	}
 	if row.Body != nil && strings.TrimSpace(*row.Body) != "" {
@@ -247,8 +250,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	}
 	over := make([]attention.MeetingAwaitingOutcome, 0, len(rows))
 	for _, row := range rows {
-		// Same defensive check the forward lane makes, for the same reason.
-		if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+		if !meetingReadable(row) {
 			continue
 		}
 		over = append(over, attention.MeetingAwaitingOutcome{
