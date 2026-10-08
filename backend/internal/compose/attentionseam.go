@@ -274,6 +274,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress).
+		WithMeetingHorizon(attentionMeetingHorizon{
+			registry: captureHealthRegistry(db), store: activities.NewStore(db),
+		}).
 		// The reader's OWN undecided domains. Bound to the contacts store the
 		// rest of this seam already reads: the question is opened by capture and
 		// answered against the same disposition ledger the admin list shows, so

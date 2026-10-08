@@ -162,9 +162,11 @@ func (s *Service) worklistIn(
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
+	horizon := reader.meetingHorizon(ctx, day, beside.until)
+	failed := append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, beside.failed...)
 	out := withPins.worklistFrom(
-		ctx, day, resolved, filter, limit, waiting, cursor,
-		append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, beside.failed...))
+		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
+	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
 	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
