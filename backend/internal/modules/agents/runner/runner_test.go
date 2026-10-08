@@ -584,6 +584,24 @@ func TestInvalidModelOutputRetriesThenDegrades(t *testing.T) {
 	}
 }
 
+// Every reply the step validator refused is reported back, so a re-run asks
+// the model again instead of being served the refused text; an accepted step
+// is not.
+func TestEveryRefusedStepReplyIsRejectedToTheBrain(t *testing.T) {
+	rejected := 0
+	brain := &scriptedBrain{
+		texts: []string{"not a step", `{"final":{"summary":"ok"}}`},
+		meta:  Meta{Reject: func() { rejected++ }},
+	}
+	res, err := New(&fakeSurface{}, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Outcome != OutcomeCompleted || rejected != 1 {
+		t.Fatalf("outcome %s with %d rejections, want completed with 1", res.Outcome, rejected)
+	}
+}
+
 func TestWallClockCancellationDegrades(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

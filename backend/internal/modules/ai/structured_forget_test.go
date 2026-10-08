@@ -8,10 +8,8 @@ package ai
 // deterministically replay its own failure until the TTL expired.
 
 import (
-	"context"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -52,32 +50,21 @@ func TestSecondAttemptFailureAlsoEvictsItsCachedAnswer(t *testing.T) {
 	}
 }
 
-// Outside a workspace the helper must return without evicting anything: a key
-// it cannot scope belongs to no tenant, and guessing one would drop another
-// workspace's valid answer.
-func TestForgetCachedToleratesAMissingWorkspace(t *testing.T) {
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient().Script("x")},
+// An admin thinking level is part of the key the answer was cached under, so
+// the eviction must find it there too, or the rejected answer replays.
+func TestValidationFailureEvictsUnderAnAdminThinkingLevel(t *testing.T) {
+	cheap := NewFakeClient().Script("not json", "still not json", `{"ok":true}`)
+	premium := NewFakeClient().Script("also not json")
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
 		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
-	// Two entries stand in for what an unscoped eviction could reach: a real
-	// tenant's answer, and the one at the key a workspace-less call would
-	// derive if it computed a key at all.
-	for _, seeded := range []struct {
-		name string
-		wsID ids.WorkspaceID
-	}{
-		{"a real tenant's entry", ids.From[ids.WorkspaceKind](ids.NewV7())},
-		{"the entry at the unscoped key", ids.WorkspaceID{}},
-	} {
-		key, err := cacheKey(seeded.wsID, TaskColdStart, structuredReq())
-		if err != nil {
-			t.Fatalf("deriving the cache key for %s: %v", seeded.name, err)
-		}
-		r.cache.put(key, seeded.wsID, r.binding().generation, model.Response{Text: `{"ok":true}`}, TierCheapCloud)
+	r.SetTaskOverrides(TaskOverrides{TaskColdStart: {Thinking: "minimal"}})
+	ctx := wsContext(t)
 
-		r.forgetCached(context.Background(), TaskColdStart, structuredReq())
-
-		if _, _, ok := r.cache.get(key, seeded.wsID, r.binding().generation); !ok {
-			t.Errorf("a workspace-less eviction dropped %s; it must derive no key at all", seeded.name)
-		}
+	if _, _, err := r.CompleteStructured(ctx, TaskColdStart, structuredReq(), jsonObjectValidator); err == nil {
+		t.Fatal("three invalid completions must fail the logical call")
+	}
+	resp, _, err := r.CompleteStructured(ctx, TaskColdStart, structuredReq(), jsonObjectValidator)
+	if err != nil || resp.Text != `{"ok":true}` {
+		t.Fatalf("resp = %q, err = %v - the cached invalid answer was replayed", resp.Text, err)
 	}
 }

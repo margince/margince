@@ -45,6 +45,9 @@ type Invoker interface {
 type Meta struct {
 	ModelID string
 	Tier    string
+	// Reject reports that the runner refused this reply, so a brain that keeps
+	// answers never serves it again. Nil for a brain that keeps none.
+	Reject func()
 }
 
 // Brain is one completion call. Compose adapts ai.Router into this so
@@ -279,6 +282,9 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 
 		step, parseErr := parseStep(resp.Text)
 		if parseErr != nil {
+			if meta.Reject != nil {
+				meta.Reject()
+			}
 			invalidStreak++
 			if invalidStreak >= consecutiveInvalidLimit {
 				return r.degradeFromCause(acc, job, invalidOutputReason(invalidStreak), parseErr), nil
