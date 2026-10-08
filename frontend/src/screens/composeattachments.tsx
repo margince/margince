@@ -35,7 +35,11 @@ import {
   useLocale,
   useT,
 } from "../i18n";
-import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
+import {
+  ACCEPTED_ATTACHMENT_ATTR,
+  type AttachmentParent,
+  uploadAttachment,
+} from "./attachmentupload";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import { useProviderCarriage } from "./channelproviders";
 import { problemMessageOf, throwProblem } from "./common";
@@ -322,6 +326,7 @@ function AttachPicker({
         hint={t("compose.fileUploadHint")}
         emptyLabel={t("compose.fileUploadEmpty")}
         onPick={(picked) => upload.mutate(picked)}
+        accept={ACCEPTED_ATTACHMENT_ATTR}
       />
       {upload.isPending && (
         <p aria-live="polite">{t("compose.fileUploading")}</p>

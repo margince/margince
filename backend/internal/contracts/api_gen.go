@@ -28333,6 +28333,11 @@ type CompanyEmailDraft struct {
 	// reader deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
+	// LanguageUndetermined True when the draft's language could not be determined from the contact's own correspondence, so it is written in the default rather than in theirs.
+	// The causes are deliberately not distinguished on the wire, and there are more than two: the reader may see none of that contact's mail, the contact may have written nothing readable, the evidence may be too short or mixed to call, or the language may be one the detector does not support. Every one of them means the same thing to a client — the draft is sendable and its language is a fallback rather than a choice.
+	// A client should say so beside the note, for the same reason voice_degraded is said: a reader fluent only in the default cannot tell a fallback from a choice, and would forward an English note to a customer who writes in German believing the product had checked. Absent reads as false.
+	LanguageUndetermined *bool `json:"language_undetermined,omitempty"`
+
 	// Reasoning What the draft was written from, as separate claims rather than a sentence in
 	// the body. A SIBLING of the body on purpose (DRAFT-AC-N-4): a body that
 	// explains itself is a body the rep has to edit before sending, and the two
@@ -41083,8 +41088,10 @@ type ReportResult struct {
 	Rows []map[string]interface{} `json:"rows"`
 
 	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
-	Timezone  string `json:"timezone"`
-	TotalRows *int   `json:"total_rows,omitempty"`
+	Timezone string `json:"timezone"`
+
+	// TotalRows Groups that matched. `rows` is capped at the report row limit, so a total above its length means this answer is the top of a longer one rather than all of it. The drill-through's `total_rows` counts source rows for the same reason.
+	TotalRows *int `json:"total_rows,omitempty"`
 }
 
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
@@ -44272,10 +44279,9 @@ type UpdateActivityRequest struct {
 	// moment the API could not be told.
 	//
 	// An omitted field is unchanged, like every other field on this patch. Sending
-	// an explicit `null` is also unchanged rather than a clear: this request maps
-	// onto the same coalescing update `due_at` and `remind_at` take, which cannot
-	// tell an absent field from a null one. Recording the wrong outcome is fixed by
-	// sending the right one.
+	// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
+	// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
+	// wrong outcome is fixed by sending the right one.
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
@@ -44294,10 +44300,9 @@ type UpdateActivityRequest struct {
 // moment the API could not be told.
 //
 // An omitted field is unchanged, like every other field on this patch. Sending
-// an explicit `null` is also unchanged rather than a clear: this request maps
-// onto the same coalescing update `due_at` and `remind_at` take, which cannot
-// tell an absent field from a null one. Recording the wrong outcome is fixed by
-// sending the right one.
+// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
+// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
+// wrong outcome is fixed by sending the right one.
 type UpdateActivityRequestMeetingStatus string
 
 // UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.

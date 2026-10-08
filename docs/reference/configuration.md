@@ -20,6 +20,46 @@ organization itself, so a call carries only the own credential of the caller. Th
 worked through, is in [tutorials/getting-started.md](../tutorials/getting-started.md).
 
 
+## Where a value comes from
+
+A value comes from the first source in its row that has one; "default" is the value in the code.
+The api and the worker follow the same rules, and each reads only the values it uses.
+
+| Kind of value | Sources, first match wins | When no source has a value |
+|---|---|---|
+| Flag or `MARGINCE_*` variable | flag → environment variable → default | The default. |
+| Key in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | The default. |
+| Setting an admin changes | value saved in the database → default | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
+| Seed in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | Used when the company is created, and again by a data reset. |
+| AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
+| SMTP password | `email.smtp.password` reference → the copy sealed in the vault | The relay is used with no password. |
+| License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
+
+**Posture.** `MARGINCE_ENV` picks the overlay; how the two files merge is in
+[The file layer is two files](#the-file-layer-is-two-files-a-base-and-the-postures-overlay).
+
+**Seeds.** These are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes,
+retention, starter automations, booking page, `ai_routing`). The api writes them in one transaction
+when it boots on a database with no company. Without `bootstrap_admin` it prints a one-time setup
+token instead. The user who claims the installation enters the company and the first admin, and
+the `seeds.*` values still apply.
+
+After that, editing `workspace` or `bootstrap_admin` changes
+nothing. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
+`seeds.*` again from the current file. Every other section of the file is read at each boot.
+
+**Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
+value. When a value fails the check of its setting, the save gets a 422 that names the setting. Editing
+`margince.yaml` never changes a saved setting.
+
+**Model binding.** The binding says which model serves each AI tier and which model embeds. It is a
+setting: `seeds.ai_routing` gives a new installation its first value, and Settings → AI changes it.
+Without a binding or `--ai-fake`, the worker does not start its AI runner or its embedding lane.
+
+**Secrets.** An empty bootstrap password or license reference is an error that names the field.
+Sealed copies of the SMTP password and the license are in
+[The vault also holds the two deployment credentials](#the-vault-also-holds-the-two-deployment-credentials).
+
 ## Common log flags (api, worker)
 
 | Flag | Env | Default | Values |
@@ -633,8 +673,9 @@ the network, as an E2E test against `gradion.com`. Another model must score the 
 pass. A normal read takes 10 to 25 seconds from start to end, based on how hard the origin slows the
 crawl.
 
-Without a declared model (`--ai-routing`/`--ai-fake`), the runner and the embedding lane do not
-start. The relay, retention, the workflow dispatch that events start (`cg:workflows`), and the clock
+The runner and the embedding lane start only on a stored model binding, or on `--ai-fake` for the
+offline fake model. A binding is stored through Settings → AI, or on a fresh install from
+`seeds.ai_routing` in `margince.yaml`. The relay, retention, the workflow dispatch that events start (`cg:workflows`), and the clock
 time scan always run. Shutdown is clean: subscriber handlers already running end their ack before
 the process stops.
 
@@ -1283,6 +1324,39 @@ The `uploads:` block sets the request size each route that carries a **file** ma
 route stays on the 1 MiB JSON limit. That limit is a security rule, and you cannot change it. Some
 handlers read the body with no limit of their own, and two of those routes need no sign-in.
 
+One JSON route reads more. `POST /mcp` with `Content-Type: application/json` takes up to 8 MiB
+(`agents.MaxMCPRequestBytes`), because `attach_document` carries a file in the call as base64. That
+leaves room for a file of about 6.2 MB. `attach_document` takes the smaller of that and
+`uploads.attachment_mb`. You cannot change the 8 MiB or the 6.2 MB limit. A request over 8 MiB gets
+`413`, with the limit named.
+
+Only one tool may use the 8 MiB body. Every other tool refuses input over 1 MiB before it runs,
+because `ToolSpec.MaxArgsBytes` starts at the JSON limit and only `attach_document` raises it.
+
+One process holds at most 4 MCP requests over 1 MiB at once (`maxLargeMCPBodiesInFlight` in
+`backend/internal/modules/agents/httpmcp.go`). Each one sits in memory many times while it is
+read. Each agent may hold only one of them, and its second gets `429`. When all 4 are in use, the next gets `503` with
+`Retry-After: 1`. When it states a `Content-Length`, it gets that answer before its body is read.
+
+Once a request holds a place, the rest of its body must come within
+10 seconds (`largeBodyReadDeadline`). If it does not, the answer is `408`, and the place is free
+again.
+
+Every upload that adds a document, from the app or from `attach_document`, must be one of the kinds
+in `attachmentTypes` (`backend/internal/modules/activities/attachmenttypes.go`). In the app, any
+other kind gets `422 unsupported_file_type`. Over MCP, `attach_document` answers with a tool error
+(`isError: true`) that names the same code, and the HTTP status stays `200`. HTML and archive files are accepted, because Margince only hands a
+stored file back as a download. `.svg` files and programs are refused.
+
+The declared type must be in the table. When the file name ends in a type from the table too, the
+file is stored under that type. Windows, for one, declares a `.csv` file as
+`application/vnd.ms-excel`.
+
+In every other case the declared type is kept, and the name does not
+matter. An empty or `application/octet-stream` type, which browsers send for `.msg` and `.md`, is
+read from the file name. Margince does not look at the bytes. Files that come in with an email are
+stored in any kind, as a record of what was sent.
+
 | Key | Default | Route |
 |---|---|---|
 | `uploads.attachment_mb` | `25` | `POST /v1/attachments`, the documents surface |
@@ -1577,7 +1651,7 @@ itself.
   A **captured** attachment carries the type read from its bytes. If the sender claims another type,
   Margince records that claim and does not use it. So someone outside can change the lane only
   through the bytes they sent. A file **uploaded through the API** carries the type its uploader
-  declared, not read from the bytes.
+  declared, or the one its file name gives (see [uploads](#uploads)). It is not read from the bytes.
 
   Before the bytes become a wire part, that type has to hold up. A file that claims a kind with a
   clear signature (PNG, JPEG, GIF, WebP, BMP, PDF, HEIC, HEIF) must carry that signature. A file

@@ -104,7 +104,8 @@ least three words. A name is a proper name, an acronym or a code identifier. An 
 technical one such as `schema`, goes in a word list, so it counts against the cap. Names the pages used
 before they joined the bar sit in the glossary's last section without a meaning; after that, the section
 only shrinks. A general word also covers its regular forms, so a page may write `deals` or `connected`
-when the list holds `deal` and `connect`. An irregular form such as `built` is listed as it is spelled. A
+when the list holds `deal` and `connect`. A form counts only when what is left is a real stem: `thing` is not `the`, `band` is not `ban`, and
+`older` is listed on its own, since a short stem cannot tell `old` + `er` from `off` + `er`. An irregular form such as `built` is listed as it is spelled. A
 glossary term matches only as written. Inline code is not checked, nor is link text
 that contains a `.` or a `/`, such as a path or a host. A bold UI label and a quoted screen message are not
 checked either: they must match the screen word for word, so they count as names.

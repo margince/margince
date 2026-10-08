@@ -47,7 +47,7 @@ amend
 amount
 an
 analytics
-analyzed
+and
 anonymize
 another
 answer
@@ -61,6 +61,8 @@ app
 appear
 appearance
 applicable
+applied
+applies
 apply
 approval
 approve
@@ -110,6 +112,7 @@ backup
 badge
 ban
 band
+bands
 bar
 base
 basis
@@ -135,7 +138,7 @@ board
 body
 book
 bookable
-booking
+bookings
 bookkeeping
 bookmark
 bot
@@ -286,6 +289,7 @@ customer's
 customise
 cut
 cutoff
+daily
 dark
 dashboard
 data
@@ -417,7 +421,6 @@ execute
 exhausted
 exist
 expect
-experiment
 expert
 expire
 expiry
@@ -437,6 +440,7 @@ feature
 fee
 fetch
 few
+fewer
 field
 figure
 file
@@ -446,7 +450,7 @@ final
 finance
 financial
 find
-finding
+findings
 finish
 fire
 first
@@ -490,6 +494,7 @@ global
 go
 goal
 gone
+good
 governance
 grant
 graph
@@ -514,7 +519,7 @@ has
 have
 head
 header's
-heading
+headings
 health
 healthy
 held
@@ -556,6 +561,7 @@ instead
 integrate
 integration
 interaction
+interface
 internal
 into
 intro
@@ -592,6 +598,7 @@ language
 large
 last
 late
+later
 law
 lawyer
 layout
@@ -633,11 +640,15 @@ lookup
 lose
 lost
 low
+lower
+lowest
 made
 mail
 mailbox
 main
 make
+maker
+makers
 manage
 management
 manager's
@@ -660,7 +671,8 @@ me
 mean
 measure
 medium
-meeting
+meet
+meetings
 member
 membership
 mention
@@ -700,6 +712,7 @@ my
 myself
 name
 narrow
+native
 natural
 nav
 navigation
@@ -710,6 +723,8 @@ net
 network
 never
 new
+newer
+newest
 newsletter
 next
 night
@@ -720,6 +735,7 @@ none
 nor
 normal
 not
+notation
 note
 nothing
 notice
@@ -736,16 +752,20 @@ off
 offboard
 offer
 offer's
+offered
 office
 offline
 often
 ok
 old
+older
+oldest
 omit
 on
 onboard
 once
 one
+only
 onto
 open
 operation
@@ -776,11 +796,14 @@ overview
 overwrote
 owed
 own
+owner
 owner's
+owners
 ownership
 owner’s
 package
 page
+paid
 palette
 panel
 paper
@@ -799,7 +822,6 @@ password
 past
 paste
 path
-pattern
 pause
 pay
 payload
@@ -904,7 +926,7 @@ reaction
 reactivate
 read
 reader's
-reading
+readings
 ready
 real
 reason
@@ -946,7 +968,10 @@ reorder
 rep
 repeat
 replace
+replied
+replies
 reply
+replying
 report
 request
 require
@@ -991,6 +1016,7 @@ row
 rule
 run
 s
+said
 sale
 salesperson
 same
@@ -1027,7 +1053,7 @@ serve
 service
 session
 set
-setting
+settings
 settle
 setup
 several
@@ -1055,6 +1081,7 @@ site
 six
 size
 skip
+slide
 slip
 slow
 small
@@ -1155,6 +1182,7 @@ there
 these
 they
 thing
+things
 this
 those
 thread
@@ -1163,6 +1191,8 @@ through
 tick
 ticket
 tie
+tier
+tiers
 tile
 time
 timeline
@@ -1222,7 +1252,6 @@ unschedule
 unshare
 unsnooze
 unsubscribe
-unsuccessful
 unsure
 untick
 until
@@ -1232,9 +1261,11 @@ upgrade
 upload
 urgent
 usage
+usd
 use
-useful
+user
 user's
+users
 user’s
 usual
 valid
@@ -1288,6 +1319,7 @@ whose
 why
 wide
 widen
+wider
 will
 win
 window

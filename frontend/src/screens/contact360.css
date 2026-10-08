@@ -708,7 +708,7 @@
 .pe-why {
   margin-top: var(--space-5);
   padding: var(--space-4);
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-sm);
 }
 

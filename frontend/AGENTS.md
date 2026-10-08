@@ -52,8 +52,8 @@ look for one.
 
 ### Indigo is a claim about the source
 
-Indigo (`--ai*`) means an agent is its source. Never use it for looks. `--orbAmber` / `--orbRed` /
-`--orbGrey` mean a result, not a source. The tokens, the edge and text rules, and `ProvenanceTag` are
+Indigo (`--ai*`) means an agent is its source. Never use it for looks. `--orbAmber` / `--orbRed`
+mean a result, not a source. The tokens, the edge and text rules, and `ProvenanceTag` are
 in [the catalog](src/design-system/README.md#indigo-says-a-machine-did-it). `check-ds-purity.sh`
 holds that these values come from tokens; nothing can tell you that the token you use means the wrong
 thing.

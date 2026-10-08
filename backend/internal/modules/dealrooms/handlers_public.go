@@ -33,18 +33,34 @@ import (
 // noSessionDetail is the 401 a buyer reads. It names no room and no reason.
 const noSessionDetail = "this link no longer admits you: ask for a new one"
 
+// requireCredential trims the credential and answers the contract's 422 for an
+// empty one. An empty credential is not a guess at a real one, so refusing it
+// by shape tells a caller nothing about any room.
+func requireCredential(w http.ResponseWriter, r *http.Request, req crmcontracts.DealRoomCredentialRequest) (string, bool) {
+	credential := strings.TrimSpace(req.Credential)
+	if credential == "" {
+		httperr.Write(w, r, httperr.Validation("credential", "required", "credential must not be empty"))
+		return "", false
+	}
+	return credential, true
+}
+
 // PeekDealRoomCredential says whether a credential can still be exchanged.
 func (h Handlers) PeekDealRoomCredential(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.DealRoomCredentialRequest
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	ok, err := h.store.PeekCredential(r.Context(), strings.TrimSpace(req.Credential))
+	credential, ok := requireCredential(w, r, req)
+	if !ok {
+		return
+	}
+	exchangeable, err := h.store.PeekCredential(r.Context(), credential)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomPeekResponse{Exchangeable: ok})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomPeekResponse{Exchangeable: exchangeable})
 }
 
 // ExchangeDealRoomCredential consumes a credential and opens a session.
@@ -53,7 +69,11 @@ func (h Handlers) ExchangeDealRoomCredential(w http.ResponseWriter, r *http.Requ
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	issued, err := h.store.ExchangeCredential(r.Context(), strings.TrimSpace(req.Credential))
+	credential, ok := requireCredential(w, r, req)
+	if !ok {
+		return
+	}
+	issued, err := h.store.ExchangeCredential(r.Context(), credential)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

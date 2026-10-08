@@ -7,6 +7,7 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -62,24 +63,32 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 // cannot legitimately be larger.
 const companyLogoUploadBytes = imagenorm.MaxMarkBytes
 
+// jsonCeilings are the routes whose JSON body may exceed the JSON bound. MCP is
+// the one: an agent attaches a file inline as base64, the only way the protocol carries one.
+func jsonCeilings() map[string]int64 {
+	return map[string]int64{"/mcp": agents.MaxMCPRequestBytes}
+}
+
 // bodyCeilingFor is the chassis's BodyCeiling for this composition.
 //
 // THREE conditions, all required, because each closes a different door: the
 // method, so a GET cannot carry a wide body; the route, so only a declared
-// upload route can; and the media type, so an upload route handed JSON still
-// rides the tight bound. A request failing any of them gets the JSON ceiling.
+// route can; and the media type, which picks the table the route must appear
+// in, so an upload route handed JSON still rides the tight bound and the MCP
+// route handed multipart does too. A request failing any of them gets the
+// JSON ceiling.
 //
 // The path is matched exactly as the router mounts it, with no normalization of
 // our own. A trailing slash or an un-cleaned segment is a path the router does
 // not serve, and guessing at how it would resolve one is how a grant ends up
 // wider than the route list it was written from.
-func bodyCeilingFor(ceilings map[string]int64) httpserver.BodyCeiling {
+func bodyCeilingFor(uploads map[string]int64) httpserver.BodyCeiling {
+	byMediaType := map[string]map[string]int64{
+		"multipart/form-data": uploads,
+		"application/json":    jsonCeilings(),
+	}
 	return func(r *http.Request) int64 {
 		if r.Method != http.MethodPost {
-			return httperr.MaxBodyBytes
-		}
-		ceiling, declared := ceilings[r.URL.Path]
-		if !declared {
 			return httperr.MaxBodyBytes
 		}
 		// Compared as a parsed MEDIA TYPE, not as a prefix. A prefix match also
@@ -87,9 +96,12 @@ func bodyCeilingFor(ceilings map[string]int64) httpserver.BodyCeiling {
 		// so the chassis and the parser would disagree about what a multipart body
 		// is, and the sender would pick which one won.
 		mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		if err != nil || mediaType != "multipart/form-data" {
+		if err != nil {
 			return httperr.MaxBodyBytes
 		}
-		return ceiling
+		if ceiling, declared := byMediaType[mediaType][r.URL.Path]; declared {
+			return ceiling
+		}
+		return httperr.MaxBodyBytes
 	}
 }

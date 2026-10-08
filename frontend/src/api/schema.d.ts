@@ -16927,6 +16927,9 @@ export interface paths {
          *     metadata + object key. `captured_by` is server-stamped from the authenticated
          *     principal, never the request. The parent entity must be visible to the caller
          *     (a hidden or cross-tenant entity answers 404, never leaks existence).
+         *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
+         *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
+         *     answers 422 `unsupported_file_type`.
          */
         post: operations["uploadAttachment"];
         delete?: never;
@@ -29816,10 +29819,9 @@ export interface components {
              *     moment the API could not be told.
              *
              *     An omitted field is unchanged, like every other field on this patch. Sending
-             *     an explicit `null` is also unchanged rather than a clear: this request maps
-             *     onto the same coalescing update `due_at` and `remind_at` take, which cannot
-             *     tell an absent field from a null one. Recording the wrong outcome is fixed by
-             *     sending the right one.
+             *     an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
+             *     `remind_at` and `assignee_id`, where `null` removes the value. Recording the
+             *     wrong outcome is fixed by sending the right one.
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
@@ -30124,6 +30126,12 @@ export interface components {
             readonly draft_ref?: string | null;
             /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
             readonly voice_degraded?: boolean;
+            /**
+             * @description True when the draft's language could not be determined from the contact's own correspondence, so it is written in the default rather than in theirs.
+             *     The causes are deliberately not distinguished on the wire, and there are more than two: the reader may see none of that contact's mail, the contact may have written nothing readable, the evidence may be too short or mixed to call, or the language may be one the detector does not support. Every one of them means the same thing to a client — the draft is sendable and its language is a fallback rather than a choice.
+             *     A client should say so beside the note, for the same reason voice_degraded is said: a reader fluent only in the default cannot tell a fallback from a choice, and would forward an English note to a customer who writes in German believing the product had checked. Absent reads as false.
+             */
+            readonly language_undetermined?: boolean;
         };
         /**
          * @description One thing the draft was written from, named so the reader can check it rather than
@@ -35046,6 +35054,7 @@ export interface components {
             rows: {
                 [key: string]: unknown;
             }[];
+            /** @description Groups that matched. `rows` is capped at the report row limit, so a total above its length means this answer is the top of a longer one rather than all of it. The drill-through's `total_rows` counts source rows for the same reason. */
             total_rows?: number;
             /** @description Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded. */
             excluded_by_permission?: number | null;

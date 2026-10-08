@@ -15,6 +15,46 @@ import { throwProblem } from "./common";
 type Attachment = components["schemas"]["Attachment"];
 
 /**
+ * The extensions the server accepts, mirroring the activities table and held
+ * to it by `backend/gates/attachmenttypes_test.go`. A drop bypasses the
+ * picker's filter, so the server's refusal stays the authority.
+ */
+export const ACCEPTED_ATTACHMENT_EXTENSIONS = [
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".odt",
+  ".ods",
+  ".odp",
+  ".rtf",
+  ".txt",
+  ".csv",
+  ".md",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".heic",
+  ".heif",
+  ".tif",
+  ".tiff",
+  ".html",
+  ".htm",
+  ".zip",
+  ".eml",
+  ".msg",
+] as const;
+
+/** The same list as a file input's `accept` attribute. */
+export const ACCEPTED_ATTACHMENT_ATTR =
+  ACCEPTED_ATTACHMENT_EXTENSIONS.join(",");
+
+/**
  * The record bytes can be filed against. The union is the ENDPOINT's, so a
  * surface that files a document states its parent in the endpoint's own terms
  * rather than keeping a private list that can fall behind it.

@@ -70,7 +70,9 @@ word on what the product does now, so check it before a change of yours trusts a
 **Docs follow the writing rules.** Every Markdown page follows
 [docs/reference/docs-prose-style.md](docs/reference/docs-prose-style.md), and
 `backend/gates/docsprose_test.go` fails what a pattern can see. A count, default or path you write is
-one you checked in the code; history goes in git.
+one you checked in the code; history goes in git. A new page goes in the folder its one job
+names, in that page's table "One job per page". What a user of the app sees goes in `docs/handbook/`,
+never in `reference/` or `how-to/`, which are for those who build or run Margince.
 
 **A red `main` is claimed once.** Before you look into a failure that is not yours, run
 `gh pr list --state open --label "claim: main-red"` and read the bodies; each names the tests it
