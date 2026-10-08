@@ -35392,7 +35392,8 @@ components:
         last_contact:
           description: >-
             The newest exchange with the account in either direction, over the same walk: an
-            email, a call, a chat message, or a meeting nobody called off. A note is not contact.
+            email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A
+            note is not contact.
             Absent when there was none, or when the caller has no activity grant (then
             `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the
             timeline applies the same rule to the rows it draws.
