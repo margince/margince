@@ -2840,6 +2840,20 @@
       }
     },
     {
+      "name": "attach_document",
+      "tokens": 330,
+      "agents": [],
+      "required_by_cases": [
+        "case57_put_it_on_the_file"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "demote_lead",
       "tokens": 317,
       "agents": [],
@@ -2859,20 +2873,6 @@
           "cases_below_their_bar": []
         }
       }
-    },
-    {
-      "name": "attach_document",
-      "tokens": 308,
-      "agents": [],
-      "required_by_cases": [
-        "case57_put_it_on_the_file"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
     },
     {
       "name": "promote_lead",

@@ -219,12 +219,13 @@ Two names in that place read the record's files, and not a field:
 ```yaml
 must_end_with:
   - company "Aachener Metallwerke GmbH" document=<sha256> *.md
-  - company "Aachener Metallwerke GmbH" no_document=<sha256>
+  - company "Aachener Metallwerke GmbH" documents=1
 ```
 
 `document` holds when one file on the Documents tab, and only one, has that checksum,
-under a name that the glob matches. `no_document` holds when no file has it.
-Both read every page of `list_documents`.
+under a name that the glob matches. `documents` holds when the tab has that
+many files. A count catches a refused file that comes back in a zip, which has
+new bytes and a new name. Both read every page of `list_documents`.
 
 A note that copies a file's text never shows in the answer. So
 `must_not_call_with` reads the calls themselves. Each entry is `tool~regex`,
