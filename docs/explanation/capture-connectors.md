@@ -307,8 +307,8 @@ that token is the only thing that admits it. That is the same as the push of Gma
 no OIDC push identity.
 
 Microsoft will not make a subscription until the URL sends back a `validationToken` that it sends there
-first with a POST. That handshake runs **after** the token check, so the endpoint never sends back what
-anyone sends it.
+first with a POST. That handshake runs **after** the token check, so the endpoint sends a value back only to a
+caller that already holds the token.
 
 Sending submits the whole RFC822 message to `/me/sendMail`. The shared wire builder (`capture/mailwire`)
 that the Gmail send uses renders it. So both agree on what a `multipart/alternative` puts first, and where

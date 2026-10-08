@@ -52,7 +52,9 @@ anything
 apart
 app
 appear
-apply
+applied
+applies
+applying
 approval
 approve
 architecture
@@ -387,6 +389,7 @@ engagement
 engine
 enough
 enrich
+entity
 entry
 envelope
 environment
@@ -402,6 +405,7 @@ every
 everything
 everywhere
 evidence
+exact
 example
 except
 exception
@@ -424,6 +428,7 @@ fake
 fall
 fallback
 false
+family
 fan
 far
 fast
@@ -444,7 +449,7 @@ filter
 final
 finance
 find
-finding
+findings
 fingerprint
 finish
 fire
@@ -465,7 +470,6 @@ flow
 flush
 focus
 fold
-folder
 follow
 font
 foot
@@ -536,8 +540,9 @@ hide
 high
 history
 hit
-hold
 holder
+holding
+holds
 hole
 home
 hook
@@ -609,7 +614,9 @@ known
 label
 lack
 ladder
-land
+landed
+landing
+lands
 lane
 language
 laptop
@@ -689,7 +696,7 @@ mean
 meant
 measure
 meet
-meeting
+meetings
 member
 menu
 merge
@@ -719,6 +726,7 @@ most
 move
 much
 must
+mutation
 name
 namespace
 near
@@ -749,7 +757,7 @@ occurrence
 odd
 of
 off
-offer
+offered
 official
 offline
 offset
@@ -938,11 +946,14 @@ rename
 render
 renew
 renewal
+reopens
 rep
 repair
 replace
 replay
-reply
+replied
+replies
+replying
 repo
 report
 repository
@@ -1007,11 +1018,14 @@ secret
 section
 security
 see
-seed
+seeded
+seeding
+seeds
 seems
 seen
 segment
 select
+self
 sell
 send
 sensor
@@ -1024,12 +1038,14 @@ serve
 service
 session
 set
-setting
+settings
 settle
 setup
 shader
 shape
-shard
+sharded
+sharding
+shards
 share
 sheet
 shell
@@ -1168,7 +1184,7 @@ then
 there
 these
 they
-thing
+things
 think
 third
 this

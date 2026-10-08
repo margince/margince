@@ -79,7 +79,7 @@ Without Redis, a process shows only its own view. Keys expire after about half a
 refreshed every 10 minutes while the provider stays in a bad state. It is not a probe.
 
 Settings → AI models marks the provider, and Settings → System health shows the **AI provider status**
-card. An operator opens again the work an outage already parked:
+card. An operator reopens the work an outage already parked:
 [recover-after-a-provider-outage.md](../how-to/recover-after-a-provider-outage.md). The budget's own
 deferral is above, under *The monthly budget* in [ai-runtime.md](ai-runtime.md). What each task does in
 an outage, row by row, is generated into [ai-provider-outages.md](../reference/ai-provider-outages.md).
@@ -87,7 +87,6 @@ an outage, row by row, is generated into [ai-provider-outages.md](../reference/a
 ## What is not covered
 
 - A stream that opens cleanly but fails inside the stream does not count as a provider failure.
-
 - A call already under way on an old key can trip the provider again after a fix.
 - A probe cut short by the caller's own deadline counts as a failed probe.
 - While a provider is blocked, only its probe counts. A call admitted before the block that finishes
