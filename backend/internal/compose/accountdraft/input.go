@@ -182,8 +182,10 @@ type ActIn struct {
 	Snippet string `json:"snippet,omitempty"`
 }
 
-// ActivityKind and ActivitySubject let draftcore.ThreadMail read an ActIn.
-func (a ActIn) ActivityKind() string    { return a.Kind }
+// ActivityKind lets draftcore.ThreadMail tell an email from a task or a call.
+func (a ActIn) ActivityKind() string { return a.Kind }
+
+// ActivitySubject is the subject draftcore.ThreadMail answers.
 func (a ActIn) ActivitySubject() string { return a.Subject }
 
 // draftInputActivities bounds how much of the conversation the draft reads.
