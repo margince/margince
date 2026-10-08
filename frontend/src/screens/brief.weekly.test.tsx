@@ -664,6 +664,9 @@ describe("BriefScreen — figures whose source had not started", () => {
     counts: { ...zeroWeekCounts },
     deals: [],
   };
+  // A record zone the test chooses, so a "recorded from" date printed in the
+  // viewer's zone instead would fail rather than happen to agree.
+  const recordZone = "Asia/Ho_Chi_Minh";
 
   const mount = async (fixture: unknown) => {
     stubApi({
@@ -671,7 +674,11 @@ describe("BriefScreen — figures whose source had not started", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    render(<BriefScreen />);
+    render(
+      <RecordZoneProvider zone={recordZone}>
+        <BriefScreen />
+      </RecordZoneProvider>,
+    );
     return screen.findByTestId("weekly-strip");
   };
   const card = (strip: HTMLElement, label: string) => {
@@ -688,7 +695,7 @@ describe("BriefScreen — figures whose source had not started", () => {
   const recordedFrom = (iso: string) =>
     en["brief.weekly.recordedFrom"].replace(
       "{date}",
-      formatDateAbbrev(iso, "en", "UTC"),
+      formatDateAbbrev(iso, "en", recordZone),
     );
 
   it("says a week before recorded history was not recorded, never 0", async () => {
@@ -740,7 +747,7 @@ describe("BriefScreen — figures whose source had not started", () => {
     expect(won.detail).toContain(
       en["brief.weekly.partialFrom"].replace(
         "{date}",
-        formatDateAbbrev("2026-09-10T08:00:00Z", "en", "UTC"),
+        formatDateAbbrev("2026-09-10T08:00:00Z", "en", recordZone),
       ),
     );
     expect(card(strip, en["brief.weekly.meetingsHeld"])).toEqual({
