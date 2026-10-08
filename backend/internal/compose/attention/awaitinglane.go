@@ -75,8 +75,8 @@ func (s *Service) WithAwaiting(a Awaiting) *Service {
 
 // readingAwaiting reads the reader's follow-ups onto a per-read copy of the
 // service, the way readingPlan carries the plan rows. The rows are the
-// reader's own sends: they ride the reader's own day and the wider team and
-// all views that include it, never a colleague's queue or the unassigned one.
+// reader's own. They ride the reader's own day and the team and all views
+// that include it, never a colleague's queue or the unassigned one.
 // The two reads fail apart, so one stumbling keeps the other's rows.
 func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service, []*crmcontracts.WorklistSourceUnavailable) {
 	scoped := *s
@@ -167,9 +167,9 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 	}
 }
 
-// classifyMeetingFollowUp is one meeting the reader owes a follow-up. The
-// composer writes a fresh message to the contact rather than a reply, since a
-// meeting is not a message to answer, so the row needs a contact to write to.
+// classifyMeetingFollowUp is one meeting the reader owes a follow-up. A
+// meeting is not a message to answer. The composer writes a fresh message to
+// the contact instead, so the row needs a contact.
 func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) ranked {
 	days := daysSince(met.SentAt, asOf)
 	row := crmcontracts.WorklistItem{

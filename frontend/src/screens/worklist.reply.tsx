@@ -159,8 +159,8 @@ function replyIntent(
  * A meeting is not a message, so there is nothing to thread a reply onto; the
  * composer is told what to write instead.
  */
-// Filed to the CONTACT, never the row's subject: a meeting on a deal names the
-// deal, a deal cannot be drafted to, and the message has to reach the contact
+// Filed to the CONTACT, never the row's subject. A meeting on a deal names the
+// deal, and a deal cannot be drafted to. The message has to reach the contact
 // for the reminder to clear.
 function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();

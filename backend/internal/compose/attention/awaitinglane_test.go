@@ -37,9 +37,8 @@ func TestAFollowUpRowSaysWhoWroteLastAndHowLongAgo(t *testing.T) {
 	}
 }
 
-// The composer drafts from the message, so a row whose message the reader may
-// not read, or that names no record to file the follow-up against, offers no
-// reply.
+// The composer drafts from the message. A row whose message the reader may not
+// read offers no reply. Neither does a row that names no record to file under.
 func TestAFollowUpOffersReplyOnlyWhenTheComposerCanDraftIt(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
@@ -55,8 +54,8 @@ func TestAFollowUpOffersReplyOnlyWhenTheComposerCanDraftIt(t *testing.T) {
 }
 
 // The rows are the reader's own sends. A manager reading a colleague's queue
-// or the unassigned one must not see their own follow-ups there; the team and
-// all views include the reader's own day and keep them.
+// or the unassigned one must not see them there. The team and all views
+// include the reader's own day and keep them.
 func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)

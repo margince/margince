@@ -19,8 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedFollowUps writes a customer, a message the admin sent them three days
-// ago and a meeting the admin held with them three days ago, none answered.
+// seedFollowUps writes a customer, a message the admin sent them and a
+// meeting the admin held with them. Both are three days old and unanswered.
 func seedFollowUps(t *testing.T, e *integration.Env) (sent, met ids.UUID) {
 	t.Helper()
 	sent, met = ids.NewV7(), ids.NewV7()
@@ -31,8 +31,10 @@ func seedFollowUps(t *testing.T, e *integration.Env) (sent, met ids.UUID) {
 			sql  string
 			args []any
 		}{
-			{`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Contact A', 'seed', 'system')`,
-				[]any{contact}},
+			{
+				`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Contact A', 'seed', 'system')`,
+				[]any{contact},
+			},
 			{`INSERT INTO company (id, display_name, lifecycle, source, captured_by)
 			  VALUES ($1, 'Company A', 'customer', 'seed', 'system')`, []any{company}},
 			{`INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
@@ -40,13 +42,19 @@ func seedFollowUps(t *testing.T, e *integration.Env) (sent, met ids.UUID) {
 			{`INSERT INTO activity (id, kind, direction, subject, body, occurred_at, thread_key, source, captured_by)
 			  VALUES ($1, 'email', 'outbound', 'The proposal', 'Here it is.', now() - interval '3 days',
 			          $2, 'seed', 'system')`, []any{sent, "thread-" + sent.String()}},
-			{`INSERT INTO activity_participant (activity_id, role, user_id) VALUES ($1, 'from', $2)`,
-				[]any{sent, e.AdminUser}},
-			{`INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, meeting_status, host_user_id, source, captured_by)
+			{
+				`INSERT INTO activity_participant (activity_id, role, user_id) VALUES ($1, 'from', $2)`,
+				[]any{sent, e.AdminUser},
+			},
+			{
+				`INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, meeting_status, host_user_id, source, captured_by)
 			  VALUES ($1, 'meeting', 'Discovery workshop', now() - interval '3 days', 3600, 'held', $2, 'seed', 'system')`,
-				[]any{met, e.AdminUser}},
-			{`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2), ($3, 'contact', $2)`,
-				[]any{sent, contact, met}},
+				[]any{met, e.AdminUser},
+			},
+			{
+				`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2), ($3, 'contact', $2)`,
+				[]any{sent, contact, met},
+			},
 		} {
 			if _, err := tx.Exec(ctx, stmt.sql, stmt.args...); err != nil {
 				return err

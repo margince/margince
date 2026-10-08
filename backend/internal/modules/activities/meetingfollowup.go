@@ -4,9 +4,8 @@
 package activities
 
 // The other follow-up reminder: a meeting the reader held with a customer,
-// after which the reader has sent them nothing once the follow-up window has
-// passed. It shares the window, the lookback and the customer test with the
-// unanswered-message reminder in awaitingreply.go.
+// with nothing sent to them once the follow-up window has passed. It shares
+// the window, the lookback and the customer test with awaitingreply.go.
 
 import (
 	"context"
@@ -20,10 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// MeetingsAwaitingFollowUp answers which meetings the reader took part in
-// that ended at least the follow-up window before asOf, inside the lookback,
-// with a customer the reader has not written to or called since. SentAt on
-// each row is when the meeting started.
+// MeetingsAwaitingFollowUp answers which of the reader's meetings with a
+// customer had nothing from the reader since. Each ended at least the
+// follow-up window before asOf, inside the lookback. SentAt is when it started.
 func (s *Store) MeetingsAwaitingFollowUp(ctx context.Context, asOf time.Time) ([]AwaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err

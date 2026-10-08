@@ -3,9 +3,9 @@
 
 package activities
 
-// "Who owes ME an answer": the mirror of the waiting queue. A message the
-// reader sent to a customer that nobody has answered, once the workspace's
-// follow-up window has passed, so the worklist can remind them to follow up.
+// "Who owes ME an answer": the mirror of the waiting queue. It finds a message
+// the reader sent to a customer that nobody answered within the follow-up
+// window. The worklist then reminds them to follow up.
 
 import (
 	"context"
@@ -44,10 +44,9 @@ type AwaitingReply struct {
 	DealID     ids.UUID
 }
 
-// AwaitingReplies answers which messages the reader sent at least the
-// workspace's follow-up window before asOf, inside the lookback, that are
-// still the last word with their customer. It returns the window it applied,
-// so a row can say how long it has waited against the same number.
+// AwaitingReplies answers which messages the reader sent that are still the
+// last word with their customer. Each was sent at least the follow-up window
+// before asOf, inside the lookback. It also returns the window it applied.
 func (s *Store) AwaitingReplies(ctx context.Context, asOf time.Time) ([]AwaitingReply, int, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, 0, err
@@ -75,8 +74,8 @@ func (s *Store) AwaitingReplies(ctx context.Context, asOf time.Time) ([]Awaiting
 }
 
 // customerArms renders the "is this a customer" test, one arm per kind of
-// record. An arm over a record kind the reader may not read is FALSE: whether
-// a deal is open is the deal's business, and a reminder must not disclose it.
+// record. An arm over a kind the reader may not read is FALSE. Whether a deal
+// is open is the deal's business, and a reminder must not disclose it.
 func customerArms(ctx context.Context, openDeal, workingLead string) (string, error) {
 	arms := []struct {
 		objects []string
