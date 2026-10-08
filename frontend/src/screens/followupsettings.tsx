@@ -2,11 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
+import { ErrorLine } from "../design-system/errorline";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 import { worklistKey } from "./worklist.queries";
 
 type FollowUpSettings = components["schemas"]["FollowUpSettings"];
@@ -84,11 +85,7 @@ export function FollowUpSettingsCard() {
             </SettingList>
           )}
         </QueryGate>
-        {update.isError ? (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(update.error, t)}
-          </p>
-        ) : null}
+        <ErrorLine error={update.isError ? update.error : undefined} />
       </PanelBody>
     </Panel>
   );
