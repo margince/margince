@@ -20572,6 +20572,27 @@ func (e ListLeadsParamsSlaState) Valid() bool {
 	}
 }
 
+// Defines values for ListLeadsParamsTagMode.
+const (
+	ListLeadsParamsTagModeAll  ListLeadsParamsTagMode = "all"
+	ListLeadsParamsTagModeAny  ListLeadsParamsTagMode = "any"
+	ListLeadsParamsTagModeNone ListLeadsParamsTagMode = "none"
+)
+
+// Valid indicates whether the value is a known member of the ListLeadsParamsTagMode enum.
+func (e ListLeadsParamsTagMode) Valid() bool {
+	switch e {
+	case ListLeadsParamsTagModeAll:
+		return true
+	case ListLeadsParamsTagModeAny:
+		return true
+	case ListLeadsParamsTagModeNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListListsParamsEntityType.
 const (
 	ListListsParamsEntityTypeCompany ListListsParamsEntityType = "company"
@@ -22344,7 +22365,10 @@ type AiFeatureRoute struct {
 	DecisionSkipReason *string `json:"decision_skip_reason,omitempty"`
 
 	// Defaults What a task's calls are sent with.
-	Defaults            *AiTaskSettings    `json:"defaults,omitempty"`
+	Defaults *AiTaskSettings `json:"defaults,omitempty"`
+
+	// DegradesOnOutage An interactive task that answers from the record's own facts once no model can, and says so in generated_by, rather than failing. False for a task that fails fast and for a background task, which waits.
+	DegradesOnOutage    *bool              `json:"degrades_on_outage,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
@@ -31627,10 +31651,13 @@ type CreateLeadDisqualifyReasonRequest struct {
 
 // CreateLeadRequest defines model for CreateLeadRequest.
 type CreateLeadRequest struct {
-	CandidateCompanyKey *string              `json:"candidate_company_key,omitempty"`
-	CompanyName         *string              `json:"company_name,omitempty"`
-	Email               *openapi_types.Email `json:"email,omitempty"`
-	FullName            *string              `json:"full_name,omitempty"`
+	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
+	CompanyName         *string `json:"company_name,omitempty"`
+
+	// ContactId An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise). The lead records it as `from_contact_id`, and the contact itself is not changed. A contact already worked through a live lead answers 409 `duplicate_contact_lead` with that lead's id. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
+	Email     *openapi_types.Email `json:"email,omitempty"`
+	FullName  *string              `json:"full_name,omitempty"`
 
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
@@ -35973,9 +36000,12 @@ type Lead struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
-	FirstResponseAt *time.Time         `json:"first_response_at,omitempty"`
-	FullName        *string            `json:"full_name,omitempty"`
-	Id              openapi_types.UUID `json:"id"`
+	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
+
+	// FromContactId The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. While this lead is live, a second create from the same contact answers 409 `duplicate_contact_lead` naming this lead.
+	FromContactId *openapi_types.UUID `json:"from_contact_id,omitempty"`
+	FullName      *string             `json:"full_name,omitempty"`
+	Id            openapi_types.UUID  `json:"id"`
 
 	// LastActivityAt Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
@@ -36050,6 +36080,7 @@ type Lead struct {
 
 	// StatusSetBy Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.
 	StatusSetBy *LeadStatusSetBy `json:"status_set_by,omitempty"`
+	Tags        *[]RowTag        `json:"tags,omitempty"`
 	Title       *string          `json:"title,omitempty"`
 	UpdatedAt   time.Time        `json:"updated_at"`
 
@@ -42057,7 +42088,7 @@ type SearchResponseTypesWithMore string
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
-	// CarriedBy For a `tag` hit only: how many contacts, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
+	// CarriedBy For a `tag` hit only: how many contacts, companies, deals and leads carry this word, as THIS caller may see them — the same types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
 	CarriedBy *int `json:"carried_by,omitempty"`
 
 	// EmailSummary The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not.
@@ -43559,8 +43590,8 @@ type TagDetail struct {
 	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
 
 	// Usage How many records of each advertised type carry this tag, counted within what the
-	// reader may see. Lead and project taggings are storage the product does not advertise
-	// and are not counted.
+	// reader may see. Project taggings are storage the product does not advertise and are
+	// not counted.
 	Usage   TagUsage `json:"usage"`
 	Version *int64   `json:"version,omitempty"`
 }
@@ -43575,12 +43606,13 @@ type TagListResponse struct {
 }
 
 // TagUsage How many records of each advertised type carry this tag, counted within what the
-// reader may see. Lead and project taggings are storage the product does not advertise
-// and are not counted.
+// reader may see. Project taggings are storage the product does not advertise and are
+// not counted.
 type TagUsage struct {
 	Companies int `json:"companies"`
 	Contacts  int `json:"contacts"`
 	Deals     int `json:"deals"`
+	Leads     int `json:"leads"`
 }
 
 // Taggable defines model for Taggable.
@@ -51172,6 +51204,23 @@ type ListLeadsParams struct {
 	// MinScore Triage by score.
 	MinScore *int    `form:"min_score,omitempty" json:"min_score,omitempty"`
 	Q        *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
+	//
+	// By ID, not by name: a name is what a human types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
+	//
+	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+	TagMode *ListLeadsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// FromContactId Only the leads worked from this contact (`from_contact_id` on the lead). The contact
+	// page asks it to find the open lead a contact is already worked through.
+	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
 }
 
 // ListLeadsParamsCapturedByKind defines parameters for ListLeads.
@@ -51182,6 +51231,9 @@ type ListLeadsParamsStatus string
 
 // ListLeadsParamsSlaState defines parameters for ListLeads.
 type ListLeadsParamsSlaState string
+
+// ListLeadsParamsTagMode defines parameters for ListLeads.
+type ListLeadsParamsTagMode string
 
 // CreateLeadParams defines parameters for CreateLead.
 type CreateLeadParams struct {
@@ -57802,6 +57854,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "company_name")
 	}
 
+	if raw, found := object["contact_id"]; found {
+		err = json.Unmarshal(raw, &a.ContactId)
+		if err != nil {
+			return fmt.Errorf("error reading 'contact_id': %w", err)
+		}
+		delete(object, "contact_id")
+	}
+
 	if raw, found := object["email"]; found {
 		err = json.Unmarshal(raw, &a.Email)
 		if err != nil {
@@ -57928,6 +57988,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["company_name"], err = json.Marshal(a.CompanyName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'company_name': %w", err)
+		}
+	}
+
+	if a.ContactId != nil {
+		object["contact_id"], err = json.Marshal(a.ContactId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contact_id': %w", err)
 		}
 	}
 
@@ -60334,6 +60401,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "first_response_at")
 	}
 
+	if raw, found := object["from_contact_id"]; found {
+		err = json.Unmarshal(raw, &a.FromContactId)
+		if err != nil {
+			return fmt.Errorf("error reading 'from_contact_id': %w", err)
+		}
+		delete(object, "from_contact_id")
+	}
+
 	if raw, found := object["full_name"]; found {
 		err = json.Unmarshal(raw, &a.FullName)
 		if err != nil {
@@ -60566,6 +60641,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "status_set_by")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -60687,6 +60770,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["first_response_at"], err = json.Marshal(a.FirstResponseAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'first_response_at': %w", err)
+		}
+	}
+
+	if a.FromContactId != nil {
+		object["from_contact_id"], err = json.Marshal(a.FromContactId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'from_contact_id': %w", err)
 		}
 	}
 
@@ -60882,6 +60972,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["status_set_by"], err = json.Marshal(a.StatusSetBy)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'status_set_by': %w", err)
+		}
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
 		}
 	}
 
@@ -92334,6 +92431,45 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_mode", r.URL.Query(), &params.TagMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from_contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from_contact_id", r.URL.Query(), &params.FromContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from_contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from_contact_id", Err: err})
 		}
 		return
 	}

@@ -5,6 +5,7 @@
 // list stories and tests so both draw the same lists.
 
 import { meFixture } from "../app/mefixture";
+import type { FilterVocabulary } from "./filterdata";
 import type {
   List,
   ListExplanation,
@@ -51,6 +52,15 @@ export const liveList: List = {
   last_check: { checked_at: "2026-09-29T08:15:00Z", outcome: "complete" },
   since_last_visit: { since: "2026-09-28T17:00:00Z", entered: 3, left: 1 },
   joined_since_visit: [MEMBER_ID],
+};
+
+/** The company vocabulary naming both fields `liveList` filters on. */
+export const liveVocabulary: FilterVocabulary = {
+  resource: "company",
+  fields: [
+    { name: "industry", type: "text", operators: ["eq"], custom: false },
+    { name: "cf_last_touch", type: "date", operators: ["lt"], custom: true },
+  ],
 };
 
 export const shortlist: List = {

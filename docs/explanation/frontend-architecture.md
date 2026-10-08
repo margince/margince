@@ -126,8 +126,13 @@ cells. `MOBILE_PRIMARY` (`home`, `contacts`, `deals`) rides the bar; everything
 else lives behind **More**, which expands the same element into a sheet. One
 nav element means one navigation landmark and no second item list to keep in
 sync. The hidden routes' own rows are `display:none` at this width, so
-**More** carries `aria-current="page"` for them. It drops the attribute once the
-sheet is open, so two elements never both claim the current page.
+**More** carries the claim the hidden row would: `aria-current="page"` on the
+destination itself. On a page below a destination it hides (a company, lead or
+project record, a focused Filters and views page, one list) the top bar's trail
+claims the page, so **More** says `"true"`. A contact or deal record leaves
+**More** without the attribute, because that destination's own bar cell is
+visible and carries the claim. **More** drops the attribute once the sheet is
+open, so two elements never both claim the current page.
 
 The **middle** cell is the agent, which is not a destination: it reports
 instead of navigating, and it belongs to the whole session, not to one screen.
@@ -317,6 +322,7 @@ discipline even if the test tree regresses.
 | Conformance suite | `design-system/conformance.test.ts` | the AST-accurate arm of the same rules, plus hard-coded user-facing copy outside the i18n catalogs and an invalid web-app manifest |
 | Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/src/app/serviceworker-registrar.test.ts` | the SPA build not emitting `/sw.js`. The emitted worker answering from Cache Storage anything but a failed navigation and the offline page's own script. The worker intercepting a path the api owns, keeping a cache that is not its own, or keeping its cache name when its contents changed. Any shipped module but `src/app/pwa.ts`, in any script dialect, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
 | Stylesheet namespaces | `design-system/stylesheetnamespace.test.ts` | a screen's class namespace declared in a stylesheet other than its home sheet, across every `.css` under `frontend/src` and each extension's frontend layer |
+| Timeline rows | `design-system/timelinerows.test.ts` | a rule that reaches a `.timeline` list's `li` by anything but `>` from the `.timeline` compound, which also reaches `li` items nested inside a row; a sibling (`+`, `~`) of such a row passes. Across every `.css` under `frontend/src` and each extension's frontend layer. Fails closed when its parsed selectors and a plain-text count disagree |
 | Token canon | `design-system/tokens.test.ts` | a Ledger-Green value drifting from the design canon |
 | Typecheck + build | `pnpm build` (`tsc -b && vite build`) | any type error |
 | Unit tests | `pnpm test` (Vitest) | co-located `*.test.tsx` |

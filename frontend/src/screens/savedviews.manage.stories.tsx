@@ -3,50 +3,58 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import type { components } from "../api/schema";
 import { ManageViewsButton } from "./savedviews.manage";
-import { StoryProviders } from "./story-utils";
+import type { SavedView } from "./savedviews.queries";
+import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
-const meta: Meta = { title: "Patterns/Manage saved views" };
+// The dialog a list's own view rail manages its views in: every view of the
+// list, each row opening in place into a rename or a delete, so a second
+// dialog never stacks on the first.
+const meta: Meta = { title: "Patterns/Manage views" };
 export default meta;
 
 type Story = StoryObj;
 
-type SavedView = components["schemas"]["SavedView"];
-
 const view = (id: string, name: string): SavedView => ({
   id,
-  owner_id: "u-1",
+  owner_id: "00000000-0000-4000-8000-000000000001",
   shared_scope: "private",
   resource: "companies",
   name,
+  query: { list: { q: "", sort: "", includeArchived: false, filters: {} } },
   version: 1,
-  query: {},
 });
 
-/** The reader's own views, each with its rename and delete verbs. */
-export const Managing: Story = {
-  render: () => (
-    <StoryProviders>
-      <ManageViewsButton
-        resource="companies"
-        views={[
-          view("v-1", "German customers"),
-          view("v-2", "Renewals due this quarter"),
-          view(
-            "v-3",
-            "Manufacturing accounts with an open deal over fifty thousand",
-          ),
-        ]}
-      />
-    </StoryProviders>
-  ),
+export const ManageViewsOpen: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({}) });
+    return (
+      <StoryProviders>
+        <ManageViewsButton
+          views={[
+            view("v1", "German customers"),
+            view("v2", "Churned in 2026"),
+            view(
+              "v3",
+              "Manufacturing accounts with an open deal over fifty thousand",
+            ),
+          ]}
+        />
+      </StoryProviders>
+    );
+  },
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
     await userEvent.click(
-      await within(canvasElement).findByRole("button", {
-        name: "Manage views",
-      }),
+      await canvas.findByRole("button", { name: "Manage views" }),
     );
     await within(document.body).findByRole("dialog");
   },
+};
+
+// Its rows, ghost buttons and the dialog's ground are all derived tokens, so
+// the list can read in light and be wrong in dark.
+export const ManageViewsOpenDark: Story = {
+  ...ManageViewsOpen,
+  globals: { theme: "dark" },
 };

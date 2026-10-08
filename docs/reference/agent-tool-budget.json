@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 82,
     "system_frame_tokens": 586,
-    "tokens": 29103,
+    "tokens": 29130,
     "median_tool_tokens": 292,
     "mean_tool_tokens": 354
   },
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 82,
-      "tokens": 3765,
-      "listing_tokens": 1890,
-      "step_schema_tokens": 1288,
+      "tokens": 3810,
+      "listing_tokens": 1913,
+      "step_schema_tokens": 1311,
       "percent_of_ceiling": 11,
-      "headroom_tokens": 19445,
+      "headroom_tokens": 19400,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 82,
-      "tokens": 5138,
-      "listing_tokens": 2737,
-      "step_schema_tokens": 1814,
+      "tokens": 5183,
+      "listing_tokens": 2760,
+      "step_schema_tokens": 1837,
       "percent_of_ceiling": 15,
-      "headroom_tokens": 18072,
+      "headroom_tokens": 18027,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -95,12 +95,12 @@
       "tokens": 823
     },
     {
-      "name": "bulk_update_records",
-      "tokens": 809
+      "name": "list_records",
+      "tokens": 817
     },
     {
-      "name": "list_records",
-      "tokens": 794
+      "name": "bulk_update_records",
+      "tokens": 809
     },
     {
       "name": "compose_analytics_report",
@@ -392,7 +392,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 141
+      "tokens": 144
     },
     {
       "name": "whoami",
@@ -404,7 +404,7 @@
     },
     {
       "name": "get_tag",
-      "tokens": 87
+      "tokens": 88
     },
     {
       "name": "read_import_report",

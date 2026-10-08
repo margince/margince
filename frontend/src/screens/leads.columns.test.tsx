@@ -13,6 +13,7 @@ const lead: Lead = {
   id: "l-1",
   full_name: "Anna Example",
   company_name: "Northwind Traders",
+  tags: [{ tag_id: "t-1", name: "Product A", color: "teal" }],
   status: "new",
   score: 0,
   source: "manual",
@@ -53,15 +54,20 @@ function renderCell(columnKey: string): ListColumn<Lead> {
 
 afterEach(cleanup);
 
-describe("the lead table's company", () => {
-  it("is a column of its own, sorted by the company the server holds", () => {
+describe("the lead table's columns", () => {
+  it("give the company a column of its own, sorted by the company the server holds", () => {
     const column = renderCell("company");
     expect(column.sort).toBe("company_name");
     expect(screen.getByTestId("cell").textContent).toBe("Northwind Traders");
   });
 
-  it("no longer trails the name as a caption", () => {
+  it("no longer trail the company after the name as a caption", () => {
     renderCell("name");
     expect(screen.getByTestId("cell").textContent).toBe("Anna Example");
+  });
+
+  it("show the tags a lead is filed under", () => {
+    renderCell("tags");
+    expect(screen.getByTestId("cell").textContent).toContain("Product A");
   });
 });

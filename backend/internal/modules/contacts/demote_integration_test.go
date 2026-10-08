@@ -124,7 +124,7 @@ func TestDemoteNeverArchivesAMergeSurvivor(t *testing.T) {
 		t.Fatalf("seed the other contact: %v", err)
 	}
 	// The created contact survives the merge; the other's history now lives on it.
-	if _, err := e.store.MergeContact(e.ctx, ids.From[ids.ContactKind](ids.UUID(other.Id)), ids.From[ids.ContactKind](ids.UUID(created.Id))); err != nil {
+	if _, err := e.store.MergeContact(e.ctx, ids.From[ids.ContactKind](ids.UUID(other.Id)), ids.From[ids.ContactKind](ids.UUID(created.Id)), nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 

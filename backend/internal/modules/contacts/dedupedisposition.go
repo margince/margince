@@ -171,10 +171,10 @@ func (s *Store) executeDedupeMergeTx(
 ) error {
 	switch entityType {
 	case entityContact:
-		_, err := s.mergeContactTx(ctx, tx, ids.From[ids.ContactKind](loser), ids.From[ids.ContactKind](winner), active)
+		_, err := s.mergeContactTx(ctx, tx, ids.From[ids.ContactKind](loser), ids.From[ids.ContactKind](winner), nil, active)
 		return err
 	case entityCompany:
-		_, err := mergeCompanyTx(ctx, tx, ids.From[ids.CompanyKind](loser), ids.From[ids.CompanyKind](winner), active)
+		_, err := mergeCompanyTx(ctx, tx, ids.From[ids.CompanyKind](loser), ids.From[ids.CompanyKind](winner), nil, active)
 		return err
 	case entityLead:
 		_, err := s.mergeLeadTx(ctx, tx, ids.From[ids.LeadKind](loser), ids.From[ids.LeadKind](winner), active, capturedBy)

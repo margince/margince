@@ -3,7 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
-import { Building2, Contact, Handshake } from "lucide-react";
+import { Building2, Contact, Handshake, UserPlus } from "lucide-react";
 
 import { api } from "../api/client";
 import { navigate } from "../app/router";
@@ -59,7 +59,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   }
 
   const usage = tag.data.usage;
-  const total = usage.contacts + usage.companies + usage.deals;
+  const total = usage.contacts + usage.companies + usage.deals + usage.leads;
 
   return (
     <div className="wrap tagresult">
@@ -129,6 +129,13 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
             count={usage.deals}
             tagID={tagID}
           />
+          <ResultGroup
+            kind="lead"
+            title={t("tagResult.leads")}
+            icon={UserPlus}
+            count={usage.leads}
+            tagID={tagID}
+          />
         </div>
       )}
     </div>
@@ -140,6 +147,7 @@ const GROUPS = {
   contact: { path: "/contacts", screen: "contacts" },
   company: { path: "/companies", screen: "companies" },
   deal: { path: "/deals", screen: "deals" },
+  lead: { path: "/leads", screen: "leads" },
 } as const;
 
 // "View all" carries a FILTER, and a filter is not part of a Route — the type
@@ -265,7 +273,7 @@ function ResultGroup({
 /**
  * What to call one record.
  *
- * The three types name themselves differently on the wire — a contact carries
+ * The types name themselves differently on the wire — a contact or lead carries
  * `full_name`, a company `display_name`, a deal `name` — and a row whose name
  * is empty is named as unnamed rather than rendered as a blank line nobody can
  * press with confidence.

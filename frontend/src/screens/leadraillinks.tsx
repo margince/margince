@@ -3,6 +3,7 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import type { components } from "../api/schema";
+import { useCanWriteRecord } from "../app/capability";
 import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { ListPopover } from "../design-system/listpopover";
@@ -19,11 +20,13 @@ import "./companyrailprojects.css";
 import { problemMessageOf } from "./common";
 import { SectionSummary } from "./companyrailshared";
 import { useEntityName } from "./entityref";
+import { LeadFillFromContact } from "./leadfillfromcontact";
 import type { LeadWriter } from "./leads";
 import { useProjectRecord } from "./projectrecord";
 import { PhaseBadge } from "./projects";
 import type { Project } from "./projects.form";
 import { searchProjectReferences } from "./recordreferences";
+import { TagsPanel } from "./tagspanel";
 
 // The lead's own two doors out: the deal it opened once qualified, and the
 // project its Details name. Split out of leads.tsx so that file's own length
@@ -70,6 +73,7 @@ export function LeadRail({
     // way the same two read on an account.
     <div className="co-rail">
       {details}
+      <LeadFillFromContact writer={writer} reasonId={reasonId} />
       <Panel>
         <LeadDealSection
           lead={lead}
@@ -78,7 +82,25 @@ export function LeadRail({
         />
         <LeadProjectSection lead={lead} writer={writer} reasonId={reasonId} />
       </Panel>
+      <LeadTagsSection lead={lead} writer={writer} />
     </div>
+  );
+}
+
+// Applying a tag writes to the lead, so the panel takes the same two answers
+// every other write here does: the seat may write this row, and the page has
+// not closed it to changes.
+function LeadTagsSection({
+  lead,
+  writer,
+}: Readonly<{ lead: Lead; writer: LeadWriter }>) {
+  const canUpdate = useCanWriteRecord("lead", lead);
+  return (
+    <TagsPanel
+      entityType="lead"
+      entityID={lead.id}
+      canEdit={canUpdate && !writer.readOnly}
+    />
   );
 }
 

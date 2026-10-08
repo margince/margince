@@ -117,7 +117,7 @@ func TestFailedCarrierSavepointRollsBackOnlyItsRetriedJob(t *testing.T) {
 	refused := errors.New("carrier write refused after retry")
 	err := storekit.RecoverPages(ctx, func(ctx context.Context, visit func(pgx.Tx) error) error { return pgx.BeginFunc(ctx, pool, visit) },
 		func(pgx.Tx, ids.UUID) ([]ids.UUID, error) { return carriers, nil }, func(id ids.UUID) ids.UUID { return id },
-		func(tx pgx.Tx, id ids.UUID) error {
+		func(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 			woke, err := runner.ResumeScheduledTx(ctx, tx, resumeProbe{}.Kind(), "carrier_id", id, workspace)
 			if err != nil {
 				return err

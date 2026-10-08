@@ -356,10 +356,10 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
 	switch in.Type {
 	case datasource.EntityContact:
-		v, err := p.store.MergeContact(ctx, ids.From[ids.ContactKind](in.SourceID), ids.From[ids.ContactKind](in.TargetID))
+		v, err := p.store.MergeContact(ctx, ids.From[ids.ContactKind](in.SourceID), ids.From[ids.ContactKind](in.TargetID), nil)
 		return ref(datasource.EntityContact, v.Id), err
 	case datasource.EntityCompany:
-		v, err := p.store.MergeCompany(ctx, ids.From[ids.CompanyKind](in.SourceID), ids.From[ids.CompanyKind](in.TargetID))
+		v, err := p.store.MergeCompany(ctx, ids.From[ids.CompanyKind](in.SourceID), ids.From[ids.CompanyKind](in.TargetID), nil)
 		return ref(datasource.EntityCompany, v.Id), err
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}

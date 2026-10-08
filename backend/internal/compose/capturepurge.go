@@ -141,6 +141,11 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		Preview:    preview,
 		Kept:       keptBreakdown(subject),
 	}
+	// After the selection, because the contact grant depends on whether it found
+	// contacts to anonymise.
+	if err := p.retention.CheckPurgeAuthority(ctx, len(contacts) > 0); err != nil {
+		return PurgeOutcome{}, err
+	}
 	if preview {
 		return outcome, nil
 	}

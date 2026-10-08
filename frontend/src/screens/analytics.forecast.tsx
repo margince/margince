@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
@@ -42,9 +42,11 @@ type Readings = components["schemas"]["ForecastReadings"];
 export function ForecastView({
   selection,
   canSubmit,
+  scopeControl,
 }: Readonly<{
   selection: AnalyticsSelection;
   canSubmit: boolean;
+  scopeControl?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -68,6 +70,7 @@ export function ForecastView({
           every number on this page changes when the window moves — a control
           nested among them would read as filtering one. */}
       <div className="analytics-toolbar">
+        {scopeControl}
         <SegmentedControl
           label={t("forecast.period")}
           options={FORECAST_PERIODS}
@@ -80,14 +83,26 @@ export function ForecastView({
           }}
         />
         {canCall && !editing ? (
-          <Button onClick={() => setEditing(true)}>
-            {t("forecast.updateCall")}
-          </Button>
+          <div className="analytics-toolbar-end">
+            <Button onClick={() => setEditing(true)}>
+              {t("forecast.updateCall")}
+            </Button>
+          </div>
         ) : null}
       </div>
       <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
         {(data) => (
           <>
+            {/* Directly under the verb that opened it, above the figures it
+                answers, so the form appears where the reader's eye already is. */}
+            {canCall && editing ? (
+              <ForecastCallEditor
+                readings={data}
+                selection={selection}
+                period={period}
+                onClose={() => setEditing(false)}
+              />
+            ) : null}
             {data.period_start && data.period_end && (
               <p className="t-caption">
                 {formatDateAbbrev(data.period_start, locale, data.timezone)} –{" "}
@@ -98,14 +113,6 @@ export function ForecastView({
             {period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />
             )}
-            {canCall && editing ? (
-              <ForecastCallEditor
-                readings={data}
-                selection={selection}
-                period={period}
-                onClose={() => setEditing(false)}
-              />
-            ) : null}
             {/* What to check comes BEFORE the receipt: a manager with ten
               minutes reads what needs doing first, and the receipt is what
               they consult when a number looks wrong. Side by side where the

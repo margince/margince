@@ -24,11 +24,12 @@ import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { CLAIM_SETTLED_KEYS } from "./activitykeys";
-import { provenanceOf, throwProblem } from "./common";
+import { problemCodeOf, provenanceOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "./activityread";
+import { refetchAfterWrite } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -68,14 +69,18 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
       // skew by the very write it is undoing.
       return data?.version;
     },
-    onSuccess: (_data, input) => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
+    // Returned, so the mutation stays pending until the reads have landed. The
+    // row the press came from stays drawn at the version it was fetched at
+    // until then, and a second press in that window re-sends it and is
+    // refused as skew by the write that has just succeeded.
+    onSuccess: (_data, input) =>
+      refetchAfterWrite(queryClient, invalidateKeys, input.id),
+    // A stale press is not a failed one: the task moved on under it, so the
+    // reads are refreshed to show where it is now.
+    onError: (error, input) => {
+      if (problemCodeOf(error) === "version_skew") {
+        return refetchAfterWrite(queryClient, invalidateKeys, input.id);
       }
-      // The task's own detail read too, always: a modal open on the task that
-      // was just completed would otherwise keep showing the old due date and
-      // offering the verbs that no longer apply.
-      queryClient.invalidateQueries({ queryKey: ["activity", input.id] });
     },
   });
 }

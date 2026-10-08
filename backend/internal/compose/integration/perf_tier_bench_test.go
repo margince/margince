@@ -1,0 +1,457 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration && bench
+
+package integration
+
+// The PERF-3 / PERF-7 benchmark harness (B-EP05.21): seeds a §6.7
+// volume tier, runs the canonical queries, records p50/p95/p99, gates
+// red on a budget breach, and emits the ADR-0021 graph-store trigger
+// evidence.
+//
+// It carries the `bench` tag, so no merge gate runs it; `make vet` and both
+// golangci passes still type-check it, which is the only thing standing
+// between a by-hand lane and rot. It ran in the standing integration lane
+// until it stopped being a signal there: the lane could only afford the SMB
+// tier, and gating a mid-market budget on an SMB corpus is a different claim
+// wearing the same id (see the tier check below). Its p95 is also the
+// second-largest of twenty samples, taken on a runner sharing one Postgres
+// with the rest of the lane. What it cost to keep was 37.9s of every merge
+// gate, a quarter of its package.
+//
+// The write-path regression it once caught by TIMING OUT rather than by
+// measuring is now held deterministically, by the seq_scan count in
+// lastactivity_integration_test.go. Run this one with `make bench-perf`
+// (mid-market, writes a record) or `make bench-perf-check` (SMB, writes
+// nothing); the scheduled workflow runs the latter weekly. Mid-market is by
+// hand only: its seed does not finish inside a CI budget, so no schedule
+// measures the tier the SLO actually binds at.
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
+	"github.com/margince/margince/backend/migrations"
+)
+
+// benchTierSpec sizes one §6.7 volume tier. Mid-market is the
+// 250k–1M-contact band; the SLO binds at its floor.
+type benchTierSpec struct {
+	tier            search.BenchTier
+	contacts        int
+	companies       int
+	bulkActivities  int // background timeline volume, linked cyclically to contacts
+	anchorTouches   int // activities on the measured graph anchor (the hot 360)
+	relationships   int
+	warmups, sample int
+}
+
+var benchTiers = map[search.BenchTier]benchTierSpec{
+	search.BenchTierSMB: {
+		tier: search.BenchTierSMB, contacts: 10_000, companies: 1_000,
+		bulkActivities: 20_000, anchorTouches: 200, relationships: 5_000,
+		warmups: 3, sample: 20,
+	},
+	search.BenchTierMidMarket: {
+		tier: search.BenchTierMidMarket, contacts: 250_000, companies: 10_000,
+		bulkActivities: 500_000, anchorTouches: 500, relationships: 50_000,
+		warmups: 3, sample: 20,
+	},
+}
+
+// benchDatabase connects as owner, resets the schema, and migrates. This suite
+// migrates inline rather than riding the migrate-once harness every other suite
+// uses (testdb.EnsureSchema + Reset); the module-wide guard in
+// backend/gates/integrationmigrateonce_test.go ratifies that as a waiver, and its
+// `inlineMigrators` entry is the one place the exception and what it costs are
+// stated.
+func benchDatabase(t *testing.T) *pgx.Conn {
+	t.Helper()
+	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
+	if ownerDSN == "" {
+		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	ctx := context.Background()
+	owner, err := pgx.Connect(ctx, ownerDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing owner connection: %v", err)
+		}
+	})
+	if _, err := owner.Exec(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT USAGE ON SCHEMA public TO margince_app`); err != nil {
+		t.Fatal(err)
+	}
+	core, err := migrations.Core()
+	if err != nil {
+		t.Fatal(err)
+	}
+	custom, err := migrations.Custom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dbmigrate.Up(ctx, owner, core, custom); err != nil {
+		t.Fatal(err)
+	}
+	return owner
+}
+
+func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
+	spec, ok := benchTiers[search.BenchTier(envOr("MARGINCE_BENCH_TIER", string(search.BenchTierSMB)))]
+	if !ok {
+		t.Fatalf("MARGINCE_BENCH_TIER must be one of smb, mid_market")
+	}
+
+	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
+	if appDSN == "" {
+		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	ctx := context.Background()
+	owner := benchDatabase(t)
+
+	ws := ids.NewV7()
+	anchor := seedBenchTier(t, owner, ws, spec)
+
+	pool, err := testdb.OwnPool(ctx, appDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	store := search.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)))
+	retriever := search.NewRetriever(store, nil)
+
+	actx := benchAdminCtx(ws)
+	searchCtx := benchSearchCtx(ws)
+
+	report := search.BenchReport{Tier: spec.tier}
+	if err := owner.QueryRow(ctx, `SELECT count(*) FROM relationship`).Scan(&report.RelationshipEdges); err != nil {
+		t.Fatal(err)
+	}
+	if err := owner.QueryRow(ctx, `SELECT count(*) FROM activity_link`).Scan(&report.ActivityLinkEdges); err != nil {
+		t.Fatal(err)
+	}
+
+	ftsStats := benchFTSQuery(t, store, searchCtx, spec)
+	graphStats := benchGraphQuery(t, retriever, actx, anchor, spec)
+
+	report.Queries = []search.QueryStats{ftsStats, graphStats}
+	for _, q := range report.Queries {
+		t.Logf("perfbench [%s]: %s p50=%s p95=%s p99=%s (budget %s, %d samples)",
+			report.Tier, q.Query, q.P50, q.P95, q.P99, q.Budget, q.Samples)
+	}
+
+	// The ADR-0021 trigger evidence is computed and reported on every
+	// run; a passing run is the "substrate confirmed" record.
+	evidence := report.TriggerEvidence()
+	t.Log(evidence.String())
+	if evidence.GraphAssemblyP95 <= 0 {
+		t.Fatal("trigger evidence must carry the measured graph-assembly p95")
+	}
+	if evidence.Tier != spec.tier {
+		t.Fatalf("trigger evidence names tier %s, ran %s", evidence.Tier, spec.tier)
+	}
+
+	// The published page's PERF-3/PERF-7 rows come from here, but only when a
+	// human asked for them: `make bench-perf` sets MARGINCE_BENCH_RECORD and the
+	// standing integration lane does not. Written before the gate, so a breach
+	// is recorded rather than hidden by its own failure.
+	if RecordingEnabled() {
+		writeTierBenchRecord(t, owner, report)
+	}
+	if err := report.Gate(); err != nil {
+		t.Fatalf("PERF budget gate is red: %v", err)
+	}
+}
+
+// writeTierBenchRecord leaves the tier harness's numbers for the published page.
+// The tier goes into the measurement NAME rather than being dropped: PERF-7's
+// budget binds at mid-market, and a p95 from the SMB canary is a different claim
+// wearing the same id.
+func writeTierBenchRecord(t *testing.T, owner *pgx.Conn, report search.BenchReport) {
+	t.Helper()
+	// PERF-7's SLO binds at mid-market. A run on any smaller tier still measures
+	// something real, and the page has to say which; otherwise the canary's
+	// number reads as the bound being met.
+	caveat := ""
+	if report.Tier != search.BenchTierMidMarket {
+		caveat = fmt.Sprintf("measured on the %s tier; the SLO binds at %s",
+			report.Tier, search.BenchTierMidMarket)
+	}
+	measurements := make([]BudgetMeasurement, 0, len(report.Queries))
+	for _, q := range report.Queries {
+		id := "PERF-3"
+		if q.Query == search.GraphQueryName {
+			id = "PERF-7"
+		}
+		m := MeasurementFrom(id, fmt.Sprintf("%s (%s tier)", q.Query, report.Tier),
+			q.P50, q.P95, q.P99, q.Budget, q.Samples)
+		// PERF-3 has no tier clause in its budget, so only the graph row is
+		// qualified: attaching it to both would caveat a claim that is unqualified.
+		if id == "PERF-7" {
+			m.Caveat = caveat
+		}
+		measurements = append(measurements, m)
+	}
+	WritePerfRecord(t, "bench-perf", PostgresVersion(func(sql string) (string, error) {
+		var version string
+		err := owner.QueryRow(context.Background(), sql).Scan(&version)
+		return version, err
+	}), measurements)
+}
+
+// benchFTSQuery measures canonical query 1 (PERF-3): ranked
+// cross-object full-text search, finding employees through a matched company
+// as GET /v1/search does when the SPA asks it to.
+func benchFTSQuery(t *testing.T, store *search.Store, actx context.Context, spec benchTierSpec) search.QueryStats {
+	t.Helper()
+	// Only the seeded companies carry "gmbh", so every contact this finds came
+	// through the arm: a bench whose reader lost the arm fails here, not silently.
+	viaEmployer, err := store.Search(actx, search.Input{Query: "gmbh", Types: []string{"contact"}, WithEmployees: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(viaEmployer.Hits) == 0 || viaEmployer.Hits[0].WorksAt == nil {
+		t.Fatalf("the employer arm found no one for this reader — the fixture or the grant is wrong: %+v", viaEmployer.Hits)
+	}
+	stats, err := benchRuns("search_fts", search.Perf3Budget, spec, func() error {
+		page, err := store.Search(actx, search.Input{Query: "hamburg", WithEmployees: true})
+		if err != nil {
+			return err
+		}
+		if len(page.Hits) == 0 {
+			return fmt.Errorf("fts benchmark query matched nothing — the fixture is wrong")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return stats
+}
+
+// benchGraphQuery measures canonical query 2 (PERF-7): the fixed-depth
+// context-graph assembly over the anchor's hot 360.
+func benchGraphQuery(t *testing.T, retriever *search.Retriever, actx context.Context, anchor ids.UUID, spec benchTierSpec) search.QueryStats {
+	t.Helper()
+	stats, err := benchRuns(search.GraphQueryName, search.Perf7Budget, spec, func() error {
+		assembled, err := retriever.AssembleContext(actx,
+			datasource.EntityRef{Type: datasource.EntityContact, ID: anchor},
+			retrieval.AssembleOptions{MaxItems: 5})
+		if err != nil {
+			return err
+		}
+		if len(assembled.Sections) < 2 {
+			return fmt.Errorf("graph assembly returned %d sections — the fixture is wrong", len(assembled.Sections))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return stats
+}
+
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func benchRuns(name string, budget time.Duration, spec benchTierSpec, run func() error) (search.QueryStats, error) {
+	for i := 0; i < spec.warmups; i++ {
+		if err := run(); err != nil {
+			return search.QueryStats{}, fmt.Errorf("%s warmup: %w", name, err)
+		}
+	}
+	durations := make([]time.Duration, 0, spec.sample)
+	for i := 0; i < spec.sample; i++ {
+		start := time.Now()
+		if err := run(); err != nil {
+			return search.QueryStats{}, fmt.Errorf("%s run %d: %w", name, i, err)
+		}
+		durations = append(durations, time.Since(start))
+	}
+	return search.MeasureQuery(name, budget, durations)
+}
+
+func benchAdminCtx(ws ids.UUID) context.Context {
+	return benchReaderCtx(ws, "contact", "company", "deal", "lead", "activity")
+}
+
+// benchSearchCtx adds the employment edge to the bench reader, without which
+// search's employer arm is dropped and PERF-3 would time a statement the
+// product no longer runs. PERF-7 keeps benchAdminCtx so its walk is unchanged.
+func benchSearchCtx(ws ids.UUID) context.Context {
+	return benchReaderCtx(ws, "contact", "company", "deal", "lead", "activity", "relationship")
+}
+
+func benchReaderCtx(ws ids.UUID, objects ...string) context.Context {
+	grants := map[string]principal.ObjectGrant{}
+	for _, object := range objects {
+		grants[object] = principal.ObjectGrant{Read: true}
+	}
+	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
+		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
+	})
+}
+
+// seedBenchTier bulk-loads one volume tier through the owner
+// connection (set-based inserts; the write shape has its own suites)
+// and returns the graph-anchor contact the PERF-7 query measures.
+// benchExec runs one seeding statement through the owner connection,
+// failing with the tier it was sizing.
+func benchExec(t *testing.T, owner *pgx.Conn, tier search.BenchTier, sql string, args ...any) {
+	t.Helper()
+	if _, err := owner.Exec(context.Background(), sql, args...); err != nil {
+		t.Fatalf("seeding %s tier: %v", tier, err)
+	}
+}
+
+func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpec) ids.UUID {
+	t.Helper()
+	exec := func(sql string, args ...any) {
+		t.Helper()
+		benchExec(t, owner, spec.tier, sql, args...)
+	}
+	// pgx.Identifier.Sanitize rather than interpolation: ANALYZE takes no
+	// parameter, so the table name is the one thing that has to be formatted in.
+	analyze := func(table string) {
+		t.Helper()
+		benchExec(t, owner, spec.tier, `ANALYZE `+pgx.Identifier{table}.Sanitize())
+	}
+
+	exec(`INSERT INTO workspace (id) VALUES ($1)`, ws)
+
+	// Every ~97th contact carries the FTS token the canonical search
+	// query hits, so the query does real ranking work over a real
+	// selectivity, not a table scan of universal matches.
+	exec(`INSERT INTO contact (full_name, source, captured_by)
+	      SELECT 'Contact ' || i || CASE WHEN i % 97 = 0 THEN ' Hamburg' ELSE '' END, 'manual', 'human:bench'
+	      FROM generate_series(1, $1) AS i`, spec.contacts)
+	exec(`INSERT INTO company (display_name, source, captured_by)
+	      SELECT 'Company ' || i || CASE WHEN i % 89 = 0 THEN ' Hamburg GmbH' ELSE '' END, 'manual', 'human:bench'
+	      FROM generate_series(1, $1) AS i`, spec.companies)
+	analyze(`contact`)
+	analyze(`company`)
+
+	// Background timeline volume: activities linked cyclically across
+	// the contact population: the activity_link fan the recursive walk
+	// competes with.
+	exec(`INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
+	      SELECT CASE WHEN i % 5 = 0 THEN 'task' ELSE 'email' END,
+	             'Subject ' || i || CASE WHEN i % 101 = 0 THEN ' Hamburg' ELSE '' END,
+	             'Body ' || i,
+	             now() - (i % 720 || ' hours')::interval,
+	             'manual', 'human:bench'
+	      FROM generate_series(1, $1) AS i`, spec.bulkActivities)
+	analyze(`activity`)
+
+	// The link fan-out and the employment edges below each fire a
+	// denormalisation trigger per row, and the trigger's read is planned
+	// against whatever statistics its tables carry. That is why the inserts
+	// are separate statements with an ANALYZE between them rather than the
+	// one chained CTE they used to be: a CTE cannot analyse what it is still
+	// writing, so every trigger call planned against an empty `activity` and
+	// drove the lookup from there: one scan of the whole activity table per
+	// link, quadratic in the tier. No installation plans that way; none of
+	// them is unanalysed.
+	//
+	// The cyclic assignment precomputes each row's target ordinal so the
+	// join is a plain hashable equijoin; an expression joining both
+	// sides' row_numbers forces the planner into a nested loop that is
+	// pathological at the mid-market tier.
+	exec(`WITH total AS (
+	        SELECT count(*) AS n FROM contact
+	      ), numbered AS (
+	        SELECT id, (row_number() OVER (ORDER BY id) - 1) % (SELECT n FROM total) + 1 AS target_rn
+	        FROM activity
+	      ), contacts AS (
+	        SELECT id, row_number() OVER () AS rn FROM contact
+	      )
+	      INSERT INTO activity_link (activity_id, entity_type, contact_id)
+	      SELECT n.id, 'contact', p.id
+	      FROM numbered n JOIN contacts p ON p.rn = n.target_rn`)
+	analyze(`activity_link`)
+
+	// Employment edges for the ADR-0021 edge-count evidence.
+	exec(`WITH total AS (
+	        SELECT count(*) AS n FROM company
+	      ), contacts AS (
+	        SELECT id, (row_number() OVER () - 1) % (SELECT n FROM total) + 1 AS target_rn
+	        FROM contact LIMIT $1
+	      ), companies AS (
+	        SELECT id, row_number() OVER () AS rn FROM company
+	      )
+	      INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+	      SELECT 'employment', p.id, o.id, 'manual', 'human:bench'
+	      FROM contacts p JOIN companies o ON o.rn = p.target_rn`, spec.relationships)
+	// The anchor's touches reach the employer through this table, so it is
+	// the last one the seeding triggers read unanalysed.
+	analyze(`relationship`)
+
+	anchor := seedBenchAnchor(t, owner, ws, spec)
+
+	// The anchor added rows to every table the measured queries read; the
+	// statistics they plan against are these, not the ones the seed ran on.
+	exec(`ANALYZE contact, company, activity, activity_link, relationship`)
+	return anchor
+}
+
+// seedBenchAnchor seeds the measured anchor: one contact with a hot 360
+// of touches linked to it and to companies, so hop 2 has real
+// expansion work.
+func seedBenchAnchor(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpec) ids.UUID {
+	t.Helper()
+	var anchor ids.UUID
+	if err := owner.QueryRow(context.Background(),
+		`INSERT INTO contact (full_name, source, captured_by)
+		 VALUES ('Anchor Hamburg', 'manual', 'human:bench') RETURNING id`).Scan(&anchor); err != nil {
+		t.Fatalf("seeding anchor: %v", err)
+	}
+	benchExec(t, owner, spec.tier, `WITH act AS (
+	        INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
+	        -- 'note', not 'meeting': the rows below are filed straight against
+	        -- an account, and a meeting is with a contact rather than with a
+	        -- company. The bench measures fan-out, which the kind does not
+	        -- change.
+	        SELECT CASE WHEN i % 4 = 0 THEN 'task' ELSE 'note' END,
+	               'Anchor touch ' || i, 'Anchor body ' || i,
+	               now() - (i || ' hours')::interval,
+	               'manual', 'human:bench'
+	        FROM generate_series(1, $2) AS i
+	        RETURNING id
+	      ), total AS (
+	        SELECT count(*) AS n FROM company
+	      ), numbered AS (
+	        SELECT id, (row_number() OVER () - 1) % (SELECT n FROM total) + 1 AS target_rn FROM act
+	      ), links AS (
+	        INSERT INTO activity_link (activity_id, entity_type, contact_id)
+	        SELECT id, 'contact', $1 FROM numbered
+	        RETURNING activity_id
+	      ), companies AS (
+	        SELECT id, row_number() OVER () AS rn FROM company
+	      )
+	      INSERT INTO activity_link (activity_id, entity_type, company_id)
+	      SELECT n.id, 'company', o.id
+	      FROM numbered n JOIN companies o ON o.rn = n.target_rn`, anchor, spec.anchorTouches)
+	return anchor
+}

@@ -565,3 +565,26 @@ func TestARepeatedSightingWithNoIdentifierStillFolds(t *testing.T) {
 			headings, got)
 	}
 }
+
+// A field the profile cannot hold without printed evidence is never filled
+// without it: the database refuses a site-read row with an empty snippet, and
+// that refusal rolls back the whole deep read.
+func TestCensusFillSkipsAnEntityWhoseEvidenceBlockWasRefused(t *testing.T) {
+	const impressum = "https://example.com/impressum"
+	kinds := map[string]crmcontracts.SiteReadPageKind{impressum: crmcontracts.SiteReadPageKindImpressum}
+	entities := []corpusLegalEntity{{
+		Name:           "Acme GmbH",
+		RegisterNumber: "HRB 12345 B",
+		SourceURL:      impressum,
+	}}
+
+	if got := fillLegalTrioFromCensus(nil, entities, kinds, false); len(got) != 0 {
+		t.Errorf("filled %d field(s) from an entity with no evidence snippet: %+v", len(got), got)
+	}
+
+	// The same entity with its evidence block is still filled.
+	entities[0].EvidenceSnippet = "Acme GmbH, HRB 12345 B"
+	if got := fillLegalTrioFromCensus(nil, entities, kinds, false); len(got) == 0 {
+		t.Error("an entity with its evidence block was refused too")
+	}
+}

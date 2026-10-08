@@ -68,7 +68,7 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	src, tgt, err := mergePair(ctx, tx, entityLead, sourceID, targetID, readLeadMergeState)
+	src, tgt, err := mergePair(ctx, tx, entityLead, sourceID, targetID, nil, readLeadMergeState)
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
@@ -85,6 +85,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		return crmcontracts.Lead{}, fmt.Errorf("retire merged-away lead: %w", err)
 	}
 	p := buildLeadSurvivorshipPatch(tgt, src)
+	if err := carryWorkedFromContact(ctx, tx, p, sourceID, targetID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if !p.Empty() {
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
 			return crmcontracts.Lead{}, fmt.Errorf("apply lead survivorship fill: %w", err)
@@ -228,5 +231,21 @@ func carryLeadMembershipsToLead(ctx context.Context, tx pgx.Tx, sourceID, target
 			return fmt.Errorf("carry lead %s rows: %w", m.table, err)
 		}
 	}
+	return nil
+}
+
+// carryWorkedFromContact hands the survivor the contact the loser was worked
+// from, when the survivor has none. Read off the rows rather than the wire
+// leads, which withhold a contact the caller cannot open.
+func carryWorkedFromContact(ctx context.Context, tx pgx.Tx, p *storekit.Patch, sourceID, targetID ids.LeadID) error {
+	source, err := workedFromContact(ctx, tx, sourceID)
+	if err != nil {
+		return err
+	}
+	target, err := workedFromContact(ctx, tx, targetID)
+	if err != nil || target != nil || source == nil {
+		return err
+	}
+	p.Set("from_contact_id", nil, source.UUID)
 	return nil
 }

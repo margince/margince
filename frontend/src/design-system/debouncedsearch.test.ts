@@ -3,8 +3,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { SEARCH_DEBOUNCE_MS, useDebouncedSearch } from "./debouncedsearch";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  SEARCH_DEBOUNCE_MS,
+  useDebouncedSearch,
+  useSettledValue,
+} from "./debouncedsearch";
 
 // What a picker over a set too large to enumerate must never do is show rows
 // that no longer answer the reader's question. These are the two moments where
@@ -87,5 +91,35 @@ describe("a debounced search", () => {
     expect(search).toHaveBeenCalledTimes(1);
     expect(search).toHaveBeenCalledWith("nor");
     vi.useRealTimers();
+  });
+});
+
+describe("a settled value", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("answers the last value typed once the typing has paused", () => {
+    vi.useFakeTimers();
+    const { result, rerender } = renderHook(
+      ({ typed }) => useSettledValue(typed),
+      { initialProps: { typed: "" } },
+    );
+    rerender({ typed: "a" });
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS - 1);
+    });
+    rerender({ typed: "ac" });
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS - 1);
+    });
+
+    // Each keystroke restarts the pause, so a reader typing steadily has not
+    // asked anything yet, however long the word takes.
+    expect(result.current).toBe("");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current).toBe("ac");
   });
 });

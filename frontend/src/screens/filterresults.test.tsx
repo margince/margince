@@ -3,8 +3,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import type { FilterPreview, VocabularyField } from "./filterdata";
 import { FilterResults, previewColumnNames } from "./filterresults";
@@ -157,8 +159,75 @@ it("shows a dash where a row has no value", () => {
   expect(screen.getByText("—")).toBeTruthy();
 });
 
-it("says no records match rather than leaving the reason blank", () => {
-  render(results([]), { wrapper });
+it("says what the caller worded for an empty answer", () => {
+  // Only the caller knows which connector the filter ran on, so the advice
+  // is its own; the table only has to show it.
+  render(
+    <FilterResults
+      preview={preview([])}
+      fields={[TIER_FIELD]}
+      named={["cf_loyalty_tier"]}
+      unit="contacts"
+      widthsKey="filter-preview-contacts"
+      emptyNote="No contacts match. Remove the most specific condition."
+      pending={false}
+    />,
+    { wrapper },
+  );
 
-  expect(screen.getByText("No records match this filter.")).toBeTruthy();
+  expect(
+    screen.getByText("No contacts match. Remove the most specific condition."),
+  ).toBeTruthy();
+});
+
+describe("a first page of many", () => {
+  const PAGE = Array.from({ length: 25 }, (_, index) => ({
+    id: `p${index}`,
+    full_name: `Contact ${index}`,
+    cf_loyalty_tier: "gold",
+  }));
+
+  function firstPage(onPerPage: (next: number) => void) {
+    return (
+      <FilterResults
+        preview={{ ...preview(PAGE), match_count: 214, truncated: true }}
+        fields={[TIER_FIELD]}
+        named={["cf_loyalty_tier"]}
+        unit="contacts"
+        widthsKey="filter-preview-contacts"
+        pending={false}
+        total={214}
+        perPage={25}
+        onPerPage={onPerPage}
+      />
+    );
+  }
+
+  it("counts what matches on the server, on one page of what was sent", () => {
+    render(
+      firstPage(() => {}),
+      { wrapper },
+    );
+
+    expect(screen.getByText(/1 to 25 of 214 contacts/)).toBeTruthy();
+    // No page past the rows in hand: the next page is asked for, not walked.
+    expect(screen.queryByRole("button", { name: "Page 2" })).toBeNull();
+  });
+
+  it("hands the size dial's choice back as the next request's page", async () => {
+    const asked: number[] = [];
+    const user = userEvent.setup();
+    render(
+      firstPage((next) => asked.push(next)),
+      { wrapper },
+    );
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Rows per page" }),
+      "50 per page",
+    );
+
+    expect(asked).toEqual([50]);
+  });
 });

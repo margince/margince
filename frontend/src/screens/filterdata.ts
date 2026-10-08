@@ -37,7 +37,7 @@ export type FilterResource = FilterVocabulary["resource"];
  * is established here (`max_messages` on the connector body generates the same
  * way), so this follows the house rather than reshaping the contract to dodge it.
  */
-const PREVIEW_PAGE = 25;
+export const PREVIEW_PAGE = 25;
 
 export function vocabularyQueryKey(resource: FilterResource) {
   return ["filter-vocabulary", resource] as const;
@@ -51,10 +51,14 @@ export function vocabularyQueryKey(resource: FilterResource) {
  * clause, so one fetch serves a whole editing session. That is also why the
  * field picker reads THIS rather than a list of its own — the server owns which
  * fields exist, and a second copy would offer one the engine refuses.
+ *
+ * `enabled` lets a surface that needs it only sometimes call the hook
+ * unconditionally and still ask nothing when it does not.
  */
-export function useFilterVocabulary(resource: FilterResource) {
+export function useFilterVocabulary(resource: FilterResource, enabled = true) {
   return useQuery<FilterVocabulary>({
     queryKey: vocabularyQueryKey(resource),
+    enabled,
     queryFn: async () => {
       const { data, error } = await api.GET("/filters/vocabulary", {
         params: { query: { resource } },

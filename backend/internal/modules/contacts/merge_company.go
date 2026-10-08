@@ -29,7 +29,7 @@ import (
 // MergeCompany merges company source→target and returns the
 // survivor. The company half additionally re-homes the hierarchy (A's
 // children become B's) and the deal/partner attributions.
-func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.CompanyID) (crmcontracts.Company, error) {
+func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.CompanyID, ifVersion *int64) (crmcontracts.Company, error) {
 	// Same rule, same reason as MergeContact: an omitted target_id is not caught
 	// by the self-merge check and would answer not-found for a survivor the
 	// caller never named.
@@ -50,7 +50,7 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = mergeCompanyTx(ctx, tx, sourceID, targetID, active)
+		out, err = mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
 	return out, err
@@ -65,7 +65,7 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 // marks a candidate 'merged' and then merges, and two transactions there leave
 // a candidate claiming a merge that never happened (#1970).
 func mergeCompanyTx(
-	ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, active []fieldcatalog.Column,
+	ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, ifVersion *int64, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
 	// A merge fills the survivor's legal_name from the record it retires
 	// (fillCompanySurvivorship), so it is a name writer like any other and owes
@@ -82,7 +82,7 @@ func mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, readCompanyMergeState)
+	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}

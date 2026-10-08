@@ -5,7 +5,12 @@
 // screen that shows a list — the library, the list page, a record's "Add to
 // Shortlist" — reads the same cache entries and invalidates them the same way.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { recordListsKey } from "./activitykeys";
@@ -35,20 +40,19 @@ export type ListQuery = Readonly<{
   entityType?: ListRecordType;
   listType?: List["list_type"];
   q?: string;
-  /** Only lists with one of these settings; absent is every one. */
-  sharing?: readonly List["sharing"][];
+  /** Archived lists too; absent is the live ones alone. */
+  includeArchived?: boolean;
 }>;
 
-/** The reader's own lists, which only they and the steward can find. */
-export const PRIVATE_LISTS: readonly List["sharing"][] = ["private"];
-
-/** The lists shared with a team or with everyone. */
-export const SHARED_LISTS: readonly List["sharing"][] = ["team", "workspace"];
-
-export function useLists(query: ListQuery, enabled = true) {
+/**
+ * The lists a query names. `keepRows` holds the rows already read on screen
+ * while a changed query is answered, for a caller that re-asks under the reader.
+ */
+export function useLists(query: ListQuery, enabled = true, keepRows = false) {
   return useQuery({
     queryKey: [LISTS_KEY, "all", query],
     enabled,
+    placeholderData: keepRows ? keepPreviousData : undefined,
     queryFn: async () => {
       const { data, error } = await api.GET("/lists", {
         params: {
@@ -56,7 +60,7 @@ export function useLists(query: ListQuery, enabled = true) {
             entity_type: query.entityType,
             list_type: query.listType,
             q: query.q || undefined,
-            sharing: query.sharing ? [...query.sharing] : undefined,
+            include_archived: query.includeArchived || undefined,
           },
         },
       });

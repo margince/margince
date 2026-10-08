@@ -11,6 +11,7 @@ package contacts
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -353,6 +354,17 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	if err != nil {
 		return CreateLeadInput{}, err
 	}
+	// A lead filled from a contact is the CRM's own contact, not an import: the
+	// replay an importer's namespace promises could not survive the contact
+	// changing between the two runs.
+	if req.ContactId != nil && req.SourceSystem != nil {
+		return CreateLeadInput{}, httperr.Validation(contactIDField, "unsupported",
+			"a lead filled from a contact cannot also name a source system; send one or the other")
+	}
+	// A blank name beside a contact is the contact's to fill.
+	if req.ContactId != nil && req.FullName != nil && strings.TrimSpace(*req.FullName) == "" {
+		req.FullName = nil
+	}
 	// A lead's name is optional, but one that is sent is a name and not spaces.
 	if req.FullName != nil {
 		name, err := httperr.RequireNonBlank("full_name", *req.FullName)
@@ -374,6 +386,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
 		CustomFields:        req.AdditionalProperties,
+		FromContactID:       idArg[ids.ContactKind](req.ContactId),
 	}
 	if req.Email != nil {
 		email := string(*req.Email)

@@ -1,0 +1,1 @@
+# General words a project plain page (rulebooks, principles, design, user guide, small READMEs) may use; sorted, and a listed word also covers its regular forms. See docs/reference/docs-prose-style.md#plain-pages.

@@ -9,6 +9,7 @@ import {
   LIVE_ID,
   listsMe,
   liveList,
+  liveVocabulary,
   MEMBER_ID,
   notOnLiveWhy,
   shortlist,
@@ -26,8 +27,6 @@ export default meta;
 
 type Story = StoryObj;
 
-const vocabulary = { resource: "company", fields: [] };
-
 function stub(onLists: readonly unknown[]) {
   installFetchStub({
     "GET /me": listsMe(true),
@@ -37,7 +36,7 @@ function stub(onLists: readonly unknown[]) {
       jsonResponse({ data: [liveList], page: { has_more: false } }),
     [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () =>
       jsonResponse(notOnLiveWhy),
-    "GET /filters/vocabulary": () => jsonResponse(vocabulary),
+    "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
   });
 }
 

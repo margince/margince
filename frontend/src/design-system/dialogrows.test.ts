@@ -16,7 +16,6 @@ import {
   classes,
   cross,
   declarations,
-  definedName,
   defOf,
   descendants,
   dialogSet,
@@ -67,7 +66,8 @@ type Verdict = "spaced" | "flush" | "doubled" | "unplaced";
 type Row = { at: string; where: string; verdict: Verdict; by?: string };
 // The class lists of the boxes from an element's parent out to its dialog.
 type Chain = string[][];
-type Guest = { file: string; name: string; outer: Chain[] };
+// `via`: the components on the way to the call, so a recursion ends.
+type Guest = { def: ts.Node; outer: Chain[]; via: ReadonlySet<ts.Node> };
 // A component definition, mapped to the call that rendered it this time.
 type Links = Map<ts.Node, ts.Node>;
 type Slot = { roots: ts.Node[]; links: Links };
@@ -98,6 +98,7 @@ const NOT_ROWS = new Map([
 const rowKeys = [...FIELD_ROWS].map(([name, file]) => primitiveKey(file, name));
 const HEADING = primitiveKey("heading", "Heading");
 const NO_LINKS: Links = new Map();
+const DIALOG: Chain[] = [[["modal"]]];
 
 const keyIs = (n: ts.Node, key: string) => {
   const def = defOf(n);
@@ -215,7 +216,10 @@ function placeSlots(source: ts.SourceFile, p: Placement) {
     }
   }
 }
+const placements = new WeakMap<ts.SourceFile, Placement>();
 function placementIn(source: ts.SourceFile): Placement {
+  const known = placements.get(source);
+  if (known) return known;
   const p: Placement = {
     inline: new Map(),
     slots: new Map(),
@@ -225,6 +229,7 @@ function placementIn(source: ts.SourceFile): Placement {
   };
   placeInline(source, p);
   placeSlots(source, p);
+  placements.set(source, p);
   return p;
 }
 
@@ -526,43 +531,38 @@ function judge(g: Gate, v: View, n: ts.Node, rows: number): Verdict {
   return overhead && underfoot ? "spaced" : "flush";
 }
 
-// Every element a dialog renders, slotted rows and same-file components
-// included, and the components in other files it hands on to.
+// Every element a dialog, or a guest's body, renders, slotted rows included,
+// and the components it hands on to as guests of their own.
 function scopeOf(
   g: Gate,
   source: ts.SourceFile,
   placement: Placement,
-  hosted?: ReadonlySet<string>,
+  hosted?: Guest,
 ) {
   const plain = { placement, links: NO_LINKS };
-  const dialogs = dialogsIn(source, g.keys);
-  const bodies = [...(hosted ?? [])].flatMap(
-    (h) => declarations(source).get(h) ?? [],
-  );
+  const dialogs = hosted ? [] : dialogsIn(source, g.keys);
   const inside = new Set<ts.Node>();
   const add = (v: View, r: ts.Node) => {
     for (const e of [r, ...walk(v, r)].filter(opening)) inside.add(e);
   };
-  for (const r of hosted ? bodies : dialogs) add(plain, r);
+  for (const r of hosted ? [hosted.def] : dialogs) add(plain, r);
   for (const [r, links] of hosted ? [] : placement.frameOf) {
     const v = { placement, links };
     const inDialog = [...climb(v, r)].some((s) => isDialog(g, s.at));
     if (inDialog) add(v, r);
   }
-  for (const [r, call] of placement.unplaced) {
+  for (const [r, call] of hosted ? [] : placement.unplaced) {
     const def = defOf(call);
     if (def && elementsIn(def).some((e) => isDialog(g, e))) add(plain, r);
   }
+  const via = new Set(hosted ? [...hosted.via, hosted.def] : []);
   const guests: Guest[] = [];
   for (const n of inside) {
     const def = defOf(n);
-    if (!def || wraps(g, n) || isField(n)) continue;
-    const file = def.getSourceFile().fileName;
-    if (file === source.fileName) add(plain, def);
-    else {
-      const outer = ancestry(g, viewAt(placement, n), n);
-      guests.push({ file, name: definedName(def), outer });
-    }
+    if (!def || via.has(def) || wraps(g, n) || isField(n)) continue;
+    // An unplaced prop is not known to render inside the boxes `g.outer` names.
+    const at = unplacedAt(placement, n) ? { ...g, outer: DIALOG } : g;
+    guests.push({ def, outer: ancestry(at, viewAt(placement, n), n), via });
   }
   return { dialogs: dialogs.length, inside, guests };
 }
@@ -591,26 +591,26 @@ function rowAt(g: Gate, placement: Placement, n: ts.Node): Row | undefined {
   if (!by || keyIs(n, HEADING)) return undefined;
   return { at, where, verdict: "doubled", by };
 }
-function rowsIn(g: Gate, source: ts.SourceFile, hosted?: ReadonlySet<string>) {
+function rowsIn(g: Gate, source: ts.SourceFile, hosted?: Guest) {
   const placement = placementIn(source);
   const { dialogs, inside, guests } = scopeOf(g, source, placement, hosted);
   const rows = [...inside].flatMap((n) => rowAt(g, placement, n) ?? []);
   return { dialogs, rows, guests };
 }
 
-// A component a dialog renders is judged in its own file as part of that
-// dialog, and so is what it renders in turn, until nothing new turns up.
+// A component a dialog renders is judged as part of that dialog under each
+// chain of boxes it is called in, and so is what it renders in turn.
 function rowsAcross(
   entry: readonly ts.SourceFile[],
   owners: Owners,
   keys: Keys,
 ) {
-  const base: Gate = { ...keys, owners, outer: [[["modal"]]] };
+  const base: Gate = { ...keys, owners, outer: DIALOG };
   const rows = new Map<string, Row>();
   const seen = new Set<string>();
   let dialogs = 0;
   let depth = 0;
-  let queue: Guest[] = [];
+  const queue: Guest[] = [];
   const take = (found: ReturnType<typeof rowsIn>) => {
     for (const r of found.rows) rows.set(`${r.at} ${r.verdict}`, r);
     queue.push(...found.guests);
@@ -621,18 +621,11 @@ function rowsAcross(
     take(found);
   }
   for (; queue.length > 0; depth++) {
-    const groups = new Map<string, Guest[]>();
-    for (const q of queue) {
-      const group = `${q.file}#${JSON.stringify(q.outer)}`;
-      if (seen.has(`${group}#${q.name}`)) continue;
-      seen.add(`${group}#${q.name}`);
-      groups.set(group, [...(groups.get(group) ?? []), q]);
-    }
-    queue = [];
-    for (const [first, ...rest] of groups.values()) {
-      const names = new Set([first, ...rest].map((q) => q.name));
-      const g = { ...base, outer: first.outer };
-      take(rowsIn(g, sourceFileAt(first.file), names));
+    for (const q of queue.splice(0)) {
+      const key = `${keyOf(q.def)}#${JSON.stringify(q.outer)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      take(rowsIn({ ...base, outer: q.outer }, q.def.getSourceFile(), q));
     }
   }
   return { rows: [...rows.values()], dialogs, depth };
@@ -689,6 +682,9 @@ function Inline() { return <Field labelHidden />; }
 function Cited() { const cite = () => <i className="m" />; return <p>{cite()}</p>; }
 function Bare() { const cite = () => <i className="m" />; return cite(); }
 function Refusals() { return <div className="m" />; }
+function Wrapped() { return <div className="s"><p /><div className="m" /></div>; }
+function Nest() { return <div className="s"><p /><div className="m"><Nest /></div></div>; }
+function HostsView() { return <View slot={<Wrapped />} />; }
 function Sheet({ children }) { return <Modal intent="form">{children}</Modal>; }
 function Side({ children, intent = "drawer" }) { return <Modal intent={intent}>{children}</Modal>; }
 function Shell({ body }) { return <Modal intent="form"><div>{body}</div></Modal>; }
@@ -725,6 +721,9 @@ const SCOPED =
 const PARAGRAPH_STACK = '<div className="s"><p /><Field /></div>';
 const DRAWER_STACK = `.modal-drawer ${STACK}`;
 const DRAWER_BLOCK = `${STACK} .modal-drawer .s { display: block }`;
+const HOSTED = inModal('<div className="f"><Wrapped /></div>');
+const HOSTED_STACK = `.f ${STACK} ${MARGIN}`;
+const HOSTED_MARGIN = `${STACK} .f ${MARGIN}`;
 type RowCase = { jsx: string; verdict: string; sheet: string };
 
 // Three files, so a guest's guest is two files away from its dialog.
@@ -971,6 +970,15 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     ${"leaves a component editing in place alone"}              | ${inModal("<div><span /><Inline /></div>")}                                                                               | ${"no rows"}              | ${""}
     ${"keeps a local function's element where it is used"}      | ${"<ConfirmModal><Cited /></ConfirmModal>"}                                                                               | ${"no rows"}              | ${`${FORM_STACK} ${MARGIN}`}
     ${"roots a local function's element the component returns"} | ${"<ConfirmModal><Bare /></ConfirmModal>"}                                                                                | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
+    ${"reads a same-file stack under the box its call is in"}   | ${HOSTED}                                                                                                                 | ${"doubled"}              | ${HOSTED_STACK}
+    ${"reads that stack as absent where its call has no box"}   | ${inModal("<Wrapped />")}                                                                                                 | ${"no rows"}              | ${HOSTED_STACK}
+    ${"reads a same-file margin under the box its call is in"}  | ${HOSTED}                                                                                                                 | ${"doubled"}              | ${HOSTED_MARGIN}
+    ${"reads that margin as absent where its call has no box"}  | ${inModal("<Wrapped />")}                                                                                                 | ${"no rows"}              | ${HOSTED_MARGIN}
+    ${"judges a same-file component under each call's boxes"}   | ${inModal('<Wrapped /><div className="f"><Wrapped /></div>')}                                                             | ${"doubled"}              | ${HOSTED_STACK}
+    ${"catches a margin on a same-file root in a form stack"}   | ${inModal('<div className="form-stack"><Refusals /></div>')}                                                              | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
+    ${"ends at a component that renders itself"}                | ${inModal("<Nest />")}                                                                                                    | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"keeps an unplaced prop out of another call's boxes"}     | ${'<><Modal intent="form"><div className="f"><HostsView /></div></Modal><Kept body={(n) => <Wrapped />} /></>'}           | ${"no rows"}              | ${HOSTED_STACK}
+    ${"keeps a guest's unplaced prop out of its call's boxes"}  | ${inModal('<div className="f"><HostsView /></div>')}                                                                      | ${"no rows"}              | ${HOSTED_STACK}
   `("$spec", ({ jsx, verdict, sheet }: RowCase) => {
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners())).toBe(
       verdict,
