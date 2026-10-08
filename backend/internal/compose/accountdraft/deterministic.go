@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // Draft and Reason are draftcore's. They were declared here and in contactdraft
@@ -106,7 +107,7 @@ func deterministicOpener(in Input) string {
 		return draftfloor.Fill(lines.Deal, in.Deal.Name)
 	}
 	if mail, ok := draftcore.ThreadMail(in.Recent); ok {
-		return draftfloor.Fill(lines.Thread, mail.Subject)
+		return draftfloor.Fill(lines.Thread, mailsubject.WithoutReplyPrefix(mail.Subject))
 	}
 	return ""
 }

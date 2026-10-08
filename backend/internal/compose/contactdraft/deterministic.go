@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // Draft is the written message plus what it was written from, before the wire
@@ -99,7 +100,7 @@ func deterministicOpener(in Input) string {
 		return draftfloor.Fill(lines.Deal, dealLine(in.Deal))
 	}
 	if mail, ok := in.threadMail(); ok {
-		return draftfloor.Fill(lines.Thread, mail.Subject)
+		return draftfloor.Fill(lines.Thread, mailsubject.WithoutReplyPrefix(mail.Subject))
 	}
 	return ""
 }

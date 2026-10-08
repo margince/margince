@@ -62,6 +62,12 @@ func Normalized(subject string) string {
 	return strings.ToLower(strings.Trim(innerSpaces.ReplaceAllString(stripped, " "), " "))
 }
 
+// WithoutReplyPrefix is subject with its leading reply prefixes removed and its
+// case kept, so a reply to it can add its own "Re:" without doubling one.
+func WithoutReplyPrefix(subject string) string {
+	return strings.TrimSpace(replyPrefixes.ReplaceAllString(subject, ""))
+}
+
 // isPostgresSpace is what the database's \s matches: Unicode white space
 // except the no-break spaces, which its locale does not class as space. Go's
 // own \s is ASCII only, so every such rune is made a plain space before the

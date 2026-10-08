@@ -127,6 +127,24 @@ func TestOnlyARealThreadSubjectEarnsTheReplyPrefix(t *testing.T) {
 	}
 }
 
+// Their subject already carries a reply prefix, and the floor adds one of its
+// own, so it must not keep theirs too.
+func TestAReplyToAReplyCarriesOnePrefix(t *testing.T) {
+	draft := contactdraft.Deterministic(contactdraft.Input{
+		Envelope:  envelopeFor(textlang.English, convstate.BandFresh),
+		Recipient: contactdraft.RecipientIn{ID: "p1", FirstName: "Marek"},
+		Recent: []contactdraft.ActIn{
+			{ID: "a1", Kind: "email", Subject: "AW: Re: Pricing question", At: "2026-08-10T09:00:00Z", Inbound: true},
+		},
+	})
+	if draft.Subject != "Re: Pricing question" {
+		t.Errorf("subject = %q, want one reply prefix", draft.Subject)
+	}
+	if strings.Contains(draft.Body, "Re: Pricing") || strings.Contains(draft.Body, "AW:") {
+		t.Errorf("the body quotes a reply prefix: %q", draft.Body)
+	}
+}
+
 // A task title is internal, so one logged after their mail neither names the
 // draft nor replaces the thread it answers.
 func TestATaskAfterTheirMailNeverReachesTheFloorDraft(t *testing.T) {
