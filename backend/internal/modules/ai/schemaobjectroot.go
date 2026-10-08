@@ -56,7 +56,7 @@ func objectRooted(raw json.RawMessage) (json.RawMessage, bool) {
 }
 
 // unwrapObjectRoot is the answer under objectRootKey. A reply that is not
-// exactly that wrapper, such as one cut off or answered bare, is handed on
+// only that wrapper, such as one cut off or answered bare, is handed on
 // unchanged for the caller's own parser to judge.
 //
 // SoleDocument, not Unfence: the agent loop executes what this returns, so an
