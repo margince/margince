@@ -24,12 +24,14 @@ package contacts
 import (
 	"context"
 	"errors"
+	"net/http"
 	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -341,3 +343,32 @@ func TestAnAnchorTheCallerCannotSeeStillAnswersNotFound(t *testing.T) {
 // The package's own `ptr` takes a string only, and widening it would touch every
 // caller of it for the sake of one test file.
 func pointerTo[T any](v T) *T { return &v }
+
+// The stakeholder role stays inside the contract's list when an edge is
+// re-roled through the generic route, as it does when the edge is made.
+func TestPatchingAProjectStakeholderEdgeToAnOffListRoleIsRefused(t *testing.T) {
+	e := setupEdgeAnchor(t)
+	me := e.as(e.me)
+	project := ids.New[ids.ProjectKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO project (id, owner_id, company_id, name, source, captured_by)
+		VALUES ($1, $2, $3, 'My Delivery', 'manual', 'human:seed')`,
+		project, e.me, e.myCompany); err != nil {
+		t.Fatal(err)
+	}
+	edge, err := e.store.CreateRelationship(me, CreateRelationshipInput{
+		Kind: ProjectStakeholderKind, ProjectID: &project, ContactID: &e.myContact,
+		Role: pointerTo("sponsor"), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating the stakeholder edge: %v", err)
+	}
+
+	_, err = e.store.UpdateRelationship(me, edge.ID, UpdateRelationshipInput{Role: pointerTo("zzz")})
+	if fault, ok := httperr.Classify(err); !ok || fault.Status != http.StatusUnprocessableEntity {
+		t.Fatalf("re-roling to an off-list role answered %v, want a 422", err)
+	}
+	if _, err := e.store.UpdateRelationship(me, edge.ID, UpdateRelationshipInput{Role: pointerTo("champion")}); err != nil {
+		t.Errorf("re-roling to a listed role was refused: %v", err)
+	}
+}

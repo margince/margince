@@ -194,6 +194,13 @@ func admitActivityPatch(
 	if err := renormalizeTranscriptPatch(current, in); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if !held && in.Subject != nil && current.Kind == crmcontracts.ActivityKindTask {
+		subject, err := taskSubject(*in.Subject)
+		if err != nil {
+			return crmcontracts.Activity{}, err
+		}
+		in.Subject = &subject
+	}
 	// The kind the ROW carries, not one the patch names — a patch cannot
 	// change a kind. Without this a note could be given `held` and read back
 	// afterwards as a meeting-shaped fact about something that was not one,

@@ -20,11 +20,12 @@ import (
 
 func TestACredentialReleasesTheRecordChangeItProposedForItsHuman(t *testing.T) {
 	q := setupQueue(t)
-	contactID := createdID(t, q.AppEnv, "/v1/contacts", AnyMap{"full_name": "Selma Human"})
+	contactID := createdID(t, q.AppEnv, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Selma Human"})
 	invoke := q.invoker(t, q.mintPassport(t, "self-releasing agent", "read", "write"))
 
 	out, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"full_name":"Selma Machine","title":"COO"}}`, contactID))
+		`{"record_type":"contact","id":%q,"fields":{"full_name":"Selma Machine","title":"COO"}}`, contactID,
+	))
 	if err != nil {
 		t.Fatalf("update_record → %v", err)
 	}

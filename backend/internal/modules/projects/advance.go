@@ -12,6 +12,7 @@ package projects
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -45,8 +46,15 @@ func (s *Store) AdvanceProjectPhase(ctx context.Context, id ids.ProjectID, in Ad
 	// Closing without a reason is refused here, before the transaction, so
 	// the caller gets the rule rather than a constraint name. The schema
 	// CHECK stays as the net under it.
-	if in.ToPhase == PhaseClosed && (in.Reason == nil || *in.Reason == "") {
-		return crmcontracts.Project{}, &ClosedReasonRequiredError{}
+	if in.ToPhase == PhaseClosed {
+		var trimmed string
+		if in.Reason != nil {
+			trimmed = strings.TrimSpace(*in.Reason)
+		}
+		if trimmed == "" {
+			return crmcontracts.Project{}, &ClosedReasonRequiredError{}
+		}
+		in.Reason = &trimmed
 	}
 	active, err := s.catalogColumns(ctx)
 	if err != nil {

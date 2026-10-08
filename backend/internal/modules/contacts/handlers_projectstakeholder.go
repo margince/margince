@@ -112,9 +112,16 @@ func (h Handlers) SetProjectCompany(w http.ResponseWriter, r *http.Request, id c
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// An omitted role is the default; one that is present must say something,
+	// so an explicit empty one is refused like a blank one rather than read as
+	// omitted.
 	role := ""
 	if req.Role != nil {
-		role = *req.Role
+		var err error
+		if role, err = httperr.RequireNonBlank(relationshipRoleField, *req.Role); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
 	}
 	on, err := h.store.SetProjectCompany(r.Context(), SetProjectCompanyInput{
 		ProjectID: pathID[ids.ProjectKind](id),

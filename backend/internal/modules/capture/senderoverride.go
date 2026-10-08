@@ -30,6 +30,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// fieldDecision is the request field a sender-decision refusal points at, and
+// the key the decision is recorded under.
+const fieldDecision = "decision"
+
 // The decisions a contact may record about a sender.
 const (
 	// OverrideBusiness readmits a sender the machine judged noise: they are a
@@ -81,7 +85,7 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 		return SenderOverride{}, apperrors.ErrPermissionDenied
 	}
 	if decision != OverrideBusiness && decision != OverrideKeepOut {
-		return SenderOverride{}, &InvalidOverrideError{Reason: "decision is business or keep_out"}
+		return SenderOverride{}, &InvalidOverrideError{Field: fieldDecision, Reason: "decision is business or keep_out"}
 	}
 	// The grant follows the DECISION, because the two are different acts.
 	// `business` is how a contact comes to exist, so it takes create;
@@ -96,9 +100,9 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 		return SenderOverride{}, err
 	}
 
-	folded := normalizeEmail(address)
-	if folded == "" {
-		return SenderOverride{}, &InvalidOverrideError{Reason: "give one email address"}
+	folded, ok := parseSingleAddress(address)
+	if !ok {
+		return SenderOverride{}, &InvalidOverrideError{Field: fieldAddress, Reason: fmt.Sprintf("give one email address of at most %d characters", maxIndexedAddressChars)}
 	}
 	var out SenderOverride
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -133,7 +137,7 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 		// gate reads call sites to tell an entity named at runtime from one
 		// named in the source, and a constant is something it cannot resolve.
 		_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
-			map[string]any{"decision": decision, "overruled_kind": kind})
+			map[string]any{fieldDecision: decision, "overruled_kind": kind})
 		return err
 	})
 	return out, err
@@ -201,7 +205,7 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 		}
 		// Spelled as a literal for the audit gate; see Set.
 		_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
-			map[string]any{"decision": "withdrawn"})
+			map[string]any{fieldDecision: "withdrawn"})
 		return err
 	})
 }
@@ -271,11 +275,11 @@ func machineKindForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address str
 }
 
 // InvalidOverrideError is a malformed decision; it answers 422 naming the field.
-type InvalidOverrideError struct{ Reason string }
+type InvalidOverrideError struct{ Field, Reason string }
 
 func (e *InvalidOverrideError) Error() string { return "capture sender decision: " + e.Reason }
 
 // FieldFault maps the refusal onto the wire.
 func (e *InvalidOverrideError) FieldFault() (field, code, message string) {
-	return "decision", "invalid_sender_decision", e.Reason
+	return e.Field, "invalid_sender_decision", e.Reason
 }

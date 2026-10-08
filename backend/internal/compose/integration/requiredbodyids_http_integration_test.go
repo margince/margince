@@ -70,8 +70,8 @@ type requiredIDFixtures struct {
 func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures {
 	t.Helper()
 	var out requiredIDFixtures
-	out.contact = createAndID(t, e, "/v1/contacts", AnyMap{"full_name": "Merge Source"})
-	out.company = createAndID(t, e, "/v1/companies", AnyMap{"display_name": "Merge Company"})
+	out.contact = createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Merge Source"})
+	out.company = createAndID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Merge Company"})
 	out.activity = createAndID(t, e, "/v1/activities", AnyMap{
 		"kind": "note", "body": "relink probe",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": out.contact}},

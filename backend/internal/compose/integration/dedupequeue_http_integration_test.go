@@ -50,12 +50,14 @@ func seedCompanyPairHTTP(t *testing.T, e *apptest.AppEnv, stem, incumbentDomain,
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
+		"source":       "manual",
 		"display_name": stem + " GmbH",
 		"domains":      []AnyMap{{"domain": incumbentDomain, "is_primary": true}},
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("incumbent create → %d, want 201", status)
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
+		"source":       "manual",
 		"display_name": stem + " Inc",
 		"domains":      []AnyMap{{"domain": dupDomain, "is_primary": true}},
 	}, nil, nil); status != http.StatusCreated {

@@ -50,6 +50,11 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 			httperr.Write(w, r, httperr.Validation("scopes", "invalid_scope", badScope.Error()))
 			return
 		}
+		var badField *InvalidPassportFieldError
+		if errors.As(err, &badField) {
+			httperr.Write(w, r, httperr.Validation(badField.Field, badField.Code, badField.Message))
+			return
+		}
 		httperr.Write(w, r, archivedRoleRefusal(err))
 		return
 	}
