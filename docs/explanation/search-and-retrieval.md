@@ -64,6 +64,11 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   `Müller`). They also match the parse with apostrophes removed (`oreilly` finds `O'Reilly`). The
   activity branch also matches German and English stems, so `Vertrag` reaches a row that holds
   `Verträge`.
+- **A whole word ranks above a prefix.** The word still being typed matches as a prefix, so `philip`
+  reaches both Philip and Philipp, and `ts_rank_cd` scores them the same. So `scoreExpression` scales
+  the rank into `[0, 1)` and adds 1 when the record holds that word whole, not stemmed, in any field
+  it indexes. A whole-word hit then ranks above every hit that only the prefix finds. So a cap of
+  three per type cannot drop Philip when two ids tie.
 - **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`. It is ranked by the cosine
   operator (`<=>`), and always kept to the current embed identity (next section). There is no HNSW
   index. The query per branch, kept to one identity, reads the table in order. An index over a
@@ -124,7 +129,7 @@ AST gates. The employer arm is a second way to reach the contact type. The arm:
   their own text. It keeps one row per contact (`DISTINCT ON`): the employer with the top match, and
   the job marked first for that contact on top. Each hit carries that company as `works_at`;
 - **ranks below every hit on own text**: its score is `-1/(1+rank)`, in `[-1, 0)`, below any
-  `ts_rank_cd`. So both page shapes put a contact matched by name first, and the
+  score on own text, which is never below 0. So both page shapes put a contact matched by name first, and the
   `(score, type, id)` cursor needs no second order. On a grouped page the arm is capped the same as
   any branch, and `page()` counts by type. So `per_type` still limits the contacts shown, and
   `types_with_more` stays true.

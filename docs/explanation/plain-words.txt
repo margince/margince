@@ -882,6 +882,8 @@ perf
 permission
 personal
 phase
+philip
+philipp
 phone
 pick
 picture
@@ -1273,7 +1275,8 @@ three
 threshold
 through
 tick
-tier
+tie
+tiered
 tile
 time
 timeline
