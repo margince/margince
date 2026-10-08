@@ -59,6 +59,9 @@ func (s *Store) SendOffer(ctx context.Context, id ids.OfferID, ifVersion *int64)
 		if err := ensureDraft(current); err != nil {
 			return err
 		}
+		if err := s.refuseLapsedOffer(ctx, tx, current); err != nil {
+			return err
+		}
 		var lineCount int
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM offer_line_item WHERE offer_id = $1`, id).Scan(&lineCount); err != nil {
@@ -86,7 +89,7 @@ func (s *Store) SendOffer(ctx context.Context, id ids.OfferID, ifVersion *int64)
 		if err != nil {
 			return err
 		}
-		rate, rateDate, err := s.freezeFx(ctx, tx, base, current.Currency, time.Now().UTC())
+		rate, rateDate, err := s.freezeFx(ctx, tx, base, current.Currency, s.clock().UTC())
 		if err != nil {
 			return fmt.Errorf("freeze fx at send: %w", err)
 		}
@@ -199,8 +202,11 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		if current.Status != crmcontracts.OfferStatusSent {
 			return &OfferNotSentError{Status: string(current.Status)}
 		}
+		if err := s.refuseLapsedOffer(ctx, tx, current); err != nil {
+			return err
+		}
 
-		now := time.Now().UTC()
+		now := s.clock().UTC()
 		p := storekit.NewPatch()
 		p.Set("status", current.Status, "accepted")
 		p.Set("accepted_at", nil, now)

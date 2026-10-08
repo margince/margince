@@ -503,3 +503,26 @@ func TestTheCoverageNoteAgreesWithACountAboveOne(t *testing.T) {
 		t.Errorf("four unpriced deals were not reported as four:\n%s", note)
 	}
 }
+
+func TestALostDealIsNotPipelineInAnyReadingOrCount(t *testing.T) {
+	t.Parallel()
+	period := testPeriod(t)
+	asOf := *day(t, time.May, 14)
+	lost := healthyDeal(t)
+	lost.Lost = true
+
+	got, err := Compute(period, asOf, []Deal{healthyDeal(t), lost})
+	if err != nil {
+		t.Fatalf("computing: %v", err)
+	}
+	if got.OpenMinor != 100_000 || got.EvidenceMinor != 100_000 || got.BestCaseMinor != 100_000 || got.WeightedMinor != 50_000 {
+		t.Errorf("readings = open %d evidence %d best %d weighted %d, want the lost deal in none of them",
+			got.OpenMinor, got.EvidenceMinor, got.BestCaseMinor, got.WeightedMinor)
+	}
+	if got.EligibleCount != 1 || got.PricedCount != 1 || got.ConfirmedDateCount != 1 {
+		t.Errorf("counts = eligible %d priced %d confirmed %d, want 1 each", got.EligibleCount, got.PricedCount, got.ConfirmedDateCount)
+	}
+	if len(got.Contributions) != 2 {
+		t.Errorf("contributions = %d, want the lost deal's row kept for the snapshot", len(got.Contributions))
+	}
+}

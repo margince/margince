@@ -4068,6 +4068,7 @@ public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-
 public.forecast_contribution.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_contribution.in_best_case boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_evidence boolean NOT NULL gen=- def=false
+public.forecast_contribution.in_lost boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-

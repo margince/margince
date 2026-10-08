@@ -187,6 +187,22 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 	return in, nil
 }
 
+// refuseClosingFields answers the first closing field a patch carries.
+func refuseClosingFields(req crmcontracts.UpdateDealRequest) error {
+	switch {
+	case req.Status != nil:
+		//nolint:goconst // a wire field name; filterStatus names a query parameter, a different vocabulary
+		return &ClosingViaPatchError{Field: "status"}
+	case req.LostReason != nil:
+		return &ClosingViaPatchError{Field: "lost_reason"}
+	case req.FxRateToBase != nil:
+		return &ClosingViaPatchError{Field: "fx_rate_to_base"}
+	case req.FxRateDate != nil:
+		return &ClosingViaPatchError{Field: "fx_rate_date"}
+	}
+	return nil
+}
+
 func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) UpdateDealInput {
 	in := UpdateDealInput{
 		Name:             req.Name,
