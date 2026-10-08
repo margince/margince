@@ -49,14 +49,13 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 }
 
 // RemoveTagTx is RemoveTag inside a caller-opened transaction, for a bulk
-// change that takes one tag off many records in one commit. It answers whether
-// the record carried the tag, since a bulk change reports the rows it changed.
-func (s *Store) RemoveTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) (bool, error) {
+// change that takes one tag off many records in one commit. It answers the
+// removal's audit id, ids.Nil when the record did not carry the tag.
+func (s *Store) RemoveTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) (ids.UUID, error) {
 	if err := requireTagRemoval(ctx, entityType, entityID); err != nil {
-		return false, err
+		return ids.Nil, err
 	}
-	removal, err := removeTagTx(ctx, tx, tagID, entityType, entityID, nil)
-	return removal != ids.Nil, err
+	return removeTagTx(ctx, tx, tagID, entityType, entityID, nil)
 }
 
 // RemoveTagAssignmentTx is RemoveTagTx held to one assignment: it takes the tag

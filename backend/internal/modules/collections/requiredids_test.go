@@ -39,4 +39,10 @@ func TestAnOmittedMemberOrTagTargetIsNamed(t *testing.T) {
 
 	_, err = store.ApplyTag(ctx, ids.New[ids.TagKind](), "contact", ids.UUID{})
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")
+
+	_, err = store.RestoreTagRemoval(ctx, ids.New[ids.TagKind](), ids.UUID{})
+	faulttest.AssertNamesOmittedID(t, err, "audit_id")
+
+	_, err = store.RestoreMemberRemoval(ctx, ids.New[ids.ListKind](), ids.UUID{})
+	faulttest.AssertNamesOmittedID(t, err, "audit_id")
 }

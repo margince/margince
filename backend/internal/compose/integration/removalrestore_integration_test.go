@@ -11,6 +11,8 @@ import (
 	"maps"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -177,6 +179,19 @@ func TestATagRestoreHidesARemovalThatIsNotTheCallers(t *testing.T) {
 		t.Errorf("restoring onto an archived record → %v, want ErrNotFound", err)
 	}
 
+	retired := f.tag(t, "Retired And Archived")
+	both := f.taggedByRep(t, retired, "Archived With A Retired Word")
+	removedBoth := f.removeTag(f.rep, t, retired, both)
+	if _, err := f.e.Contacts.ArchiveContact(f.e.Admin(), ContactIDOf(both), nil); err != nil {
+		t.Fatalf("archiving the contact: %v", err)
+	}
+	if _, err := f.store.ArchiveTag(f.e.Admin(), retired); err != nil {
+		t.Fatalf("archiving the tag: %v", err)
+	}
+	if _, err := f.store.RestoreTagRemoval(f.rep, retired, removedBoth); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("restoring a retired tag onto an archived record → %v, want ErrNotFound before any conflict", err)
+	}
+
 	kept := f.taggedByRep(t, tag, "Rep Lost The Grant")
 	removal := f.removeTag(f.rep, t, tag, kept)
 	readOnly := f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, withGrant(restorePerms(), "contact", principal.ObjectGrant{Read: true}))
@@ -208,11 +223,11 @@ func (f restoreFixture) member(contact ids.UUID, note *string) collections.Membe
 
 func (f restoreFixture) removeMember(ctx context.Context, t *testing.T, list ids.ListID, contact ids.UUID) ids.UUID {
 	t.Helper()
-	removed, err := f.store.RemoveMember(ctx, list, f.member(contact, nil))
+	removal, err := f.store.RemoveMember(ctx, list, f.member(contact, nil))
 	if err != nil {
 		t.Fatalf("removing the member: %v", err)
 	}
-	return removed.AuditID
+	return removal
 }
 
 func (f restoreFixture) memberProvenance(t *testing.T, list ids.ListID, contact ids.UUID) string {
@@ -344,5 +359,50 @@ func TestAnErasedMembersNoteLeavesNoCopyAndItsRemovalCannotComeBack(t *testing.T
 	}
 	if _, err := f.store.RestoreMemberRemoval(f.e.Admin(), list, removal); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("restoring a removal whose subject was erased → %v, want ErrNotFound", err)
+	}
+}
+
+// A change whose transaction began before the removal's carries an earlier
+// occurred_at, and still counts as later: it was written after.
+func TestATagRestoreSeesAChangeFromATransactionThatBeganFirst(t *testing.T) {
+	f := newRestoreFixture(t)
+	tag := f.tag(t, "Long Transaction")
+	contact := f.taggedByRep(t, tag, "Raced")
+	var removal ids.UUID
+	err := f.e.DB().Tx(f.e.Admin(), func(tx pgx.Tx) error {
+		removal = f.removeTag(f.e.Admin(), t, tag, contact)
+		if _, err := f.store.ApplyTagTx(f.e.Admin(), tx, tag, "contact", contact); err != nil {
+			return err
+		}
+		_, err := f.store.RemoveTagTx(f.e.Admin(), tx, tag, "contact", contact)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("the long transaction: %v", err)
+	}
+	earlier := f.e.WsCount(t, `SELECT count(*) FROM audit_log a, audit_log r
+		WHERE r.id = $1 AND a.entity_type = 'tag' AND a.entity_id = r.entity_id AND a.id > r.id AND a.occurred_at < r.occurred_at`,
+		removal)
+	if earlier != 2 {
+		t.Fatalf("%d later changes carry an earlier occurred_at, want the long transaction's two", earlier)
+	}
+	if _, err := f.store.RestoreTagRemoval(f.e.Admin(), tag, removal); !errors.Is(err, collections.ErrRemovalMovedOn) {
+		t.Fatalf("restoring past a change from a transaction that began first → %v, want ErrRemovalMovedOn", err)
+	}
+}
+
+func TestATagRemovalCannotComeBackOnceItsRecordIsErased(t *testing.T) {
+	f := newRestoreFixture(t)
+	tag := f.tag(t, "Erased Record")
+	contact := f.taggedByRep(t, tag, "Erased Tagged Subject")
+	removal := f.removeTag(f.e.Admin(), t, tag, contact)
+	if err := privacy.NewEraser(f.e.DB()).EraseContact(f.e.Admin(), contact, "subject request"); err != nil {
+		t.Fatalf("erasing the record: %v", err)
+	}
+	if _, err := f.store.RestoreTagRemoval(f.e.Admin(), tag, removal); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("restoring a tag onto an erased record → %v, want ErrNotFound", err)
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM taggable WHERE tag_id = $1`, tag); n != 0 {
+		t.Fatalf("%d taggings of the erased record exist, want none", n)
 	}
 }

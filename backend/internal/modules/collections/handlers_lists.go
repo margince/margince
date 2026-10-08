@@ -185,7 +185,7 @@ func (h Handlers) RemoveListMember(w http.ResponseWriter, r *http.Request, id cr
 		return
 	}
 	removed, err := h.store.RemoveMember(r.Context(), pathID[ids.ListKind](id), memberChange(req))
-	respond(w, r, http.StatusOK, crmcontracts.RemovalUndo{AuditId: openapi_types.UUID(removed.AuditID)}, err)
+	respond(w, r, http.StatusOK, crmcontracts.RemovalUndo{AuditId: openapi_types.UUID(removed)}, err)
 }
 
 // RestoreListMember serves POST /lists/{id}/members/restore.

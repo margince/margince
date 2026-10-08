@@ -6,9 +6,8 @@ package deals
 // Bringing an archived deal back. The flow and its refusals are
 // storekit/unarchive.go's; this is the deal's share of the statements.
 //
-// The relationship statement repeats the contacts module's word for word. A
-// module never imports a sibling, and each copy has to stay a literal in the
-// module that writes it for the table-ownership gate to see the write at all.
+// The relationship statement repeats the contacts module's: a module never imports
+// a sibling, and the table-ownership gate sees only a literal in the writer.
 
 import (
 	"context"

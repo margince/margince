@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -32,46 +33,65 @@ func reinsertMemberArgs(entityType string, id ids.UUID, rowID *ids.UUID, kept st
 // off a Shortlist, as its author left it, behind the removal's own gates.
 func (s *Store) RestoreMemberRemoval(ctx context.Context, listID ids.ListID, removalID ids.UUID) (memberRow, error) {
 	var out memberRow
+	if err := httperr.RequireBodyID(auditIDField, removalID); err != nil {
+		return out, err
+	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		removed, err := ownRemoval(ctx, tx, listObject, listID.UUID, removalID)
-		if err != nil {
-			return err
-		}
-		var record linkImage
-		if err := removed.decode(&record); err != nil {
-			return err
-		}
-		if record.ListMembership == nil {
-			return ErrRemovalUnkept
-		}
-		change := MemberChange{EntityType: record.EntityType, EntityID: record.EntityID, Reason: ReasonChosen}
-		if err := admitMemberChange(ctx, tx, listID, change); err != nil {
-			return err
-		}
-		if err := refuseMovedOn(ctx, tx, listObject, listID.UUID, removed, record); err != nil {
-			return err
-		}
-		memberNote, err := removedMemberNote(ctx, tx, listID, removed, record)
-		if err != nil {
-			return err
-		}
-		actor, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
-		kept := *record.ListMembership
-		kept.ListID, kept.Note = listID.UUID, memberNote
-		err = rowScanMember(tx.QueryRow(ctx, reinsertMember, reinsertMemberArgs(record.EntityType, record.EntityID, record.RowID, kept)), &out)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrRemovalMovedOn
-		}
-		if err != nil {
-			return fmt.Errorf("put the membership back: %w", err)
-		}
-		_, err = recordMemberChange(storekit.WithReversal(ctx, listObject, listID.UUID, removalID),
-			tx, listID, change, memberAdded, actor, nil)
+		var err error
+		out, err = restoreMemberRemovalTx(ctx, tx, listID, removalID, nil)
 		return err
 	})
+	return out, err
+}
+
+// RestoreBatchMemberRemovalTx is RestoreMemberRemoval for a bulk undo: it puts
+// back a removal the batch wrote, under the undo's authority over that batch.
+func (s *Store) RestoreBatchMemberRemovalTx(ctx context.Context, tx pgx.Tx, listID ids.ListID, removalID, batchID ids.UUID) (memberRow, error) {
+	return restoreMemberRemovalTx(ctx, tx, listID, removalID, &batchID)
+}
+
+func restoreMemberRemovalTx(ctx context.Context, tx pgx.Tx, listID ids.ListID, removalID ids.UUID, batch *ids.UUID) (memberRow, error) {
+	var out memberRow
+	removed, err := ownRemoval(ctx, tx, listObject, listID.UUID, removalID, batch)
+	if err != nil {
+		return out, err
+	}
+	var record linkImage
+	if err := removed.decode(&record); err != nil {
+		return out, err
+	}
+	if record.ListMembership == nil {
+		return out, ErrRemovalUnkept
+	}
+	change := MemberChange{EntityType: record.EntityType, EntityID: record.EntityID, Reason: ReasonChosen}
+	if batch != nil {
+		change.Reason = ReasonBulk
+	}
+	if err := admitMemberChange(ctx, tx, listID, change); err != nil {
+		return out, err
+	}
+	if err := refuseMovedOn(ctx, tx, listObject, listID.UUID, removed, record); err != nil {
+		return out, err
+	}
+	memberNote, err := removedMemberNote(ctx, tx, listID, removed, record)
+	if err != nil {
+		return out, err
+	}
+	actor, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return out, err
+	}
+	kept := *record.ListMembership
+	kept.ListID, kept.Note = listID.UUID, memberNote
+	err = rowScanMember(tx.QueryRow(ctx, reinsertMember, reinsertMemberArgs(record.EntityType, record.EntityID, record.RowID, kept)), &out)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, ErrRemovalMovedOn
+	}
+	if err != nil {
+		return out, fmt.Errorf("put the membership back: %w", err)
+	}
+	_, err = recordMemberChange(storekit.WithReversal(ctx, listObject, listID.UUID, removalID),
+		tx, listID, change, memberAdded, actor, nil)
 	return out, err
 }
 
@@ -81,9 +101,11 @@ func removedMemberNote(ctx context.Context, tx pgx.Tx, listID ids.ListID, r remo
 	var note *string
 	err := tx.QueryRow(ctx, `
 		SELECT member_note FROM list_member_event
-		 WHERE list_id = $1 AND entity_type = $2 AND entity_id = $3 AND action = 'removed' AND occurred_at = $4
+		 WHERE list_id = @list_id AND entity_type = @entity_type AND entity_id = @entity_id
+		   AND action = 'removed' AND occurred_at = @at
 		 ORDER BY id DESC LIMIT 1`,
-		listID, record.EntityType, record.EntityID, r.at).Scan(&note)
+		pgx.StrictNamedArgs{listIDField: listID, entityTypeField: record.EntityType, entityIDField: record.EntityID, "at": r.at},
+	).Scan(&note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrRemovalUnkept
 	}

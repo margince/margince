@@ -287,6 +287,16 @@ func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType stri
 	return out, err
 }
 
+// The keys a tag audit row files a tagging under.
+const (
+	tagApplied = "applied"
+	tagRemoved = "removed"
+)
+
+func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string, link linkImage) (ids.UUID, error) {
+	return storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{change: link})
+}
+
 // EnsureTaggable refuses a record this caller may not tag.
 //
 // Split out so a caller can ask BEFORE it creates anything: apply-by-name used

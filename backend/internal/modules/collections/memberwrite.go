@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -48,16 +47,6 @@ type MemberChange struct {
 	EntityID   ids.UUID
 	Note       *string
 	Reason     string
-	// AddedAt puts a member back with the time it was first added; nil is now.
-	AddedAt *time.Time
-}
-
-// RemovedMember is what a removal took off the list, so an undo can put the
-// member back as it was; AuditID is the handle RestoreMemberRemoval takes.
-type RemovedMember struct {
-	Note    *string
-	AddedAt time.Time
-	AuditID ids.UUID
 }
 
 // ErrAlreadyMember and ErrNotMember are a change that would change nothing.
@@ -80,12 +69,13 @@ func (s *Store) AddMember(ctx context.Context, listID ids.ListID, change MemberC
 	return out, err
 }
 
-// RemoveMember removes one record from a Shortlist in its own transaction.
-func (s *Store) RemoveMember(ctx context.Context, listID ids.ListID, change MemberChange) (RemovedMember, error) {
+// RemoveMember removes one record from a Shortlist in its own transaction, and
+// answers the removal's audit id, the handle RestoreMemberRemoval takes.
+func (s *Store) RemoveMember(ctx context.Context, listID ids.ListID, change MemberChange) (ids.UUID, error) {
 	if err := httperr.RequireBodyID(entityIDField, change.EntityID); err != nil {
-		return RemovedMember{}, err
+		return ids.Nil, err
 	}
-	var removed RemovedMember
+	var removed ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		removed, err = s.RemoveMemberTx(ctx, tx, listID, change)
@@ -127,14 +117,13 @@ func addMemberTx(ctx, admit context.Context, tx pgx.Tx, listID ids.ListID, chang
 	}
 	var out memberRow
 	err = rowScanMember(tx.QueryRow(ctx, `
-		INSERT INTO list_member (list_id, entity_type, entity_id, added_by, note, created_at)
-		VALUES (@list_id, @entity_type, @entity_id, @added_by, @note, COALESCE(@added_at, now()))
+		INSERT INTO list_member (list_id, entity_type, entity_id, added_by, note)
+		VALUES (@list_id, @entity_type, @entity_id, @added_by, @note)
 		ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING
 		RETURNING id, list_id, entity_type, entity_id, added_by, created_at, note`,
 		pgx.StrictNamedArgs{
 			listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID,
 			"added_by": actor, noteField: change.Note,
-			"added_at": change.AddedAt,
 		}), &out)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return memberRow{}, ErrAlreadyMember
@@ -148,13 +137,13 @@ func addMemberTx(ctx, admit context.Context, tx pgx.Tx, listID ids.ListID, chang
 
 // RemoveMemberTx removes one record from a Shortlist on the caller's
 // transaction.
-func (s *Store) RemoveMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID, change MemberChange) (RemovedMember, error) {
+func (s *Store) RemoveMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID, change MemberChange) (ids.UUID, error) {
 	if err := admitMemberChange(ctx, tx, listID, change); err != nil {
-		return RemovedMember{}, err
+		return ids.Nil, err
 	}
 	actor, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return RemovedMember{}, err
+		return ids.Nil, err
 	}
 	kept := storekit.ListMembership{ListID: listID.UUID}
 	var rowID ids.UUID
@@ -164,13 +153,12 @@ func (s *Store) RemoveMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID
 		pgx.StrictNamedArgs{listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID},
 	).Scan(&rowID, &kept.AddedBy, &kept.CreatedAt, &kept.Note)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return RemovedMember{}, ErrNotMember
+		return ids.Nil, ErrNotMember
 	}
 	if err != nil {
-		return RemovedMember{}, err
+		return ids.Nil, err
 	}
-	auditID, err := recordMemberChange(ctx, tx, listID, change, memberRemoved, actor, &linkImage{RowID: &rowID, ListMembership: &kept})
-	return RemovedMember{Note: kept.Note, AddedAt: kept.CreatedAt, AuditID: auditID}, err
+	return recordMemberChange(ctx, tx, listID, change, memberRemoved, actor, &linkImage{RowID: &rowID, ListMembership: &kept})
 }
 
 // admitMemberChange asks every gate a membership change passes: the list

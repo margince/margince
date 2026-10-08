@@ -3,9 +3,6 @@
 
 package collections
 
-// A restore is keyed by the removal's audit row because that row kept the
-// link's provenance, which the restore writes back instead of the restorer's.
-
 import (
 	"context"
 	"encoding/json"
@@ -20,6 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+const auditIDField = "audit_id"
+
 // The refusals a restore answers besides not-found.
 var (
 	ErrRemovalMovedOn    = fmt.Errorf("the record's link changed after this removal, so it cannot be put back: %w", apperrors.ErrConflict)
@@ -27,15 +26,17 @@ var (
 	ErrTagRetiredRestore = fmt.Errorf("the tag is archived: restore it first: %w", apperrors.ErrConflict)
 )
 
+// removal is the audit row a restore is keyed by: it kept the link's provenance,
+// which the restore writes back instead of the restorer's.
 type removal struct {
 	id    ids.UUID
 	image []byte
 	at    time.Time
 }
 
-// ownRemoval answers not-found for any row but the caller's own removal, so an
-// id says nothing about whose removal it was.
-func ownRemoval(ctx context.Context, tx pgx.Tx, subject string, subjectID, auditID ids.UUID) (removal, error) {
+// ownRemoval answers not-found for any row but the caller's own removal, or,
+// for a bulk undo, one the undone batch wrote; an id says nothing about whose.
+func ownRemoval(ctx context.Context, tx pgx.Tx, subject string, subjectID, auditID ids.UUID, batch *ids.UUID) (removal, error) {
 	p, err := storekit.Actor(ctx)
 	if err != nil {
 		return removal{}, err
@@ -43,9 +44,13 @@ func ownRemoval(ctx context.Context, tx pgx.Tx, subject string, subjectID, audit
 	out := removal{id: auditID}
 	err = tx.QueryRow(ctx, `
 		SELECT after -> 'removed', occurred_at FROM audit_log
-		 WHERE id = $1 AND entity_type = $2 AND entity_id = $3 AND action = 'update'
-		   AND after ? 'removed' AND actor_type = $4 AND actor_id = $5`,
-		auditID, subject, subjectID, string(p.Type), p.ID).Scan(&out.image, &out.at)
+		 WHERE id = @audit_id AND entity_type = @subject AND entity_id = @subject_id AND action = 'update'
+		   AND after ? 'removed'
+		   AND (batch_id = @batch OR (@batch::uuid IS NULL AND actor_type = @actor_type AND actor_id = @actor_id))`,
+		pgx.StrictNamedArgs{
+			auditIDField: auditID, "subject": subject, "subject_id": subjectID, "batch": batch,
+			"actor_type": string(p.Type), "actor_id": p.ID,
+		}).Scan(&out.image, &out.at)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return removal{}, apperrors.ErrNotFound
 	}
@@ -75,7 +80,8 @@ type linkImage struct {
 }
 
 // refuseMovedOn refuses when a later audit row touched the same link: putting
-// the removed one back would overwrite that change.
+// the removed one back would overwrite that change. Ids are minted at write
+// time, so they also order a row whose transaction began before the removal's.
 func refuseMovedOn(ctx context.Context, tx pgx.Tx, subject string, subjectID ids.UUID, r removal, record linkImage) error {
 	pair, err := json.Marshal(linkImage{EntityType: record.EntityType, EntityID: record.EntityID})
 	if err != nil {
@@ -84,9 +90,11 @@ func refuseMovedOn(ctx context.Context, tx pgx.Tx, subject string, subjectID ids
 	var moved bool
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM audit_log
-		 WHERE entity_type = $1 AND entity_id = $2 AND id <> $3 AND occurred_at >= $4
-		   AND (after -> 'applied' @> $5::jsonb OR after -> 'added' @> $5::jsonb OR after -> 'removed' @> $5::jsonb))`,
-		subject, subjectID, r.id, r.at, string(pair)).Scan(&moved)
+		 WHERE entity_type = @subject AND entity_id = @subject_id AND id <> @removal
+		   AND (occurred_at >= @at OR id > @removal)
+		   AND (after -> 'applied' @> @pair::jsonb OR after -> 'added' @> @pair::jsonb OR after -> 'removed' @> @pair::jsonb))`,
+		pgx.StrictNamedArgs{"subject": subject, "subject_id": subjectID, "removal": r.id, "at": r.at, "pair": string(pair)},
+	).Scan(&moved)
 	if err != nil {
 		return fmt.Errorf("check the link for later changes: %w", err)
 	}

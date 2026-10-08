@@ -158,8 +158,9 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/contacts/companytechnical.go:auditTechnicalEnrichment": "what a company publicly runs lands in company_fact and no column of the company moves, so no field has a prior value for an image to name. What was replaced is still recorded, and more precisely than an image would: the evidence carries the rows written AND the rows the reconciliation removed, which is what makes a mail provider moving to Microsoft 365 readable as a move rather than as an arrival",
 
-	"internal/modules/collections/tagrestore.go:auditTagLink": "the tag row is untouched; the write inserts or deletes a " +
-		"taggable link, and the after image names the record it now points at or stopped pointing at.",
+	"internal/modules/collections/tags.go:auditTagLink": "the tag row is untouched; the write inserts or deletes a " +
+		"taggable link, and the after image names the record. The helper is the subject because its signature admits " +
+		"nothing but a tagging image on a tag, so a new caller can only write the shape ratified here.",
 	"internal/modules/collections/memberwrite.go:recordMemberChange": "the list row is untouched; the write adds or " +
 		"removes a Shortlist membership, and the after image names the record that joined or left.",
 	"internal/modules/webhooks/store.go:RotateSecret": "the new signing secret replaces a value that must never be " +

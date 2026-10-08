@@ -64,7 +64,7 @@ type RestoreWith struct {
 	// Erased is required: restoring from behind an erasure would bring back
 	// what the erasure certified gone.
 	Erased ErasedSince
-	// Links is required: a cascade that kept memberships or tags owes them back.
+	// Links is required: the archive cascade removed memberships and tags the un-archive must put back.
 	Links LinkRestore
 	// PendingLinks are links an earlier restore of the same change left
 	// behind because this record was still archived. Each is tried again once

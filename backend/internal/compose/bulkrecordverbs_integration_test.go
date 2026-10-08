@@ -142,9 +142,15 @@ func TestABulkRemoveTagAndItsUndoPutsItBack(t *testing.T) {
 	tag := seedBulkTag(t, e)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
 	tags := collections.NewStore(e.DB())
-	if _, err := tags.ApplyTag(e.Admin(), tag, "contact", ids.UUID(items[0].Id)); err != nil {
+	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, bulkTagPerms())
+	if _, err := tags.ApplyTag(rep1, tag, "contact", ids.UUID(items[0].Id)); err != nil {
 		t.Fatal(err)
 	}
+	assignment := func() string {
+		return e.WsScalar(t, `SELECT concat_ws('|', id, created_at, assigned_by, assigned_by_kind, assigned_at)
+			FROM taggable WHERE tag_id = $1 AND entity_id = $2`, tag, items[0].Id)
+	}
+	assigned := assignment()
 	engine := bulkEngineFor(e)
 	out, err := engine.Execute(e.Admin(), tagChange(crmcontracts.BulkVerbRemoveTag, tag, items))
 	if err != nil || out.Changed != 1 || len(out.Skipped) != 1 || out.Skipped[0].Reason != crmcontracts.BulkSkipReasonNoChange {
@@ -161,6 +167,9 @@ func TestABulkRemoveTagAndItsUndoPutsItBack(t *testing.T) {
 	}
 	if n := taggedCount(t, e, tag); n != 1 {
 		t.Errorf("after the undo %d contacts carry the tag, want only the one it was taken off", n)
+	}
+	if back := assignment(); back != assigned {
+		t.Errorf("the undo put the tag back as %q, want the assignment it had: %q", back, assigned)
 	}
 }
 
