@@ -66,7 +66,7 @@ tiers:
 # set once on the provider (the key comes from OPENAI_COMPATIBLE_API_KEY):
 providers:
   openai_compatible:
-    base_url: https://api.mistral.ai # host root, NO /v1 (see the caveat below)
+    base_url: https://api.mistral.ai # host root; a trailing /v1 is dropped
 tiers:
   cheap_cloud:
     provider: openai_compatible
@@ -86,10 +86,10 @@ with a `# yaml-language-server:` line.
 - The embeddings lane may carry its own `base_url`, for a separate server for embeddings. A vLLM you host
   serves one model per program.
 - When a lane has a `base_url` and its provider names none, Margince moves it to the provider.
-- For the providers on the OpenAI wire (`openai_compatible`, `openai`, `vllm`), `base_url` is the root of
-  the vendor host, with _no_ version part. The client adds `/v1/chat/completions` (or `/v1/responses`).
-  So a base that ends in `/v1` has it twice: `https://api.mistral.ai/v1` becomes
-  `…/v1/v1/chat/completions`, and answers 404. Use `https://api.mistral.ai`.
+- For the providers whose client adds `/v1` (`openai_compatible`, `openai`, `vllm`, `anthropic`),
+  `base_url` is the root of the vendor host. The client adds `/v1/chat/completions` (or
+  `/v1/responses`, `/v1/messages`). A base that ends in `/v1` is read as its root, so
+  `https://api.mistral.ai/v1` reaches the same place as `https://api.mistral.ai`.
 - `gemini` works the other way. Its default base keeps `/v1beta`, and the paths are written from the
   version, so leave `base_url` out.
 
@@ -271,11 +271,10 @@ the same `http` or `https`. It refuses it when it changes the host, or goes down
 
 | What you see | What it means, and the fix |
 |---|---|
-| `http 404` on `…/v1/v1/chat/completions` or `…/v1/v1/responses` | `base_url` has a `/v1` part; drop it ([Set the host](#set-the-host)). The client adds it. |
 | Error at start: `profile sovereign forbids cloud provider …` | A binding names a cloud provider under a profile that refuses it. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
 | Error at start: `needs an api key — set X_API_KEY …` | The key value for the cloud provider in the binding is not set. Export the one the error names, such as `GEMINI_API_KEY`. |
 | Error at start: `field api_key not found` | You put an `api_key:` in the `seeds.ai_routing` binding. Remove it. The key comes from the key vault (Settings → AI → Model provider keys), or from its seed value. |
-| Error at start: `needs a base_url …` | `openai_compatible` has no host. Set `providers.openai_compatible.base_url` (the Host field on its provider sheet) to the root of the vendor host, with no `/v1`. |
+| Error at start: `needs a base_url …` | `openai_compatible` has no host. Set `providers.openai_compatible.base_url` (the Host field on its provider sheet) to the root of the vendor host. |
 | Error at start: `must name a public host` | A binding to a vendor with its own client (`anthropic`/`openai`/`gemini`) points inside your network. Bind `openai_compatible` for a gateway you host (see "Where a `base_url` may point"). |
 | Error at start: `must be https` | A binding to a vendor with its own client uses `http://`. Use `https://`, or bind `openai_compatible` if the endpoint serves over `http`. |
 | Error at start: `not an address inference is served from` | The `base_url` names a `link-local`, CGNAT or documentation address. Give the endpoint's own address (see "Where a `base_url` may point"). |

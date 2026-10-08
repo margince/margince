@@ -1561,11 +1561,11 @@ from `PUT /ai/routing`.
 The `base_url` of a decision provider is the whole endpoint URL, and Margince sends to it as
 written; it adds nothing.
 
-`base_url` for the providers on the OpenAI wire (`openai_compatible`, `openai`, and `vllm`) is the
-**root of the vendor host**, with no version part. The adapter adds `/v1/chat/completions` (or
-`/v1/responses`), so a base that ends in `/v1` would have it twice (`…/v1/v1/…` → 404). Use
-`https://api.mistral.ai`, not `https://api.mistral.ai/v1`. `gemini` is the other way round: its
-default base keeps the `/v1beta` part, and the paths are written from that version.
+`base_url` for the providers whose adapter adds `/v1` (`openai_compatible`, `openai`, `vllm` and
+`anthropic`) is the **root of the vendor host**. The adapter adds `/v1/chat/completions` (or
+`/v1/responses`, `/v1/messages`). A base that ends in `/v1` is stored and dialled as its root, so
+`https://api.mistral.ai/v1` and `https://api.mistral.ai` reach the same place. `gemini` is the other
+way round: its default base keeps the `/v1beta` part, and the paths are written from that version.
 
 `location` belongs to `gemini_vertex` only. It is set on the provider (and may be set again on
 `embeddings:`), and refused on every other provider.
