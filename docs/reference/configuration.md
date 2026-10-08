@@ -32,8 +32,8 @@ The api and the worker follow the same rules, and each reads only the values it 
 | Setting an admin changes | value saved in the database → default | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
 | Seed in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | Used when the company is created, and again by a data reset. |
 | AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
-| SMTP password | `email.smtp.password` reference → the copy sealed in the vault | The relay is used without authentication. |
-| License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run unlicensed. |
+| SMTP password | `email.smtp.password` reference → the copy sealed in the vault | The relay is used with no password. |
+| License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
 
 **Posture.** `MARGINCE_ENV` picks the overlay; how the two files merge is in
 [The file layer is two files](#the-file-layer-is-two-files-a-base-and-the-postures-overlay).
@@ -41,13 +41,15 @@ The api and the worker follow the same rules, and each reads only the values it 
 **Seeds.** These are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes,
 retention, starter automations, booking page, `ai_routing`). The api writes them in one transaction
 when it boots on a database with no company. Without `bootstrap_admin` it prints a one-time setup
-token instead, and the person who claims the installation enters the company and the first admin;
-the `seeds.*` values still apply. After that, editing the seeds changes nothing until a data reset
-(`operations.allow_data_reset`), which applies `seeds.*` again from the current file. Every other
-section of the file is read at each boot.
+token instead. The user who claims the installation enters the company and the first admin, and
+the `seeds.*` values still apply.
+
+After that, editing `workspace` or `bootstrap_admin` changes
+nothing. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
+`seeds.*` again from the current file. Every other section of the file is read at each boot.
 
 **Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
-value. A value the setting's own check refuses gets a 422 that names the setting. Editing
+value. When a value fails the check of its setting, the save gets a 422 that names the setting. Editing
 `margince.yaml` never changes a saved setting.
 
 **Model binding.** The binding says which model serves each AI tier and which model embeds. It is a
