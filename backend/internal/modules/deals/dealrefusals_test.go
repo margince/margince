@@ -82,13 +82,6 @@ func TestAnOfferWithoutADateIsNeverLapsed(t *testing.T) {
 	}
 }
 
-func TestMovingToTheStageAlreadyHeldNamesTheTargetStage(t *testing.T) {
-	field, code := faultOf(t, &AlreadyInStageError{})
-	if field != "to_stage_id" || code != "already_in_stage" {
-		t.Errorf("fault = %s/%s", field, code)
-	}
-}
-
 func TestAStageMismatchNamesTheFieldTheCallerSent(t *testing.T) {
 	if field, _ := faultOf(t, &StagePipelineMismatchError{Field: "stage_id"}); field != "stage_id" {
 		t.Errorf("a create-time mismatch names %s, want stage_id", field)

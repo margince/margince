@@ -148,7 +148,7 @@ func TestADealBornInAStageThatDoesNotExistIsNotFound(t *testing.T) {
 	}
 }
 
-func TestAClosedDealCannotBeClosedAgainByMovingToItsOwnStage(t *testing.T) {
+func TestMovingAClosedDealToItsOwnStageChangesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -159,10 +159,9 @@ func TestAClosedDealCannotBeClosedAgainByMovingToItsOwnStage(t *testing.T) {
 		t.Fatalf("winning the deal → %d", status)
 	}
 	closed := readDealStatus(t, e, won)
-	var fault faultBody
 	if status := e.Call(t, "POST", "/v1/deals/"+won+"/advance",
-		AnyMap{"to_stage_id": stages.Won, "won_without_contract_reason": "purchase_order"}, nil, &fault); status != http.StatusUnprocessableEntity {
-		t.Errorf("winning an already won deal → %d %+v, want 422", status, fault)
+		AnyMap{"to_stage_id": stages.Won, "won_without_contract_reason": "purchase_order"}, nil, nil); status != http.StatusOK {
+		t.Errorf("winning an already won deal → %d, want the deal back as it stands (200)", status)
 	}
 	if after := readDealStatus(t, e, won); after.ClosedAt == nil || closed.ClosedAt == nil || *after.ClosedAt != *closed.ClosedAt || after.Version != closed.Version {
 		t.Errorf("a repeated win moved the close: %+v → %+v", closed, after)
@@ -174,16 +173,15 @@ func TestAClosedDealCannotBeClosedAgainByMovingToItsOwnStage(t *testing.T) {
 	}, nil, &second); status != http.StatusCreated {
 		t.Fatalf("create the second deal → %d", status)
 	}
-	lost := second.ID
-	if status := e.Call(t, "POST", "/v1/deals/"+lost+"/advance",
+	if status := e.Call(t, "POST", "/v1/deals/"+second.ID+"/advance",
 		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "price"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("losing the deal → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/deals/"+lost+"/advance",
-		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "a different reason"}, nil, nil); status != http.StatusUnprocessableEntity {
-		t.Errorf("losing an already lost deal → %d, want 422", status)
+	if status := e.Call(t, "POST", "/v1/deals/"+second.ID+"/advance",
+		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "a different reason"}, nil, nil); status != http.StatusOK {
+		t.Errorf("losing an already lost deal → %d, want 200", status)
 	}
-	if after := readDealStatus(t, e, lost); after.LostReason == nil || *after.LostReason != "price" {
+	if after := readDealStatus(t, e, second.ID); after.LostReason == nil || *after.LostReason != "price" {
 		t.Errorf("a repeated loss replaced the reason: %+v", after)
 	}
 }

@@ -3236,9 +3236,9 @@ export interface paths {
          *     its lost reason and the FX rate frozen at close, and takes revenue out of a
          *     quarter that has already been reported.
          *
-         *     A move to the stage the deal already holds is refused 422 `already_in_stage`: closing
-         *     a closed deal again would move its close day, so it takes a reopen first. A
-         *     `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
+         *     A move to the stage the deal already holds changes nothing and answers 200 with the
+         *     deal as it stands: a retried call must not close a closed deal again and move its
+         *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          */
         post: operations["advanceDeal"];
         delete?: never;

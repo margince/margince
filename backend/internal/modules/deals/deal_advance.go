@@ -79,19 +79,6 @@ func (e *StagePipelineMismatchError) FieldFault() (field, code, message string) 
 	return "to_stage_id", "stage_not_in_pipeline", e.Error()
 }
 
-// AlreadyInStageError maps to 422: a move to the stage the deal already stands
-// in changes nothing, and on a closed deal it would move the close day.
-type AlreadyInStageError struct{}
-
-func (e *AlreadyInStageError) Error() string {
-	return "the deal is already in this stage; choose a different stage (a closed deal is reopened by moving it to an open stage)"
-}
-
-// FieldFault refuses a move onto the stage the deal already holds.
-func (e *AlreadyInStageError) FieldFault() (field, code, message string) {
-	return "to_stage_id", "already_in_stage", e.Error()
-}
-
 // LostReasonRequiredError maps to 422 on advancing to a lost stage
 // without a reason (deal_lost_reason CHECK, features/01 §3.1).
 type LostReasonRequiredError struct{}
@@ -181,8 +168,12 @@ func (s *Store) advanceOnTx(
 			return fmt.Errorf("advance deal %s: deal has no native pipeline/stage", id)
 		}
 
+		// Moving to the stage the deal already holds changes nothing. Answering
+		// with the deal as it stands makes a retried call safe, where running the
+		// move again would close a closed deal a second time and move its day.
 		if ids.UUID(*current.StageId) == in.ToStageID.UUID {
-			return &AlreadyInStageError{}
+			out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+			return err
 		}
 		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
 		if err != nil {
