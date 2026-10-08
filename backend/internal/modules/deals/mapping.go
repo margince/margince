@@ -123,6 +123,11 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 		return CreateDealInput{}, err
 	}
 	req.Name = name
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateDealInput{}, err
+	}
+	req.Source = source
 	// Provenance first, and before the structural checks below: a caller writing
 	// the importer's namespace is claiming to BE the importer, and that is refused
 	// on the attempt rather than only on an otherwise-complete body. Answering

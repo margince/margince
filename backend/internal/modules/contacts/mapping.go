@@ -72,6 +72,11 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 		return CreateContactInput{}, err
 	}
 	req.FullName = fullName
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateContactInput{}, err
+	}
+	req.Source = source
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateContactInput{}, err
 	}
@@ -229,6 +234,11 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		return CreateCompanyInput{}, err
 	}
 	req.DisplayName = displayName
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateCompanyInput{}, err
+	}
+	req.Source = source
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateCompanyInput{}, err
 	}

@@ -338,6 +338,7 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Vera Verified",
 		"emails": []AnyMap{
 			{"email": "vera@corp.example", "email_type": "work", "is_primary": true},
@@ -446,6 +447,7 @@ func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 			ID string `json:"id"`
 		}
 		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+			"source":    "manual",
 			"full_name": name,
 			"emails":    []AnyMap{{"email": email, "email_type": "work", "is_primary": true}},
 		}, nil, &p); status != http.StatusCreated {

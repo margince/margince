@@ -24,8 +24,8 @@ import {
   companyBackstop,
   emptyPage,
   jsonResponse,
-  stubFetch,
 } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 import { companyEditFields, mapCompanyUpdate } from "./companyform";
 import { TodayOnThisAccount } from "./companytoday";
 import { listFetchLimit } from "./listquery";

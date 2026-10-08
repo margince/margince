@@ -51,8 +51,8 @@ func mustCall(t *testing.T, e *apptest.AppEnv, method, path string, body any, wa
 func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	e, _ := listsApp(t, true)
 	var a, b, company AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"full_name": "Route Alpha"}, http.StatusCreated, &a)
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"full_name": "Route Beta"}, http.StatusCreated, &b)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Alpha"}, http.StatusCreated, &a)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Beta"}, http.StatusCreated, &b)
 	mustCall(t, e, "POST", "/v1/companies", AnyMap{"display_name": "Route Account", "source": "manual"}, http.StatusCreated, &company)
 
 	var live, short listWire
@@ -208,7 +208,7 @@ func TestACompanysShortlistsAndTheOtherRecordListsNarrowByList(t *testing.T) {
 func TestTheAgentsListModesAnswerAsTheRoutesDo(t *testing.T) {
 	e, agent := listsApp(t, true)
 	var contact AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"full_name": "Agent Pick"}, http.StatusCreated, &contact)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Agent Pick"}, http.StatusCreated, &contact)
 	var created struct {
 		Result listWire `json:"result"`
 	}

@@ -184,6 +184,13 @@ func (s *Store) SetProjectCompany(ctx context.Context, in SetProjectCompanyInput
 	if err := httperr.RequireBodyID(siteReadCompanyKey, in.CompanyID.UUID); err != nil {
 		return nil, err
 	}
+	role := projectCompanyDefaultRole
+	if in.Role != "" {
+		var err error
+		if role, err = httperr.RequireNonBlank(relationshipRoleField, in.Role); err != nil {
+			return nil, err
+		}
+	}
 	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
 		return nil, err
 	}
@@ -193,10 +200,6 @@ func (s *Store) SetProjectCompany(ctx context.Context, in SetProjectCompanyInput
 	// project.
 	if err := auth.Require(ctx, projectObjectName, principal.ActionUpdate); err != nil {
 		return nil, err
-	}
-	role := in.Role
-	if role == "" {
-		role = projectCompanyDefaultRole
 	}
 	// captured_by is stamped from the authenticated principal, never from the
 	// request body — the write shape's rule, taken before the transaction opens

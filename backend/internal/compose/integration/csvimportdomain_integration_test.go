@@ -102,7 +102,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Northwind Traders", "domains": []map[string]any{
+		map[string]any{"source": "manual", "display_name": "Northwind Traders", "domains": []map[string]any{
 			{"domain": "northwind.example", "is_primary": true},
 		}}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the incumbent → %d, want 201", status)

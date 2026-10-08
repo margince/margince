@@ -10,13 +10,17 @@
 // Shared, so every split gate reads one corpus: a gate with a narrower idea of
 // what ships reads a smaller tree and reports the same word, PASS.
 
+import { readFileSync } from "node:fs";
 import { basename } from "node:path";
+import type ts from "typescript";
 import {
   filesMatching,
   moduleSpecifiers,
+  parseSource,
   resolveRelative,
   sourceFileAt,
 } from "./source-tree";
+import { isDocsPage } from "./story-files";
 
 // Tests, stories and testkits ask for both halves on purpose, and ship in no
 // chunk, so a walk from one proves nothing about the bundle.
@@ -29,46 +33,114 @@ export function productionModulesUnder(dir: string): string[] {
   );
 }
 
+// "scanned" is a text scan for a string after `from` or `import`: a superset
+// of "all" at a hundredth of a parse, so it can clear a graph but not convict.
+type Edges = "all" | "values" | "scanned";
+
+const GAP = String.raw`(?:\s|/\*[\s\S]*?\*/|//[^\n]*\n)*`;
+const SPECIFIER_SCAN = new RegExp(
+  String.raw`\b(?:from|import)${GAP}\(?${GAP}["'\`]([^"'\`\n]+)["'\`]`,
+  "g",
+);
+
 // Every walk crosses the same shared subgraph — the design system, the api
 // client, i18n — so a module is parsed once for the run, not once per entry
 // that reaches it. The tree does not change while a suite runs.
-const resolvedImports = new Map<string, string[]>();
+const resolvedImports: Record<Edges, Map<string, string[]>> = {
+  all: new Map(),
+  values: new Map(),
+  scanned: new Map(),
+};
 
-function edgesOf(file: string): string[] {
-  const known = resolvedImports.get(file);
+// An MDX page loads what its column-0 ESM statements name outside CommonMark
+// code fences; prose and samples would parse into specifiers nothing loads.
+const MDX_FENCE_OPEN = /^ {0,3}(?:(`{3,})(?!.*`)|(~{3,}))/;
+const MDX_LOADS =
+  /^(?:import(?=[\s{*"'])[^;]*?["'][^"'\n]+["']|export\b[^;]*?\bfrom\s*["'][^"'\n]+["']);?/gm;
+
+function outsideFences(text: string): string {
+  const kept: string[] = [];
+  let close: RegExp | null = null;
+  for (const line of text.split("\n")) {
+    if (close !== null) {
+      if (close.test(line)) {
+        close = null;
+      }
+      continue;
+    }
+    const open = MDX_FENCE_OPEN.exec(line);
+    if (open === null) {
+      kept.push(line);
+      continue;
+    }
+    const fence = open[1] ?? open[2];
+    close = new RegExp(`^ {0,3}\\${fence[0]}{${fence.length},}\\s*$`);
+  }
+  return kept.join("\n");
+}
+
+function importText(file: string): string {
+  const text = readFileSync(file, "utf8");
+  if (!isDocsPage(file)) {
+    return text;
+  }
+  return (outsideFences(text).match(MDX_LOADS) ?? []).join("\n");
+}
+
+function sourceOf(file: string): ts.SourceFile {
+  return isDocsPage(file)
+    ? parseSource(file, importText(file))
+    : sourceFileAt(file);
+}
+
+function specifiersOf(file: string, edges: Edges): string[] {
+  return edges === "scanned"
+    ? [...importText(file).matchAll(SPECIFIER_SCAN)].map((match) => match[1])
+    : moduleSpecifiers(sourceOf(file), edges);
+}
+
+export function edgesOf(file: string, edges: Edges): string[] {
+  const known = resolvedImports[edges].get(file);
   if (known) {
     return known;
   }
-  // Type-only edges count: a type import naming the heavy half couples the
-  // two, and a later value import across it would not show up in review.
-  const edges = moduleSpecifiers(sourceFileAt(file), "all")
+  const found = specifiersOf(file, edges)
     .map((specifier) => resolveRelative(file, specifier))
     .filter((next): next is string => next !== null);
-  resolvedImports.set(file, edges);
-  return edges;
+  resolvedImports[edges].set(file, found);
+  return found;
 }
 
 /**
- * The shortest import path from `entry` to any of `targets`, as absolute
- * paths from the entry on, or null when none is reachable. A path rather than
- * a boolean, because the offending edge is usually several hops in and
- * invisible from the entry.
+ * The shortest import path from `entry` (or the nearest of several) to any of
+ * `targets`, as absolute paths from the entry on, or null when none is
+ * reachable. A path rather than a boolean, because the offending edge is
+ * usually several hops in and invisible from the entry.
  */
 export function importPathTo(
-  entry: string,
-  targets: ReadonlySet<string>,
+  entry: string | readonly string[],
+  targets: ReadonlySet<string> | ((file: string) => boolean),
+  // Type-only edges count by default: a type import naming the heavy half
+  // couples the two, and a later value import across it would pass review.
+  edges: Edges = "all",
 ): string[] | null {
-  if (targets.has(entry)) {
-    return [entry];
+  const isTarget =
+    typeof targets === "function"
+      ? targets
+      : (file: string) => targets.has(file);
+  const starts = typeof entry === "string" ? [entry] : entry;
+  const hit = starts.find(isTarget);
+  if (hit !== undefined) {
+    return [hit];
   }
-  const seen = new Set([entry]);
-  const queue: string[][] = [[entry]];
+  const seen = new Set(starts);
+  const queue: string[][] = starts.map((start) => [start]);
   for (let trail = queue.shift(); trail; trail = queue.shift()) {
-    for (const next of edgesOf(trail[trail.length - 1])) {
+    for (const next of edgesOf(trail[trail.length - 1], edges)) {
       if (seen.has(next)) {
         continue;
       }
-      if (targets.has(next)) {
+      if (isTarget(next)) {
         return [...trail, next];
       }
       seen.add(next);
@@ -76,4 +148,48 @@ export function importPathTo(
     }
   }
   return null;
+}
+
+// `vitest`, `vitest/*`, `@vitest/*`, and a package's own `vitest` entry such as
+// `@testing-library/jest-dom/vitest`, which imports vitest in turn.
+const TEST_RUNNER = /^(?!\.)(?:[^/]+\/)*@?vitest(?:\/|$)/;
+
+const runnerModules = new Map<string, boolean>();
+
+export function loadsTestRunner(file: string): boolean {
+  const known = runnerModules.get(file);
+  if (known !== undefined) {
+    return known;
+  }
+  const loads =
+    importText(file).includes("vitest") &&
+    moduleSpecifiers(sourceOf(file), "values").some((specifier) =>
+      TEST_RUNNER.test(specifier),
+    );
+  runnerModules.set(file, loads);
+  return loads;
+}
+
+/** Each entry's value-import path to a module that loads the test runner. */
+export function testRunnerReach(entries: readonly string[]): string[][] {
+  // The scan costs a fraction of a parse, so only an entry it flags pays for
+  // the exact walk, which may still clear it of a type-only path.
+  return offenders(entries, "scanned")
+    .map((entry) => importPathTo(entry, loadsTestRunner, "values"))
+    .filter((path): path is string[] => path !== null);
+}
+
+// One walk per offender from every remaining entry, not one per entry: each
+// clean entry's walk would cross the whole graph again.
+function offenders(entries: readonly string[], edges: Edges): string[] {
+  const found: string[] = [];
+  let remaining = [...entries];
+  let path = importPathTo(remaining, loadsTestRunner, edges);
+  while (path !== null) {
+    const offender = path[0];
+    found.push(offender);
+    remaining = remaining.filter((entry) => entry !== offender);
+    path = importPathTo(remaining, loadsTestRunner, edges);
+  }
+  return entries.filter((entry) => found.includes(entry));
 }
