@@ -16,6 +16,7 @@ package agents
 
 import (
 	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -94,6 +95,9 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// Quoting the error whole would have carried the unescaped original
 		// beside the escaped copy.
 		return stagedExplanation(staged)
+	case errors.Is(err, errFileCannotWait):
+		return "This call needs a contact's approval, and a file cannot wait for an approval: the approval would " +
+			"keep the file. Nothing was changed. Do not retry; tell the user to attach the file in the Margince app."
 	case errors.Is(err, apperrors.ErrRequiresApproval):
 		// An approval is required and nothing was staged to carry it — a surface
 		// with no inbox, or a tool that cannot describe its own staging target.
@@ -198,6 +202,11 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 	}
 
 	explained := faultExplanation(fault)
+	if fault.Status == http.StatusNotImplemented {
+		// A 501 is the installation, not the call: no argument or retry reaches it.
+		return "This installation does not offer what this call needs, so nothing was changed and no argument " +
+			"would change that. (" + explained + ") Do not retry; tell the user it is not available here."
+	}
 	if fault.Transient() {
 		return "This tool is temporarily unavailable — nothing was changed. (" + explained + ") " +
 			"The same call can succeed later; wait before retrying, and tell the user if they are waiting on it."

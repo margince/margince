@@ -151,7 +151,8 @@ func (t attachDocument) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err != nil {
 		return nil, err
 	}
-	// The parent is what a retry's replay re-proves the caller may still see.
+	// A replay is a receipt of a past write: it re-proves the parent, not the file,
+	// which a human may since have removed and no replay reader resolves.
 	noteEvidence(ctx, datasource.EntityType(parent.EntityType), parent.EntityID)
 	return json.Marshal(stored)
 }

@@ -36,11 +36,11 @@ var attachmentTypes = []attachmentType{
 	{extension: ".odp", mediaType: "application/vnd.oasis.opendocument.presentation"},
 	{extension: ".rtf", mediaType: "application/rtf", aliases: []string{"text/rtf"}},
 	{extension: ".txt", mediaType: "text/plain"},
-	{extension: ".csv", mediaType: "text/csv"},
+	{extension: ".csv", mediaType: "text/csv", aliases: []string{"application/csv", "text/x-csv"}},
 	{extension: ".md", mediaType: "text/markdown", aliases: []string{"text/x-markdown"}},
 	{extension: ".png", mediaType: "image/png"},
-	{extension: ".jpg", mediaType: "image/jpeg"},
-	{extension: ".jpeg", mediaType: "image/jpeg"},
+	{extension: ".jpg", mediaType: "image/jpeg", aliases: []string{"image/jpg"}},
+	{extension: ".jpeg", mediaType: "image/jpeg", aliases: []string{"image/jpg"}},
 	{extension: ".gif", mediaType: "image/gif"},
 	{extension: ".webp", mediaType: "image/webp"},
 	{extension: ".heic", mediaType: "image/heic"},
@@ -67,27 +67,32 @@ func AcceptedAttachmentExtensions() []string {
 	return out
 }
 
-// resolveAttachmentType answers the media type an upload is stored with.
-//
-// An accepted declared type wins even over a disagreeing extension: Margince
-// only serves these files as downloads and never opens or runs them, so the
-// name is the downloader's concern. An empty or octet-stream type is what a
-// browser sends for a type it does not know (.msg, .md), so it defers to the
-// extension. No bytes are sniffed. shownName is what the refusal quotes.
+// resolveAttachmentType answers the stored media type. A declared type must be
+// in the table; an extension in the table then names the type, since Windows
+// declares a .csv as Excel, and otherwise the declared type stands: a stored
+// file is only ever downloaded. An empty or octet-stream type defers to the name.
 func resolveAttachmentType(declared, typedName, shownName string) (string, error) {
 	refusal := &UnsupportedFileTypeError{Filename: shownName}
 	declaredType, parsed := normalizeMediaType(declared)
 	if !parsed {
 		return "", refusal
 	}
-	kind, known := kindForMediaType(declaredType)
+	named, extensionKnown := kindForExtension(strings.ToLower(path.Ext(typedName)))
 	if declaredType == "" {
-		kind, known = kindForExtension(strings.ToLower(path.Ext(typedName)))
+		if !extensionKnown {
+			return "", refusal
+		}
+		return named.mediaType, nil
 	}
-	if !known {
+	kind, known := kindForMediaType(declaredType)
+	switch {
+	case !known:
 		return "", refusal
+	case extensionKnown:
+		return named.mediaType, nil
+	default:
+		return kind.mediaType, nil
 	}
-	return kind.mediaType, nil
 }
 
 // normalizeMediaType lowercases a declared type and drops its parameters; an

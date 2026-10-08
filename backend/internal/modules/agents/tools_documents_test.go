@@ -275,6 +275,31 @@ func TestAttachDocumentCanNeverBeStaged(t *testing.T) {
 	}
 }
 
+// Were attach_document ever made confirm-first, nothing could be staged for it,
+// so the refusal must say why and where the file goes instead.
+func TestAnAttachThatNeedsApprovalSaysTheFileCannotWait(t *testing.T) {
+	approvals := &recordingApprovals{}
+	registry := NewRegistry(approvals, nil)
+	RegisterDocumentTools(registry, &fakeDocuments{})
+
+	err := registry.stageRefusedCall(context.Background(), registry.tools["attach_document"], "attach_document",
+		attachCall(t, nil), "hash", apperrors.ErrRequiresApproval)
+
+	if !errors.Is(err, apperrors.ErrRequiresApproval) || len(approvals.staged) != 0 {
+		t.Fatalf("answered %v after staging %d calls, want the approval refusal and nothing staged", err, len(approvals.staged))
+	}
+	said := NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog()).
+		explain("attach_document", err)
+	for _, want := range []string{"cannot wait for an approval", "Margince app"} {
+		if !strings.Contains(said, want) {
+			t.Errorf("the agent was told %q, want it to say %q", said, want)
+		}
+	}
+	if strings.Contains(said, "list_approvals") {
+		t.Errorf("the agent was told %q, which sends the user to an approval that does not exist", said)
+	}
+}
+
 // A retry after a lost answer gets the first receipt, and the file is stored once.
 func TestARetriedAttachReplaysTheFirstReceipt(t *testing.T) {
 	docs := &fakeDocuments{}

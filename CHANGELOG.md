@@ -63,7 +63,7 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   The file lands on the record's **Documents** tab at once, through the same
   writer as an upload in the app. A file can be up to about 6.2 MB, or the
   installation's `uploads.attachment_mb` if that is smaller. No tool downloads a
-  file or returns its contents, and no scheduled agent is given either tool.
+  file or returns its contents, and no scheduled agent is given `attach_document`.
 
 ### Removed
 

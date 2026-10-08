@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -369,6 +370,117 @@ func TestARetriedAttachUnderOneKeyStoresOneFile(t *testing.T) {
 	}
 	if n := h.attachmentRows(t, company); n != 1 {
 		t.Errorf("a retried attach under one key left %d rows, want 1", n)
+	}
+}
+
+// A retry's answer is a receipt for the write that already happened, so it is
+// replayed even after a human removed the file: only the parent is re-proved.
+func TestARetriedAttachReplaysItsReceiptAfterTheFileIsRemoved(t *testing.T) {
+	h := newDocumentHarness(t, documentRepPerms(true))
+	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Receipt GmbH"}}`)
+	args := attachArgs("company", company, "terms.pdf", "application/pdf", []byte(minimalPDF))
+	args["idempotency_key"] = "attach-then-remove"
+	first, err := h.attach(t, args)
+	if err != nil {
+		t.Fatalf("first attach: %v", err)
+	}
+	human := h.e.As(h.e.Rep1, []ids.UUID{h.e.Team1}, integration.AdminPerms)
+	if err := activities.NewStore(h.e.DB()).ArchiveAttachment(human, first.AttachmentID); err != nil {
+		t.Fatalf("removing the file: %v", err)
+	}
+	again, err := h.attach(t, args)
+	if err != nil {
+		t.Fatalf("the retry after the file was removed: %v", err)
+	}
+	if again.AttachmentID != first.AttachmentID {
+		t.Errorf("the retry answered attachment %s, want the first call's %s", again.AttachmentID, first.AttachmentID)
+	}
+	if n := h.attachmentRows(t, company); n != 1 {
+		t.Errorf("the retry left %d rows, want the one first stored", n)
+	}
+}
+
+// An archived record stays readable by id, and so do its files: list_documents
+// answers what the record's Documents tab shows, on either kind of tab read.
+func TestAnArchivedRecordsDocumentsListAsItsTabShowsThem(t *testing.T) {
+	h := newDocumentHarness(t, documentRepPerms(true))
+	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Retired AG"}}`)
+	contact := h.createAs(t, h.e.Rep1, `{"record_type":"contact","fields":{"full_name":"Rhea Retired"}}`)
+	for entityType, id := range map[string]ids.UUID{"company": company, "contact": contact} {
+		if _, err := h.attach(t, attachArgs(entityType, id, "terms.pdf", "application/pdf", []byte(minimalPDF))); err != nil {
+			t.Fatalf("attaching to the %s: %v", entityType, err)
+		}
+	}
+	human := h.e.As(h.e.Rep1, []ids.UUID{h.e.Team1}, integration.AdminPerms)
+	directory := contacts.NewStore(h.e.DB())
+	if _, err := directory.ArchiveCompany(human, ids.From[ids.CompanyKind](company), nil); err != nil {
+		t.Fatalf("archiving the company: %v", err)
+	}
+	if _, err := directory.ArchiveContact(human, ids.From[ids.ContactKind](contact), nil); err != nil {
+		t.Fatalf("archiving the contact: %v", err)
+	}
+
+	store := activities.NewStore(h.e.DB())
+	companyTab, _, err := store.ListCompanyDocuments(human, company, activities.DocumentFilters{})
+	if err != nil {
+		t.Fatalf("the archived company's tab: %v", err)
+	}
+	contactTab, _, err := store.ListAttachments(human, "contact", contact, nil, nil)
+	if err != nil {
+		t.Fatalf("the archived contact's tab: %v", err)
+	}
+	for entityType, tc := range map[string]struct {
+		id  ids.UUID
+		tab int
+	}{"company": {company, len(companyTab)}, "contact": {contact, len(contactTab)}} {
+		page, err := h.list(t, entityType, tc.id)
+		if err != nil {
+			t.Errorf("list_documents on the archived %s: %v", entityType, err)
+			continue
+		}
+		if tc.tab == 0 || len(page.Documents) != tc.tab {
+			t.Errorf("list_documents on the archived %s shows %d files, its tab %d; want the same, and the file",
+				entityType, len(page.Documents), tc.tab)
+		}
+	}
+}
+
+// A deal with more files than one page walks to the end on next_cursor, each file once.
+func TestListDocumentsWalksADealsFilesPageByPage(t *testing.T) {
+	h := newDocumentHarness(t, documentRepPerms(true))
+	pipeline, open, _ := integration.DealFixture(t, h.e)
+	deal := h.createAs(t, h.e.Rep1, `{"record_type":"deal","fields":{"name":"Paged renewal","pipeline_id":"`+
+		pipeline.String()+`","stage_id":"`+open.String()+`"}}`)
+	want := map[ids.UUID]int{}
+	for _, name := range []string{"terms.pdf", "annex.pdf"} {
+		stored, err := h.attach(t, attachArgs("deal", deal, name, "application/pdf", []byte(minimalPDF)))
+		if err != nil {
+			t.Fatalf("attaching %s: %v", name, err)
+		}
+		want[stored.AttachmentID] = 0
+	}
+	args := map[string]any{"entity_type": "deal", "entity_id": deal.String(), "limit": 1}
+	pages := 0
+	for ; pages < len(want)+1; pages++ {
+		page, err := callTool[agents.DocumentPage](t, h, "list_documents", args)
+		if err != nil {
+			t.Fatalf("page %d: %v", pages+1, err)
+		}
+		for _, doc := range page.Documents {
+			want[doc.AttachmentID]++
+		}
+		if page.NextCursor == "" {
+			break
+		}
+		args["cursor"] = page.NextCursor
+	}
+	if pages+1 != len(want) {
+		t.Errorf("the walk took %d pages, want %d", pages+1, len(want))
+	}
+	for id, seen := range want {
+		if seen != 1 {
+			t.Errorf("file %s was listed %d times, want once", id, seen)
+		}
 	}
 }
 

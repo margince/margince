@@ -1388,15 +1388,21 @@ over 1 MiB before it runs, because `ToolSpec.MaxArgsBytes` defaults to the JSON
 bound and only `attach_document` raises it. One process holds at most 4 MCP
 requests over 1 MiB at once (`maxLargeMCPBodiesInFlight` in
 `backend/internal/modules/agents/httpmcp.go`), since each is held in memory
-several times while it is decoded. A fifth is refused `503` with `Retry-After: 1`.
+several times while it is decoded. A fifth is refused `503` with `Retry-After: 1`,
+before its body is read when it declares a `Content-Length`. Once a request holds
+a slot, its body must arrive within 10 seconds (`largeBodyReadDeadline`) or it is
+answered `408`, so a stalled sender does not keep the slot.
 
 Every upload that files a document, the app's and `attach_document` alike, must
 be one of the kinds in `attachmentTypes`
 (`backend/internal/modules/activities/attachmenttypes.go`); any other answers
 `422 unsupported_file_type`. HTML and zip are accepted because Margince only
-serves a stored file as a download; SVG and executables are refused. An accepted
-declared type wins over the extension. An empty or `application/octet-stream`
-type, which browsers send for `.msg` and `.md`, is resolved from the extension.
+serves a stored file as a download; SVG and executables are refused. A declared
+type must be in the table. When the extension is in the table too, the file is
+stored under the extension's type, because Windows declares a `.csv` as
+`application/vnd.ms-excel`; otherwise the declared type stands, whatever the
+name. An empty or `application/octet-stream` type, which browsers send for
+`.msg` and `.md`, is resolved from the extension.
 No bytes are sniffed. Files captured with an email are stored whatever their
 kind, as a record of what was sent.
 
@@ -1702,7 +1708,8 @@ attachment lane:
   attachment carries the type sniffed from its bytes, with a disagreeing sender
   claim recorded and ignored, so an external counterparty influences the lane
   only through the bytes they sent. A file **uploaded through the API** carries
-  its uploader's declared type, unsniffed.
+  the type resolved from its uploader's declared type and file name (see
+  [uploads](#uploads)), unsniffed.
 
   Before the bytes become a wire part, that type has to hold up. A file claiming
   a kind whose signature is unambiguous (PNG, JPEG, GIF, WebP, BMP, PDF, HEIC,
