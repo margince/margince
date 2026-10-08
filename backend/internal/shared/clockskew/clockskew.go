@@ -30,11 +30,9 @@ type Applier string
 
 // The three appliers, and the absence of one. They are not interchangeable:
 //
-//   - Machine moves the host's wall clock, which is what CI does. Linux has no
-//     CLOCK_REALTIME namespace, so a container reads the host's wall clock
-//     rather than one of its own: the compose Postgres and the Go process are
-//     looking at the same moved clock. It reaches every reading of now(),
-//     including the ones a column DEFAULT wrote.
+//   - Machine moves the host's wall clock, which is what CI does. The Go
+//     process and the compose Postgres read that one clock, so it reaches every
+//     reading of now(); scripts/clock-drift-host.sh says why no other shift can.
 //   - Database shadows now() in the test template, for a machine whose wall
 //     clock must not move. Strictly weaker: platform/testdb/clockshadow.go
 //     states what it cannot reach.

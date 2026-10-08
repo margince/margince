@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
 # The machine applier: move this host's wall clock, prove it moved, put it back.
 #
-# WHY THE HOST'S AND NOT A FAKE ONE. Go reads the wall clock through the vDSO,
-# so no LD_PRELOAD shim reaches time.Now(); and Linux has no CLOCK_REALTIME
-# namespace — a container cannot hold a wall clock of its own, only its own
-# monotonic and boottime. The host's clock is therefore the only one whose move
-# reaches the Go test process and the compose Postgres as ONE clock. That
-# matters more than the mechanism: 905 of this module's files compare against
-# Postgres' now(), so a shift reaching only Go would fail them in their
-# hundreds, and every one of those failures would belong to this lane rather
-# than to the tree. A lane whose reds are its own fault teaches a reader to
-# ignore it, which is worse than having no lane.
+# Why the host's clock and not a fake one: Go reads the wall clock through the
+# vDSO, so no LD_PRELOAD shim reaches time.Now(), and Linux has no
+# CLOCK_REALTIME namespace, so a container cannot hold a wall clock of its own.
+# Moving the host's is the only shift that reaches the Go test process and the
+# compose Postgres as one clock. Several hundred test files compare against
+# Postgres' now(); a shift reaching only Go would fail them all, and those reds
+# would be the lane's fault rather than the tree's.
 #
-# NOT FOR A DEVELOPER MACHINE. Moving a laptop's clock 200 days expires its
-# credentials and its certificates. This is for a disposable CI runner.
+# Not for a developer machine: a 200-day jump expires its credentials and
+# certificates. This is for a disposable CI runner.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -83,17 +80,11 @@ move() {
 	assert "$days"
 }
 
-# assert proves the clock is still the moved one.
+# assert proves the clock is still the moved one, before the suites and after.
 #
-# Called after the suites as well as before them, because the failure worth
-# catching is a time service that came back and re-synced partway through.
-#
-# ONE-SIDED, and that is the whole correctness of it. The baseline is the real
-# instant frozen at move time; it does not tick. The moved clock does, so after
-# an hour of suites the drift is the offset PLUS an hour, and a two-sided
-# tolerance would call every run of any length a failure. What this has to
-# separate is "the clock is still 200 days out" from "something put it back",
-# and only a SHORTFALL says the second.
+# One-sided on purpose: the baseline is frozen at move time while the moved
+# clock keeps ticking, so after an hour of suites the drift is the offset plus
+# an hour. Only a shortfall says something put the clock back.
 assert() {
 	local days short
 	days=$(days "$1")
@@ -115,16 +106,10 @@ assert() {
 
 # restore puts the clock back and hands timekeeping to the machine again.
 #
-# It SUBTRACTS the same offset rather than rewinding to the parked instant. The
-# moved clock ticked normally while the suite ran, so subtracting is exact,
-# where restoring the baseline would leave the machine however long the suite
-# took in the past.
-#
-# It re-proves the shift first. A baseline can outlive a jump that did not hold
-# — `move` writes it and then asserts, so a time service winning the race
-# between the two leaves the file behind — and the workflow reaches this step
-# under always(). Subtracting from a clock nobody moved is the poisoned runner
-# this step exists to prevent, arrived at from the other side.
+# It subtracts the offset rather than rewinding to the baseline, which would
+# leave the machine however long the suite took in the past. It re-proves the
+# shift first: a baseline can outlive a jump a time service undid, and
+# subtracting from a clock nobody moved poisons the runner from the other side.
 restore() {
 	local days short
 	days=$(days "$1")

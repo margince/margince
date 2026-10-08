@@ -266,29 +266,14 @@ jobs:
         working-directory: .
         run: make check-backend
 
-  # The backend's counterpart to fe-clock-drift, and the harder half of the same
-  # argument: the suite's verdict must not depend on the calendar. Several hundred
-  # backend test files read the wall clock (gates/testdata/wallclockfixtures.txt
-  # counts them) and 905 more compare against Postgres' now(), and one confirmed instance — a task seeded seven days out,
-  # asserted to group as `later`, answering `this_week` on a Thursday — cost two
-  # sessions a working stretch of bisecting a red main.
+  # The backend's counterpart to fe-clock-drift: the suite's verdict must not
+  # depend on the calendar. It moves the runner's own clock, and
+  # scripts/clock-drift-host.sh says why no other shift reaches both Go and
+  # Postgres.
   #
-  # WHY THE HOST'S CLOCK. Go reads the wall clock through the vDSO, so no
-  # LD_PRELOAD reaches time.Now(), and Linux has no CLOCK_REALTIME namespace, so
-  # the compose Postgres cannot hold a clock of its own. Moving the runner's is
-  # the only shift that reaches the Go process and the database as ONE clock. A
-  # shift reaching only one of them would fail those 905 files in their
-  # hundreds, and every failure would be this lane's own fault — which teaches a
-  # reader to ignore it, and is worse than having no lane.
-  #
-  # ORDER IS LOAD-BEARING. Checkout, module download, the gate binaries and the
-  # compose pull all complete at the REAL date, because a 200-day jump expires
-  # the TLS certificates they verify. Only then does the clock move.
-  #
-  # The first run is a DISPATCH on purpose. Whether the Actions agent tolerates
-  # a 200-day jump — its job token is short-lived — is not something a design
-  # could settle on paper, so the lane answers it on real hardware before it is
-  # ever left to run unattended.
+  # Order matters: checkout, module download, the gate binaries and the compose
+  # pull all finish at the real date, because a 200-day jump expires the TLS
+  # certificates they verify. Only then does the clock move.
   backend-clock-drift:
     # The DAILY cadence, spelled per job for the reason backend-lane states: a
     # job with no `if` runs on every trigger the workflow has.

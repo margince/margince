@@ -1,15 +1,8 @@
 #!/usr/bin/env bash
 # The backend's counterpart to fe-clock-drift: the same suites, run at a moved
-# clock, required to reach the same verdict.
-#
-# A fixture only becomes a bomb when something COMPARES its instant to now to
-# decide a state, and no static rule separates those from the instants a test
-# merely stores — which is why this is a second RUN rather than a pattern, and
-# why gates/wallclockfixtures_test.go counts the population instead of judging
-# it.
-#
-# WHICH CLOCK MOVED is BACKEND_CLOCK_SKEW's business, and the appliers are not
-# interchangeable — internal/shared/clockskew carries what each one reaches.
+# clock, required to reach the same verdict. Which clock moved is
+# BACKEND_CLOCK_SKEW's business; internal/shared/clockskew says what each
+# applier reaches.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -49,29 +42,21 @@ database)
 	;;
 esac
 
-# UNCACHED, both halves. Go's test cache keys on the binary, its arguments and
-# the environment a test READS — not on the wall clock, which is the whole
-# subject here. Without this, a package that passed at the real date an hour ago
-# replays as `ok (cached)` and the lane reports a green over a suite that never
-# ran at the moved clock.
+# Uncached: Go's test cache does not key on the wall clock, so a package that
+# passed at the real date would replay as `ok (cached)` under the lane's name.
 export GOFLAGS="${GOFLAGS:-} -count=1"
 
 echo "backend-clock-drift: running the backend suites at $SKEW"
 
-# BOTH halves run, and their verdicts are combined. Short-circuiting on the unit
-# suite would mean a single unit red — including one inherited from main — kept
-# the integration half from running at all, every night until somebody fixed it.
-# That half is the lane's actual subject: the 905 files comparing against
-# Postgres' now() are exercised nowhere else.
+# Both halves run and their verdicts combine, so one unit red cannot keep the
+# integration half, where the files comparing against Postgres' now() live,
+# from running at all.
 suites=0
 make -C backend test || suites=$?
 make -C backend test-integration || suites=$?
 
-# The shift is proven AGAIN, and on the failing path too. A time service that
-# re-synced partway through leaves the rest of the run an ordinary one, so a
-# green after that proves nothing and a red after it belongs to the lane rather
-# than to the tree — which is the first thing anyone reading a failure has to
-# rule out.
+# The shift is proven again, on the failing path too: a time service that
+# re-synced mid-run makes the rest an ordinary run, and its verdict the lane's.
 if [ "${SKEW%%:*}" = machine ]; then
 	./scripts/clock-drift-host.sh assert "${SKEW##*:}"
 fi

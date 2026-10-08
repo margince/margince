@@ -203,11 +203,10 @@ Notes on the jobs:
   that never pins the clock" matches 129 files, nearly all harmless. The gate is
   therefore a second run.
 - Several hundred backend test files read the wall clock, and
-  `backend/gates/testdata/wallclockfixtures.txt` holds the count. Another 905
-  compare against Postgres' `now()`, so the shift must reach both clocks.
-  Moving the runner's clock is the only shift that does. Go reads the wall clock
-  through the vDSO, so no `LD_PRELOAD` shim reaches `time.Now()`. Linux has no
-  `CLOCK_REALTIME` namespace, so the compose Postgres cannot keep its own clock.
+  `backend/gates/testdata/wallclockfixtures.txt` holds the count. Several
+  hundred more compare against Postgres' `now()`, so the shift must reach both
+  clocks. Moving the runner's clock is the only shift that does;
+  `scripts/clock-drift-host.sh` says why.
 - Every step that needs the network finishes before the jump, because 200 days
   expires the TLS certificates those steps verify. The clock is restored even on
   failure, so the runner does not return to the pool 200 days ahead.

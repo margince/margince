@@ -1,18 +1,15 @@
-# Every backend test file that reads the wall clock, with the count frozen when
-# it was admitted. Held by gates/wallclockfixtures_test.go.
+# Every backend test file that reads the wall clock, with its current count.
+# Held by gates/wallclockfixtures_test.go.
 #
-# A READ, not a call: `NewStore(db, time.Now)` hands the clock over as a value,
-# which is the idiom that matters most — the store stamps rows at wall time and
-# no fixture helper can move it.
+# A read, not a call: `NewStore(db, time.Now)` hands the clock over as a value,
+# and no fixture helper can move the rows such a store stamps.
 #
-# The list only falls. A file may shrink; at zero its entry comes OUT, which is
-# what holds it at zero for good. A file not listed may not start reading the
-# wall clock — it takes its instant from clocktest.Now(t), which is what lets
-# the drift lane move it.
+# The list only falls. A file that shrinks has its count lowered to match; at
+# zero its entry comes out, which holds it at zero for good. A file not listed
+# takes its instant from clocktest.Now(t), which the drift lane can move.
 #
-# THIS FILE IS THE ONLY PLACE THE POPULATION IS COUNTED. It moves whenever this
-# branch rebases, so prose that repeated the number went stale every time; the
-# documents point here instead.
+# This file is the only place the population is counted; documents point here
+# rather than repeat a number that moves with every merge.
 
 internal/compose/agentcost_test.go 2
 internal/compose/agenttaskhandle_integration_test.go 1
@@ -208,7 +205,7 @@ internal/compose/integration/voice_sendoutcome_integration_test.go 2
 internal/compose/integration/voicestore_integration_test.go 3
 internal/compose/integration/webhooks/listmember_integration_test.go 1
 internal/compose/integration/webhooks/schemaconformance_integration_test.go 1
-internal/compose/integration/webhooks/webhookretry_pass_integration_test.go 4
+internal/compose/integration/webhooks/webhookretry_pass_integration_test.go 3
 internal/compose/integration/webhooks/webhookrevisibility_integration_test.go 5
 internal/compose/integration/webhooks/webhooks_integration_test.go 7
 internal/compose/integration/withheldfile_integration_test.go 1

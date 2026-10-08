@@ -8,44 +8,29 @@ package gates
 // The population of tests that date themselves from wall time may fall and
 // never rise.
 //
-// A fixture built on time.Now() makes its claim about the day it runs. Seeded
-// seven days out and asserted to group as `later`, it answers `this_week` on a
-// Thursday. The day it changes its answer is a day nobody edited anything, so
-// no pull-request gate can be the thing that finds it. What finds it is the
-// drift lane, a second RUN of the suite at a moved clock.
-//
-// This gate is a ratchet rather than a census, and that is the whole design.
-// Nothing static separates a fixture whose instant is compared against a
-// boundary from one whose instant is merely stored. docs/reference/make-targets.md
-// records the same finding for the frontend lane, where "an absolute date in a
-// file that never pins the clock" matched 129 files, nearly all harmless. A gate
-// reporting all of those would be noise, and noise is what teaches a reader to
-// skip a census. So this one judges no site. It counts them, holds the count,
-// and lets the lane do the judging.
+// A fixture built on time.Now() makes its claim about the day it runs, so the
+// day it changes its answer is a day nobody edited anything. The drift lane, a
+// second run of the suite at a moved clock, is what finds it. This gate judges
+// no site, because nothing static separates an instant compared against a
+// boundary from one merely stored; it holds the count and lets the lane judge.
 //
 // What this does not cover, so its silence is not read as a wider claim:
-//   - Whether any counted site is actually fragile. It is a budget on a
-//     population, and a file at its frozen count may still hold the next defect.
-//   - time.Since and time.Until, which read the same clock. A COMPARISON
-//     against an elapsed duration is mergegateclockbounds_test.go's subject and
-//     is prohibited outright there; counting them here would report the same
-//     line under two rules.
-//   - A clock reached through an interface or a struct field rather than named.
-//     Resolving that needs type information this gate does not load.
-//   - A read moved OUT of a _test.go file into a build-tagged helper beside it,
-//     the shape platform/testdb carries. The file's count drops to zero, this
-//     gate then requires its ledger entry deleted, and nothing counts the read
-//     again. No such helper holds one today. The alternative is to read every
-//     .go file, which would report the whole product's legitimate use of the
-//     clock: far more correct sites than wrong ones, and the noise that
-//     teaches a reader to skip a census.
-//   - A fixture spelling an absolute date (time.Date(2026, ...)), which is
-//     calendar-fragile in the same way and which no count of time.Now
-//     reaches. The lane sees it; this ledger does not.
-//   - The 905 files whose SQL says now(). Those read the DATABASE's clock, and
-//     only the machine applier moves it.
+//   - Whether any counted site is fragile. A file at its frozen count may
+//     still hold the next defect.
+//   - time.Since and time.Until. Comparing an elapsed duration is
+//     mergegateclockbounds_test.go's subject and is prohibited outright there.
+//   - A clock reached through an interface or a struct field, which needs type
+//     information this gate does not load.
+//   - A read moved out of a _test.go file into a build-tagged helper beside
+//     it. Reading every .go file instead would report the product's legitimate
+//     use of the clock, far more correct sites than wrong ones.
+//   - An absolute date (time.Date(2026, ...)), which the lane sees and no count
+//     of time.Now reaches.
+//   - SQL that says now(). That is the database's clock, and only the machine
+//     applier moves it.
 
 import (
+	"fmt"
 	"go/ast"
 	"io/fs"
 	"os"
@@ -57,9 +42,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// ledgerPath records each test file that reads wall time, with the count frozen
-// when it was admitted. A file may shrink; reaching zero means its entry comes
-// OUT, so the file is held at zero for good.
+// ledgerPath records each test file that reads wall time, with its current
+// count. A file may shrink and its entry follows it down; at zero the entry
+// comes out, which holds the file at zero for good.
 const ledgerPath = "gates/testdata/wallclockfixtures.txt"
 
 // clockOwners are the packages whose subject is the clock, so a wall-time read
@@ -72,36 +57,83 @@ var clockOwners = []string{
 func TestTheWallClockFixturePopulationOnlyFalls(t *testing.T) {
 	t.Parallel()
 
-	frozen := readLedger(t)
-	counted := countWallClockReads(t)
+	for _, finding := range ledgerDrift(readLedger(t), countWallClockReads(t), fileExists) {
+		t.Error(finding)
+	}
+}
 
+// TestTheWallClockLedgerAnswersEveryPlantedShape plants each way the tree can
+// disagree with the ledger, so a comparison that stops seeing one fails here
+// rather than reporting PASS over the real tree.
+func TestTheWallClockLedgerAnswersEveryPlantedShape(t *testing.T) {
+	t.Parallel()
+
+	present := func(string) bool { return true }
+	cases := []struct {
+		name    string
+		frozen  map[string]int
+		counted map[string]int
+		exists  func(string) bool
+		want    string
+	}{
+		{"an unlisted file", map[string]int{}, map[string]int{"a_test.go": 1}, present, "had none"},
+		{"a count that rose", map[string]int{"a_test.go": 2}, map[string]int{"a_test.go": 3}, present, "up from the frozen 2"},
+		{"a count that fell", map[string]int{"a_test.go": 5}, map[string]int{"a_test.go": 2}, present, "lower the frozen count to 2"},
+		{"a file down to zero", map[string]int{"a_test.go": 1}, map[string]int{}, present, "Remove its entry"},
+		{"a deleted file", map[string]int{"a_test.go": 1}, map[string]int{}, func(string) bool { return false }, "no longer exists"},
+	}
+	for _, planted := range cases {
+		findings := ledgerDrift(planted.frozen, planted.counted, planted.exists)
+		if len(findings) != 1 || !strings.Contains(findings[0], planted.want) {
+			t.Errorf("%s: want one finding containing %q, got %q", planted.name, planted.want, findings)
+		}
+	}
+	if findings := ledgerDrift(map[string]int{"a_test.go": 2}, map[string]int{"a_test.go": 2}, present); len(findings) != 0 {
+		t.Errorf("a file at its frozen count: want no finding, got %q", findings)
+	}
+}
+
+// ledgerDrift returns every disagreement between the frozen ledger and the
+// counted tree. The ledger states each current count, so a count that fell is a
+// finding too: an entry left above its file is headroom the file can grow back
+// into unseen.
+func ledgerDrift(frozen, counted map[string]int, exists func(string) bool) []string {
+	var findings []string
 	for path, count := range counted {
 		was, admitted := frozen[path]
 		switch {
 		case !admitted:
-			t.Errorf("%s: %d wall-clock read(s) in a test file that had none. Date the fixture from "+
-				"clocktest.Now(t) instead, so the drift lane can move it; if the instant genuinely "+
-				"must be wall time, add the file to %s with its count and say why in the commit.",
-				path, count, ledgerPath)
+			findings = append(findings, fmt.Sprintf("%s: %d wall-clock read(s) in a test file that had none. "+
+				"Date the fixture from clocktest.Now(t) instead, so the drift lane can move it; if the "+
+				"instant genuinely must be wall time, add the file to %s with its count and say why in "+
+				"the commit.", path, count, ledgerPath))
 		case count > was:
-			t.Errorf("%s: %d wall-clock read(s), up from the frozen %d. The ledger only falls — "+
-				"new fixtures in an admitted file take their instant from clocktest.Now(t).",
-				path, count, was)
+			findings = append(findings, fmt.Sprintf("%s: %d wall-clock read(s), up from the frozen %d. "+
+				"The ledger only falls; new fixtures in an admitted file take their instant from "+
+				"clocktest.Now(t).", path, count, was))
+		case count < was:
+			findings = append(findings, fmt.Sprintf("%s: %d wall-clock read(s), down from the frozen %d. "+
+				"In %s, lower the frozen count to %d so the file cannot grow back.",
+				path, count, was, ledgerPath, count))
 		}
 	}
-
 	for path := range frozen {
-		if counted[path] > 0 {
-			continue
+		switch {
+		case counted[path] > 0:
+		case !exists(path):
+			findings = append(findings, fmt.Sprintf("%s: %s names a file that no longer exists. A stale "+
+				"entry hides the next file that takes its place.", ledgerPath, path))
+		default:
+			findings = append(findings, fmt.Sprintf("%s: %s now reads no wall clock. Remove its entry, "+
+				"which is what holds it at zero.", ledgerPath, path))
 		}
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("%s: %s names a file that no longer exists — a stale entry hides the next "+
-				"file that takes its place.", ledgerPath, path)
-			continue
-		}
-		t.Errorf("%s: %s now reads no wall clock. Remove its entry, which is what holds it at zero.",
-			ledgerPath, path)
 	}
+	return findings
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // countWallClockReads returns every backend test file holding at least one
