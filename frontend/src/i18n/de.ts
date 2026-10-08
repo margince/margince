@@ -683,6 +683,8 @@ export const de = {
   "brief.coverage.source.relationship_decay": "Ruhende Beziehungen",
   "brief.coverage.source.meeting_outcome": "Termin-Nachbereitung",
   "brief.coverage.source.meeting": "Anstehende Termine",
+  "brief.coverage.source.calendar": "Kalenderverbindung",
+  "brief.coverage.source.next_meeting": "Nächster Termin",
   "brief.coverage.source.deal_at_risk": "Markierte Deals",
   "brief.coverage.source.lead_response": "Zugewiesene Leads",
   "brief.coverage.source.customer_waiting": "Unbeantwortete Nachrichten",

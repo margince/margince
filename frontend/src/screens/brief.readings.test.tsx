@@ -296,6 +296,23 @@ describe("the brief readings strip", () => {
     );
   });
 
+  // A failed calendar side read leaves `calendar` unstated: unknown, so the
+  // slot keeps the wording it had before the server could say.
+  it("keeps today's reading when only the calendar read failed", () => {
+    const day = readingsDay({}, [], []);
+    day.sources_unavailable = [
+      { source: "calendar", reason: "failed", category: "meetings" },
+    ];
+    drawDay(day);
+
+    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
+      "0",
+    );
+    expect(meetingsCard().textContent).toContain(
+      en["brief.readings.meetingsBasis"],
+    );
+  });
+
   // A measured quiet day says when the next conversation is.
   it("names the next meeting under a connected calendar's zero", () => {
     const startsAt = "2026-09-04T09:30:00Z";

@@ -674,6 +674,8 @@ export const vi = {
   "brief.coverage.source.relationship_decay": "Mối quan hệ ít liên lạc",
   "brief.coverage.source.meeting_outcome": "Theo dõi sau cuộc họp",
   "brief.coverage.source.meeting": "Cuộc họp sắp tới",
+  "brief.coverage.source.calendar": "Kết nối lịch",
+  "brief.coverage.source.next_meeting": "Cuộc họp tiếp theo",
   "brief.coverage.source.deal_at_risk": "Giao dịch được đánh dấu",
   "brief.coverage.source.lead_response": "Khách hàng tiềm năng được phân công",
   "brief.coverage.source.customer_waiting": "Tin nhắn chưa trả lời",

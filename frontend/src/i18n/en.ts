@@ -660,6 +660,8 @@ export const en = {
   "brief.coverage.source.relationship_decay": "Quiet relationships",
   "brief.coverage.source.meeting_outcome": "Meeting follow-up",
   "brief.coverage.source.meeting": "Upcoming meetings",
+  "brief.coverage.source.calendar": "Calendar connection",
+  "brief.coverage.source.next_meeting": "Next meeting",
   "brief.coverage.source.deal_at_risk": "Flagged deals",
   "brief.coverage.source.lead_response": "Assigned leads",
   "brief.coverage.source.customer_waiting": "Unanswered messages",
