@@ -1,217 +1,201 @@
+<!-- prose:plain -->
 # Add an RBAC object
 
-For introducing a new kind of record into the permission model: a new name in
-the closed set of objects a role document may grant. For adding an operation to
-an existing module, use [add-an-endpoint.md](add-an-endpoint.md); for the whole
-capability, [add-a-module.md](add-a-module.md). What the finished vocabulary
-looks like: [reference/rbac-matrix.md](../reference/rbac-matrix.md); why it works
-this way: [explanation/rbac-roles-and-teams.md](../explanation/rbac-roles-and-teams.md).
+Use this page to add a new kind of record to the access model. That is a new name in the closed set of
+objects that a role document may grant. To add an operation to a module that exists, use
+[add-an-endpoint.md](add-an-endpoint.md). For the whole capability, use [add-a-module.md](add-a-module.md).
+What the whole set looks like: [reference/rbac-matrix.md](../reference/rbac-matrix.md). Why it works this
+way: [explanation/rbac-roles-and-teams.md](../explanation/rbac-roles-and-teams.md).
 
-The change spans **five places**, and skipping any one of them fails in a
-different way. Merge-blocking gates hold two of them, so you will find out
-before you push. The backfill migration (step 3) gives **no compile-time or
-review-time signal at all** on a fresh database, and getting it wrong 403s every
-existing installation forever.
+The change touches **five places**, and each one you skip fails in a different way. Gates that block a merge
+hold two of them, so you find out before you push. The backfill migration (step 3) gives **no sign at all**
+at build or review time on a new database. If you get it wrong, every installation that exists answers 403
+for good.
 
-## 1. Add the object to the policy vocabulary
+## 1. Add the object to the policy word list
 
 In `backend/internal/modules/identity/internal/policy/policy.go`:
 
-1. Append the name to `coreObjects`. This is the closed set `Parse` validates
-   against, so nothing outside it can ever be granted.
-2. In `defaults.go`, decide for **each system role** (`admin`, `management`,
-   `manager`, `rep`, `read_only`, `ops`) whether the new object matches that
-   role's baseline. If it does, there is nothing to write: `grid` gives every
-   core object the base. If it does not, add one line naming the object and its
-   grant to that role's override map.
+1. Add the name to `coreObjects`.
+   `Parse` checks each object against this set and the objects that extensions register at start.
+2. In `defaults.go`, decide for **each system role** if the new object matches that role's base grant.
+   The roles are `admin`, `management`, `manager`, `rep`, `read_only` and `ops`.
+   If it matches, there is nothing to write: `grid` gives every core object the base grant.
+   If it does not match, add one line to that role's map of changes, with the object and its grant.
 
-   An object you do not override gets the role's base grant, with no warning.
-   Decide for every role and check the result in the matrix at step 4; that page
-   is the only thing that shows a role inherited a grant you never thought about.
+   An object you do not name in the map gets the role's base grant, and nothing warns you. Decide for every role,
+   and check the result in the matrix at step 4. That page is the only thing that shows a role gets a grant
+   you never planned.
 
-**Nothing is positional.** `grid(base, overrides)` seeds every object in
-`coreObjects` with the base and then applies the overrides by name, so the
-object a grant governs is written beside it. An override naming an object that
-does not exist panics at package init, so a typo is a build failure instead of a
-role that governs nothing.
+**Nothing depends on order.** `grid(base, overrides)` gives every object in `coreObjects` the base grant,
+then applies the changes by name. So each grant is written beside the object it covers. A change that names
+an object that does not exist stops the package at start with a panic. A typo is then a build failure, not a
+role that covers nothing.
 
-A role's override map is therefore the list of places that role departs from its
-own posture. A reviewer reads "where is rep not the record posture" instead of
-"what does rep hold on every object". `managerObjects` is one variable shared by
-`manager` and `management` so the two grids cannot drift; only their row scope
-differs.
+So a role's map of changes lists the places where that role leaves its own base grant. A reviewer reads
+"where does `rep` not have the record grant", not "what does `rep` hold on every object".
 
-Pick the posture from an existing precedent instead of inventing one. The
-comment block above `defaults` records the reasoning for each family (record
-posture, pipeline-config posture, admin/ops-owned config), and matching one of
-them is how a reviewer checks your choice.
+`manager` uses `managerObjects`. `management` uses `managementObjects`, a copy of it plus read grants on
+some admin objects, such as AI spend and seat use. It is a copy, not one shared value, so those reads reach
+`management` and never `manager`. Their row scope is also different.
+
+Choose the grant from a case that exists; do not make up a new one. The comment block above `defaults`
+records the reason for each kind of grant: record grants, pipeline settings grants, and settings owned by `admin` or
+`ops`. A reviewer checks your pick by matching it to one of them.
 
 ## 2. Add the object to the contract enum
 
 Add the same string to `RbacObject` in `backend/api/crm.yaml`.
 
-**The server derives nothing from it.** `oapi-codegen` emits no Go constants for
-a top-level standalone string enum, so `policy.coreObjects` and this enum are
-both maintained by hand. The enum serves the web client: `openapi-typescript`
-renders it as a string union, so a capability check against a misspelled object
-is a TypeScript error instead of a check that compiles and denies forever.
+**The server reads nothing from it.** `oapi-codegen` makes no Go values for a string enum that stands alone
+at the root of the schema. So `policy.coreObjects` and this enum are both kept by hand. The enum serves the web client.
+`openapi-typescript` turns it into a string union, so a check against a wrong object name is a TypeScript
+error. It is not a check that compiles and then refuses for good.
 
-A merge-blocking parity test keeps the two halves equal:
-**`TestContractObjectEnumMatchesPolicyVocabulary`** in
-`backend/gates/rbacvocabulary_test.go`. Both sides are derived: the object list is
-AST-parsed out of `policy.go` by `coreObjectsFromSource`
-(`backend/gates/rbacvocabularysource_test.go`), and the contract side is read from
-the YAML, so the test never becomes a third place to keep current. Editing the
-enum alone changes what clients can *express*, never what the server *enforces*.
+A test that blocks a merge keeps the two equal:
+**`TestContractObjectEnumMatchesPolicyVocabulary`** in `backend/gates/rbacvocabulary_test.go`. Both sides are
+read from the source. `coreObjectsFromSource` (`backend/gates/rbacvocabularysource_test.go`) reads the
+object list out of `policy.go`, and the contract side is read from the YAML. So the test never becomes a
+third place to keep up to date. An edit to the enum alone changes what clients can *say*, never what the server
+*checks*.
 
-## 3. Write the backfill migration (the step that bites)
+## 3. Write the backfill migration (the step that fails without a sign)
 
-Role seeding runs **once**, at workspace creation, and never re-syncs.
-`identity.seedSystemRoles` writes `policy.MustDefaultJSON(role.key)` into
-`role.permissions` when the workspace is bootstrapped
-(`backend/internal/modules/identity/service.go`), and no code path reconciles a
-stored document against the compiled-in defaults afterwards. Authentication
-reads the *stored* document: `loadGrants` selects `role.permissions` and merges
-it. So an object added to `coreObjects` without a migration is granted to nobody
-who bootstrapped earlier. It works on your fresh database and 403s everywhere
-else, permanently.
+Role seeding runs **once**, when the workspace is created, and never runs again.
+`identity.seedSystemRoles` writes `policy.MustDefaultJSON(role.key)` into `role.permissions` when the
+workspace starts (`backend/internal/modules/identity/service.go`). No code path later compares a stored
+document with the defaults built into the code. Sign-in reads the *stored* document: `loadGrants` reads
+`role.permissions` and merges it. So an object added to `coreObjects` with no migration is granted to no
+workspace that started earlier. It works on your new database and answers 403 in every other place, for good.
 
-Write the pair in `backend/migrations/core/` following
-[apply-migrations.md](apply-migrations.md) for numbering and lane conventions,
-and copy the shape of the most recent RBAC backfill in `backend/migrations/core/`
+Write the pair in `backend/migrations/core/`. Follow [apply-migrations.md](apply-migrations.md) for numbers
+and lanes. Copy the shape of the newest RBAC backfill in `backend/migrations/core/`
 (`ls *_rbac.up.sql | tail -1`):
 
-- One `UPDATE role SET permissions = jsonb_set(permissions, '{objects,<name>}', '<grant>'::jsonb)`
-  per distinct grant, grouped by the roles that share it.
-- Guard every statement with `WHERE is_system AND ... AND NOT permissions->'objects' ? '<name>'`.
-  The only-if-absent guard makes the migration free where it is not needed and
-  non-destructive where an operator has already edited a role.
-- The grants must reproduce what step 1 seeds. The replay in step 6 compares the
-  upgraded end state against the seeded matrix, verb by verb.
+- One `UPDATE role SET permissions = jsonb_set(permissions, '{objects,<name>}', '<grant>'::jsonb)` per
+  grant, for all the roles that share it.
+- Guard every statement with `WHERE is_system AND ... AND NOT permissions->'objects' ? '<name>'`. This guard
+  acts only when the key is absent. So the migration costs nothing where no one needs it, and it changes
+  nothing where an operator has already edited a role.
+- The grants must give what step 1 seeds. The replay in step 6 compares the end state after the change
+  with the seeded matrix, verb by verb.
 
-**The `down` removes the key.** The grant goes with the object it names. A role
-document left naming an object outside the closed set would fail every login
-(see below). Copy the down half of the same backfill pair.
+**The `down` removes the key.** The grant goes with the object it names. A role document that still names
+an object outside the set grants nothing on it and logs a warning at each sign-in (see below). Copy the down
+half of the same backfill pair.
 
-### The typo that locks users out of login
+### The typo that grants nothing
 
-`policy.Parse` **rejects** an unknown object key:
+`policy.Parse` **drops** an object key it does not know, and logs a warning:
 
 ```go
 for object := range doc.Objects {
-    if !IsCoreObject(object) {
-        return Document{}, fmt.Errorf("policy: unknown object %q in permissions document", object)
+    if IsGrantableObject(object) {
+        continue
     }
+    delete(doc.Objects, object)
+    slog.Default().Warn("policy: dropping a grant on an object this installation does not know", "object", object)
 }
 ```
 
-`Parse` is called from `loadGrants`, which runs on the **login** path, on session
-resolution, and on the agent-authority re-derivation in `identity/authority.go`.
-A role carrying an invalid document is treated as a data defect to surface, and
-the whole authentication fails instead of downgrading to no access.
+A key that `Parse` knows is a core object or one that an extension registers at start. `loadGrants` calls `Parse`. It runs
+on the **sign-in** path, when a session is read, and when `identity/authority.go` works out an agent's rights
+again. Sign-in still works, and the rest of the document still applies. Only a document that is not JSON at
+all, or a `row_scope` that nothing can read, fails the whole sign-in.
 
-That makes a typo in the migration's JSON path far worse than a missing grant. If
-you write `'{objects,webook_subscription}'`, the migration succeeds, the object is
-never granted, and **every user holding that role is locked out**, because
-the document now names an object outside the closed set. Spell the path from the
-same string literal you added to `coreObjects`, and prove it by running the
-integration lane in step 6. A typo'd path leaves the object ungranted, which the
-convergence arms fail on.
+So a typo in the JSON path of the migration fails with no error. Say you write
+`'{objects,webook_subscription}'`. The migration passes and the object is never granted. Then **every user
+who holds that role is refused the object**, and the only sign is a warning in the log.
 
-## 4. Regenerate the published matrix
+Write the path from
+the same string you added to `coreObjects`. Prove it by running the integration lane in step 6. A path with a
+typo leaves the object with no grant, and the matching tests fail on that.
 
-[reference/rbac-matrix.md](../reference/rbac-matrix.md) is generated from the
-seeded documents. From `backend/`:
+## 4. Build the published matrix again
+
+[reference/rbac-matrix.md](../reference/rbac-matrix.md) is generated from the seeded documents. From
+`backend/`:
 
 ```bash
 go test ./internal/modules/identity/ -run RBAC -update
 ```
 
 The same test, **`TestPublishedRBACMatrixMatchesTheSeededRoleDocuments`** in
-`backend/internal/modules/identity/rbacmatrix_test.go`, runs on every build
-*without* `-update` and fails when the page and the seeded values disagree. Read
-the regenerated row: it renders each role's grant as `CRUD` letters, the resolved
-answer and not the base-plus-overrides you wrote. That is where you confirm that
-a role you wrote no line for inherited the grant you meant it to.
+`backend/internal/modules/identity/rbacmatrix_test.go`, runs on every build *without* `-update`. It fails when
+the page and the seeded values disagree. Read the new row. It shows each role's grant in `CRUD` form: the
+answer the code works out, not the base grant and changes you wrote. That is where you confirm that a role you wrote no
+line for gets the grant you planned.
 
 ## 5. Gate the store, then the UI
 
-**Server side.** Every exported method on the owning `*Store` or `*Service` that
-touches the new object calls `auth.Require(ctx, "<object>", principal.ActionX)`,
-plus `auth.EnsureVisible` / `auth.ScopeClauseFor` for row scope; see
+**Server side.** Every public method on the owning `*Store` or `*Service` that touches the new object calls
+`auth.Require(ctx, "<object>", principal.ActionX)`. It also calls `auth.EnsureVisible` or
+`auth.ScopeClauseFor` for row scope; see
 [reference/platform-toolkit.md](../reference/platform-toolkit.md#platformauth--the-admission-point).
-`TestEveryStoreEntryPointIsAuthGated` (`backend/gates/rbacgate_test.go`) derives the
-entry-point set from the tree and fails an ungated store method. Such a method is
-a door into tenant data, reachable by any transport wired to it and invisible to
-review.
+`TestEveryStoreEntryPointIsAuthGated` (`backend/gates/rbacgate_test.go`) reads the list of entry points from
+the tree and fails a store method with no gate. Such a method is a way into tenant data. Any transport wired
+to it can reach it, and a review cannot see it.
 
-**Client side.** Bind the affordance to the **grant**, never to a role name. The
-hooks are in `frontend/src/app/capability.ts` and take the generated `RbacObject`
-union, so a misspelled object is a compile error:
+**Client side.** Bind the control to the **grant**, never to a role name. The hooks are in
+`frontend/src/app/capability.ts`. They take the generated `RbacObject` union, so a wrong object name fails
+the compile:
 
 | Hook | Use it for |
 |---|---|
-| `useCan(object, action)` | One specific request. Object RBAC only, no seat ceiling. |
-| `useCanWrite(object, action)` | A control that issues a **mutating** request (the common case): grant ∧ seat. |
-| `useCanUpsert(object)` | A control whose endpoint inserts *or* replaces, so the needed verb is not knowable client-side. |
-| `useHoldsWriteGrant(object)` | An authoring *surface* (a nav entry, a section heading) where any write verb justifies showing it. |
-| `useCanMutate()` | The licensing seat ceiling alone. |
+| `useCan(object, action)` | One request. Object RBAC only, no seat limit. |
+| `useCanWrite(object, action)` | A control that sends a request **that changes data** (the normal case): grant ∧ seat. |
+| `useCanUpsert(object)` | A control whose endpoint adds a record *or* puts a new one in its place, so the client cannot know the verb it needs. |
+| `useCanMutate()` | The seat limit from the license alone. |
 
-The answers come from the server (`GET /me` carries the merged grants it
-computed) and only the vocabulary comes from the contract, so the client stays
-correct on a workspace whose stored grants have drifted. The hooks only shape
-the UI. The server's `auth.Require` is the authority on every call, and a client
-that gets it wrong shows the wrong button and never the wrong data.
+The answers come from the server (`GET /me` carries the merged grants it worked out). Only the word list
+comes from the contract. So the client stays correct on a workspace whose stored grants have moved. The hooks
+only shape the UI. The server's `auth.Require` decides every call. A client that gets it wrong shows the
+wrong button, and never the wrong data.
 
-## 6. Verify
+## 6. Check
 
-Run both lanes, and know which one proves what:
+Run both lanes, and know which one proves what.
 
 **`make check`**: the merge gate.
 
-- `TestContractObjectEnumMatchesPolicyVocabulary`: the contract enum and
-  `coreObjects` are the same set. Catches step 2 missing, or misspelled.
-- `TestPublishedRBACMatrixMatchesTheSeededRoleDocuments`: the published page
-  matches the seeded documents. Catches step 4 not run.
-- `TestEveryStoreEntryPointIsAuthGated`: no ungated store entry point. Catches
-  step 5 missing on the server.
-- `make check-fe`: the TypeScript build proves the new object is expressible in
-  the capability hooks.
+- `TestContractObjectEnumMatchesPolicyVocabulary`: the contract enum and `coreObjects` are the same set. It
+  finds step 2 missing, or a wrong name.
+- `TestPublishedRBACMatrixMatchesTheSeededRoleDocuments`: the published page matches the seeded documents.
+  It finds step 4 not run.
+- `TestEveryStoreEntryPointIsAuthGated`: every store entry point has a gate. It finds step 5 missing on the
+  server.
+- `make check-fe`: the TypeScript build proves the capability hooks can name the new object.
 
-**`make test-integration`**: the real-Postgres lane, and **the only proof the
-backfill landed on an old install**. All three gates live in
-`backend/internal/compose/integration/rbacseedparity_integration_test.go` and
-they execute the obligation instead of scanning for it, so no list of objects
-and no grep for `'{objects,<name>}'` decides any of them:
+**`make test-integration`**: the lane with a real Postgres, and **the only proof that the backfill reached
+an old install**. All three gates live in
+`backend/internal/compose/integration/rbacseedparity_integration_test.go`. They run the rule instead of
+scanning for it. So no list of objects, and no search for `'{objects,<name>}'`, decides any of them:
 
-- `TestTheRealBootstrapSeedsTheDocumentedMatrix`: the real bootstrap writes the
-  documented matrix. Catches step 1 or step 4 not landing on a fresh install.
-- `TestEveryRBACBackfillConvergesOnTheSeededMatrix`: each backfill, replayed
-  against today's matrix minus its own objects, converges back onto the matrix.
-  This arm isolates: a failure names your migration. A typo'd jsonb path from
-  step 3, a wrong verb, or a `WHERE` clause that matches no rows shows up here.
-- `TestTheBackfillsComposeFromTheOldestUpgradableInstallation`: every backfill
-  replayed in version order over the documents an installation bootstrapped at
-  the migration baseline held. **This arm catches step 3 missing entirely**, for
-  any object added since that baseline. The isolating arm cannot: it derives its
-  starting state from the migrations, so an object no migration mentions is
-  never absent from that state and its missing backfill is invisible.
+- `TestTheRealBootstrapSeedsTheDocumentedMatrix`: the real start of a workspace writes the matrix the docs
+  show. It finds step 1 or step 4 missing on a new install.
+- `TestEveryRBACBackfillConvergesOnTheSeededMatrix`: each backfill runs against the matrix of today, without
+  its own objects, and must reach the matrix again. This test points at one cause: a failure names your
+  migration. A typo in the JSON path from step 3, a wrong verb, or a `WHERE` that matches no rows shows up
+  here.
+- `TestTheBackfillsComposeFromTheOldestUpgradableInstallation`: every backfill runs in version order over the
+  documents that an installation started at the migration baseline held. **This test finds step 3 missing
+  in full**, for any object added since that baseline. The test above cannot. It takes its first state from
+  the migrations, so an object that no migration names is never absent from that state. So the test
+  cannot see its missing backfill.
 
-The composed arm's starting state is a committed fixture,
-`backend/migrations/testdata/rbac_baseline_era_defaults.json`. Editing that
-fixture could make a broken backfill look like a working one, so a second gate
-guards it. `TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded`
-(`backend/gates/rbacbaselineerafixture_test.go`, unit lane) pins the fixture to
-the baseline commit's `rbac_seeded_defaults.json`
-(`git show <baseline>:backend/migrations/testdata/rbac_seeded_defaults.json`). It
-compares decoded JSON, so re-indentation is no difference but any changed key or
-value is. It also checks that the pinned commit is the consolidation baseline,
-so the pin cannot be moved forward instead. Regenerate the fixture with the
-command that gate's failure message prints; never by hand.
+The first state of this last test is a committed fixture,
+`backend/migrations/testdata/rbac_baseline_era_defaults.json`. An edit to that fixture could make a backfill that fails
+look like a working one, so a second gate guards it.
 
-It lives in the unit lane because reading history needs a full checkout, and the
-integration shards check out shallow.
+`TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded` (`backend/gates/rbacbaselineerafixture_test.go`, unit
+lane) pins the fixture to the baseline commit's `rbac_seeded_defaults.json`
+(`git show <baseline>:backend/migrations/testdata/rbac_seeded_defaults.json`). It compares the JSON as data, not as
+text. So line breaks do not count, but any changed key or value does. It also checks that the pinned commit is
+the baseline merge, so no one can move the pin to a later commit. Build the fixture again with the command that gate
+prints when it fails; never by hand.
 
-Commit the policy change, the contract, the migration pair, the regenerated
-matrix and the UI binding together. They are one change, and any one of them
-alone is a broken state.
+It lives in the unit lane because reading history needs a full checkout, and the integration lane takes a
+short checkout.
+
+Commit the policy change, the contract, the migration pair, the new matrix and the UI link together. They
+are one change, and any one of them alone is a state that does not work.
