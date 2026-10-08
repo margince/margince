@@ -124,8 +124,7 @@ func admitCallerChosenFields(in IssuePassportInput) error {
 		return &InvalidPassportFieldError{Field: "label", Code: "label_too_long", Message: fmt.Sprintf("must be at most %d characters", maxPassportLabelRunes)}
 	}
 	if in.TTL != nil && (*in.TTL <= 0 || *in.TTL > maxPassportTTL) {
-		return &InvalidPassportFieldError{Field: "ttl_hours", Code: "ttl_out_of_range",
-			Message: fmt.Sprintf("must be 1 to %d hours", int(maxPassportTTL/time.Hour))}
+		return &InvalidPassportFieldError{Field: "ttl_hours", Code: "ttl_out_of_range", Message: fmt.Sprintf("must be 1 to %d hours", int(maxPassportTTL/time.Hour))}
 	}
 	if len(slices.Compact(slices.Sorted(slices.Values(in.Scopes)))) != len(in.Scopes) {
 		return &InvalidPassportFieldError{Field: "scopes", Code: "duplicate_scope", Message: "must not repeat a scope"}
