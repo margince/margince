@@ -37,6 +37,8 @@ type Deal struct {
 	// local day before any comparison.
 	ClosedAt *time.Time
 	Won      bool
+	// Lost deals cannot land, so no reading counts them as open.
+	Lost     bool
 	Category string
 	// Integer percent, the stage's own win probability.
 	StageProbability int
@@ -150,15 +152,20 @@ func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
 		if err != nil {
 			return Readings{}, err
 		}
-		out.EligibleCount++
-		if deal.AmountMinor != nil {
-			out.PricedCount++
-		}
-		if deal.ExpectedCloseDate != nil && !deal.CloseProvisional {
-			out.ConfirmedDateCount++
-		}
-		if deal.AmountMinor != nil && deal.BaseMinor == nil {
-			out.FxMissingCount++
+		// A lost deal is not pipeline: it is left out of every count that
+		// describes the pipeline, though its contribution row is still kept for
+		// the snapshot and the movement reading that watch it leave.
+		if !deal.Lost {
+			out.EligibleCount++
+			if deal.AmountMinor != nil {
+				out.PricedCount++
+			}
+			if deal.ExpectedCloseDate != nil && !deal.CloseProvisional {
+				out.ConfirmedDateCount++
+			}
+			if deal.AmountMinor != nil && deal.BaseMinor == nil {
+				out.FxMissingCount++
+			}
 		}
 		base := int64(0)
 		if contribution.BaseMinor != nil {
@@ -241,7 +248,7 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 	// quarter did not bring in.
 	out.InWon = deal.Won && deal.ClosedAt != nil && period.ContainsInstant(*deal.ClosedAt)
 
-	if !deal.Won && deal.ExpectedCloseDate != nil && period.ContainsDay(*deal.ExpectedCloseDate) {
+	if !deal.Won && !deal.Lost && deal.ExpectedCloseDate != nil && period.ContainsDay(*deal.ExpectedCloseDate) {
 		out.InOpen = true
 		// Evidence is the reading that claims support. A provisional date is a
 		// guess, so it is in the open pipeline and out of the evidence — which

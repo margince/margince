@@ -66501,7 +66501,7 @@ type ServerInterface interface {
 	// Get a deal by id (the 360 record).
 	// (GET /deals/{id})
 	GetDeal(w http.ResponseWriter, r *http.Request, id Id)
-	// Update a deal (partial). Closing requires terminal status + lost_reason if lost.
+	// Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming `status`, `lost_reason`, `fx_rate_to_base` or `fx_rate_date` is refused 422.
 	// (PATCH /deals/{id})
 	UpdateDeal(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealParams)
 	// Advance a deal to a new stage (audit-logged with prior + next stage).
@@ -70005,7 +70005,7 @@ func (_ Unimplemented) GetDeal(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Update a deal (partial). Closing requires terminal status + lost_reason if lost.
+// Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming `status`, `lost_reason`, `fx_rate_to_base` or `fx_rate_date` is refused 422.
 // (PATCH /deals/{id})
 func (_ Unimplemented) UpdateDeal(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealParams) {
 	w.WriteHeader(http.StatusNotImplemented)

@@ -460,8 +460,14 @@ func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.
 	}
 	var out crmcontracts.Offer
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if _, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly); err != nil {
+		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
+		if err != nil {
 			return err
+		}
+		// An accepted offer is the source of its deal's price, so retiring it
+		// would leave the deal priced from a document nobody can open.
+		if current.Status == crmcontracts.OfferStatusAccepted {
+			return fmt.Errorf("an accepted offer prices its deal and cannot be archived: %w", apperrors.ErrConflict)
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE offer SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
@@ -470,7 +476,6 @@ func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.
 		if _, err := storekit.Audit(ctx, tx, "archive", "offer", id.UUID, nil, nil); err != nil {
 			return fmt.Errorf("audit offer archive: %w", err)
 		}
-		var err error
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.IncludeArchived); err != nil {
 			return fmt.Errorf("read archived offer: %w", err)
 		}

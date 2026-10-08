@@ -3209,7 +3209,7 @@ export interface paths {
         delete: operations["archiveDeal"];
         options?: never;
         head?: never;
-        /** Update a deal (partial). Closing requires terminal status + lost_reason if lost. */
+        /** Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming `status`, `lost_reason`, `fx_rate_to_base` or `fx_rate_date` is refused 422. */
         patch: operations["updateDeal"];
         trace?: never;
     };
@@ -3235,6 +3235,10 @@ export interface paths {
          *     the same money: moving a won deal back to an open stage clears its close date,
          *     its lost reason and the FX rate frozen at close, and takes revenue out of a
          *     quarter that has already been reported.
+         *
+         *     A move to the stage the deal already holds is refused 422 `already_in_stage`: closing
+         *     a closed deal again would move its close day, so it takes a reopen first. A
+         *     `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          */
         post: operations["advanceDeal"];
         delete?: never;
@@ -15201,7 +15205,10 @@ export interface paths {
         get: operations["getOffer"];
         put?: never;
         post?: never;
-        /** Archive (soft-delete) an offer. */
+        /**
+         * Archive (soft-delete) an offer.
+         * @description An accepted offer prices its deal and is refused 409; archive any other status.
+         */
         delete: operations["archiveOffer"];
         options?: never;
         head?: never;
@@ -15271,7 +15278,8 @@ export interface paths {
          *     rendered or delivered to a counterparty — delivery is a separate capability that does not
          *     exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
          *     with no staging path — this IS the commercial commitment, since a sent revision is never
-         *     mutated in place and its rate to base is fixed from here on.
+         *     mutated in place and its rate to base is fixed from here on. An offer whose `valid_until`
+         *     day has passed is refused 422 `offer_lapsed`; regenerate it with a later date.
          */
         post: operations["sendOffer"];
         delete?: never;
@@ -15297,7 +15305,8 @@ export interface paths {
          * @description sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
          *     accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
          *     `offer.accepted`. Recording the buyer's acceptance is a human attestation — an agent
-         *     principal is rejected outright.
+         *     principal is rejected outright. An offer whose `valid_until` day has passed is refused
+         *     422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
          */
         post: operations["acceptOffer"];
         delete?: never;
@@ -66414,6 +66423,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateOffer: {

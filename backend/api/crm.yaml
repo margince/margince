@@ -4828,7 +4828,7 @@ paths:
     patch:
       tags: [Deals]
       operationId: updateDeal
-      summary: Update a deal (partial). Closing requires terminal status + lost_reason if lost.
+      summary: Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming `status`, `lost_reason`, `fx_rate_to_base` or `fx_rate_date` is refused 422.
       x-mcp-tool: { verb: update_record, record_type: deal, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4879,6 +4879,10 @@ paths:
         the same money: moving a won deal back to an open stage clears its close date,
         its lost reason and the FX rate frozen at close, and takes revenue out of a
         quarter that has already been reported.
+
+        A move to the stage the deal already holds is refused 422 `already_in_stage`: closing
+        a closed deal again would move its close day, so it takes a reopen first. A
+        `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
       # advance_deal is the one TierDynamic tool (ADR-0026): the gate resolves the tier from the
       # stage semantics at BOTH ENDS of the move, not statically. open→open = 🟢 (no token); a
       # terminal won/lost stage at either end = 🟡 (approval token required), so closing a deal and
@@ -22530,6 +22534,7 @@ paths:
       tags: [Offers]
       operationId: archiveOffer
       summary: Archive (soft-delete) an offer.
+      description: An accepted offer prices its deal and is refused 409; archive any other status.
       x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write }
       responses:
         '200':
@@ -22538,6 +22543,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Offer' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   /offers/{id}/line-items:
     parameters:
@@ -22615,7 +22621,8 @@ paths:
         rendered or delivered to a counterparty — delivery is a separate capability that does not
         exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
         with no staging path — this IS the commercial commitment, since a sent revision is never
-        mutated in place and its rate to base is fixed from here on.
+        mutated in place and its rate to base is fixed from here on. An offer whose `valid_until`
+        day has passed is refused 422 `offer_lapsed`; regenerate it with a later date.
       x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -22641,7 +22648,8 @@ paths:
         sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
         accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
         `offer.accepted`. Recording the buyer's acceptance is a human attestation — an agent
-        principal is rejected outright.
+        principal is rejected outright. An offer whose `valid_until` day has passed is refused
+        422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       parameters:

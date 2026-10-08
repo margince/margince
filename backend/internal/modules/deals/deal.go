@@ -32,7 +32,7 @@ func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, p
 			lockLiveStageTarget,
 		stageID, pipelineID).Scan(&semantic)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return apperrors.ErrNotFound
+		return refuseUnplaceableBirthStage(ctx, tx, stageID)
 	}
 	if err != nil {
 		return fmt.Errorf("resolve target stage: %w", err)
@@ -41,6 +41,21 @@ func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, p
 		return &TerminalStageOnCreateError{Semantic: semantic}
 	}
 	return nil
+}
+
+// refuseUnplaceableBirthStage answers for a stage that is not in the deal's
+// pipeline: a live stage of another pipeline is the caller's mismatch (422),
+// and only a stage that does not exist, or is archived, reads as not found.
+func refuseUnplaceableBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID) error {
+	var elsewhere bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM stage WHERE id = $1 AND archived_at IS NULL)`, stageID).Scan(&elsewhere); err != nil {
+		return fmt.Errorf("look for the stage in another pipeline: %w", err)
+	}
+	if elsewhere {
+		return &StagePipelineMismatchError{StageID: stageID, Field: "stage_id"}
+	}
+	return apperrors.ErrNotFound
 }
 
 // recordDealUpdate lands the write shape's audit row and its paired
