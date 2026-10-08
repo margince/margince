@@ -77,3 +77,26 @@ export function importPathTo(
   }
   return null;
 }
+
+const TEST_RUNNER = /^(vitest|@vitest\/[^/]+)(\/|$)/;
+
+/**
+ * Each entry's import path to a `corpus` module with a value import of vitest;
+ * `runners` lists those modules, so a caller can refuse a corpus with none.
+ */
+export function testRunnerReach(
+  entries: readonly string[],
+  corpus: readonly string[],
+): { runners: ReadonlySet<string>; reaches: string[][] } {
+  const runners = new Set(
+    corpus.filter((file) =>
+      moduleSpecifiers(sourceFileAt(file), "values").some((specifier) =>
+        TEST_RUNNER.test(specifier),
+      ),
+    ),
+  );
+  const reaches = entries
+    .map((entry) => importPathTo(entry, runners))
+    .filter((path): path is string[] => path !== null);
+  return { runners, reaches };
+}

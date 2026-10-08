@@ -9,7 +9,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { importPathTo, productionModulesUnder } from "./import-reach";
+import {
+  importPathTo,
+  productionModulesUnder,
+  testRunnerReach,
+} from "./import-reach";
 
 describe("the import walk the split gates share", () => {
   let dir = "";
@@ -77,5 +81,42 @@ describe("the import walk the split gates share", () => {
     write("heavy.tsx", "");
 
     expect(importPathTo(at("entry.ts"), new Set([at("heavy.tsx")]))).toBeNull();
+  });
+
+  it("reaches a value import of vitest through a plain module, and no type-only one", () => {
+    write(
+      "card.stories.tsx",
+      'import { body } from "./plain";\nimport "./typed.fixtures";\n',
+    );
+    write("plain.ts", 'export { body } from "./card.fixtures";\n');
+    write(
+      "card.fixtures.ts",
+      'import { vi } from "vitest";\nexport const body = vi.fn();\n',
+    );
+    write(
+      "typed.fixtures.ts",
+      'import type { Mock } from "vitest";\nexport type M = Mock;\n',
+    );
+    write("typed.stories.tsx", 'import "./typed.fixtures";\n');
+    write("spy.stories.tsx", 'import { fn } from "@vitest/spy";\n');
+
+    const { runners, reaches } = testRunnerReach(
+      ["card.stories.tsx", "typed.stories.tsx", "spy.stories.tsx"].map(at),
+      [
+        "plain.ts",
+        "card.fixtures.ts",
+        "typed.fixtures.ts",
+        "spy.stories.tsx",
+      ].map(at),
+    );
+
+    expect(reaches.map(named)).toEqual([
+      ["card.stories.tsx", "plain.ts", "card.fixtures.ts"],
+      ["spy.stories.tsx"],
+    ]);
+    expect(named([...runners])).toEqual([
+      "card.fixtures.ts",
+      "spy.stories.tsx",
+    ]);
   });
 });
