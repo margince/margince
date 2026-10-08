@@ -4,7 +4,7 @@ import type { MessageKey } from "../../i18n/en";
 // of it. The timeline also carries tasks and notes, which we wrote for
 // ourselves, and the newest stop drawn from this list is titled "Last contact".
 //
-// A map keyed by kind, because `t` takes a declared MessageKey: building the
+// A map keyed by kind, because `t` takes a declared MessageKey. Building the
 // key from the kind would let a new kind ship printing its own id.
 export const EXCHANGE_KINDS = {
   email: "co.spine.kind.email",

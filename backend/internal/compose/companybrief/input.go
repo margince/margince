@@ -90,9 +90,9 @@ type Input struct {
 	OpenTasks []TaskIn `json:"open_tasks,omitempty"`
 	Recent    []ActIn  `json:"recent,omitempty"`
 	// LastContact is the activity the page's "Last contact" tile names, nil
-	// when it names none. It may be older than every Recent row, because tasks
-	// and notes crowd the window, so it rides the fingerprint on its own: two
-	// readers who see different activity never share a brief that names it.
+	// when it names none. Tasks and notes can push it out of Recent, so it
+	// rides the fingerprint on its own. Two readers who see different activity
+	// never share a brief that names it.
 	LastContact *ActIn `json:"last_contact,omitempty"`
 	// SectionsOmitted names what the reader could NOT see. It rides the
 	// fingerprint so two readers with different grants never share a cached

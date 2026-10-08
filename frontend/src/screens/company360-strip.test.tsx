@@ -350,7 +350,7 @@ describe("silence on the relationship slot names which silence it is", () => {
   }
 
   // An unrated account with no mail either way may still have meetings and
-  // calls; the brief reads the same missing rating as not assessed, and the
+  // calls. The brief reads the same missing rating as not assessed, and the
   // tile says what the brief says.
   it("says not assessed when unrated and nothing was ever sent", async () => {
     stubFinance(NO_CONNECTION);

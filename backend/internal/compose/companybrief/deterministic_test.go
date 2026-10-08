@@ -285,8 +285,8 @@ func TestProfileLinesSkipAStatementThatIsOnlyPunctuation(t *testing.T) {
 	}
 }
 
-// A note written after the last call is the newest row on the timeline, and
-// still not contact: the sentence names the row the page's tile names.
+// A note written after the last call is the newest row on the timeline. It is
+// still not contact, so the sentence names the row the page's tile names.
 func TestDeterministicLastContactSkipsANewerNote(t *testing.T) {
 	text := briefLines(Deterministic(briefCompanyID, Input{
 		Name: "Acme",

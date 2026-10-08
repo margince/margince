@@ -6,9 +6,9 @@
 package compose
 
 // An account's last contact counts every exchange that is contact, whatever
-// its direction: a meeting and a call carry none and are the likeliest last
-// contact on an account nobody mails. A note is not contact, and neither is a
-// meeting called off.
+// its direction. A meeting and a call carry none, and they are the likeliest
+// last contact on an account nobody mails. A note is not contact, and neither
+// is a meeting called off.
 
 import (
 	"testing"
