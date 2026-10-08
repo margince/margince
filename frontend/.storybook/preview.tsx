@@ -4,7 +4,7 @@ import type { Decorator, Preview } from "@storybook/react-vite";
 // resolved. No `backgrounds` palette is configured: the addon needs literal
 // colours, which ds-purity bans — the theme switch below is a decorator.
 import "../src/app.css";
-// Structural chrome (.wrap/.list-head/.list-toolbar) and composed surfaces
+// Structural chrome (.wrap/.list-toolbar) and composed surfaces
 // (.card/.firmo/.meterbar/…) live in these two sheets, loaded in the real
 // app via component-colocated side-effect imports (app/shell.tsx,
 // design-system/composed.tsx) that most stories never reach — importing
@@ -96,7 +96,16 @@ const preview: Preview = {
         order: [
           "Get started",
           "Foundations",
-          ["Color", "Typography", "Radius", "Brand"],
+          [
+            "Color",
+            "Typography",
+            "Spacing",
+            "Radius",
+            "Elevation",
+            "Motion",
+            "Iconography",
+            "Brand",
+          ],
           "Components",
           [
             "Forms and input",

@@ -84,11 +84,11 @@
   height: 100%;
   padding: var(--space-4);
   /* The STRONG border, not the subtle one. These plates stand on a card that
-     is already `--bgCard`, so a hairline in the subtle tone disappeared into
+     is already `--bgInset`, so a hairline in the subtle tone disappeared into
      the ground and only the selected plate read as a plate at all. */
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  background: var(--bgInset);
   transition:
     border-color var(--dur-move) var(--ease-out),
     box-shadow var(--dur-move) var(--ease-out);

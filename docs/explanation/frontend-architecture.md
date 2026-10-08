@@ -215,9 +215,8 @@ The app shell is **glass over the light page**, as
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark rail group in `tokens.css` (`--bgRail`, `--railTop`,
-`--railBottom`, `--railIcon`, `--railIconHover`, `--railIconActive`,
-`--railHover`, `--railActive`, `--overlayScrim`) is for the dark green field
+The dark rail group in `tokens.css` (`--bgRail`, `--railIconActive`,
+`--overlayScrim`) is for the dark green field
 only. Its comment says it has no theme, `white-alpha` in both themes, which is
 correct for that field. That field is the tooltips the small rail shows, the bar
 of the client surface, and the surfaces for the web site and the deck. A new

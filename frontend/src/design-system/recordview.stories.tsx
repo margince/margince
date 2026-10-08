@@ -57,63 +57,6 @@ export const WithWayBack: Story = {
   },
 };
 
-// The sign-off and the quoted history fold behind their own control: the split
-// is a heuristic, so a wrong guess stays one click from visible.
-export const MailWithSignatureAndQuote: Story = {
-  args: {
-    name: "Acme GmbH",
-    identity: "o-acme",
-    subtitle: "Enterprise · Munich",
-    zone: "Europe/Berlin",
-    timeline: [
-      {
-        ...emailEntry,
-        title: "Re: Rollout-Plan",
-        body: [
-          "From: lena.fischer@acme.de",
-          "To: lars@gradion.com",
-          "",
-          "Hallo,",
-          "",
-          "der Plan sieht gut aus. Phase 1 ist realistisch, bei Phase 3 haben wir",
-          "intern noch Klärungsbedarf mit dem Händlerteam. Details stehen unter",
-          "https://acme.de/rollout bereit.",
-          "",
-          "Dienstag 14 Uhr würde bei uns passen.",
-          "",
-          "Mit freundlichen Grüßen",
-          "Lena Fischer",
-          "Acme GmbH · +49 89 123456",
-          "",
-          "Am 12.08.2026 um 09:14 schrieb Lars Jankowfsky:",
-          "> Passt ein Termin nächste Woche für die Detailabstimmung?",
-        ].join("\n"),
-      },
-      meetingEntry,
-    ],
-  },
-};
-
-// A note is never folded: "Viele Grüße" opens it as prose, and a quoted line
-// in a note is something a human typed.
-export const NoteThatReadsLikeASignOff: Story = {
-  args: {
-    name: "Acme GmbH",
-    identity: "o-acme",
-    zone: "Europe/Berlin",
-    timeline: [
-      {
-        ...noteEntry,
-        title: "Nach dem Messegespräch",
-        body: [
-          "Viele Grüße von der Messe ausgerichtet, Lena war sichtlich erfreut.",
-          "> Sie fragte nochmal nach dem Händlerportal.",
-        ].join("\n"),
-      },
-    ],
-  },
-};
-
 export const WithRowActions: Story = {
   args: {
     name: "Acme GmbH",
