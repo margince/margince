@@ -1,11 +1,18 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { type ReactNode, useEffect } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { steppedClock } from "../testing/steppedclock";
 import { Button } from "./atoms";
+import { useFocusHandoff } from "./focushandoff";
 import {
   type Toast,
   type ToastOptions,
@@ -558,46 +565,74 @@ describe("a caller withdrawing its own message", () => {
 });
 
 describe("focus after the verb runs", () => {
-  function Opener({ onShown }: Readonly<{ onShown: (toast: Toast) => void }>) {
-    const toast = useToast();
-    return <Button onClick={() => onShown(toast)}>take off</Button>;
+  function Row({
+    landing,
+    onTake,
+  }: Readonly<{ landing: () => HTMLElement | null; onTake: () => void }>) {
+    const row = useRef<HTMLDivElement | null>(null);
+    useFocusHandoff(row, landing);
+    return (
+      <div ref={row}>
+        <Button onClick={onTake}>take off</Button>
+      </div>
+    );
   }
 
-  function mountOpener(onShown: (toast: Toast) => void, withOpener = true) {
-    const view = (opener: boolean) => (
+  // The message is shown first and the row leaves after, handing focus to the
+  // block: the order a write that runs at once produces.
+  function Shortlist() {
+    const toast = useToast();
+    const [onList, setOnList] = useState(true);
+    const block = useRef<HTMLDivElement | null>(null);
+    const landing = useCallback(() => block.current, []);
+    return (
+      <div ref={block} tabIndex={-1} data-testid="block">
+        {onList && (
+          <Row
+            landing={landing}
+            onTake={() => {
+              toast.show(
+                "Taken off",
+                undo(() => setOnList(true)),
+              );
+              setOnList(false);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  it("hands focus back to where it was before it entered the toast", async () => {
+    const acting = steppedClock();
+    render(
       <LocaleProvider initial="en">
         <ToastProvider>
-          {opener && <Opener onShown={onShown} />}
+          <Shortlist />
           <ToastRegion />
         </ToastProvider>
-      </LocaleProvider>
+      </LocaleProvider>,
     );
-    const rendered = render(view(true));
-    return () => rendered.rerender(view(withOpener));
-  }
-
-  it("hands focus back to where it sat when the message was shown", async () => {
-    const acting = steppedClock();
-    mountOpener((toast) => toast.show("Taken off", undo()));
-    const opener = press("take off");
-    act(() => opener.focus());
-    await acting.click(opener);
+    await acting.click(press("take off"));
+    expect(screen.getByTestId("block")).toHaveFocus();
     act(() => press("Undo").focus());
 
     await acting.click(press("Undo"));
 
     expect(screen.queryByRole("status")).toBeNull();
-    expect(opener).toHaveFocus();
+    expect(screen.getByTestId("block")).toHaveFocus();
   });
 
   it("moves focus nowhere when that place has left the page", async () => {
     const acting = steppedClock();
-    const removeOpener = mountOpener(
-      (toast) => toast.show("Taken off", undo()),
-      false,
-    );
-    await acting.click(press("take off"));
-    removeOpener();
+    const toast = controlled();
+    const field = document.createElement("input");
+    document.body.append(field);
+    act(() => field.focus());
+    act(() => {
+      toast().show("Taken off", undo());
+    });
+    field.remove();
     act(() => press("Undo").focus());
 
     await acting.click(press("Undo"));

@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import {
   createContext,
   type ReactNode,
+  type RefObject,
   useCallback,
   useContext,
   useEffect,
@@ -95,8 +96,6 @@ type ToastMessage = Readonly<{
   action: ToastAction | null;
   /** It took the place of the message on screen, rather than waiting its turn. */
   replacedShown: boolean;
-  /** Where focus sat when it was shown, for its action to hand focus back to. */
-  returnFocusTo: HTMLElement | null;
 }>;
 
 export type ToastOptions = Readonly<{
@@ -179,7 +178,6 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
       sticky: options?.sticky ?? action?.kind === "open",
       action,
       replacedShown: false,
-      returnFocusTo: focusOutsideToasts(),
     };
     setQueue((waiting) => enqueue(waiting, arriving));
     return arriving.id;
@@ -213,15 +211,6 @@ function enqueue(
   return [...waiting, arriving];
 }
 
-function focusOutsideToasts(): HTMLElement | null {
-  const active = document.activeElement;
-  return active instanceof HTMLElement &&
-    active !== document.body &&
-    active.closest(".toast-region") === null
-    ? active
-    : null;
-}
-
 /** Where focus sat in a message: one of its two controls, or its own body. */
 type ToastControl = "act" | "close" | "body";
 
@@ -241,6 +230,33 @@ function refocusTarget(region: HTMLElement, control: ToastControl) {
       ? null
       : region.querySelector<HTMLElement>(`[data-toast-control="${control}"]`);
   return same ?? region.querySelector<HTMLElement>("a[href], button");
+}
+
+// The last place focus sat outside every toast. Read at the press, not at
+// `show`: a write's own row may hand focus on after the message is shown.
+function useLeftFrom(): RefObject<HTMLElement | null> {
+  const leftFrom = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const outside = (node: EventTarget | null) =>
+      node instanceof HTMLElement && node.closest(".toast-region") === null;
+    const entered = (event: FocusEvent) => {
+      if (outside(event.target) && event.target instanceof HTMLElement) {
+        leftFrom.current = event.target;
+      }
+    };
+    const dropped = (event: FocusEvent) => {
+      if (outside(event.target) && event.relatedTarget === null) {
+        leftFrom.current = null;
+      }
+    };
+    document.addEventListener("focusin", entered);
+    document.addEventListener("focusout", dropped);
+    return () => {
+      document.removeEventListener("focusin", entered);
+      document.removeEventListener("focusout", dropped);
+    };
+  }, []);
+  return leftFrom;
 }
 
 /** What a screen calls to say something landed. */
@@ -295,7 +311,7 @@ export function useOwnToast({ leavesWithCaller = false } = {}) {
  * Focus is never taken. The reader is mid-task and the toast is passive; what it
  * owes them instead is a way IN (it is last in the DOM, so Tab reaches it) and a
  * way OUT (Escape, while focus is inside it). Pressing its action hands focus
- * back to where it sat when the message was shown, while that is still on screen.
+ * back to where it was before it entered the toast, while that is still on screen.
  */
 export function ToastRegion() {
   const t = useT();
@@ -324,6 +340,7 @@ export function ToastRegion() {
       setFocusInside(false);
     }
   }, []);
+  const leftFrom = useLeftFrom();
   // Where focus sat in a message that is about to unmount; a replacement takes
   // it over. A ref cleanup runs before React removes the node, focus still in it.
   const refocus = useRef<ToastControl | null>(null);
@@ -417,8 +434,9 @@ export function ToastRegion() {
               const holding = event.currentTarget === document.activeElement;
               act.onAct();
               dismiss(shown.id);
-              if (holding && shown.returnFocusTo?.isConnected) {
-                shown.returnFocusTo.focus();
+              const back = leftFrom.current;
+              if (holding && back?.isConnected) {
+                back.focus();
               }
             }}
           >
