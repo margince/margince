@@ -672,9 +672,8 @@ function CompanyFactsCard({
             null instead, because a capability this installation does not have
             is not a fact about the reader. */}
         {readOnly && <p>{t("settings.companyReadOnly")}</p>}
-        {/* The company's FACE, above the statements about it. It is the
-            one thing on this card a reader recognises at a glance, and
-            the only one that also stands at the top of the sidebar. */}
+        {/* The company's FACE, above the statements about it: the one thing
+            here a reader recognises at a glance, and the sidebar's too. */}
         {company.data && form && (
           <CompanyMark profile={company.data} canEdit={canEdit} />
         )}
