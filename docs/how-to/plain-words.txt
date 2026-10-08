@@ -544,7 +544,6 @@ job
 join
 journal
 judge
-k
 keep
 kept
 key
@@ -1069,7 +1068,7 @@ technology
 tell
 template
 tenant
-term
+terms
 test
 text
 than
