@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { formatDateAbbrev } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import type { Locale } from "../i18n";
 import {
   loadedQueue,
   type Worklist,
@@ -92,12 +95,19 @@ type NextMeeting = NonNullable<Worklist["next_meeting"]>;
  *
  * `counted` keeps the figure as it stands; `unread` is a meetings lane that
  * never answered. `not_connected` and `unreadable` are a zero that measured
- * nothing, so neither surface may draw it as a day without meetings. `quiet`
- * is a zero that did measure, with the next booked conversation to name.
+ * nothing, so neither surface may draw it as a day without meetings, though a
+ * meeting booked by hand is still a fact the CRM can name. `quiet` is a zero
+ * that did measure, with the next booked conversation to name.
  */
 export type CalendarDay =
-  | Readonly<{ state: "counted" | "unread" | "not_connected" | "unreadable" }>
+  | Readonly<{ state: "counted" | "unread" }>
+  | Readonly<{ state: "not_connected" | "unreadable"; next?: NextMeeting }>
   | Readonly<{ state: "quiet"; next: NextMeeting }>;
+
+/** The next meeting's day, spelled one way wherever the brief names it. */
+export function nextMeetingDay(next: NextMeeting, locale: Locale): string {
+  return formatDateAbbrev(next.starts_at, locale, viewerZone());
+}
 
 export function calendarDay(day: Worklist): CalendarDay {
   if (day.sources_unavailable.some((entry) => entry.source === "meeting")) {
@@ -107,7 +117,7 @@ export function calendarDay(day: Worklist): CalendarDay {
     return { state: "counted" };
   }
   if (day.calendar === "not_connected" || day.calendar === "unreadable") {
-    return { state: day.calendar };
+    return { state: day.calendar, next: day.next_meeting };
   }
   // No `calendar` is a server that cannot say whether its zero measured
   // anything, so the reading stays what it always was.

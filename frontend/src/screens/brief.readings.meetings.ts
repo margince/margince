@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { navigate } from "../app/router";
-import { formatDateAbbrev, formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
+import { formatNumber } from "../format/format";
 import type { Locale, Translator, usePlural } from "../i18n";
 import {
   type CalendarDay,
   meetingReadiness,
   meetingsCounted,
+  nextMeetingDay,
   scheduledMeetings,
   sourceComplete,
 } from "./brief.facts";
@@ -96,7 +96,7 @@ export function nextMeetingLine(
   locale: Locale,
   t: Translator,
 ): string {
-  const date = formatDateAbbrev(next.starts_at, locale, viewerZone());
+  const date = nextMeetingDay(next, locale);
   return next.subject
     ? t("brief.readings.nextMeeting", { date, subject: next.subject })
     : t("brief.readings.nextMeetingUntitled", { date });

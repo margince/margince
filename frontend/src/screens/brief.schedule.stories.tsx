@@ -79,42 +79,46 @@ export const ScheduleCollapsed: Story = {
   render: panel(<SchedulePanel day={CLEAR} state="ready" />),
 };
 
+// A meeting booked further out, which the CRM holds whatever the calendar
+// connection says.
+const NEXT_MEETING = {
+  activity_id: "a-next",
+  starts_at: "2026-08-25T08:00:00Z",
+  subject: "Weber GmbH · kickoff",
+  linked_deal_id: "d-1",
+  participants: [{ contact_id: "c-1", full_name: "Anna Weber" }],
+};
+
 // Nothing left today, and the next booked meeting named on the day's line with
 // a date where today's rows carry a time.
 export const QuietDayNextMeeting: Story = {
   render: panel(
     <SchedulePanel
-      day={{
-        ...CLEAR,
-        calendar: "connected",
-        next_meeting: {
-          activity_id: "a-next",
-          starts_at: "2026-08-25T08:00:00Z",
-          subject: "Weber GmbH · kickoff",
-          linked_deal_id: "d-1",
-          participants: [{ contact_id: "c-1", full_name: "Anna Weber" }],
-        },
-      }}
+      day={{ ...CLEAR, calendar: "connected", next_meeting: NEXT_MEETING }}
       state="ready"
     />,
   ),
 };
 
-// No calendar connected: the zero measured nothing, so the panel stays and
-// leads to where one connects.
+// No calendar connected: the zero measured nothing, so the panel stays, leads
+// to where one connects, and still names the meeting booked by hand.
 export const CalendarNotConnected: Story = {
   render: panel(
     <SchedulePanel
-      day={{ ...CLEAR, calendar: "not_connected" }}
+      day={{ ...CLEAR, calendar: "not_connected", next_meeting: NEXT_MEETING }}
       state="ready"
     />,
   ),
 };
 
-// A connection that stopped syncing: the same box, and the way to reconnect.
+// A connection that stopped syncing: the same box, the way to reconnect, and
+// the next meeting the CRM already holds.
 export const CalendarNotSyncing: Story = {
   render: panel(
-    <SchedulePanel day={{ ...CLEAR, calendar: "unreadable" }} state="ready" />,
+    <SchedulePanel
+      day={{ ...CLEAR, calendar: "unreadable", next_meeting: NEXT_MEETING }}
+      state="ready"
+    />,
   ),
 };
 

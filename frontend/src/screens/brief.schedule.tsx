@@ -5,10 +5,15 @@ import { routeHash } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatDayMonth, formatTimeOfDay } from "../format/format";
+import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { type CalendarDay, calendarDay, sourceComplete } from "./brief.facts";
+import {
+  type CalendarDay,
+  calendarDay,
+  nextMeetingDay,
+  sourceComplete,
+} from "./brief.facts";
 import { EntityRef } from "./entityref";
 import { settingsHref } from "./settingsrouting";
 import { isUnprepared, itemTitle, moveHref, rowHref } from "./worklist.copy";
@@ -116,17 +121,23 @@ function NoMeetingRows({ calendar }: Readonly<{ calendar: CalendarDay }>) {
       return <NextMeetingRow next={calendar.next} />;
     case "not_connected":
       return (
-        <CalendarRow
-          sentence={t("brief.schedule.notConnected")}
-          verb={t("brief.schedule.connect")}
-        />
+        <>
+          <CalendarRow
+            sentence={t("brief.schedule.notConnected")}
+            verb={t("brief.schedule.connect")}
+          />
+          {calendar.next && <NextMeetingRow next={calendar.next} />}
+        </>
       );
     case "unreadable":
       return (
-        <CalendarRow
-          sentence={t("brief.schedule.unreadable")}
-          verb={t("brief.schedule.reconnect")}
-        />
+        <>
+          <CalendarRow
+            sentence={t("brief.schedule.unreadable")}
+            verb={t("brief.schedule.reconnect")}
+          />
+          {calendar.next && <NextMeetingRow next={calendar.next} />}
+        </>
       );
     case "unread":
       return <PanelRow>{t("brief.schedule.unavailable")}</PanelRow>;
@@ -162,7 +173,7 @@ function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
   return (
     <PanelRow className="rail-schedule-row">
       <span className="t-caption rail-schedule-when">
-        {formatDayMonth(next.starts_at, locale, zone)}
+        {nextMeetingDay(next, locale)}
       </span>
       <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">

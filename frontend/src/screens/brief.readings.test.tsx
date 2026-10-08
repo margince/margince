@@ -229,6 +229,8 @@ describe("the brief readings strip", () => {
     expect(screen.queryByText(en["brief.readings.prepUnknown"])).toBeNull();
   });
 
+  const NEXT_AT = "2026-09-04T09:30:00Z";
+
   // A zero from a calendar nobody connected measured nothing, and drawing it
   // tells a rep their day is clear. The door goes where a calendar connects.
   it.each([
@@ -246,10 +248,13 @@ describe("the brief readings strip", () => {
     "reads a %s calendar's zero as no measurement",
     async (calendar, value, why) => {
       const user = userEvent.setup();
-      drawDay({ ...readingsDay({}, [], []), calendar });
+      const next_meeting = { activity_id: "a-n", starts_at: NEXT_AT };
+      drawDay({ ...readingsDay({}, [], []), calendar, next_meeting });
 
       expect(meetingsCard().textContent).toContain(en[value]);
+      // The why stays the line; the hand-booked meeting is the panel's to show.
       expect(meetingsCard().textContent).toContain(en[why]);
+      expect(meetingsCard().textContent).not.toContain("Next:");
       expect(
         meetingsCard().querySelector(".stat-card-value")?.textContent,
       ).toBe(en[value]);

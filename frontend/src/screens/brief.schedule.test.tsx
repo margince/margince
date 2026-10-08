@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatDayMonth, formatTimeOfDay } from "../format/format";
+import { formatDateAbbrev, formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -135,7 +135,7 @@ describe("the schedule panel", () => {
 
     const panel = screen.getByRole("region");
     expect(panel.querySelector(".rail-schedule-when")?.textContent).toBe(
-      formatDayMonth(NEXT.starts_at, "en", zone),
+      formatDateAbbrev(NEXT.starts_at, "en", zone),
     );
     expect(
       within(panel)
@@ -171,6 +171,7 @@ describe("the schedule panel", () => {
 
       const panel = screen.getByRole("region");
       expect(panel.textContent).toContain(en[sentence]);
+      expect(panel.querySelector(".rail-schedule-row")).toBeNull();
       expect(
         within(panel)
           .getByRole("link", { name: en[verb] })
@@ -179,6 +180,28 @@ describe("the schedule panel", () => {
       expect(scheduleIsEmpty(day, "ready")).toBe(false);
     },
   );
+
+  // A meeting booked by hand is a fact the CRM holds whatever the calendar
+  // says, so it follows the sentence instead of hiding behind it.
+  it("names a hand-booked next meeting under a calendar that cannot count", () => {
+    const day = {
+      ...readingsDay({}, []),
+      calendar: "not_connected" as const,
+      next_meeting: NEXT,
+    };
+    draw(<SchedulePanel day={day} state="ready" />);
+
+    const panel = screen.getByRole("region");
+    const rows = panel.querySelectorAll(".panel-row");
+    expect(rows[0].textContent).toContain(en["brief.schedule.notConnected"]);
+    expect(rows[1].classList.contains("rail-schedule-row")).toBe(true);
+    expect(
+      within(panel).getByRole("link", { name: en["brief.schedule.connect"] }),
+    ).toBeTruthy();
+    expect(
+      within(panel).getByRole("link", { name: "Weber kickoff" }),
+    ).toBeTruthy();
+  });
 
   // A read that has not landed is not a clear day. Collapsing here would send a
   // rep into a morning believing nothing was booked, so the panel keeps its box
