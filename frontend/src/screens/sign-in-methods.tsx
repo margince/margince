@@ -338,11 +338,8 @@ export function SignInMethodsCard() {
       </PanelBody>
       <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
         {(current) => {
-          // Defaulted, not asserted. The field is contract-required, but a
-          // body that lost one hands over `undefined` anyway, and this card
-          // sits on the settings screen — dereferencing it would take the
-          // whole page down over a list nobody could act on. The same reading
-          // Switch's own `checked` prop documents.
+          // Defaulted although required: a body missing it would otherwise
+          // take the whole settings page down.
           const providers = current.sign_in_providers ?? [];
           const enabledKeys = providers
             .filter((provider) => provider.enabled)
@@ -376,10 +373,8 @@ export function SignInMethodsCard() {
                         checked={provider.enabled}
                         describedBy={control["aria-describedby"]}
                         pending={save.isPending}
-                        // Disabled while ANY save is in flight, not just for
-                        // a reader who may not write. The list travels whole,
-                        // so a second flip computed from the still-stale cache
-                        // would send a list that undoes the first one.
+                        // The list is sent whole, so a second flip during a
+                        // save would send the stale list and undo the first.
                         disabled={!canManage || save.isPending}
                         onChange={(next) =>
                           save.mutate(

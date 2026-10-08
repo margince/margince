@@ -142,10 +142,7 @@ export function CaptureActivityTab() {
           <PanelIntro>{t("captureActivity.sub")}</PanelIntro>
         </PanelBody>
         <SettingList bleed="settings">
-          {/* Whose activity is a one-of-two ANSWER, so it sits beside its
-              naming in the right column like every other answer on the page.
-              The control keeps the same words as its own accessible name —
-              the row draws them, the fieldset announces them. */}
+          {/* The control repeats the row's label: its fieldset announces it. */}
           {canReadWorkspace && (
             <SettingRow
               label={t("captureActivity.scope.label")}

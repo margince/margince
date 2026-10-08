@@ -785,13 +785,8 @@ export function LeadHandlingCard() {
               label={t("leadHandling.firstResponse")}
               description={t("leadHandling.firstResponseHint")}
               control={(control) => (
-                // The switch keeps its own hidden label — it owns its
-                // accessible name by design, and pointing it at the row's
-                // span as well would name it twice — but it takes the row's
-                // DESCRIPTION, or the sentence saying what the setting does
-                // reaches nobody who cannot see it. `reason` refuses the
-                // flip AND says why, which is what a stateful control a
-                // permission denies owes its reader.
+                // Without the row's description, a screen reader never
+                // hears what this switch does.
                 <Switch
                   describedBy={control["aria-describedby"]}
                   label={t("leadHandling.firstResponse")}

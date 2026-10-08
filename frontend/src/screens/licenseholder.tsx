@@ -66,18 +66,8 @@ export function LicenseHolderCard({
           )}
         </PanelBody>
       )}
-      {/* Each claim is a fact the license asserts, so it reads as a row: the
-          claim on the left and its value on the right, at the one x every
-          other answer on these pages sits at. It was a two-column `<dl>` with
-          its own grid and its own gaps — a third layout for the shape
-          `SettingRow` is. `control={null}` because there is nothing to press:
-          a license is changed by changing the deployment.
-
-          Every claim except the identifiers and the expiry is optional. A
-          license issued before those claims existed verifies exactly like any
-          other, so each row renders only when the token carries it — an empty
-          row would say something is missing from THIS license rather than from
-          the vocabulary it was issued under. */}
+      {/* No control: a license changes only with the deployment. Older
+          licenses lack the optional claims, so an absent claim gets no row. */}
       <SettingList bleed="settings">
         {holder.company && (
           <SettingRow

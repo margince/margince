@@ -224,10 +224,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
           />
         </PanelBody>
         <SettingList bleed="settings">
-          {/* Stacked: the preferences are the longest thing anybody types in
-              settings, and a control that IS the subject takes the width
-              rather than the right column. The row draws the label the box
-              announces, so the two cannot drift apart. */}
+          {/* Stacked: the preferences are the longest text in settings. */}
           <SettingRow
             label={t("settings.voice.personalityLabel")}
             layout="stack"
@@ -240,11 +237,8 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
               />
             )}
           />
-          {/* The raw derived text is what a profile can show BEFORE it is
-              ready; once it is, the insights above quote the same build back
-              in a form a reader can use, and repeating the markdown under it
-              would say the same thing twice. Closed by default either way:
-              it is the artifact behind the reading, not the reading. */}
+          {/* Once ready, the insights above quote this text, so showing it too
+              would say it twice. */}
           {profile.status !== "ready" && (
             <Disclosure summary={t("settings.voice.derivedLabel")}>
               <DerivedVoice profile={profile} />

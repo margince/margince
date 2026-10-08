@@ -257,14 +257,8 @@ export function LinkedInImportCard() {
       </PanelBody>
       <SettingList bleed="settings">
         <LinkedInProfileRow />
-        {/* The file is NAMED on the left, which is the row language doing the
-            job an icon used to: LinkedIn's export archive holds a dozen CSVs
-            and picking the wrong one fails with a parse error that explains
-            nothing, so the name of the file sits in the description the picker
-            is announced with rather than beside a glyph above it. The
-            description also carries what happens to the file — a member
-            uploading their own address book into a company system is owed that
-            before they press, and beside the picker is where they read it. */}
+        {/* LinkedIn's export holds many CSVs and the wrong one fails with an
+            unhelpful parse error, so the description names the file to pick. */}
         <SettingRow
           label={t("linkedinImport.importLabel")}
           description={t("linkedinImport.whichFile")}
@@ -294,9 +288,8 @@ export function LinkedInImportCard() {
           }
         />
       </SettingList>
-      {/* What the import DID. Not a row: a row is an answer to a question the
-          card asks, and this is a report of an act that has already happened —
-          it has no setting to line up with and no verb of its own. */}
+      {/* Outside the list: the result reports a finished import and answers
+          no setting. */}
       {!importer.isIdle && (
         <PanelBody>
           {importer.isPending && (

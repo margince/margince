@@ -283,15 +283,8 @@ export function LicenseReading({
         )}
       </PanelBody>
       <SettingList bleed="settings">
-        {/* ONE row, stacked. The two figures and the bar under them are the
-            card's SUBJECT rather than an answer that fits in a right-hand
-            column (design-system README, `SettingList` / `SettingRow`): used
-            against granted is the whole question this screen answers, and
-            splitting it into two rows would make it two readings. What counts
-            as a seat rides as the row's description — it is the rule the
-            figures are drawn under, which is exactly what a description is
-            for, and it used to sit at the foot of the card where a reader met
-            it after taking the numbers at face value. */}
+        {/* Stacked: used against granted is the card's subject, too wide for
+            the answer column. */}
         <SettingRow
           label={t("license.seats.title")}
           description={t("license.counting")}
@@ -312,11 +305,6 @@ export function LicenseReading({
                     })
                   : formatNumber(entitlement.seats_used, locale)
               }
-              // What is left, or what is past — and for a licence that caps
-              // nothing, the fact that there is nothing to be left of. Absent,
-              // not zero: an unlicensed installation and a licence that caps
-              // nothing both have no grant, and only the first is something an
-              // admin might want to change.
               detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
               // Only where the reading HAS a denominator: an uncapped
               // installation has nothing to be a share of, and a bar drawn

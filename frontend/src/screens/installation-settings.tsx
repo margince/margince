@@ -375,10 +375,8 @@ function InstallationSettingsForm({
         <SettingRow
           label={t("installationSettings.fiscalYearStart")}
           description={t("installationSettings.fiscalYearStartHint")}
-          // The month's name and the span it produces, because the number
-          // alone answers the wrong question: an admin is deciding what a
-          // report will SAY, and "April — FY2026/27" shows that where "4"
-          // makes them work it out.
+          // The month and the fiscal year it starts; a bare "4" leaves the
+          // admin to work out what a report will say.
           value={fiscalYearStartSummary(
             settings.fiscal_year_start_month,
             locale,

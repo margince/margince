@@ -788,16 +788,8 @@ function CompanySourceCard({
             ) : null
           }
         />
-        {/* Reading the website is a WRITE of this profile: the server admits
-            the read on the same create-or-update the save needs, because a
-            read exists to change what the record says. Absent without that
-            grant, like every other verb on these two cards — the posture is
-            stated once, on the card above.
-
-            This is the one card on the page that exists to make a MOVE, which
-            is what earns the primary. The refusal it can state is stated:
-            with no website there is nothing to read, in the same sentence the
-            start itself would answer with. */}
+        {/* Reading the website rewrites this profile, so the server asks for
+            the same grant as a save. */}
         {canEdit && (
           <SettingRow
             label={t("settings.companyRefreshRow")}

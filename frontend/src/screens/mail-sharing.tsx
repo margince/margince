@@ -177,11 +177,8 @@ export function MailSharingCard() {
                 <SettingRow
                   label={t("mailSharing.label")}
                   description={t("mailSharing.help")}
-                  // The function form, so the row's description reaches the
-                  // switch: the sentence saying what sharing DOES used to be
-                  // the switch's own `hint`, and moving it into the row would
-                  // otherwise take it away from every reader who cannot see
-                  // it. `labelHidden` still keeps the naming the row's.
+                  // Without the row's description, a screen reader never
+                  // hears what sharing does.
                   control={(control) => (
                     <Switch
                       describedBy={control["aria-describedby"]}
@@ -197,10 +194,8 @@ export function MailSharingCard() {
                     />
                   )}
                 />
-                {/* Whether a seat may ask for `shared` at all. The only
-                    capture setting whose default WITHHOLDS, so it is the one
-                    row on this card where ON is the permissive answer — the
-                    warning below fires on true rather than on false. */}
+                {/* The one capture setting whose default withholds, so switching
+                    it on is the permissive answer and the warning fires on true. */}
                 <SettingRow
                   label={t("mailSharing.sharedPosture.label")}
                   description={t("mailSharing.sharedPosture.help")}

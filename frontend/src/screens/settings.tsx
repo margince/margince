@@ -1419,12 +1419,8 @@ function AgentToolsCard() {
         <PanelIntro>{t("tools.sub")}</PanelIntro>
       </PanelBody>
       <SettingList bleed="settings">
-        {/* The dial FIRST, then the inventory it narrows — the posture before
-            the judgements that read it. Absent, not disabled, while this human
-            has minted nothing: a selector offering one choice is a control
-            with nothing behind it. `PassportSelect` carries its own accessible
-            name ("All passports"), the way `Switch` does, so the row hands it
-            no ARIA of its own. */}
+        {/* Absent until this human mints a passport: a selector with one
+            choice has nothing behind it. */}
         {everMintedAPassport && (
           <SettingRow
             label={t("tools.scopeLabel")}
@@ -1444,17 +1440,8 @@ function AgentToolsCard() {
             }
           />
         )}
-        {/* The inventory is a REFERENCE, and it is 68 tools long: each row
-            carries the tool's name, what it is for, and the text an agent
-            selects it by, which is the promise this console makes — and read
-            open it measured 14,000px, so the card was a page-long wall in
-            front of the two rows above it that a reader actually sets. So it
-            is the card's secondary half and it is closed: the rule this page
-            follows for anything advanced or diagnostic.
-
-            One row per governed tool, handed to the list inside as its own
-            children so the hairline between two tools comes from the list
-            that holds both. */}
+        {/* Closed: the tool inventory is a long reference that would bury the
+            rows a reader sets. */}
         <QueryGate
           query={tools}
           empty={(data) => data.data.length === 0}
@@ -1637,11 +1624,8 @@ function ResetDataCard() {
         <PanelIntro>{t("settings.dangerZoneSub")}</PanelIntro>
       </PanelBody>
       <SettingList bleed="settings">
-        {/* One row, because there is one act: what it does on the left, the
-            verb that does it on the right. This verb opens the question and
-            the dialog's confirm answers it, so each is named for its own act
-            — a destructive button and the button that asks again about it
-            must not read the same while both are on screen. */}
+        {/* This button and the dialog's confirm share the screen, so each is
+            named for its own act. */}
         <SettingRow
           label={t("settings.resetDataLabel")}
           description={t("settings.resetDataDesc")}
@@ -1721,13 +1705,8 @@ function AutonomyCard() {
       <PanelBody>
         <PanelIntro>{t("settings.autonomySub")}</PanelIntro>
       </PanelBody>
-      {/* Four rows in the page's own language, even though none of them is
-          settable: what the tier COVERS reads left as prose, and the tier it
-          runs at — the dot, and on the locked row the badge saying the answer
-          cannot move — sits at the same x as every answer on this page. A
-          reader coming from the tool inventory above is matching dots, which
-          is why sending carries the green one: a contact's grant of the `send`
-          scope IS the approval, so a funded send does not stage a second. */}
+      {/* Sending is green: a contact's grant of the `send` scope is the
+          approval, so a funded send does not stage a second. */}
       <SettingList bleed="settings">
         <SettingRow
           label={t("settings.tierRead")}
@@ -1743,11 +1722,8 @@ function AutonomyCard() {
         />
         <SettingRow
           label={t("settings.tierAdvance")}
-          // The dot and the badge are ONE answer — the tier, and the fact that
-          // it cannot move — so they travel as a run at the page's own 8px chip
-          // gap. Handed to the control column loose, they took its 12px flex
-          // gap instead, which put the one row on this page carrying two chips
-          // at a different interval from every tool row above it.
+          // One run at the 8px chip gap; loose, the control column's 12px gap
+          // would space these chips unlike every tool row above.
           control={
             <span className="settings-run">
               <AutonomyDot tier="confirm" withLabel />

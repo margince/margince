@@ -83,10 +83,8 @@ export function CaptureSettingsCard() {
       <QueryGate query={query} pendingLabel={t("captureSettings.title")}>
         {(settings) => (
           <SettingList bleed="settings">
-            {/* The row draws the naming — what the setting is, and what it
-                does — so the switch carries the same words hidden: it owns
-                its own accessible name by design, and pointing it at the
-                row's label as well would name it twice. */}
+            {/* The switch carries its own hidden label; pointing it at the
+                row's label too would name it twice. */}
             <SettingRow
               label={t("captureSettings.autoEnrich.label")}
               description={t("captureSettings.autoEnrich.help")}

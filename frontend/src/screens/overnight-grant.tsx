@@ -220,16 +220,8 @@ export function OvernightGrantCard() {
           const grant = morningBriefGrant(grants);
           const granted = grant?.state === "granted";
           const shown = optimistic ?? granted;
-          // The rep agreed and their credential no longer does the job.
-          // Reported as its own state rather than as a decline, because they
-          // already answered — asking again would be putting a settled
-          // question back to them.
-          //
-          // TWO CAUSES, and the rep is owed which one. The passport lapsed —
-          // revoked or expired — or the agent has since gained a tool the
-          // passport was never minted to fund, in which case it is perfectly
-          // live authority for a job this agent no longer does. Neither
-          // fails the run: it degrades, silently, at 2am.
+          // Lapsed and outgrown differ from a decline (the rep already agreed);
+          // each names its cause, since either degrades the 2am run silently.
           const lapsed = granted && !grant?.credential_usable;
           const outgrown =
             granted &&
