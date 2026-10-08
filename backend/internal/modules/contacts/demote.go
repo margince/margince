@@ -146,7 +146,7 @@ func (s *Store) DemoteLead(
 			`UPDATE lead SET status = 'engaged', status_set_by = $2, archived_at = NULL,
 			        promoted_contact_id = NULL, promoted_at = NULL, qualified_deal_id = NULL
 			 WHERE id = $1`, id, setBy); err != nil {
-			return fmt.Errorf("restore lead: %w", err)
+			return restoreFailure(err, lead)
 		}
 
 		auditID, err := storekit.Audit(ctx, tx, "demote", "lead", id.UUID,
@@ -410,4 +410,14 @@ func refuseIfColleagueWorkedOnCreated(
 		return &HumanTouchedError{EntityType: entityContact, EntityID: contactID.UUID}
 	}
 	return nil
+}
+
+// restoreFailure answers a failed restore of a promoted lead. Its address may
+// have been taken by a live lead while it was away, which is the same
+// duplicate-email conflict create and update answer.
+func restoreFailure(err error, lead crmcontracts.Lead) error {
+	if mapped, ok := leadUniqueViolation(err, (*string)(lead.Email)); ok {
+		return mapped
+	}
+	return fmt.Errorf("restore lead: %w", err)
 }

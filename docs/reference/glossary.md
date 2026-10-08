@@ -65,3 +65,36 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 
 The pages used these names before they joined the plain-words bar. Move a name up into the table when you
 write its meaning, and delete it here. A name new to the docs goes in the table, never here.
+
+<!-- prose:allow sentence a list of names, not a sentence -->
+`AA`, `AAAA`, `ack`, `Act`, `AD`, `AirDrop`, `allowlist`, `Android`, `Anthropic`, `api`, `Apple`, `arch-lint`,
+`args`, `Art`, `ASCII`, `AST`, `Aurora`, `Austria`, `Austrian`, `auth`, `Authenticode`, `axe`, `Azure`, `B`,
+`bash`, `BDSG`, `Betriebsrat`, `Betriebsvereinbarung`, `BetrVG`, `BI`, `Biome`, `biome`, `BotFather`, `BYOK`,
+`C`, `CA`, `calendarView`, `Cc`, `cert`, `CGNAT`, `ChatGPT`, `CHF`, `chi`, `Chrome`, `chunker`, `Claude`,
+`claude`, `CLI`, `Cloud`, `Cmd`, `CNAME`, `codegen`, `CODEOWNERS`, `CodeRabbit`, `Codex`, `codex`, `compose`,
+`config`, `craft`, `CredentialRotator`, `CredentialSink`, `cron`, `CRUD`, `CSRF`, `CSS`, `Ctrl`, `Ctrl-C`,
+`curl`, `CV`, `DAG`, `DB`, `DCR`, `DDL`, `dedupe`, `DeepSeek`, `DELETE`, `depguard`, `Desktop`, `Deutsch`,
+`dist`, `DKIM`, `DMARC`, `DML`, `DNA`, `DNS`, `DocuSign`, `dorny`, `DPA`, `DPIA`, `DSFA`, `DSGVO`, `DSN`,
+`DSR`, `DTO`, `Edge`, `Einwilligung`, `Empfangsbestätigung`, `Enterprise`, `Entra`, `entrypoint`, `enum`,
+`ERP`, `Esc`, `Escape`, `ETag`, `EUR`, `European`, `evaluator`, `Excel`, `Exchange`, `FAQ`, `Fastmail`,
+`favicons`, `FE`, `Firefox`, `Flash-Lite`, `Fonts`, `Forrester`, `frontend`, `FX`, `Gartner`, `Gatekeeper`,
+`GB`, `GBP`, `gcal`, `GCM`, `Geist`, `Gemini`, `Gemma`, `Geocoding`, `GH`, `gitignored`, `gitleaks`, `glob`,
+`GNU`, `go-arch-lint`, `golangci-lint`, `govulncheck`, `GPL`, `GPT`, `GPU`, `Graph`, `graphcal`, `grep`,
+`Groq`, `GUC`, `Haiku`, `Handelsbrief`, `HardPass`, `HGB`, `HMAC`, `HMAC-SHA`, `HTML`, `HTTP`, `IAM`, `IANA`,
+`ICP`, `ID`, `id`, `Idempotency-Key`, `IMAPS`, `Impressum`, `Inspector`, `Intel`, `IP`, `iPhone`, `Jev`,
+`JSON`, `JSON-LD`, `JSONL`, `JSONPath`, `K`, `KB`, `Kev`, `keyvault`, `Lars`, `Laya`, `lcov`, `Linux`,
+`LiteLLM`, `LLM`, `localhost`, `lockfile`, `London`, `Mac`, `MAJOR`, `Makefile`, `Markdown`, `MB`, `Meet`,
+`MiB`, `micro-USD`, `middleware`, `MIME`, `MinIO`, `MINOR`, `Mistral`, `Mitarbeiterinformation`, `MRL`, `ms`,
+`MSVC`, `mtime`, `MX`, `NAT`, `NL`, `non-match`, `nonce`, `NormalizedRecord`, `notarization`, `Nr`, `NULL`,
+`null`, `oapi-codegen`, `OAuth`, `Office`, `OIDC`, `OpenAI`, `OpenAI-compatible`, `OpenAPI`, `Ops`, `OS`,
+`Outfit`, `Outlook`, `PATCH`, `PDF`, `pgvector`, `PII`, `PIM`, `Playwright`, `POST`, `PostgreSQL`, `POSTs`,
+`PowerShell`, `PR`, `PTR`, `Pub`, `push-capable`, `px`, `Python`, `re-authenticate`, `Re-certify`,
+`re-certify`, `README`, `Renovate`, `RFC`, `River`, `Rosetta`, `Safari`, `SAR`, `SBOMs`, `SDR`, `semver`,
+`send-capable`, `SHA`, `Shopify`, `Shopware`, `Shortlist`, `SKU`, `SLA`, `slug`, `SmartScreen`, `SMTP`,
+`Sonnet`, `SPA`, `Sparkles`, `SPDX`, `SPF`, `SQL`, `SQLSTATE`, `SSRF`, `stderr`, `stdin`, `stdout`, `storekit`,
+`Storybook`, `Streamable`, `Stripe`, `struct`, `structs`, `Studio`, `Sub`, `Surfe`, `Svix`, `syft`, `SyncOnce`,
+`syncToken`, `TCP`, `ThreadKey`, `Tiếng`, `TLS`, `TS`, `tsc`, `TTL`, `TXT`, `TypeSafe`, `TypeScript`, `UAT`,
+`UI`, `UID`, `und`, `unix`, `URI`, `URIs`, `URL`, `URL-safe`, `USB`, `USP`, `UTC`, `UUID`, `uuid`, `Valkey`,
+`vCard`, `Ventura`, `Verarbeitungsverzeichnis`, `Vertex`, `vet`, `VIES`, `Vietnamese`, `Visual`, `vitest`,
+`Việt`, `Voice-DNA`, `VS`, `vuln`, `Wappalyzer`, `WatchRenewer`, `WCAG`, `Wettbewerbszentrale`, `worktrees`,
+`Xcode`, `YAML`, `Zürich`

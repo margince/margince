@@ -416,6 +416,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `subjectlockorder_test.go` | H2 | The subject lock is the first row a transaction takes. |
 | `tableownership_test.go` | H1 | A package writes SQL only against tables it owns; the import DAG is enforced three ways, but nothing in the import graph stops a write to another module's table. |
 | `updateguard_test.go` | H2 | Every single-row-by-id UPDATE of a mutable entity carries a guard: the optimistic version (storekit.ApplyWithVersion / ApplyGuarded), a held row lock (LockRow / LockPair + ApplyLocked), an advisory lock, an in-statement FOR UPDATE, or a checked conditional write (the RowsAffected CAS shape). |
+| `updateguardcas_test.go` | H2 | What the by-id guard census counts as a compare-and-set, and the cases that only look like one. |
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |
 | `writeauthority_test.go` | H2 | A path that changes a shareable record probes for write authority rather than for visibility, because a manual record grant is asymmetric between read and write. |
 | `writeliveness_test.go` | H2 | A write that targets one standing row of a table which can be archived either refuses an archived row, declares that it reaches one by design, or is ratified with a reason. |
@@ -521,6 +522,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | employment.IsCurrentSQL calls itself "the one spelling of 'this job is still theirs'", and every statement that asks whether an employment is current goes through it. |
 | `importtargetsclaim_test.go` | H3 | What the contract says an import can receive, against what it actually can. |
+| `langcopyonecensus_test.go` | H2 | One census reads every langcopy.Phrase table, and no owner walks its own. |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and two functions in two packages each called themselves the one spelling of it while the tree held about twenty copies. |
 | `marketingquestion_test.go` | H2 | The question a grant is bound to is the question the screen asks. |
 | `meetingoverspelling_test.go` | H2 | "This meeting is over" is spelled twice, and the two must say the same thing. |
