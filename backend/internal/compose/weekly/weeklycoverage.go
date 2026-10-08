@@ -39,6 +39,8 @@ const planNoun = "weekly plan"
 // where the scope holds none.
 type figureStarts struct {
 	deals, tasks, meetings, leads *time.Time
+	// leadsRead is false for a seat without lead read, whose leads get no statement.
+	leadsRead bool
 }
 
 // figureCoverageOf states the record families' coverage of [start, end) for
@@ -50,12 +52,15 @@ func figureCoverageOf(
 	if err != nil {
 		return nil, err
 	}
-	return &crmcontracts.WeeklyFigureCoverageSet{
+	set := &crmcontracts.WeeklyFigureCoverageSet{
 		Deals:    figureCoverage(since.deals, start, end, "deal"),
 		Tasks:    figureCoverage(since.tasks, start, end, "task"),
 		Meetings: figureCoverage(since.meetings, start, end, "meeting"),
-		Leads:    figureCoverage(since.leads, start, end, "inbound lead"),
-	}, nil
+	}
+	if since.leadsRead {
+		set.Leads = figureCoverage(since.leads, start, end, "inbound lead")
+	}
+	return set, nil
 }
 
 // measureRepCoverage freezes one rep's coverage onto their summary. planned is
@@ -168,7 +173,8 @@ func figureCoverage(since *time.Time, start, end time.Time, noun string) *crmcon
 // cannot make a past week countable. Meetings take the earlier of created_at
 // and occurred_at because their count dates by occurred_at, which a calendar
 // import carries from the source. Imported leads start nothing: the lead count
-// excludes them, having no response stamps to judge.
+// excludes them, having no response stamps to judge. Without lead read the lead
+// arm is rendered FALSE, so the statement stays one and the lead table is not read.
 func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (figureStarts, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -182,9 +188,14 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (figure
 	if err != nil {
 		return figureStarts{}, err
 	}
-	leadScope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
-	if err != nil {
-		return figureStarts{}, err
+	var s figureStarts
+	s.leadsRead = auth.ReadGranted(ctx, "lead")
+	leadScope := "FALSE"
+	if s.leadsRead {
+		if leadScope, err = auth.ScopeClauseFor(ctx, "lead", "l", arg); err != nil {
+			return figureStarts{}, err
+		}
+		leadScope = orUnbounded(leadScope)
 	}
 	taskScope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
@@ -194,7 +205,6 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (figure
 	if err != nil {
 		return figureStarts{}, err
 	}
-	var s figureStarts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT min(LEAST(d.created_at, d.closed_at,
@@ -207,7 +217,7 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (figure
 		  (SELECT min(COALESCE(l.routed_at, l.created_at)) FROM lead l
 		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+nonImportedLeadSQL+` AND (%[6]s))`,
 		owned, orUnbounded(dealScope), taskScope, meetingIsTheirsSQL(owned, capturedBy), meetingScope,
-		orUnbounded(leadScope)), args...).
+		leadScope), args...).
 		Scan(&s.deals, &s.tasks, &s.meetings, &s.leads)
 	if err != nil {
 		return figureStarts{}, fmt.Errorf("weekly: reading when each figure's source began: %w", err)

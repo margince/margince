@@ -43,8 +43,8 @@ func readOwnDay(t *testing.T, e *integration.Env, now time.Time) crmcontracts.Wo
 }
 
 // seedCalendar files one gcal connection for Rep1 in a status, and a failing
-// sync beside it when failing is set. Hand-inserted because the only writer is
-// the OAuth grant flow, which needs a provider.
+// sync beside it when failing is set. Hand-inserted because a connection is
+// granted through the OAuth flow, which needs a provider.
 func seedCalendar(t *testing.T, e *integration.Env, provider, status string, failing bool) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -98,7 +98,7 @@ func TestTheReadersCalendarSaysWhetherItFeedsTheMeetingsCount(t *testing.T) {
 	}
 }
 
-// horizonContacts makes the two people a customer meeting is with: one the
+// horizonContacts makes the two contacts a customer meeting is with: one the
 // reader may see, and a colleague's private buyer they may not.
 func horizonContacts(t *testing.T, e *integration.Env) (visible, hidden ids.UUID) {
 	t.Helper()
@@ -114,15 +114,15 @@ func horizonContacts(t *testing.T, e *integration.Env) (visible, hidden ids.UUID
 
 // bookOwnMeeting logs a meeting Rep1 hosts at an instant, linked to the given
 // contacts. With none it is an internal meeting.
-func bookOwnMeeting(t *testing.T, e *integration.Env, subject string, at time.Time, status string, with ...ids.UUID) ids.UUID {
+func bookOwnMeeting(t *testing.T, e *integration.Env, subject string, at time.Time, status string, with ...ids.UUID) {
 	t.Helper()
-	return bookMeetingFor(t, e, horizonReader(e), subject, at, status, with...)
+	bookMeetingFor(horizonReader(e), t, e, subject, at, status, with...)
 }
 
 // bookMeetingFor logs a meeting Rep1 hosts as author, who must be able to link
 // every contact named.
 func bookMeetingFor(
-	t *testing.T, e *integration.Env, author context.Context, subject string, at time.Time, status string, with ...ids.UUID,
+	author context.Context, t *testing.T, e *integration.Env, subject string, at time.Time, status string, with ...ids.UUID,
 ) ids.UUID {
 	t.Helper()
 	host := ids.From[ids.UserKind](e.Rep1)
@@ -141,7 +141,7 @@ func bookMeetingFor(
 }
 
 // An empty day names the soonest booked customer meeting past it, skipping the
-// internal one and the cancelled one before it, with only the people the
+// internal one and the cancelled one before it, with only the attendees the
 // reader may see in the room.
 func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testing.T) {
 	e := integration.Setup(t)
@@ -151,7 +151,7 @@ func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testin
 	bookOwnMeeting(t, e, "Called off", now.Add(60*time.Hour), "canceled", visible)
 	// Booked by the colleague who owns the private buyer, onto Rep1's calendar.
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AccountRepPerms)
-	want := bookMeetingFor(t, e, colleague, "Quarterly review", now.Add(72*time.Hour), "", visible, hidden)
+	want := bookMeetingFor(colleague, t, e, "Quarterly review", now.Add(72*time.Hour), "", visible, hidden)
 	bookOwnMeeting(t, e, "Renewal", now.Add(96*time.Hour), "booked", visible)
 
 	day := readOwnDay(t, e, now)

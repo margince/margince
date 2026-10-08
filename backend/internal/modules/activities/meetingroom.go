@@ -19,7 +19,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -55,11 +54,11 @@ type MeetingRoom struct {
 // unbounded seat, so on its own it would name contacts to a seat that may not
 // read contacts. A clause is built only when used, because it binds arguments.
 func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) {
-	dealScope, err := readableScope(ctx, linkEntityDeal, "d", arg)
+	dealScope, err := readableScope(ctx, auth.ReadGranted(ctx, "deal"), linkEntityDeal, "d", arg)
 	if err != nil {
 		return "", err
 	}
-	contactScope, err := readableScope(ctx, linkEntityContact, "p", arg)
+	contactScope, err := readableScope(ctx, auth.ReadGranted(ctx, "contact"), linkEntityContact, "p", arg)
 	if err != nil {
 		return "", err
 	}
@@ -82,13 +81,11 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 }
 
 // readableScope is one record kind's visibility for MeetingRoomColumns: nothing
-// without the object grant, its row scope with it.
-func readableScope(ctx context.Context, object, alias string, arg func(any) int) (string, error) {
-	if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return scopeNothing, nil
-		}
-		return "", err
+// without the object grant, its row scope with it. The grant is asked by the
+// caller, where the object is a literal the reader censuses can see.
+func readableScope(ctx context.Context, granted bool, object, alias string, arg func(any) int) (string, error) {
+	if !granted {
+		return scopeNothing, nil
 	}
 	clause, err := auth.ScopeClauseFor(ctx, object, alias, arg)
 	if err != nil {
