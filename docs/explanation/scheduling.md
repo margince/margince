@@ -147,8 +147,8 @@ guests already hold to manage their meetings. A paused page stops new public boo
 proposals already sent keep working until they run out; pause does not pull back invites.
 
 Profile answers hold only what the guest needs: the public host name, company, logo, meeting
-subject, time and place, and booking rules. The logo keeps its shape, and the end of the page uses the same
-Margince name mark part as the outside Deal Room.
+subject, time and place, and booking rules. The logo keeps its shape, and the page footer uses the
+same Margince name mark as the outside Deal Room.
 
 The server links each personal proposal to the recipient's address and contact. A proposal runs
 out after 7 days, or at the last time it offers if that comes sooner, and a guest can use it once.
@@ -221,8 +221,9 @@ A used personal proposal stays a key the recipient holds until it would have run
 again gives back the existing meeting's manage link after an answer never reached the guest. It
 never books a second meeting.
 
-Public clients may send a new random `UUIDv4` `Idempotency-Key` with each request. For 24 hours, a
-retry of the same form with that key gives back the same invite and the same guest manage key.
+Public clients may send a new random `UUIDv4` `Idempotency-Key` for each new booking, and send the
+same key again on each retry of it. For 24 hours, such a retry gives back the same invite and the
+same guest manage key.
 Margince stores only the key hash and a hash of the request; key URLs stay in the vault. A changed
 form cannot use the key again. Host HTTP replay records also leave out proposal URLs and manage
 tokens.

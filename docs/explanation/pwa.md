@@ -21,12 +21,12 @@ every other reader does.
 
 ## The worker answers two requests, and none is the app
 
-The rule is short: the worker answers **two requests from `Cache Storage`, and no others.** A page
-request (a `navigation`) whose network fetch fails gets the offline page. A request for the offline
-page's own script gets that script, from the cache first. Every other request gets no `respondWith`
-at all and takes the browser's own path. A page request that reaches the server and comes back with
-a 404 or a 500 passes through as it is. Only a fetch that is refused (no network, no route to the
-host) gets the offline page.
+The rule is short: the worker answers **two requests, and no others.** A page request (a
+`navigation`) whose network fetch fails gets the offline page from `Cache Storage`, or a network
+error when the cache has no copy. A request for the offline page's own script gets that script from
+the cache, or from the network when the cache has none. Every other request gets no `respondWith`
+at all and takes the browser's own path. A page request that gets a 404 or a 500 passes through;
+only a refused fetch (no network, no route to the host) gets the offline page.
 
 That is a smaller job than most service workers take on. A worker that answers the app shell from a
 cache can pin a browser to an old build. The browser keeps serving that build's `index.html`, and
@@ -152,8 +152,8 @@ answers one of:
 - `unreachable`: a request to the API is refused at the network level or runs past its client time
   limit. Or it gets a 502, 503 or 504 with no problem body. (A `5xx` with no problem body is a proxy saying
   the API is down; the API itself sends a `5xx` with a problem body.) A `/healthz` check sent at once fails
-  too. One refused path on a working server declares nothing. None of it counts on a model route,
-  where a long wait is the work.
+  too. One refused path on a working server declares nothing. On a model route a run past the time
+  limit, or a bare 502, 503 or 504, does not count, since a long wait is the work there.
 
 Only a screen that states the problem holds it open, because a pause that nothing explains is a page
 that never loads. Two screens do: the shell's banner, and the connection screen that a failed first

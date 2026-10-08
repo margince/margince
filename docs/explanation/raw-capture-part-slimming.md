@@ -9,8 +9,9 @@ rather than learned one at a time from a comment.
 
 ## What the column holds
 
-`raw_capture.payload` holds the provider's bytes. Each attachment part whose stored copy **is proved
-safe in the object store** has its encoded body cut out. A block such as this one takes its place:
+`raw_capture.payload` holds the provider's bytes. The sweep cuts out an attachment part's encoded
+body only when its stored copy **is proved safe in the object store**. That encoding must also show
+up once, and only once, in the payload. A block such as this one takes its place:
 
 ```
 Content-Type: application/pdf
@@ -124,8 +125,9 @@ use up rows that a store connected later must still work on. `parts_slimmed_at` 
   and is dropped.
 - **Replay for review.** The three sweeps that read stored originals again
   (`compose/participantreplay.go`, `meetingattendeerepair.go`, `participantnamerecover.go`) read
-  participants, attendees and the names shown for them. All of those live in headers. Nothing in the
-  tree reads attachment parts back out of `raw_capture`.
+  participants, attendees and the names shown for them. All of those live in headers, so these
+  sweeps never read attachment parts back out of `raw_capture`. Art. 15 access and the private-thread
+  files path (`capture/privatethreadfiles.go`) do, and both build the parts again first.
 - **Art. 17 erasure.** The `ILIKE` over `payload::text` never looks inside a `base64` part, since
   the text itself is not there to match. `privacy/erasure_attachments.go` already removes the
   objects by `storage_key`.

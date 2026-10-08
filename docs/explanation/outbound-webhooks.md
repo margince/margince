@@ -12,10 +12,10 @@ is **outbound only** and takes in nothing inbound.
 
 Every payload on the wire is generated from its own public OpenAPI contract
 (`api/public-events.yaml`, §3 below), instead of being shaped by hand at each emit site. Every entry
-point in `store.go`/`delivery.go` can be reached from the HTTP surface of `internal/compose` **and**
-from the Settings → Integrations tab in the frontend (§9). A subscription can be created, moved to a
-new target, paused, archived and rotated, and its deliveries looked at and replayed, without leaving
-the UI.
+point in `store.go`, and replay in `delivery.go`, can be reached from the HTTP surface in
+`internal/compose` **and** from Settings → Integrations (§9). A subscription
+can be created, moved to a new target, paused, archived and rotated, and its deliveries looked at and
+replayed, without leaving the UI. The bus consumer and the retry sweep run only in the worker.
 
 For the short version see [reference/modules.md](../reference/modules.md). To *register* one, see
 [how-to/register-a-webhook.md](../how-to/register-a-webhook.md). For the write shape every write

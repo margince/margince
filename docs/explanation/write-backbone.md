@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # The write backbone: storekit, `audit_log` & the outbox
 
-Every write in this backend commits **three rows in one transaction**. They are the domain row, an
+Every audited write in this backend commits **three rows in one transaction**. They are the domain row, an
 `audit_log` row and an `event_outbox` row, through code written once in `storekit`. A relay then
 moves the outbox to the event bus, and consumers skip events that come twice. That is one design,
 so it gets one document.
@@ -227,9 +227,9 @@ already committed:
 ## 5. The consumer side: groups & dedupe
 
 `internal/platform/events/subscriber.go` + `dedupe.go`. The consumer groups are declared in
-`internal/shared/kernel/events/groups.go`. Each group sees every event on its streams once, and it
-can grow by adding more workers inside the group. Redis splits groups only by stream, so the
-workspace and actor checks run inside the process.
+`internal/shared/kernel/events/groups.go`. Each group gets every event on its streams, at least
+once, since the relay can send a row again. A group can grow by adding more workers inside it.
+Redis splits groups only by stream, so the workspace and actor checks run inside the process.
 
 **What each group does, and which are live.** Most groups have a subscriber. The ones marked
 reserved below are named in the catalog but have no consumer yet. Their streams carry events, but
@@ -293,8 +293,10 @@ event would never come. Marking *after* means a crash can only lead to a second 
 
 The layer that really decides takes that second run and does nothing. Effects write by a key the
 data already has (`uq_activity_source` and others of the same kind). `Dedupe` only saves work over
-that layer, and never stands in for it. The `96h` TTL is longer than the stream keeps events. So a consumer that comes
-back after a long time offline cannot see an event again once its dedupe entry has timed out.
+that layer, and never stands in for it. The `96h` TTL is set above how long the stream is expected
+to keep events. The stream is capped by a count (`MAXLEN ~`), not by a time, so at a low write
+rate an event can stay longer. A consumer that takes it back after its dedupe entry timed out runs the
+handler again, and the key layer makes that run do nothing.
 
 ---
 
@@ -310,8 +312,9 @@ The `Trace` on every envelope lets you build one request or run back up as a sin
   `principal.SystemActing(ctx, "system:<pass>")`.
 
   The pass names itself, so a reader can tell its audit rows from those of other passes. The two go
-  together, because a pass that binds only one leaves a track nobody can read back. Missing either
-  one fails nothing at the call. `backend/gates/systemprovenance_test.go` holds it.
+  together, because a pass that binds only one leaves a track nobody can read back. `Audit` fails
+  at the call without an actor, and `Emit` fails without a `correlation_id`.
+  `backend/gates/systemprovenance_test.go` makes every pass bind the two through that one helper.
 - **`causation_id`** is the `event_id` of the event that *started* this one (empty for the first in
   a line of events). It comes from `principal.CausationEvent(ctx)` when a consumer binds the event that
   started it before it does more work. Correlation is the whole request or run; causation is the
