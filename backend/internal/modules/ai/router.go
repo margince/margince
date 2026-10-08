@@ -102,7 +102,7 @@ type RouteInfo struct {
 	Degraded bool
 	Cached   bool
 	// cacheKey is the result-cache key this answer was served or stored under,
-	// so Reject evicts exactly that entry without deriving the key a second time.
+	// so Reject evicts that one entry without deriving the key a second time.
 	cacheKey string
 }
 

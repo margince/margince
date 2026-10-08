@@ -86,7 +86,7 @@ func TestARejectionLeavesAnotherWorkspacesAnswerCached(t *testing.T) {
 	}
 }
 
-// A RouteInfo that names no served answer — a failed call's — evicts nothing.
+// A RouteInfo that names no served answer, such as a failed call's, evicts nothing.
 func TestRejectingAnUnservedCallEvictsNothing(t *testing.T) {
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 	ws := ids.From[ids.WorkspaceKind](ids.NewV7())
