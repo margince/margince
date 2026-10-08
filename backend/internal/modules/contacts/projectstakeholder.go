@@ -273,12 +273,10 @@ func contactNames(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID) (map
 	return names, rows.Err()
 }
 
-// validRoleForKind answers the closed role vocabularies, for every door that can
+// validRoleForKind answers the closed role vocabularies for every door that can
 // write an edge: a billing contact's three capacities and a project
-// stakeholder's list. Every other kind keeps free text. Only a role that is
-// SUPPLIED is judged for a stakeholder, because the generic edge routes carry no
-// role as readily as one; the dedicated route passes its own, so an empty one is
-// refused there.
+// stakeholder's list. Other kinds keep free text. A stakeholder role is judged
+// only when one is given, since the generic routes may carry none.
 func validRoleForKind(kind string, role *string) error {
 	if kind == ProjectStakeholderKind && role != nil {
 		// The contract's enum is the list, read off the generated type so a role

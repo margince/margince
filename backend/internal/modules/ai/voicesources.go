@@ -185,7 +185,7 @@ func validateDeclaredSource(in IngestSourceInput) (register string, weight float
 	if utf8.RuneCountInString(in.SourceLabel) > maxSourceLabelChars {
 		return "", 0, &CorpusIngestError{Field: voiceKeySourceLabel, Reason: fmt.Sprintf("must be at most %d characters", maxSourceLabelChars)}
 	}
-	if utf8.RuneCountInString(in.SourceRef) > maxSourceRefChars {
+	if utf8.RuneCountInString(strings.TrimSpace(in.SourceRef)) > maxSourceRefChars {
 		return "", 0, &CorpusIngestError{Field: voiceKeySourceRef, Reason: fmt.Sprintf("must be at most %d characters", maxSourceRefChars)}
 	}
 	if strings.TrimSpace(in.Content) == "" {
