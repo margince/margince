@@ -7,8 +7,8 @@ import { ProviderSettingsForm } from "./ai-provider-settings";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // One provider's own settings, under its key on the provider sheet: the host
-// for a broker or decision server, OpenRouter's host pins when the host is
-// OpenRouter, and the Vertex location.
+// for a broker, Gemini, Anthropic or a decision server, OpenRouter's host pins
+// when the host is OpenRouter, and the Vertex location.
 
 type Routing = components["schemas"]["AiRouting"];
 
@@ -97,6 +97,25 @@ export const Gateway: Story = {
   render: story(
     "openai_compatible",
     routing({ openai_compatible: { base_url: "https://gateway.example" } }),
+  ),
+};
+
+// Gemini through Langdock's EU region: the host keeps Gemini's API version.
+export const GeminiLangdock: Story = {
+  render: story(
+    "gemini",
+    routing({
+      gemini: { base_url: "https://api.langdock.com/google/eu/v1beta" },
+    }),
+  ),
+};
+
+export const AnthropicLangdock: Story = {
+  render: story(
+    "anthropic",
+    routing({
+      anthropic: { base_url: "https://api.langdock.com/anthropic/us" },
+    }),
   ),
 };
 

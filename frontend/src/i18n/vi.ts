@@ -9329,6 +9329,13 @@ export const vi = {
     "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.baseUrl.help.gemini":
+    "Host đến phiên bản API, như /v1beta; đường dẫn model được thêm sau đó.",
+  "aiRouting.baseUrl.placeholder.gemini":
+    "https://generativelanguage.googleapis.com/v1beta",
+  "aiRouting.baseUrl.help.anthropic":
+    "Gốc host; /v1 được thêm vào. Để trống để dùng API của chính Anthropic.",
+  "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
   "aiRouting.models.askingLocation":
     "Đang hỏi Google những mô hình {location} phục vụ…",
   "aiRouting.models.noKey":
@@ -11917,6 +11924,13 @@ export const vi = {
   "aiProviderSettings.service.together": "Together",
   "aiProviderSettings.service.groq": "Groq",
   "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.langdockEu": "Langdock (EU)",
+  "aiProviderSettings.service.langdockUs": "Langdock (US)",
+  "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
+  "aiProviderSettings.service.anthropic": "Anthropic",
+  "aiProviderSettings.service.otherGemini": "Host tương thích Gemini khác",
+  "aiProviderSettings.service.otherAnthropic":
+    "Host tương thích Anthropic khác",
   "aiProviderSettings.service.typesafe": "TypeSafe (mặc định)",
   "aiProviderSettings.service.otherChat": "Dịch vụ tương thích OpenAI khác",
   "aiProviderSettings.service.otherDecisions": "Máy chủ quyết định khác",

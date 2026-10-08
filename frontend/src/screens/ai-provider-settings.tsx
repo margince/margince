@@ -42,8 +42,8 @@ type Service = Readonly<{
   noteLink?: string;
 }>;
 
-// What the Other service asks for on each provider: the chat broker gets /v1
-// appended, while a decision endpoint is the full URL, used as written.
+// What the Other service asks for on each provider: a chat host gets /v1
+// appended, Gemini's carries its version, a decision endpoint is used as written.
 type OtherHost = Readonly<{ help: MessageKey; placeholder: MessageKey }>;
 
 type ProviderServices = Readonly<{
@@ -52,6 +52,23 @@ type ProviderServices = Readonly<{
 }>;
 
 const OTHER = "other";
+
+// Langdock serves each vendor's wire under its own path, once per region, on
+// one key; `version` is the segment the adapter expects in its host.
+function langdock(wire: string, version = ""): readonly Service[] {
+  return [
+    {
+      id: "langdock-eu",
+      label: "aiProviderSettings.service.langdockEu",
+      host: `https://api.langdock.com/${wire}/eu${version}`,
+    },
+    {
+      id: "langdock-us",
+      label: "aiProviderSettings.service.langdockUs",
+      host: `https://api.langdock.com/${wire}/us${version}`,
+    },
+  ];
+}
 
 const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
   [
@@ -90,11 +107,48 @@ const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
           label: "aiProviderSettings.service.deepseek",
           host: "https://api.deepseek.com",
         },
+        ...langdock("openai"),
       ],
       other: {
         label: "aiProviderSettings.service.otherChat",
         help: "aiRouting.baseUrl.help",
         placeholder: "aiRouting.baseUrl.placeholder",
+      },
+    },
+  ],
+  [
+    "gemini",
+    {
+      services: [
+        {
+          id: "google-ai-studio",
+          label: "aiProviderSettings.service.googleAiStudio",
+          host: "",
+        },
+        ...langdock("google", "/v1beta"),
+      ],
+      other: {
+        label: "aiProviderSettings.service.otherGemini",
+        help: "aiRouting.baseUrl.help.gemini",
+        placeholder: "aiRouting.baseUrl.placeholder.gemini",
+      },
+    },
+  ],
+  [
+    "anthropic",
+    {
+      services: [
+        {
+          id: "anthropic",
+          label: "aiProviderSettings.service.anthropic",
+          host: "",
+        },
+        ...langdock("anthropic"),
+      ],
+      other: {
+        label: "aiProviderSettings.service.otherAnthropic",
+        help: "aiRouting.baseUrl.help.anthropic",
+        placeholder: "aiRouting.baseUrl.placeholder.anthropic",
       },
     },
   ],
