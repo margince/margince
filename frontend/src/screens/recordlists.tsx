@@ -13,14 +13,13 @@ import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
-import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import { LiveExplanation } from "./listexplain";
 import { ListKindBadge } from "./listlibrary";
 import {
   type List,
   type ListedRecordType,
+  type MemberRestore,
   useExplanation,
   useLists,
   useListsAvailable,
@@ -29,6 +28,7 @@ import {
   useRestoreMember,
 } from "./lists.queries";
 import "./lists.css";
+import { useUndoableRemoval } from "./undoableremoval";
 
 type RecordRef = Readonly<{ entityType: ListedRecordType; entityId: string }>;
 
@@ -200,28 +200,12 @@ function TakeOffAction({
   );
 }
 
-// A refused removal or Undo has no dialog to stand in, so it stays as a toast.
 function useTakeOff(name: string) {
   const t = useT();
-  const toast = useToast();
-  const sayRefused = (error: Error) =>
-    toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
-  const restore = useRestoreMember({
-    onError: sayRefused,
-    onSuccess: () => toast.show(t("lists.record.putBack", { name })),
+  const toasts = useUndoableRemoval<MemberRestore>({
+    removed: t("lists.record.takenOff", { name }),
+    restored: t("lists.record.putBack", { name }),
   });
-  return useRemoveMember({
-    onError: sayRefused,
-    onSuccess: (removal) =>
-      toast.show(
-        t("lists.record.takenOff", { name }),
-        removal
-          ? {
-              action: undoAction(t("common.undo"), () =>
-                restore.mutate(removal),
-              ),
-            }
-          : undefined,
-      ),
-  });
+  const restore = useRestoreMember(toasts.restored);
+  return useRemoveMember(toasts.removed((handle) => restore.mutate(handle)));
 }

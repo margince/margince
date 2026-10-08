@@ -168,8 +168,9 @@ describe("taking a tag off a record", () => {
 
   function serve(
     answers: Partial<Record<"remove" | "restore", () => Response>> = {},
+    tag: PanelTag = KEY_ACCOUNT,
   ) {
-    let carried = [KEY_ACCOUNT];
+    let carried = [tag];
     const sent: { remove: unknown[]; restore: unknown[] } = {
       remove: [],
       restore: [],
@@ -192,7 +193,7 @@ describe("taking a tag off a record", () => {
         if (answer) {
           return answer;
         }
-        carried = [KEY_ACCOUNT];
+        carried = [tag];
         return jsonResponse({});
       },
     });
@@ -210,7 +211,7 @@ describe("taking a tag off a record", () => {
   const refused = () =>
     jsonResponse({ detail: "The tag was applied again since." }, 409);
 
-  it("removes at once, with no dialog, and offers Undo", async () => {
+  it("takes it off at once and offers Undo", async () => {
     const sent = serve();
     const user = userEvent.setup();
 
@@ -278,6 +279,24 @@ describe("taking a tag off a record", () => {
         en["tags.removed"].replace("{name}", "Key Account"),
       ),
     );
+    expect(
+      within(said).queryByRole("button", { name: en["common.undo"] }),
+    ).toBeNull();
+  });
+
+  it("offers no Undo for a retired tag, which cannot be put back", async () => {
+    const sent = serve({}, { ...KEY_ACCOUNT, archived: true });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: removeName }));
+
+    const said = await screen.findByRole("status");
+    await waitFor(() =>
+      expect(said).toHaveTextContent(
+        en["tags.removed"].replace("{name}", "Key Account"),
+      ),
+    );
+    expect(sent.remove).toHaveLength(1);
     expect(
       within(said).queryByRole("button", { name: en["common.undo"] }),
     ).toBeNull();

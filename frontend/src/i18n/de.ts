@@ -2835,7 +2835,7 @@ export const de = {
   "tags.showLess": "Weniger anzeigen",
   "tags.removeTag": "{name} entfernen",
   "tags.removed": "{name} von diesem Datensatz entfernt",
-  "tags.restored": "{name} ist wieder an diesem Datensatz",
+  "tags.restored": "{name} wieder an diesem Datensatz",
   "tags.addedBy": "Hinzugefügt von {who} · {when}",
   "tags.addedByUndated": "Hinzugefügt von {who}",
   "tags.addedOn": "Hinzugefügt am {when}",

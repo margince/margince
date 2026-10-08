@@ -341,8 +341,6 @@ describe("a record page's lists", () => {
   });
 });
 
-// Taking a record off a Shortlist runs at once; the toast's Undo hands the
-// removal's audit id to the restore route.
 describe("taking a record off a Shortlist", () => {
   const AUDIT = "0199a000-0000-7000-8000-0000000000b2";
   const REMOVE = `POST /lists/${SHORTLIST_ID}/members/remove`;
@@ -401,7 +399,7 @@ describe("taking a record off a Shortlist", () => {
   const refused = () =>
     jsonResponse({ detail: "The record was added to this list again." }, 409);
 
-  it("takes it off at once, with no dialog and no note, and offers Undo", async () => {
+  it("takes it off at once and offers Undo", async () => {
     const sent = serve();
     const user = userEvent.setup();
 

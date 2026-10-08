@@ -152,7 +152,7 @@ async function undoInToast() {
   return undo;
 }
 
-/** Taking the record off runs at once: no dialog, no note, and an Undo. */
+/** Taking the record off runs at once and the toast offers Undo. */
 export const TakenOffWithUndo: Story = {
   render: () => <TakeOffBench />,
   play: async (context) => {

@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
 import { RECORD_LIST_KEY } from "./recordlistkeys";
+import type { MutationOutcome } from "./undoableremoval";
 
 // The reads and writes behind the record page's tag panel.
 
@@ -109,13 +110,6 @@ export function useApplyTag(entityType: TaggableType, entityID: string) {
 
 export type RemovalUndo = components["schemas"]["RemovalUndo"];
 
-// On the hook, not on `mutate`: an Undo runs after its pill has unmounted, and
-// React Query drops a `mutate` call's own callbacks once its observer is gone.
-type Outcome<V> = Readonly<{
-  onSuccess: (variables: V) => void;
-  onError: (error: Error) => void;
-}>;
-
 /**
  * Take one tag off one record, leaving the tag itself alone. `onSuccess` gets
  * the handle that puts it back, or null when the record did not carry the tag.
@@ -123,7 +117,7 @@ type Outcome<V> = Readonly<{
 export function useRemoveTag(
   entityType: TaggableType,
   entityID: string,
-  outcome: Outcome<TagRestore | null>,
+  outcome: MutationOutcome<TagRestore | null>,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -151,7 +145,7 @@ export type TagRestore = Readonly<{ tagID: string; undo: RemovalUndo }>;
 export function useRestoreTag(
   entityType: TaggableType,
   entityID: string,
-  outcome: Outcome<TagRestore>,
+  outcome: MutationOutcome<TagRestore>,
 ) {
   const queryClient = useQueryClient();
   return useMutation({

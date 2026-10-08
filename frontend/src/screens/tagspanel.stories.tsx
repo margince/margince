@@ -41,8 +41,12 @@ const CHURN_RISK = {
 const REMOVE = `DELETE /tags/${KEY_ACCOUNT.tag_id}/apply`;
 const RESTORE = `POST /tags/${KEY_ACCOUNT.tag_id}/apply/restore`;
 
-function Served({ restore }: Readonly<{ restore?: () => Response }>) {
-  let carried = [KEY_ACCOUNT, CHURN_RISK];
+function Served({
+  restore,
+  retired = false,
+}: Readonly<{ restore?: () => Response; retired?: boolean }>) {
+  const removable = { ...KEY_ACCOUNT, archived: retired };
+  let carried = [removable, CHURN_RISK];
   installFetchStub({
     [`GET /records/company/${COMPANY}/tags`]: () =>
       jsonResponse({ data: carried, withheld: false }),
@@ -54,7 +58,7 @@ function Served({ restore }: Readonly<{ restore?: () => Response }>) {
       if (restore) {
         return restore();
       }
-      carried = [KEY_ACCOUNT, CHURN_RISK];
+      carried = [removable, CHURN_RISK];
       return jsonResponse({});
     },
   });
@@ -85,7 +89,7 @@ async function undoInToast() {
   return undo;
 }
 
-/** The cross takes the tag off at once: no dialog, and the toast carries Undo. */
+/** The cross takes the tag off at once and the toast offers Undo. */
 export const RemovedWithUndo: Story = {
   render: () => <Served />,
   play: async (context) => {
@@ -93,6 +97,21 @@ export const RemovedWithUndo: Story = {
     await undoInToast();
     await expect(
       within(document.body).queryByRole("dialog"),
+    ).not.toBeInTheDocument();
+  },
+};
+
+/** A retired tag cannot be put back, so its removal offers no Undo. */
+export const RetiredTagRemoved: Story = {
+  render: () => <Served retired />,
+  play: async (context) => {
+    await pressRemove(context);
+    const said = await within(document.body).findByText(
+      "Key Account removed from this record",
+    );
+    await waitFor(() => expect(said).toBeVisible());
+    await expect(
+      within(document.body).queryByRole("button", { name: "Undo" }),
     ).not.toBeInTheDocument();
   },
 };

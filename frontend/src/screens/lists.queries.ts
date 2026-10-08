@@ -15,6 +15,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { recordListsKey } from "./activitykeys";
 import { throwProblem, useMe } from "./common";
+import type { MutationOutcome } from "./undoableremoval";
 
 export type List = components["schemas"]["List"];
 export type ListRecordType = List["entity_type"];
@@ -329,18 +330,13 @@ export type MemberRestore = Readonly<{
   undo: components["schemas"]["RemovalUndo"];
 }>;
 
-// On the hook, not on `mutate`: an Undo runs after its row has unmounted, and
-// React Query drops a `mutate` call's own callbacks once its observer is gone.
-type Outcome<V> = Readonly<{
-  onSuccess: (variables: V) => void;
-  onError: (error: Error) => void;
-}>;
-
 /**
  * Take one record off a Shortlist. `onSuccess` gets the handle that puts it
  * back, or null from a server that answered without one.
  */
-export function useRemoveMember(outcome: Outcome<MemberRestore | null>) {
+export function useRemoveMember(
+  outcome: MutationOutcome<MemberRestore | null>,
+) {
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (input: MemberChange): Promise<MemberRestore | null> => {
@@ -362,7 +358,7 @@ export function useRemoveMember(outcome: Outcome<MemberRestore | null>) {
 }
 
 /** Put back a record this reader took off a Shortlist, as its author left it. */
-export function useRestoreMember(outcome: Outcome<MemberRestore>) {
+export function useRestoreMember(outcome: MutationOutcome<MemberRestore>) {
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (input: MemberRestore) => {

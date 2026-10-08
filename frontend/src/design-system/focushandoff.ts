@@ -10,15 +10,18 @@ export function useFocusHandoff(
   landing: () => HTMLElement | null,
 ): void {
   const latest = useRef(landing);
+  // Copied each commit: the source's ref may already be detached at unmount.
+  const held = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     latest.current = landing;
+    held.current = source.current;
   });
-  useLayoutEffect(() => {
-    const node = source.current;
-    return () => {
-      if (node?.contains(document.activeElement)) {
+  useLayoutEffect(
+    () => () => {
+      if (held.current?.contains(document.activeElement)) {
         latest.current()?.focus();
       }
-    };
-  }, [source]);
+    },
+    [],
+  );
 }

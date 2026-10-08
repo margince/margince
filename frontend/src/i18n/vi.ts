@@ -10808,7 +10808,7 @@ export const vi = {
   "lists.record.truncated":
     "V\u00e0 c\u00f2n danh s\u00e1ch kh\u00e1c kh\u00f4ng hi\u1ec3n th\u1ecb \u1edf \u0111\u00e2y.",
   "lists.record.takenOff": "Đã gỡ khỏi {name}",
-  "lists.record.putBack": "Đã đưa lại vào {name}",
+  "lists.record.putBack": "Đã thêm lại vào {name}",
   "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",

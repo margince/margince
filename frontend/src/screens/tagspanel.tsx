@@ -9,16 +9,15 @@ import { Button } from "../design-system/atoms";
 import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
 import { TagPill } from "../design-system/tagpill";
-import { undoAction, useToast } from "../design-system/toast";
 import { useTooltip } from "../design-system/tooltip";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import { AddTagPicker } from "./tagpicker";
-import type { RecordTag, TaggableType } from "./tags.queries";
+import type { RecordTag, TaggableType, TagRestore } from "./tags.queries";
 import { useRecordTags, useRemoveTag, useRestoreTag } from "./tags.queries";
 import "./tagspanel.css";
+import { useUndoableRemoval } from "./undoableremoval";
 
 /**
  * The tags on one record — the same component on a contact, a company and a
@@ -198,13 +197,12 @@ function TagOnRecord({
 }>) {
   const t = useT();
   const combo = useRef<HTMLSpanElement | null>(null);
-  const remove = useTagRemoval(entityType, entityID, tag.name);
+  const remove = useTagRemoval(entityType, entityID, tag);
   useFocusHandoff(combo, focusLanding);
   return (
     <span className="tagspanel-combo" ref={combo}>
       <TagLink tag={tag} />
-      {/* A cross the pill grows on hover and focus, not a menu of one item.
-          It runs at once; the toast's Undo restores the tagging as assigned. */}
+      {/* The toast's Undo restores the tagging as it was assigned. */}
       {canEdit && (
         <button
           type="button"
@@ -233,8 +231,6 @@ function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
   const stamped = !Number.isNaN(Date.parse(tag.assigned_at));
   const who = tag.assigned_by?.display_name;
   const when = stamped ? formatDate(tag.assigned_at, locale, zone) : "";
-  // An assignment older than the product's record of WHO credits nobody,
-  // rather than putting the choice on somebody.
   const added = who
     ? stamped
       ? t("tags.addedBy", { who, when })
@@ -256,32 +252,21 @@ function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
   );
 }
 
-// A refused removal or Undo has no dialog to stand in, so it stays as a toast.
 function useTagRemoval(
   entityType: TaggableType,
   entityID: string,
-  name: string,
+  tag: RecordTag,
 ) {
   const t = useT();
-  const toast = useToast();
-  const sayRefused = (error: Error) =>
-    toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
-  const restore = useRestoreTag(entityType, entityID, {
-    onError: sayRefused,
-    onSuccess: () => toast.show(t("tags.restored", { name })),
+  const toasts = useUndoableRemoval<TagRestore>({
+    removed: t("tags.removed", { name: tag.name }),
+    restored: t("tags.restored", { name: tag.name }),
   });
-  return useRemoveTag(entityType, entityID, {
-    onError: sayRefused,
-    onSuccess: (removal) =>
-      toast.show(
-        t("tags.removed", { name }),
-        removal
-          ? {
-              action: undoAction(t("common.undo"), () =>
-                restore.mutate(removal),
-              ),
-            }
-          : undefined,
-      ),
-  });
+  const restore = useRestoreTag(entityType, entityID, toasts.restored);
+  // The server refuses to put back a retired tag, so its removal offers no Undo.
+  return useRemoveTag(
+    entityType,
+    entityID,
+    toasts.removed((handle) => restore.mutate(handle), !tag.archived),
+  );
 }

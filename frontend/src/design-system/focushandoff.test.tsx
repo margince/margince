@@ -9,23 +9,43 @@ import { useRef } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { useFocusHandoff } from "./focushandoff";
 
-function Row({ landing }: Readonly<{ landing: () => HTMLElement | null }>) {
+function Row({
+  landing,
+  ready = true,
+}: Readonly<{ landing: () => HTMLElement | null; ready?: boolean }>) {
   const row = useRef<HTMLDivElement | null>(null);
   useFocusHandoff(row, landing);
-  return (
+  return ready ? (
     <div ref={row}>
       <button type="button">Remove</button>
     </div>
-  );
+  ) : null;
 }
 
-function Strip({ withRow }: Readonly<{ withRow: boolean }>) {
+function Strip({
+  withRow,
+  ready = true,
+  landOn = "strip",
+}: Readonly<{
+  withRow: boolean;
+  ready?: boolean;
+  landOn?: "strip" | "aside";
+}>) {
   const strip = useRef<HTMLDivElement | null>(null);
+  const aside = useRef<HTMLDivElement | null>(null);
   return (
-    <div ref={strip} tabIndex={-1} data-testid="strip">
-      {withRow && <Row landing={() => strip.current} />}
-      <button type="button">Elsewhere</button>
-    </div>
+    <>
+      <div ref={strip} tabIndex={-1} data-testid="strip">
+        {withRow && (
+          <Row
+            ready={ready}
+            landing={() => (landOn === "strip" ? strip.current : aside.current)}
+          />
+        )}
+        <button type="button">Elsewhere</button>
+      </div>
+      <div ref={aside} tabIndex={-1} data-testid="aside" />
+    </>
   );
 }
 
@@ -56,8 +76,28 @@ describe("useFocusHandoff", () => {
     const remove = screen.getByRole("button", { name: "Remove" });
     remove.focus();
 
-    rerender(<Strip withRow />);
+    rerender(<Strip withRow landOn="aside" />);
 
     expect(remove).toHaveFocus();
+  });
+
+  it("hands focus to the landing named last when the row leaves", () => {
+    const { rerender } = render(<Strip withRow />);
+    screen.getByRole("button", { name: "Remove" }).focus();
+    rerender(<Strip withRow landOn="aside" />);
+
+    rerender(<Strip withRow={false} landOn="aside" />);
+
+    expect(screen.getByTestId("aside")).toHaveFocus();
+  });
+
+  it("follows a source that mounts after the hook", () => {
+    const { rerender } = render(<Strip withRow ready={false} />);
+    rerender(<Strip withRow />);
+    screen.getByRole("button", { name: "Remove" }).focus();
+
+    rerender(<Strip withRow={false} />);
+
+    expect(screen.getByTestId("strip")).toHaveFocus();
   });
 });
