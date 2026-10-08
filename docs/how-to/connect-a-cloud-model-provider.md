@@ -124,6 +124,7 @@ Service:
 | Provider | Host (EU; `us` for the US region) | Models it serves |
 |---|---|---|
 | `openai_compatible` | `https://api.langdock.com/openai/eu` | OpenAI models |
+| `openai` | `https://api.langdock.com/openai/eu` | OpenAI models, through the client for OpenAI |
 | `gemini` | `https://api.langdock.com/google/eu/v1beta` | Gemini models |
 | `anthropic` | `https://api.langdock.com/anthropic/eu` | Claude models |
 

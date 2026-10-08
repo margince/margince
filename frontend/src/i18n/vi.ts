@@ -9333,6 +9333,9 @@ export const vi = {
     "Host đến phiên bản API, như /v1beta; đường dẫn model được thêm sau đó.",
   "aiRouting.baseUrl.placeholder.gemini":
     "https://generativelanguage.googleapis.com/v1beta",
+  "aiRouting.baseUrl.help.openai":
+    "Gốc host; /v1 được thêm vào. Để trống để dùng API của chính OpenAI.",
+  "aiRouting.baseUrl.placeholder.openai": "https://api.openai.com",
   "aiRouting.baseUrl.help.anthropic":
     "Gốc host; /v1 được thêm vào. Để trống để dùng API của chính Anthropic.",
   "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
@@ -11929,6 +11932,8 @@ export const vi = {
   "aiProviderSettings.service.langdockGemini.note":
     "Langdock không cung cấp embedding của Gemini. Nếu tìm kiếm và truy hồi đang dùng Gemini, hãy chuyển chúng sang nhà cung cấp khác trước, nếu không chúng sẽ ngừng hoạt động.",
   "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
+  "aiProviderSettings.service.openai": "OpenAI",
+  "aiProviderSettings.service.otherOpenai": "Host API OpenAI khác",
   "aiProviderSettings.service.anthropic": "Anthropic",
   "aiProviderSettings.service.otherGemini": "Host tương thích Gemini khác",
   "aiProviderSettings.service.otherAnthropic":

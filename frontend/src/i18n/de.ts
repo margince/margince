@@ -9429,6 +9429,9 @@ export const de = {
     "Host bis zur API-Version, etwa /v1beta; Modellpfade werden danach angehängt.",
   "aiRouting.baseUrl.placeholder.gemini":
     "https://generativelanguage.googleapis.com/v1beta",
+  "aiRouting.baseUrl.help.openai":
+    "Host-Wurzel; /v1 wird angehängt. Leer nutzt die API von OpenAI selbst.",
+  "aiRouting.baseUrl.placeholder.openai": "https://api.openai.com",
   "aiRouting.baseUrl.help.anthropic":
     "Host-Wurzel; /v1 wird angehängt. Leer nutzt die API von Anthropic selbst.",
   "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
@@ -12053,6 +12056,8 @@ export const de = {
   "aiProviderSettings.service.langdockGemini.note":
     "Langdock bietet keine Gemini-Embeddings. Wenn Suche und Abruf Gemini nutzen, verlege sie zuerst auf einen anderen Anbieter, sonst funktionieren sie nicht mehr.",
   "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
+  "aiProviderSettings.service.openai": "OpenAI",
+  "aiProviderSettings.service.otherOpenai": "Anderer Host mit OpenAI-API",
   "aiProviderSettings.service.anthropic": "Anthropic",
   "aiProviderSettings.service.otherGemini": "Anderer Gemini-kompatibler Host",
   "aiProviderSettings.service.otherAnthropic":

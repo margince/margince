@@ -147,6 +147,20 @@ const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
     },
   ],
   [
+    "openai",
+    {
+      services: [
+        { id: "openai", label: "aiProviderSettings.service.openai", host: "" },
+        ...langdock("openai"),
+      ],
+      other: {
+        label: "aiProviderSettings.service.otherOpenai",
+        help: "aiRouting.baseUrl.help.openai",
+        placeholder: "aiRouting.baseUrl.placeholder.openai",
+      },
+    },
+  ],
+  [
     "anthropic",
     {
       services: [

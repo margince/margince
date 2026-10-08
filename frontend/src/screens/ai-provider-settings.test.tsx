@@ -93,6 +93,13 @@ function backend(
               optional: false,
             },
             {
+              provider: "openai",
+              configured: true,
+              env_var: "OPENAI_API_KEY",
+              usable: true,
+              optional: false,
+            },
+            {
               provider: "jev_compatible",
               configured: false,
               env_var: "JEV_COMPATIBLE_API_KEY",
@@ -404,6 +411,30 @@ describe("a provider's settings on its sheet", () => {
     expect(within(sheet).queryByRole("link", { name: /About/ })).toBeNull();
   });
 
+  it("points native OpenAI at Langdock's EU host", async () => {
+    const puts = backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "openai");
+    expect(
+      await within(sheet).findByRole("combobox", { name: "Service" }),
+    ).toHaveTextContent("OpenAI");
+    await pickService(user, sheet, "Langdock (EU)");
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+
+    await waitFor(() =>
+      expect(puts).toEqual([
+        {
+          provider: "openai",
+          body: { base_url: "https://api.langdock.com/openai/eu" },
+        },
+      ]),
+    );
+  });
+
   it("points Anthropic at Langdock's EU host", async () => {
     const puts = backend(routingWith({}));
     const user = userEvent.setup();
@@ -498,6 +529,7 @@ describe("serviceOf", () => {
       ["openai_compatible", "openai"],
       ["gemini", "google"],
       ["anthropic", "anthropic"],
+      ["openai", "openai"],
     ] as const) {
       const version = wire === "google" ? "/v1beta" : "";
       expect(
