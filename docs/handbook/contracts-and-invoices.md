@@ -174,7 +174,7 @@ past customer the card is titled "Finance · historical".
 ### A blank is not zero
 
 A figure that cannot be worked out is **left blank**. It is never shown as
-zero. "€0 open" means every invoice is paid. No figure means you
+zero. "€0 open" means no amount is left open. No figure means you
 do not know.
 
 The same goes for totals. If one invoice has no rate to change its currency,

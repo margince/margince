@@ -59,7 +59,7 @@ Select an edition in the history to see the values, targets, graphs and records 
 
 Open **Targets** and choose sales won, qualified pipeline created, meetings held or accepted opportunities. Select the owner or team, the pipeline where that is offered, and month or fiscal quarter. Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**.
 
-Use **Export CSV**, next to **Save report**, for the report's numbers of today, or export a fixed edition for the numbers it stored. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **More analysis → Custom reports** or ask your connected AI to report through Margince.
+Use **Export CSV**, next to **Save report**, for the report's numbers of today, or export a fixed edition for the numbers it stored. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
 
 Any user who reads a report can see the definitions of its numbers. Admins open **Reporting setup** on its own to set up qualifying stages and the daily history of the pipeline.
 

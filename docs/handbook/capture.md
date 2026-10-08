@@ -29,8 +29,8 @@ A captured message passes four stages, in order.
 a chat reaction or a message your own mail rules filtered. Those never reach
 Margince at all.
 
-**2. The first check.** Margince confirms the message is whole,
-within size limits, and from a source that stands behind the addresses on it.
+**2. The first check.** Margince confirms the message follows the expected format,
+is within size limits, and comes from a source that stands behind the addresses on it.
 It also checks, every time, that the member it belongs to is still allowed to
 capture. It ends either *accepted*, or *skipped* with the reason logged.
 A skipped message is not tried again.
@@ -266,7 +266,7 @@ a contact on a channel, or they may have blocked the bot. Then there is no reply
 button. A send without consent for that purpose is blocked, with a **Review
 consent** link.
 
-**The capture log names the sender.** It keeps one address and one short
+**The capture log names the sender.** It keeps one address and one shortened
 subject line, never a body, and deletes them after 24 hours. That is how the log
 can tell you why a message did not arrive. You see only entries from your own
 connections.

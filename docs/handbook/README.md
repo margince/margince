@@ -134,7 +134,8 @@ Records, deals and mail in Margince, by page:
   for deal fields, and document sets you can ask questions of. Every size limit,
   with its number.
 - [What is kept, what is destroyed](retention-exports-and-deletion.md): the six
-  retention rules a new company starts with, and archive against delete.
+  retention rules a new company starts with, and the difference between
+  archiving and deleting.
   Erasure and what else it removes, and the legal floor no administrator can
   override. Consent, the audit trail, and what you can export.
 - [Seats, roles and who can see what](seats-roles-and-access.md): full and read

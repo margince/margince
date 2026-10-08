@@ -56,7 +56,8 @@ apart
 app
 appear
 applicable
-apply
+applied
+applies
 approval
 approve
 april
@@ -91,6 +92,7 @@ automation
 autopilot
 available
 avatar
+average
 await
 away
 b
@@ -100,7 +102,7 @@ background
 backup
 badge
 ban
-band
+bands
 bar
 base
 basis
@@ -213,6 +215,7 @@ complete
 compliance
 compliant
 composer
+condition
 confidence
 configure
 confirm
@@ -398,7 +401,7 @@ final
 finance
 financial
 find
-finding
+findings
 finish
 fire
 first
@@ -476,6 +479,7 @@ hour
 how
 human
 i
+ids
 if
 ignore
 image
@@ -655,8 +659,8 @@ obligation
 of
 off
 offboard
-offer
 offer's
+offered
 offline
 often
 ok
@@ -700,6 +704,7 @@ page
 palette
 panel
 paper
+paragraph
 parent
 part
 partial
@@ -809,7 +814,7 @@ reaction
 reactivate
 read
 reader's
-reading
+readings
 ready
 real
 reason
@@ -848,7 +853,8 @@ reopen
 rep
 repeat
 replace
-reply
+replies
+replying
 report
 request
 require
@@ -856,6 +862,7 @@ research
 reseller
 reset
 resolution
+resolve
 respond
 response
 rest
@@ -917,7 +924,7 @@ serve
 service
 session
 set
-setting
+settings
 settle
 setup
 several
@@ -925,6 +932,7 @@ share
 sheet
 ship
 short
+shortened
 shortlist
 should
 show
@@ -1029,7 +1037,7 @@ then
 there
 these
 they
-thing
+things
 this
 those
 thread

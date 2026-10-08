@@ -48,9 +48,9 @@ Also called: compliance check, legal sign-off, is Margince compliant.
    the work mailbox is the choice to make.
 3. **Agree it with the works council**: the *Betriebsvereinbarung* (§87(1) Nr. 6
    BetrVG). Mail capture is a system able to watch how the team works and acts.
-   So the works council has a say, even if you never mean to watch anybody.
+   So the works council must agree, even if you never mean to watch anybody.
 4. **Write it down for the regulator**: the *Verarbeitungsverzeichnis und DSFA*
-   (Art. 30, Art. 35). One entry per processing step.
+   (Art. 30, Art. 35). One entry per processing operation.
 
 The templates live in the compliance section of the Margince documentation. The
 English set is for reading and for passing around inside the company; the German
