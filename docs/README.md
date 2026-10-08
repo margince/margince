@@ -146,7 +146,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.
   Generated.
-- [brief-priorities.md](reference/brief-priorities.md): how the app builds the morning list of work.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
 - [agent-tools.md](reference/agent-tools.md): each agent tool, and what it may do.
 - [mcp-info.md](reference/mcp-info.md): the MCP tools as a client sees them. Generated.
@@ -265,6 +264,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 - [customer-requests.md](explanation/customer-requests.md): how the app finds and tracks what a customer
   asks for.
+- [home-and-worklist.md](explanation/home-and-worklist.md): how the app builds the morning list of work, and
+  the review that follows it.
 - [frontend-architecture.md](explanation/frontend-architecture.md): how the web app is built.
 - [pwa.md](explanation/pwa.md): the app you can install from the web.
 - [contact-record-page.md](explanation/contact-record-page.md): the contact record page.
