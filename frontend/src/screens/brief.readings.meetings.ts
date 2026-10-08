@@ -27,22 +27,22 @@ export type StandIn = Readonly<{
 
 export type MeetingsReading = Readonly<{
   meetings: number | null;
-  // Null when the page carries fewer meetings than it counted, so no honest
-  // readiness figure exists — NOT the same as zero unprepared.
+  // Null when the page carries fewer meetings than it counted, so no readiness
+  // figure can be stated. That is not the same as zero unprepared.
   unready: number | null;
 }>;
 
 // The meetings reading: how many stand behind the day, and how many of those
-// nothing is prepared for — or that the second question could not be answered.
+// nothing is prepared for, or that the second question could not be answered.
 //
-// The two figures come from DIFFERENT populations and that is the whole care
+// The two figures come from different populations and that is the whole care
 // here. `considered` counts every meeting read and ranked, before the fold and
 // before the page cut; the readiness figure can only be counted off the rows the
 // page actually carries. Divide one by the other and a day with ten meetings
 // considered and three on the page reads "10 · 2 need prep", telling a rep eight
 // meetings are ready when nothing checked them.
 //
-// So readiness is claimed ONLY when the page carries every meeting it counted.
+// So readiness is claimed only when the page carries every meeting it counted.
 export function meetingsReading(
   day: Worklist,
   calendar: CalendarDay,
