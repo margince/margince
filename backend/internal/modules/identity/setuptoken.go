@@ -138,6 +138,9 @@ func (s *Service) issueSetupToken(ctx context.Context, policy outstandingPolicy)
 				return ErrSetupTokenExists
 			}
 		}
+		if err := reapDeadCredentials(ctx, tx, "setup_token"); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `INSERT INTO setup_token (token_hash) VALUES ($1)`, hash); err != nil {
 			// The partial unique index is the real guarantee; the check above
 			// only lets us say so in words. Report both the same way, so a boot
