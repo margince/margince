@@ -19916,10 +19916,12 @@ paths:
           description: Admin management view — include deactivated/suspended members. Honored only for an admin caller.
         - name: include_invited
           in: query
+          deprecated: true
           schema: { type: boolean, default: false }
           description: |
-            Also list invited seats — members who have not signed in yet. For NAMING the colleagues records
-            already point at (an imported record's owner is often an invited colleague); any member may ask.
+            Also list invited seats — members who have not signed in yet. Naming the colleagues a record
+            already points at is `GET /users/names`, which answers id and display name alone; a roster row
+            carries the member's email and seat status with it.
             Pickers leave it off, so nobody is offered work they cannot open.
       responses:
         '200':
@@ -20142,6 +20144,50 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /users/names:
+    get:
+      tags: [Identity]
+      operationId: nameSeats
+      summary: Name the colleagues behind a set of ids. Read-only.
+      description: |
+        The display names behind ids the caller already holds — a record's owner, an activity's
+        author, an assignee on a card. Any authenticated member may ask, for the reason the
+        roster itself is readable by any member: a seat is not a record, `app_user` carries no
+        owner and no capture privacy, so a row-scope clause here would invent a rule this table
+        has never had.
+
+        It answers every NON-ARCHIVED seat — active, invited and deactivated alike. A record
+        outlives the colleague who owned it, and `POST /users/former` exists to create
+        deactivated seats precisely so imported history can name its author; archiving is the
+        act that withdraws a seat from the reads that name a timeline row, so an archived seat
+        is absent here.
+
+        An id this answer omits is not an error: it is archived, or this installation never held
+        it, and the caller renders the id it already has.
+
+        Not a page. There is no cursor, no `q` and no limit — the caller names what it wants and
+        gets at most that. Naming more than 100 colleagues in one request is `422`.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: The seats to name. Repeat the parameter for several, up to 100; more is `422`.
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: The names, for the ids that resolved to one.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeatNameListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /users/{id}/role:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -45101,6 +45147,23 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+
+    SeatName:
+      type: object
+      description: >
+        A colleague's id and the name a human would recognise them by. Deliberately nothing
+        else: this answers what an id is CALLED, for a caller that already holds the id off a
+        record they can read. Email, status and seat type are the roster's answers, and a
+        naming read has no business disclosing them.
+      required: [id, display_name]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+    SeatNameListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/SeatName' } }
 
     FormerMemberRequest:
       type: object
