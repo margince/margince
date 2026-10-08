@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # Meetings and booking
 
-Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up. This page covers the meeting itself: sending it, following it, moving it and cancelling it.
+Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
 
 There are three ways to set up a meeting with a contact. You can offer two or three times, send an invitation for a time you agreed, or share a personal link. **My booking link**, in the account menu, is a fourth way that needs no contact.
 
@@ -16,6 +16,7 @@ Also called: send an invite, book a call, schedule a meeting, calendar invite.
 
 ### What do the invitation states mean?
 A Margince meeting invitation shows one of three states on the meeting. **Creating your invitation…** means it has not reached your calendar yet. **Calendar invitation created** means your calendar provider accepted it and told the guests. **Invitation needs attention** means the calendar did not accept it, even after Margince tried again.
+
 Calendar invitation created does not mean the guest said yes. The guest's reply comes through your connected calendar, as with any other invitation.
 Also called: pending, confirmed, invite failed, delivery status.
 
