@@ -65,3 +65,26 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 
 The pages used these names before they joined the plain-words bar. Move a name up into the table when you
 write its meaning, and delete it here. A name new to the docs goes in the table, never here.
+
+<!-- prose:allow sentence a list of names, not a sentence -->
+`AA`, `AAAA`, `Act`, `AD`, `AirDrop`, `allowlist`, `Anthropic`, `Apple`, `arch-lint`, `args`, `Art`, `ASCII`,
+`AST`, `Aurora`, `Austria`, `Austrian`, `Authenticode`, `axe`, `Azure`, `BDSG`, `Betriebsrat`,
+`Betriebsvereinbarung`, `BetrVG`, `BI`, `BotFather`, `BYOK`, `C`, `CA`, `Cc`, `CGNAT`, `ChatGPT`, `CHF`,
+`Chrome`, `chunker`, `Claude`, `claude`, `CLI`, `Cloud`, `CNAME`, `CODEOWNERS`, `CodeRabbit`, `Codex`, `codex`,
+`config`, `cron`, `CRUD`, `CSRF`, `CSS`, `Ctrl`, `Ctrl-C`, `curl`, `CV`, `DAG`, `DCR`, `DDL`, `dedupe`,
+`DeepSeek`, `DELETE`, `Desktop`, `dist`, `DKIM`, `DMARC`, `DNS`, `DocuSign`, `DPA`, `DPIA`, `DSFA`, `DSGVO`,
+`DSN`, `Edge`, `Einwilligung`, `Empfangsbestätigung`, `Enterprise`, `Entra`, `enum`, `ERP`, `Esc`, `Escape`,
+`EUR`, `European`, `evaluator`, `Excel`, `FAQ`, `Fastmail`, `Firefox`, `Flash-Lite`, `Fonts`, `Forrester`,
+`frontend`, `FX`, `Gartner`, `Gatekeeper`, `GB`, `GBP`, `GCM`, `Geist`, `Gemini`, `Gemma`, `Geocoding`,
+`gitignored`, `GNU`, `GPL`, `GPT`, `GPU`, `Graph`, `Groq`, `Haiku`, `Handelsbrief`, `HardPass`, `HMAC`,
+`HMAC-SHA`, `HTML`, `HTTP`, `IAM`, `IANA`, `IMAPS`, `Impressum`, `Inspector`, `Intel`, `IP`, `JSON`, `JSONL`,
+`JSONPath`, `K`, `KB`, `keyvault`, `Lars`, `LLM`, `London`, `Mac`, `Makefile`, `Markdown`, `MB`, `Mistral`,
+`Mitarbeiterinformation`, `MRL`, `ms`, `MSVC`, `MX`, `NAT`, `notarization`, `Nr`, `NULL`, `OAuth`, `Office`,
+`OpenAI`, `OpenAI-compatible`, `Ops`, `OS`, `Outfit`, `Outlook`, `PATCH`, `PDF`, `pgvector`, `PIM`, `POST`,
+`PostgreSQL`, `POSTs`, `PowerShell`, `PR`, `PTR`, `px`, `Python`, `re-authenticate`, `Re-certify`,
+`re-certify`, `README`, `RFC`, `River`, `Rosetta`, `Safari`, `SAR`, `SBOMs`, `SDR`, `semver`, `Shopify`,
+`Shopware`, `SLA`, `slug`, `SmartScreen`, `SMTP`, `Sparkles`, `SPDX`, `SPF`, `SQL`, `SSRF`, `stderr`, `stdin`,
+`stdout`, `Storybook`, `Stripe`, `struct`, `Studio`, `Surfe`, `Svix`, `TCP`, `TLS`, `TTL`, `TXT`, `TypeSafe`,
+`TypeScript`, `UI`, `UID`, `und`, `unix`, `URI`, `URIs`, `URL`, `URL-safe`, `USB`, `UTC`, `uuid`, `Valkey`,
+`vCard`, `Ventura`, `Verarbeitungsverzeichnis`, `Vertex`, `vet`, `VIES`, `Visual`, `VS`, `Wappalyzer`, `WCAG`,
+`Xcode`, `YAML`, `Zürich`
