@@ -139,7 +139,7 @@ what starts again:
 - **The poll cursor starts again** (`poll_offset = 0`). `update_id` is a count for each bot. Say the new bot
   kept the place of the old bot in that count. Then the poll would ask it for numbers past any it has
   sent. Every message sent to it would be skipped, and no one would know.
-- **The connection is always live.** A poll calls out, so only the row decides which token the next poll
+- **Rotation never takes the connection down.** A poll calls out, so only the row decides which token the next poll
   uses. To point the row at the new token is the whole change.
 - **Margince deletes the old token** from the vault once the row names the new one. Nothing else would
   ever remove it.

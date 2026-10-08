@@ -44,8 +44,8 @@ A dev stack binds every tier and the embeddings lane to `gemini` (`seeds.ai_rout
 Ollama. That is the first rung of the ladder of `enrich` (`local_small` → `cheap_cloud`). Step 3 says what
 else must move for a stack with no cloud key.
 
-On a running stack, do it under **Settings → AI**, which works at once. To have a *new* stack come up this
-way, edit the seed and run `make dev-fresh`. The shape is the same either way:
+On a running stack, do it under **Settings → AI**, which every process picks up within 30 seconds, with no
+restart. To have a *new* stack come up this way, edit the seed and run `make dev-fresh`. The shape is the same either way:
 
 ```yaml
 local_small: { provider: ollama, model: gemma3 }   # no base_url ⇒ localhost:11434
