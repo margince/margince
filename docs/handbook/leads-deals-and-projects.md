@@ -2,7 +2,7 @@
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one
-company, and a project is the body of work a deal belongs to. Contacts and
+company, and a project is a body of work a deal may belong to. Contacts and
 companies are in [Contacts, companies, leads, deals and projects](records.md).
 So are archiving, undo, custom fields and tags for every record.
 
@@ -93,14 +93,15 @@ installation.
 To reverse a lead qualification in Margince, open the qualified lead and choose **Reverse qualification**.
 1. Enter a **Reason (recorded in the audit trail)**. Without one the dialog says "Enter a reason first."
 2. Choose **Reverse**.
-The lead goes back to the open status Engaged. A contact the qualification created is archived; a contact it merged into is left as it was.
+The lead goes back to the open status Engaged. A contact the qualification created is archived, unless other records now depend on it. A contact it merged into is left as it was.
 It is refused while the contact is a stakeholder on a live deal.
 Also called: undo a qualification, unqualify, demote a lead.
 
 What reversing does depends on how the lead was qualified:
 
-- If it **created** a contact: the contact is archived, and the lead comes back
-  to the queue at Engaged. Activities captured since the qualification stay on
+- If it **created** a contact: the contact is archived, unless other records
+  now depend on it (see the last point). The lead comes back to the queue at
+  Engaged. Activities captured since the qualification stay on
   the contact's timeline.
 - If it **merged** into an existing contact: that contact is left as it is.
   Only the link to the lead is removed. The merged fields are not taken apart
@@ -337,7 +338,7 @@ Two live projects never share a key. Archiving a project frees its key.
 
 ### How do I choose a good project key?
 To get a project key you can read in Margince, pick the right project name. The key is made from the name once, when the project is created, and never changes.
-Lead with the customer, then the work: "Nordwind ERP rollout" gives `NER-1`, while "ERP rollout" gives `ER-1`, which names nobody. Three or four words do more than one: "Datenmigration" gives `DATENMIG-1`.
+Lead with the customer, then the work: "Nordwind ERP rollout" gives `NER-1`, while "ERP rollout" gives `ER-1`, which names nobody. A one-word name gives a long key: "Datenmigration" gives `DATENMIG-1`. Three or four words give a short key.
 
 A name that opens with numbers drops them, and a name with too few letters falls back to `PRJ`. Renaming a project keeps its key; to get a different one, archive the project and create it again. Also called: project code, project number, ticket prefix.
 

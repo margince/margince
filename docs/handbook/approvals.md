@@ -167,7 +167,7 @@ outside your scope does.
 **Agents and their own proposals.** On your
 word, an agent may approve a proposal it staged for you only in a narrow case.
 The change must be one that would have applied by itself if a human had not
-edited the record first. It may not close a deal, relink, merge tags,
+edited the record first, and could be put back. It may not close a deal, relink, merge tags,
 change what a field means, send anything, or do anything your installation
 requires a human for. And it must happen in a conversation, never on a
 schedule. The decision is recorded as yours, given through that agent.

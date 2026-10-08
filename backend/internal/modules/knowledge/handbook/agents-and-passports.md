@@ -142,8 +142,9 @@ in these cases:
 - An agent never approves a proposal staged for somebody else. If it could, two
   colleagues could each give out a passport. One agent could stage a confirm-first
   action and the other approve it, and nobody would have looked.
-- An agent may approve its own proposal only when the change could be put back.
-  That leaves out closing a deal, relinking, merging tags, changing a custom
+- An agent may approve its own proposal only in a narrow case. The change must
+  be one that would have applied by itself if a human had not edited the record
+  first, and could be put back. That leaves out closing a deal, relinking, merging tags, changing a custom
   field, sending, and anything your installation always holds for a human.
   Any of the colleague's passports may approve such a proposal. That includes
   the one that proposed it, and a connected agent.

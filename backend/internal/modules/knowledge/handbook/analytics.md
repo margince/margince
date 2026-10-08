@@ -23,7 +23,7 @@ A manager records a call with **Update forecast**. Also called: sales forecast, 
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers.
-A seat whose scope is its teams, such as a team lead's, is offered **My teams**, each of those teams and its own records. A seat that sees everything is also offered **Whole company**.
+A seat whose scope is its teams, such as a team lead's, is offered **My teams**, each of those teams and its own records. If the seat is in no team, it is offered only its own records. A seat that sees everything is also offered **Whole company**.
 A rep who sees only their own records gets no picker, only "These numbers cover {scope}."
 Also called: team forecast, my team's deals, manager view, team report.
 
@@ -35,10 +35,13 @@ To see your pipeline report in Margince, click **Analytics** in the sidebar and 
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
-The Analytics sections are **Performance**, **Forecast**, **Saved reports** and **Pipeline analysis**. **More analysis** holds **Data coverage** and **Custom reports**. Access decides which sections you get.
-The **Forecast** section is where this period will land. The **Pipeline analysis** section holds the pipeline reports.
+The Analytics tabs are **Performance**, **Forecast**, **Pipeline**, **My outcomes**, **Delivery** and **Reports**. The **Setup** menu at the end of the tab row holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get.
+The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports.
 
 The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts.
+It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
+The **Reports** section lists saved reports and starts a custom report with **New custom report**. A seat that cannot read saved reports gets a **Custom reports** tab instead.
+
 The **My outcomes** section shows your own open deals and meetings, for a rep only.
 The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
@@ -59,7 +62,7 @@ A link also stops on its own after 30 days, or when you lose forecast access. Al
 
 ### How do I see a win rate or export a report?
 **Performance** offers a closed win rate with a smallest group size, and a CSV export under its rules; see [Performance and saved sales reports](sales-reporting.md).
-To get deal rows out, open **Filters and views** in the sidebar and choose **Deals** as the **Record type**. Make a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
+To get deal rows out, open **Filters and views** → **New filter** → **Deals** and make a filter. Then choose **⋯** (**More for this filter**) → **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
 
 ## The reporting sections
 
@@ -93,14 +96,15 @@ plain sentence instead: **"These numbers cover {scope}."**
 - A seat that sees everything is offered **Whole company**, every live team,
   and its own records.
 - A seat whose scope is its teams is offered **My teams**, each of its own live
-  teams, and its own records.
+  teams, and its own records. If it is in no team, it is offered only its own
+  records.
 - Everyone else is offered their own records.
 
 Archived teams are never offered.
 
 The scope picker rules Performance, Forecast and Custom reports. Pipeline
-analysis and Delivery report cards use their own record scopes; changing the
-picker does not change those cards.
+and Delivery report cards use their own record scopes; changing the picker does
+not change those cards.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only

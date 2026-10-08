@@ -163,9 +163,9 @@ its own. Relink it, or let the next message in the thread carry the filing.
 
 ### Filing under a project starts a retention clock
 
-Under the German set of rules, an email linked to a project is business
-correspondence. It must be kept **six years from the end of the calendar year in
-which it was sent or received**. The clock runs from the email's own date, not
+In Margince, the German set of rules counts every email linked to a project as
+business correspondence. Margince keeps it **six years from the end of the
+calendar year in which it was sent or received**. The clock runs from the email's own date, not
 the day you filed it.
 
 The mark is set the moment the link is made, no matter how. Moving the email

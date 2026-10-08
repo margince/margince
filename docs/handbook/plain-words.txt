@@ -38,7 +38,6 @@ always
 amend
 amount
 an
-analysis
 analytics
 another
 answer
@@ -50,7 +49,8 @@ apart
 app
 appear
 applicable
-apply
+applied
+applies
 approval
 approve
 april
@@ -85,7 +85,7 @@ backfill
 background
 badge
 ban
-band
+bands
 bar
 base
 basis
@@ -519,7 +519,7 @@ now
 number
 of
 off
-offer
+offered
 offline
 often
 ok
@@ -669,7 +669,8 @@ renewal
 reopen
 rep
 replace
-reply
+replies
+replying
 report
 request
 require
@@ -724,7 +725,7 @@ serve
 service
 session
 set
-setting
+settings
 settle
 several
 share
@@ -817,7 +818,7 @@ then
 there
 these
 they
-thing
+things
 this
 those
 thread
@@ -832,6 +833,7 @@ timeline
 timeouts
 title
 to
+toast
 today
 together
 token

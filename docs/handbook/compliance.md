@@ -30,8 +30,9 @@ Also called: compliance check, legal sign-off, is Margince compliant.
    *Mitarbeiterinformation* (Art. 13 GDPR). Do it before a mailbox is
    connected, not after. Keep the receipt: the *Empfangsbestätigung* shows you
    did it, which Art. 5(2) asks of you on its own. Where there is no works
-   council (often in Austria), each colleague agrees on that same sheet. Step 3
-   below then has nobody to agree with.
+   council (most often in Austria), add each colleague's written agreement to
+   that same sheet. The receipt alone is not that agreement. Step 3 below then
+   has nobody to agree with.
 2. **Settle private use**: the *Einwilligung* (§26(2) BDSG, Art. 7 GDPR). Private use of
    the work mailbox may be allowed or put up with. Then the archive fills with
    mail from outside the company: a friend, a doctor. The legal basis for work
