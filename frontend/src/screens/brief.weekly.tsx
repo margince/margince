@@ -280,7 +280,7 @@ function WeeklyBody({
   const place = { t, locale, zone: recordZone };
   // A figure its source did not measure trades its own reading for that fact.
   const reading = (figure: WeeklyFigure, value: string, detail: ReactNode) =>
-    figureReading(numeric.figures[figure], value, place) ?? { value, detail };
+    figureReading(numeric.figures[figure], { value, detail }, place);
   const prior = review.prior?.counts;
   // The delta line, or nothing. A reading with no earlier week to measure
   // against gets no line at all rather than "+0": a rep's first week did not

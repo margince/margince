@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { createElement, Fragment, type ReactNode } from "react";
 import type { components } from "../api/schema";
 import { formatDateAbbrev } from "../format/format";
 import type { Locale } from "../i18n";
@@ -142,29 +143,50 @@ export function anyUnrecorded(figures: WeeklyFigures): boolean {
 type Translate = (key: MessageKey, values?: Record<string, string>) => string;
 type Place = Readonly<{ t: Translate; locale: Locale; zone: string }>;
 
+type Reading = { value: string; detail?: ReactNode };
+
+// The qualifier rides the detail line, never a popover: a partial figure has to
+// say so at a glance or it reads as a whole week's count.
+function qualified(detail: ReactNode, qualifier: string): ReactNode {
+  if (
+    detail === undefined ||
+    detail === null ||
+    detail === false ||
+    detail === ""
+  )
+    return qualifier;
+  if (typeof detail === "string") return [detail, qualifier].join(" · ");
+  return createElement(Fragment, null, detail, " · ", qualifier);
+}
+
 /**
- * A stat card's value and detail for a figure that is not a plain measurement,
- * or null when the caller's own reading stands.
+ * A stat card's reading for a figure, from the caller's own reading of it.
+ *
+ * A partial figure keeps the caller's value and adds its qualifier to the
+ * detail line; a figure nobody measured replaces both.
  */
 export function figureReading(
   state: FigureState,
-  value: string,
+  shown: Readonly<Reading>,
   { t, locale, zone }: Place,
-): { value: string; detail?: string } | null {
+): Reading {
   const from = (since: string | undefined) =>
     since && formatDateAbbrev(since, locale, zone);
   switch (state.kind) {
     case "measured":
-      return null;
+      return shown;
     case "unavailable":
       return { value: t("reporting.unavailable"), detail: state.reason };
     case "partial": {
       const date = from(state.since);
       return {
-        value,
-        detail: date
-          ? t("brief.weekly.partialFrom", { date })
-          : (state.reason ?? t("reporting.status.partial")),
+        value: shown.value,
+        detail: qualified(
+          shown.detail,
+          date
+            ? t("brief.weekly.partialFrom", { date })
+            : (state.reason ?? t("reporting.status.partial")),
+        ),
       };
     }
     case "unrecorded": {

@@ -712,9 +712,15 @@ describe("BriefScreen — figures whose source had not started", () => {
     expect(glance.textContent).not.toContain(en["brief.week.quiet"]);
   });
 
-  it("keeps a partly recorded figure with its qualifier", async () => {
+  it("keeps a partly recorded figure, its money line and its qualifier", async () => {
     const strip = await mount({
       ...review,
+      pipeline: {
+        created_minor: 0,
+        won_minor: 1250000,
+        lost_minor: 0,
+        currency: "EUR",
+      },
       counts: {
         ...zeroWeekCounts,
         deals_won: 3,
@@ -727,13 +733,16 @@ describe("BriefScreen — figures whose source had not started", () => {
       numeric_summary: partlyRecordedWeeklyNumbers,
     });
 
-    expect(card(strip, en["brief.weekly.dealsWon"])).toEqual({
-      value: "3",
-      detail: en["brief.weekly.partialFrom"].replace(
+    const won = card(strip, en["brief.weekly.dealsWon"]);
+    expect(won.value).toBe("3");
+    // The money line stays, and the qualifier follows it on the same line.
+    expect(won.detail).toMatch(/^(12.500,00\s*€|€12,500\.00) · /);
+    expect(won.detail).toContain(
+      en["brief.weekly.partialFrom"].replace(
         "{date}",
         formatDateAbbrev("2026-09-10T08:00:00Z", "en", "UTC"),
       ),
-    });
+    );
     expect(card(strip, en["brief.weekly.meetingsHeld"])).toEqual({
       value: "3 of 5",
       detail: "Some meeting history predates confirmed outcomes.",

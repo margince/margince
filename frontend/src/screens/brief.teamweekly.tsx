@@ -291,7 +291,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const reading = (
     figure: WeeklyFigure,
     shown: { value: string; detail?: string },
-  ) => figureReading(figures[figure], shown.value, place) ?? shown;
+  ) => figureReading(figures[figure], shown, place);
   // A SHARE NEEDS A DENOMINATOR. "0 of 0" is a rate nobody could have scored,
   // and the basis line beside it explains a measurement that was never taken —
   // so a week that routed no lead, held no meeting or carried no commitment

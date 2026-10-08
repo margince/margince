@@ -631,5 +631,16 @@ describe("figures whose source had not started", () => {
     expect(screen.queryByText(en["teamweekly.movement.leads"])).toBeNull();
     expect(screen.getByText(en["teamweekly.movement.moved"])).toBeTruthy();
     expect(screen.getAllByText(en["brief.weekly.notRecorded"])).toHaveLength(1);
+    // The partial won card keeps its lost-count line, and the qualifier follows.
+    const won = screen
+      .getByText(en["teamweekly.card.won"], {
+        selector: ".stat-card-label-text",
+      })
+      .closest(".stat-card");
+    expect(won?.querySelector(".stat-card-detail")?.textContent).toMatch(
+      new RegExp(
+        `^${en["teamweekly.card.wonBasis"].replace("{lost}", "1")} · Partial week: counted from `,
+      ),
+    );
   });
 });
