@@ -182,6 +182,10 @@ type ActIn struct {
 	Snippet string `json:"snippet,omitempty"`
 }
 
+// ActivityKind and ActivitySubject let draftcore.ThreadMail read an ActIn.
+func (a ActIn) ActivityKind() string    { return a.Kind }
+func (a ActIn) ActivitySubject() string { return a.Subject }
+
 // draftInputActivities bounds how much of the conversation the draft reads.
 // A follow-up is about the last exchange, not the relationship's history; a
 // longer window costs prefill and buys older news.

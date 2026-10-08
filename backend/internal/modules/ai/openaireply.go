@@ -14,7 +14,8 @@ import (
 // item can precede the message, and a refusal part is an outcome of its own.
 // A schema-bound reply is the first message with text, since a model can add
 // a second one and the two joined are not one document. Once a final_answer
-// exists, commentary messages are working notes and are skipped.
+// exists, commentary messages are working notes and are skipped. Stream applies
+// none of this; its one caller is the health probe.
 func openaiReplyText(ctx context.Context, out openaiResponse, schemaBound bool) (string, error) {
 	skipCommentary := slices.ContainsFunc(out.Output, func(item openaiOutputItem) bool { return item.Phase == "final_answer" })
 	var text strings.Builder

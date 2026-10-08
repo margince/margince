@@ -399,17 +399,8 @@ func (in Input) Threaded() bool {
 	return ok && mail.Inbound
 }
 
-// threadMail is the newest email with a subject. A task or a logged call is
-// not a message in the thread, and its title is internal, so one recorded
-// after their mail still leaves that mail as the thread a draft answers.
-func (in Input) threadMail() (ActIn, bool) {
-	for _, act := range in.Recent {
-		if act.Kind == string(crmcontracts.ActivityKindEmail) {
-			return act, act.Subject != ""
-		}
-	}
-	return ActIn{}, false
-}
+// threadMail is the thread a draft answers: draftcore.ThreadMail on Recent.
+func (in Input) threadMail() (ActIn, bool) { return draftcore.ThreadMail(in.Recent) }
 
 // Booked is whether this contact has a meeting on file. foldMeeting only
 // carries one this contact actually attends, so a non-nil Meeting is a real

@@ -32,10 +32,17 @@ export function useProviderKeys(enabled: boolean) {
 // Every read whose answer a provider's key decides: whether it is keyed, and
 // the locations, models and health that are asked with that key. Not awaited
 // by the save: a model list is a call to the vendor, and the save is done first.
-function invalidateProviderKeyState(queryClient: QueryClient) {
+function invalidateProviderKeyState(
+  queryClient: QueryClient,
+  provider: string,
+) {
   queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
-  queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
-  queryClient.invalidateQueries({ queryKey: ["ai-available-models"] });
+  queryClient.invalidateQueries({
+    queryKey: ["ai-provider-locations", provider],
+  });
+  queryClient.invalidateQueries({
+    queryKey: ["ai-available-models", provider],
+  });
   invalidateProviderHealth(queryClient);
 }
 
@@ -80,8 +87,8 @@ export function useSetProviderKey() {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
-      invalidateProviderKeyState(queryClient);
+    onSuccess: (_, vars) => {
+      invalidateProviderKeyState(queryClient, vars.provider);
     },
   });
 }
@@ -97,8 +104,8 @@ export function useRemoveProviderKey() {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
-      invalidateProviderKeyState(queryClient);
+    onSuccess: (_, vars) => {
+      invalidateProviderKeyState(queryClient, vars.provider);
     },
   });
 }

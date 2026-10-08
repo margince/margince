@@ -275,10 +275,12 @@ export function useSetProviderSettings() {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ROUTING_KEY });
       // A key test and a model list ask the provider at its host.
-      queryClient.invalidateQueries({ queryKey: ["ai-available-models"] });
+      queryClient.invalidateQueries({
+        queryKey: ["ai-available-models", vars.provider],
+      });
       invalidateProviderHealth(queryClient);
     },
   });
