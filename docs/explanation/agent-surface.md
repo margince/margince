@@ -31,12 +31,13 @@ who granted the passport. Every call checks the credential again, so a revoked p
 not at the next login. What a passport holds: [authorization.md](authorization.md#what-a-passport-is).
 
 **Files reach a record from Surface A only.** `attach_document`
-carries the whole file in its arguments, and both places that keep a call's arguments would keep the
-file too: an approval stores them in `approval.proposed_change`, and a run stores each step in
-`agent_run.trace`. So the tool is 🟢 with no staging path, and
+carries the whole file in its input, and two places keep a call's input. An approval stores it in
+`approval.proposed_change`, and a run stores each step in `agent_run.trace`. So the tool is 🟢 with
+no staging path.
+
 `TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
-scheduled agent's tool list names any tool whose argument bound is over 1 MiB. An agent can attach a
-file and list a record's files (`list_documents`); no tool downloads a file or returns its contents.
+scheduled agent's tool list names any tool whose input bound is over 1 MiB. An agent can attach a
+file and list a record's files (`list_documents`); no tool can fetch a file or return its contents.
 The size and type bounds are in [configuration.md](../reference/configuration.md#uploads).
 
 ## The reason-act-observe loop (Surface B)
