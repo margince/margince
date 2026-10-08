@@ -103,6 +103,67 @@ class EndStateTest(unittest.TestCase):
                 endstate.end_state(session, [EMSLAND])
 
 
+NOTES = "a" * 64
+LOGO = "b" * 64
+FILED = f'company "Emsland Ventilbau GmbH" document={NOTES} *.md'
+REFUSED = f'company "Emsland Ventilbau GmbH" no_document={LOGO}'
+
+
+def documents_on(files, page_size=1):
+    """list_documents over [(filename, checksum)], filed on every company alike.
+
+    Paged one to a page, so a reader that stopped at the first page would miss
+    every file but the newest.
+    """
+    def list_documents(arguments):
+        start = int(arguments.get("cursor") or 0)
+        page = [{"filename": name, "checksum": checksum} for name, checksum in files[start:start + page_size]]
+        data = {"documents": page}
+        if start + page_size < len(files):
+            data["next_cursor"] = str(start + page_size)
+        return json.dumps({"data": data}), False
+
+    return {**world(SEEDED), "list_documents": list_documents}
+
+
+class DocumentTest(unittest.TestCase):
+    def read(self, files, entries=(FILED, REFUSED)):
+        tools = TOOLS + [{"name": "list_documents", "inputSchema": {"type": "object"}}]
+        with FakeMcp(tools, replies=documents_on(files)) as server:
+            session = mcpclient.Session(server.url, "tok")
+            session.open()
+            return endstate.end_state(session, list(entries))
+
+    def test_the_file_on_the_record_under_its_kind_of_name_holds(self):
+        held, problems = self.read([("logo.png", "c" * 64), ("visit-notes.md", NOTES)])
+        self.assertEqual((held, problems), ([FILED, REFUSED], []))
+
+    def test_a_file_whose_bytes_changed_on_the_way_is_absent(self):
+        _, problems = self.read([("visit-notes.md", "d" * 64)], [FILED])
+        self.assertEqual(problems, [f'ended with no file on company "Emsland Ventilbau GmbH" whose checksum is {NOTES}'])
+
+    def test_the_right_bytes_under_another_kind_of_name_fail(self):
+        _, problems = self.read([("visit-notes.txt", NOTES)], [FILED])
+        self.assertEqual(problems, ['ended with the file on company "Emsland Ventilbau GmbH" named "visit-notes.txt", wanted *.md'])
+
+    def test_one_file_attached_twice_fails(self):
+        _, problems = self.read([("visit-notes.md", NOTES), ("visit-notes.md", NOTES)], [FILED])
+        self.assertEqual(problems, ['ended with 2 copies of the file on company "Emsland Ventilbau GmbH"'])
+
+    def test_a_refused_file_kept_under_another_name_fails(self):
+        _, problems = self.read([("logo.txt", LOGO)], [REFUSED])
+        self.assertEqual(problems, [f'ended with company "Emsland Ventilbau GmbH" holding a file with checksum {LOGO}'])
+
+    def test_a_listing_with_no_documents_is_a_harness_fault(self):
+        replies = {**documents_on([]), "list_documents": (json.dumps({"data": {}}), False)}
+        tools = TOOLS + [{"name": "list_documents", "inputSchema": {"type": "object"}}]
+        with FakeMcp(tools, replies=replies) as server:
+            session = mcpclient.Session(server.url, "tok")
+            session.open()
+            with self.assertRaisesRegex(endstate.Unreadable, "no documents list"):
+                endstate.end_state(session, [FILED])
+
+
 class ParseTest(unittest.TestCase):
     def test_an_entry_reads_as_type_name_field_and_value(self):
         self.assertEqual(endstate.parse(EMSLAND),
@@ -111,6 +172,12 @@ class ParseTest(unittest.TestCase):
     def test_a_malformed_entry_is_refused(self):
         for entry in ('company Emsland lifecycle=prospect', 'company "Emsland" lifecycle',
                       'planet "Mars" lifecycle=prospect'):
+            with self.assertRaises(ValueError, msg=entry):
+                endstate.parse(entry)
+
+    def test_a_malformed_document_entry_is_refused(self):
+        for entry in (f'company "E" document={NOTES}', 'company "E" document=ABC *.md',
+                      f'company "E" no_document={LOGO} *.svg'):
             with self.assertRaises(ValueError, msg=entry):
                 endstate.parse(entry)
 

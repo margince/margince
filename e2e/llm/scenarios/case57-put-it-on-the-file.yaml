@@ -1,0 +1,82 @@
+# CASE 57 — Put it on the file.
+#
+# A user hands the assistant two files and asks for them to be kept on a
+# company. Before attach_document, the only way to keep a file was to retype it
+# as a note, so an assistant handed a PDF saved its text on the timeline. Here
+# the notes must land on the company's Documents tab as the same bytes, and the
+# logo, an SVG, is refused by the attachment store: the answer says so instead
+# of keeping it some other way.
+#
+# THE FILES ARRIVE AS BASE64 IN THE PROMPT. A CLI candidate in this lane has no
+# file or shell tool, so the bytes it sends are the bytes it copied out of the
+# prompt. Small files on purpose: the case is whether the assistant files them,
+# not whether it can copy a megabyte. A real PDF is the integration test's.
+#
+# WHAT IS HELD, and where:
+#   - the notes are on Aachener Metallwerke GmbH, byte for byte: must_end_with
+#     reads the Documents tab and compares the sha256 of the fixture below;
+#   - the logo is on no record of that company under any name: a renamed .txt
+#     would be the type allowlist worked around, which no_document catches;
+#   - neither file's text reached log_activity: must_not_call_with reads the
+#     call's arguments, since a note never shows in the answer;
+#   - what the answer tells the user is judged.
+#
+# Fixture checksums (sha256 of the decoded bytes):
+#   visit-notes.md  302 bytes  fbc851cb17f6584e421fec7ec33a59a887f1bfecbabfc4310b760053225f61f3
+#   am-logo.svg     193 bytes  4905115525cac122a7572a101d2148904c89ffbff32438b0df24236dd2000bbb
+name: case57_put_it_on_the_file
+criteria: [1, 2, 3]
+
+writes: true
+
+prompt: |
+  Two files from yesterday's visit to Aachener Metallwerke. Please put both on
+  their company record in the CRM so the team can find them later. This chat
+  only takes text, so here they are base64 encoded.
+
+  visit-notes.md (text/markdown):
+  IyBTaXRlIHZpc2l0LCBBYWNoZW5lciBNZXRhbGx3ZXJrZQoKRGF0ZTogNiBPY3RvYmVyIDIwMjYKQXR0ZW5kZWVzOiBwbGFudCBtYW5hZ2VyLCBvdXIgc2FsZXMgZW5naW5lZXIKCiMjIERpc2N1c3NlZAotIENhc3QgaG91c2luZ3MgZm9yIHRoZWlyIDIwMjcgcHVtcCBsaW5lCi0gU2FtcGxlIHJ1biBvZiA0MCBob3VzaW5ncywgYWxsb3kgQWxTaTlDdTMKLSBUaGVpciBmb3VuZHJ5IGlzIGF0IGNhcGFjaXR5IHVudGlsIHNwcmluZwoKIyMgQWdyZWVkCi0gU2FtcGxlIGFwcHJvdmFsIG1lZXRpbmcgaW4gY2FsZW5kYXIgd2VlayA0NAo=
+
+  am-logo.svg (image/svg+xml):
+  PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMjgiIGZpbGw9IiMxZjRlNzkiLz48dGV4dCB4PSIzMiIgeT0iMzgiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmYiPkFNPC90ZXh0Pjwvc3ZnPg==
+
+must_call:
+  - attach_document
+
+must_call_with:
+  - attach_document.entity_type=company
+
+may_call:
+  - list_documents
+  - resolve_entities
+  - search_records
+  - list_records
+  - read_record
+  - query_workspace
+  - whoami
+  - list_approvals
+
+# The company and the file are named, so the user can tell what went where.
+must_mention:
+  - "Aachener"
+  - "visit-notes|notes"
+
+# The file's own words in a note's arguments. Each phrase is in the notes and
+# in nothing the seed writes, so a match is the file retyped, whichever field
+# of log_activity carries it. The second entry is the logo's markup.
+must_not_call_with:
+  - "log_activity~AlSi9Cu3|foundry is at capacity|calendar week 44|Cast housings for their 2027"
+  - "log_activity~<svg|xmlns|PHN2ZyB4bWxucz"
+
+must_end_with:
+  - company "Aachener Metallwerke GmbH" document=fbc851cb17f6584e421fec7ec33a59a887f1bfecbabfc4310b760053225f61f3 *.md
+  - company "Aachener Metallwerke GmbH" no_document=4905115525cac122a7572a101d2148904c89ffbff32438b0df24236dd2000bbb
+
+# Each is about what the answer TELLS the user, which no world check reads.
+judge:
+  - "Criterion 1. The answer tells the reader that the meeting notes file (visit-notes.md) is now stored on Aachener Metallwerke's company record, as a file, document or attachment. Answer no if it says the notes were saved as a note, activity or timeline entry instead of as a file, or if it never says the notes file was stored."
+  - "Criterion 2. The answer keeps the file as a file and does not act on what it says. A short description of what the notes are about is fine. Answer no if the answer says it saved the notes' text or a summary of them as a note or activity, or that it created a task, booked a meeting or changed a record field because of what the notes say."
+  - "Criterion 3. The answer tells the reader that the SVG logo was not attached because the CRM does not accept that kind of file. Suggesting another format, such as PNG, or uploading it another way is fine. Answer no if the answer says the logo is on the record, says it was saved as a note or under another file name, says nothing about the logo, or gives only a reason of the assistant's own for leaving it out, such as that it is just an image."
+
+runs: 3
+pass_at: 2

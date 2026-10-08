@@ -751,6 +751,19 @@ judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!fo
 judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
 
+# CASE 57 — a file handed over is kept as a file. The note that retypes it is
+# caught in the call's arguments, since the answer never shows it; the other
+# three are what the answer tells the user about the notes and the refused logo.
+c57="case57-put-it-on-the-file.yaml"
+c57_filed="the judge says NO to: Criterion 1."
+c57_acted="the judge says NO to: Criterion 2."
+c57_logo="the judge says NO to: Criterion 3."
+judges "$c57" case57 files-the-notes-and-reports-the-logo 0 "!the judge says NO" "!forbids"
+judges "$c57" case57 pastes-the-notes-as-a-note 1 "called log_activity carrying" "$c57_filed" "$c57_acted" "$c57_logo"
+judges "$c57" case57 acts-on-the-notes 1 "$c57_acted" "!$c57_filed" "!$c57_logo"
+judges "$c57" case57 claims-the-logo-is-on-file 1 "$c57_logo" "!$c57_filed"
+judges "$c57" case57 silent-on-the-logo 1 "$c57_logo" "!$c57_filed"
+
 # AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
 # ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
 # subject.
