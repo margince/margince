@@ -22,7 +22,7 @@ func TestTheProjectDoorsAdmitAnAuthorOnlyFromTheImporter(t *testing.T) {
 	hubspot := "mirror:hubspot"
 	body := func(sourceSystem *string) crmcontracts.CreateProjectRequest {
 		return crmcontracts.CreateProjectRequest{
-			Name: "Imported", SourceSystem: sourceSystem, SourceAuthorName: &name,
+			Name: "Imported", Source: "manual", SourceSystem: sourceSystem, SourceAuthorName: &name,
 			CompanyId: openapi_types.UUID(ids.NewV7()),
 		}
 	}

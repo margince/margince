@@ -61,8 +61,7 @@ app
 appear
 appearance
 applicable
-applied
-applies
+apply
 approval
 approve
 april
@@ -110,7 +109,7 @@ background
 backup
 badge
 ban
-bands
+band
 bar
 base
 basis
@@ -136,7 +135,7 @@ board
 body
 book
 bookable
-bookings
+booking
 bookkeeping
 bookmark
 bot
@@ -190,7 +189,7 @@ certify
 champion
 change
 channel
-character
+characters
 chart
 chase
 chat
@@ -447,7 +446,7 @@ final
 finance
 financial
 find
-findings
+finding
 finish
 fire
 first
@@ -494,7 +493,7 @@ gone
 governance
 grant
 graph
-greet
+greeting
 grey
 gross
 group
@@ -515,7 +514,7 @@ has
 have
 head
 header's
-headings
+heading
 health
 healthy
 held
@@ -535,7 +534,6 @@ how
 human
 i
 idea
-ids
 if
 ignore
 image
@@ -736,8 +734,8 @@ observation
 of
 off
 offboard
+offer
 offer's
-offered
 office
 offline
 often
@@ -906,7 +904,7 @@ reaction
 reactivate
 read
 reader's
-readings
+reading
 ready
 real
 reason
@@ -948,9 +946,7 @@ reorder
 rep
 repeat
 replace
-replied
-replies
-replying
+reply
 report
 request
 require
@@ -1031,7 +1027,7 @@ serve
 service
 session
 set
-settings
+setting
 settle
 setup
 several
@@ -1158,7 +1154,7 @@ then
 there
 these
 they
-things
+thing
 this
 those
 thread

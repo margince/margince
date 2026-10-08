@@ -2919,6 +2919,10 @@ func (stubs) CreateFormerMember(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "CreateFormerMember")
 }
 
+func (stubs) NameSeats(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.NameSeatsParams) {
+	httperr.NotImplemented(w, r, "NameSeats")
+}
+
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetUserAccess")
 }

@@ -1,69 +1,63 @@
+<!-- prose:plain -->
 # The record is the code
 
-**Code, tests, migrations and `backend/api/crm.yaml` define what this product
-does.** A document describing them goes stale silently. A test goes stale
-loudly, *if* it still exercises the obligation it was written for; see
-[derive the obligation](derive-the-obligation.md#writing-a-gate-that-holds)
-for the ways a green one can prove nothing.
+**The code, tests, migrations and `backend/api/crm.yaml` decide.** They say what this product does. A document about
+them goes out of date, and nothing tells you. A test that goes out of date fails, so you see it,
+*if* it still checks the obligation it is there to check. See
+[derive the obligation](derive-the-obligation.md#writing-a-gate-that-holds) for the ways a green
+test can prove nothing.
 
-This is the principle behind the precedence order in `AGENTS.md`, and the reason
-that order puts the running software above every prose artefact except the
-current request and the guardrails.
+This principle is behind the order in `AGENTS.md` that decides a question. It is also the reason
+that order puts the running software above every page of text but the current request and the
+guardrails.
 
 ## Why the order is that order
 
-1. **The explicit current request**: what someone is asking to change.
+1. **The current request, as someone states it**: what someone is asking to change.
 2. **Code, tests, migrations, the contract**: what the product does *today*.
    These are the record itself.
-3. **Guardrails**: security, privacy, agent authority, auditability, contract
-   compatibility, licensing, durability. Enforced by tests wherever possible,
-   *and the test is the thing to read*: it states the obligation in a form that
-   fails when the obligation stops holding.
-4. **[docs/](../)**: how the product is built and operated.
-5. **Retired material**: history. It never blocks work on its own.
+3. **Guardrails**: security, privacy, what an agent may do, audit, a public contract that does not
+   break, licensing, data that lasts. Tests hold them where they can, *and the test is the thing to
+   read*. It states the obligation in a form that fails when the obligation stops holding.
+4. **[docs/](../)**: how the product is built and run.
+5. **Old pages kept only as history.** They never block work on their own.
 
-The step that matters most is 2 above 4. A doc that disagrees with a green test
-is wrong about the product, and the fix is to change the doc rather than argue
-from it.
+The step that counts most is 2 above 4. A doc that disagrees with a green test is wrong about the
+product. The fix is to change the doc, not to point to it as proof.
 
-## The method
+## How to use it
 
-**When two sources disagree, run the code.** Execute the test, read the
-migration, open the contract, instead of deciding which source sounds more
-authoritative. One of them is the record.
+**When two sources disagree, run the code.** Run the test, read the migration, open the contract.
+Do not trust one source over the other by how it reads. One of them is the record.
 
-**A behaviour change lands in the record first**: a migration
-and a test, then the doc that describes them. Do not land a doc-only change that
-claims new behaviour.
+**A behaviour change goes into the record first**: a migration and a test, then the
+doc about them. Do not merge a change to only docs that claims the product does something new.
 
-**Findings route by durability**, and this is the rule that keeps the record
-readable:
+**Each finding goes where it lasts long enough.** This is the rule that keeps the
+record something a reader can use:
 
-| The thing you found | Where it goes |
+| What you find | Where it goes |
 |---|---|
-| An implementation decision you made | the commit and the PR — git history is the record |
-| A decision that binds future work | raised with the team, where the reasoning is kept |
-| Something found but not fixed here | a GitHub issue in this repo, labelled on all three axes, **unless it is an exploitable weakness**, which goes to a private Security Advisory and never a public issue ([nothing here is private](nothing-here-is-private.md)) |
-| Open work / the session pickup point | GitHub issues, labelled per [issue-labels.md](../reference/issue-labels.md) |
+| A decision about how you built something | the commit and the PR: git history is the record |
+| A decision that later work must follow | for the team to decide, where the reasons are kept |
+| Something you find and do not fix here | a GitHub issue in this repository, with all three kinds of label, **unless an attacker can use it**. That goes to a private Security Advisory and never to a public issue ([nothing here is private](nothing-here-is-private.md)) |
+| Open work, or where the next session starts | GitHub issues, labelled as [issue-labels.md](../reference/issue-labels.md) says |
 
-**No build-process residue in comments.** No review-ticket numbers, no fix
-narration, no "changed in response to". State the invariant so it stands alone.
-The story of how the code got this way is in git; a comment retelling it is a
-second copy that cannot be queried and will not be updated. Same for test
-names.
+**No notes about the build work in comments.** No review issue numbers, no story of the fix, no
+"changed in answer to". State the invariant so it stands on its own. The story of how the code reached
+this shape is in git. A comment that tells it a second time is a second copy that no one can query
+and no one will keep up to date. The same goes for test names.
 
-**Never rationalize a known gap in a comment.** Restructure it away or gate it
-with a test. A comment explaining why something is broken leaves it broken.
+**Never excuse a known gap in a comment.** Change the code so the
+gap is not there, or hold it with a test. A comment that says why something is wrong leaves it wrong.
 
 ## What this does not ask for
 
-- **Not "documentation does not matter".** `docs/` is step 4 of the order. It
-  explains how the product is built and operated, and that is work the code
-  cannot do.
-- **Not refusing change because an older document disagrees.** Name the
-  conflict, say what it costs, and keep building. If the change touches a
-  guardrail, say so in the PR so the decision behind it is updated with the
-  code.
-- **Not "tests are documentation".** A test states one obligation precisely. It
-  does not orient a newcomer, and pretending it does is how a tree becomes
-  unreadable to everyone who did not write it.
+- **Not "documentation has no value".** `docs/` is step 4 of the order. It explains how the
+  product is built and run, and that is work the code cannot do.
+- **Not refusing change over an older document.** Name the conflict, say what it
+  costs, and keep building. If the change touches a guardrail, say so in the PR, so the decision
+  behind it changes with the code.
+- **Not "tests are documentation".** A test states one obligation, and only that one. It does not
+  guide a new reader. To use tests as the guide is how a tree becomes something only its writers can
+  read.

@@ -9745,7 +9745,9 @@ export interface paths {
          *     write with no customer-facing meaning — a maintenance sweep, a projection
          *     refresh — is not Magic, and folding it in would turn internal churn into apparent
          *     value. Counting it instead means the preview can never imply completeness it does
-         *     not have.
+         *     not have. Its `unknown_entity_type` entry counts workspace-wide machine actions this
+         *     build cannot place and is reported only to a seat holding `ai_diagnostics` read; its
+         *     absence for any other seat is not a zero.
          *
          *     Bounded by `limit`, over a deterministic `occurred_at, id` order, and bounded
          *     again by how far back it will look: a receipt answers "since you last looked",
@@ -13667,6 +13669,42 @@ export interface paths {
          *     invitation a subscriber is expected to deliver, and nothing was invited here.
          */
         post: operations["createFormerMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Name the colleagues behind a set of ids. Read-only.
+         * @description The display names behind ids the caller already holds — a record's owner, an activity's
+         *     author, an assignee on a card. Any authenticated member may ask, for the reason the
+         *     roster itself is readable by any member: a seat is not a record, `app_user` carries no
+         *     owner and no capture privacy, so a row-scope clause here would invent a rule this table
+         *     has never had.
+         *
+         *     It answers every NON-ARCHIVED seat — active, invited and deactivated alike. A record
+         *     outlives the colleague who owned it, and `POST /users/former` exists to create
+         *     deactivated seats precisely so imported history can name its author; archiving is the
+         *     act that withdraws a seat from the reads that name a timeline row, so an archived seat
+         *     is absent here.
+         *
+         *     An id this answer omits is not an error: it is archived, or this installation never held
+         *     it, and the caller renders the id it already has.
+         *
+         *     Not a page. There is no cursor, no `q` and no limit — the caller names what it wants and
+         *     gets at most that. Naming more than 100 colleagues in one request is `422`.
+         */
+        get: operations["nameSeats"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -33156,6 +33194,15 @@ export interface components {
             /** Format: date-time */
             archived_at?: string | null;
         };
+        /** @description A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them. */
+        SeatName: {
+            /** Format: uuid */
+            id: string;
+            display_name: string;
+        };
+        SeatNameListResponse: {
+            data: components["schemas"]["SeatName"][];
+        };
         /** @description A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into. */
         FormerMemberRequest: {
             /**
@@ -39583,6 +39630,46 @@ export interface components {
             meetings_coverage: components["schemas"]["ReportingCoverage"];
             /** Format: int64 */
             won_minor?: number;
+            figure_coverage?: components["schemas"]["WeeklyFigureCoverageSet"];
+        };
+        /**
+         * @description Whether each figure family on the review was measured over the week, by the source
+         *     that feeds it. Absent on a review frozen before figures carried their coverage; such a
+         *     review states no coverage either way. A family missing here has no coverage statement.
+         */
+        WeeklyFigureCoverageSet: {
+            /** @description Covers the deals won, lost and moved. */
+            deals?: components["schemas"]["WeeklyFigureCoverage"];
+            /** @description Covers the tasks completed, due and carried. */
+            tasks?: components["schemas"]["WeeklyFigureCoverage"];
+            meetings?: components["schemas"]["WeeklyFigureCoverage"];
+            leads?: components["schemas"]["WeeklyFigureCoverage"];
+            commitments?: components["schemas"]["WeeklyFigureCoverage"];
+        };
+        /**
+         * @description Whether one figure family's source held records for the review's owner scope across
+         *     the week, so a zero can be told from an unmeasured week.
+         *
+         *     `recorded` — the source held usable records in scope before the week began.
+         *     `partial` — the source's first usable record in scope falls inside the week, so the
+         *     figure counts only from `recorded_since`. `not_recorded` — the week ended before the
+         *     source's first record in scope, or the scope holds no record of that source at all.
+         *
+         *     A client renders a `not_recorded` figure as unrecorded, never as 0: the zero beside it
+         *     is the absence of a source, not a measurement.
+         */
+        WeeklyFigureCoverage: {
+            /** @enum {string} */
+            status: "recorded" | "partial" | "not_recorded";
+            /**
+             * Format: date-time
+             * @description The earliest usable record of this source in the review's owner scope, counting
+             *     manually entered and imported records. Not the date a capture connection was made:
+             *     a record keyed in by hand before any connection existed is still a record.
+             */
+            recorded_since?: string;
+            /** @description Why the figure carries this status, in words a reader can be shown. */
+            reason?: string;
         };
         /**
          * @description One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
@@ -40855,6 +40942,37 @@ export interface components {
              */
             bands?: components["schemas"]["WorklistBand"][];
             plan_coverage?: components["schemas"]["WorklistPlanCoverage"];
+            /**
+             * @description Whether the reader's own calendar feeds the meetings this read counts. Present only
+             *     for scope `mine`; a wider scope has no single calendar to answer for.
+             *
+             *     `not_connected` — the reader has no live calendar connection: none was made, or every
+             *     one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+             *     reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+             *
+             *     A zero `meetings` count is a measurement only when this is `connected`. Under either
+             *     other answer it says nothing about the day, and a client must not draw it as "no
+             *     meetings".
+             *
+             *     Absent under scope `mine` when the read could not answer. A read that failed is
+             *     named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
+             *     reader is refused is absent and named nowhere.
+             * @enum {string}
+             */
+            calendar?: "connected" | "not_connected" | "unreadable";
+            /**
+             * @description The reader's next booked customer meeting — linked to a contact, lead or company the
+             *     reader may see — within the next 30 days. Present only when the meetings lane
+             *     answered and holds no meeting left today, so an empty day still says when the next
+             *     conversation is. Any meeting left today, internal meetings included, means the day
+             *     is not empty, so this is absent. Absent too when the lane did not answer, when
+             *     nothing is booked in the window, or when its read failed. `participants` names only
+             *     contacts the reader may see.
+             *
+             *     A read that failed is named in `sources_unavailable` as source `next_meeting`,
+             *     category `meetings`; a read the reader is refused is absent and named nowhere.
+             */
+            next_meeting?: components["schemas"]["Contact360NextMeeting"];
         };
         /**
          * @description Whose weekly plans this read looked at, present only when `scope` is `team` and the
@@ -42062,6 +42180,10 @@ export interface components {
              *     A machine write with no customer-facing meaning is not Magic, and folding it
              *     in would turn internal churn into apparent value. Reporting the count instead
              *     means a preview showing five lines can never imply it is showing everything.
+             *
+             *     The `unknown_entity_type` entry counts workspace-wide machine actions this build
+             *     cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
+             *     absence for any other seat is not a zero.
              */
             not_shown: components["schemas"]["MagicNotShown"][];
             /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
@@ -42089,7 +42211,9 @@ export interface components {
              *     meaning: a maintenance sweep, a projection refresh.
              *     `unknown_entity_type` — an entity kind this build cannot scope, and therefore
              *     cannot safely show. Counted rather than served: showing a row this read cannot
-             *     place is showing a row it cannot prove the reader may see.
+             *     place is showing a row it cannot prove the reader may see. The count is
+             *     workspace-wide machine actions, not the reader's own, and is reported only to a
+             *     seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
              *     `out_of_scope` — a row about a record outside the reader's own scope. Counted
              *     so the total is honest, and never named.
              * @enum {string}
@@ -63347,8 +63471,10 @@ export interface operations {
                 /** @description Admin management view — include deactivated/suspended members. Honored only for an admin caller. */
                 include_inactive?: boolean;
                 /**
-                 * @description Also list invited seats — members who have not signed in yet. For NAMING the colleagues records
-                 *     already point at (an imported record's owner is often an invited colleague); any member may ask.
+                 * @deprecated
+                 * @description Also list invited seats — members who have not signed in yet. Naming the colleagues a record
+                 *     already points at is `GET /users/names`, which answers id and display name alone; a roster row
+                 *     carries the member's email and seat status with it.
                  *     Pickers leave it off, so nobody is offered work they cannot open.
                  */
                 include_invited?: boolean;
@@ -63549,6 +63675,32 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    nameSeats: {
+        parameters: {
+            query: {
+                /** @description The seats to name. Repeat the parameter for several, up to 100; more is `422`. */
+                id: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The names, for the ids that resolved to one. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeatNameListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     changeUserRole: {

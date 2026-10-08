@@ -48,10 +48,11 @@ import {
 import {
   EntityRef,
   RosterPartialNote,
-  rosterMissLabel,
+  rosterOwnerName,
   useRoster,
   useRosterPartial,
 } from "./entityref";
+import { useMemberName } from "./membernames";
 import { useLinkedCase } from "./privacy.caselink";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
@@ -535,38 +536,36 @@ function assigneeOptions(
   ];
 }
 
-/**
- * The request's own assignee as an option, when they are nobody the picker
- * offers — and null when they are, or when nobody holds it.
- *
- * `members` is the whole roster read and `offered` the filtered list: an agent
- * seat is in the first and never the second, so it can be named by its own name
- * while still not being offered. An id in neither is one the roster could not
- * name at all, and `rosterMissLabel` decides what that is honest to say.
- */
-function unofferedAssignee({
-  assigneeId,
-  offered,
-  members,
-  roster,
-  partial,
-  t,
-}: Readonly<{
-  assigneeId: string | null | undefined;
-  offered: readonly User[];
-  members: readonly User[];
-  roster: Readonly<{ isPending: boolean; isError: boolean }>;
-  partial: boolean;
-  t: ReturnType<typeof useT>;
-}>): SelectOption | null {
-  if (!assigneeId || offered.some((member) => member.id === assigneeId)) {
+// Whether the assignee is nobody the picker offers, asked only while the row
+// is open; the option built from this same fact is only rendered then too.
+function isUnoffered(
+  expanded: boolean,
+  assigneeId: string | null | undefined,
+  offered: readonly User[],
+): boolean {
+  return (
+    expanded &&
+    Boolean(assigneeId) &&
+    !offered.some((member) => member.id === assigneeId)
+  );
+}
+
+// The request's own assignee as an option, when `unoffered` says they are
+// nobody the picker offers, null otherwise. Named by id: an agent seat is
+// never offered (the is_agent filter above) but still has a name, and so
+// does a departed or deactivated holder.
+function unofferedAssignee(
+  assigneeId: string | null | undefined,
+  unoffered: boolean,
+  name: ReturnType<typeof useMemberName>,
+  t: ReturnType<typeof useT>,
+): SelectOption | null {
+  if (!assigneeId || !unoffered) {
     return null;
   }
   return {
     value: assigneeId,
-    label:
-      members.find((member) => member.id === assigneeId)?.display_name ??
-      rosterMissLabel(roster, partial, t, t("ref.notInRoster")),
+    label: rosterOwnerName(assigneeId, name, t, t("ref.notInRoster")),
     // Disabled for the same reason the unassigned entry is: re-choosing the
     // holder this request already has changes nothing, and an entry a reader can
     // aim at has to be able to change something.
@@ -670,14 +669,14 @@ function DsrRow({
   // human admission can), so the picker never offers one — same is_agent
   // filter as the share subject picker.
   const assignableUsers = members.filter((member) => !member.is_agent);
-  const currentAssignee = unofferedAssignee({
-    assigneeId: dsr.assignee_id,
-    offered: assignableUsers,
-    members,
-    roster,
-    partial: rosterPartial,
+  const unoffered = isUnoffered(expanded, dsr.assignee_id, assignableUsers);
+  const assigneeName = useMemberName(unoffered ? dsr.assignee_id : null);
+  const currentAssignee = unofferedAssignee(
+    dsr.assignee_id,
+    unoffered,
+    assigneeName,
     t,
-  });
+  );
 
   const patch = useMutation({
     mutationFn: async (body: UpdateDataSubjectRequest) => {

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // LeadReader is the caller's own read of the lead. Gated inside the store
@@ -93,14 +94,15 @@ func (s *Service) WithVoice(reader draftvoice.Reader, log *slog.Logger) *Service
 	return s
 }
 
-// Draft writes one email. It performs no write of any kind.
+// Draft writes one email, and names the records it was written from so a
+// caller that keeps it can re-prove them. It performs no write of any kind.
 func (s *Service) Draft(
 	ctx context.Context, leadID ids.LeadID, req Request,
-) (crmcontracts.CompanyEmailDraft, error) {
+) (crmcontracts.CompanyEmailDraft, []datasource.EntityRef, error) {
 	// A human, or an agent holding draft: draft_email reaches this engine too
 	// (agentdraftseam.go), so one contact gets one draft whoever asks.
 	if err := auth.RequireHumanOrAgentScope(ctx, principal.ScopeDraft); err != nil {
-		return crmcontracts.CompanyEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	// The gate that matters runs HERE, in the caller's own read: a lead they
 	// cannot see refuses before a word is written.
@@ -111,22 +113,26 @@ func (s *Service) Draft(
 	// correspondence belongs to the contact it became.
 	lead, err := s.leads.GetLead(ctx, leadID, storekit.LiveOnly)
 	if err != nil {
-		return crmcontracts.CompanyEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	// A draft addressed to nobody is not a message. Refused before the model
 	// call rather than after it, so a lead with no address costs nothing.
 	if lead.Email == nil || string(*lead.Email) == "" {
-		return crmcontracts.CompanyEmailDraft{}, httperr.Validation("email", "missing",
+		return crmcontracts.CompanyEmailDraft{}, nil, httperr.Validation("email", "missing",
 			"this lead has no email address on record, so there is nobody to write to")
 	}
 	activities, err := s.acts.ForLead(ctx, leadID)
 	if err != nil {
-		return crmcontracts.CompanyEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	envelope := s.envelope.Resolve(ctx,
 		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities), Purpose: req.Intent},
 		ConversationState(activities, s.envelope.Now()))
 	in := FromLead(lead, activities, req.Intent, envelope)
+	grounding, err := in.Grounding(datasource.EntityLead)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
 	// Loaded after the lead read, so a caller who may not see this lead is
 	// refused before their voice profile is touched at all.
 	voice := draftvoice.Load(ctx, s.voice, s.log)
@@ -135,7 +141,7 @@ func (s *Service) Draft(
 	// wipes the lead destroy the captured payload holding those words.
 	draft, by, err := contactdraft.Write(ai.WithSubject(ctx, leadID.Ref(), ""), s.lane, in, voice)
 	if err != nil {
-		return crmcontracts.CompanyEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
-	return contactdraft.Wire(draft, by, voice.Degraded, envelope.Language), nil
+	return contactdraft.Wire(draft, by, voice.Degraded, envelope.Language), grounding, nil
 }

@@ -139,6 +139,8 @@ const DEFAULTS: Routes = {
   // the fallback is exactly what nothing could see before.
   "GET /users": () => jsonResponse(emptyPage),
   "GET /agent-tools": () => jsonResponse(emptyPage),
+  // A row names its owner by id; naming nobody leaves the id as the label.
+  "GET /users/names": () => jsonResponse({ data: [] }),
 };
 
 /**

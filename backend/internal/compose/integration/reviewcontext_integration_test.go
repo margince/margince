@@ -42,6 +42,7 @@ func aColdContact(t *testing.T, c *consentEnv, address string) coldContact {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Cold Contact",
 		"emails":    []AnyMap{{"email": address}},
 	}, nil, &contact); status != http.StatusCreated {

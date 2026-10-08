@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 294 |
-| Columns | 3503 |
+| Columns | 3504 |
 | Foreign keys | 476 |
 | Owning areas | 36 |
 
@@ -311,7 +311,7 @@ erDiagram
 | [`list_member_event`](collections.md#list_member_event) | collections | 11 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
 | [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
-| [`mail_draft`](activities.md#mail_draft) | activities | 14 | 0 |
+| [`mail_draft`](activities.md#mail_draft) | activities | 15 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_invitation`](activities.md#meeting_invitation) | activities | 19 | 1 |
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |

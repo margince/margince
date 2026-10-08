@@ -3,6 +3,11 @@
 
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import {
+  figureValue,
+  type WeeklyFigure,
+  type WeeklyFigures,
+} from "./brief.numeric";
 import type { WeeklyReview } from "./brief.queries";
 
 import "./brief.weekly.css";
@@ -28,26 +33,32 @@ import "./brief.weekly.css";
  */
 export function WeeklyWorkings({
   counts,
-}: Readonly<{ counts: WeeklyReview["counts"] }>) {
+  figures,
+}: Readonly<{ counts: WeeklyReview["counts"]; figures: WeeklyFigures }>) {
   const t = useT();
   const { locale } = useLocale();
   const n = (value: number) => formatNumber(value, locale);
+  const of = (figure: WeeklyFigure, value: string) =>
+    figureValue(figures[figure], value, t);
   return (
     <dl className="brief-weekly-workings">
       <Working
         label={t("brief.weekly.tasksDelivered")}
-        value={t("brief.weekly.ofDue", {
-          done: n(counts.tasks_done),
-          due: n(counts.tasks_due),
-        })}
+        value={of(
+          "tasks",
+          t("brief.weekly.ofDue", {
+            done: n(counts.tasks_done),
+            due: n(counts.tasks_due),
+          }),
+        )}
       />
       <Working
         label={t("brief.weekly.dealsMoved")}
-        value={n(counts.deals_moved)}
+        value={of("moved", n(counts.deals_moved))}
       />
       <Working
         label={t("brief.weekly.dealsLost")}
-        value={n(counts.deals_lost)}
+        value={of("lost", n(counts.deals_lost))}
       />
       <Working
         label={t("brief.weekly.decided")}

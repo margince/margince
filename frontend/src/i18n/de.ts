@@ -618,6 +618,15 @@ export const de = {
   "brief.weekly.noCommitments": "Keine fällig",
   "brief.weekly.basis":
     "Erfasste CRM-Arbeit dieser abgeschlossenen Woche. Fehlende Datensätze belegen keine Inaktivität.",
+  "brief.weekly.notRecorded": "Nicht erfasst",
+  "brief.weekly.recordedFrom": "Erfasst ab {date}",
+  "brief.weekly.noRecords": "Keine Datensätze aus dieser Quelle",
+  "brief.weekly.partialFrom": "Teilwoche: gezählt ab {date}",
+  "brief.weekly.partialValue": "{value} (teilweise)",
+  "brief.week.beforeHistory":
+    "Diese Woche liegt vor den ersten Datensätzen und hat daher keine Zahlen.",
+  "teamweekly.headline.notRecorded":
+    "Einige Zahlen wurden für diese Woche nicht erfasst und fehlen hier.",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.undated": "Kein Datum",
   "home.receipt.confidence": "Forecast-Konfidenz aktualisiert",
@@ -649,6 +658,13 @@ export const de = {
   "brief.schedule.unavailable": "Der Kalender wurde nicht geladen.",
   "brief.schedule.more":
     "Lade weitere Agenda-Einträge, um die übrigen Termine zu sehen.",
+  "brief.schedule.notConnected":
+    "Kein Kalender ist verbunden, deshalb fehlen die heutigen Termine.",
+  "brief.schedule.unreadable":
+    "Dein Kalender synchronisiert nicht, deshalb fehlen die heutigen Termine.",
+  "brief.schedule.connect": "Kalender verbinden",
+  "brief.schedule.reconnect": "Kalender neu verbinden",
+  "brief.schedule.nextAt": "Nächster Termin um {time}",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
   "brief.readings.unpricedCount_one": "1 Deal ohne Preis · nicht enthalten",
   "brief.readings.unpricedCount_other":
@@ -667,6 +683,8 @@ export const de = {
   "brief.coverage.source.relationship_decay": "Ruhende Beziehungen",
   "brief.coverage.source.meeting_outcome": "Termin-Nachbereitung",
   "brief.coverage.source.meeting": "Anstehende Termine",
+  "brief.coverage.source.calendar": "Kalenderverbindung",
+  "brief.coverage.source.next_meeting": "Nächster Termin",
   "brief.coverage.source.deal_at_risk": "Markierte Deals",
   "brief.coverage.source.lead_response": "Zugewiesene Leads",
   "brief.coverage.source.customer_waiting": "Unbeantwortete Nachrichten",
@@ -3939,6 +3957,14 @@ export const de = {
   "brief.readings.needsPrep_other": "{count} brauchen Vorbereitung",
   "brief.readings.prepUnknown": "Vorbereitung nicht geprüft",
   "brief.readings.prepared": "Alle vorbereitet",
+  "brief.readings.calendarNotConnected": "Nicht verbunden",
+  "brief.readings.calendarNotConnectedWhy":
+    "Verbinde deinen Kalender, um Termine zu zählen.",
+  "brief.readings.calendarUnreadable": "Synchronisiert nicht",
+  "brief.readings.calendarUnreadableWhy":
+    "Verbinde deinen Kalender neu, um Termine zu zählen.",
+  "brief.readings.nextMeeting": "Nächster Termin: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Nächster Termin: {date}",
   "brief.readings.leads": "Akquise",
   "brief.readings.leadsBasis": "Geplante Aufgaben für Leads",
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",

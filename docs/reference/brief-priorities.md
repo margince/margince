@@ -1,197 +1,272 @@
+<!-- prose:plain -->
 # Home: morning and weekly priorities
 
 The personal morning brief has four parts:
 
-- **Focus**: up to six server-selected cards, including actionable proposals and commitments due today. They lead the page, supporting readings follow them, and the headline names the same cards.
-- **Updates**: informational notices. Pinned notices keep their chosen position.
-- **Context**: task evidence opens in the shared task dialog, and contact context opens in a separate drawer, so the overview stays in place.
-- **Full queue**: opens on demand in Home and owns filtering and pagination. Future tasks and routine privacy work stay there with their deadlines and actions.
+- **Focus**: up to 6 cards the server picks, with proposals a user can act on and promises due today. They come first on the page, the reading cards that back them up come after, and the headline names the same cards.
+- **Updates**: notices that only tell. A pinned notice keeps the place its user gave it.
+- **Context**: task evidence opens in the shared task dialog, and contact details open in a separate drawer, so the page stays in place.
+- **Full queue**: opens when asked for in Home, and does its own filters and pages. Future tasks and normal privacy work stay there with their deadlines and actions.
 
-Brief creation time comes from the stored run; agenda refresh time comes from the live queue.
+The brief time comes from the stored run; the agenda time comes from the live queue.
 
-The team morning is a named-team board with routes to each member’s work and current plan. Morning and Weekly retain the same team selection in the URL. The board roster is resolved through live membership and reader authority; workspace-wide unassigned work is not attributed to a named team.
+The team morning is a board for a named team, with routes to the work and current plan of each
+member. Morning and Weekly keep the same team pick in the URL. Who is on the team now, and the rights
+of the reader, decide who is on the board. Work across the workspace that nobody holds does not count
+for a named team.
 
 ## What leads the day
 
-Fresh waiting customers and approaching response deadlines retain precedence. Waiting threads older than fourteen days are recovery work: linked open deals retain material-risk priority, other old threads become routine. Privacy obligations enter the preparation window seven days before the actual deadline; the legal deadline itself is unchanged. A duty recorded more than a day after its own deadline (what an imported history produces) is a backlog to review rather than today's breach. It ranks as routine with the reason "recorded after its deadline" and never takes a Focus card. A duty that fell due while recorded stays urgent however old it is. A sent notice leaves the Worklist; it stays owed until delivered, and a bounce brings it back. Overdue or due-today tasks outside generic lead prospecting are urgent obligations. Deal recovery enters the urgent-work band when the deal is material relative to the priced risk population, or when its expected close is overdue or within fourteen days.
+New customers who wait, and response deadlines that come near, keep the first place. A thread that
+has waited more than 14 days is recovery work. If it links to an open deal, it keeps the priority of
+a deal at real risk; other old threads become normal work.
 
-Existing customer work precedes routine prospecting. Actual response deadlines and urgent obligations still lead both. Within each band, deadlines, value and the remaining server tie-breaks decide the order. Clients preserve that order.
+A privacy duty enters the time to prepare 7 days before the real deadline; the legal deadline
+itself does not change. Some duties are recorded more than a day after their own deadline, which is
+what an imported history makes. Such a duty is old work to review, not a missed deadline today. It
+ranks as normal work with the reason "recorded after its deadline", and never takes a Focus card. A
+duty that turned due while it was on record stays urgent, no matter how old it is.
 
-A provisional close is a reason to confirm or revise the forecast, not evidence of a customer commitment. Cards retain the provisional flag and forecast category, including an omitted forecast. The deal-work reading reports known deal value in the selected queue with an explicit incompleteness qualification; it includes opportunities as well as recovery, and is not a risk-adjusted forecast or expected revenue.
+A sent notice
+leaves the Worklist. It stays owed until it is delivered, and a failed delivery puts it back.
 
-Only a task written by the lead SLA escalation duplicates a dated first-response row. Other lead-linked tasks keep their own identity, due date and actions. A lead without a configured response target still appears as prospecting, with company, status, administered source label and last activity where available, and no invented deadline.
+Tasks due today or past due are urgent duties, unless they are general lead search work. Deal
+recovery enters the urgent band in two cases. One is when the deal value is high next to the priced
+risk of all deals. The other is when its expected close is past due or within 14 days.
 
-Focus eligibility is evaluated before the six-card cap. The risk engine applies its overdue-close predicate before its bounded scan, and publishes truncation when a candidate source is incomplete.
+Work for current customers comes before normal lead search. Real response deadlines and urgent
+duties still lead both. Within each band, deadlines, value and then the other server rules decide
+the order. Clients keep that order.
+
+A close date Margince set for now is a reason to confirm or change the forecast. It is not
+evidence of a customer promise. Cards keep the for-now flag and the forecast group, even when there
+is no forecast. The deal work reading reports the deal value it knows in the queue a user picked.
+It says plainly that the number may not be complete. It includes opportunities and also recovery, and
+it is not a forecast that counts risk, or expected revenue.
+
+Only a task written by the lead SLA escalation copies a dated first response row. Other tasks
+linked to a lead stay separate tasks, with their own due date and actions. A lead with no response
+target set still shows as lead search work. It shows company, status, the admin source label and
+last activity where there is one, and no made-up deadline.
+
+Margince decides which cards may go in Focus before the 6-card limit. The risk engine applies its
+past-close rule before its limited scan, and says so when a source it scans is not complete.
 
 ## What the daily brief can claim
 
-Dates, reply direction, deal standing and its reason stay on the row. Details contain supporting evidence, not comparisons of raw ranking timestamps. A task never inherits a deal-level recommendation. Pinning changes personal order without changing the server’s urgent classification.
+Dates, reply direction, deal standing and its reason stay on the row. Details hold the evidence
+that backs it up, not rank times put side by side. A task never takes on advice made for its deal.
+A pin changes the personal order, and does not change how the server ranks the work as urgent.
 
-Upcoming meetings count calendar entries, excluding past meetings awaiting outcomes. Preparation is unknown unless the source explicitly establishes it. A source failure is not a zero; failed sources are named with a retry. Permission exclusions and bounded scans do not produce a generic alarm; counts retain their bounds and pagination remains explicit. Deal values exclude unpriced deals and state their count.
+Meetings to come count calendar entries, and leave out past meetings that wait for an outcome.
+Margince does not know whether a user is prepared unless the source says so. A failed source is
+not a zero; Margince names each failed source, with a retry. Permission limits and limited scans do
+not show a general error: counts keep their limits, and paging stays visible. Deal values leave
+out deals with no price, and state how many those are.
 
-Open weekly commitments with an intentional due date enter Today on that date in the installation timezone. Done uses the existing plan writer and invalidates the agenda. Undated, future and completed commitments stay out of the due lane. Creating a commitment can link an existing CRM record through the shared record picker. Team leads can read a member’s current plan and answer help requests through the existing permission-checked writer.
+An open weekly promise with a due date that a user picked enters Today on that date, in the
+timezone of the installation. Done uses the plan writer that is already there, and marks the agenda
+as old. Promises with no date, future promises and done promises stay out of the due lane. To create
+a promise, a user can link a CRM record that is already there, through the shared record picker. A
+team lead can read the current plan of a member. The lead can also answer requests for help through
+the writer that is already there, which checks permissions.
 
 ## What a weekly review can claim
 
-A team snapshot covering zero reps reports unavailable measurement and suppresses performance cards and the agenda. Partial coverage precedes the figures and suppresses a whole-team performance verdict. Historic snapshots remain frozen. The selected period drives both headline and detail. Losses and recorded SDR activity contribute to the headline; missing snapshots do not masquerade as quiet weeks. Deal outcomes and the manager conversation agenda precede expandable supporting metrics, forecasts and observations. Forecasts retain their stored period and generation date; observations do not imply causation.
+A team snapshot that covers zero reps reports that no measure is available. It hides the
+performance cards and the agenda. A snapshot that covers only some reps says so before the numbers,
+and gives no performance result for the whole team. Old snapshots never change. The time a user
+picks sets both the headline and the detail.
 
-Recorded lead responses are not presented as an SLA success rate. A missing breach stamp does not prove a response target was configured. Both weekly counters and the lead scorecard use the same arrival cohort and closing instant; a response recorded after that instant cannot improve the closed week.
+Losses and recorded SDR activity count for the headline. A missing snapshot does not pass as a
+quiet week. Deal outcomes and the agenda for the manager conversation come before the numbers,
+forecasts and notes that back them up, which a user can open. Forecasts keep the time they cover and
+the date they were made. Notes do not claim that one thing caused another.
 
-New team snapshots include deal recovery in their agenda, after requests for help, breached responses and missed commitments, and before meeting hygiene or celebration. The evidence comes from each member's frozen deal scorecard: forecast downgrades, stage regressions, unsound close dates or missing next steps. Missing scorecard coverage supplies no finding.
+Margince does not show recorded lead responses as a share of SLA passes. A missing breach mark does
+not prove someone set a response target. Both weekly counts and the lead scorecard use the same
+group of new leads and the same closing time. A response recorded after that time cannot change the
+closed week.
+
+New team snapshots include deal recovery in their agenda. It comes after requests for help, missed
+responses and missed promises, and before work on meeting notes or good news. The evidence comes
+from the deal scorecard of each member, as it was stored. That means forecasts moved down, stages
+moved back, close dates that are wrong, or missing next steps. A missing scorecard gives no finding.
 
 ## Reviewing automatic changes
 
-Changes made for you shows recorded work, its subject, reason and occurrence time.
-Close-date corrections name the old and new date when the date changed; a change
-in confidence alone is not described as a date change. Automatic stage moves use
-the progression ledger's guarded reversal; date corrections use record history's
-correction restore. Accept records a durable, audited review of that change
-and retains its applied values. It does not replay the change or turn an unconfirmed
-forecast into a customer commitment. Reversed and superseded changes cannot be
-accepted. A generic stage notification is information, not evidence that an agent
-changed the deal. New notifications retain the actual stage names at occurrence.
+Changes made for you shows recorded work, its subject, its reason and the time it happened. A
+close date fix names the old and new date when the date changed. A change in confidence alone is
+not called a date change. Automatic stage moves use the guarded undo of the stage history. Date
+fixes use the restore of the record history.
+
+Accept records a lasting, audited review of that change, and keeps the values it applied. It does
+not replay the change, or turn a forecast nobody confirmed into a customer promise. Nobody can
+accept a change after an undo, or after a newer change replaced it. A general stage notice tells; it
+is not evidence that an agent changed the deal. New notices keep the real stage names at the time.
 
 ## Focus and the work queue
 
-Morning's Focus is an additive `/worklist` projection, selected on the server
-before the queue's filter and page limit, in the existing rank order. A quiet
-day has zero cards. Pins are explicit exceptions, without changing a row's semantic urgency.
-Meeting preparation is eligible within 24 hours when preparation is missing;
-prepared meetings remain in Schedule. Privacy preparation retains its existing
-seven-day classifier window. Unpriced commercial work remains eligible.
+Morning's Focus is an added `/worklist` view. The server picks it before the filter and page limit
+of the queue, in the rank order that is already there. A quiet day has zero cards.
 
-`focus.total` counts eligible cards, with a group counting once.
-`focus.urgent_remaining` counts urgent underlying work not individually named by the cards in the
-same units as `summary.urgent`; it remains visible even without another queue
-page. Source bounds and failed or withheld reads retain their separate coverage
-meaning. Neither an exhausted page nor a complete focus projection certifies
-that every source was fully read.
+Pins are rows a
+user picked by name, and they do not change how urgent a row is. Preparing for a meeting may go in
+Focus within 24 hours when it is not done yet; prepared meetings stay in Schedule. Privacy
+preparing keeps its 7-day window. Sales work with no price may still go in Focus.
 
-Home is the daily navigation entry. Its work queue opens in a right drawer,
-with the existing scope, owner, filters, paging, actions, coaching and reviews.
-The queue has its own `queue_scope` dial so it cannot change the Morning/Weekly
-view behind it. Old `#/worklist` and owner/unassigned links redirect to the same
-Home queue state; the API contract and domain writers remain available.
-Context opens independently of the overview. Closing it restores keyboard focus to its opener. The queue keeps its own filtering and scroll state.
+`focus.total` counts the cards that may go in Focus, and a group counts once.
+`focus.urgent_remaining` counts urgent work under the cards that the cards do not name one by one.
+It counts the same way as `summary.urgent`, and it stays visible even with no other queue page.
+Source limits, failed reads and reads Margince kept back keep their own meaning for how much was
+read. Not the last page, and not a complete Focus view, proves that Margince read every source in
+full.
 
-## Attribution and commitments
+Home is where daily work starts. Its work queue opens in a drawer on the right, with the scope,
+owner, filters, paging, actions, coaching and reviews it already has. The queue has its own
+`queue_scope` dial, so it cannot change the Morning/Weekly view behind it. Old `#/worklist` links
+and owner/`unassigned` links redirect to the same Home queue state. The API contract and the domain
+writers are still available.
 
-Stage-change notifications:
+Context opens on its own, over the page. When it closes, keyboard focus goes back to the
+control that opened it. The queue keeps its own filter and scroll state.
 
-- **Actor**: a notification carries the original event actor and occurrence time through live and retry dispatch. Delivery still writes as the automation, and a recipient/event key prevents duplicate notifications.
-- **Self-changes**: stage changes the recipient made are skipped before delivery and excluded from existing unread feeds before the page limit. Deal history still records them. Unknown authorship is never treated as a self-made change.
-- **Other changes**: other human changes name the member. Machine changes stay visible even when they ran on the recipient’s behalf.
-- **Wording**: a stage update uses the deal name once, then the recorded from/to stages and who changed them.
-- **Old notices**: they recover these facts through the notice-created event’s causation link to the stage-change event. Recorded stage names take precedence; without a snapshot, only a never-edited stage configuration supplies a name. Edited configurations stay unknown, without comparing clocks. Missing history is stated plainly, and ownership is never substituted for authorship.
+## Who did what, and promises
 
-Task responsibility comes from the assigned user ID. Recognized reader-prefixed task wording is presented as “You need to …”, without rewriting the stored promise. Details retain the original wording and evidence. Similar tasks from distinct transcripts or deadlines remain separate obligations; text similarity alone cannot establish supersession.
+Stage change notices:
 
-One rule turns a promise read out of a meeting transcript or an email into work (`compose/commitmentdispatch.go`):
+- **Actor**: a notice carries the original event actor and the time it happened, through live and retry delivery. Margince still writes the delivery as the automation, and a key per recipient and event stops a second copy of a notice.
+- **Own changes**: Margince skips stage changes the recipient made. It drops them before delivery, and before the page limit in the lists of notices not yet read. Deal history still records them. Margince never reads a change by an author it does not know as one the recipient made.
+- **Other changes**: other human changes name the member. Machine changes stay visible even when they ran for the recipient.
+- **Words**: a stage update uses the deal name once, then the recorded from and to stages and who changed them.
+- **Old notices**: they get these facts back through a link from the event that created the notice to its cause, the stage change event. Recorded stage names come first. Without a snapshot, only a stage setup nobody has edited gives a name. Edited setups stay unknown, and Margince does not compare clocks. Missing history is named plainly, and Margince never puts the owner in the place of the author.
 
-- A promise the customer made is filed on their contact as something to watch. It never becomes a task. The deal page lists the open ones for its account (`GET /deals/{id}/commitments`), with the quoted words and, for a reader allowed to update contacts, a way to dismiss a wrong reading.
-- A promise a named colleague made becomes their task. Read at or above `CommitmentTaskConfidence`, it is written directly and captured by the reader (`agent:…`); below it, it is proposed to them as a `commitment_task` card and written when they accept.
-- A promise nobody can be named for is proposed to whoever the reading belongs to, and accepting it makes it theirs.
-- A promise in mail only one member may read stays with that member. Made by a colleague in it, it is proposed to the owner instead of becoming the colleague's task, and the task it becomes is visible to its holder alone.
-- In mail, only what the sender wrote counts: words they quote from earlier in the thread are not filed as theirs.
-- A task carries a due date only when the conversation stated a day. An undated promise sits in today's queue with undated request reminders.
-- A commitment and the task it became settle together (`compose/commitmentsettle.go`, consumer group `cg:commitment-settle`): ticking the task settles the commitment as kept, and settling the commitment as kept completes the task. Reopening the task leaves the commitment kept, and dismissing the commitment leaves the task alone.
-- The task is keyed on the promise's evidence (source, side, party and the words it was said in), archived tasks included. A task a rep archived, a proposal a rep refused and a customer promise a rep dismissed are not raised again when the conversation is read again.
+The user ID a task is assigned to decides who holds the task. Task text that starts with the name
+of the reader, in a form Margince knows, reads as "You need to …". The stored promise does not
+change. Details keep the original words and evidence. Tasks that look the same, from a separate
+transcript or deadline, stay separate duties. Text that looks the same cannot prove that one task
+replaces another.
 
-## Stable close dates
+One rule turns a promise read out of a meeting transcript or an email into work
+(`compose/commitmentdispatch.go`):
 
-The nightly repair replaces missing or overdue dates. It retains a valid future date, including a provisional estimate from an earlier sweep. Quietness may lower forecast confidence without moving the date. A replacement is today plus observed median stage days multiplied by remaining open stages, rounded up to whole weeks, with a minimum of seven days. Without sufficient history the fallback is fourteen days per stage. All generated replacement dates remain provisional; existing opt-outs, reversal memory and review controls still apply.
+- A promise the customer made goes on their contact as something to watch. It never becomes a task. The deal page lists the open ones for its account (`GET /deals/{id}/commitments`) with the quoted words. A reader who may update contacts gets a way to dismiss a wrong reading.
+- A promise a named colleague made becomes their task. When the confidence of the reader in the promise is at or above `CommitmentTaskConfidence`, Margince writes the task at once, captured by the reader (`agent:…`). Below that, Margince makes it a proposal to them as a `commitment_task` card, and writes it when they accept.
+- A promise nobody can be named for goes as a proposal to the member the reading belongs to, and to accept it makes it theirs.
+- A promise in mail only one member may read stays with that member. If a colleague made it in that mail, it goes as a proposal to the owner, not as a task for the colleague. The task it turns into is visible to its holder alone.
+- In mail, only what the sender wrote counts: words they quote from earlier in the thread do not count as theirs.
+- A task has a due date only when the conversation named a day. A promise with no date sits in the queue for today, with request reminders that have no date.
+- A promise and the task it turned into close together (`compose/commitmentsettle.go`, consumer group `cg:commitment-settle`). To mark the task done closes the promise as kept, and to close the promise as kept completes the task. To open the task again leaves the promise kept, and to dismiss the promise leaves the task as it is.
+- The task is keyed on the evidence of the promise (source, side, party and the words it was said in), archived tasks included. Some things never come back when Margince reads the conversation again. They are a task a rep archived, a proposal a rep refused, and a customer promise a rep dismissed.
 
-## Regional presentation and links
+## Close dates that hold
 
-Installation settings place date and time notation beside base currency. Date options are interface-language default, DD.MM.YYYY, MM/DD/YYYY and YYYY-MM-DD. Time options are interface-language default, 24-hour and 12-hour. Shared formatters apply the preference throughout the authenticated interface, including typed close-date receipts, without changing stored values or their reporting/record timezone. Native date-input editing remains governed by the browser.
+The repair that runs each night replaces missing or past dates. It keeps a good future date, even one Margince
+set for now in an earlier run. A quiet deal may lower forecast confidence without a change to the
+date. A new date is today plus the middle number of days per stage on record, times the stages still
+open. It is rounded up to whole weeks, with at least 7 days.
 
-The canonical destination is `#/home` in every language. Visible navigation is localized (Home, Startseite, Trang chủ). Older `#/brief` links preserve their query parameters while redirecting to Home. Existing Worklist links still open the queue with their owner and filters.
+Without enough history it is 14 days
+per stage. All generated dates stay for-now dates, and the opt-out settings, the record of past
+undos and the review controls still apply.
 
-## Personal relevance and email requests
+## Date formats, language and links
 
-Mine means the reader's responsibilities for managers and individual contributors alike.
-Access to a record does not assign its work. Team oversight is selected explicitly;
-team exceptions follow live team membership, and broad backlog diagnostics appear only
-under All. Manager authority does not grant access to colleagues' private correspondence.
-Capture-contact reviews belong to the importing member, including proposals already waiting.
-Disclosure cards require an openable contact and follow the assigned officer, falling back
-to the contact owner; the explicit compliance queue retains its separate officer authority.
+Installation settings put the date and time format next to the base currency. Date options are the
+default of the app language, `DD.MM.YYYY`, `MM/DD/YYYY` and `YYYY-MM-DD`. Time options are the
+default of the app language, 24-hour and 12-hour. Shared format helpers apply the setting across the
+whole signed-in app, close dates a user types included. They do not change stored values or the
+timezone for reports and records. The browser still controls how its own date input works.
 
-| Surface | Personal scope | Wider scope |
+The one true address is `#/home` in every language. The visible name changes with the language
+(Home, Startseite, Trang chủ). Older `#/brief` links keep their query string as they redirect to
+Home. Worklist links still open the queue with their owner and filters.
+
+## Personal work and email requests
+
+Mine means the work the reader holds, for managers and other members both. Access to a record does
+not assign its work. A user picks the team view by name. Team exceptions follow who is on the team
+now, and backlog checks across the workspace show only under All. Manager rights do not grant access
+to the private mail of colleagues. Reviews of captured contacts belong to the member who imported
+them, including proposals that already wait.
+
+Disclosure cards need a contact the user can open. They follow the assigned officer, and if there is
+no officer, the contact owner. The compliance queue keeps its own, separate officer rights.
+
+| Part | Personal scope | Team or all scope |
 | --- | --- | --- |
-| Focus and deal drill-down | Owned deals, assigned tasks and confirmed incoming requests | Select the queue's team or all scope explicitly |
-| Team board and exceptions | Absent | Team members and visible unassigned work, under existing grants |
-| Overnight | Own imported mail and owned projects, revalidated when read | Does not become a team feed merely because the reader manages colleagues |
-| Contact conversations | Same stored thread grouped together | Each original retains its content gate |
+| Focus and deal drill-down | Owned deals, assigned tasks and confirmed requests sent to the user | Pick the team scope or the all scope of the queue by name |
+| Team board and exceptions | Not there | Team members and visible work nobody holds, under the grants already there |
+| Overnight | Own imported mail and owned projects, checked again when read | Does not become a team view just because the reader is a manager of colleagues |
+| Contact conversations | The same stored thread, in one group | Each original keeps its content gate |
 
-Unanswered does not mean actionable. Focus requires an `asks_us` verdict and a
-`commitment` capture label. Missing, conflicting, informational or meeting-only
-classification remains reviewable without claiming urgency, even on an open deal.
-A confirmed first request needs no previous outbound message to deserve attention.
-The classifier reads the sender's new words rather than quoted earlier requests.
+Not answered does not mean a user must act. Focus needs an `asks_us` result and a `commitment`
+capture label. Missing, conflicting, only-to-tell or only-a-meeting labels stay open to review, and
+do not claim to be urgent, even on an open deal. A confirmed first request needs no earlier outbound
+message to get a look. The label step reads the new words of the sender, not earlier requests they
+quote.
 
-The hourly request pass creates one undated personal task for a confirmed unanswered
-request when a single importing seat is directly addressed. It preserves the source
-message and record links, honors the recipient's set-aside state, and never invents a
-deadline. Existing verdicts can be processed without a configured model. Private and
-restricted mail remains outside this automatic classification flow. Ambiguous assignment
-is left for review rather than guessed.
+The request run each hour creates one personal task with no date for a confirmed request nobody
+answered, when the mail names one importing seat. It keeps the source message and record links,
+follows the `set-aside` state of the recipient, and never makes up a deadline. Results already
+stored can run with no model set up. Private and limited mail stays outside this automatic label
+step. When it is not clear who should get the task, Margince leaves it for review and does not
+guess.
 
-The reminder replaces its source email in the assignee’s queue. Completion settles
-the request for every reader. Archiving an incomplete reminder makes the original
-request reviewable again, without creating another task; reopening remains explicit. A reply
-settles only its own conversation and does not prove a promised deliverable was completed.
-The task remains until handled. Its source action opens the original email reader, and
-removing access to the source also withholds the derived task text.
+The reminder replaces its source email in the queue of the assignee. To complete it closes the
+request for every reader. To archive a reminder that is not done makes the original request open to
+review again, without another task. Only a user can open it again. A reply closes
+only its own conversation, and does not prove that a promised item was delivered. The task stays
+until someone handles it.
 
-When no classifier is available, uncertain mail stays in the conversation review
-queue. It does not claim Focus priority or a confirmed team obligation. Outbound
-intent is not classified by this pass: a sent acknowledgement does not prove that
-the recipient owes an answer. Email move therefore remains unknown (`none`) unless
-there is positive request evidence. Move is never inferred from direction alone.
+Its source action opens the original email reader. When a user can no longer reach the source, they
+also can no longer read the text of the task made from it.
 
-## Weekly measurement and recovery
+When no label model is available, mail it cannot judge stays in the conversation review queue. It
+does not claim Focus priority or a confirmed team duty. This run does not label outbound mail: a
+sent reply that only confirms does not prove that the recipient owes an answer. So the email move
+stays unknown (`none`) unless there is clear evidence of a request. Margince never guesses the move
+from the direction alone.
 
-Personal reports summarize the member's recorded responsibilities even when that
-member is a manager. Team reports are an explicit management view of member
-summaries, gated by live team authority; they do not expose private message text.
-Ownership is resolved when the report is generated. Once measured, the report
-retains that attribution and roster rather than following later reassignments.
+## Weekly measure and recovery
 
-The reporting window is the complete local Monday-to-Sunday week. A completion
-at the following Monday's midnight belongs to the next week. Completed tasks
-include undated work and earlier overdue work, separately from the ratio of tasks
-due that week. Older snapshots have no completed-task measurement, rather than
-an invented zero. Carryover includes tasks due during or before the reviewed week
-that were unfinished at its closing boundary.
+Personal reports cover the recorded work a member holds, even when that member is a manager. Team
+reports are a manager view, picked by name, of member reports, gated by live team rights; they do
+not show private message text. Margince decides who owns what when it generates the report. Once
+measured, the report keeps that owner list and roster, and does not follow later changes.
 
-A recorded lead response includes a late response; breach counts remain separate.
-A breach therefore does not mean a lead remains unanswered. Meeting follow-up
-counts require an explicit source link to a readable task created before week end.
-A task sharing a contact or account is insufficient evidence. Missing linkage is
-a recording gap, not proof that the member failed to follow up. The same content
-permission checks apply to task and contact evidence in the deal scorecard.
+The report window is the whole local week, Monday to Sunday. A task completed at 00:00 at the start
+of the next Monday belongs to the next week. Completed tasks include work with no date and older
+work that was past due, counted separately from the share of tasks due that week. Older snapshots
+have no measure of completed tasks, not a made-up zero. Carryover includes tasks due in or before
+the reviewed week that were not done when it closed.
 
-Personal and team measurements wait until Monday's configured review hour;
-catch-up also runs on Sunday. Both complete before optional model calls and mail.
-Configured narration, observations and unattempted delivery remain independently
-reachable on retries. Unconfigured services do not keep measured members due.
-A team waits when one of its members failed measurement on the current pass.
-The job selects a member with team read authority rather than assuming any
-member can read a team report. A team report with zero measured members can be replaced by its first
-measurement, retaining its ID and recording the correction in the audit trail.
-Its roster is captured at that first measurement. A nonempty snapshot, including
-explicitly partial coverage, remains frozen.
+A recorded lead response includes a response after the deadline; breach counts stay separate. So a
+breach does not mean a lead is still not answered. Meeting follow-up counts need a named source link
+to a task the user can read, created before the week ends. A task that shares a contact or account
+is not enough evidence. A missing link is a gap in the record, not proof that the member failed to
+follow up. The same content permission checks apply to task and contact evidence in the deal
+scorecard.
 
-A team total is unavailable if a member snapshot is missing, cannot be converted, or uses a
-different currency. Comparisons name the actual earlier report's week, which may
-not be the immediately preceding week. An absence of coaching signals says no
-priority was identified; it makes no claim about productivity or inactivity.
-Current-plan and work-queue links explicitly refer to today's responsibilities.
+Personal and team measures wait until the review hour set for Monday; a catch-up also runs on
+Sunday. Both run before the model calls and mail, which a setup may leave out. The written report
+text, its notes and a delivery that has not run yet, when they are set up, can still run on retries. A
+service that is not set up does not keep measured members due. A team waits when one of its members
+failed to be measured on the current run. The job picks a member who has read rights to the team,
+and does not expect that any member can read a team report.
 
-Older frozen reports retain the measurement rules used when they were created.
-Missing meeting documentation ranks below recorded wins or kept commitments.
+A team report with zero measured members can be replaced by its first measure. It keeps its ID, and
+the audit log records the fix. Its roster is captured at that first measure. A snapshot that is not
+empty, even one that covers only some members by name, never changes.
 
-The scheduled writer and web reader share the composed weekly engine, including
-plan settlement and forecast snapshots. A refused forecast does not discard the
-member's recorded-work report.
+A team total is not available if a member snapshot is missing, cannot be converted, or uses another
+currency. A week-on-week view names the week of the real earlier report, which may not be the week
+just before. When coaching finds nothing, it says no priority was found; it claims nothing
+about how hard someone worked. Links to the current plan and the work queue say that they point to
+the work of today.
+
+Older reports keep the measure rules used when they were created. Missing meeting notes rank below
+recorded wins or kept promises.
+
+The scheduled writer and the web reader share the same weekly engine, with the plan close step and
+the forecast snapshots. A refused forecast does not drop the report of the work the member recorded.

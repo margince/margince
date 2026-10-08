@@ -38,7 +38,7 @@ func (h Handlers) DraftCompanyEmail(w http.ResponseWriter, r *http.Request, id c
 		httperr.Write(w, r, err)
 		return
 	}
-	draft, err := h.svc.Draft(r.Context(),
+	draft, _, err := h.svc.Draft(r.Context(),
 		ids.From[ids.CompanyKind](ids.UUID(id)), req)
 	if err != nil {
 		modelfailure.Write(w, r, err)

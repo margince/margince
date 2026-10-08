@@ -170,11 +170,39 @@ func unavailable(ctx context.Context, day crmcontracts.Attention) []crmcontracts
 			continue
 		}
 		out = append(out, crmcontracts.WorklistSourceUnavailable{
-			Source: string(lane),
+			Source: sourceOfLane(lane),
 			Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		})
 	}
 	return out
+}
+
+// sourceOfLane names a withheld lane by the source its rows carry, the word the
+// categories, the readings and every client match on. Named by the lane's own
+// word, a withheld meetings lane matched no reader and its zero read as a measurement.
+func sourceOfLane(lane crmcontracts.AttentionLanesOmitted) string {
+	if source, renamed := laneRowSource[lane]; renamed {
+		return string(source)
+	}
+	return string(lane)
+}
+
+// laneRowSource lists the lanes whose rows carry a source spelt unlike the
+// lane. A lane absent here spells both alike, or puts no row on the queue.
+var laneRowSource = map[crmcontracts.AttentionLanesOmitted]crmcontracts.WorklistItemSource{
+	crmcontracts.AttentionLanesOmittedMeetings:           sourceMeeting,
+	crmcontracts.AttentionLanesOmittedMeetingsUnreported: sourceMeetingOutcome,
+	crmcontracts.AttentionLanesOmittedAtRisk:             sourceAtRisk,
+	crmcontracts.AttentionLanesOmittedThisMorning:        sourceBriefItem,
+	crmcontracts.AttentionLanesOmittedPlanned:            sourceTask,
+	crmcontracts.AttentionLanesOmittedCommitments:        sourceClaim,
+	crmcontracts.AttentionLanesOmittedNeedsYou:           crmcontracts.WorklistItemSourceApproval,
+	crmcontracts.AttentionLanesOmittedDidNotRun:          crmcontracts.WorklistItemSourceFailedApproval,
+	crmcontracts.AttentionLanesOmittedBounces:            crmcontracts.WorklistItemSourceBounce,
+	crmcontracts.AttentionLanesOmittedNotices:            crmcontracts.WorklistItemSource(sourceNotice),
+	crmcontracts.AttentionLanesOmittedAutomationHealth:   crmcontracts.WorklistItemSourceAutomationRun,
+	crmcontracts.AttentionLanesOmittedIntroductions:      crmcontracts.WorklistItemSourceIntroductionRequest,
+	crmcontracts.AttentionLanesOmittedDomainQuestions:    crmcontracts.WorklistItemSource(sourceDomainQuestion),
 }
 
 // laneDSR and laneNoticeCase are the lanes a reader without the privacy inbox
