@@ -83,40 +83,72 @@ describe("the import walk the split gates share", () => {
     expect(importPathTo(at("entry.ts"), new Set([at("heavy.tsx")]))).toBeNull();
   });
 
-  it("reaches a value import of vitest through a plain module, and no type-only one", () => {
+  it("walks value edges alone when asked, keeping a separate cache per mode", () => {
+    write("kit.stories.tsx", 'import type { M } from "./kit.testkit";\n');
+    write("kit.testkit.ts", "export type M = number;\n");
+    const kit = new Set([at("kit.testkit.ts")]);
+
+    expect(importPathTo(at("kit.stories.tsx"), kit, "values")).toBeNull();
+    expect(named(importPathTo(at("kit.stories.tsx"), kit))).toEqual([
+      "kit.stories.tsx",
+      "kit.testkit.ts",
+    ]);
+  });
+
+  it("finds every value path to vitest from stories, docs pages and preview", () => {
+    const vi = 'import { vi } from "vitest";\nexport const body = vi.fn();\n';
     write(
-      "card.stories.tsx",
+      "src/card.stories.tsx",
       'import { body } from "./plain";\nimport "./typed.fixtures";\n',
     );
-    write("plain.ts", 'export { body } from "./card.fixtures";\n');
+    write("src/plain.ts", 'export { body } from "./card.fixtures";\n');
+    write("src/card.fixtures.ts", vi);
     write(
-      "card.fixtures.ts",
-      'import { vi } from "vitest";\nexport const body = vi.fn();\n',
-    );
-    write(
-      "typed.fixtures.ts",
+      "src/typed.fixtures.ts",
       'import type { Mock } from "vitest";\nexport type M = Mock;\n',
     );
-    write("typed.stories.tsx", 'import "./typed.fixtures";\n');
-    write("spy.stories.tsx", 'import { fn } from "@vitest/spy";\n');
-
-    const { runners, reaches } = testRunnerReach(
-      ["card.stories.tsx", "typed.stories.tsx", "spy.stories.tsx"].map(at),
-      [
-        "plain.ts",
-        "card.fixtures.ts",
-        "typed.fixtures.ts",
-        "spy.stories.tsx",
-      ].map(at),
+    write("src/typed.stories.tsx", 'import "./typed.fixtures";\n');
+    write("src/kit.stories.tsx", 'import type { M } from "./kit.testkit";\n');
+    write("src/kit.testkit.ts", `${vi}export type M = number;\n`);
+    write("src/spy.stories.tsx", 'import { fn } from "@vitest/spy";\n');
+    write(
+      "src/dom.stories.tsx",
+      'import "@testing-library/jest-dom/vitest";\n',
+    );
+    write("src/far.stories.tsx", 'import { body } from "../outside";\n');
+    write("outside.ts", vi);
+    write(".storybook/preview.tsx", vi);
+    write(
+      "src/intro.mdx",
+      'import { Meta } from "@storybook/addon-docs/blocks";\n' +
+        'import { body } from "./card.fixtures";\n\n# Intro\n',
     );
 
-    expect(reaches.map(named)).toEqual([
-      ["card.stories.tsx", "plain.ts", "card.fixtures.ts"],
-      ["spy.stories.tsx"],
-    ]);
-    expect(named([...runners])).toEqual([
-      "card.fixtures.ts",
-      "spy.stories.tsx",
+    write(
+      "src/notes.mdx",
+      'See import("./kit.testkit") in prose.\n\n' +
+        '```ts\nimport { vi } from "vitest";\n```\n',
+    );
+
+    const entries = [
+      "src/card.stories.tsx",
+      "src/typed.stories.tsx",
+      "src/kit.stories.tsx",
+      "src/spy.stories.tsx",
+      "src/dom.stories.tsx",
+      "src/far.stories.tsx",
+      ".storybook/preview.tsx",
+      "src/intro.mdx",
+      "src/notes.mdx",
+    ];
+
+    expect(testRunnerReach(entries.map(at)).map(named)).toEqual([
+      ["src/card.stories.tsx", "src/plain.ts", "src/card.fixtures.ts"],
+      ["src/spy.stories.tsx"],
+      ["src/dom.stories.tsx"],
+      ["src/far.stories.tsx", "outside.ts"],
+      [".storybook/preview.tsx"],
+      ["src/intro.mdx", "src/card.fixtures.ts"],
     ]);
   });
 });

@@ -10,7 +10,7 @@ import {
 
 /**
  * Stubs global `fetch`: the shell's reads answer from `options` or a default,
- * and `responder` answers the rest. Returns the mock and each URL requested.
+ * `responder` the rest. A refusal test passes `rollup` as a whole `Response`.
  */
 export function stubFetch(
   responder: (
