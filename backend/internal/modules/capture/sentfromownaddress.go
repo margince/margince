@@ -6,6 +6,7 @@ package capture
 import (
 	"context"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -60,11 +61,7 @@ func (s *Sink) asSentFromOwnAddressTx(
 	if !self.CoversAddressExactly(cp.Email) {
 		return rec, fields, nil
 	}
-	// Participants are in header order, To before Cc, which is where the
-	// connector takes an outbound counterparty from as well.
-	at := slices.IndexFunc(rec.Participants, func(p connector.MessageParticipant) bool {
-		return p.Role != connector.ParticipantRoleBCC && p.Email != "" && !self.Covers(p.Email)
-	})
+	at := sentToAt(rec.Participants, self)
 	if at < 0 {
 		return rec, fields, nil
 	}
@@ -76,8 +73,25 @@ func (s *Sink) asSentFromOwnAddressTx(
 	return rec, fields, nil
 }
 
+// sentToAt is where in participants the seat's own mail names whom it was
+// written to, or -1 when it names nobody but the seat. Participants are in
+// header order, To before Cc, which is where the connector takes an outbound
+// counterparty from as well.
+func sentToAt(participants []connector.MessageParticipant, self SelfSet) int {
+	return slices.IndexFunc(participants, func(p connector.MessageParticipant) bool {
+		return p.Role != connector.ParticipantRoleBCC && p.Email != "" && !self.Covers(p.Email)
+	})
+}
+
+// ProviderFiledMailTransports names the mail connectors whose sent filing the
+// provider made, as captured_by spells them after `connector:`.
+func ProviderFiledMailTransports() []string {
+	return []string{providerGmail, providerGraph}
+}
+
 // providerFiledTransport reports a mail connector whose sent filing the provider
 // made. capturedBy is the authenticated connector's own id (admitRecord).
 func providerFiledTransport(capturedBy string) bool {
-	return capturedBy == "connector:"+providerGmail || capturedBy == "connector:"+providerGraph
+	name, ok := strings.CutPrefix(capturedBy, "connector:")
+	return ok && slices.Contains(ProviderFiledMailTransports(), name)
 }

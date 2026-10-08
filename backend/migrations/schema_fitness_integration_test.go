@@ -453,6 +453,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// own rather than a column on the repair above: the two ask different
 	// questions about the same row, and one marker could not say which had run.
 	"activity_meeting_rsvp_backfill.activity_id": "job bookkeeping: written by the system-principal rsvp backfill sweeping every captured meeting in the workspace, never from a request. The row records THAT a meeting's stored original was re-read for its RSVP and what that said — it returns no record to any caller and discloses nothing about the meeting it names",
+	"activity_own_sent_mail_repair.activity_id":  "job bookkeeping: written by the system-principal own-sent-mail repair sweeping every captured received email in the workspace, never from a request. The row records THAT an email's stored original was re-read and what that said, returns no record to any caller and discloses nothing about the email it names",
 	// The LinkedIn ghost's match arms (CG-DDL-2). A ghost is not a record and
 	// carries no client-supplied reference: the matcher resolves both ids from
 	// its own row-scoped lookups, and a human confirming a suggestion

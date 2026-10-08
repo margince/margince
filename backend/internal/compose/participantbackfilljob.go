@@ -104,111 +104,57 @@ func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws id
 		}
 		total += n
 	}
-	replayed, err := w.replayWorkspace(wsCtx)
-	if err != nil {
-		return total + replayed, err
+	for _, pass := range backfillPasses {
+		n, err := w.drainPass(wsCtx, pass)
+		total += n
+		if err != nil {
+			return total, err
+		}
 	}
-	// The meetings whose attendees were read under the OLD rule, which bound no
+	return total, nil
+}
+
+// backfillPass is one pass the worker drains each tick: the function that runs
+// one bounded batch of it, and that batch's size.
+type backfillPass struct {
+	batch func(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error)
+	limit int
+}
+
+// backfillPasses run after the two-end backfill and never instead of it: an
+// activity with no participants at all is the worse gap, and settling that
+// first means a workspace part-way through recovery still answers "who was in
+// this" with something true.
+var backfillPasses = []backfillPass{
+	// Mail a seat sent from another address of theirs, still stored as
+	// received. Ahead of the replay, which reads a message's further parties as
+	// the seat's own statement only once the row is attested outbound.
+	{repairOwnSentMailBatch, ownSentMailRepairPerTick},
+	// The CCs and meeting attendees of activities whose two ends are recorded.
+	{replayParticipantsBatch, participantReplayBatch},
+	// The meetings whose attendees were read under the earlier rule, which bound no
 	// colleague from a calendar's list. They already carry a replay marker, so
-	// the pass above will never offer them again — and until they are re-read, a
+	// the pass above never offers them again, and until they are re-read a
 	// colleague who was in a meeting cannot read it.
-	repaired, err := w.repairMeetingAttendeesWorkspace(wsCtx)
-	if err != nil {
-		return total + replayed + repaired, err
-	}
+	{repairMeetingAttendeesBatch, meetingAttendeeRepairPerTick},
 	// The meetings the calendar had already called off when they were captured.
-	// A cancelled or declined event was DROPPED then, so the row still reads
-	// booked and no later sync will say otherwise — a provider stops listing an
-	// event once it is off.
-	//
-	// Independent of the passes around it: it reads each meeting's own stored
-	// original and writes only meeting_status, touching no participant row, so
-	// its position in this sequence is not load-bearing.
-	closed, err := w.backfillMeetingRSVPWorkspace(wsCtx)
-	if err != nil {
-		return total + replayed + repaired + closed, err
-	}
-	// Last, because it reads what the passes above write: an attendee row that
-	// does not exist yet cannot be given the name its invitation used.
-	named, err := w.recoverNamesWorkspace(wsCtx)
-	if err != nil {
-		return total + replayed + repaired + closed + named, err
-	}
+	// A provider stops listing an event once it is off, so no later sync will
+	// say otherwise. It writes only meeting_status, so its place here is free.
+	{backfillMeetingRSVPBatch, meetingRSVPBackfillPerTick},
+	// After the passes above, because an attendee row that does not exist yet
+	// cannot be given the name its invitation used.
+	{recoverAttendeeNamesBatch, participantReplayBatch},
 	// And after that, because the names it recovers are what a stale display
 	// name is refreshed from.
-	shown, err := w.refreshDisplayNamesWorkspace(wsCtx)
-	return total + replayed + repaired + closed + named + shown, err
+	{repairStaleDisplayNamesBatch, participantReplayBatch},
 }
 
-// backfillMeetingRSVPWorkspace closes the meetings whose stored original says
-// the calendar had already called them off.
-//
-// Same drain shape as the passes around it: it stops the moment a batch finds
-// nothing, so a workspace with none left costs one probe a tick.
-func (w *participantBackfillWorker) backfillMeetingRSVPWorkspace(wsCtx context.Context) (int, error) {
+// drainPass runs one pass's batches until a batch finds nothing or the tick's
+// bound is reached, so a workspace with none left costs one probe a tick.
+func (w *participantBackfillWorker) drainPass(wsCtx context.Context, pass backfillPass) (int, error) {
 	total := 0
 	for i := 0; i < participantBackfillBatchesPerTick; i++ {
-		n, err := backfillMeetingRSVPBatch(wsCtx, w.pool, meetingRSVPBackfillPerTick, w.log)
-		if err != nil {
-			return total, err
-		}
-		if n == 0 {
-			return total, nil
-		}
-		total += n
-	}
-	return total, nil
-}
-
-// repairMeetingAttendeesWorkspace binds the invited colleagues of meetings
-// captured before a calendar's attendee list was trusted.
-//
-// Same drain shape as the passes around it: it stops the moment a batch finds
-// nothing, so a workspace with none left costs one probe a tick.
-func (w *participantBackfillWorker) repairMeetingAttendeesWorkspace(wsCtx context.Context) (int, error) {
-	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
-		n, err := repairMeetingAttendeesBatch(wsCtx, w.pool, meetingAttendeeRepairPerTick, w.log)
-		if err != nil {
-			return total, err
-		}
-		if n == 0 {
-			return total, nil
-		}
-		total += n
-	}
-	return total, nil
-}
-
-// refreshDisplayNamesWorkspace puts the learned name on the page for contacts
-// whose split columns were filled before the display followed them.
-//
-// Same drain shape as the passes above: it stops the moment a batch finds
-// nothing, so a workspace with no stale display names costs one probe a tick.
-func (w *participantBackfillWorker) refreshDisplayNamesWorkspace(wsCtx context.Context) (int, error) {
-	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
-		n, err := repairStaleDisplayNamesBatch(wsCtx, w.pool, participantReplayBatch, w.log)
-		if err != nil {
-			return total, err
-		}
-		if n == 0 {
-			return total, nil
-		}
-		total += n
-	}
-	return total, nil
-}
-
-// recoverNamesWorkspace fills in the names calendar invitations gave, on the
-// attendee rows written before those names were carried.
-//
-// Same drain shape as the replay above: it stops the moment a batch finds
-// nothing, so a workspace with no such rows left costs one probe a tick.
-func (w *participantBackfillWorker) recoverNamesWorkspace(wsCtx context.Context) (int, error) {
-	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
-		n, err := recoverAttendeeNamesBatch(wsCtx, w.pool, participantReplayBatch, w.log)
+		n, err := pass.batch(wsCtx, w.pool, pass.limit, w.log)
 		if err != nil {
 			return total, err
 		}
@@ -224,25 +170,3 @@ func (w *participantBackfillWorker) recoverNamesWorkspace(wsCtx context.Context)
 // real work per row — it parses a stored RFC822 message or calendar resource
 // in Go rather than running one join in the database.
 const participantReplayBatch = 100
-
-// replayWorkspace re-reads the stored originals of activities that already
-// have their two ends recorded, recovering the CCs and meeting attendees.
-//
-// It runs after the two-end backfill and never instead of it: an activity with
-// no participants at all is the worse gap, and settling that first means a
-// workspace part-way through recovery still answers "who was in this" with
-// something true.
-func (w *participantBackfillWorker) replayWorkspace(wsCtx context.Context) (int, error) {
-	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
-		n, err := replayParticipantsBatch(wsCtx, w.pool, participantReplayBatch, w.log)
-		if err != nil {
-			return total, err
-		}
-		if n == 0 {
-			return total, nil
-		}
-		total += n
-	}
-	return total, nil
-}

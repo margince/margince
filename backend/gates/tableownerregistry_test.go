@@ -501,6 +501,10 @@ var tableOwners = map[string]string{
 	// this one records a completed JUDGEMENT about whether the meeting is off,
 	// which neither marker above answers.
 	"activity_meeting_rsvp_backfill": "internal/compose",
+	// Which received emails have been re-read for whether the seat wrote them
+	// from another address of theirs. The same bookkeeping, owned here for the
+	// same reason.
+	"activity_own_sent_mail_repair": "internal/compose",
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
 	"suggestion_dismissal": "internal/compose/company360",

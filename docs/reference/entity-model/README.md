@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 294 |
-| Columns | 3502 |
-| Foreign keys | 476 |
+| Tables | 295 |
+| Columns | 3505 |
+| Foreign keys | 477 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -42,7 +42,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 24 | 126 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 43 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 40 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 33 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 22 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 37 | 14 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
@@ -99,7 +99,7 @@ erDiagram
 | [collections](collections.md) | 10 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 36 |
+| [compose](compose.md) | 37 |
 | [consent](consent.md) | 18 |
 | [contacts](contacts.md) | 39 |
 | [continuity](continuity.md) | 1 |
@@ -128,7 +128,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 58 | 32 |
+| [`activity`](activities.md#activity) | activities | 58 | 33 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
@@ -137,6 +137,7 @@ erDiagram
 | [`activity_meeting_attendee_repair`](compose.md#activity_meeting_attendee_repair) | compose | 3 | 0 |
 | [`activity_meeting_history`](activities.md#activity_meeting_history) | activities | 12 | 0 |
 | [`activity_meeting_rsvp_backfill`](compose.md#activity_meeting_rsvp_backfill) | compose | 3 | 0 |
+| [`activity_own_sent_mail_repair`](compose.md#activity_own_sent_mail_repair) | compose | 3 | 0 |
 | [`activity_participant`](activities.md#activity_participant) | activities | 9 | 0 |
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
 | [`activity_reader_state`](activities.md#activity_reader_state) | activities | 8 | 0 |
