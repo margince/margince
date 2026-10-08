@@ -214,6 +214,9 @@ func TestOpenAISchemaAnswerIsTheFirstMessageAlone(t *testing.T) {
 	if bound.Text != `{"tool":"t"}` {
 		t.Errorf("schema-bound reply = %q, want the first message alone", bound.Text)
 	}
+	if bound.FinishReason != "stop" {
+		t.Errorf("finish reason = %q, want stop for a completed response", bound.FinishReason)
+	}
 
 	free, err := client.Complete(context.Background(), model.Request{Messages: msgs})
 	if err != nil {

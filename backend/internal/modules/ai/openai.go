@@ -167,6 +167,11 @@ func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) 
 		return model.Response{}, withSpend(err, resp)
 	}
 	resp.Text = text
+	// The Responses wire says "completed" where the chat wire says "stop"; one
+	// word for one outcome keeps the finish counts comparable across wires.
+	if out.Status == "completed" {
+		resp.FinishReason = "stop"
+	}
 	if cutOff {
 		resp.FinishReason = model.FinishReasonLength
 	}
