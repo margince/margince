@@ -2,7 +2,6 @@
 a
 about
 above
-abschlüsse
 absence
 absent
 abstention
@@ -222,7 +221,6 @@ button
 buy
 by
 byte
-bücher
 cache
 cadence
 calculated
@@ -450,6 +448,7 @@ did
 differ
 difference
 different
+diffing
 digest
 digit
 dir
@@ -542,7 +541,6 @@ equality
 erase
 error
 essentials
-eu
 evaluate
 even
 event
@@ -648,7 +646,6 @@ frequency
 fresh
 from
 front
-frontier
 full
 function
 gap
@@ -756,7 +753,6 @@ idempotent
 identical
 identifier
 identity
-idna
 if
 ignore
 image
@@ -764,9 +760,9 @@ implementation
 import
 in
 inbound
-inc
 include
 indents
+index
 indicators
 indigo
 industry
@@ -805,9 +801,7 @@ invite
 invoice
 involvement
 involves
-ir
 is
-isc
 isolation
 issue
 it
@@ -818,8 +812,6 @@ january
 job
 join
 jsdom
-json
-jsx
 judge
 jump
 just
@@ -984,7 +976,6 @@ most
 motion
 mount
 move
-msys
 much
 muddy
 multi
@@ -993,7 +984,6 @@ multiple
 multiplies
 must
 mutation
-n
 name
 namespace
 narrow
@@ -1017,11 +1007,9 @@ no
 nobody
 node
 noise
-nomad
 non
 none
 nor
-nordwind
 normal
 not
 note
@@ -1039,7 +1027,6 @@ objection
 obligation
 observe
 obtain
-oci
 of
 off
 offered
@@ -1055,7 +1042,6 @@ once
 one
 onto
 open
-openrouter
 operation
 operational
 operator
@@ -1093,7 +1079,6 @@ override
 overview
 overwrite
 owe
-owl
 own
 owner's
 pack
@@ -1229,8 +1214,6 @@ pursue
 pursuit
 push
 put
-pypi
-python
 qualify
 query
 question
@@ -1267,6 +1250,7 @@ ready
 real
 reason
 rebound
+rebuild
 receipt
 receive
 receiver's
@@ -1454,7 +1438,6 @@ sibling
 side
 sidebar
 sideways
-sigint
 sign
 signal
 silence
@@ -1581,7 +1564,6 @@ tab
 table
 tabular
 tag
-tailwind
 take
 taken
 tall
@@ -1675,7 +1657,6 @@ troubleshooting
 true
 trust
 truth
-tsx
 turn
 twelve
 twice
@@ -1701,7 +1682,6 @@ unlicensed
 unlink
 unlisted
 unpinned
-unprivileged
 unreachable
 unready
 unrestricted
@@ -1723,7 +1703,6 @@ usable
 use
 user's
 usual
-uwg
 valid
 validation
 validator
@@ -1740,7 +1719,6 @@ verdict
 verify
 version
 via
-vietnam
 view
 viewer's
 viewport

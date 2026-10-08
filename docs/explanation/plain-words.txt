@@ -8,7 +8,6 @@ accent
 accept
 access
 account
-acme
 across
 act
 action
@@ -46,7 +45,6 @@ among
 an
 analysis
 anchor
-anna
 another
 answer
 any
@@ -183,7 +181,6 @@ capture
 card
 carrier's
 carry
-cas
 case
 catalog
 catch
@@ -369,7 +366,6 @@ display
 disposition
 do
 doc
-dock
 document
 documentation
 domain
@@ -534,7 +530,6 @@ generate
 generator
 get
 ghost
-gin
 give
 given
 go
@@ -577,7 +572,6 @@ hide
 high
 history
 hit
-hnsw
 holder
 holding
 holds
@@ -591,7 +585,6 @@ hour
 how
 human
 icon
-ics
 id
 idempotency
 idempotent
@@ -633,8 +626,6 @@ intro
 introduction
 invite
 invoice
-ios
-ipad
 is
 isolation
 issue
@@ -642,7 +633,6 @@ it
 item
 itself
 jar
-javascript
 jitter
 job
 join
@@ -651,7 +641,6 @@ jpeg
 judge
 jurisdiction
 just
-kb
 keep
 kept
 key
@@ -661,7 +650,6 @@ kill
 kind
 know
 known
-kv
 label
 lack
 ladder
@@ -725,7 +713,6 @@ loopback
 lose
 lost
 low
-mac
 machine
 made
 mail
@@ -788,7 +775,6 @@ must
 mutation
 name
 namespace
-nan
 narrow
 near
 need
@@ -907,7 +893,6 @@ pick
 picture
 pin
 pipeline
-pk
 place
 plain
 plan
@@ -1380,7 +1365,6 @@ verdict
 version
 very
 video
-vietnam
 view
 visibility
 visible
@@ -1388,7 +1372,6 @@ visit
 vocabulary
 voice
 volume
-vram
 wait
 waiver
 wakes
