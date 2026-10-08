@@ -65,6 +65,7 @@ amber
 amount
 an
 anchor
+and
 annotated
 announce
 annual
@@ -223,6 +224,7 @@ business
 but
 button
 buy
+buyer
 by
 byte
 bücher
@@ -417,6 +419,7 @@ cut
 cuts
 cutting
 dachpartner
+daily
 danger
 dark
 dash
@@ -610,6 +613,7 @@ extra
 eye
 eyebrow
 face
+facing
 fact
 factor
 factors
@@ -631,6 +635,7 @@ feel
 fence
 fetch
 few
+fewer
 fictional
 field
 fieldset
@@ -715,6 +720,7 @@ glyph
 glyphs
 gmbh
 go
+god
 gone
 good
 got
@@ -835,6 +841,7 @@ inject
 injection
 ink
 inline
+inner
 input
 inset
 inside
@@ -903,6 +910,8 @@ large
 last
 late
 latency
+later
+latest
 launch
 lavender
 law
@@ -967,6 +976,7 @@ lookup
 loop
 loopback
 lose
+loss
 lost
 loudest
 low
@@ -1073,6 +1083,8 @@ network
 neutral
 never
 new
+newer
+newest
 newline
 next
 nginx
@@ -1115,10 +1127,13 @@ offset
 often
 oklch
 old
+older
+oldest
 on
 onboard
 once
 one
+only
 onto
 open
 openrouter
@@ -1147,6 +1162,7 @@ outage
 outbound
 outbox
 outcome
+outer
 outline
 outlines
 outlive
@@ -1165,12 +1181,16 @@ overwrite
 owe
 owl
 own
+owner
 owner's
+owners
 p
 pack
 package
 padding
 page
+pager
+paid
 paint
 paints
 pair
@@ -1446,6 +1466,8 @@ rung
 runtime
 s
 safe
+safer
+said
 sale
 same
 sample
@@ -1734,6 +1756,7 @@ tiles
 time
 timeline
 timeout
+timers
 timezone
 tint
 tinted
@@ -1821,12 +1844,15 @@ up
 update
 upgrade
 upload
+upper
 upstream
 uptime
 us
 usable
 use
+user
 user's
+users
 usual
 uwg
 valid
@@ -1897,6 +1923,7 @@ white
 who
 whoever
 whole
+wholly
 whose
 why
 wide

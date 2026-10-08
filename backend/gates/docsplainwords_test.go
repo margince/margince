@@ -81,18 +81,39 @@ func plainForms(word string) []string {
 	forms := []string{word}
 	for _, suffix := range []string{"s", "es", "ed", "d", "ing", "er", "ers", "est", "ly", "'s", "’s"} {
 		base, ok := strings.CutSuffix(word, suffix)
-		if !ok || len(base) < 2 {
+		if !ok || !plainStem(base, suffix) {
 			continue
 		}
-		forms = append(forms, base, base+"e")
-		if strings.HasSuffix(base, "i") {
-			forms = append(forms, strings.TrimSuffix(base, "i")+"y")
+		forms = append(forms, base)
+		switch suffix {
+		case "ing", "ed", "er", "ers", "est":
+			forms = append(forms, base+"e")
+			if n := len(base); n > 2 && base[n-1] == base[n-2] {
+				forms = append(forms, base[:n-1])
+			}
 		}
-		if n := len(base); n > 2 && base[n-1] == base[n-2] {
-			forms = append(forms, base[:n-1])
+		if strings.HasSuffix(base, "i") && suffix != "s" && suffix != "ing" {
+			forms = append(forms, strings.TrimSuffix(base, "i")+"y")
 		}
 	}
 	return forms
+}
+
+// plainStem says whether base can be what is left of a word once suffix is cut.
+// A stem has a vowel, so "thing" is not "th" + "ing"; a bare "d" follows an "e",
+// so "band" is not "ban" + "d"; and "-ly", "-er" and "-est" need a stem of four
+// letters, so "apply", "reply" and "offer" do not reduce to "app", "rep", "off".
+func plainStem(base, suffix string) bool {
+	if !strings.ContainsAny(base, "aeiouy") {
+		return false
+	}
+	switch suffix {
+	case "d":
+		return strings.HasSuffix(base, "e")
+	case "ly", "er", "ers", "est":
+		return len(base) >= 4
+	}
+	return len(base) >= 2
 }
 
 // plainVocab keeps the two lists apart: a technical name matches only as
@@ -219,11 +240,11 @@ var plainPools = []struct{ prefix, list string }{
 // must equal its list's size, so a list that shrinks pins its cap lower with it.
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
-	"docs/how-to/plain-words.txt":      1226,
-	"docs/explanation/plain-words.txt": 1456,
-	"docs/handbook/plain-words.txt":    1330,
-	"docs/reference/plain-words.txt":   1762,
-	plainProjectFile:                   1943,
+	"docs/how-to/plain-words.txt":      1254,
+	"docs/explanation/plain-words.txt": 1501,
+	"docs/handbook/plain-words.txt":    1355,
+	"docs/reference/plain-words.txt":   1811,
+	plainProjectFile:                   1970,
 }
 
 // glossaryLegacyMax is how many names may still lack a meaning: the names pages
@@ -418,6 +439,16 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 	}
 	if res.unknown["deals"] != 0 || res.unknown["opened"] != 0 {
 		t.Errorf("an inflection of a listed word was reported: %v", res.unknown)
+	}
+	for word, base := range map[string]string{"making": "make", "stopped": "stop", "cities": "city", "used": "use", "quickly": "quick"} {
+		if _, ok := plainMatch(word, plainVocab{general: map[string]bool{base: true}}); !ok {
+			t.Errorf("%q was not read as a form of %q", word, base)
+		}
+	}
+	for word, base := range map[string]string{"thing": "the", "apply": "app", "band": "ban", "offer": "off", "reply": "rep", "bring": "br"} {
+		if _, ok := plainMatch(word, plainVocab{general: map[string]bool{base: true}}); ok {
+			t.Errorf("%q passed as a form of the unrelated word %q", word, base)
+		}
 	}
 	if len(res.long) == 0 {
 		t.Error("a 21-word numbered step was not reported")
