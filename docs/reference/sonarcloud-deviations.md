@@ -43,8 +43,8 @@ caller that drops the closure still has no stop, and the tests catch that.
 
 ## The accessibility rules, on a table and two menus that are already correct
 
-13 findings in `frontend/src/design-system/` and
-`frontend/src/app/account.tsx`: `typescript:S6825`, `S6843`, `S6845`, `S6848`
+14 findings in `frontend/src/design-system/`, `frontend/src/app/account.tsx`
+and `frontend/src/app/agentrail.tsx`: `typescript:S6825`, `S6843`, `S6845`, `S6848`
 and `S6852`. They stay open together because they are one error made five
 ways. Each rule states a default that the code leaves for a reason WCAG itself
 gives. Following the rule would make the product harder to use with a screen
@@ -127,8 +127,7 @@ with no change.
 Other patterns in the tree have a new form only where the new form gave the same
 result on every string up to length five. This one has no such rewrite.
 
-**What limits it instead.** The input is a mail subject, and RFC 5322 lines
-stop at about 1 000 bytes; at that length the pattern costs a few `µs`. If a
-subject ever comes in with no limit, the fix is a scan with `indexOf`. The
-first `]` after a `[` is what the pattern means. The fix is not the change to the
-class.
+**What the code does instead.** `stripEveryKeyTag` no longer runs the pattern.
+`bracketedGroups` scans the subject with `indexOf` and takes the first `]` after
+each `[`, which is what the pattern means. The scan takes time in step with the
+input, so it needs no limit on the length of a subject.

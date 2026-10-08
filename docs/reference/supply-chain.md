@@ -196,8 +196,9 @@ set in a job that holds `id-token: write`. All three go into the container.
 The target depends on `sbom-parity` and not on `sbom`, for two reasons.
 
 - The signature must cover clean bytes that agree with each other, so something
-  has to check them again. The parity check does that at low cost, and refuses to sign a
-  set that is out of date or not cleaned.
+  has to check them again. The parity check does that at low cost. It refuses to
+  sign a set when the three SBOMs do not list the same files. It does not check
+  that the set matches `HEAD`.
 - Running *generation* again here would run the syft scan while the signing token
   is in scope. The job split of the CI workflow (below) does not allow that. In
   CI the signing job uses the build output of the generation job instead.

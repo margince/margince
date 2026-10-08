@@ -184,12 +184,10 @@ changes the order. Only a hard filter puts a limit on a tail.
 | `preferred_max_latency_p90` | a `p90` limit over a moving window of 5 minutes | **soft** |
 | `allow_fallbacks` | switch hosts on failure; default true | `n/a` |
 
-† **You cannot set `max_price` in this tree.** The table lists the field set of
-the broker, and `OpenRouterRouting` has no member for this row. The routing config
-is parsed with `KnownFields(true)`. So an operator who copies it into a `routing:`
-block gets a parse error at start, and no price limit. It is left out because
-section 5 measured its `p99` at 387 seconds. Adding it would need a `struct`
-member, a schema field and a matching test case.
+† **A tier can set `max_price`.** It goes under `routing.provider` on an
+OpenRouter binding: `OpenRouterRouting` has a member for it, and the config
+schema has a field. It is left out of the default because section 5 measured
+its `p99` at 387 seconds.
 
 The soft preference on its own did harm. In the `A/B` test, the arm that set only
 `preferred_max_latency_p90: 8` was the slowest arm we measured. Its `p90` was
@@ -214,8 +212,8 @@ and `G_nitro` repeated from round 1 as controls for change over time:
 | `only: [cerebras, groq]` | 2,609 | 3,513 | 3,857 | 0.971 | Groq ×14, Cerebras ×6 |
 | `sort` + `max_price` | 2,702 | **141,484** | **386,985** | 1.068 | Groq ×11, Cerebras ×9 |
 
-**`max_price` is not used.** It is not in the default, and not in the tree (see the
-note in section 4). Its `p99` was 387 seconds, the slowest arm of either round: a
+**`max_price` is not used.** It is not in the default, but a tier may set it (see
+the note in section 4). Its `p99` was 387 seconds, the slowest arm of either round: a
 price limit cannot remove what the sort then prefers.
 
 **`only` and `ignore` are not used.** They reach the same host as the sort, but
@@ -268,8 +266,8 @@ the model. The whole price difference here is per upstream (Cerebras `$0.35/M`
 prompt against CoreWeave `$0.03/M`, about 11×).
 
 OpenRouter returns the true number as `usage.cost` on every response, and this
-tree does not read it. Until it does, use the cost column of the `A/B` test: about
-2.4×.
+tree does not read it. Until it does, use the cost column of the `A/B` test:
+`$1.351` against `$0.661` per 1,000 calls, about 2×.
 
 ## 8. What the trace records
 

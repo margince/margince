@@ -75,8 +75,9 @@ Three scans, each taking its list of files from the tree:
   every scan reads through the `ALTER ... RENAME` statements the migrations
   declare. Without it the other scans miss every name that changed.
 
-Audit rows keep the dropped word for good. `trg_audit_no_mutate` refuses an
-UPDATE on `audit_log`, which is what makes the audit log safe to trust. So a
+An audit row keeps the dropped word for as long as the row is kept.
+`trg_audit_no_mutate` refuses a DELETE or an UPDATE on `audit_log`, which is
+what makes the audit log safe to trust. So a
 change recorded before a rename still says `entity_type = 'person'` or
 `'organization'`. The two read paths that filter the audit log by record type accept
 both words, and `backend/internal/compose/auditlegacytype.go` holds that map for

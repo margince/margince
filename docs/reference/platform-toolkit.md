@@ -177,9 +177,10 @@ Store functions accept no write without it (a missing `Provenance` does not comp
 - **Use it when:** you make any write. Pass the source of the value and who wrote it.
 
 ### `shared/kernel/values`: domain value types
-Types that parse a value once, for formats that else move from place to place as plain strings. They
+Types that parse a value once, so it does not move from place to place as a plain string. They
 cover email in lower case, `E.164` phone numbers, domains with only a host, slug values and time zones.
-They also cover money: an amount and a currency code. Each one parses and cleans the value once, at the seam where input comes into a store; past that point a bad value cannot exist.
+They also cover money: an amount and a currency code. Each one parses and cleans input once, at the seam where it comes into a store.
+A value read back from the database through `Scan` is not parsed again.
 The parse functions return `ParseError`, which the HTTP layer maps to the 422 shape for bad input.
 - **Use it when:** you accept an email, phone, domain, money or other such input. Parse it here; do not
   check it by hand.

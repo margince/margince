@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # The meeting brief
 
-The file to get ready for one booked meeting, at
+The brief is the file a user reads to get ready for one booked meeting, at
 `GET /activities/{id}/meeting-brief`. It answers two questions in one read:
 **what we know** about this meeting, in `sections`, and **what to do** in the
 room, in `plan`.
@@ -24,7 +24,7 @@ it.
 
 ## What the caller sees is what the caller could open
 
-The brief is built under the own scope of the caller, from the same gated reads the
+The brief is built under the caller's own scope, from the same gated reads the
 contact page serves. It can only describe records that caller could open; there
 is no path with more rights.
 
@@ -88,6 +88,9 @@ member of their team. Two questions decide it, in the same order
    in the meeting. This goes through the team member seam the Worklist reads.
    A lead who is in the meeting is still allowed to coach. A lead in the meeting
    who coaches their rep through it is the normal case.
+
+A caller who passes the first question but carries no user id fails the read.
+It does not get a brief with no coaching.
 
 When either answer is no, the call returns the rep's brief with no error,
 because the caller asked for a brief and may have one. When the team member

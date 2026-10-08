@@ -117,9 +117,9 @@ vendor with the **OpenAI API shape** (Mistral, DeepSeek, Groq, OpenRouter, a
 gateway, …).
 
 - The API and the worker both call the model. Give both of them outbound
-  access to every endpoint you bind. The own API of a cloud vendor is HTTPS
-  only. An Ollama or vLLM endpoint on your own network, or one with the OpenAI API shape, can be
-  plain HTTP.
+  access to every endpoint you bind. The API of a cloud vendor is HTTPS only.
+  An Ollama, vLLM or OpenAI API shape endpoint on your own network can be plain
+  HTTP. Use HTTPS for any other endpoint.
 - The embeddings feature is bound on its own, not with chat and can name its own
   endpoint. The API calls it for search by meaning, the worker to build the
   index and build it again, so both need that endpoint too. A vendor with chat

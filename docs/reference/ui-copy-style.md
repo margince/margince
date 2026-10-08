@@ -40,13 +40,13 @@ items and most help text are statements that address no one.
 - Use `you` and `your` only where the sentence would else be unclear about who
   owns what (`Your drafts` next to `Team drafts`). Also use them where an error
   or confirmation tells the reader what to do next (`Sign in again to continue`).
-- Never `we`, `us` or `our`. Margince is software. It has no opinions, plans or
-  feelings. `We could not save` becomes `Changes were not saved`. The one
-  exception is the privacy notice, where the data controller addresses the data
-  subject and, in law, speaks as `we`.
-- Never `I`, with one exception: a conversation surface where an agent speaks in
-  a message bubble (the onboarding conversation). There the agent says `I` in
-  short, factual sentences, and nowhere else. Status lines, notices and activity
+- Never `we`, `us`, `our` or `ours`. Margince is software. It has no opinions,
+  plans or feelings. `We could not save` becomes `Changes were not saved`. In the
+  voice of the product, the one exception is the privacy notice. There the data
+  controller addresses the data subject and, in law, speaks as `we`.
+- Never `I` in the voice of the product. An agent is the exception, on a
+  conversation surface where it speaks in a message bubble (the onboarding
+  conversation). There it says `I` in short, factual sentences, and nowhere else. Status lines, notices and activity
   entries about agent work use the neutral voice: `Summary of {name} ready`, not
   `My summary of {name} is ready`.
 - `Me` is allowed as the object of a control that picks the reader:
@@ -151,7 +151,7 @@ nouns and are not reworded. Internal jargon never reaches the screen.
 | The mail thread of a record | `thread` | `spine`, `conversation` |
 | Import of mailbox history | `mailbox history import` | `backread` |
 | Full read of a web page | `full page read` | `deep read` |
-| The result of a classifier | `result`, `check` | `verdict` |
+| The result of a classifier | `result` for the outcome, `check` for the run that makes it | `verdict` |
 | Capture intake step | `intake check` | `admission check` |
 | Loading a record | `Loading…` | `Reading…` |
 | Who owns a deal | `owns` | `carries`, `carrier` |
@@ -222,4 +222,4 @@ outside its list. And `you` used where no one needed it.
 The grammar and message rules follow the Atlassian Design System content
 guidelines (voice and tone, language and grammar, inclusive writing, date and
 time, designing messages). Margince is more formal in three places: no
-contractions, a product that never says `I` or `we`, and no humor.
+contractions, a product that never says `I` or `we` in its own voice, and no humor.

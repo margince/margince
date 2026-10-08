@@ -98,8 +98,10 @@ seconds at `low`. The answers were correct both ways. `reasoning_effort: "none"`
 is refused with a 400.
 
 **Never publish the port.** The `vllm` binding sends no key, so only the hosts of
-the product may reach the server: the local machine or a private network. That
-is also what the `sovereign` profile checks on `base_url`. The own `--api-key` of
+the product may reach the server: the local machine or a private network. The
+`sovereign` profile checks only that `base_url` names such a host. It does not
+stop other hosts from reaching the server, so the network around it must do
+that. The own `--api-key` of
 vLLM guards only the `/v1`, `/v2`, `/inference` and `/cohere` routes; `/metrics`
 and `/health` stay open.
 

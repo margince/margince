@@ -2,8 +2,8 @@
 # Self-hosting models with Ollama: what we measured
 
 **Tested 2026-09-23 to 2026-09-24** on one machine (below), with Ollama 0.34.3,
-through the certification lane of this tree. Every number is a measure from these
-two days; we ran the verdicts in section 4 again on 2026-09-28/29. Models,
+through the certification lane of this tree. Every number comes from these two
+days, except the verdicts in section 4, which were run again on 2026-09-28/29. Models,
 Ollama and this product all change: measure again before you trust a number here
 to decide what to buy.
 

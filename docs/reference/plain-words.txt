@@ -513,7 +513,6 @@ escape
 establish
 even
 event
-ever
 every
 everyday
 everything
