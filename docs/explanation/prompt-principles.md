@@ -149,18 +149,53 @@ Reading that diff is review.
 
 ### 11. The payload carries the fact the expected answer needs
 
-### 12. What is graded is told, and what is told is graded the same way
-A cap, a band or a rubric clause the prompt never states measures the model's
-luck. A token cap graded on offer drafts while production tells the model no
-budget is such a case, and is removed. A rubric that allows what the prompt
-forbids, or asks for a field the schema cannot carry, marks a correct reply down.
-*Checked by* the rules in
-[write-a-certification-case.md](../how-to/write-a-certification-case.md); review.
+Say a scenario has a right answer that uses a fact the request never sends. Then it grades the
+fixture, and tells you nothing about the model. A meeting brief that expects words from a thread
+its payload sends as `Recent: null` fails for that reason. So does a price reply that expects a
+tier the fixture does not carry. Before you say the model is wrong, find the fact in the traced
+request.
+
+*Checked by* `refuseUnreachableCriteria` (`backend/internal/compose/certcase_stageevidence.go`)
+for stage evidence. It refuses a `settled_by` that no line of the thread says. For other places
+it is review.
+
+### 12. The prompt states what is graded, and the grade follows what the prompt states
+
+A cap, a band or a rubric clause the prompt never states grades the model on what it could not
+know. One such case is a token cap graded on offer drafts while production tells the model no
+budget, and it is removed. A rubric that allows what the prompt says not to do, or asks for a
+field the schema cannot carry, marks a right reply down.
+
+*Checked by* the rules in [write-a-certification-case.md](../how-to/write-a-certification-case.md);
+review.
+
+### 13. The judge grades against the product rules, from outside the model's own line
+
+The grader sees the rubric, the system prompt of the model under test, the ask, the reference
+answer and the output. It never sees the verdict of the code checks, because it would score that
+verdict in place of the reply. A grader without the product rules scores a reply against rules it
+never sees.
+
+A judge from the same provider or model line as the model under test is marked. A run where a
+model would grade itself is refused. This follows the research on using a model as a judge. A
+reference answer helps stop the judge from giving long answers more points. A different model helps
+stop it from giving its own answers more points. The rubric text carries no history of older text; that
+goes in a YAML comment.
 
 *Checked by* `TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer` and
-`TestACheckerSpecNeverReachesTheGrader`
-(`backend/internal/compose/aicert/judgeinput_test.go`); `make e2e-ai` refuses a
-self-graded run.
+`TestACheckerSpecNeverReachesTheGrader` (`backend/internal/compose/aicert/judgeinput_test.go`);
+`make e2e-ai` refuses a run where a model grades itself.
+
+### 14. Model settings come last, and they stay at provider defaults until measured
+
+Google says to leave Gemini 3 temperature at its default. How much a model thinks is set per
+model. `flash-lite` defaults to `minimal`, which on a call site that must judge leaves the model
+next to no room to think. A request with a schema to a model that thinks more is sent `low`. So
+it cannot use its whole output cap on thinking (`backend/internal/modules/ai/geminithinking.go`).
+
+Changing the thinking level or the tier is step 3 of the fix order below, never step 1. A cut can
+cost as much as it saves: `reasoning_effort: low` cost 20 points of the judge score (85 → 65) on a drafting task
+([openrouter.md](../reference/openrouter.md)).
 
 *Checked by* a certification run against the changed binding.
 
@@ -181,10 +216,9 @@ Work down, and stop at the first step that explains why it fails.
    under test (4). Look for a reference to nothing (9), or words left over from a rename (10).
 3. **Model settings.** Only now: thinking level, then tier. Record which change moved the score.
 
-In the September 2026 review of the `gemini_cloud` run, roughly half the failing
-grades were case, check or judge defects and a third were prompt defects; two
-were real flash-lite misses. A tier move made first would have hidden all of the
-rest.
+Take the September 2026 review of the `gemini_cloud` run. About half the failing grades turn out
+to be errors in the case, the check or the judge. A third are errors in the prompt, and two are real
+`flash-lite` misses. A tier move made first would have hidden all of the rest.
 
 ## Context budget
 

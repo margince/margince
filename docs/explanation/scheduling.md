@@ -71,14 +71,11 @@ before the setting existed reads it as on. Each invite and each personal proposa
 another way for that one meeting. A proposal keeps its setting when the guest accepts it, and a
 public booking follows the host's setting.
 
-Google Calendar receives a conference request keyed to the invitation's stable
-request ID, so a retried create cannot ask for a second Google Meet. For Outlook,
-Margince reads the calendar's own default online meeting provider and sends it
-as `onlineMeetingProvider` with `isOnlineMeeting` set, because Graph applies
-none by itself. That is Microsoft Teams for a work or school account, and no
-link for a calendar that offers none. Only creation asks for a link; a reschedule keeps the conference the event already
-has, and never rewrites an Outlook event's body, where Outlook keeps the join
-details.
+Google Calendar gets a call request linked to the invite's request ID, which never changes. So a
+create that runs again cannot ask for a second Google Meet. For Outlook, Margince reads the
+calendar's own default meeting provider and sends it as `onlineMeetingProvider` with
+`isOnlineMeeting` set, because Graph adds none by itself. That provider is Microsoft Teams for a
+Microsoft work or school account, and no link for a calendar that offers none.
 
 Only a new meeting asks for a link. A move keeps the call the event already has. It never writes
 the body of an Outlook event again, because Outlook keeps the join text there.
@@ -163,10 +160,11 @@ A contact's open proposals list only the host's own links that are not used yet,
 not pulled back, newest first. Pulling one back archives the proposal's activity, and the guest's
 link stops working at once.
 
-Browser and agent invitation writes use the same activities store and provider
-adapter. `invite_meeting` is a confirm-first, send-scoped operation. The approval
-names the recipient, interval, subject, location and the full description sent externally. The delivery worker rechecks
-the acting host's live permissions and any originating passport's send authority.
+Manage and proposal tokens are random keys, stored only as hashes. A manage or proposal URL
+is also kept as a secret in the vault, because the delivery worker must put it in the invite.
+Public answers leave out calendar IDs, provider event URLs, guest addresses and internal record
+links. Access logs leave out the key part of the path, and public answers turn off caching and
+the `Referer` header.
 
 Margince captures consent to the meeting separate from any marketing consent, which a guest need
 not give. Calendar invite text holds a manage link. Someone with the full invite, such as a user

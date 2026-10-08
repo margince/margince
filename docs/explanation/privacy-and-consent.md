@@ -39,11 +39,78 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   recipient. The row holds the category, the verdict, the reason, the basis and a fingerprint of the
   words. So "why could this message go" is one query, not a search through old mail.
 
-A refusal names only the address and discloses nothing new. The engine is spelled once
-(`consent.NewGate`) and **injected into the send path** (activities) at the composition root, so
-consent never becomes an import edge between siblings. Every consent *state* write also appends a
-proof row (Art. 7(1) demonstrability), and a fitness test (`consentproof_test.go`) fails any state
-write that skips its proof.
+  (The proof
+  itself goes into `communication_basis`, not on the decision row.) A message that reaches a provider
+  always has both rows. The second sees a withdrawal, a bounce or an edit to the words that comes
+  in between the two.
+- **Withdrawals and stops are separate, and both bind.** An unsubscribe is a consent withdrawal. The
+  engine reads it **by class** ("has the subject stopped this kind of message"). That is because a category worked out from
+  proof may carry no purpose key to match. `communication_suppression` records the other stops: an
+  Article 21 objection, a legal limit on use, a subject's request to stop, a hard bounce. No stop
+  ends by itself, and no mode turns either one off.
+- **A user may override a refused send.** The override stands separate from consent.
+  `communication_override` (`consent.Allow`) records a standing statement per category. It says a
+  refusal by the machine for want of proof may be set to one side for one contact. It covers the category
+  the engine gave the send, and only that one. So an override for `marketing` says nothing about
+  `customer_service`.
+
+  It turns nothing absolute. `Decision.CanBeOverruledByCategory` asks the question only for a
+  reading by the machine that is not absolute and that has a category. The `absoluteDenials` below
+  and any refusal the subject decided stay out of reach for every user, so a stop by the subject
+  still comes first.
+
+  An `unknown_purpose` refusal is out of reach too, for a different reason. It is not
+  absolute, but the request named a purpose key the engine does not know. So there is no category,
+  and an override per category has nothing to answer. The fix there is to send again with a purpose the engine knows.
+
+  The user must write a reason. A stop may pass on a phone call alone, but an override is the user's own
+  call, and the record must say why. Only a caller whose authority level `CanRevoke` the level the
+  override holds may revoke it (`consent.RevokeOverride`). That is `CanOverrule` plus one step,
+  because no human authority sits above admin. Without it, an override an admin recorded would have no
+  seat that could take it back. `lift.go` keeps the `CanOverrule` test, which asks for more, for a stop, where not
+  sending is the safe side.
+
+  An override lives on through a merge, on the contact that is kept (`consent.CarryOverridesTx`). It
+  keeps its first `decided_by_level` and its reason, so a merge cannot drop its authority
+  level. So a revoke reaches every copy a merge made of it, from the old ID the caller holds.
+  Each copy is reported as lifted on the stream that carried its record. An override left standing
+  under an ID that the user who made it does not know would go on allowing the send.
+
+  Article 17 erasure and the retention sweep delete it with the rest of the contact's consent
+  record. A standing "write to them all the same" must not live longer than its contact. Article 15 subject
+  access exports it (the `communication_overrides` part of `privacy.AssembleSAR`). A subject who asks what is
+  held about them has a right to the record that a human decided to write to them, and why.
+- **A restricted subject still gets three message kinds.** Three categories still reach a
+  restricted subject through a registered template: `security_notice`, `privacy_notice` and
+  `optout_confirmation`. A subject is not helped if they cannot learn that their account is under
+  attack, or that the product recorded their opt-out. A hard bounce stops even those, because
+  no template makes an address that bounces work.
+- **Every category ships enforcing, even when left out.** `consent.authorization_modes` can move one
+  to `observe` or `warn`. Those record the engine's answer without binding it. That is an operator's
+  way back; the shipped mode is enforcing. A category the stored map does not name
+  enforces.
+
+  A map with entries that leaves out any category is refused at write time, naming the ones
+  it missed. So a half-written setting cannot leave mail with no check. An empty map is accepted and every
+  category enforces, the same answer as storing nothing at all.
+
+  The older purpose-key gate decides only where **no** recipient's category enforces, so turning one
+  category changes not as much as it looks. Some reason codes are absolute (`absoluteDenials` in
+  `commsauthz`) and refuse in every mode, for any setting. They are the four above, a
+  double opt-in not yet confirmed, and a recipient that matches no single subject. Also a consent
+  withdrawal, a legal cap on how much marketing a place allows, and a request whose claimed category
+  goes against the engine's own.
+
+Marketing consent needs the subject to answer a mail. A double-opt-in purpose needs a confirmed `consent_event`,
+completed **only by the data subject**. They complete it with a single-use link mailed to their own
+live primary address. No operator holds a token, because a token an operator can read and hand back
+proves nothing about the mailbox it should reach.
+
+A refusal names only the address and tells nothing new. The engine is written once
+(`consent.NewGate`) and **injected into the send path** (activities) at the composition root. So
+consent never becomes an import edge between siblings. Every consent *state* write also adds a
+proof row (Article 7(1): the duty to show consent). A fitness test (`consentproof_test.go`) fails any
+state write that skips its proof.
 
 ## What a refusal leaves behind
 
@@ -287,8 +354,31 @@ project's name is copied when the activity first counts, so a later rename does 
 record says. The one way out is **Undo filing** (`POST /activities/{id}/project-filing/undo`). It is
 a decision only a human makes: a named user who holds `activity.update`, with a written reason.
 
-Over-retention is an argument to have with a supervisory authority, while destruction cannot be
-reversed. So the undo is narrow, and the data layer refuses what the writer refuses.
+- It removes the activity from its project, and removes the class together with the proof for the
+  project filing. One transaction carries that change, the audit entry (the reason and the name of who
+  decided) and an `activity.updated` event carrying `project_filing_undone`.
+- It is allowed only when the project filing is the **only** basis. A `won` deal, a sent offer, a
+  pin set by the data controller or a deal link that still counts keeps the class (`409 other_basis_remains` /
+  `qualifying_deal`). An activity a statutory retention hold has already restricted always keeps it
+  (`409 restricted`). A legal hold on any record it is linked to, the project included, comes before
+  the undo (`409 legal_hold`).
+
+  A project the user cannot see still holds the activity
+  (`409 hidden_project`). The read shows such a project with no name, and a decision about it as only a
+  time. `GET /activities/{id}/project-filing` gives the same answer, plus the decisions already
+  made, so the screen and the write cannot disagree.
+- The database enforces the same rule below. The class may be removed only inside a transaction that
+  declares the undo for that one activity. The row must not be restricted, and must have no proof and
+  no project link left. The declared undo may delete project-filing proof and nothing else. Every other
+  change to the class or its timestamp is still refused.
+- An agent never decides it, even with an admin's passport. It can stage the new link that files an
+  activity under a project, and release it on an attended call. It can do so only while the undo could
+  still take the filing back. In three cases a member releases the new link in the CRM. The activity is restricted, held
+  through a link, or covered by an open erasure request. There, that filing would
+  last for good.
+
+To keep data too long is something a privacy authority may question later, while destroyed data
+cannot come back. So the undo is narrow, and the database refuses what the writer refuses.
 
 ## Where the code lives
 
