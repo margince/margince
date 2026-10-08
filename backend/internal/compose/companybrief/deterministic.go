@@ -41,8 +41,7 @@ func Deterministic(companyID string, in Input, lang string) []Sentence {
 	sentences = append(sentences,
 		perRecordSentences(stalledDeals(in), citeDeal, dealID,
 			func(deal DealIn) string { return stalledLine(deal, say) })...)
-	if len(in.Recent) > 0 {
-		last := in.Recent[0]
+	if last, ok := lastContact(in); ok {
 		sentences = append(sentences, Sentence{
 			Text:     lastTouchLine(last, say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},
@@ -201,6 +200,17 @@ func kindNoun(kind string, say spoken) string {
 	return noun
 }
 
+// lastContact is the timeline row the page names as last contact. A note, a
+// task or a meeting called off sits on the timeline too, and is not contact.
+func lastContact(in Input) (ActIn, bool) {
+	for _, act := range in.Recent {
+		if in.LastContactID != "" && act.ID == in.LastContactID {
+			return act, true
+		}
+	}
+	return ActIn{}, false
+}
+
 func lastTouchLine(last ActIn, say spoken) string {
 	noun := kindNoun(last.Kind, say)
 	when := shortDate(last.At, say)
@@ -280,8 +290,7 @@ func DeterministicSections(companyID string, in Input, lang string) []Section {
 	}
 
 	var activity []Sentence
-	if len(in.Recent) > 0 {
-		last := in.Recent[0]
+	if last, ok := lastContact(in); ok {
 		activity = append(activity, Sentence{
 			Text:     lastTouchLine(last, say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},

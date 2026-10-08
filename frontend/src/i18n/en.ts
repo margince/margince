@@ -4286,7 +4286,6 @@ export const en = {
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Call",
   "co.spine.kind.meeting": "Meeting",
-  "co.spine.kind.note": "Note",
   "co.spine.kind.message": "Message",
   "co.spine.andOthers": "{names} and {count} others",
   "co.spine.said.to": "{what} to {who}",

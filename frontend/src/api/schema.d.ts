@@ -24976,6 +24976,8 @@ export interface components {
              * @description When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
              */
             last_outbound_at?: string | null;
+            /** @description The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting nobody called off. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile and the timeline's last-contact stop both read this, so they cannot disagree. */
+            last_contact?: components["schemas"]["Company360LastContact"];
             state_strip?: components["schemas"]["Company360StateStrip"];
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
@@ -25261,6 +25263,14 @@ export interface components {
              */
             baseline_at?: string | null;
             new_activities: number;
+        };
+        Company360LastContact: {
+            /** Format: date-time */
+            at: string;
+            /** @enum {string} */
+            kind: "email" | "call" | "meeting" | "message";
+            /** Format: uuid */
+            activity_id: string;
         };
         /**
          * @description The contact record page in one payload (PO-EXT-3). Every section except `contact` is

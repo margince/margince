@@ -727,9 +727,9 @@ export function StateStrip({
   );
 }
 
-// The last word exchanged, as days since it fell, and who said it. Read off
-// the account's own timestamps rather than the health reading: the two dates
-// are the fact, and the reading is a judgement made from them.
+// The last contact with the account, as days since it happened and what it
+// was. The server picks it (`last_contact`), so this tile and the timeline's
+// last-contact stop name the same activity.
 function LastTouchStat({
   view,
   withheld,
@@ -750,10 +750,7 @@ function LastTouchStat({
   if (!view || withheld) {
     return <StatCard onOpen={onOpen} {...slot} value={t(WITHHELD_READING)} />;
   }
-  const inbound = view.last_inbound_at ?? undefined;
-  const outbound = view.last_outbound_at ?? undefined;
-  const theirs = Boolean(inbound && (!outbound || inbound > outbound));
-  const last = theirs ? inbound : outbound;
+  const last = view.last_contact;
   if (!last) {
     return (
       <StatCard
@@ -763,7 +760,7 @@ function LastTouchStat({
       />
     );
   }
-  const days = daysAgo(last, view.as_of);
+  const days = daysAgo(last.at, view.as_of);
   return (
     <StatCard
       onOpen={onOpen}
@@ -774,12 +771,22 @@ function LastTouchStat({
           : t("co.strip.lastTouch.ago", { count: formatNumber(days, locale) })
       }
       detail={join(
-        t(theirs ? "co.strip.lastTouch.theirs" : "co.strip.lastTouch.ours"),
-        formatDateAbbrev(last, locale, recordZone),
+        t(LAST_CONTACT_KIND[last.kind]),
+        formatDateAbbrev(last.at, locale, recordZone),
       )}
     />
   );
 }
+
+const LAST_CONTACT_KIND = {
+  email: "co.spine.kind.email",
+  call: "co.spine.kind.call",
+  meeting: "co.spine.kind.meeting",
+  message: "co.spine.kind.message",
+} as const satisfies Record<
+  NonNullable<Company360["last_contact"]>["kind"],
+  MessageKey
+>;
 
 // What is next on the calendar with this account: the meeting's day, its
 // subject and its hour. Nothing scheduled is a fact about the account and is

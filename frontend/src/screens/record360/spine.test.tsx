@@ -78,6 +78,7 @@ function activities(
     // reading is gated on kind, only that it is absent on that one row.
     host_user_id?: string;
     direction?: "inbound" | "outbound";
+    meetingStatus?: "booked" | "held" | "canceled" | "no_show";
     // What the server sends for a `kind=email` row and for no other kind. A
     // mail fixture without it models a shape the API does not return, so a
     // stop judged against it proves nothing about a real message.
@@ -95,6 +96,7 @@ function activities(
       links: row.links ?? [],
       host_user_id: row.host_user_id ?? null,
       direction: row.direction ?? null,
+      meeting_status: row.meetingStatus ?? null,
       email_summary: row.emailStatus
         ? {
             activity_id: row.id,
@@ -291,6 +293,36 @@ describe("the last thing that was actually said", () => {
 
     expect(screen.getByText("About capacity")).toBeTruthy();
     expect(screen.queryByText("Chase the signature")).toBeNull();
+  });
+
+  // The newest stop is titled "Last contact". A note we wrote and a meeting
+  // nobody held sit on the timeline too, and neither is contact.
+  it("skips a note and a called-off meeting when picking the last contact", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "a-note",
+            kind: "note",
+            subject: "No reply after two chasers",
+            at: "2026-08-20T09:00:00Z",
+          },
+          {
+            id: "a-off",
+            kind: "meeting",
+            subject: "Review that never happened",
+            at: "2026-08-19T09:00:00Z",
+            meetingStatus: "canceled",
+          },
+          { id: "a-call", kind: "call", subject: "Pricing call", at: SPOKE },
+        ]),
+      }),
+    );
+
+    expect(screen.getByText("Pricing call")).toBeTruthy();
+    expect(screen.queryByText("No reply after two chasers")).toBeNull();
+    expect(screen.queryByText("Review that never happened")).toBeNull();
   });
 
   // `occurred_at DESC` sorts a meeting booked for next week to the head of the

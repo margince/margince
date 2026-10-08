@@ -124,16 +124,18 @@ func TestDeterministicPipelineCitesTheLeadingOpenDeal(t *testing.T) {
 // date are the facts; inventing a subject would not be.
 func TestDeterministicLastTouchSurvivesAMissingSubject(t *testing.T) {
 	withSubject := briefLines(Deterministic(briefCompanyID, Input{
-		Name:   "Acme",
-		Recent: []ActIn{{ID: "a-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"}},
+		Name:          "Acme",
+		Recent:        []ActIn{{ID: "a-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"}},
+		LastContactID: "a-1",
 	}, "en"))
 	if !strings.Contains(withSubject, `"Pricing"`) {
 		t.Errorf("the subject is not quoted as theirs: %q", withSubject)
 	}
 
 	without := briefLines(Deterministic(briefCompanyID, Input{
-		Name:   "Acme",
-		Recent: []ActIn{{ID: "a-1", Kind: "call", At: "2026-07-10T09:00:00Z"}},
+		Name:          "Acme",
+		Recent:        []ActIn{{ID: "a-1", Kind: "call", At: "2026-07-10T09:00:00Z"}},
+		LastContactID: "a-1",
 	}, "en"))
 	if !strings.Contains(without, "call") {
 		t.Errorf("a subjectless activity lost its kind: %q", without)
@@ -282,5 +284,32 @@ func TestProfileLinesSkipAStatementThatIsOnlyPunctuation(t *testing.T) {
 	}
 	if !strings.Contains(lines[0].Text, "Mittelstand") {
 		t.Errorf("line = %q, want the real statement", lines[0].Text)
+	}
+}
+
+// A note written after the last call is the newest row on the timeline, and
+// still not contact: the sentence names the row the page's tile names.
+func TestDeterministicLastContactSkipsANewerNote(t *testing.T) {
+	text := briefLines(Deterministic(briefCompanyID, Input{
+		Name: "Acme",
+		Recent: []ActIn{
+			{ID: "n-1", Kind: "note", Subject: "No reply after two chasers", At: "2026-07-12T09:00:00Z"},
+			{ID: "c-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"},
+		},
+		LastContactID: "c-1",
+	}, "en"))
+	if strings.Contains(text, "chasers") {
+		t.Errorf("a note was reported as the last contact: %q", text)
+	}
+	if !strings.Contains(text, `"Pricing"`) {
+		t.Errorf("the call the tile names is missing: %q", text)
+	}
+
+	none := briefLines(Deterministic(briefCompanyID, Input{
+		Name:   "Acme",
+		Recent: []ActIn{{ID: "n-1", Kind: "note", Subject: "Internal", At: "2026-07-12T09:00:00Z"}},
+	}, "en"))
+	if strings.Contains(none, "Internal") {
+		t.Errorf("an account with only a note was given a last contact: %q", none)
 	}
 }

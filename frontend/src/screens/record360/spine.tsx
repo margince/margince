@@ -99,6 +99,8 @@ export type SpineSource = {
       // that names OUR side of an exchange — a mail carries the contact it was
       // with and nothing about the mailbox behind it.
       host_user_id?: string | null;
+      // Meeting only: whether it was held, booked or called off.
+      meeting_status?: string | null;
     }[];
     // Whether the read sent a cut page. A thread that drew three of four
     // conversations can count the rest; one drawn from a cut page cannot, and
@@ -437,13 +439,18 @@ function on(at: string, ctx: Ctx): string {
 // A map rather than a set plus a template-literal key: `t` takes a declared
 // MessageKey, so writing the key from the kind would put the catalog beyond
 // what the compiler can check and let a new kind ship printing its own id.
+// A note is absent on purpose: it is something we wrote down, not contact,
+// and the newest stop is titled "Last contact".
 const EXCHANGE_KINDS = {
   email: "co.spine.kind.email",
   call: "co.spine.kind.call",
   meeting: "co.spine.kind.meeting",
-  note: "co.spine.kind.note",
   message: "co.spine.kind.message",
 } as const satisfies Record<string, MessageKey>;
+
+// A meeting nobody held is not contact either. The server's
+// relstrength.countingMeetingStatuses is the same rule from the other side.
+const CALLED_OFF_MEETING: ReadonlySet<string> = new Set(["canceled", "no_show"]);
 
 type ExchangeKind = keyof typeof EXCHANGE_KINDS;
 
@@ -662,6 +669,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
     const at = Date.parse(entry.occurred_at ?? "");
     if (
       !isExchange(entry.kind) ||
+      CALLED_OFF_MEETING.has(entry.meeting_status ?? "") ||
       !subject ||
       // Already happened, as of the read the rest of the card describes: an
       // `occurred_at DESC` list sorts a meeting booked for next week to the

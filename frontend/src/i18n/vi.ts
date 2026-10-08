@@ -4135,7 +4135,6 @@ export const vi = {
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Cuộc gọi",
   "co.spine.kind.meeting": "Cuộc họp",
-  "co.spine.kind.note": "Ghi chú",
   "co.spine.kind.message": "Tin nhắn",
   "co.spine.andOthers": "{names} và {count} người khác",
   "co.spine.said.to": "{what} gửi {who}",

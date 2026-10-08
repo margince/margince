@@ -4183,6 +4183,30 @@ func (e Company360DealStatus) Valid() bool {
 	}
 }
 
+// Defines values for Company360LastContactKind.
+const (
+	Company360LastContactKindCall    Company360LastContactKind = "call"
+	Company360LastContactKindEmail   Company360LastContactKind = "email"
+	Company360LastContactKindMeeting Company360LastContactKind = "meeting"
+	Company360LastContactKindMessage Company360LastContactKind = "message"
+)
+
+// Valid indicates whether the value is a known member of the Company360LastContactKind enum.
+func (e Company360LastContactKind) Valid() bool {
+	switch e {
+	case Company360LastContactKindCall:
+		return true
+	case Company360LastContactKindEmail:
+		return true
+	case Company360LastContactKindMeeting:
+		return true
+	case Company360LastContactKindMessage:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Company360ProjectPhase.
 const (
 	Company360ProjectPhaseClosed     Company360ProjectPhase = "closed"
@@ -27160,6 +27184,9 @@ type Company360 struct {
 	// be a claim about the account rather than about what was readable.
 	Health *Company360Health `json:"health,omitempty"`
 
+	// LastContact The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting nobody called off. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile and the timeline's last-contact stop both read this, so they cannot disagree.
+	LastContact *Company360LastContact `json:"last_contact,omitempty"`
+
 	// LastInboundAt When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's company, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
@@ -27417,6 +27444,16 @@ type Company360Health struct {
 	// SingleThreaded The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
 	SingleThreaded *bool `json:"single_threaded,omitempty"`
 }
+
+// Company360LastContact defines model for Company360LastContact.
+type Company360LastContact struct {
+	ActivityId openapi_types.UUID        `json:"activity_id"`
+	At         time.Time                 `json:"at"`
+	Kind       Company360LastContactKind `json:"kind"`
+}
+
+// Company360LastContactKind defines model for Company360LastContact.Kind.
+type Company360LastContactKind string
 
 // Company360MeetingParticipant One attendee of the next meeting, named only when the caller may read them.
 type Company360MeetingParticipant struct {

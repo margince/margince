@@ -156,6 +156,14 @@ export function HealthStat({
       />
     );
   }
+  if (days == null && !dimension && !lastOutboundAt && !touchWithheld) {
+    // Unrated, and no mail either way: the account may well have meetings and
+    // calls, so "no inbound messages" would contradict the brief beside it,
+    // which reads this same missing rating as not assessed.
+    return (
+      <StatCard onOpen={onOpen} {...slot} value={t(UNASSESSED_READING)} />
+    );
+  }
   if (days == null) {
     const silence = silenceReading(
       touchWithheld,

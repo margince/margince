@@ -89,6 +89,10 @@ type Input struct {
 	LostCount *int     `json:"lost_count,omitempty"`
 	OpenTasks []TaskIn `json:"open_tasks,omitempty"`
 	Recent    []ActIn  `json:"recent,omitempty"`
+	// LastContactID is the Recent row the page's "Last contact" names, empty
+	// when it names none. The model reads the timeline itself; this keeps the
+	// written-out sentence on the row the tile shows.
+	LastContactID string `json:"-"`
 	// SectionsOmitted names what the reader could NOT see. It rides the
 	// fingerprint so two readers with different grants never share a cached
 	// brief, and it tells the writer to stay silent about those sections
@@ -368,6 +372,9 @@ func foldRecent(view crmcontracts.Company360, in *Input) {
 			}
 		}
 		in.Recent = append(in.Recent, act)
+	}
+	if view.LastContact != nil {
+		in.LastContactID = view.LastContact.ActivityId.String()
 	}
 }
 
