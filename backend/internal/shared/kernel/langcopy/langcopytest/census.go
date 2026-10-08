@@ -25,8 +25,23 @@ import (
 
 // verbs counts the format placeholders in a template. A translation that drops
 // one does not fail to compile — it renders "%!s(MISSING)" into a card — and a
-// translation that adds one consumes an argument nobody passed.
-var verbs = regexp.MustCompile(`%[a-zA-Z]|%%`)
+// translation that adds one consumes an argument nobody passed. Flags, width
+// and precision are read past so %02d counts as a %d.
+var verbs = regexp.MustCompile(`%(?:%|[-+# 0]*[0-9]*(?:\.[0-9]*)?([a-zA-Z]))`)
+
+// Placeholders lists a template's conversion verbs in order, without the
+// modifiers: a translation may pad a number differently and still take it.
+func Placeholders(template string) []string {
+	matches := verbs.FindAllStringSubmatch(template, -1)
+	found := make([]string, len(matches))
+	for i, match := range matches {
+		found[i] = "%" + match[1]
+		if match[1] == "" {
+			found[i] = "%%"
+		}
+	}
+	return found
+}
 
 // reporter is the slice of *testing.T's methods this package calls. Narrower
 // than testing.TB, whose unexported method rules out a test double.
@@ -134,7 +149,7 @@ func censusEntry(t reporter, name string, p langcopy.Phrase) {
 				lang, name)
 			continue
 		}
-		got, want := verbs.FindAllString(text, -1), verbs.FindAllString(english, -1)
+		got, want := Placeholders(text), Placeholders(english)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s writes %s with placeholders %v, but the sentence is given %v.\n  %s\n"+
 				"A dropped placeholder renders as %%!s(MISSING) in a card; an extra one reads an "+
@@ -150,7 +165,7 @@ func NoCount(t reporter, singulars map[string]langcopy.Phrase) {
 	t.Helper()
 	for _, lang := range textlang.Shipped {
 		for name, p := range singulars {
-			if got := verbs.FindAllString(p.In(lang), -1); len(got) != 0 {
+			if got := Placeholders(p.In(lang)); len(got) != 0 {
 				t.Errorf("%s writes %s with %v — a sentence about exactly one takes no count", lang, name, got)
 			}
 		}

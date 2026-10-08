@@ -93,6 +93,19 @@ func TestCensusReportsADroppedPlaceholder(t *testing.T) {
 	}
 }
 
+func TestCensusReadsAPaddedPlaceholder(t *testing.T) {
+	t.Parallel()
+	type table struct{ Count langcopy.Phrase }
+	bad := table{Count: langcopy.Phrase{En: "%02d things", De: "Dinge", Vi: "%d thứ"}}
+	s := run(func(r reporter) { Census(r, bad) })
+	if !reports(s.errors, "Count") {
+		t.Fatalf("a German sentence dropping the English %%02d was not reported: %v", s.errors)
+	}
+	if reports(s.errors, fmt.Sprintf("%s writes", textlang.Vietnamese)) {
+		t.Fatalf("a translation padding %%02d as %%d was reported as a mismatch: %v", s.errors)
+	}
+}
+
 func TestCensusReportsAnAddedPlaceholder(t *testing.T) {
 	t.Parallel()
 	type table struct{ Fine langcopy.Phrase }

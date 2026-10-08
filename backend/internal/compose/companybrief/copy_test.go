@@ -6,7 +6,6 @@ package companybrief
 // Every language the product ships writes the whole company floor.
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -14,12 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
-
-// companyVerbs is the placeholder count TestASingleKnownContactIsNotWrittenAsAPlural
-// holds StrengthOverOne to, below — the census in
-// TestEveryShippedLanguageWritesTheCompanyFloor owns the same check for every
-// other sentence.
-var companyVerbs = regexp.MustCompile(`%[a-zA-Z]|%%`)
 
 func TestEveryShippedLanguageWritesTheCompanyFloor(t *testing.T) {
 	t.Parallel()
@@ -80,7 +73,7 @@ func TestEveryLanguageDateLayoutRendersADate(t *testing.T) {
 // German, and the same shape is wrong in every language that inflects.
 func TestASingleKnownContactIsNotWrittenAsAPlural(t *testing.T) {
 	for _, lang := range textlang.Shipped {
-		if got := companyVerbs.FindAllString(floor.StrengthOverOne.In(lang), -1); len(got) != 1 {
+		if got := langcopytest.Placeholders(floor.StrengthOverOne.In(lang)); len(got) != 1 {
 			t.Errorf("%s writes StrengthOverOne with %v — it takes the strength and nothing else, "+
 				"because the count it would print is always one", lang, got)
 		}
