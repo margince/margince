@@ -24,6 +24,14 @@ To create a lead in Margince, open **Leads** in the sidebar and choose **New lea
 Many leads at once come in through Settings → **Data import**.
 Also called: add a prospect, new lead.
 
+### How do I work an existing contact as a lead?
+To work a contact you already have as a lead in Margince, open the contact, choose **More actions**, then **Work as a lead**.
+1. Margince creates a lead owned by you, filled from the contact's name, email, title, company and LinkedIn profile, and opens it.
+2. A contact is worked through one open lead at a time. Once it has one, the same menu shows **Open the lead** instead.
+3. In **New lead**, typing a name or an email also offers matching contacts; picking one fills the lead the same way.
+If the lead is still open 14 days after it was created, its owner gets a task, "Qualify this lead or close it". Qualifying or disqualifying the lead, or logging a call, email or meeting on it, completes the task.
+Also called: mark a contact as a lead, turn a contact into a lead, start a lead from a contact.
+
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
