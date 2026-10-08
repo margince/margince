@@ -91,7 +91,8 @@ with a `# yaml-language-server:` line.
   `/v1/responses`, `/v1/messages`). A base that ends in `/v1` is read as its root, so
   `https://api.mistral.ai/v1` reaches the same place as `https://api.mistral.ai`.
 - `gemini` works the other way. Its default base keeps `/v1beta`, and the paths are written from the
-  version, so leave `base_url` out.
+  version. Leave `base_url` out to reach Google, or give a gateway's base with its version, such as
+  `https://api.langdock.com/google/eu/v1beta`.
 
 ### Gemini thinking on a call with a schema
 
@@ -113,6 +114,22 @@ Give `openai_compatible` the host `https://openrouter.ai/api` and one `OPENAI_CO
 OpenRouter key reaches every model with open weights. Keep only the candidates that declare both
 `structured_outputs` and `tools`. To certify one and not bind it, `make e2e-ai` takes the model by
 name: `MODEL=openai_compatible:<slug> BASE_URL=https://openrouter.ai/api`.
+
+### One gateway for three wires: Langdock
+
+Langdock serves each vendor's own wire under its own path, on one key. Each path goes to the provider
+that speaks that wire, and the sheet of each provider lists Langdock (EU) and Langdock (US) as a
+Service:
+
+| Provider | Host (EU; `us` for the US region) | Models it serves |
+|---|---|---|
+| `openai_compatible` | `https://api.langdock.com/openai/eu` | OpenAI models |
+| `gemini` | `https://api.langdock.com/google/eu/v1beta` | Gemini models |
+| `anthropic` | `https://api.langdock.com/anthropic/eu` | Claude models |
+
+Each provider holds one key, so give the Langdock key to each provider you point at Langdock. A
+provider pointed at Langdock no longer reaches the vendor: `gemini` on Langdock cannot also call
+Google AI Studio with a Google key.
 
 ## 3. Bind the embeddings lane separately
 
