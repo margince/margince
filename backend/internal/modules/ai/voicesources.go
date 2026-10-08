@@ -11,9 +11,11 @@ package ai
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,6 +26,15 @@ import (
 // text) — the corpus target is 30k words total, so anything larger is a
 // wrong upload, not a bigger voice.
 const maxCorpusSourceBytes = 1 << 20
+
+// The contract's character limits on a source's label and reference.
+const (
+	maxSourceLabelChars = 255
+	maxSourceRefChars   = 512
+)
+
+// defaultVoiceWeight is the weight of a source whose request named none.
+const defaultVoiceWeight = 1.0
 
 // VoiceCorpusSource is one manifest row; the ingested text stays
 // store-internal (the builder reads it, the API never echoes it).
@@ -67,8 +78,8 @@ type CorpusSummary struct {
 // IngestSourceInput is one corpus source in its raw declared format.
 type IngestSourceInput struct {
 	Kind         string
-	Register     string // empty → DefaultRegister(kind)
-	Weight       float64
+	Register     string   // empty → DefaultRegister(kind)
+	Weight       *float64 // nil → defaultVoiceWeight; an explicit 0 is kept
 	SourceLabel  string
 	SourceRef    string // empty → SourceRefForContent
 	Format       string // empty → txt
@@ -161,15 +172,21 @@ func validateDeclaredSource(in IngestSourceInput) (register string, weight float
 	if !IsVoiceRegister(register) {
 		return "", 0, &CorpusIngestError{Field: voiceKeyRegister, Reason: "must be one of email, social, long_form, spoken, general"}
 	}
-	weight = in.Weight
-	if weight == 0 {
-		weight = 1.0
+	weight = defaultVoiceWeight
+	if in.Weight != nil {
+		weight = *in.Weight
 	}
 	if voiceWeightRefused(weight) {
 		return "", 0, &CorpusIngestError{Field: voiceKeyWeight, Reason: voiceWeightRange}
 	}
 	if strings.TrimSpace(in.SourceLabel) == "" {
 		return "", 0, &CorpusIngestError{Field: voiceKeySourceLabel, Reason: voiceValidationNotEmpty}
+	}
+	if utf8.RuneCountInString(in.SourceLabel) > maxSourceLabelChars {
+		return "", 0, &CorpusIngestError{Field: voiceKeySourceLabel, Reason: fmt.Sprintf("must be at most %d characters", maxSourceLabelChars)}
+	}
+	if utf8.RuneCountInString(in.SourceRef) > maxSourceRefChars {
+		return "", 0, &CorpusIngestError{Field: voiceKeySourceRef, Reason: fmt.Sprintf("must be at most %d characters", maxSourceRefChars)}
 	}
 	if strings.TrimSpace(in.Content) == "" {
 		return "", 0, &CorpusIngestError{Field: voiceKeyContent, Reason: voiceValidationNotEmpty}
@@ -227,7 +244,7 @@ func prepareSource(ctx context.Context, in IngestSourceInput, known KnownSpeaker
 			Reason: "no turns belong to this speaker label — nothing of the owner's own words to ingest",
 		}
 	}
-	sourceRef := in.SourceRef
+	sourceRef := strings.TrimSpace(in.SourceRef)
 	if sourceRef == "" {
 		sourceRef = SourceRefForContent(in.Content)
 	}

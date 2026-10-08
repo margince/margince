@@ -118,7 +118,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Acme"}, nil, &company); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Acme"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	var pipelines struct {
@@ -145,7 +145,8 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	}
 	for i := 0; i < 2; i++ {
 		if status := e.Call(t, "POST", "/v1/deals", AnyMap{
-			"name": fmt.Sprintf("Acme Deal %d", i), "pipeline_id": pipelines.Data[0].ID,
+			"source": "manual",
+			"name":   fmt.Sprintf("Acme Deal %d", i), "pipeline_id": pipelines.Data[0].ID,
 			"stage_id": stageID, "company_id": company.ID,
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("create deal → %d", status)

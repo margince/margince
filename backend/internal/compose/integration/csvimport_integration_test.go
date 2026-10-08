@@ -689,7 +689,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	// identity map only remembers rows IT wrote, so a company captured from
 	// mail, a connector or a seed is invisible to it.
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Akeneo", "industry": "retail"}, nil, nil); status != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Akeneo", "industry": "retail"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the incumbent → %d, want 201", status)
 	}
 
@@ -848,7 +848,7 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 	e := setupImportApp(t)
 
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the incumbent → %d, want 201", status)
 	}
 	companiesBefore := len(companyList(t, e).Data)
@@ -948,7 +948,7 @@ func TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted(t
 	// approval. Directly, the way real ones arrive: the importer's identity map
 	// remembers only rows IT wrote, so this one is invisible to it.
 	if code := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Zephyr Freight", "industry": "logistics"}, nil, nil); code != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Zephyr Freight", "industry": "logistics"}, nil, nil); code != http.StatusCreated {
 		t.Fatalf("creating the company between preview and approval → %d, want 201", code)
 	}
 

@@ -55,14 +55,14 @@ func seedEmploymentOverHTTP(t *testing.T, e *apptest.AppEnv) linkedPair {
 	role := seededEdgeRole
 	var contact contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Ada Employed"}, nil, &contact); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Ada Employed"}, nil, &contact); status != 201 {
 		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies",
-		AnyMap{"display_name": "Employer GmbH"}, nil, &company); status != 201 {
+		AnyMap{"source": "manual", "display_name": "Employer GmbH"}, nil, &company); status != 201 {
 		t.Fatalf("create company → %d", status)
 	}
 	return linkedPair{contact: contact.ID, company: company.ID, edge: linkEdge(t, e, AnyMap{
@@ -264,7 +264,7 @@ func TestEndToEnd_reversingAProjectCompanyRefusesByNameAndWritesNothing(t *testi
 		Version int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies",
-		AnyMap{"display_name": "Client GmbH"}, nil, &company); status != 201 {
+		AnyMap{"source": "manual", "display_name": "Client GmbH"}, nil, &company); status != 201 {
 		t.Fatalf("create company → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/projects", AnyMap{

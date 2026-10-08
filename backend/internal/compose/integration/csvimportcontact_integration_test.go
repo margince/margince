@@ -165,7 +165,7 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	e := setupImportApp(t)
 	for _, name := range []string{"Analytical Engines", "Bletchley Ltd"} {
 		if status := e.Call(t, http.MethodPost, "/v1/companies",
-			map[string]any{"display_name": name}, nil, nil); status != http.StatusCreated {
+			map[string]any{"source": "manual", "display_name": name}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("creating %q → %d, want 201", name, status)
 		}
 	}
@@ -243,7 +243,7 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Northwind GmbH"}, nil, nil); status != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Northwind GmbH"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the company → %d, want 201", status)
 	}
 
@@ -280,7 +280,7 @@ func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Analytical Engines"}, nil, nil); status != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Analytical Engines"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the company → %d, want 201", status)
 	}
 
@@ -339,7 +339,7 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 func TestCSVImportLinksACompanyWhoseTwoNamesAreTheSame(t *testing.T) {
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Kelvin Systems", "legal_name": "Kelvin Systems"},
+		map[string]any{"source": "manual", "display_name": "Kelvin Systems", "legal_name": "Kelvin Systems"},
 		nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the company → %d, want 201", status)
 	}
@@ -366,7 +366,7 @@ func TestCSVImportLinksACompanyWhoseTwoNamesAreTheSame(t *testing.T) {
 func TestCSVImportResolvesALegalNameAndRefusesASharedOne(t *testing.T) {
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Faraday", "legal_name": "Faraday Electrical AG"},
+		map[string]any{"source": "manual", "display_name": "Faraday", "legal_name": "Faraday Electrical AG"},
 		nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the company → %d, want 201", status)
 	}
@@ -379,7 +379,7 @@ func TestCSVImportResolvesALegalNameAndRefusesASharedOne(t *testing.T) {
 	// A second company wearing the first one's TRADING name. Which one employs
 	// the contact is a question only a human can answer.
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Faraday", "legal_name": "Faraday Holdings SE"},
+		map[string]any{"source": "manual", "display_name": "Faraday", "legal_name": "Faraday Holdings SE"},
 		nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the second company → %d, want 201", status)
 	}

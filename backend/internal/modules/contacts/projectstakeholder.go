@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -52,6 +53,9 @@ func (s *Store) SetProjectStakeholder(ctx context.Context, in SetProjectStakehol
 	// by the contract, and true only here: the zero UUID would reach the edge
 	// lookup and answer not-found for a contact the caller never named.
 	if err := httperr.RequireBodyID("contact_id", in.ContactID.UUID); err != nil {
+		return relationshipRow{}, err
+	}
+	if err := validRoleForKind(ProjectStakeholderKind, &in.Role); err != nil {
 		return relationshipRow{}, err
 	}
 	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
@@ -267,4 +271,23 @@ func contactNames(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID) (map
 		names[id] = name
 	}
 	return names, rows.Err()
+}
+
+// validRoleForKind answers the closed role vocabularies, for every door that can
+// write an edge: a billing contact's three capacities and a project
+// stakeholder's list. Every other kind keeps free text. Only a role that is
+// SUPPLIED is judged for a stakeholder, because the generic edge routes carry no
+// role as readily as one; the dedicated route passes its own, so an empty one is
+// refused there.
+func validRoleForKind(kind string, role *string) error {
+	if kind == ProjectStakeholderKind && role != nil {
+		// The contract's enum is the list, read off the generated type so a role
+		// added there is admitted here without a second spelling.
+		if !crmcontracts.SetProjectStakeholderRequestRole(*role).Valid() {
+			return httperr.Validation("role", "invalid",
+				"role must be one of the roles the contract lists for a project stakeholder")
+		}
+		return nil
+	}
+	return validBillingContactRole(kind, role)
 }
