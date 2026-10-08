@@ -54,7 +54,7 @@ No caps, no click; `badge-spelling.test.ts` fails a hand-rolled pill or restyle.
 ### Indigo is a claim about provenance
 
 Indigo (`--ai*`) means an agent proposed it. Never use it as decoration.
-`--orbAmber` / `--orbRed` / `--orbGrey` mean an outcome, not provenance. Tokens,
+`--orbAmber` / `--orbRed` mean an outcome, not provenance. Tokens,
 the staged dashed edge, the text-contrast rule and `ProvenanceTag`:
 [the catalog](src/design-system/README.md#indigo-says-a-machine-did-it).
 `check-ds-purity.sh` holds that colours come from tokens; nothing can tell you

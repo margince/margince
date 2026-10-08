@@ -5,7 +5,7 @@
   grid-template-columns: auto 1fr;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgInset);
   overflow: hidden;
   /* One line box for both faces: the numbers are the body face and the text
      the code face, and only a shared line-height keeps them level. */

@@ -190,9 +190,8 @@ The app chrome is **glass over the lit page ground**, as
 state. It does not use the deep ink-green field, so rail icons read as ordinary
 theme tokens instead of white-alpha on a dark ground.
 
-The dark-rail family in `tokens.css` (`--bgRail`, `--railTop`,
-`--railBottom`, `--railIcon`, `--railIconHover`, `--railIconActive`,
-`--railHover`, `--railActive`, `--overlayScrim`) is for the ink-green field
+The dark-rail family in `tokens.css` (`--bgRail`,
+`--railIconActive`, `--overlayScrim`) is for the ink-green field
 only. Its comment says it is unthemed, white-alpha in both themes, which is
 correct for that field: the collapsed rail's tooltips, the client-surface bar,
 and the website and deck surfaces. A new app panel styled from those tokens is

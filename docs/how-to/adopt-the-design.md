@@ -55,7 +55,7 @@ least risky once the tokens hold.
 
 1. **Grounds.** Move the light ladder to the lit ground: `--bgPage` → the
    pale green `#f1f5f2`, `--bgElevated` → the pane's solid fallback,
-   `--bgCard` and `--bgHover` a step apart, `--bgSidebar` → the glass value.
+   `--bgInset` and `--bgHover` a step apart.
    Add `--pane`, `--paneEdge`, `--glowA`, `--glowB` (the two corner glows at
    `.06`/`.10` light and `.10`/`.20` dark). Re-run the luminance ladder and
    the contrast math; the ladder order is asserted, so pick values that keep
@@ -144,7 +144,7 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
 1. **Ground and glows.** `.app` paints `--bgPage` with the two radial glows
    (`--glowA` top-left, `--glowB` top-right) as a background, not an
    element and not an animation.
-2. **Rail.** Glass (`--bgSidebar` + blur) over the glow, a hairline on the
+2. **Rail.** Glass (`--pane` + blur) over the glow, a hairline on the
    right, no dark ground. Collapsed stays **64px** (the 44px touch targets
    and the tooltip constraint in `shell.css` depend on it; the mock's 52px is
    not worth breaking them), expanded 224px instead of 252. Rows 34px,

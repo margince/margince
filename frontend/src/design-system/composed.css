@@ -67,7 +67,7 @@
      boards those are is a fact about callers and changes without this file
      hearing about it, so the condition is the surface. */
   overflow-x: clip;
-  /* A RECESS in the surface, not a card on it. --bgCard is a card's ground and
+  /* A RECESS in the surface, not a card on it. --bgInset is a card's ground and
      read as one — five of them in a row made the board a grid of grey slabs
      with the deals inside them, and the cards had to fight their own
      containers to look like the subject. */
@@ -1318,7 +1318,7 @@
    The recessed ground, not a tint — colour on this page means direction or
    provenance, and a note has neither. */
 .tl-note .tl-text {
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
 }
@@ -1390,7 +1390,7 @@
   padding-inline: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /*

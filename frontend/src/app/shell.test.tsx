@@ -306,7 +306,7 @@ describe("PageTitle", () => {
   // to the top bar or to the dock now, and a button appearing here without a
   // caller asking for it is chrome creeping back into the content column.
   // The heading block is a NAME, not a toolbar. A screen's own verbs stand in
-  // its `.list-head`, where the list they act on is; the shell used to thread a
+  // the header row of the list they act on; the shell used to thread a
   // `pageActions` slot down to here and no screen ever filled it.
   it("carries no control at all", () => {
     render(<PageTitle route={{ screen: "deals" }} />);

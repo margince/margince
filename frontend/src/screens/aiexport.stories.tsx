@@ -29,7 +29,7 @@ const renderDialog = () => (
 export const Dialog: Story = { render: renderDialog };
 
 // The dialog in dark. Almost everything here is a tinted Callout or a
-// `pre.code-block`, and the block paints `--bgCard` INSIDE a dialog that is
+// `pre.code-block`, and the block paints `--bgInset` INSIDE a dialog that is
 // already a raised surface — two grounds that only stay distinguishable if both
 // re-resolve. The callout is what tells the reader this YAML is about to leave
 // the installation, so it is the one thing that may not go quiet.

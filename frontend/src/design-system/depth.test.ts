@@ -189,8 +189,8 @@ describe("depth", () => {
       // The one genuine drop shadow outside --shadow-pop, and the reason is the
       // ground: this dialog floats on the rail's own dark brand surface, where
       // --shadow-pop is tinted for the page and reads as a grey smear. Tinted
-      // to --railBottom so it is the shadow that ground would actually cast.
-      "src/screens/onboarding.css: box-shadow: 0 18px 46px color-mix(in srgb, var(--railBottom) 44%, transparent)",
+      // to --obDialogShadow so it is the shadow that ground would actually cast.
+      "src/screens/onboarding.css: box-shadow: 0 18px 46px color-mix(in srgb, var(--obDialogShadow) 44%, transparent)",
     ]);
   });
 
