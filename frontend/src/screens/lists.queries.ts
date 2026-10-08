@@ -15,6 +15,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { recordListsKey } from "./activitykeys";
 import { throwProblem, useMe } from "./common";
+import type { MutationOutcome } from "./undoableremoval";
 
 export type List = components["schemas"]["List"];
 export type ListRecordType = List["entity_type"];
@@ -307,22 +308,72 @@ export type MemberChange = Readonly<{
 export function useChangeMember() {
   const invalidate = useInvalidateLists();
   return useMutation({
-    mutationFn: async (
-      input: MemberChange & Readonly<{ remove?: boolean }>,
-    ) => {
-      const body = {
-        entity_type: input.entityType,
-        entity_id: input.entityId,
-        note: input.note || undefined,
-      };
-      const params = { path: { id: input.listId } };
-      const { error } = input.remove
-        ? await api.POST("/lists/{id}/members/remove", { params, body })
-        : await api.POST("/lists/{id}/members", { params, body });
+    mutationFn: async (input: MemberChange) => {
+      const { error } = await api.POST("/lists/{id}/members", {
+        params: { path: { id: input.listId } },
+        body: {
+          entity_type: input.entityType,
+          entity_id: input.entityId,
+          note: input.note || undefined,
+        },
+      });
       if (error) {
         throwProblem(error);
       }
     },
     onSuccess: invalidate,
+  });
+}
+
+export type MemberRestore = Readonly<{
+  listId: string;
+  undo: components["schemas"]["RemovalUndo"];
+}>;
+
+/**
+ * Take one record off a Shortlist. `onSuccess` gets the handle that puts it
+ * back, or null from a server that answered without one.
+ */
+export function useRemoveMember(
+  outcome: MutationOutcome<MemberRestore | null>,
+) {
+  const invalidate = useInvalidateLists();
+  return useMutation({
+    mutationFn: async (input: MemberChange): Promise<MemberRestore | null> => {
+      const { data, error } = await api.POST("/lists/{id}/members/remove", {
+        params: { path: { id: input.listId } },
+        body: { entity_type: input.entityType, entity_id: input.entityId },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data ? { listId: input.listId, undo: data } : null;
+    },
+    onError: outcome.onError,
+    onSuccess: async (restore) => {
+      await invalidate();
+      outcome.onSuccess(restore);
+    },
+  });
+}
+
+/** Put back a record this reader took off a Shortlist, as its author left it. */
+export function useRestoreMember(outcome: MutationOutcome<MemberRestore>) {
+  const invalidate = useInvalidateLists();
+  return useMutation({
+    mutationFn: async (input: MemberRestore) => {
+      const { error } = await api.POST("/lists/{id}/members/restore", {
+        params: { path: { id: input.listId } },
+        body: input.undo,
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onError: outcome.onError,
+    onSuccess: async (_, input) => {
+      await invalidate();
+      outcome.onSuccess(input);
+    },
   });
 }

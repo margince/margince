@@ -3209,7 +3209,7 @@ export interface paths {
         delete: operations["archiveDeal"];
         options?: never;
         head?: never;
-        /** Update a deal (partial). Closing requires terminal status + lost_reason if lost. */
+        /** Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. */
         patch: operations["updateDeal"];
         trace?: never;
     };
@@ -3235,6 +3235,10 @@ export interface paths {
          *     the same money: moving a won deal back to an open stage clears its close date,
          *     its lost reason and the FX rate frozen at close, and takes revenue out of a
          *     quarter that has already been reported.
+         *
+         *     A move to the stage the deal already holds changes nothing and answers 200 with the
+         *     deal as it stands: a retried call must not close a closed deal again and move its
+         *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          */
         post: operations["advanceDeal"];
         delete?: never;
@@ -6989,6 +6993,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/lists/{id}/members/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back a record the caller took off a Shortlist.
+         * @description Undoes one `removeListMember`, named by the `audit_id` it answered. The member comes back
+         *     as its author left it: the same `added_by`, `created_at` and note, not the restorer and
+         *     now. The gates are the removal's own.
+         *
+         *     Only the caller's own removal can be put back, and only while nothing has changed that
+         *     record's membership since: a removal by somebody else, of another list, or of a record
+         *     the caller can no longer see answers `404`.
+         *
+         *     An agent may not call this: the restore undoes the caller's own removal, made by hand.
+         */
+        post: operations["restoreListMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/lists/{id}/members/{recordId}/why": {
         parameters: {
             query?: never;
@@ -8057,8 +8092,42 @@ export interface paths {
          * @description Undo for applyTag. archiveTag retires a tag from the whole workspace, which is not the
          *     same act and not a way back from a mistaken tagging. Idempotent: removing a tagging that
          *     is not there succeeds, because the caller asked for a state that is already true.
+         *
+         *     A removal that took a tagging off answers `200` with the handle `restoreTagApplication`
+         *     takes to put it back; one that found nothing to remove answers `204`.
          */
         delete: operations["removeTag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/{id}/apply/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back a tag the caller took off a record.
+         * @description Undoes one `removeTag`, named by the `audit_id` it answered. The tagging comes back as it
+         *     was assigned: the same `assigned_by`, `assigned_by_kind` and `assigned_at`, not the
+         *     restorer and now. The gates are the removal's own.
+         *
+         *     Only the caller's own removal can be put back, and only while nothing has changed that
+         *     record's tagging since: a removal by somebody else, of another tag, or from a record the
+         *     caller can no longer see answers `404`.
+         *
+         *     An agent may not call this: the restore undoes the caller's own removal, made by hand.
+         */
+        post: operations["restoreTagApplication"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -15201,7 +15270,10 @@ export interface paths {
         get: operations["getOffer"];
         put?: never;
         post?: never;
-        /** Archive (soft-delete) an offer. */
+        /**
+         * Archive (soft-delete) an offer.
+         * @description An accepted offer prices its deal and is refused 409 `offer_accepted`; archive any other status.
+         */
         delete: operations["archiveOffer"];
         options?: never;
         head?: never;
@@ -15271,7 +15343,8 @@ export interface paths {
          *     rendered or delivered to a counterparty — delivery is a separate capability that does not
          *     exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
          *     with no staging path — this IS the commercial commitment, since a sent revision is never
-         *     mutated in place and its rate to base is fixed from here on.
+         *     mutated in place and its rate to base is fixed from here on. An offer whose `valid_until`
+         *     day has passed is refused 422 `offer_lapsed`; regenerate it with a later date.
          */
         post: operations["sendOffer"];
         delete?: never;
@@ -15297,7 +15370,8 @@ export interface paths {
          * @description sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
          *     accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
          *     `offer.accepted`. Recording the buyer's acceptance is a human attestation — an agent
-         *     principal is rejected outright.
+         *     principal is rejected outright. An offer whose `valid_until` day has passed is refused
+         *     422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
          */
         post: operations["acceptOffer"];
         delete?: never;
@@ -27531,12 +27605,19 @@ export interface components {
             project_id?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
-            /** @enum {string} */
+            /**
+             * @description Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.
+             * @enum {string}
+             */
             status?: "open" | "won" | "lost";
+            /** @description Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage. */
             lost_reason?: string | null;
-            /** @description Native→base rate to FREEZE at close. Required (server may also compute it from the FX table) when transitioning to won with a non-base currency — satisfies the deal_closed_fx CHECK (formulas §6.1). Ignored while open. */
+            /** @description Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal. */
             fx_rate_to_base?: string | null;
-            /** Format: date */
+            /**
+             * Format: date
+             * @description Refused 422 `set_by_advance`; dated by the advance that closes the deal.
+             */
             fx_rate_date?: string | null;
             /** @enum {string|null} */
             forecast_category?: null | "commit" | "best_case" | "pipeline" | "omitted";
@@ -32616,6 +32697,14 @@ export interface components {
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
+        };
+        /** @description The way back from taking a tag off a record or a record off a Shortlist. A removal answers it, and the matching restore route takes it back unchanged. */
+        RemovalUndo: {
+            /**
+             * Format: uuid
+             * @description The removal's own history entry, which kept who added the link and when, so the restore puts it back as it was.
+             */
+            audit_id: string;
         };
         TagListResponse: {
             data: components["schemas"]["Tag"][];
@@ -54879,7 +54968,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Removed. */
+            /** @description Removed. The body is the handle `restoreListMember` takes to put the record back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalUndo"];
+                };
+            };
+            /** @description Not sent. A removal answers `200` with its undo handle, and a record that is not on the list answers `404`. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -54889,6 +54987,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalUndo"];
+            };
+        };
+        responses: {
+            /** @description The member, back on the list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMember"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The membership cannot be put back: the record was added to or taken off this list again since, or the list is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -56865,7 +57003,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Removed (or was not applied). */
+            /** @description Removed. The body is the handle that puts the tagging back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalUndo"];
+                };
+            };
+            /** @description The record did not carry the tag; nothing was removed. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -56875,6 +57022,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreTagApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalUndo"];
+            };
+        };
+        responses: {
+            /** @description The tagging, back on the record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Taggable"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The tagging cannot be put back: the tag was applied to or removed from this record again since, or the tag is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -66422,6 +66609,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateOffer: {

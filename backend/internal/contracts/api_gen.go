@@ -40840,6 +40840,12 @@ type RelinkThreadRequest struct {
 	ThreadKey string `json:"thread_key"`
 }
 
+// RemovalUndo The way back from taking a tag off a record or a record off a Shortlist. A removal answers it, and the matching restore route takes it back unchanged.
+type RemovalUndo struct {
+	// AuditId The removal's own history entry, which kept who added the link and when, so the restore puts it back as it was.
+	AuditId openapi_types.UUID `json:"audit_id"`
+}
+
 // RenameCustomFieldRequest Merge-PATCH; `label` only — `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent).
 type RenameCustomFieldRequest struct {
 	Label *string `json:"label,omitempty"`
@@ -44609,13 +44615,17 @@ type UpdateDealRequest struct {
 	// ExpectedCloseDate On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.
 	ExpectedCloseDate *openapi_types.Date                `json:"expected_close_date,omitempty"`
 	ForecastCategory  *UpdateDealRequestForecastCategory `json:"forecast_category,omitempty"`
-	FxRateDate        *openapi_types.Date                `json:"fx_rate_date,omitempty"`
 
-	// FxRateToBase Native→base rate to FREEZE at close. Required (server may also compute it from the FX table) when transitioning to won with a non-base currency — satisfies the deal_closed_fx CHECK (formulas §6.1). Ignored while open.
-	FxRateToBase *string             `json:"fx_rate_to_base,omitempty"`
-	LostReason   *string             `json:"lost_reason,omitempty"`
-	Name         *string             `json:"name,omitempty"`
-	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
+	// FxRateDate Refused 422 `set_by_advance`; dated by the advance that closes the deal.
+	FxRateDate *openapi_types.Date `json:"fx_rate_date,omitempty"`
+
+	// FxRateToBase Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal.
+	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
+
+	// LostReason Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.
+	LostReason *string             `json:"lost_reason,omitempty"`
+	Name       *string             `json:"name,omitempty"`
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
 	PartnerAttribution *UpdateDealRequestPartnerAttribution `json:"partner_attribution,omitempty"`
@@ -44624,11 +44634,13 @@ type UpdateDealRequest struct {
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
-	Priority             *UpdateDealRequestPriority `json:"priority,omitempty"`
-	ProjectId            *openapi_types.UUID        `json:"project_id,omitempty"`
-	Status               *UpdateDealRequestStatus   `json:"status,omitempty"`
-	WaitUntil            *openapi_types.Date        `json:"wait_until,omitempty"`
-	AdditionalProperties map[string]interface{}     `json:"-"`
+	Priority  *UpdateDealRequestPriority `json:"priority,omitempty"`
+	ProjectId *openapi_types.UUID        `json:"project_id,omitempty"`
+
+	// Status Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.
+	Status               *UpdateDealRequestStatus `json:"status,omitempty"`
+	WaitUntil            *openapi_types.Date      `json:"wait_until,omitempty"`
+	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
 // UpdateDealRequestCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
@@ -44643,7 +44655,7 @@ type UpdateDealRequestPartnerAttribution string
 // UpdateDealRequestPriority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
 type UpdateDealRequestPriority string
 
-// UpdateDealRequestStatus defines model for UpdateDealRequest.Status.
+// UpdateDealRequestStatus Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.
 type UpdateDealRequestStatus string
 
 // UpdateDealRoomDocumentRequest Any subset; omit a field to leave it unchanged.
@@ -54539,6 +54551,9 @@ type AddListMemberJSONRequestBody = ListMemberChangeRequest
 // RemoveListMemberJSONRequestBody defines body for RemoveListMember for application/json ContentType.
 type RemoveListMemberJSONRequestBody = ListMemberChangeRequest
 
+// RestoreListMemberJSONRequestBody defines body for RestoreListMember for application/json ContentType.
+type RestoreListMemberJSONRequestBody = RemovalUndo
+
 // SaveMailDraftJSONRequestBody defines body for SaveMailDraft for application/json ContentType.
 type SaveMailDraftJSONRequestBody = MailDraftInput
 
@@ -54802,6 +54817,9 @@ type RemoveTagJSONRequestBody = ApplyTagRequest
 
 // ApplyTagJSONRequestBody defines body for ApplyTag for application/json ContentType.
 type ApplyTagJSONRequestBody = ApplyTagRequest
+
+// RestoreTagApplicationJSONRequestBody defines body for RestoreTagApplication for application/json ContentType.
+type RestoreTagApplicationJSONRequestBody = RemovalUndo
 
 // MergeTagsJSONRequestBody defines body for MergeTags for application/json ContentType.
 type MergeTagsJSONRequestBody = MergeTagsRequest
@@ -66509,7 +66527,7 @@ type ServerInterface interface {
 	// Get a deal by id (the 360 record).
 	// (GET /deals/{id})
 	GetDeal(w http.ResponseWriter, r *http.Request, id Id)
-	// Update a deal (partial). Closing requires terminal status + lost_reason if lost.
+	// Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
 	// (PATCH /deals/{id})
 	UpdateDeal(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealParams)
 	// Advance a deal to a new stage (audit-logged with prior + next stage).
@@ -66860,6 +66878,9 @@ type ServerInterface interface {
 	// Take one record off a Shortlist, with an optional note on why.
 	// (POST /lists/{id}/members/remove)
 	RemoveListMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back a record the caller took off a Shortlist.
+	// (POST /lists/{id}/members/restore)
+	RestoreListMember(w http.ResponseWriter, r *http.Request, id Id)
 	// Say why a record is, or is not, on a list.
 	// (GET /lists/{id}/members/{recordId}/why)
 	ExplainListMember(w http.ResponseWriter, r *http.Request, id Id, recordId openapi_types.UUID)
@@ -67490,6 +67511,9 @@ type ServerInterface interface {
 	// Apply a tag to an entity (contact/company/deal/lead/project).
 	// (POST /tags/{id}/apply)
 	ApplyTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back a tag the caller took off a record.
+	// (POST /tags/{id}/apply/restore)
+	RestoreTagApplication(w http.ResponseWriter, r *http.Request, id Id)
 	// Fold this tag into another, moving every record that carries it.
 	// (POST /tags/{id}/merge)
 	MergeTags(w http.ResponseWriter, r *http.Request, id Id)
@@ -70013,7 +70037,7 @@ func (_ Unimplemented) GetDeal(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Update a deal (partial). Closing requires terminal status + lost_reason if lost.
+// Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
 // (PATCH /deals/{id})
 func (_ Unimplemented) UpdateDeal(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -70712,6 +70736,12 @@ func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id 
 // Take one record off a Shortlist, with an optional note on why.
 // (POST /lists/{id}/members/remove)
 func (_ Unimplemented) RemoveListMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back a record the caller took off a Shortlist.
+// (POST /lists/{id}/members/restore)
+func (_ Unimplemented) RestoreListMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71972,6 +72002,12 @@ func (_ Unimplemented) RemoveTag(w http.ResponseWriter, r *http.Request, id Id) 
 // Apply a tag to an entity (contact/company/deal/lead/project).
 // (POST /tags/{id}/apply)
 func (_ Unimplemented) ApplyTag(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back a tag the caller took off a record.
+// (POST /tags/{id}/apply/restore)
+func (_ Unimplemented) RestoreTagApplication(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93770,6 +93806,38 @@ func (siw *ServerInterfaceWrapper) RemoveListMember(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreListMember operation middleware
+func (siw *ServerInterfaceWrapper) RestoreListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreListMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ExplainListMember operation middleware
 func (siw *ServerInterfaceWrapper) ExplainListMember(w http.ResponseWriter, r *http.Request) {
 
@@ -102876,6 +102944,38 @@ func (siw *ServerInterfaceWrapper) ApplyTag(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreTagApplication operation middleware
+func (siw *ServerInterfaceWrapper) RestoreTagApplication(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreTagApplication(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // MergeTags operation middleware
 func (siw *ServerInterfaceWrapper) MergeTags(w http.ResponseWriter, r *http.Request) {
 
@@ -107607,6 +107707,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/lists/{id}/members/remove", wrapper.RemoveListMember)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/members/restore", wrapper.RestoreListMember)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lists/{id}/members/{recordId}/why", wrapper.ExplainListMember)
 	})
 	r.Group(func(r chi.Router) {
@@ -108235,6 +108338,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tags/{id}/apply", wrapper.ApplyTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tags/{id}/apply/restore", wrapper.RestoreTagApplication)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tags/{id}/merge", wrapper.MergeTags)

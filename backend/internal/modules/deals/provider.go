@@ -124,6 +124,9 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
+		if err := refuseClosingFields(req); err != nil {
+			return datasource.EntityRef{}, err
+		}
 		update := dealUpdateInput(req, in.IfVersion)
 		update.Trail = in.Trail
 		update.Clear = in.Clear

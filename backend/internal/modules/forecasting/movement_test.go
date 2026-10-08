@@ -306,3 +306,15 @@ func TestAReopenedDealIsNotReportedAsAModelChange(t *testing.T) {
 	}
 	reconciles(t, m)
 }
+
+func TestADealThatWasLostBetweenSnapshotsLeavesAsLost(t *testing.T) {
+	t.Parallel()
+	lost := open("d1", 10_000)
+	lost.InOpen, lost.InEvidence, lost.InBestCase, lost.InLost = false, false, false, true
+
+	m := Classify(ReadingOpen, side(DefinitionVersion, open("d1", 10_000)), side(DefinitionVersion, lost))
+	if delta := bucketOf(t, m, "d1"); delta.Bucket != BucketLost || delta.AmountMinor != -10_000 {
+		t.Errorf("a lost deal landed in %q moving %d, want %q moving -10000", delta.Bucket, delta.AmountMinor, BucketLost)
+	}
+	reconciles(t, m)
+}

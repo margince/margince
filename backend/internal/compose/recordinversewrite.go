@@ -175,7 +175,7 @@ func refuseColleagueWork(ctx context.Context, tx pgx.Tx, row AuditRow) error {
 
 // unarchive brings the record back through its own module's un-archive.
 func (r recordInverses) unarchive(ctx context.Context, tx pgx.Tx, row AuditRow, ifVersion int64) (storekit.RestoreReport, error) {
-	with := storekit.RestoreWith{Erased: archiveIsBehindErasure}
+	with := unarchiveWith(nil)
 	switch row.EntityType {
 	case entityTypeContact:
 		return r.contacts.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](row.EntityID), &ifVersion, with)

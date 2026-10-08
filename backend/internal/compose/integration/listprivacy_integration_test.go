@@ -53,3 +53,36 @@ func TestASubjectsShortlistsReachTheirAccessExportAndTheirErasure(t *testing.T) 
 		t.Fatalf("%d membership events outlived the erasure", n)
 	}
 }
+
+func TestARemovedMembershipsNoteReachesTheAccessExport(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	subject := e.SeedContact(t, "Removed Subject", &e.Rep1)
+	list, err := store.CreateList(e.Admin(), collections.CreateListInput{Name: "Panel", EntityType: "contact"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	note := "spoke on the panel"
+	change := collections.MemberChange{EntityType: "contact", EntityID: subject, Note: &note, Reason: collections.ReasonChosen}
+	if _, err := store.AddMember(e.Admin(), list.ID, change); err != nil {
+		t.Fatal(err)
+	}
+	change.Note = nil
+	if _, err := store.RemoveMember(e.Admin(), list.ID, change); err != nil {
+		t.Fatal(err)
+	}
+
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](subject))
+	if err != nil {
+		t.Fatalf("assemble the access export: %v", err)
+	}
+	kept := 0
+	for _, row := range pkg.ListMembershipHistory {
+		if row["action"] == "removed" && row["member_note"] == note {
+			kept++
+		}
+	}
+	if kept != 1 {
+		t.Fatalf("the export's Shortlist history = %v, want the removal with the note it kept", pkg.ListMembershipHistory)
+	}
+}

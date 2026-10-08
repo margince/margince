@@ -4828,7 +4828,7 @@ paths:
     patch:
       tags: [Deals]
       operationId: updateDeal
-      summary: Update a deal (partial). Closing requires terminal status + lost_reason if lost.
+      summary: Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
       x-mcp-tool: { verb: update_record, record_type: deal, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4879,6 +4879,10 @@ paths:
         the same money: moving a won deal back to an open stage clears its close date,
         its lost reason and the FX rate frozen at close, and takes revenue out of a
         quarter that has already been reported.
+
+        A move to the stage the deal already holds changes nothing and answers 200 with the
+        deal as it stands: a retried call must not close a closed deal again and move its
+        close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
       # advance_deal is the one TierDynamic tool (ADR-0026): the gate resolves the tier from the
       # stage semantics at BOTH ENDS of the move, not statically. open→open = 🟢 (no token); a
       # terminal won/lost stage at either end = 🟡 (approval token required), so closing a deal and
@@ -10609,10 +10613,60 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/ListMemberChangeRequest' }
       responses:
-        '204': { description: Removed. }
+        '200':
+          description: Removed. The body is the handle `restoreListMember` takes to put the record back.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemovalUndo' }
+        '204':
+          description: >-
+            Not sent. A removal answers `200` with its undo handle, and a record that is not on
+            the list answers `404`.
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /lists/{id}/members/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Lists]
+      operationId: restoreListMember
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Put back a record the caller took off a Shortlist.
+      description: |
+        Undoes one `removeListMember`, named by the `audit_id` it answered. The member comes back
+        as its author left it: the same `added_by`, `created_at` and note, not the restorer and
+        now. The gates are the removal's own.
+
+        Only the caller's own removal can be put back, and only while nothing has changed that
+        record's membership since: a removal by somebody else, of another list, or of a record
+        the caller can no longer see answers `404`.
+
+        An agent may not call this: the restore undoes the caller's own removal, made by hand.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RemovalUndo' }
+      responses:
+        '200':
+          description: The member, back on the list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListMember' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The membership cannot be put back: the record was added to or taken off this list
+            again since, or the list is archived.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /lists/{id}/members/{recordId}/why:
@@ -12623,16 +12677,66 @@ paths:
         Undo for applyTag. archiveTag retires a tag from the whole workspace, which is not the
         same act and not a way back from a mistaken tagging. Idempotent: removing a tagging that
         is not there succeeds, because the caller asked for a state that is already true.
+
+        A removal that took a tagging off answers `200` with the handle `restoreTagApplication`
+        takes to put it back; one that found nothing to remove answers `204`.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/ApplyTagRequest' }
       responses:
-        '204': { description: Removed (or was not applied). }
+        '200':
+          description: Removed. The body is the handle that puts the tagging back.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemovalUndo' }
+        '204': { description: The record did not carry the tag; nothing was removed. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /tags/{id}/apply/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Tags]
+      operationId: restoreTagApplication
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Put back a tag the caller took off a record.
+      description: |
+        Undoes one `removeTag`, named by the `audit_id` it answered. The tagging comes back as it
+        was assigned: the same `assigned_by`, `assigned_by_kind` and `assigned_at`, not the
+        restorer and now. The gates are the removal's own.
+
+        Only the caller's own removal can be put back, and only while nothing has changed that
+        record's tagging since: a removal by somebody else, of another tag, or from a record the
+        caller can no longer see answers `404`.
+
+        An agent may not call this: the restore undoes the caller's own removal, made by hand.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RemovalUndo' }
+      responses:
+        '200':
+          description: The tagging, back on the record.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Taggable' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The tagging cannot be put back: the tag was applied to or removed from this record
+            again since, or the tag is archived.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ----------------------------- /reports -----------------------------------
@@ -22530,6 +22634,7 @@ paths:
       tags: [Offers]
       operationId: archiveOffer
       summary: Archive (soft-delete) an offer.
+      description: An accepted offer prices its deal and is refused 409 `offer_accepted`; archive any other status.
       x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write }
       responses:
         '200':
@@ -22538,6 +22643,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Offer' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   /offers/{id}/line-items:
     parameters:
@@ -22615,7 +22721,8 @@ paths:
         rendered or delivered to a counterparty — delivery is a separate capability that does not
         exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
         with no staging path — this IS the commercial commitment, since a sent revision is never
-        mutated in place and its rate to base is fixed from here on.
+        mutated in place and its rate to base is fixed from here on. An offer whose `valid_until`
+        day has passed is refused 422 `offer_lapsed`; regenerate it with a later date.
       x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -22641,7 +22748,8 @@ paths:
         sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
         accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
         `offer.accepted`. Recording the buyer's acceptance is a human attestation — an agent
-        principal is rejected outright.
+        principal is rejected outright. An offer whose `valid_until` day has passed is refused
+        422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       parameters:
@@ -38617,10 +38725,10 @@ components:
             through unrelated edits. Null clears it.
         project_id: { type: [string, 'null'], format: uuid }
         owner_id: { type: [string, 'null'], format: uuid }
-        status: { type: string, enum: [open, won, lost] }
-        lost_reason: { type: [string, 'null'] }
-        fx_rate_to_base: { type: [string, 'null'], description: 'Native→base rate to FREEZE at close. Required (server may also compute it from the FX table) when transitioning to won with a non-base currency — satisfies the deal_closed_fx CHECK (formulas §6.1). Ignored while open.' }
-        fx_rate_date: { type: [string, 'null'], format: date }
+        status: { type: string, enum: [open, won, lost], description: 'Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.' }
+        lost_reason: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.' }
+        fx_rate_to_base: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal.' }
+        fx_rate_date: { type: [string, 'null'], format: date, description: 'Refused 422 `set_by_advance`; dated by the advance that closes the deal.' }
         forecast_category: { type: [string, 'null'], enum: [null, commit, best_case, pipeline, omitted] }
         expected_close_date: { type: [string, 'null'], format: date, description: 'On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.' }
         wait_until: { type: [string, 'null'], format: date }
@@ -44172,6 +44280,20 @@ components:
       properties:
         entity_type: { type: string, enum: [contact, company, deal, lead, project] }
         entity_id: { type: string, format: uuid }
+
+    RemovalUndo:
+      type: object
+      description: >-
+        The way back from taking a tag off a record or a record off a Shortlist. A removal
+        answers it, and the matching restore route takes it back unchanged.
+      required: [audit_id]
+      properties:
+        audit_id:
+          type: string
+          format: uuid
+          description: >-
+            The removal's own history entry, which kept who added the link and when, so the
+            restore puts it back as it was.
 
     TagListResponse:
       type: object

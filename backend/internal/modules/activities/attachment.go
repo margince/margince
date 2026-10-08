@@ -240,27 +240,6 @@ func (s *Store) GetAttachmentMeta(ctx context.Context, id ids.UUID) (crmcontract
 	return out, err
 }
 
-// ArchiveAttachment soft-deletes the row (identical to the module's other
-// archive verbs). The object bytes are deliberately retained: authoritative
-// byte-erasure is the Art. 17 path, matching how every archived record's data
-// persists until erasure. Authority inherits from the parent (Update + row
-// scope). Archived/invisible reads as ErrNotFound.
-func (s *Store) ArchiveAttachment(ctx context.Context, id ids.UUID) error {
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		entityType, err := resolveAttachmentParent(ctx, tx, id, principal.ActionUpdate)
-		if err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `UPDATE attachment SET archived_at = now() WHERE id = $1`, id); err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "archive", "attachment", id, nil, map[string]any{
-			fieldEntityType: entityType,
-		})
-		return err
-	})
-}
-
 // ListAttachments returns the live attachments hung off one entity, newest
 // first, keyset-paginated. The caller must be able to see the parent entity;
 // otherwise the list is ErrNotFound (existence-hiding), never an empty page

@@ -9,15 +9,16 @@ import (
 	"strings"
 )
 
-// catalog is the enumerable V1 event catalog (events.md §5.1–§5.11): each
-// type's home stream entity and current payload schema version. The
-// remaining §5.11 type (forecast.period_closed) rides
-// E09 — deferred with its work package.
+// catalog is the enumerable V1 event catalog: each type's home stream entity
+// and current payload schema version. Every subscribable type is listed here,
+// and a type absent from it cannot be emitted. One forecast type
+// (forecast.period_closed) is not here yet; it lands with the forecasting work
+// that produces it.
 //
 // Types whose entity segment is not itself a stream ride their family's
 // stream (events.md §1 routing rule): consent.*/retention.* are
 // contact-lifecycle events, offer.*/pipeline.*/stage.* belong to the
-// deal family — each declares its stream home here, and no catalog type
+// deal family, each declares its stream home here, and no catalog type
 // may imply a stream §4.1 does not define.
 var catalog = map[string]struct {
 	stream  string
@@ -44,7 +45,7 @@ var catalog = map[string]struct {
 	// consent.changed for the same reason consent.suppressed is: an override is
 	// not consent, it does not expire on its own, and a consumer folding it into
 	// a generic change would have no way to tell "may now write" from "may no
-	// longer write" — the two states this catalog most needs kept apart.
+	// longer write", the two states this catalog most needs kept apart.
 	"consent.override_recorded": {contactStreamEntity, 1},
 	// A standing override taken back by somebody who outranked the level that
 	// recorded it. Its own type for the same reason consent.suppression_lifted
@@ -85,16 +86,16 @@ var catalog = map[string]struct {
 	// auditable fact is that a member imported their network at all.
 	"linkedin_network.imported": {contactStreamEntity, 1},
 	// One decision on one connection. It rides the contact stream because the
-	// decision is ABOUT a contact — and it names neither the contact nor the
+	// decision is ABOUT a contact, and it names neither the contact nor the
 	// connection, because a ghost's identity must not travel through the bus.
 	"linkedin_match.decided": {contactStreamEntity, 1},
 	"retention.applied":      {contactStreamEntity, 1},
 	// A statutory obligation withheld, released or pinned one activity
-	// (ADR-0114). It rides the contact stream beside retention.applied:
+	// (ADR-0114). It rides the contact stream beside retention.applied.
 	// it is the erasure's other outcome, published from the same transaction,
 	// and a subscriber tracking one has to see the other. Its own type rather
 	// than a fourth retention.applied action, because `restrict` obliges the
-	// subscriber to drop a record that still exists — an obligation no
+	// subscriber to drop a record that still exists, an obligation no
 	// existing action carries, so it must not reach a subscriber that never
 	// opted into it.
 	"retention.restricted": {contactStreamEntity, 1},
@@ -172,8 +173,8 @@ var catalog = map[string]struct {
 	// The two lead vocabularies, on the lead stream because their entries are
 	// values every lead carries: a subscriber that groups by source or reports
 	// on why leads were disqualified has to re-read the catalog when one
-	// changes. events.md §5.3b — config changes are first-class facts, the
-	// same reason pipeline.created is published.
+	// changes. A change to the workspace's own configuration is a fact a
+	// subscriber needs, which is the reason pipeline.created is published too.
 	"lead_source.changed":            {leadStreamEntity, 1},
 	"lead_disqualify_reason.changed": {leadStreamEntity, 1},
 
@@ -195,10 +196,18 @@ var catalog = map[string]struct {
 	"activity.captured":          {activityStreamEntity, 1},
 	"activity.updated":           {activityStreamEntity, 1},
 	"activity.archived":          {activityStreamEntity, 1},
+	// A file's own kind is not a stream §4.1 defines, so the attachment family
+	// rides the activity stream, the table belongs to the activities module,
+	// and a file that arrives with captured mail is already filed on an
+	// activity. The parent a file hangs off travels in the payload, which is
+	// what a subscriber routes on.
+	"attachment.created":  {activityStreamEntity, 1},
+	"attachment.updated":  {activityStreamEntity, 1},
+	"attachment.archived": {activityStreamEntity, 1},
 	// Somebody decided what to do about a waiting message and the Worklist
 	// stopped offering it. `disposition_recorded` rather than `disposition_set`
 	// because the catalog's verbs are past tense, and a compound one puts the
-	// object first — the shape `password_link_issued` already takes.
+	// object first, the shape `password_link_issued` already takes.
 	//
 	// Its own type rather than an activity.updated: the
 	// message did not change, only what one contact (or the workspace) decided
@@ -207,11 +216,11 @@ var catalog = map[string]struct {
 	"activity.disposition_recorded": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
 	// them, or put them back. The entity is the contact, which is what the
-	// judgement is about — the relationship's silence is a fact about them
+	// judgement is about, the relationship's silence is a fact about them
 	// rather than about any one message.
 	"relationship_nudge.decided": {contactStreamEntity, 1},
 	// §5.11: a thread-matched inbound is an activity-family fact, emitted
-	// by capture alongside activity.captured (EVT-SEM-14 — idempotent per
+	// by capture alongside activity.captured (EVT-SEM-14, idempotent per
 	// reply; a duplicate inbound for the same reply does not re-emit).
 	"engagement.reply": {activityStreamEntity, 1},
 
@@ -226,7 +235,7 @@ var catalog = map[string]struct {
 	"notice.read":    {identityStreamEntity, 1},
 
 	// How a seat wants their notices to reach them is a fact about the seat, so
-	// it rides the stream those notices ride — and only they are its subject.
+	// it rides the stream those notices ride, and only they are its subject.
 	"notification.preference_changed": {identityStreamEntity, 1},
 
 	// A weekly plan belongs to one rep, so its changes ride the same identity
@@ -239,7 +248,7 @@ var catalog = map[string]struct {
 
 	// A call rides the identity stream because its entity is the AUTHOR. A
 	// forecast is about a pipeline, but a CALL is an assertion by a contact and
-	// is attributable to them — a consumer asking "who said this number" is
+	// is attributable to them, a consumer asking "who said this number" is
 	// asking about a user, not about a deal.
 	"forecast.created":            {identityStreamEntity, 1},
 	"forecast.exception_resolved": {identityStreamEntity, 1},
@@ -250,8 +259,8 @@ var catalog = map[string]struct {
 	"forecast.share_issued":  {identityStreamEntity, 1},
 	"forecast.share_revoked": {identityStreamEntity, 1},
 
-	// An introduction request is about a CONTACT — who can open a door to
-	// them, and what came of asking — so it rides the contact stream a
+	// An introduction request is about a CONTACT, who can open a door to
+	// them, and what came of asking, so it rides the contact stream a
 	// consumer ranking that contact's open work already reads.
 	"intro_request.created":   {contactStreamEntity, 1},
 	"intro_request.decided":   {contactStreamEntity, 1},
@@ -267,7 +276,7 @@ var catalog = map[string]struct {
 	"capture.failed":     {captureStreamEntity, 1},
 	"capture.skipped":    {captureStreamEntity, 1},
 
-	// §5.11: signal is not one of the nine stream entities — the
+	// §5.11: signal is not one of the nine stream entities, the
 	// detection lifecycle rides the capture stream (events.md §5.11
 	// stream-routing rule).
 	"signal.detected": {captureStreamEntity, 1},
@@ -279,9 +288,10 @@ var catalog = map[string]struct {
 
 	"audit.appended": {auditStreamEntity, 1},
 
-	// §5.6a: the access-revocation cascade (B-EP03.10) — user, role and
-	// passport are identity-owned facts, so all three ride the identity
-	// stream rather than gaining per-entity streams of their own.
+	// Revoking access cascades across all three: user, role and passport are
+	// identity-owned facts, so they ride the identity stream rather than gaining
+	// per-entity streams of their own. A subscriber watching one seat's access
+	// reads them in one place and in order.
 	"user.invited":              {identityStreamEntity, 1},
 	"user.activated":            {identityStreamEntity, 1},
 	"user.password_link_issued": {identityStreamEntity, 1},
@@ -305,7 +315,7 @@ var catalog = map[string]struct {
 	// inside, like voice.build_changed: a new state must never need a new type.
 	"ai_task.state_changed": {aiTaskStreamEntity, 1},
 
-	// Product telemetry: the morning Brief was read. Internal only — nothing
+	// Product telemetry: the morning Brief was read. Internal only, nothing
 	// subscribes to it, and api/internal-events.yaml says why that file exists.
 	"brief.opened": {briefStreamEntity, 1},
 
@@ -325,7 +335,7 @@ func IsPipelineEvent(eventType string) bool {
 	return ok
 }
 
-// Types returns every catalog event type, sorted — the enumerable set
+// Types returns every catalog event type, sorted, the enumerable set
 // codegen and the naming fitness test walk.
 func Types() []string {
 	out := make([]string, 0, len(catalog))
@@ -337,7 +347,7 @@ func Types() []string {
 }
 
 // StreamFor routes an event type to its stream key. An unknown type is a
-// programming error the publisher must surface before the outbox write —
+// programming error the publisher must surface before the outbox write,
 // an unroutable row would wedge the relay forever.
 //
 // The catalog is consulted FIRST and the extension grammar second, so a core
@@ -357,7 +367,7 @@ func StreamFor(eventType string) (string, error) {
 // VersionOf returns the current payload schema version of a catalog type
 // (0 for an unknown type; Validate rejects those via StreamFor first), and
 // ExtensionEventVersion for an extension type. Publishers stamp envelopes
-// from here — never a literal — so a future v2 bump happens in exactly one
+// from here, never a literal, so a future v2 bump happens in one
 // place, and so the extension port has no version of its own to get wrong.
 func VersionOf(eventType string) int {
 	if spec, ok := catalog[eventType]; ok {
