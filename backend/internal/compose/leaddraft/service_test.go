@@ -8,7 +8,9 @@ package leaddraft_test
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // leadReader answers one lead and records what it was asked.
@@ -70,7 +73,7 @@ func TestAnAgentIsRefusedBeforeAnythingIsRead(t *testing.T) {
 	leads := &leadReader{lead: lead(nil)}
 	acts := &correspondence{}
 
-	_, err := leaddraft.NewService(leads, acts, nil).Draft(agentCtx(), someLead, leaddraft.Request{})
+	_, _, err := leaddraft.NewService(leads, acts, nil).Draft(agentCtx(), someLead, leaddraft.Request{})
 
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an agent got %v, want ErrPermissionDenied", err)
@@ -88,7 +91,7 @@ func TestALeadWithNoAddressIsRefusedBeforeTheModel(t *testing.T) {
 	leads := &leadReader{lead: lead(func(l *crmcontracts.Lead) { l.Email = nil })}
 	acts := &correspondence{}
 
-	_, err := leaddraft.NewService(leads, acts, nil).Draft(humanCtx(), someLead, leaddraft.Request{})
+	_, _, err := leaddraft.NewService(leads, acts, nil).Draft(humanCtx(), someLead, leaddraft.Request{})
 
 	if err == nil {
 		t.Fatal("a lead with no address drafted anyway")
@@ -106,7 +109,7 @@ func TestAnEmptyAddressIsTheSameAsNone(t *testing.T) {
 	blank := openapi_types.Email("")
 	leads := &leadReader{lead: lead(func(l *crmcontracts.Lead) { l.Email = &blank })}
 
-	_, err := leaddraft.NewService(leads, &correspondence{}, nil).
+	_, _, err := leaddraft.NewService(leads, &correspondence{}, nil).
 		Draft(humanCtx(), someLead, leaddraft.Request{})
 
 	if err == nil {
@@ -121,7 +124,7 @@ func TestATerminalLeadIsNotDraftedTo(t *testing.T) {
 	t.Parallel()
 	leads := &leadReader{lead: lead(nil)}
 
-	if _, err := leaddraft.NewService(leads, &correspondence{}, nil).
+	if _, _, err := leaddraft.NewService(leads, &correspondence{}, nil).
 		Draft(humanCtx(), someLead, leaddraft.Request{}); err != nil {
 		t.Fatalf("a live lead was refused: %v", err)
 	}
@@ -139,7 +142,7 @@ func TestALeadTheCallerCannotSeeRefuses(t *testing.T) {
 	leads := &leadReader{err: apperrors.ErrNotFound}
 	acts := &correspondence{}
 
-	_, err := leaddraft.NewService(leads, acts, nil).Draft(humanCtx(), someLead, leaddraft.Request{})
+	_, _, err := leaddraft.NewService(leads, acts, nil).Draft(humanCtx(), someLead, leaddraft.Request{})
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("got %v, want the store's own refusal", err)
@@ -156,7 +159,7 @@ func TestWithNoModelLaneTheFloorWrites(t *testing.T) {
 	t.Parallel()
 	leads := &leadReader{lead: lead(nil)}
 
-	draft, err := leaddraft.NewService(leads, &correspondence{}, nil).
+	draft, _, err := leaddraft.NewService(leads, &correspondence{}, nil).
 		Draft(humanCtx(), someLead, leaddraft.Request{})
 	if err != nil {
 		t.Fatalf("the floor refused: %v", err)
@@ -171,5 +174,32 @@ func TestWithNoModelLaneTheFloorWrites(t *testing.T) {
 	// one carries none, because no model wrote it.
 	if draft.AiDisclosure != nil {
 		t.Errorf("a deterministic draft carried the provenance notice %q", *draft.AiDisclosure)
+	}
+}
+
+// A lead's draft names what it was written from: the lead, and every exchange
+// in its window. A caller keeping the draft re-proves each one.
+func TestTheGroundingNamesTheLeadAndItsCorrespondence(t *testing.T) {
+	t.Parallel()
+	rows := []crmcontracts.Activity{
+		act("019fe7ae-0000-7000-8000-00000000000a", when.Add(-2*time.Hour),
+			crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost for 40 seats?"),
+		act("019fe7ae-0000-7000-8000-00000000000b", when.Add(-48*time.Hour),
+			crmcontracts.ActivityDirectionOutbound, "Intro", "Good to meet you."),
+	}
+
+	_, grounding, err := leaddraft.NewService(&leadReader{lead: lead(nil)}, &correspondence{rows: rows}, nil).
+		Draft(humanCtx(), someLead, leaddraft.Request{})
+	if err != nil {
+		t.Fatalf("the floor refused: %v", err)
+	}
+
+	want := []datasource.EntityRef{
+		{Type: datasource.EntityLead, ID: someLead.UUID},
+		{Type: datasource.EntityActivity, ID: ids.MustParse("019fe7ae-0000-7000-8000-00000000000a")},
+		{Type: datasource.EntityActivity, ID: ids.MustParse("019fe7ae-0000-7000-8000-00000000000b")},
+	}
+	if !slices.Equal(grounding, want) {
+		t.Errorf("grounding = %v, want %v", grounding, want)
 	}
 }

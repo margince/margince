@@ -508,6 +508,24 @@ describe("an unavailable source", () => {
     }
   });
 
+  // The meetings lane's side reads rank no rows, so `KNOWN_SOURCES` never
+  // lists them; they still fail on their own and must be named, not "other".
+  it.each(["calendar", "next_meeting"])(
+    "names the meetings lane's %s read",
+    (source) => {
+      for (const locale of LOCALES) {
+        const t: Translator = (key, vars) => translate(locale, key, vars);
+        const name = sourceName(source, t);
+        expect(name, locale).not.toBe(
+          translate(locale, "brief.coverage.source.generic"),
+        );
+        const text = sourceUnavailableText({ source, reason: "failed" }, t);
+        expect(text, locale).toContain(name);
+        expect(text.startsWith(name), locale).toBe(false);
+      }
+    },
+  );
+
   it("says which of the two reasons it is, because only one is anybody's to fix", () => {
     // A withheld source is the reader's own grants; a failed one is an outage.
     // One sentence for both would tell a reader to go asking for access to

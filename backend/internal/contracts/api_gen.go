@@ -17557,6 +17557,27 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyFigureCoverageStatus.
+const (
+	WeeklyFigureCoverageStatusNotRecorded WeeklyFigureCoverageStatus = "not_recorded"
+	WeeklyFigureCoverageStatusPartial     WeeklyFigureCoverageStatus = "partial"
+	WeeklyFigureCoverageStatusRecorded    WeeklyFigureCoverageStatus = "recorded"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyFigureCoverageStatus enum.
+func (e WeeklyFigureCoverageStatus) Valid() bool {
+	switch e {
+	case WeeklyFigureCoverageStatusNotRecorded:
+		return true
+	case WeeklyFigureCoverageStatusPartial:
+		return true
+	case WeeklyFigureCoverageStatusRecorded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WeeklyLearningCitationSubjectType.
 const (
 	WeeklyLearningCitationSubjectTypeCommitment WeeklyLearningCitationSubjectType = "commitment"
@@ -17776,6 +17797,27 @@ func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
 	case WeeklyReviewOutlookPeriodKindWeeklyOutlookPeriodQuarter:
 		return true
 	case WeeklyReviewOutlookPeriodKindWeeklyOutlookPeriodWeek:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistCalendar.
+const (
+	WorklistCalendarConnected    WorklistCalendar = "connected"
+	WorklistCalendarNotConnected WorklistCalendar = "not_connected"
+	WorklistCalendarUnreadable   WorklistCalendar = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the WorklistCalendar enum.
+func (e WorklistCalendar) Valid() bool {
+	switch e {
+	case WorklistCalendarConnected:
+		return true
+	case WorklistCalendarNotConnected:
+		return true
+	case WorklistCalendarUnreadable:
 		return true
 	default:
 		return false
@@ -36904,7 +36946,9 @@ type MagicNotShown struct {
 	// meaning: a maintenance sweep, a projection refresh.
 	// `unknown_entity_type` — an entity kind this build cannot scope, and therefore
 	// cannot safely show. Counted rather than served: showing a row this read cannot
-	// place is showing a row it cannot prove the reader may see.
+	// place is showing a row it cannot prove the reader may see. The count is
+	// workspace-wide machine actions, not the reader's own, and is reported only to a
+	// seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 	// `out_of_scope` — a row about a record outside the reader's own scope. Counted
 	// so the total is honest, and never named.
 	Reason MagicNotShownReason `json:"reason"`
@@ -36914,7 +36958,9 @@ type MagicNotShown struct {
 // meaning: a maintenance sweep, a projection refresh.
 // `unknown_entity_type` — an entity kind this build cannot scope, and therefore
 // cannot safely show. Counted rather than served: showing a row this read cannot
-// place is showing a row it cannot prove the reader may see.
+// place is showing a row it cannot prove the reader may see. The count is
+// workspace-wide machine actions, not the reader's own, and is reported only to a
+// seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 // `out_of_scope` — a row about a record outside the reader's own scope. Counted
 // so the total is honest, and never named.
 type MagicNotShownReason string
@@ -36938,6 +36984,10 @@ type MagicReceipt struct {
 	// A machine write with no customer-facing meaning is not Magic, and folding it
 	// in would turn internal churn into apparent value. Reporting the count instead
 	// means a preview showing five lines can never imply it is showing everything.
+	//
+	// The `unknown_entity_type` entry counts workspace-wide machine actions this build
+	// cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
+	// absence for any other seat is not a zero.
 	NotShown []MagicNotShown `json:"not_shown"`
 
 	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
@@ -45636,6 +45686,45 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyFigureCoverage Whether one figure family's source held records for the review's owner scope across
+// the week, so a zero can be told from an unmeasured week.
+//
+// `recorded` — the source held usable records in scope before the week began.
+// `partial` — the source's first usable record in scope falls inside the week, so the
+// figure counts only from `recorded_since`. `not_recorded` — the week ended before the
+// source's first record in scope, or the scope holds no record of that source at all.
+//
+// A client renders a `not_recorded` figure as unrecorded, never as 0: the zero beside it
+// is the absence of a source, not a measurement.
+type WeeklyFigureCoverage struct {
+	// Reason Why the figure carries this status, in words a reader can be shown.
+	Reason *string `json:"reason,omitempty"`
+
+	// RecordedSince The earliest usable record of this source in the review's owner scope, counting
+	// manually entered and imported records. Not the date a capture connection was made:
+	// a record keyed in by hand before any connection existed is still a record.
+	RecordedSince *time.Time                 `json:"recorded_since,omitempty"`
+	Status        WeeklyFigureCoverageStatus `json:"status"`
+}
+
+// WeeklyFigureCoverageStatus defines model for WeeklyFigureCoverage.Status.
+type WeeklyFigureCoverageStatus string
+
+// WeeklyFigureCoverageSet Whether each figure family on the review was measured over the week, by the source
+// that feeds it. Absent on a review frozen before figures carried their coverage; such a
+// review states no coverage either way. A family missing here has no coverage statement.
+type WeeklyFigureCoverageSet struct {
+	Commitments *WeeklyFigureCoverage `json:"commitments,omitempty"`
+
+	// Deals Covers the deals won, lost and moved.
+	Deals    *WeeklyFigureCoverage `json:"deals,omitempty"`
+	Leads    *WeeklyFigureCoverage `json:"leads,omitempty"`
+	Meetings *WeeklyFigureCoverage `json:"meetings,omitempty"`
+
+	// Tasks Covers the tasks completed, due and carried.
+	Tasks *WeeklyFigureCoverage `json:"tasks,omitempty"`
+}
+
 // WeeklyLearningCitation One row a learning was drawn from, by the name it carried that week.
 type WeeklyLearningCitation struct {
 	// Label What the row was CALLED when the learning was written, so a citation still reads after a rename.
@@ -45656,11 +45745,16 @@ type WeeklyNumericSummary struct {
 	BookingsCoverage ReportingCoverage `json:"bookings_coverage"`
 	Currency         string            `json:"currency"`
 	EvaluatedAt      time.Time         `json:"evaluated_at"`
-	Interval         ReportingWindow   `json:"interval"`
-	MeetingsCoverage ReportingCoverage `json:"meetings_coverage"`
-	Timezone         string            `json:"timezone"`
-	Version          string            `json:"version"`
-	WonMinor         *int64            `json:"won_minor,omitempty"`
+
+	// FigureCoverage Whether each figure family on the review was measured over the week, by the source
+	// that feeds it. Absent on a review frozen before figures carried their coverage; such a
+	// review states no coverage either way. A family missing here has no coverage statement.
+	FigureCoverage   *WeeklyFigureCoverageSet `json:"figure_coverage,omitempty"`
+	Interval         ReportingWindow          `json:"interval"`
+	MeetingsCoverage ReportingCoverage        `json:"meetings_coverage"`
+	Timezone         string                   `json:"timezone"`
+	Version          string                   `json:"version"`
+	WonMinor         *int64                   `json:"won_minor,omitempty"`
 }
 
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -46255,6 +46349,22 @@ type Worklist struct {
 	// labelled in ranked order — a client draws a heading where the band changes.
 	Bands *[]WorklistBand `json:"bands,omitempty"`
 
+	// Calendar Whether the reader's own calendar feeds the meetings this read counts. Present only
+	// for scope `mine`; a wider scope has no single calendar to answer for.
+	//
+	// `not_connected` — the reader has no live calendar connection: none was made, or every
+	// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+	// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+	//
+	// A zero `meetings` count is a measurement only when this is `connected`. Under either
+	// other answer it says nothing about the day, and a client must not draw it as "no
+	// meetings".
+	//
+	// Absent under scope `mine` when the read could not answer. A read that failed is
+	// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
+	// reader is refused is absent and named nowhere.
+	Calendar *WorklistCalendar `json:"calendar,omitempty"`
+
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
 	// pill counts, and what lets the page say how much it is not showing. Counted
 	// before any narrowing, so a filtered page still reports the categories it is
@@ -46289,6 +46399,18 @@ type Worklist struct {
 	// can still sit above sources that were cut short, and both statements are true at
 	// once.
 	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// NextMeeting The reader's next booked customer meeting — linked to a contact, lead or company the
+	// reader may see — within the next 30 days. Present only when the meetings lane
+	// answered and holds no meeting left today, so an empty day still says when the next
+	// conversation is. Any meeting left today, internal meetings included, means the day
+	// is not empty, so this is absent. Absent too when the lane did not answer, when
+	// nothing is booked in the window, or when its read failed. `participants` names only
+	// contacts the reader may see.
+	//
+	// A read that failed is named in `sources_unavailable` as source `next_meeting`,
+	// category `meetings`; a read the reader is refused is absent and named nowhere.
+	NextMeeting *Contact360NextMeeting `json:"next_meeting,omitempty"`
 
 	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
 	// due commitments were read across the team roster. Absent under every other scope.
@@ -46392,6 +46514,22 @@ type Worklist struct {
 	// `changed_since_snapshot` explains why the count moved. Neither is an error.
 	Walk *WorklistWalk `json:"walk,omitempty"`
 }
+
+// WorklistCalendar Whether the reader's own calendar feeds the meetings this read counts. Present only
+// for scope `mine`; a wider scope has no single calendar to answer for.
+//
+// `not_connected` — the reader has no live calendar connection: none was made, or every
+// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+//
+// A zero `meetings` count is a measurement only when this is `connected`. Under either
+// other answer it says nothing about the day, and a client must not draw it as "no
+// meetings".
+//
+// Absent under scope `mine` when the read could not answer. A read that failed is
+// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
+// reader is refused is absent and named nowhere.
+type WorklistCalendar string
 
 // WorklistFilter The narrowing this read applied. The same vocabulary the query parameter takes.
 type WorklistFilter string

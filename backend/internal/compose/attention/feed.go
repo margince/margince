@@ -108,6 +108,7 @@ type Service struct {
 	// an installation can prepare a rep for their day without asking them to
 	// close off what already happened.
 	meetingsAwaitingOutcome MeetingsAwaitingOutcome
+	horizon                 MeetingHorizon
 	// zone resolves the installation timezone the day boundary is measured in;
 	// nil is UTC, for the reason WithZone gives.
 	zone   Zone
@@ -349,7 +350,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		}
 		out.Counts.DealSuggestionsOpen = count.suggestions
 	})
-	beside := besideDay{failed: count.failed}
+	beside := besideDay{failed: count.failed, until: until}
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}

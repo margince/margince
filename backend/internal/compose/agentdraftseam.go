@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // firstMessageEngines are the three drafters the web composer serves, held on
@@ -111,7 +112,9 @@ func badFirstMessage(reason string) error {
 
 // draft asks the engine the web composer would: a lead's own, the account's
 // when a company is named beside the contact, and the contact's otherwise.
-func (e *firstMessageEngines) draft(ctx context.Context, m firstMessage, intent string) (crmcontracts.CompanyEmailDraft, error) {
+func (e *firstMessageEngines) draft(
+	ctx context.Context, m firstMessage, intent string,
+) (crmcontracts.CompanyEmailDraft, []datasource.EntityRef, error) {
 	switch {
 	case m.recipient.Type == crmcontracts.MailDraftAnchorTypeLead:
 		return e.lead.Draft(ctx, ids.From[ids.LeadKind](m.recipient.ID), leaddraft.Request{Intent: intent})
@@ -153,14 +156,18 @@ func (c commsAdapter) DraftCompanyEmail(
 	if c.firstDrafts == nil {
 		return agents.FirstDraft{}, errors.New("compose: this surface has no first-message drafting engine wired")
 	}
-	drafted, err := c.firstDrafts.draft(ctx, message, intent)
+	drafted, grounding, err := c.firstDrafts.draft(ctx, message, intent)
 	if err != nil {
 		return agents.FirstDraft{}, err
 	}
 	out := firstDraftOf(drafted)
+	grounds := groundsOf(grounding)
+	for _, ground := range grounds {
+		out.Grounding = append(out.Grounding, agents.EvidenceRef{RecordType: ground.Type, RecordID: ground.ID})
+	}
 	saved, err := c.store.SaveAgentMailDraft(ctx, message.recipient, activities.MailDraftContent{
 		To: out.To, Subject: out.Subject, Body: out.Body,
-	})
+	}, draftAnchorsOf(grounds))
 	if errors.Is(err, activities.ErrOwnDraftWaiting) {
 		out.NotSaved = err.Error()
 		return out, nil
@@ -170,6 +177,30 @@ func (c commsAdapter) DraftCompanyEmail(
 	}
 	out.SavedDraftID = &saved.ID
 	return out, nil
+}
+
+// groundsOf names each record an engine wrote from once: a claim, the next
+// meeting and the recent exchanges can all cite one conversation.
+func groundsOf(grounding []datasource.EntityRef) []datasource.EntityRef {
+	seen := make(map[datasource.EntityRef]bool, len(grounding))
+	out := make([]datasource.EntityRef, 0, len(grounding))
+	for _, ground := range grounding {
+		if !seen[ground] {
+			seen[ground] = true
+			out = append(out, ground)
+		}
+	}
+	return out
+}
+
+// draftAnchorsOf spells the grounding in the saved draft's vocabulary, which
+// names the same record types the engines write from.
+func draftAnchorsOf(grounds []datasource.EntityRef) []activities.MailDraftAnchor {
+	out := make([]activities.MailDraftAnchor, 0, len(grounds))
+	for _, ground := range grounds {
+		out = append(out, activities.MailDraftAnchor{Type: crmcontracts.MailDraftAnchorType(ground.Type), ID: ground.ID})
+	}
+	return out
 }
 
 func firstDraftOf(drafted crmcontracts.CompanyEmailDraft) agents.FirstDraft {

@@ -191,6 +191,7 @@ catch
 category
 causation
 cause
+cc
 census
 certification
 certify
@@ -649,7 +650,6 @@ jitter
 job
 join
 journey
-jpeg
 judge
 jurisdiction
 just
@@ -658,7 +658,6 @@ keep
 kept
 key
 keyset
-kib
 kill
 kind
 know
@@ -800,7 +799,7 @@ never
 new
 newsletter
 next
-nil
+nginx
 no
 nobody
 node
@@ -914,7 +913,6 @@ plain
 plan
 platform
 plus
-png
 pod
 point
 policy
@@ -1355,6 +1353,7 @@ undo
 union
 uniqueness
 unit
+unix
 unknown
 unless
 unread
@@ -1366,7 +1365,6 @@ update
 upload
 upsert
 upstream
-urls
 us
 use
 user's
@@ -1382,6 +1380,7 @@ verdict
 version
 very
 video
+vietnam
 view
 visibility
 visible

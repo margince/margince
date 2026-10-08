@@ -14678,7 +14678,9 @@ paths:
         write with no customer-facing meaning — a maintenance sweep, a projection
         refresh — is not Magic, and folding it in would turn internal churn into apparent
         value. Counting it instead means the preview can never imply completeness it does
-        not have.
+        not have. Its `unknown_entity_type` entry counts workspace-wide machine actions this
+        build cannot place and is reported only to a seat holding `ai_diagnostics` read; its
+        absence for any other seat is not a zero.
 
         Bounded by `limit`, over a deterministic `occurred_at, id` order, and bounded
         again by how far back it will look: a receipt answers "since you last looked",
@@ -53115,6 +53117,59 @@ components:
         bookings_coverage: { $ref: '#/components/schemas/ReportingCoverage' }
         meetings_coverage: { $ref: '#/components/schemas/ReportingCoverage' }
         won_minor: { type: integer, format: int64 }
+        figure_coverage:
+          $ref: '#/components/schemas/WeeklyFigureCoverageSet'
+
+    WeeklyFigureCoverageSet:
+      type: object
+      additionalProperties: false
+      description: |
+        Whether each figure family on the review was measured over the week, by the source
+        that feeds it. Absent on a review frozen before figures carried their coverage; such a
+        review states no coverage either way. A family missing here has no coverage statement.
+      properties:
+        deals:
+          description: Covers the deals won, lost and moved.
+          allOf: [{ $ref: '#/components/schemas/WeeklyFigureCoverage' }]
+        tasks:
+          description: Covers the tasks completed, due and carried.
+          allOf: [{ $ref: '#/components/schemas/WeeklyFigureCoverage' }]
+        meetings:
+          allOf: [{ $ref: '#/components/schemas/WeeklyFigureCoverage' }]
+        leads:
+          allOf: [{ $ref: '#/components/schemas/WeeklyFigureCoverage' }]
+        commitments:
+          allOf: [{ $ref: '#/components/schemas/WeeklyFigureCoverage' }]
+
+    WeeklyFigureCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        Whether one figure family's source held records for the review's owner scope across
+        the week, so a zero can be told from an unmeasured week.
+
+        `recorded` — the source held usable records in scope before the week began.
+        `partial` — the source's first usable record in scope falls inside the week, so the
+        figure counts only from `recorded_since`. `not_recorded` — the week ended before the
+        source's first record in scope, or the scope holds no record of that source at all.
+
+        A client renders a `not_recorded` figure as unrecorded, never as 0: the zero beside it
+        is the absence of a source, not a measurement.
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [recorded, partial, not_recorded]
+        recorded_since:
+          type: string
+          format: date-time
+          description: |
+            The earliest usable record of this source in the review's owner scope, counting
+            manually entered and imported records. Not the date a capture connection was made:
+            a record keyed in by hand before any connection existed is still a record.
+        reason:
+          type: string
+          description: Why the figure carries this status, in words a reader can be shown.
 
     WeeklyReview:
       type: object
@@ -54540,6 +54595,37 @@ components:
             labelled in ranked order — a client draws a heading where the band changes.
         plan_coverage:
           $ref: '#/components/schemas/WorklistPlanCoverage'
+        calendar:
+          type: string
+          enum: [connected, not_connected, unreadable]
+          description: |
+            Whether the reader's own calendar feeds the meetings this read counts. Present only
+            for scope `mine`; a wider scope has no single calendar to answer for.
+
+            `not_connected` — the reader has no live calendar connection: none was made, or every
+            one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+            reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+
+            A zero `meetings` count is a measurement only when this is `connected`. Under either
+            other answer it says nothing about the day, and a client must not draw it as "no
+            meetings".
+
+            Absent under scope `mine` when the read could not answer. A read that failed is
+            named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
+            reader is refused is absent and named nowhere.
+        next_meeting:
+          description: |
+            The reader's next booked customer meeting — linked to a contact, lead or company the
+            reader may see — within the next 30 days. Present only when the meetings lane
+            answered and holds no meeting left today, so an empty day still says when the next
+            conversation is. Any meeting left today, internal meetings included, means the day
+            is not empty, so this is absent. Absent too when the lane did not answer, when
+            nothing is booked in the window, or when its read failed. `participants` names only
+            contacts the reader may see.
+
+            A read that failed is named in `sources_unavailable` as source `next_meeting`,
+            category `meetings`; a read the reader is refused is absent and named nowhere.
+          allOf: [{ $ref: '#/components/schemas/Contact360NextMeeting' }]
 
     WorklistPlanCoverage:
       type: object
@@ -55843,6 +55929,10 @@ components:
             A machine write with no customer-facing meaning is not Magic, and folding it
             in would turn internal churn into apparent value. Reporting the count instead
             means a preview showing five lines can never imply it is showing everything.
+
+            The `unknown_entity_type` entry counts workspace-wide machine actions this build
+            cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
+            absence for any other seat is not a zero.
         sources_unavailable:
           type: array
           items: { $ref: '#/components/schemas/WorklistSourceUnavailable' }
@@ -55885,7 +55975,9 @@ components:
             meaning: a maintenance sweep, a projection refresh.
             `unknown_entity_type` — an entity kind this build cannot scope, and therefore
             cannot safely show. Counted rather than served: showing a row this read cannot
-            place is showing a row it cannot prove the reader may see.
+            place is showing a row it cannot prove the reader may see. The count is
+            workspace-wide machine actions, not the reader's own, and is reported only to a
+            seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
             `out_of_scope` — a row about a record outside the reader's own scope. Counted
             so the total is honest, and never named.
         count: { type: integer, minimum: 0 }

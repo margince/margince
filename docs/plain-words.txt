@@ -19,7 +19,6 @@ all
 already
 also
 an
-and
 answer
 app
 approval
@@ -80,6 +79,7 @@ commit
 company
 compliance
 concept
+conduct
 confirm
 conflict
 connect
@@ -98,7 +98,6 @@ cover
 craftsmanship
 credential
 custom
-customer
 daily
 data
 database
@@ -145,7 +144,7 @@ field
 file
 fill
 find
-finding
+findings
 first
 fix
 fixation
@@ -166,7 +165,6 @@ generate
 get
 give
 go
-good
 grade
 green
 guide
@@ -181,7 +179,7 @@ have
 help
 here
 history
-hold
+holds
 hole
 hook
 host
@@ -201,7 +199,6 @@ into
 is
 issue
 it
-its
 itself
 job
 keep
@@ -240,7 +237,7 @@ may
 mean
 measure
 meet
-meeting
+meetings
 merge
 message
 migration
@@ -382,11 +379,10 @@ separate
 sequence
 serious
 serve
-server
 service
 session
 set
-setting
+settings
 setup
 shape
 share
@@ -443,7 +439,7 @@ then
 there
 these
 they
-thing
+things
 think
 third
 this
@@ -475,7 +471,7 @@ until
 up
 us
 use
-user
+user's
 value
 version
 vulnerability
