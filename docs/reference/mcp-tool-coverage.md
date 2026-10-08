@@ -18,7 +18,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 31 of 32 | 🟢 Yes | Reliable on 31 of 31 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 28 of 32 | 🟢 Yes | Reliable on 28 of 28 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 29 of 32 | 🟢 Yes | Reliable on 29 of 29 jobs tried. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -63,7 +63,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅ | ✅ |
 | A word from the fair, offered and not claimed | A tag is offered and not claimed | ✅ | ✅ |
 | Not the same contact | Two different contacts are told apart | ✅ | ✅ |
-| Put it on the file | A file handed over is kept as a file<br>The file is not retyped as a note<br>A refused kind of file is reported, not worked around | - | - |
+| Put it on the file | A file handed over is kept as a file<br>The file is not retyped as a note<br>A refused kind of file is reported, not worked around | - | ✅ |
 
 ---
 
@@ -104,11 +104,11 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
 | `claude-sonnet-5-5@claude-cli` | 31 of 32 | 31 | 0 | 88/93 | 95% |
-| `gpt-5.6-sol@codex-cli` | 28 of 32 | 28 | 0 | 75/84 | 89% |
+| `gpt-5.6-sol@codex-cli` | 29 of 32 | 29 | 0 | 78/87 | 90% |
 
 > `claude-sonnet-5-5@claude-cli` has no committed run for 1 of 32 cases.
 
-> `gpt-5.6-sol@codex-cli` has no committed run for 4 of 32 cases.
+> `gpt-5.6-sol@codex-cli` has no committed run for 3 of 32 cases.
 
 ## The two surfaces
 
@@ -207,7 +207,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A tag is offered and not claimed | `create_record` |
 | [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
 | [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
-| [case57_put_it_on_the_file](../../e2e/llm/scenarios/case57-put-it-on-the-file.yaml) | - | not run | - | - | **1** A file handed over is kept as a file<br>**2** The file is not retyped as a note<br>**3** A refused kind of file is reported, not worked around | `attach_document` |
+| [case57_put_it_on_the_file](../../e2e/llm/scenarios/case57-put-it-on-the-file.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A file handed over is kept as a file<br>**2** The file is not retyped as a note<br>**3** A refused kind of file is reported, not worked around | `attach_document` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
@@ -369,6 +369,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
+| `attach_document` | 1.00 | 3 | `case57_put_it_on_the_file` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |

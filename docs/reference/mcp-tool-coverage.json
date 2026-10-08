@@ -26,12 +26,12 @@
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
-      "cases_with_a_committed_run": 28,
-      "cases_that_reached_their_bar": 28,
+      "cases_with_a_committed_run": 29,
+      "cases_that_reached_their_bar": 29,
       "cases_below_their_bar": 0,
-      "runs": 84,
-      "passed": 75,
-      "reliability": 0.8928571428571429,
+      "runs": 87,
+      "passed": 78,
+      "reliability": 0.896551724137931,
       "cases_below_their_bar_named": [],
       "route": "Codex CLI"
     }
@@ -1009,7 +1009,17 @@
         "attach_document"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case6_ask_the_company",
@@ -2851,7 +2861,14 @@
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "demote_lead",
