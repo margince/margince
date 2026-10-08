@@ -15,9 +15,17 @@
 // the tree allows and this is one idea that reads whole on its own.
 
 import { useQueryClient } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Button } from "../design-system/atoms";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
+import {
+  ChannelReplyAction,
+  ComposeModal,
+  RELINK_KINDS,
+  type RelinkKind,
+} from "./compose";
 import { intentAbout } from "./compose.intent";
 import { phrasedReasons, reasonText } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
@@ -77,6 +85,9 @@ export function WaitingReply({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  if (item.source === "meeting_follow_up") {
+    return <MeetingFollowUp item={item} />;
+  }
   return (
     <ChannelReplyAction
       activityId={item.id}
@@ -91,7 +102,11 @@ export function WaitingReply({
               // rather than the composer; this control mounts the composer
               // itself, on every row it is drawn on, so the weaker word would
               // under-promise what pressing it does.
-              label: t("worklist.verb.draft_reply_now"),
+              label: t(
+                item.source === "awaiting_reply"
+                  ? "worklist.verb.draft_follow_up_now"
+                  : "worklist.verb.draft_reply_now",
+              ),
               intent: replyIntent(item, t, locale),
             }
           : undefined
@@ -130,5 +145,55 @@ function replyIntent(
   )[0];
   // The composer's own phrase for answering a message, not a second spelling
   // of it: one sentence reaches the model whichever surface opened the drawer.
-  return intentAbout(t("contact.composer.intentReply"), why);
+  // A follow-up is anchored on OUR message, which has nothing of theirs to
+  // reply to.
+  const phrase =
+    item.source === "awaiting_reply"
+      ? t("contact.composer.intentFollowUp")
+      : t("contact.composer.intentReply");
+  return intentAbout(phrase, why);
+}
+
+/**
+ * Following up after a meeting: a FRESH message to the contact the reader met.
+ * A meeting is not a message, so there is nothing to thread a reply onto; the
+ * composer is told what to write instead.
+ */
+// Filed to the CONTACT, never the row's subject. A meeting on a deal names the
+// deal, and a deal cannot be drafted to. The message has to reach the contact
+// for the reminder to clear.
+function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState<number | null>(null);
+  const contact = item.contact?.id;
+  if (!contact) {
+    return null;
+  }
+  return (
+    <>
+      <Button variant="ai" onClick={() => setOpen((seq) => (seq ?? 0) + 1)}>
+        <Sparkles aria-hidden="true" />
+        {t("worklist.verb.draft_follow_up_now")}
+      </Button>
+      {open !== null && (
+        <ComposeModal
+          key={open}
+          entityType="contact"
+          entityId={contact}
+          contactId={contact}
+          kind="email"
+          intent={intentAbout(
+            t("contact.composer.intentFollowUp"),
+            item.title ?? undefined,
+          )}
+          open
+          onClose={() => setOpen(null)}
+          onSent={() =>
+            void queryClient.invalidateQueries({ queryKey: worklistKey })
+          }
+        />
+      )}
+    </>
+  );
 }

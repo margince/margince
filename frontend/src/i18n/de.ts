@@ -671,6 +671,8 @@ export const de = {
     "{count} Deals ohne Preis · nicht enthalten",
   "brief.coverage.source.generic": "Weitere Arbeit",
   "brief.coverage.source.weekly_commitment": "Wochenzusagen",
+  "brief.coverage.source.awaiting_reply": "Nachfassen",
+  "brief.coverage.source.meeting_follow_up": "Nachfassen nach Terminen",
   "brief.coverage.source.batch": "Gruppierte Arbeit",
   "brief.coverage.source.introduction_request": "Vorstellungsanfragen",
   "brief.coverage.source.automation_run": "Automatisierungsfehler",
@@ -749,6 +751,9 @@ export const de = {
   "brief.plan.open": "Wochenplan öffnen",
   "worklist.source.weekly_commitment": "Wochenzusage",
   "worklist.untitled.weekly_commitment": "Wochenzusage",
+  "worklist.source.awaiting_reply": "Nachfassen",
+  "worklist.untitled.awaiting_reply": "Nachfassen",
+  "worklist.untitled.meeting_follow_up": "Termin",
   "brief.plan.select": "Deal, Lead, Kontakt, Unternehmen oder Projekt suchen",
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
   "brief.forecast.period":
@@ -2963,6 +2968,13 @@ export const de = {
   "leadReasons.removeTitle": "Grund entfernen?",
   "leadReasons.removeBody":
     "„{label}“ wird von keinem Lead verwendet und wird aus der Liste entfernt.",
+  "followUpSettings.title": "Nachfassen",
+  "followUpSettings.sub":
+    "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Startseite des Absenders erscheint.",
+  "followUpSettings.days": "Erinnern nach (Tagen)",
+  "followUpSettings.daysHint":
+    "So viele Tage darf eine gesendete Nachricht unbeantwortet bleiben, bevor der Absender ans Nachfassen erinnert wird, 1 bis 30.",
+  "followUpSettings.outOfRange": "Gib eine ganze Zahl von 1 bis 30 Tagen ein.",
   "leadHandling.title": "Lead-Bearbeitung",
   "leadHandling.sub": "Wie neue Leads bearbeitet werden.",
   "leadHandling.firstResponse": "Zielzeit für die erste Antwort",
@@ -11629,6 +11641,15 @@ export const de = {
   "worklist.because.meeting_booked.value": "Termin vereinbart für {value}",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
+  "worklist.because.you_wrote_last": "du hast zuletzt geschrieben",
+  "worklist.because.no_reply_days": "keine Antwort",
+  "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort",
+  "worklist.because.no_reply_days.value_other":
+    "seit {value} Tagen keine Antwort",
+  "worklist.because.met_days_ago": "getroffen",
+  "worklist.because.met_days_ago.value_one": "vor {value} Tag getroffen",
+  "worklist.because.met_days_ago.value_other": "vor {value} Tagen getroffen",
+  "worklist.because.nothing_sent_since": "seitdem nichts geschickt",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
@@ -11822,6 +11843,7 @@ export const de = {
   "worklist.verb.draft_reply": "Lesen und antworten",
   // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.
   "worklist.verb.draft_reply_now": "Antwort entwerfen",
+  "worklist.verb.draft_follow_up_now": "Nachfass-Mail entwerfen",
   // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.
   "worklist.verb.draft_email": "E-Mail schreiben",
   "worklist.verb.draft_email_now": "E-Mail entwerfen",

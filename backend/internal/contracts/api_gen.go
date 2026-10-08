@@ -18435,6 +18435,7 @@ const (
 	WorklistItemSourceAiWorkHealth        WorklistItemSource = "ai_work_health"
 	WorklistItemSourceApproval            WorklistItemSource = "approval"
 	WorklistItemSourceAutomationRun       WorklistItemSource = "automation_run"
+	WorklistItemSourceAwaitingReply       WorklistItemSource = "awaiting_reply"
 	WorklistItemSourceBatch               WorklistItemSource = "batch"
 	WorklistItemSourceBounce              WorklistItemSource = "bounce"
 	WorklistItemSourceBriefItem           WorklistItemSource = "brief_item"
@@ -18450,6 +18451,7 @@ const (
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
 	WorklistItemSourceLeadResponse        WorklistItemSource = "lead_response"
 	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
+	WorklistItemSourceMeetingFollowUp     WorklistItemSource = "meeting_follow_up"
 	WorklistItemSourceMeetingOutcome      WorklistItemSource = "meeting_outcome"
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceNoticeCase          WorklistItemSource = "notice_case"
@@ -18467,6 +18469,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceApproval:
 		return true
 	case WorklistItemSourceAutomationRun:
+		return true
+	case WorklistItemSourceAwaitingReply:
 		return true
 	case WorklistItemSourceBatch:
 		return true
@@ -18497,6 +18501,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceLeadResponse:
 		return true
 	case WorklistItemSourceMeeting:
+		return true
+	case WorklistItemSourceMeetingFollowUp:
 		return true
 	case WorklistItemSourceMeetingOutcome:
 		return true
@@ -18573,6 +18579,7 @@ const (
 	WorklistReachSourceAiWorkHealth        WorklistReachSource = "ai_work_health"
 	WorklistReachSourceApproval            WorklistReachSource = "approval"
 	WorklistReachSourceAutomationRun       WorklistReachSource = "automation_run"
+	WorklistReachSourceAwaitingReply       WorklistReachSource = "awaiting_reply"
 	WorklistReachSourceBatch               WorklistReachSource = "batch"
 	WorklistReachSourceBounce              WorklistReachSource = "bounce"
 	WorklistReachSourceBriefItem           WorklistReachSource = "brief_item"
@@ -18588,6 +18595,7 @@ const (
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
 	WorklistReachSourceLeadResponse        WorklistReachSource = "lead_response"
 	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
+	WorklistReachSourceMeetingFollowUp     WorklistReachSource = "meeting_follow_up"
 	WorklistReachSourceMeetingOutcome      WorklistReachSource = "meeting_outcome"
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceNoticeCase          WorklistReachSource = "notice_case"
@@ -18605,6 +18613,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceApproval:
 		return true
 	case WorklistReachSourceAutomationRun:
+		return true
+	case WorklistReachSourceAwaitingReply:
 		return true
 	case WorklistReachSourceBatch:
 		return true
@@ -18635,6 +18645,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceLeadResponse:
 		return true
 	case WorklistReachSourceMeeting:
+		return true
+	case WorklistReachSourceMeetingFollowUp:
 		return true
 	case WorklistReachSourceMeetingOutcome:
 		return true
@@ -18674,9 +18686,12 @@ const (
 	WorklistReasonKindMeetingBooked      WorklistReasonKind = "meeting_booked"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
+	WorklistReasonKindMetDaysAgo         WorklistReasonKind = "met_days_ago"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindNoNextStep         WorklistReasonKind = "no_next_step"
+	WorklistReasonKindNoReplyDays        WorklistReasonKind = "no_reply_days"
 	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
+	WorklistReasonKindNothingSentSince   WorklistReasonKind = "nothing_sent_since"
 	WorklistReasonKindOpenedOverdue      WorklistReasonKind = "opened_overdue"
 	WorklistReasonKindOutcomeUnrecorded  WorklistReasonKind = "outcome_unrecorded"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
@@ -18690,6 +18705,7 @@ const (
 	WorklistReasonKindStale              WorklistReasonKind = "stale"
 	WorklistReasonKindUnassigned         WorklistReasonKind = "unassigned"
 	WorklistReasonKindWaitingDays        WorklistReasonKind = "waiting_days"
+	WorklistReasonKindYouWroteLast       WorklistReasonKind = "you_wrote_last"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReasonKind enum.
@@ -18729,11 +18745,17 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindMeetingUnprepared:
 		return true
+	case WorklistReasonKindMetDaysAgo:
+		return true
 	case WorklistReasonKindNoChampion:
 		return true
 	case WorklistReasonKindNoNextStep:
 		return true
+	case WorklistReasonKindNoReplyDays:
+		return true
 	case WorklistReasonKindNoReplyHistory:
+		return true
+	case WorklistReasonKindNothingSentSince:
 		return true
 	case WorklistReasonKindOpenedOverdue:
 		return true
@@ -18760,6 +18782,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindUnassigned:
 		return true
 	case WorklistReasonKindWaitingDays:
+		return true
+	case WorklistReasonKindYouWroteLast:
 		return true
 	default:
 		return false
@@ -34273,6 +34297,12 @@ type FinanceInvoiceStatus string
 // `error` — the last attempt failed. What is shown is the last good answer,
 // and the reader is told it is not current.
 type FinanceSummaryState string
+
+// FollowUpSettings defines model for FollowUpSettings.
+type FollowUpSettings struct {
+	// FollowUpAfterDays Days a sent message may stay unanswered before its sender is reminded to follow up.
+	FollowUpAfterDays int `json:"follow_up_after_days"`
+}
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
 type ForecastAssurance struct {
@@ -54009,6 +54039,9 @@ type UpdateAcquisitionSourceJSONRequestBody = UpdateAcquisitionSourceRequest
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
 type LogActivityJSONRequestBody = CreateActivityRequest
 
+// UpdateFollowUpSettingsJSONRequestBody defines body for UpdateFollowUpSettings for application/json ContentType.
+type UpdateFollowUpSettingsJSONRequestBody = FollowUpSettings
+
 // RelinkActivitiesJSONRequestBody defines body for RelinkActivities for application/json ContentType.
 type RelinkActivitiesJSONRequestBody = RelinkActivitiesRequest
 
@@ -65433,6 +65466,12 @@ type ServerInterface interface {
 	// Log an activity (the `log_activity` MCP verb).
 	// (POST /activities)
 	LogActivity(w http.ResponseWriter, r *http.Request, params LogActivityParams)
+	// How long a sent message may go unanswered before the worklist reminds its sender.
+	// (GET /activities/follow-up-settings)
+	GetFollowUpSettings(w http.ResponseWriter, r *http.Request)
+	// Change the follow-up window (admin/ops).
+	// (PATCH /activities/follow-up-settings)
+	UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 	// Re-associate a named set of activities to a chosen record, in one transaction.
 	// (POST /activities/relink-bulk)
 	RelinkActivities(w http.ResponseWriter, r *http.Request, params RelinkActivitiesParams)
@@ -67809,6 +67848,18 @@ func (_ Unimplemented) ListActivities(w http.ResponseWriter, r *http.Request, pa
 // Log an activity (the `log_activity` MCP verb).
 // (POST /activities)
 func (_ Unimplemented) LogActivity(w http.ResponseWriter, r *http.Request, params LogActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How long a sent message may go unanswered before the worklist reminds its sender.
+// (GET /activities/follow-up-settings)
+func (_ Unimplemented) GetFollowUpSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change the follow-up window (admin/ops).
+// (PATCH /activities/follow-up-settings)
+func (_ Unimplemented) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72895,6 +72946,48 @@ func (siw *ServerInterfaceWrapper) LogActivity(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LogActivity(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFollowUpSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetFollowUpSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFollowUpSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateFollowUpSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateFollowUpSettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -106260,6 +106353,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities", wrapper.LogActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/follow-up-settings", wrapper.GetFollowUpSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/activities/follow-up-settings", wrapper.UpdateFollowUpSettings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/relink-bulk", wrapper.RelinkActivities)

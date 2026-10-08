@@ -6201,6 +6201,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/follow-up-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How long a sent message may go unanswered before the worklist reminds its sender.
+         * @description The workspace's follow-up window: a message a seat sent to a customer that is still
+         *     the last word after this many days comes back on the sender's worklist as a
+         *     follow-up. Read by every role; changed by admin/ops. Governed by the
+         *     `installation_settings` RBAC object.
+         */
+        get: operations["getFollowUpSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change the follow-up window (admin/ops). */
+        patch: operations["updateFollowUpSettings"];
+        trace?: never;
+    };
     "/leads/settings": {
         parameters: {
             query?: never;
@@ -31605,6 +31629,10 @@ export interface components {
             sort_order?: number;
             active?: boolean;
         };
+        FollowUpSettings: {
+            /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
+            follow_up_after_days: number;
+        };
         LeadSettings: {
             /** @description Whether the first-response target is tracked at all. Off by default. */
             first_response_enabled: boolean;
@@ -41064,7 +41092,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -41950,7 +41978,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -42480,7 +42508,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -53351,6 +53379,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignLeadsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getFollowUpSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The follow-up settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowUpSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateFollowUpSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FollowUpSettings"];
+            };
+        };
+        responses: {
+            /** @description The updated follow-up settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowUpSettings"];
                 };
             };
             401: components["responses"]["Unauthorized"];
