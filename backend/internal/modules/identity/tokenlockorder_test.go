@@ -133,7 +133,8 @@ func TestTokenPathsReachTheTokenRowBeforeTheMemberRow(t *testing.T) {
 				"%s:%s locks the member row before it reaches auth_token — redemption takes "+
 					"the token row FIRST, so this inverts the order and a redeem racing this can "+
 					"deadlock. Hold no app_user row lock and serialize with "+
-					"lockMemberForTokenIssue instead.", fn.file, fn.name)
+					"lockMemberForTokenIssue instead.", fn.file, fn.name,
+			)
 		}
 	}
 	if checked == 0 {
@@ -193,7 +194,8 @@ func TestTokenSupersedersSerializeOnTheMember(t *testing.T) {
 				"%s:%s supersedes and re-mints a member's token without "+
 					"lockMemberForTokenIssue — two issuers racing would both leave a live "+
 					"token, so the one-outstanding-token rule would hold only when nobody "+
-					"raced.", fn.file, fn.name)
+					"raced.", fn.file, fn.name,
+			)
 		}
 	}
 	if checked == 0 {

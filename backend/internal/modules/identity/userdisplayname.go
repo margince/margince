@@ -144,5 +144,6 @@ func (e *InvalidDisplayNameError) Error() string {
 // 422 pointing at the control the reader used rather than a 500.
 func (e *InvalidDisplayNameError) FieldFault() (field, code, message string) {
 	return displayNameField, codeInvalid, fmt.Sprintf(
-		"a display name is 1 to %d characters", e.MaxRunes)
+		"a display name is 1 to %d characters", e.MaxRunes,
+	)
 }
