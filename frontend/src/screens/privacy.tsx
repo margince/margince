@@ -537,7 +537,7 @@ function assigneeOptions(
 }
 
 // Whether the assignee is nobody the picker offers, asked only while the row
-// is open — the option built from this same fact is only rendered then too.
+// is open; the option built from this same fact is only rendered then too.
 function isUnoffered(
   expanded: boolean,
   assigneeId: string | null | undefined,
@@ -551,7 +551,7 @@ function isUnoffered(
 }
 
 // The request's own assignee as an option, when `unoffered` says they are
-// nobody the picker offers — null otherwise. Named by id: an agent seat is
+// nobody the picker offers, null otherwise. Named by id: an agent seat is
 // never offered (the is_agent filter above) but still has a name, and so
 // does a departed or deactivated holder.
 function unofferedAssignee(

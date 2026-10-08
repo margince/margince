@@ -455,7 +455,7 @@ describe("EntityRef", () => {
 });
 
 // The roster walk: `/users` and `/teams` are keyset-paged, so ONE page is not
-// the roster. Every picker built on `useRoster` inherits what the walk sees —
+// the roster. Every picker built on `useRoster` inherits what the walk sees,
 // which is why the walk carries whether it reached the end. A team reference
 // is named off this same walk (`RosterRef`'s team arm); a user reference is
 // named by id and never walks, so these three facts are proven against a
@@ -633,7 +633,7 @@ describe("the roster walk", () => {
     render(<EntityRef kind="team" id="t-2" />);
 
     // The first page arrived and the second did not. Kept as the entries that
-    // did load, this reads as a roster that simply does not carry `t-2` — and
+    // did load, this reads as a roster that simply does not carry `t-2`, and
     // the id would be printed as the settled answer for a read that never
     // finished.
     expect(await screen.findByText("Name did not load")).toBeTruthy();

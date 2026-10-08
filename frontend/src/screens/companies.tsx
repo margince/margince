@@ -891,7 +891,7 @@ function useChronologySlots({
   const recordZone = useRecordZone();
   // The workspace roster, for the ids a change row stores. Still walks rather
   // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
-  // `values.nameOf`, called per row as it renders — ids unknown here.
+  // `values.nameOf`, called per row as it renders, so the ids are unknown here.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>

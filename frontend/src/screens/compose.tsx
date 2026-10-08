@@ -1550,7 +1550,7 @@ export function ComposeModal({
   }, []);
   // A reader who picks a DIFFERENT conversation is owed its address, so the
   // previous offer leaves the field HERE, on the change itself, rather than
-  // when the new address resolves — a lookup still out, or a conversation
+  // when the new address resolves: a lookup still out, or a conversation
   // with no address on record, must not leave the old counterparty standing
   // as the recipient of a reply to somebody else. What the reader added
   // beside it is theirs and stays.

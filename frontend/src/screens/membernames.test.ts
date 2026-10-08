@@ -37,7 +37,7 @@ let client: QueryClient;
 
 beforeEach(() => {
   // No `retry` default here: the failed-read tests below exist to prove the
-  // module's OWN `retry: false` (memberNameQueryOptions), not to stand in for
+  // module's own `retry: false` (memberNameQueryOptions), not to stand in for
   // it with the client's.
   client = new QueryClient();
 });
@@ -280,7 +280,7 @@ describe("useMemberNames", () => {
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    // A later tick, past that batch window: only a cache entry under the SAME
+    // A later tick, past that batch window: only a cache entry under the same
     // per-id key can answer this without a second request. Diverging keys
     // would read as a miss and ask again.
     const single = renderHook(() => useMemberName("u-2"), { wrapper });

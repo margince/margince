@@ -1593,7 +1593,7 @@ function DealBoardBody({
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
-  // Named by id, batched into one request for every card's owner at once —
+  // Named by id, batched into one request for every card's owner at once;
   // an unowned deal contributes no id, so a board of them asks nothing.
   const ownerNames = useMemberNames(
     loadedDeals.flatMap((deal) => (deal.owner_id ? [deal.owner_id] : [])),

@@ -42,7 +42,7 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
-	// IncludeInvited widens the roster to invited seats for ANY member.
+	// IncludeInvited widens the roster to invited seats for any member.
 	//
 	// Deprecated: naming the owners a record points at is SeatNames, which
 	// answers id and display name alone; a roster row carries the member's

@@ -164,7 +164,7 @@ export function CompanyOwnerControl({
   );
   // The current owner may not be offerable (invited, deactivated, or past the
   // walk), and a select whose value is no option renders blank. Named by id
-  // regardless — `rosterOwnerName` says the honest sentence for the rest.
+  // regardless: `rosterOwnerName` says the true sentence for the rest.
   if (
     company.owner_id &&
     !owners.some((user) => user.value === company.owner_id)

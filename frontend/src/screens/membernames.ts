@@ -8,11 +8,11 @@ import { ProblemError } from "./common";
 // Names a colleague by id, batching every id asked for within one tick into
 // a single `GET /users/names` request rather than one request per reference.
 
-/** The most seats one request names — the contract's own `id` bound. */
+/** The most seats one request names: the contract's own `id` bound. */
 const MAX_SEATS_PER_REQUEST = 100;
 
-// The query every reader of one id's name shares — `useMemberName` and
-// `useMemberNames` both build their observers off this SAME options object,
+// The query every reader of one id's name shares. `useMemberName` and
+// `useMemberNames` both build their observers off this options object,
 // keyed by the id alone, so a name either one has already read costs the
 // other nothing: same cache entry, same in-flight request.
 function memberNameQueryOptions(id: string) {
@@ -46,8 +46,8 @@ export function useMemberName(id: string | null | undefined) {
 }
 
 /**
- * Every id a caller already holds, named at once — a list row, a board card,
- * a chronology's own colleagues — rather than one `useMemberName` per row,
+ * Every id a caller already holds, named at once (a list row, a board card,
+ * a chronology's own colleagues) rather than one `useMemberName` per row,
  * which is not an option: a hook cannot be called inside a `.map()`.
  *
  * An id absent from the map is pending, failed, or was never asked; no caller
@@ -80,7 +80,7 @@ type Naming = Readonly<{
 
 // The ids this tick has asked about and not yet sent. A leaf component cannot
 // see its siblings, so the coalescing has to live beside the request rather
-// than at any one call site — one shared batch, every subscriber served from
+// than at any one call site: one shared batch, every subscriber served from
 // the one answer it produces.
 let queued: string[] = [];
 let batch: Promise<Naming> | null = null;

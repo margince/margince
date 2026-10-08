@@ -33,7 +33,7 @@ const seatNamePassword = "a colleague password!"
 // login path, the sequence rosterteams_integration_test.go spells out: a
 // hand-built Identity would prove only that this file spelled a role key
 // right, not that the seat can actually sign in. Every colleague this suite
-// names is a rep — TestTheAnswerCarriesNothingButTheName is the proof that the
+// names is a rep: TestTheAnswerCarriesNothingButTheName is the proof that the
 // naming read does not even disclose a role, so there is nothing here for a
 // second role to exercise.
 func inviteAndLogin(t *testing.T, e *revocationEnv, email, name string) Identity {
@@ -168,8 +168,8 @@ func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
 	third := inviteAndLogin(t, e, "third@acme.test", "Cy Third")
 	fourth := inviteAndLogin(t, e, "fourth@acme.test", "Dee Fourth")
 
-	// Asked as an interleaving — neither the creation order above nor its
-	// exact reverse — and across four seats rather than two: with only two,
+	// Asked as an interleaving (neither the creation order above nor its
+	// reverse) and across four seats rather than two: with only two,
 	// a handler that ranged the map SeatNames returns instead of walking the
 	// request would still match this order about half the time.
 	asked := []openapi_types.UUID{
@@ -209,7 +209,7 @@ func TestTheAnswerCarriesNothingButTheName(t *testing.T) {
 }
 
 // A repeated id is one question, and an id nobody holds is an absence rather
-// than an error — the two readings the loader on the client depends on.
+// than an error: the two readings the loader on the client depends on.
 func TestARepeatIsOneRowAndAnUnknownIdIsNoRow(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-repeat")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
@@ -232,8 +232,8 @@ func TestARepeatIsOneRowAndAnUnknownIdIsNoRow(t *testing.T) {
 // below share, so the ceiling, order and shape assertions differ only in
 // what they read back rather than in how they call the handler.
 // An external Deal Room participant is not a member of the installation whose
-// colleagues these are. SeatNames holds that gate itself —
-// rosterteams_integration_test.go proves it — and this is the proof that the
+// colleagues these are. SeatNames holds that gate itself
+// (rosterteams_integration_test.go proves it), and this is the proof that the
 // refusal reaches a caller of the ROUTE as the 403 the contract publishes,
 // rather than as an empty answer that reads as a workspace with nobody in it.
 func TestNamingRefusesADealRoomBuyer(t *testing.T) {

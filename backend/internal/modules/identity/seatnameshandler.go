@@ -21,8 +21,8 @@ import (
 )
 
 // maxNamedSeats bounds one naming request, and must agree with the `maxItems`
-// on the contract's `id` parameter. The contract's number enforces nothing —
-// nothing in internal/contracts checks it — so this is the check that holds,
+// on the contract's `id` parameter. The contract's number enforces nothing
+// (nothing in internal/contracts checks it), so this is the check that holds,
 // the same arrangement company_list.go's maxCompanyIDFilter has.
 const maxNamedSeats = 100
 

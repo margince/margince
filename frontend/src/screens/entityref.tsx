@@ -30,7 +30,7 @@ import { type RosterKind, useRosterWalk } from "./roster";
 // there is no 360 to send them to, so a resolved name always renders as plain
 // text and never touches the ENTITY registry, which has no `user`/`team`
 // entry. A user is named by id (`/users/names`); a team is still named off
-// the roster walk — see `RosterRef`.
+// the roster walk (see `RosterRef`).
 
 export {
   ENTITY_NAME_KEY,
@@ -74,10 +74,10 @@ export function rosterReading(
 /**
  * What a reading is allowed to say once there is no name to show:
  * `unlisted` is the CALLER's sentence, because only the caller knows what the
- * id was for — an account's owner, a request's assignee — and it is the one
+ * id was for (an account's owner, a request's assignee), and it is the one
  * reading that claims the read answered about them. The other two readings
  * say the same thing wherever they happen: a read still in flight has said
- * nothing yet, and one that failed has said nothing about THIS id.
+ * nothing yet, and one that failed has said nothing about this id.
  */
 function missLabel(
   reading: NameReading,
@@ -98,9 +98,9 @@ function missLabel(
  * through `useMemberName`, which answers about that id alone and has no walk to
  * stop short.
  *
- * A picker whose current value matches no option renders blank — indistinguish-
- * able from unset — so a value the roster cannot name still needs a label, and
- * this is the one that is honest about why it has none.
+ * A picker whose current value matches no option renders blank, which reads
+ * as unset, so a value the roster cannot name still needs a label, and this is
+ * the one that says truthfully why it has none.
  */
 export function rosterMissLabel(
   roster: Readonly<{ isPending: boolean; isError: boolean }>,
@@ -195,7 +195,7 @@ export function EntityRef({
 // name renders as plain text and the reference never becomes a link.
 //
 // A user is named by id and a team is still named off the walk. The asymmetry
-// is deliberate: teams carry no invited seats, so the walk's budget was never a
+// is intended: teams carry no invited seats, so the walk's budget was never a
 // naming question for them. A `/teams/names` read would make both arms one.
 function RosterRef({
   kind,
@@ -209,7 +209,7 @@ function RosterRef({
 }
 
 // A resolved name as plain text, or the reading `UnnamedRef` owes a reader who
-// gets none — shared by both roster arms so neither draws its fallback
+// gets none, shared by both roster arms so neither draws its fallback
 // differently from the other.
 function resolvedOrFallback(
   id: string,
@@ -317,7 +317,7 @@ function RecordRef({
 }
 
 /**
- * rosterOwnerName names a record's owner by id — the same by-id read every
+ * rosterOwnerName names a record's owner by id, the same by-id read every
  * other reference in this file resolves through, never a walk. An owner the
  * read has not named yet gets that read's own reading of why, never a bare id.
  */
@@ -341,8 +341,8 @@ export function rosterOwnerName(
  * A function rather than the map itself, for the same reason the company
  * mapping takes `CompanyNaming`: the mapper is pure and `useMemberNames`'s
  * result is a hook's, and a mapper that reads one directly is one that every
- * story and test of it has to assemble a hook result for. Null is BOTH
- * "unowned" and "the read has not named this id" — on a card the two draw
+ * story and test of it has to assemble a hook result for. Null is both
+ * "unowned" and "the read has not named this id": on a card the two draw
  * the same nothing, and the table's owner column is where they are told
  * apart.
  */
@@ -359,8 +359,8 @@ export function rosterOwnerNaming(
  *
  * Reads `useMemberName`, batching every id asked for within one tick into a
  * single request, so a list of 50 rows costs one request rather than fifty.
- * An owner the read cannot name still renders rather than going blank — a
- * blank column reads as unowned, a different fact with its own filter — but
+ * An owner the read cannot name still renders rather than going blank (a
+ * blank column reads as unowned, a different fact with its own filter), but
  * as the same unnamed reference every other cross-record reference gets, not
  * a truncated id, which is a non-answer that has also lost the ability to be
  * looked up.

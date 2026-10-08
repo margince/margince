@@ -78,7 +78,7 @@ function stub(
     status?: number;
     seat?: Seat;
     // What GET /users/names answers about the owner; { data: [] } is a
-    // settled absence — the roster never held this id.
+    // settled absence: the roster never held this id.
     names?: unknown;
     // The record's own read answers 404: the reader can no longer open it.
     gone?: boolean;

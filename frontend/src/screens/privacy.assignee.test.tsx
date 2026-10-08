@@ -23,11 +23,11 @@ import { PrivacyInboxCard } from "./privacy";
 //
 // The roster walk still builds the picker's OFFERED list, but the assignee's
 // own name is a separate by-id read (`GET /users/names`) with its own
-// pending/settled/failed states — it owes nothing to the walk's budget, which
+// pending/settled/failed states. It owes nothing to the walk's budget, which
 // is what lets it name a holder even while the offered list is still partial.
 // Naming can still come up short in its own right: the read has not answered
 // yet, it settles on nothing for this id (archived, or never held), or it
-// names a colleague the picker still withholds — an agent seat cannot hold
+// names a colleague the picker still withholds: an agent seat cannot hold
 // the row scope a subject request needs.
 
 type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
@@ -212,7 +212,7 @@ describe("an assignee the picker's own list does not offer", () => {
   it("says the name is still coming while its own read is still running", async () => {
     // The picker's OFFERED list settles fine; it is the assignee's own by-id
     // name read (GET /users/names) that has not answered, and that read is
-    // what this field waits on — the roster walk beside it is a separate
+    // what this field waits on; the roster walk beside it is a separate
     // question.
     stub(
       dsrAssignedTo("u-gone"),
@@ -232,7 +232,7 @@ describe("an assignee the picker's own list does not offer", () => {
   it("says the name failed to load, never that the holder departed, when the read is refused", async () => {
     // A 403 excludes nobody. Reading it as a settled absence reports the
     // holder as gone on the evidence of a refusal rather than a name that
-    // never arrived — the same confusion the unanswered-read case above
+    // never arrived, the same confusion the unanswered-read case above
     // guards against, on the failed-read side of it.
     stub(
       dsrAssignedTo("u-gone"),

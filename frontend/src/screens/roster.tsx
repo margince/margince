@@ -29,7 +29,7 @@ type RosterEntry = User | Team;
 //
 // This walk is the PICKER's list: who a reader may choose as an owner, a
 // subject, a filter value. Naming somebody a record already points at is a
-// separate read (`useMemberName`, membernames.ts) — a by-id lookup that never
+// separate read (`useMemberName`, membernames.ts), a by-id lookup that never
 // walks and never runs out of budget, which is what makes it safe to leave
 // invited and deactivated seats off this list entirely: they may be pointed at
 // but never chosen.
@@ -120,10 +120,10 @@ export function useRosterWalk(kind: RosterKind, enabled: boolean) {
 }
 
 /**
- * The roster's entries — everyone a picker may offer.
+ * The roster's entries: everyone a picker may offer.
  *
  * Exported so the Share subject picker, the owner pickers and a team's own
- * name resolution all build off the exact same cache entry — one walk, one
+ * name resolution all build off the exact same cache entry: one walk, one
  * cache key, every consumer. Invited and deactivated seats never reach this
  * list: the server leaves them out because nothing here asks for them, which
  * is what keeps the walk's budget spent on colleagues who can actually be
@@ -131,7 +131,7 @@ export function useRosterWalk(kind: RosterKind, enabled: boolean) {
  *
  * A consumer that OFFERS these entries as a list of who exists owes its reader
  * `useRosterPartial` beside it: this result cannot say whether the walk reached
- * the end, and a picker missing colleagues looks exactly like a small workspace.
+ * the end, and a picker missing colleagues looks just like a small workspace.
  */
 export function useRoster(kind: RosterKind, enabled: boolean) {
   return useQuery({

@@ -104,7 +104,7 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 		t.Fatalf("the assignee roster offers the invited member %s, who cannot sign in", invited.ID)
 	}
 	// include_invited carries them: the roster widened to every seat that may
-	// yet activate. It is deprecated — naming an id is GET /users/names.
+	// yet activate. It is deprecated: naming an id is GET /users/names.
 	var invitedRoster userListWire
 	if status := e.Call(t, "GET", "/v1/users?include_invited=true", nil, nil, &invitedRoster); status != http.StatusOK {
 		t.Fatalf("list users with include_invited -> %d, want 200", status)

@@ -356,7 +356,7 @@ function useAudienceSentence(
   const ownerId = record.owner_id ?? undefined;
   const yours = viewerId !== undefined && ownerId === viewerId;
   // Named by id, batched with the facts strip's own request for the same
-  // owner within the same tick — this costs no extra round trip.
+  // owner within the same tick, so this costs no extra round trip.
   const name = useMemberName(isPrivate && !yours ? ownerId : null);
   if (!record.visibility) {
     return undefined;
