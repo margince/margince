@@ -46,8 +46,9 @@ Records, deals and mail in Margince, by page:
 - How do I set up a partner, or credit and pay a partner's commission? → [Partners and commission](partners.md)
 - What is on a project page, and how do I start delivery? → [Leads, deals and projects](leads-deals-and-projects.md)
 - How do I send or schedule an email? → [Writing and sending mail](sending-mail.md)
-- Where is my Worklist, and how do I snooze or pin? → [Your day and your week](your-day-and-your-week.md)
-- How do I see all my tasks? → [Your day and your week](your-day-and-your-week.md)
+- Where is my Worklist, and how do I snooze or pin? → [Your day](your-day.md)
+- How do I see all my tasks? → [Your day](your-day.md)
+- How do I see my weekly review or plan my week? → [Your week](your-week.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
 
@@ -90,9 +91,11 @@ Records, deals and mail in Margince, by page:
   to a message step by step. The rules that file it against the right contact,
   deal and project. What happens when nothing matches, and what capture refuses
   to store.
-- [Your day and your week](your-day-and-your-week.md): the bands of the
-  Worklist and why a row appears there. Pinning, snoozing and what each action
-  reaches. The frozen weekly review, planning a week, and what a team lead sees.
+- [Your day](your-day.md): **Morning**, the bands of the Worklist and why a row
+  appears there. Pinning, snoozing and what each action reaches, and what a team
+  lead sees.
+- [Your week](your-week.md): the frozen weekly review, what it counts and will
+  not claim, and planning a week.
 - [Performance and saved reports](sales-reporting.md): graphs, targets, scheduled editions, comparisons and exports.
 - [Analytics and forecasting](analytics.md): the report sections, what each
   number covers, and how to open the deals behind it. Forecast calls and the
