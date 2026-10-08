@@ -140,7 +140,7 @@ The handler signature carries the capability handle:
 func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error)
 ```
 
-`rt` is the **only** thing the core hands a unit. The core makes a new one for each call, and it stops
+`rt` is the **only** way a unit reaches the core. The core makes a new one for each call, and it stops
 working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()`,
 `rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`.
 
