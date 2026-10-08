@@ -6,13 +6,14 @@
 // reader may find. "Check a list" answers the question a member table cannot:
 // why this record is NOT on a Live List, clause by clause.
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { navigate } from "../app/router";
-import { Button, Field, Textarea } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
+import { Button, Field } from "../design-system/atoms";
+import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
+import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { LiveExplanation } from "./listexplain";
@@ -20,11 +21,12 @@ import { ListKindBadge } from "./listlibrary";
 import {
   type List,
   type ListedRecordType,
-  useChangeMember,
   useExplanation,
   useLists,
   useListsAvailable,
   useRecordLists,
+  useRemoveMember,
+  useRestoreMember,
 } from "./lists.queries";
 import "./lists.css";
 
@@ -50,8 +52,11 @@ export function RecordListsBody({ entityType, entityId }: RecordRef) {
   const t = useT();
   const lists = useRecordLists(entityType, entityId);
   const found = lists.data?.data ?? [];
+  // Where focus lands when a row leaves with the control that held it.
+  const block = useRef<HTMLDivElement | null>(null);
+  const focusLanding = useCallback(() => block.current, []);
   return (
-    <div className="lists-record">
+    <div className="lists-record" ref={block} tabIndex={-1}>
       <SurfaceState
         state={
           lists.isPending
@@ -68,19 +73,12 @@ export function RecordListsBody({ entityType, entityId }: RecordRef) {
       >
         <ul className="lists-record-set">
           {found.map((list) => (
-            <li key={list.id}>
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => navigate({ screen: "lists", id: list.id })}
-              >
-                {list.name}
-              </button>
-              <ListKindBadge list={list} />
-              {list.list_type === "static" && list.can_edit && (
-                <TakeOffAction list={list} entityId={entityId} />
-              )}
-            </li>
+            <RecordListRow
+              key={list.id}
+              list={list}
+              entityId={entityId}
+              focusLanding={focusLanding}
+            />
           ))}
         </ul>
         {lists.data?.truncated && (
@@ -147,52 +145,83 @@ function CheckedList({
   );
 }
 
-/** Taking this record off a Shortlist, with an optional note on why. */
+function RecordListRow({
+  list,
+  entityId,
+  focusLanding,
+}: Readonly<{
+  list: List;
+  entityId: string;
+  focusLanding: () => HTMLElement | null;
+}>) {
+  const row = useRef<HTMLLIElement | null>(null);
+  useFocusHandoff(row, focusLanding);
+  return (
+    <li ref={row}>
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => navigate({ screen: "lists", id: list.id })}
+      >
+        {list.name}
+      </button>
+      <ListKindBadge list={list} />
+      {list.list_type === "static" && list.can_edit && (
+        <TakeOffAction list={list} entityId={entityId} />
+      )}
+    </li>
+  );
+}
+
+/**
+ * Taking this record off a Shortlist runs at once: the toast's Undo puts the
+ * membership back with its author, date and note.
+ */
 function TakeOffAction({
   list,
   entityId,
 }: Readonly<{ list: List; entityId: string }>) {
   const t = useT();
-  const [open, setOpen] = useState(false);
-  const [note, setNote] = useState("");
-  const change = useChangeMember();
+  const remove = useTakeOff(list.name);
   return (
-    <>
-      <Button variant="ghost" onClick={() => setOpen(true)}>
-        {t("lists.remove")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={t("lists.removeTitle")}
-        confirmLabel={t("lists.remove")}
-        confirmVariant="danger"
-        pending={change.isPending}
-        error={change.isError ? problemMessageOf(change.error, t) : null}
-        onConfirm={() =>
-          change.mutate(
-            {
-              listId: list.id,
-              entityType: list.entity_type,
-              entityId,
-              note,
-              remove: true,
-            },
-            { onSuccess: () => setOpen(false) },
-          )
-        }
-      >
-        <Field label={t("lists.note")}>
-          {(control) => (
-            <Textarea
-              {...control}
-              value={note}
-              maxLength={500}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          )}
-        </Field>
-      </ConfirmModal>
-    </>
+    <Button
+      variant="ghost"
+      pending={remove.isPending}
+      onClick={() =>
+        remove.mutate({
+          listId: list.id,
+          entityType: list.entity_type,
+          entityId,
+        })
+      }
+    >
+      {t("lists.remove")}
+    </Button>
   );
+}
+
+// A refused removal or Undo has no dialog to stand in, so it stays as a toast.
+function useTakeOff(name: string) {
+  const t = useT();
+  const toast = useToast();
+  const sayRefused = (error: Error) =>
+    toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
+  const restore = useRestoreMember({
+    onError: sayRefused,
+    onSuccess: () => toast.show(t("lists.record.putBack", { name })),
+  });
+  return useRemoveMember({
+    onError: sayRefused,
+    onSuccess: (removal) =>
+      toast.show(
+        t("lists.record.takenOff", { name }),
+        removal
+          ? {
+              action: undoAction(t("common.undo"), () =>
+                restore.mutate(removal),
+              ),
+            }
+          : undefined,
+      ),
+  });
 }

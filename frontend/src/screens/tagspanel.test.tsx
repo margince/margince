@@ -4,10 +4,18 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { en } from "../i18n/en";
 import { CompanyTagsSection } from "./companyrailtags";
 import { ContactTagsSection } from "./contactrail";
@@ -127,40 +135,186 @@ describe("the tags panel", () => {
     ).toBeNull();
   });
 
-  it("names who applied a tag, and when", async () => {
-    const user = userEvent.setup();
+  it("names who applied a tag, and when, on the tag itself", async () => {
     mount([KEY_ACCOUNT]);
-    await screen.findByText("Key Account");
+    const link = await screen.findByRole("link", { name: /Key Account/ });
 
-    await user.click(
-      screen.getByRole("button", {
-        name: en["tags.removeTag"].replace("{name}", "Key Account"),
-      }),
-    );
-    expect(await screen.findByText(/Lena Fischer/)).toBeInTheDocument();
-    // The workspace-visibility line rides with it: a reader deciding whether
-    // to tag a sensitive record has to know the word is not private to them.
-    expect(
-      screen.getByText(en["tags.visibleWorkspaceWide"]),
-    ).toBeInTheDocument();
+    act(() => link.focus());
+
+    const tip = await screen.findByRole("tooltip");
+    expect(tip).toHaveTextContent(/Added by Lena Fischer/);
+    expect(link).toHaveAttribute("aria-describedby", tip.id);
   });
 
   // An assignment written before the product recorded WHO has nobody to
   // credit, and inventing a name would put a choice on somebody.
   it("shows the date alone when the assignment names nobody", async () => {
-    const user = userEvent.setup();
     mount([{ ...KEY_ACCOUNT, assigned_by: undefined }]);
-    await screen.findByText("Key Account");
+    const link = await screen.findByRole("link", { name: /Key Account/ });
+
+    act(() => link.focus());
+
+    const tip = await screen.findByRole("tooltip");
+    expect(tip).toHaveTextContent(/^Added /);
+    expect(tip).not.toHaveTextContent(/Lena Fischer/);
+  });
+});
+
+describe("taking a tag off a record", () => {
+  const AUDIT = "0199a000-0000-7000-8000-0000000000a1";
+  const REMOVE = `DELETE /tags/${KEY_ACCOUNT.tag_id}/apply`;
+  const RESTORE = `POST /tags/${KEY_ACCOUNT.tag_id}/apply/restore`;
+  const removeName = en["tags.removeTag"].replace("{name}", "Key Account");
+
+  function serve(
+    answers: Partial<Record<"remove" | "restore", () => Response>> = {},
+  ) {
+    let carried = [KEY_ACCOUNT];
+    const sent: { remove: unknown[]; restore: unknown[] } = {
+      remove: [],
+      restore: [],
+    };
+    installFetchStub({
+      [`GET /records/company/${COMPANY}/tags`]: () =>
+        jsonResponse({ data: carried, withheld: false }),
+      [REMOVE]: (body) => {
+        sent.remove.push(body);
+        const answer = answers.remove?.();
+        if (answer) {
+          return answer;
+        }
+        carried = [];
+        return jsonResponse({ audit_id: AUDIT });
+      },
+      [RESTORE]: (body) => {
+        sent.restore.push(body);
+        const answer = answers.restore?.();
+        if (answer) {
+          return answer;
+        }
+        carried = [KEY_ACCOUNT];
+        return jsonResponse({});
+      },
+    });
+    render(
+      <StoryProviders>
+        <ToastProvider>
+          <TagsPanel entityType="company" entityID={COMPANY} canEdit />
+          <ToastRegion />
+        </ToastProvider>
+      </StoryProviders>,
+    );
+    return sent;
+  }
+
+  const refused = () =>
+    jsonResponse({ detail: "The tag was applied again since." }, 409);
+
+  it("removes at once, with no dialog, and offers Undo", async () => {
+    const sent = serve();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: removeName }));
+
+    const said = await screen.findByRole("status");
+    await waitFor(() =>
+      expect(said).toHaveTextContent(
+        en["tags.removed"].replace("{name}", "Key Account"),
+      ),
+    );
+    expect(sent.remove).toEqual([
+      { entity_type: "company", entity_id: COMPANY },
+    ]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      within(said).getByRole("button", { name: en["common.undo"] }),
+    ).toBeInTheDocument();
+  });
+
+  it("hands focus to the Add tag row once the pill is gone", async () => {
+    serve();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: removeName }));
+
+    await waitFor(() => expect(screen.queryByText("Key Account")).toBeNull());
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toContainElement(
+      screen.getByRole("button", { name: en["tags.add"] }),
+    );
+  });
+
+  it("puts the tag back through Undo with the removal's audit id", async () => {
+    const sent = serve();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: removeName }));
+    const said = await screen.findByRole("status");
 
     await user.click(
-      screen.getByRole("button", {
-        name: en["tags.removeTag"].replace("{name}", "Key Account"),
-      }),
+      await within(said).findByRole("button", { name: en["common.undo"] }),
     );
-    expect(screen.queryByText(/Lena Fischer/)).toBeNull();
+
+    await waitFor(() => expect(sent.restore).toEqual([{ audit_id: AUDIT }]));
+    expect(await screen.findByText("Key Account")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        en["tags.restored"].replace("{name}", "Key Account"),
+      ),
+    );
+  });
+
+  it("offers no Undo when the record no longer carried the tag", async () => {
+    serve({ remove: () => new Response(null, { status: 204 }) });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: removeName }));
+
+    const said = await screen.findByRole("status");
+    await waitFor(() =>
+      expect(said).toHaveTextContent(
+        en["tags.removed"].replace("{name}", "Key Account"),
+      ),
+    );
     expect(
-      screen.getByText(en["tags.visibleWorkspaceWide"]),
+      within(said).queryByRole("button", { name: en["common.undo"] }),
+    ).toBeNull();
+  });
+
+  it("keeps a refused removal on screen as a danger toast", async () => {
+    serve({ remove: refused });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: removeName }));
+
+    const said = await screen.findByRole("status");
+    await waitFor(() =>
+      expect(said).toHaveTextContent("The tag was applied again since."),
+    );
+    expect(said.querySelector(".toast-dot-danger")).not.toBeNull();
+    expect(
+      within(said).getByRole("button", { name: en["common.close"] }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Key Account")).toBeInTheDocument();
+  });
+
+  it("keeps a refused Undo on screen as a danger toast", async () => {
+    serve({ restore: refused });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: removeName }));
+    const said = await screen.findByRole("status");
+
+    await user.click(
+      await within(said).findByRole("button", { name: en["common.undo"] }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "The tag was applied again since.",
+      ),
+    );
+    expect(
+      screen.getByRole("status").querySelector(".toast-dot-danger"),
+    ).not.toBeNull();
   });
 });
 

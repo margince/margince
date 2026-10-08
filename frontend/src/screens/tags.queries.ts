@@ -103,19 +103,67 @@ export function useApplyTag(entityType: TaggableType, entityID: string) {
   });
 }
 
-/** Take one tag off one record, leaving the tag itself alone. */
-export function useRemoveTag(entityType: TaggableType, entityID: string) {
+export type RemovalUndo = components["schemas"]["RemovalUndo"];
+
+// On the hook, not on `mutate`: an Undo runs after its pill has unmounted, and
+// React Query drops a `mutate` call's own callbacks once its observer is gone.
+type Outcome<V> = Readonly<{
+  onSuccess: (variables: V) => void;
+  onError: (error: Error) => void;
+}>;
+
+/**
+ * Take one tag off one record, leaving the tag itself alone. `onSuccess` gets
+ * the handle that puts it back, or null when the record did not carry the tag.
+ */
+export function useRemoveTag(
+  entityType: TaggableType,
+  entityID: string,
+  outcome: Outcome<TagRestore | null>,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (tagID: string) => {
-      const { error } = await api.DELETE("/tags/{id}/apply", {
+    mutationFn: async (tagID: string): Promise<TagRestore | null> => {
+      const { data, error } = await api.DELETE("/tags/{id}/apply", {
         params: { path: { id: tagID } },
         body: { entity_type: entityType, entity_id: entityID },
       });
       if (error) {
         throwProblem(error);
       }
+      return data ? { tagID, undo: data } : null;
     },
-    onSuccess: () => invalidateTagged(queryClient, entityType, entityID),
+    onError: outcome.onError,
+    onSuccess: (restore) => {
+      invalidateTagged(queryClient, entityType, entityID);
+      outcome.onSuccess(restore);
+    },
+  });
+}
+
+export type TagRestore = Readonly<{ tagID: string; undo: RemovalUndo }>;
+
+/** Put back a tagging this reader removed, as it was assigned. */
+export function useRestoreTag(
+  entityType: TaggableType,
+  entityID: string,
+  outcome: Outcome<TagRestore>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: TagRestore) => {
+      const { error } = await api.POST("/tags/{id}/apply/restore", {
+        params: { path: { id: input.tagID } },
+        body: input.undo,
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onError: outcome.onError,
+    onSuccess: (_, input) => {
+      invalidateTagged(queryClient, entityType, entityID);
+      outcome.onSuccess(input);
+    },
   });
 }

@@ -2804,12 +2804,11 @@ export const vi = {
   "tags.more": "+{count} nữa",
   "tags.showLess": "Thu gọn",
   "tags.removeTag": "Gỡ {name}",
-  "tags.removeTitle": "Gỡ {name} khỏi bản ghi này?",
+  "tags.removed": "Đã gỡ {name} khỏi bản ghi này",
+  "tags.restored": "Đã gắn lại {name} cho bản ghi này",
   "tags.addedBy": "Được thêm bởi {who} · {when}",
   "tags.addedByUndated": "Được thêm bởi {who}",
   "tags.addedOn": "Đã thêm {when}",
-  "tags.visibleWorkspaceWide": "Tên tag hiển thị cho toàn bộ tổ chức.",
-  "tags.removeFromRecord": "Gỡ khỏi bản ghi này",
   "tags.withheld": "Đã ẩn — vai trò của bạn không đọc được từ vựng tag",
   "tags.emptyTitle": "Chưa có tag",
   "tags.emptyBody":
@@ -10797,8 +10796,6 @@ export const vi = {
   "lists.why.inDays_one": "trong {count} ng\u00e0y n\u1eefa",
   "lists.why.inDays_other": "trong {count} ng\u00e0y n\u1eefa",
   "lists.remove": "G\u1ee1 kh\u1ecfi danh s\u00e1ch ch\u1ecdn",
-  "lists.removeTitle":
-    "G\u1ee1 b\u1ea3n ghi n\u00e0y kh\u1ecfi danh s\u00e1ch ch\u1ecdn?",
   "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
   "lists.noteHint":
     "\u0110\u01b0\u1ee3c l\u01b0u c\u00f9ng thay \u0111\u1ed5i \u0111\u1ec3 \u0111\u1ed3ng nghi\u1ec7p bi\u1ebft l\u00fd do.",
@@ -10810,6 +10807,8 @@ export const vi = {
   "lists.record.checkPick": "Ch\u1ecdn m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
   "lists.record.truncated":
     "V\u00e0 c\u00f2n danh s\u00e1ch kh\u00e1c kh\u00f4ng hi\u1ec3n th\u1ecb \u1edf \u0111\u00e2y.",
+  "lists.record.takenOff": "Đã gỡ khỏi {name}",
+  "lists.record.putBack": "Đã đưa lại vào {name}",
   "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",

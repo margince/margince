@@ -326,7 +326,7 @@ A Margince list's page shows why each member is there in its own columns.
 - On a Live List, each field the filter uses is a column with the member's current value, such as "52 days ago". The first four are shown; **Display** offers the rest. A value you may not see shows as **Hidden**.
 - On a Shortlist, **Added by**, **Added on** and **Note** say who chose the record, when, and why.
 To see why a record is not on a Live List, open the record's page and, under **Lists**, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's current value; a value you may not see shows as "Value hidden from you".
-To take one record off a Shortlist, press **Take off the Shortlist** beside it under **Lists** on the record's page and add a note if you like, or tick it on the list's page and use the bulk bar.
+To take one record off a Shortlist, press **Take off the Shortlist** beside it under **Lists** on the record's page. It comes off at once, and the toast "Taken off {name}" offers **Undo**, which puts the record back with its **Added by**, **Added on** and **Note**. To take several off, tick them on the list's page and use the bulk bar.
 Also called: why is this contact here, why is this record missing, list membership reason.
 
 ### How often does a Live List update?

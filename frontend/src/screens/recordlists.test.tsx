@@ -5,10 +5,17 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import {
@@ -288,36 +295,6 @@ describe("a record page's lists", () => {
     );
   });
 
-  it("takes the record off a Shortlist with a note", async () => {
-    const removed: unknown[] = [];
-    stub({
-      [`POST /lists/${SHORTLIST_ID}/members/remove`]: (body) => {
-        removed.push(body);
-        return new Response(null, { status: 204 });
-      },
-    });
-    const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: en["lists.remove"] }),
-    );
-    await user.type(
-      screen.getByRole("textbox", { name: en["lists.note"] }),
-      "left the company",
-    );
-    const dialog = screen.getByRole("dialog", {
-      name: en["lists.removeTitle"],
-    });
-    await user.click(
-      within(dialog).getByRole("button", { name: en["lists.remove"] }),
-    );
-    await vi.waitFor(() => expect(removed).toHaveLength(1));
-    expect(removed[0]).toEqual({
-      entity_type: "company",
-      entity_id: MEMBER_ID,
-      note: "left the company",
-    });
-  });
-
   it("reads the record's lists and an open verdict again when the record is written", async () => {
     let listReads = 0;
     let whyReads = 0;
@@ -361,5 +338,167 @@ describe("a record page's lists", () => {
       ),
     );
     await vi.waitFor(() => expect([listReads, whyReads]).toEqual([2, 2]));
+  });
+});
+
+// Taking a record off a Shortlist runs at once; the toast's Undo hands the
+// removal's audit id to the restore route.
+describe("taking a record off a Shortlist", () => {
+  const AUDIT = "0199a000-0000-7000-8000-0000000000b2";
+  const REMOVE = `POST /lists/${SHORTLIST_ID}/members/remove`;
+  const RESTORE = `POST /lists/${SHORTLIST_ID}/members/restore`;
+  const takenOff = en["lists.record.takenOff"].replace(
+    "{name}",
+    shortlist.name,
+  );
+
+  function serve(
+    answers: Partial<Record<"remove" | "restore", () => Response>> = {},
+  ) {
+    let onList = true;
+    const sent: { remove: unknown[]; restore: unknown[] } = {
+      remove: [],
+      restore: [],
+    };
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /records/company/${MEMBER_ID}/lists`]: () =>
+        jsonResponse({ data: onList ? [editableShortlist] : [] }),
+      "GET /lists": () =>
+        jsonResponse({ data: [liveList], page: { has_more: false } }),
+      "GET /filters/vocabulary": () =>
+        jsonResponse({ resource: "company", fields: [] }),
+      [REMOVE]: (body) => {
+        sent.remove.push(body);
+        const answer = answers.remove?.();
+        if (answer) {
+          return answer;
+        }
+        onList = false;
+        return jsonResponse({ audit_id: AUDIT });
+      },
+      [RESTORE]: (body) => {
+        sent.restore.push(body);
+        const answer = answers.restore?.();
+        if (answer) {
+          return answer;
+        }
+        onList = true;
+        return jsonResponse({});
+      },
+    });
+    render(
+      <StoryProviders>
+        <ToastProvider>
+          <RecordListsPanel entityType="company" entityId={MEMBER_ID} />
+          <ToastRegion />
+        </ToastProvider>
+      </StoryProviders>,
+    );
+    return sent;
+  }
+
+  const refused = () =>
+    jsonResponse({ detail: "The record was added to this list again." }, 409);
+
+  it("takes it off at once, with no dialog and no note, and offers Undo", async () => {
+    const sent = serve();
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.remove"] }),
+    );
+
+    const said = await screen.findByRole("status");
+    await waitFor(() => expect(said).toHaveTextContent(takenOff));
+    expect(sent.remove).toEqual([
+      { entity_type: "company", entity_id: MEMBER_ID },
+    ]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      within(said).getByRole("button", { name: en["common.undo"] }),
+    ).toBeInTheDocument();
+  });
+
+  it("hands focus to the lists block once the row is gone", async () => {
+    serve();
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.remove"] }),
+    );
+
+    expect(
+      await screen.findByText(en["lists.record.empty"]),
+    ).toBeInTheDocument();
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toContainElement(
+      screen.getByText(en["lists.record.empty"]),
+    );
+  });
+
+  it("puts it back through Undo with the removal's audit id", async () => {
+    const sent = serve();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.remove"] }),
+    );
+    const said = await screen.findByRole("status");
+
+    await user.click(
+      await within(said).findByRole("button", { name: en["common.undo"] }),
+    );
+
+    await waitFor(() => expect(sent.restore).toEqual([{ audit_id: AUDIT }]));
+    expect(
+      await screen.findByRole("button", { name: shortlist.name }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        en["lists.record.putBack"].replace("{name}", shortlist.name),
+      ),
+    );
+  });
+
+  it("keeps a refused removal on screen as a danger toast", async () => {
+    serve({ remove: refused });
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.remove"] }),
+    );
+
+    const said = await screen.findByRole("status");
+    await waitFor(() =>
+      expect(said).toHaveTextContent(
+        "The record was added to this list again.",
+      ),
+    );
+    expect(said.querySelector(".toast-dot-danger")).not.toBeNull();
+    expect(
+      within(said).getByRole("button", { name: en["common.close"] }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a refused Undo on screen as a danger toast", async () => {
+    serve({ restore: refused });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.remove"] }),
+    );
+    const said = await screen.findByRole("status");
+
+    await user.click(
+      await within(said).findByRole("button", { name: en["common.undo"] }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "The record was added to this list again.",
+      ),
+    );
+    expect(
+      screen.getByRole("status").querySelector(".toast-dot-danger"),
+    ).not.toBeNull();
   });
 });

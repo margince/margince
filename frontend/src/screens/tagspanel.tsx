@@ -3,19 +3,21 @@
 
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { Button } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
+import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
 import { TagPill } from "../design-system/tagpill";
+import { undoAction, useToast } from "../design-system/toast";
+import { useTooltip } from "../design-system/tooltip";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { AddTagPicker } from "./tagpicker";
 import type { RecordTag, TaggableType } from "./tags.queries";
-import { useRecordTags, useRemoveTag } from "./tags.queries";
+import { useRecordTags, useRemoveTag, useRestoreTag } from "./tags.queries";
 import "./tagspanel.css";
 
 /**
@@ -50,10 +52,11 @@ export function TagsPanel({
   const t = useT();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
-  // Where focus returns once a pill is gone: the Add tag row, which stays
+  // Where focus lands once a pill is gone: the Add tag row, which stays
   // mounted whenever a tag can be removed, including after the last one goes
   // and the row of tags unmounts with it.
   const actions = useRef<HTMLDivElement>(null);
+  const focusLanding = useCallback(() => actions.current, []);
   const read = useRecordTags(entityType, entityID);
 
   // The frame stands while the read is in flight. This panel sits in the record
@@ -114,7 +117,7 @@ export function TagsPanel({
               entityType={entityType}
               entityID={entityID}
               canEdit={canEdit}
-              returnFocusTo={() => actions.current}
+              focusLanding={focusLanding}
             />
           ))}
           {hidden > 0 && (
@@ -173,10 +176,10 @@ function TagsFrame({
 }
 
 /**
- * One tag on one record: the word, and a menu for the ASSIGNMENT.
+ * One tag on one record: the word, and the cross that takes it off.
  *
  * The two are different things and the split pill says so. Clicking the word
- * goes to the tag — everything else carrying it. The menu acts on this record
+ * goes to the tag — everything else carrying it. The cross acts on this record
  * alone, which is the distinction a reader has to be able to make before they
  * remove something.
  */
@@ -185,87 +188,100 @@ function TagOnRecord({
   entityType,
   entityID,
   canEdit,
-  returnFocusTo,
+  focusLanding,
 }: Readonly<{
   tag: RecordTag;
   entityType: TaggableType;
   entityID: string;
   canEdit: boolean;
-  // Where focus lands after a removal: the row of tags, which survives the
-  // refetch, rather than the pill's own button, which the refetch takes away
-  // and would leave focus on the document body.
-  returnFocusTo: () => HTMLElement | null;
+  focusLanding: () => HTMLElement | null;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const remove = useRemoveTag(entityType, entityID);
-  const [confirming, setConfirming] = useState(false);
-  // A date the row cannot hold is a date this line does not print. The
-  // contract promises `assigned_at` on every tag, and a server one release out
-  // of step that answers without it used to take the whole record down here:
-  // Intl refuses an unparseable value by throwing, and the throw is not the
-  // tag row's to survive alone. Who applied the tag still reads.
-  const stamped = !Number.isNaN(Date.parse(tag.assigned_at));
-  const who = tag.assigned_by?.display_name;
-  const added = who
-    ? stamped
-      ? t("tags.addedBy", {
-          who,
-          when: formatDate(tag.assigned_at, locale, zone),
-        })
-      : t("tags.addedByUndated", { who })
-    : // No name where the row records none: an assignment written before
-      // the product recorded WHO has nobody to credit, and inventing one
-      // would put a choice on somebody.
-      stamped
-      ? t("tags.addedOn", {
-          when: formatDate(tag.assigned_at, locale, zone),
-        })
-      : undefined;
-
+  const combo = useRef<HTMLSpanElement | null>(null);
+  const remove = useTagRemoval(entityType, entityID, tag.name);
+  useFocusHandoff(combo, focusLanding);
   return (
-    <span className="tagspanel-combo">
-      <a className="tagspanel-open" href={`#/tags/${tag.tag_id}`}>
-        <TagPill name={tag.name} tone={tag.color} archived={tag.archived} />
-      </a>
-      {/* The one verb a tag on a record has, as the cross the pill grows on
-          hover and on focus, rather than a menu of one item. It asks before
-          it acts: who applied the tag and when is shown there, so a reader
-          about to undo a colleague's filing sees whose it was. */}
+    <span className="tagspanel-combo" ref={combo}>
+      <TagLink tag={tag} />
+      {/* A cross the pill grows on hover and focus, not a menu of one item.
+          It runs at once; the toast's Undo restores the tagging as assigned. */}
       {canEdit && (
-        <>
-          <button
-            type="button"
-            className="tagspanel-remove"
-            aria-label={t("tags.removeTag", { name: tag.name })}
-            onClick={() => setConfirming(true)}
-          >
-            <X aria-hidden />
-          </button>
-          <ConfirmModal
-            open={confirming}
-            onClose={() => {
-              setConfirming(false);
-              remove.reset();
-            }}
-            title={t("tags.removeTitle", { name: tag.name })}
-            confirmLabel={t("tags.removeFromRecord")}
-            confirmVariant="danger"
-            pending={remove.isPending}
-            error={remove.isError ? problemMessageOf(remove.error, t) : null}
-            returnFocusTo={returnFocusTo}
-            onConfirm={() =>
-              remove.mutate(tag.tag_id, {
-                onSuccess: () => setConfirming(false),
-              })
+        <button
+          type="button"
+          className="tagspanel-remove"
+          aria-label={t("tags.removeTag", { name: tag.name })}
+          aria-disabled={remove.isPending || undefined}
+          onClick={() => {
+            if (!remove.isPending) {
+              remove.mutate(tag.tag_id);
             }
-          >
-            {added && <p className="t-body">{added}</p>}
-            <p className="t-caption">{t("tags.visibleWorkspaceWide")}</p>
-          </ConfirmModal>
-        </>
+          }}
+        >
+          <X aria-hidden />
+        </button>
       )}
     </span>
   );
+}
+
+/** The word as a link to the tag, with who applied it here and when on hover and focus. */
+function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  // Intl throws on an unparseable date, and a server out of step may send one.
+  const stamped = !Number.isNaN(Date.parse(tag.assigned_at));
+  const who = tag.assigned_by?.display_name;
+  const when = stamped ? formatDate(tag.assigned_at, locale, zone) : "";
+  // An assignment older than the product's record of WHO credits nobody,
+  // rather than putting the choice on somebody.
+  const added = who
+    ? stamped
+      ? t("tags.addedBy", { who, when })
+      : t("tags.addedByUndated", { who })
+    : stamped
+      ? t("tags.addedOn", { when })
+      : "";
+  const provenance = useTooltip<HTMLAnchorElement>(added);
+  return (
+    <a
+      ref={provenance.ref}
+      className="tagspanel-open"
+      href={`#/tags/${tag.tag_id}`}
+      {...(added ? provenance.trigger : undefined)}
+    >
+      <TagPill name={tag.name} tone={tag.color} archived={tag.archived} />
+      {provenance.tip}
+    </a>
+  );
+}
+
+// A refused removal or Undo has no dialog to stand in, so it stays as a toast.
+function useTagRemoval(
+  entityType: TaggableType,
+  entityID: string,
+  name: string,
+) {
+  const t = useT();
+  const toast = useToast();
+  const sayRefused = (error: Error) =>
+    toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
+  const restore = useRestoreTag(entityType, entityID, {
+    onError: sayRefused,
+    onSuccess: () => toast.show(t("tags.restored", { name })),
+  });
+  return useRemoveTag(entityType, entityID, {
+    onError: sayRefused,
+    onSuccess: (removal) =>
+      toast.show(
+        t("tags.removed", { name }),
+        removal
+          ? {
+              action: undoAction(t("common.undo"), () =>
+                restore.mutate(removal),
+              ),
+            }
+          : undefined,
+      ),
+  });
 }
