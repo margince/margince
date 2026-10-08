@@ -112,3 +112,33 @@ describe("StatStrip stretches its last slot over the rest of the row", () => {
     expect(strip.style.getPropertyValue("--stat-strip-tail-3")).toBe("1");
   });
 });
+
+// A compact strip sits above the content a reader came for. It holds one row
+// through the width where the regular strip folds to three, and its cards take
+// the smaller rung of the tile's own scale.
+describe("a compact strip", () => {
+  it("marks the row so the tile's sheet can draw the compact card", () => {
+    render(
+      <StatStrip testId="strip" density="compact">
+        <span>one</span>
+      </StatStrip>,
+    );
+    expect(screen.getByTestId("strip").dataset.density).toBe("compact");
+  });
+
+  it("keeps one row where the regular strip folds to three", () => {
+    const rule =
+      /@container \(min-width: 40rem\) and \(max-width: 66rem\)\s*\{\s*\.stat-strip\[data-density="compact"\]\s*\{([^}]*)\}/.exec(
+        stripCss(),
+      );
+    expect(rule?.[1]).toContain("repeat(var(--stat-strip-slots, 6), 1fr)");
+  });
+
+  it("sets the compact figure one rung down the tile's scale, in the tile's sheet", () => {
+    const atoms = readFileSync(join(here, "atoms.css"), "utf8");
+    const value =
+      /\[data-density="compact"\] \.stat-card-value\s*\{([^}]*)\}/.exec(atoms);
+    expect(value?.[1]).toContain("var(--fontHeadingSmall)");
+    expect(stripCss()).not.toMatch(/font:/);
+  });
+});

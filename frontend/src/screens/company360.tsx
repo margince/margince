@@ -660,21 +660,21 @@ export function StateStrip({
   // The stage the money slot reads to know whether there is a window to read
   // at all, and to name itself under the word when there is not.
   const lifecycle = strip.account.lifecycle;
-  // The contract pairs an absent optional section with its name in
-  // `sections_omitted` (Company360), so the reason `health` did not arrive
-  // is readable rather than guessable — and guessing is how a grant boundary
-  // gets reported as an account nobody has assessed.
+  // An absent section is named in `sections_omitted`, so a grant boundary is
+  // never reported as an account nobody has assessed.
   const healthWithheld = view != null && omitted(view, "health");
-  // The same boundary read ONCE for the two cards that depend on it: the last
-  // contact IS this section, and the relationship card reads its outbound date
-  // to tell silence with nothing sent from silence after we wrote.
+  // Read once for the two cards on this section: last contact, and the
+  // relationship card's outbound date.
   const touchWithheld = view != null && omitted(view, "last_touch");
   const door = (tab: CompanyTab) => onOpenTab && (() => onOpenTab(tab));
   return (
-    // The shared strip: five readings read ACROSS as one row of doors, each
-    // into the tab that holds its rows. The region's name is the SCREEN's to
-    // set; the cards inside are the shared primitive's, unreached-into.
-    <StatStrip label={t("co.strip.title")} testId="company-strip">
+    // Five readings in one compact row of doors, each into the tab that holds
+    // its rows, so the brief below shows without scrolling.
+    <StatStrip
+      label={t("co.strip.title")}
+      testId="company-strip"
+      density="compact"
+    >
       <PipelineCard
         commercial={strip.commercial}
         dimension={view?.health?.commercial}

@@ -1740,6 +1740,38 @@ span.error-line {
   min-block-size: 138px;
 }
 
+/* The compact card, inside a strip that asked for it (`StatStrip density`).
+   One step down the same heading scale, tighter air, and a one-line basis:
+   the row sits above the content a reader came for, so it must not fill the
+   first screen. The full figure stays on the value's tooltip. */
+[data-density="compact"] .stat-card {
+  padding: var(--space-3);
+  min-block-size: 0;
+}
+/* A narrow tile cannot hold the name and its receipt on one line; the receipt
+   drops under the name rather than cutting it to a stub. */
+[data-density="compact"] .stat-card-label {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+[data-density="compact"] .stat-card-label-text {
+  flex-shrink: 0;
+  max-inline-size: 100%;
+}
+[data-density="compact"] .stat-card-value {
+  font: var(--fontHeadingSmall);
+  font-variant-numeric: tabular-nums;
+  margin-block-end: var(--space-1);
+}
+[data-density="compact"] .stat-card-detail {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  margin-block-end: 0;
+}
+[data-density="compact"] .stat-card-foot {
+  padding-top: var(--space-1);
+}
+
 /* Nothing left to declare between two adjacent StatCards. A free-standing card
    already carries a border on all four sides, so a divider spelled here as a
    `border-left` on the second and later siblings only restated it — while

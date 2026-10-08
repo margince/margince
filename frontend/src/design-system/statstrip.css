@@ -42,6 +42,15 @@
   }
 }
 
+/* A compact row keeps every slot on one line through the width where the
+   regular row folds to three: its cards are small enough to share it. */
+@container (min-width: 40rem) and (max-width: 66rem) {
+  .stat-strip[data-density="compact"] {
+    grid-template-columns: repeat(var(--stat-strip-slots, 6), 1fr);
+    --stat-strip-tail: var(--stat-strip-tail-6, 1);
+  }
+}
+
 @container (max-width: 40rem) {
   .stat-strip {
     grid-template-columns: repeat(var(--stat-strip-slots-2, 2), 1fr);
