@@ -14,7 +14,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
-import { companyBackstop, jsonResponse, stubFetch } from "./company.fixtures";
+import { companyBackstop, jsonResponse } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 
 afterEach(() => {
   cleanup();

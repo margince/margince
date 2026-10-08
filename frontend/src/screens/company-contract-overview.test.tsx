@@ -12,7 +12,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
-import { company360, companyBackstop, stubFetch } from "./company.fixtures";
+import { company360, companyBackstop } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 
 // What an account is under contract for reads on the Deals tab, which is
 // where the pipeline and the account's other work in flight already live.

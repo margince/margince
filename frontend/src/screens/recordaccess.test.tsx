@@ -22,8 +22,8 @@ import {
   emptyPage,
   jsonResponse,
   company as pageCompany,
-  stubFetch,
 } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 import { useContact360 } from "./contact360";
 import { RecordAccess } from "./recordaccess";
 
