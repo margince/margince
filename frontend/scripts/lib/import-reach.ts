@@ -52,17 +52,39 @@ const resolvedImports: Record<Edges, Map<string, string[]>> = {
   scanned: new Map(),
 };
 
-// An MDX page's imports are ESM lines outside its code fences; the prose and
-// samples around them would parse into specifiers nothing loads.
-const MDX_FENCE = /^```[\s\S]*?^```/gm;
-const MDX_IMPORT = /^import\s[^;]*?["'][^"'\n]+["'];?/gm;
+// An MDX page loads what its column-0 ESM statements name outside CommonMark
+// code fences; prose and samples would parse into specifiers nothing loads.
+const MDX_FENCE_OPEN = /^ {0,3}(?:(`{3,})(?!.*`)|(~{3,}))/;
+const MDX_LOADS =
+  /^(?:import(?=[\s{*"'])[^;]*?["'][^"'\n]+["']|export\b[^;]*?\bfrom\s*["'][^"'\n]+["']);?/gm;
+
+function outsideFences(text: string): string {
+  const kept: string[] = [];
+  let close: RegExp | null = null;
+  for (const line of text.split("\n")) {
+    if (close !== null) {
+      if (close.test(line)) {
+        close = null;
+      }
+      continue;
+    }
+    const open = MDX_FENCE_OPEN.exec(line);
+    if (open === null) {
+      kept.push(line);
+      continue;
+    }
+    const fence = open[1] ?? open[2];
+    close = new RegExp(`^ {0,3}\\${fence[0]}{${fence.length},}\\s*$`);
+  }
+  return kept.join("\n");
+}
 
 function importText(file: string): string {
   const text = readFileSync(file, "utf8");
   if (!isDocsPage(file)) {
     return text;
   }
-  return (text.replace(MDX_FENCE, "").match(MDX_IMPORT) ?? []).join("\n");
+  return (outsideFences(text).match(MDX_LOADS) ?? []).join("\n");
 }
 
 function sourceOf(file: string): ts.SourceFile {

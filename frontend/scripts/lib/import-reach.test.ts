@@ -160,6 +160,15 @@ describe("the import walk the split gates share", () => {
       'See import("./kit.testkit") in prose.\n\n' +
         '```ts\nimport { vi } from "vitest";\n```\n',
     );
+    write(
+      "src/reexport.mdx",
+      '# Re-export\n\nexport { body } from "./card.fixtures";\n',
+    );
+    write("src/tilde.mdx", '~~~ts\nimport { vi } from "vitest";\n~~~\n');
+    write(
+      "src/nested.mdx",
+      '````md\n```\nimport { vi } from "vitest";\n```\n````\n',
+    );
 
     const entries = [
       "src/card.stories.tsx",
@@ -171,6 +180,9 @@ describe("the import walk the split gates share", () => {
       ".storybook/preview.tsx",
       "src/intro.mdx",
       "src/notes.mdx",
+      "src/reexport.mdx",
+      "src/tilde.mdx",
+      "src/nested.mdx",
     ];
 
     expect(testRunnerReach(entries.map(at)).map(named)).toEqual([
@@ -180,6 +192,7 @@ describe("the import walk the split gates share", () => {
       ["src/far.stories.tsx", "outside.ts"],
       [".storybook/preview.tsx"],
       ["src/intro.mdx", "src/card.fixtures.ts"],
+      ["src/reexport.mdx", "src/card.fixtures.ts"],
     ]);
   });
 });
