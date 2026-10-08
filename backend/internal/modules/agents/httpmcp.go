@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -259,6 +260,10 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.servePost(w, r)
 }
 
+// MaxMCPRequestBytes bounds one MCP request. An agent attaches a file inline as
+// base64, which grows it by a third, so the largest it can attach is about 6 MB.
+const MaxMCPRequestBytes = 8 << 20
+
 // servePost handles the one JSON-RPC exchange a POST carries: parse, decide
 // which framing the request is in, hold it to that framing's preconditions,
 // and dispatch.
@@ -268,7 +273,16 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // request, and the framing decides how a call is parsed — never what it may
 // do, which is the registry's business either way.
 func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(io.LimitReader(r.Body, 8<<20))
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxMCPRequestBytes))
+	// The limit is read off the error because the chassis may have bound the
+	// body tighter than this handler does, and the refusal names the one that fired.
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		httperr.Write(w, r, httperr.BodyTooLargeRefusal(fmt.Sprintf(
+			"This request exceeds the %s limit for one MCP call. Upload a larger file in the Margince app.",
+			httperr.Megabytes(tooLarge.Limit))))
+		return
+	}
 	if err != nil {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusBadRequest,

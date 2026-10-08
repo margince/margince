@@ -1377,6 +1377,10 @@ may read. Every other route stays on the 1 MiB JSON bound. That bound is a
 security invariant and is not configurable: several handlers decode the body
 with no bound of their own, and two of those routes are unauthenticated.
 
+One JSON route reads more: `POST /mcp` with `Content-Type: application/json`
+takes up to 8 MiB, because an agent attaches a file inline as base64. That
+admits a file of about 6 MB, and the number is not configurable either.
+
 | Key | Default | Route |
 |---|---|---|
 | `uploads.attachment_mb` | `25` | `POST /v1/attachments`, the documents surface |
