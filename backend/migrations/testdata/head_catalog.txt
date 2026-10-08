@@ -5029,6 +5029,7 @@ public.mail_draft.bcc_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.body text NOT NULL gen=- def=''::text
 public.mail_draft.cc_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.mail_draft.grounding jsonb NOT NULL gen=- def='[]'::jsonb
 public.mail_draft.html_body text gen=- def=-
 public.mail_draft.id uuid NOT NULL gen=- def=-
 public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))

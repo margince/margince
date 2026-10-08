@@ -56,8 +56,11 @@ type MailDraft struct {
 	// AgentDrafted is the AI marking: an agent wrote these words for the
 	// author, and no save from the author's composer has replaced them yet.
 	AgentDrafted bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// Grounding lists the records an agent wrote these words from. It outlives
+	// the author's edits, because edited words still rest on what they read.
+	Grounding []MailDraftAnchor
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 const (
@@ -70,7 +73,7 @@ const (
 )
 
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
-	subject, body, html_body, version, agent_drafted, created_at, updated_at`
+	subject, body, html_body, version, agent_drafted, grounding, created_at, updated_at`
 
 // InvalidMailDraftError refuses a draft the store will not keep.
 type InvalidMailDraftError struct {
@@ -86,7 +89,8 @@ func (e *InvalidMailDraftError) FieldFault() (field, code, message string) {
 }
 
 // GetMailDraft reads the caller's draft for one anchor. No draft, somebody
-// else's, and an anchor the caller can no longer see are all ErrNotFound.
+// else's, and an anchor the caller can no longer see are all ErrNotFound — as
+// is a draft resting on a record they can no longer see, which is discarded.
 func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailDraft, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return MailDraft{}, err
@@ -98,7 +102,10 @@ func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailD
 	if err != nil {
 		return MailDraft{}, err
 	}
-	var out MailDraft
+	var (
+		out       MailDraft
+		discarded bool
+	)
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := ensureDraftAnchorVisible(ctx, tx, anchor); err != nil {
 			return err
@@ -110,10 +117,20 @@ func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailD
 			  FROM mail_draft
 			 WHERE author_id = $%d AND anchor_type = $%d AND anchor_id = $%d`,
 			arg(author), arg(string(anchor.Type)), arg(anchor.ID)), args...)
-		out, err = scanMailDraft(row)
+		if out, err = scanMailDraft(row); err != nil {
+			return err
+		}
+		// The discard returns nil so it commits; the refusal is answered below.
+		discarded, err = discardUngrounded(ctx, tx, out)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return MailDraft{}, err
+	}
+	if discarded {
+		return MailDraft{}, apperrors.ErrNotFound
+	}
+	return out, nil
 }
 
 // SaveMailDraft keeps the composer's fields for one anchor.
@@ -415,10 +432,11 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		out        MailDraft
 		anchorType string
 		html       *string
+		grounding  []draftGround
 	)
 	err := row.Scan(&out.ID, &anchorType, &out.Anchor.ID, &out.Content.To, &out.Content.Cc,
 		&out.Content.Bcc, &out.Content.Subject, &out.Content.Body, &html, &out.Version,
-		&out.AgentDrafted, &out.CreatedAt, &out.UpdatedAt)
+		&out.AgentDrafted, &grounding, &out.CreatedAt, &out.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MailDraft{}, apperrors.ErrNotFound
 	}
@@ -428,6 +446,9 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 	out.Anchor.Type = crmcontracts.MailDraftAnchorType(anchorType)
 	if html != nil {
 		out.Content.HTMLBody = *html
+	}
+	for _, ground := range grounding {
+		out.Grounding = append(out.Grounding, MailDraftAnchor(ground))
 	}
 	return out, nil
 }
