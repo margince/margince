@@ -39,7 +39,7 @@ func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 		t.Fatalf("installing the shadow: %v", err)
 	}
 
-	// Dialled AFTER the install, as the app role: ALTER DATABASE reaches the
+	// Dialled after the install, as the app role: ALTER DATABASE reaches the
 	// sessions that connect next, and every test pool is held back until
 	// EnsureSchema has run this.
 	app := connectAs(t, appDSN(t), probe)
@@ -67,7 +67,7 @@ func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 	//
 	// Compared element by element rather than as a substring: the path holds
 	// the expanded "$user", so a role or schema whose name merely contains the
-	// three letters — extensions, context, an app role named for them — would
+	// three letters (extensions, context, an app role named for them) would
 	// report a failure against a path that is correct.
 	if slices.Contains(strings.Split(path, ","), "ext") {
 		t.Errorf("the app role's effective path is %s, which volunteers ext: a unit's unqualified "+

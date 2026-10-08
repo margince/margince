@@ -13,11 +13,11 @@ package testdb
 // verbs so that psql is not a host requirement, leaving no sanctioned shell path
 // for DDL.
 //
-// THREE THINGS MAKE THE SHADOW REACHABLE, and missing any one of them leaves it
-// installed and inert — every statement answering at the real date under a lane
-// reporting green:
+// Three things make the shadow reachable, and missing any one of them leaves it
+// installed and inert: every statement answers at the real date under a lane
+// reporting green.
 //
-//   - pg_catalog is named LAST. Unnamed, it is searched implicitly FIRST and
+//   - pg_catalog is named last. Unnamed, it is searched implicitly first and
 //     nothing in a listed schema is ever reached.
 //   - The schema is granted to PUBLIC. Postgres drops from a session's path any
 //     schema that session's role lacks USAGE on, silently: the product's
@@ -28,13 +28,13 @@ package testdb
 //     information_schema by it, so leading with the shadow sends them looking
 //     for the application's columns in a schema holding one function.
 //
-// ext is deliberately NOT on the path. It is on none the application connects
-// with — extensionsqlscope_test.go and extmigrategate/role.go both rest on that
-// — so putting it there would resolve a unit's unqualified ext_* name into ext
+// ext stays off the path, as it is off every path the application connects
+// with (extensionsqlscope_test.go and extmigrategate/role.go both rest on that).
+// Putting it there would resolve a unit's unqualified ext_* name into ext
 // only under this applier, and let the drift lane differ from the ordinary lane
 // for a reason that has nothing to do with the clock.
 //
-// WHAT IT CANNOT MOVE: CURRENT_TIMESTAMP, which resolves without consulting the
+// What it cannot move: CURRENT_TIMESTAMP, which resolves without consulting the
 // search path, and the migrations' column DEFAULTs, which bound pg_catalog.now()
 // before this existed. A green under this applier is weaker than the lane's.
 
@@ -104,7 +104,7 @@ func installClockShadow(ctx context.Context, owner *pgx.Conn) error {
 // ALTER DATABASE ... SET lives in pg_db_role_setting, which is in no schema:
 // dropping and re-migrating the schema leaves it untouched, so one local
 // `make backend-clock-drift` would otherwise leave every later ordinary run on
-// the modified path — and, once the shadow is reachable, 200 days into the
+// the modified path and, once the shadow is reachable, 200 days into the
 // future with nothing set and nothing printed. An ordinary run therefore clears
 // the residue rather than inheriting it.
 func clearClockShadow(ctx context.Context, owner *pgx.Conn, database string) error {

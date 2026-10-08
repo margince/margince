@@ -204,7 +204,7 @@ func subscriptionStub(t *testing.T, st subscriptionStubState) *httptest.Server {
 	t.Helper()
 	// Resolved here rather than inside the handlers: clocktest.Now fails the
 	// test through t.Fatalf, which testing permits only from the goroutine
-	// running the test — a handler goroutine would abort mid-response and the
+	// running the test. A handler goroutine would abort mid-response and the
 	// client would see a transport error instead of the reason.
 	expiry := clocktest.Now(t).Add(time.Hour)
 	mux := http.NewServeMux()

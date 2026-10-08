@@ -61,10 +61,10 @@ func EnsureSchema(ctx context.Context, owner *pgx.Conn) error {
 		}
 		emptySizes.Store(&sizes)
 		// The drift lane's database applier, before anything can connect. A
-		// per-database search_path reaches connections opened AFTER it is set,
-		// and schemaReady below is what holds every test pool back until here —
-		// so the shadow is on the path of every connection a test will make, or
-		// of none of them. A no-op under every other applier.
+		// per-database search_path reaches connections opened after it is set,
+		// and schemaReady below holds every test pool back until here, so the
+		// shadow is on the path of every connection a test will make, or of
+		// none of them. A no-op under every other applier.
 		if err := installClockShadow(ctx, owner); err != nil {
 			migrateErr = err
 			return

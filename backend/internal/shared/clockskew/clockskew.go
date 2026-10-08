@@ -21,7 +21,7 @@ const EnvVar = "BACKEND_CLOCK_SKEW"
 
 // maxDays bounds the offset at a century. A day count near the int64 nanosecond
 // ceiling wraps FixtureOffset to a large negative duration, which runs the suite
-// at a clock in the past under the drift lane's name — the same defect the zero
+// at a clock in the past under the drift lane's name: the same defect the zero
 // check refuses, arrived at from the other end.
 const maxDays = 36500
 
@@ -36,7 +36,7 @@ type Applier string
 //     looking at the same moved clock. It reaches every reading of now(),
 //     including the ones a column DEFAULT wrote.
 //   - Database shadows now() in the test template, for a machine whose wall
-//     clock must not move. Strictly weaker — platform/testdb/clockshadow.go
+//     clock must not move. Strictly weaker: platform/testdb/clockshadow.go
 //     states what it cannot reach.
 //   - Fixture moves only the base instant tests seed from, through
 //     platform/clocktest. It shifts no database reading at all.
@@ -58,7 +58,7 @@ type Skew struct {
 // Nonzero under Fixture alone. Under Machine the operating system has already
 // moved and under Database the database has, so a helper adding its own on top
 // would stand the fixtures a further 200 days from the rows they are compared
-// against — and every failure that produced would belong to the lane rather
+// against, and every failure that produced would belong to the lane rather
 // than to the tree.
 func (s Skew) FixtureOffset() time.Duration {
 	if s.Applier != Fixture {
@@ -74,11 +74,11 @@ func (s Skew) Armed() bool { return s.Applier != None }
 //
 // Anything else that cannot be read is an error rather than a fallback to the
 // ordinary run: a typo that silently shifted nothing leaves the lane reporting
-// PASS over a suite it never moved, which reads exactly like a suite with no
+// PASS over a suite it never moved, which reads just like a suite with no
 // date-fragile fixtures left.
 //
 // The applier is named beside the amount so that two cannot be armed at once.
-// The three clocks do not compose — two armed together run the suite at twice
+// The three clocks do not compose: two armed together run the suite at twice
 // the offset, with the layers disagreeing about which day it is.
 func Parse(value string) (Skew, error) {
 	value = strings.TrimSpace(value)

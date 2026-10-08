@@ -25,8 +25,8 @@ func TestAnUnsetVariableIsTheOrdinaryRun(t *testing.T) {
 func TestAnOffsetNamesItsApplierAndItsAmount(t *testing.T) {
 	t.Parallel()
 
-	// A slice rather than a map, because the padded case is the point of the
-	// last row and a map key carrying deliberate whitespace reads as a typo.
+	// A slice rather than a map, because the last row tests the padded case
+	// and a map key carrying padding whitespace reads as a typo.
 	want := []struct {
 		value    string
 		expected Skew
@@ -73,7 +73,7 @@ func TestAValueThatMovesNoClockIsRefused(t *testing.T) {
 	}
 }
 
-// The coherence rule the whole design rests on: exactly one layer supplies the
+// The coherence rule the whole design rests on: one layer alone supplies the
 // shift. Under machine the operating system already moved and under database
 // the database did, so a fixture helper adding its own would run the suite at
 // twice the offset with the layers disagreeing.

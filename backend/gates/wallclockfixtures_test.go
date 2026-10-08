@@ -10,20 +10,20 @@ package gates
 //
 // A fixture built on time.Now() makes its claim about the day it runs. Seeded
 // seven days out and asserted to group as `later`, it answers `this_week` on a
-// Thursday — and the day it changes its answer is a day nobody edited anything,
-// so no pull-request gate can be the thing that finds it. What finds it is the
+// Thursday. The day it changes its answer is a day nobody edited anything, so
+// no pull-request gate can be the thing that finds it. What finds it is the
 // drift lane, a second RUN of the suite at a moved clock.
 //
-// THIS GATE IS A RATCHET, NOT A CENSUS, and the distinction is the whole design.
+// This gate is a ratchet rather than a census, and that is the whole design.
 // Nothing static separates a fixture whose instant is compared against a
-// boundary from one whose instant is merely stored — docs/reference/make-targets.md
+// boundary from one whose instant is merely stored. docs/reference/make-targets.md
 // records the same finding for the frontend lane, where "an absolute date in a
 // file that never pins the clock" matched 129 files, nearly all harmless. A gate
 // reporting all of those would be noise, and noise is what teaches a reader to
 // skip a census. So this one judges no site. It counts them, holds the count,
 // and lets the lane do the judging.
 //
-// WHAT THIS DOES NOT COVER, so its silence is not read as a wider claim:
+// What this does not cover, so its silence is not read as a wider claim:
 //   - Whether any counted site is actually fragile. It is a budget on a
 //     population, and a file at its frozen count may still hold the next defect.
 //   - time.Since and time.Until, which read the same clock. A COMPARISON
@@ -37,10 +37,10 @@ package gates
 //     gate then requires its ledger entry deleted, and nothing counts the read
 //     again. No such helper holds one today. The alternative is to read every
 //     .go file, which would report the whole product's legitimate use of the
-//     clock — far more correct sites than wrong ones, and the noise that
+//     clock: far more correct sites than wrong ones, and the noise that
 //     teaches a reader to skip a census.
-//   - A fixture spelling an absolute date — time.Date(2026, ...) — which is
-//     calendar-fragile in exactly the same way and which no count of time.Now
+//   - A fixture spelling an absolute date (time.Date(2026, ...)), which is
+//     calendar-fragile in the same way and which no count of time.Now
 //     reaches. The lane sees it; this ledger does not.
 //   - The 905 files whose SQL says now(). Those read the DATABASE's clock, and
 //     only the machine applier moves it.
@@ -62,7 +62,7 @@ import (
 // OUT, so the file is held at zero for good.
 const ledgerPath = "gates/testdata/wallclockfixtures.txt"
 
-// clockOwners are the packages whose subject IS the clock, so a wall-time read
+// clockOwners are the packages whose subject is the clock, so a wall-time read
 // in their tests is the thing under test rather than a fixture dating itself.
 var clockOwners = []string{
 	"internal/platform/clocktest/",
@@ -148,14 +148,14 @@ func countWallClockReads(t *testing.T) map[string]int {
 
 // wallClockReads counts one parsed file's reads of the wall clock.
 //
-// A READ, not a call. `NewStore(db, time.Now)` hands the clock over as a value
+// A read, not a call. `NewStore(db, time.Now)` hands the clock over as a value
 // and is the dominant injection idiom here: the store stamps rows at wall time
 // and no fixture helper can move it, which makes those the sites that matter
 // most.
 //
 // The package is resolved through the file's IMPORTS rather than matched on the
-// spelling `time`. Go lets a file bind the package to any name — `import
-// walltime "time"` makes every read `walltime.Now()` — and a counter keyed on
+// spelling `time`. Go lets a file bind the package to any name (`import
+// walltime "time"` makes every read `walltime.Now()`), and a counter keyed on
 // the word would return zero for such a file, admit it as reading no clock, and
 // report PASS. That is under-recognition, the one direction a census must not
 // fail in: it reads a smaller tree and there is no failing assertion to notice.
@@ -186,8 +186,8 @@ func wallClockReads(file *ast.File) int {
 
 // dotImportedNowReads counts the bare Now a dot import puts in the file's own
 // scope. Reached only for a file that dot-imported time: an unqualified `Now`
-// is not distinctive on its own — a method, a field and a local can all wear
-// the name — so matching it anywhere else would report far more correct sites
+// is not distinctive on its own (a method, a field and a local can all wear
+// the name), so matching it anywhere else would report far more correct sites
 // than wrong ones.
 func dotImportedNowReads(file *ast.File) int {
 	found := 0
@@ -258,7 +258,7 @@ func readLedger(t *testing.T) map[string]int {
 			t.Fatalf("%s:%d: %q is not `<path> <count>` with a positive count", ledgerPath, i+1, line)
 		}
 		// A second line for one path would otherwise overwrite the first, so
-		// the higher of two counts silently becomes the ceiling — the ledger
+		// the higher of two counts silently becomes the ceiling: the ledger
 		// raised by an edit that looks like an addition.
 		if was, seen := frozen[path]; seen {
 			t.Fatalf("%s:%d: %s is listed twice, frozen at %d and again at %d. One line per file, or "+
