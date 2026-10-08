@@ -61,7 +61,7 @@ function readAll(tokens: readonly string[]): Map<string, string> {
 }
 
 /**
- * Every token's resolved value in BOTH themes at once. The root is flipped to
+ * Every token's resolved value in both themes at once. The root is flipped to
  * light, read, flipped to dark, read, and put back inside one task, so nothing
  * paints in between. Reading on the root is what makes derived tokens right: a
  * `color-mix()` over a themed base only resolves against the dark base when it

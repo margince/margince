@@ -177,11 +177,11 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   });
 
   // The surface ladder is a set of RELATIONS, not four independent colours, and
-  // every one of them is load-bearing: a card well sits below the page ground,
+  // every one of them carries weight: a card well sits below the page ground,
   // and the elevated surface sits above it. A retune that keeps all four values
   // plausible and inverts one pair breaks a state the eye reads without
   // breaking anything a value test can see. So the ordering is asserted rather
-  // than the values, in BOTH themes, from the sheet itself.
+  // than the values, in both themes, from the sheet itself.
   //
   // Dark is not a mirror of light and must not be asserted as one: on a dark
   // ground every surface lifts toward the light, so the ladder runs the other

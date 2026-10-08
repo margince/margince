@@ -332,7 +332,7 @@ const SIZING: readonly Measure[] = [
 
 /**
  * The measures. Each bar is drawn at its token's length. A button and a text
- * input are different heights on purpose: a button is a verb you hit, an input
+ * input are different heights by design: a button is a verb you hit, an input
  * is a place you put something, and the room inside it says so.
  */
 export const Sizing: Story = {

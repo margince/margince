@@ -162,7 +162,7 @@ export const Grouped: Story = {
 // `activityTimeline` adapts the contract's activities to the rows above, and a
 // record page mounts the result in this list. What is worth a picture is whose
 // face a message wears: the page's own chip sits above the list, so a sender
-// who IS the page's contact reads in the same colour, and anybody else in
+// who is the page's contact reads in the same colour, and anybody else in
 // their own.
 
 type Activity = components["schemas"]["Activity"];

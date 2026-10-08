@@ -15,7 +15,7 @@ import {
  * Depth is light first and shadow second. A surface is separated from the one
  * under it by its own lightness, which is what lets the resting shadow be as
  * slight as it is. The shadow then depends on what the thing is: a surface and
- * a filled control have a top side, a field has a floor, and what is genuinely
+ * a filled control have a top side, a field has a floor, and what is truly
  * above the plane (a popover, a menu, a drawer) takes the pop.
  *
  * Flip the theme in the toolbar. On a dark ground every surface lifts toward
@@ -170,7 +170,7 @@ const floating: CSSProperties = {
 };
 
 /**
- * What is genuinely above the plane: a scrim over the page, and a surface that
+ * What sits above the plane: a scrim over the page, and a surface that
  * takes the pop shadow over it. Nothing at rest wears the pop.
  */
 export const OverlaysAndScrim: Story = {

@@ -220,7 +220,7 @@ const block: CSSProperties = {
 
 /**
  * `--stagger-enter` is the gap between one arriving block and the next. It is
- * small on purpose: a reading order made briefly visible, not a sequence
+ * small by design: a reading order made briefly visible, not a sequence
  * anyone waits through, so six blocks are all moving within a fifth of a
  * second. The blocks use the product's own `.arrive-stack`, so this is the
  * real arrival and not a copy of it.
