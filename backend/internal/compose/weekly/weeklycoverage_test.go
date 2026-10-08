@@ -43,3 +43,34 @@ func TestAFigureIsJudgedByWhenItsSourceBegan(t *testing.T) {
 		})
 	}
 }
+
+func TestATeamStatesCommitmentsOnlyWhenEveryMemberWeekDid(t *testing.T) {
+	t.Parallel()
+	start := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	end := start.AddDate(0, 0, 7)
+	earlier, later := start.AddDate(0, 0, -14), start.AddDate(0, 0, 2)
+	stated := func(since *time.Time) *crmcontracts.WeeklyFigureCoverage {
+		return figureCoverage(since, start, end, planNoun)
+	}
+
+	var none memberPlans
+	if got := none.coverage(start, end); got != nil {
+		t.Errorf("a team with no counted member week states %+v", got)
+	}
+
+	var all memberPlans
+	all.add(stated(&later))
+	all.add(stated(nil))
+	all.add(stated(&earlier))
+	got := all.coverage(start, end)
+	if got == nil || got.Status != crmcontracts.WeeklyFigureCoverageStatusRecorded || got.RecordedSince != &earlier {
+		t.Errorf("every member week stated: got %+v, want recorded from the earliest member plan", got)
+	}
+
+	var silent memberPlans
+	silent.add(stated(&earlier))
+	silent.add(nil)
+	if got := silent.coverage(start, end); got != nil {
+		t.Errorf("one member week settled no plan, yet the team states %+v", got)
+	}
+}

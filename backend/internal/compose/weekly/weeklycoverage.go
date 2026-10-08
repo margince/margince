@@ -11,9 +11,14 @@ package weekly
 // counts beside it draw on, so a reader can tell an empty week from an
 // unmeasured one. A capture connection's date never answers this: a record
 // keyed in by hand before any connection existed is still a record.
+//
+// Commitments follow one rule at both scopes: a figure states its coverage only
+// where every week it sums settled a plan. A rep's week settles it in
+// measureWeek; a team's sum inherits the statements its members' weeks froze.
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,35 +27,115 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// figureStarts is the earliest usable record behind each figure family; nil
+// planNoun names the commitments source in a coverage reason.
+const planNoun = "weekly plan"
+
+// figureStarts is the earliest usable record behind each record family; nil
 // where the scope holds none.
 type figureStarts struct {
-	deals, tasks, meetings, leads, commitments *time.Time
+	deals, tasks, meetings, leads *time.Time
 }
 
-// figureCoverageOf states each family's coverage of [start, end) for the
-// owners' records this reader may see. planned is false when the review could
-// not settle the plan, and commitments then carry no statement at all.
+// figureCoverageOf states the record families' coverage of [start, end) for
+// the owners' records this reader may see. Commitments are the caller's to add.
 func figureCoverageOf(
-	ctx context.Context, tx pgx.Tx, owners []ids.UUID, start, end time.Time, planned bool,
+	ctx context.Context, tx pgx.Tx, owners []ids.UUID, start, end time.Time,
 ) (*crmcontracts.WeeklyFigureCoverageSet, error) {
 	since, err := readFigureStarts(ctx, tx, owners)
 	if err != nil {
 		return nil, err
 	}
-	set := &crmcontracts.WeeklyFigureCoverageSet{
+	return &crmcontracts.WeeklyFigureCoverageSet{
 		Deals:    figureCoverage(since.deals, start, end, "deal"),
 		Tasks:    figureCoverage(since.tasks, start, end, "task"),
 		Meetings: figureCoverage(since.meetings, start, end, "meeting"),
 		Leads:    figureCoverage(since.leads, start, end, "inbound lead"),
+	}, nil
+}
+
+// measureRepCoverage freezes one rep's coverage onto their summary. planned is
+// false when the week settled no plan, and commitments then state nothing.
+func measureRepCoverage(
+	ctx context.Context, tx pgx.Tx, summary *crmcontracts.WeeklyNumericSummary,
+	userID ids.UUID, start, end time.Time, planned bool,
+) error {
+	set, err := figureCoverageOf(ctx, tx, []ids.UUID{userID}, start, end)
+	if err != nil {
+		return err
 	}
-	if planned {
-		set.Commitments = figureCoverage(since.commitments, start, end, "weekly plan")
+	readable, err := mayReadPlans(ctx)
+	if err != nil {
+		return err
 	}
-	return set, nil
+	if planned && readable {
+		if set.Commitments, err = planCoverage(ctx, tx, userID, start, end); err != nil {
+			return err
+		}
+	}
+	summary.FigureCoverage = set
+	return nil
+}
+
+// mayReadPlans asks for weekly_plan read. A refused seat gets no commitments
+// statement rather than a guess; any other error is real.
+func mayReadPlans(ctx context.Context) (bool, error) {
+	err := auth.Require(ctx, "weekly_plan", principal.ActionRead)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// planCoverage dates a rep's commitments from their first plan week.
+func planCoverage(
+	ctx context.Context, tx pgx.Tx, owner ids.UUID, start, end time.Time,
+) (*crmcontracts.WeeklyFigureCoverage, error) {
+	zone, err := identity.TimezoneOf(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	var since *time.Time
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT (SELECT min(p.local_week_start) FROM weekly_plan p WHERE p.owner_id = $%d)::timestamp
+		       AT TIME ZONE $%d`, arg(owner), arg(zone)), args...).Scan(&since); err != nil {
+		return nil, fmt.Errorf("weekly: reading when the plan began: %w", err)
+	}
+	return figureCoverage(since, start, end, planNoun), nil
+}
+
+// memberPlans folds the commitments statements of the member weeks a team
+// total sums.
+type memberPlans struct {
+	counted, stated int
+	since           *time.Time
+}
+
+// add takes one counted member week's frozen statement, nil where it made none.
+func (m *memberPlans) add(plans *crmcontracts.WeeklyFigureCoverage) {
+	m.counted++
+	if plans == nil {
+		return
+	}
+	m.stated++
+	if plans.RecordedSince != nil && (m.since == nil || plans.RecordedSince.Before(*m.since)) {
+		m.since = plans.RecordedSince
+	}
+}
+
+// coverage states the team's commitments only when every counted member week
+// stated its own: one silent week makes the summed figure unmeasured.
+func (m memberPlans) coverage(start, end time.Time) *crmcontracts.WeeklyFigureCoverage {
+	if m.counted == 0 || m.stated < m.counted {
+		return nil
+	}
+	return figureCoverage(m.since, start, end, planNoun)
 }
 
 // figureCoverage judges one source's first record against the week. A record
@@ -75,8 +160,8 @@ func figureCoverage(since *time.Time, start, end time.Time, noun string) *crmcon
 	return &crmcontracts.WeeklyFigureCoverage{Status: status, RecordedSince: since, Reason: &reason}
 }
 
-// readFigureStarts reads every family's first record in one statement, each
-// under the scope clause and owner rule its count uses.
+// readFigureStarts reads every record family's first record in one statement,
+// each under the scope clause and owner rule its count uses.
 //
 // Tasks date by created_at alone because the task count admits only rows
 // created before the week closed, so an imported task's older occurred_at
@@ -109,11 +194,6 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (figure
 	if err != nil {
 		return figureStarts{}, err
 	}
-	zone, err := identity.TimezoneOf(ctx, tx)
-	if err != nil {
-		return figureStarts{}, err
-	}
-	zonePos := arg(zone)
 	var s figureStarts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
@@ -125,22 +205,12 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (figure
 		  (SELECT min(LEAST(m.created_at, m.occurred_at)) FROM activity m
 		    WHERE m.kind = 'meeting' AND m.archived_at IS NULL AND %[4]s AND (%[5]s)),
 		  (SELECT min(COALESCE(l.routed_at, l.created_at)) FROM lead l
-		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+nonImportedLeadSQL+` AND (%[6]s)),
-		  (SELECT min(p.local_week_start) FROM weekly_plan p WHERE p.owner_id = %[1]s)::timestamp
-		      AT TIME ZONE $%[7]d`,
+		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+nonImportedLeadSQL+` AND (%[6]s))`,
 		owned, orUnbounded(dealScope), taskScope, meetingIsTheirsSQL(owned, capturedBy), meetingScope,
-		orUnbounded(leadScope), zonePos), args...).
-		Scan(&s.deals, &s.tasks, &s.meetings, &s.leads, &s.commitments)
+		orUnbounded(leadScope)), args...).
+		Scan(&s.deals, &s.tasks, &s.meetings, &s.leads)
 	if err != nil {
 		return figureStarts{}, fmt.Errorf("weekly: reading when each figure's source began: %w", err)
 	}
 	return s, nil
-}
-
-// orUnbounded renders an empty scope clause as the unnarrowed predicate.
-func orUnbounded(clause string) string {
-	if clause == "" {
-		return sqlUnbounded
-	}
-	return clause
 }

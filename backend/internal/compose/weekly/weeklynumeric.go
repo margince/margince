@@ -48,7 +48,7 @@ func (e *Engine) measureNumeric(ctx context.Context, tx pgx.Tx, review *Review, 
 }
 
 func (e *Engine) measureTeamNumeric(
-	ctx context.Context, tx pgx.Tx, review *TeamReview, members []TeamMember, now time.Time,
+	ctx context.Context, tx pgx.Tx, review *TeamReview, members []TeamMember, plans memberPlans, now time.Time,
 ) error {
 	if e.numeric == nil {
 		return nil
@@ -67,10 +67,11 @@ func (e *Engine) measureTeamNumeric(
 	}
 	// The team's figures sum its members' weeks, so a family is measured from
 	// the first record any member's source holds.
-	numeric.Summary.FigureCoverage, err = figureCoverageOf(ctx, tx, owners, start, end, e.plan != nil)
+	numeric.Summary.FigureCoverage, err = figureCoverageOf(ctx, tx, owners, start, end)
 	if err != nil {
 		return err
 	}
+	numeric.Summary.FigureCoverage.Commitments = plans.coverage(start, end)
 	review.NumericSummary = &numeric.Summary
 	review.Counts.DealsWon = numeric.Won
 	review.Counts.MeetingsHeld = numeric.Held

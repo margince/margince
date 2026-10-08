@@ -148,10 +148,11 @@ func (e *Engine) AssembleTeamFor(
 		if measured {
 			return nil
 		}
-		if err := gatherTeamWeek(ctx, tx, &review, members); err != nil {
+		plans, err := gatherTeamWeek(ctx, tx, &review, members)
+		if err != nil {
 			return err
 		}
-		if err := e.measureTeamNumeric(ctx, tx, &review, members, now); err != nil {
+		if err := e.measureTeamNumeric(ctx, tx, &review, members, plans, now); err != nil {
 			return err
 		}
 		id, wrote, err := insertTeamReview(ctx, tx, review)
@@ -233,22 +234,25 @@ func (e *Engine) AssembleTeamFor(
 // identical as zeros, and only one of those is a fact about their week.
 func gatherTeamWeek(
 	ctx context.Context, tx pgx.Tx, review *TeamReview, members []TeamMember,
-) error {
+) (memberPlans, error) {
 	// Money is answerable only if EVERY member's week converted. One rep whose
 	// currency had no rate makes the team total unanswerable, exactly as one
 	// unconvertible deal does for that rep — a sum quietly missing a contact is
 	// worse than an absent one.
 	money := Money{Known: true}
+	var plans memberPlans
 	for _, member := range members {
-		counts, memberMoney, help, err := memberWeek(ctx, tx, member.UserID, review.LocalWeekStart)
+		frozen, err := memberWeek(ctx, tx, member.UserID, review.LocalWeekStart)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			review.RepsUnread++
 			money.Known = false
 			continue
 		}
 		if err != nil {
-			return err
+			return memberPlans{}, err
 		}
+		counts, memberMoney := frozen.counts, frozen.money
+		plans.add(frozen.plans)
 		review.Counts.RepsCounted++
 		addTeamCounts(&review.Counts, counts)
 		if !memberMoney.Known || (money.Currency != "" && money.Currency != memberMoney.Currency) {
@@ -261,14 +265,14 @@ func gatherTeamWeek(
 		}
 		recovery, err := memberDealRecovery(ctx, tx, member.UserID, review.LocalWeekStart)
 		if err != nil {
-			return err
+			return memberPlans{}, err
 		}
-		review.Reps = append(review.Reps, repFrom(member, counts, help, recovery))
+		review.Reps = append(review.Reps, repFrom(member, counts, frozen.help, recovery))
 	}
 	if money.Known && money.Currency != "" {
 		review.Money = money
 	}
-	return nil
+	return plans, nil
 }
 
 // addTeamCounts folds one member's week into the team's totals.

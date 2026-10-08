@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -204,8 +203,7 @@ func (e *Engine) measureWeek(
 	// Frozen inside the numeric summary, so a review computed without the
 	// metric engine states no coverage rather than one nobody measured against.
 	if review.NumericSummary != nil {
-		review.NumericSummary.FigureCoverage, err = figureCoverageOf(ctx, tx, []ids.UUID{userID}, start, end, planned)
-		if err != nil {
+		if err := measureRepCoverage(ctx, tx, review.NumericSummary, userID, start, end, planned); err != nil {
 			return err
 		}
 	}
