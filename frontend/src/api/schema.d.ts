@@ -9680,7 +9680,9 @@ export interface paths {
          *     write with no customer-facing meaning — a maintenance sweep, a projection
          *     refresh — is not Magic, and folding it in would turn internal churn into apparent
          *     value. Counting it instead means the preview can never imply completeness it does
-         *     not have.
+         *     not have. Its `unknown_entity_type` entry counts workspace-wide machine actions this
+         *     build cannot place and is reported only to a seat holding `ai_diagnostics` read; its
+         *     absence for any other seat is not a zero.
          *
          *     Bounded by `limit`, over a deterministic `occurred_at, id` order, and bounded
          *     again by how far back it will look: a receipt answers "since you last looked",
@@ -39510,6 +39512,46 @@ export interface components {
             meetings_coverage: components["schemas"]["ReportingCoverage"];
             /** Format: int64 */
             won_minor?: number;
+            figure_coverage?: components["schemas"]["WeeklyFigureCoverageSet"];
+        };
+        /**
+         * @description Whether each figure family on the review was measured over the week, by the source
+         *     that feeds it. Absent on a review frozen before figures carried their coverage; such a
+         *     review states no coverage either way. A family missing here has no coverage statement.
+         */
+        WeeklyFigureCoverageSet: {
+            /** @description Covers the deals won, lost and moved. */
+            deals?: components["schemas"]["WeeklyFigureCoverage"];
+            /** @description Covers the tasks completed, due and carried. */
+            tasks?: components["schemas"]["WeeklyFigureCoverage"];
+            meetings?: components["schemas"]["WeeklyFigureCoverage"];
+            leads?: components["schemas"]["WeeklyFigureCoverage"];
+            commitments?: components["schemas"]["WeeklyFigureCoverage"];
+        };
+        /**
+         * @description Whether one figure family's source held records for the review's owner scope across
+         *     the week, so a zero can be told from an unmeasured week.
+         *
+         *     `recorded` — the source held usable records in scope before the week began.
+         *     `partial` — the source's first usable record in scope falls inside the week, so the
+         *     figure counts only from `recorded_since`. `not_recorded` — the week ended before the
+         *     source's first record in scope, or the scope holds no record of that source at all.
+         *
+         *     A client renders a `not_recorded` figure as unrecorded, never as 0: the zero beside it
+         *     is the absence of a source, not a measurement.
+         */
+        WeeklyFigureCoverage: {
+            /** @enum {string} */
+            status: "recorded" | "partial" | "not_recorded";
+            /**
+             * Format: date-time
+             * @description The earliest usable record of this source in the review's owner scope, counting
+             *     manually entered and imported records. Not the date a capture connection was made:
+             *     a record keyed in by hand before any connection existed is still a record.
+             */
+            recorded_since?: string;
+            /** @description Why the figure carries this status, in words a reader can be shown. */
+            reason?: string;
         };
         /**
          * @description One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
@@ -40782,6 +40824,29 @@ export interface components {
              */
             bands?: components["schemas"]["WorklistBand"][];
             plan_coverage?: components["schemas"]["WorklistPlanCoverage"];
+            /**
+             * @description Whether the reader's own calendar feeds the meetings this read counts. Present only
+             *     for scope `mine`; a wider scope has no single calendar to answer for.
+             *
+             *     `not_connected` — the reader has no live calendar connection: none was made, or every
+             *     one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+             *     reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+             *
+             *     A zero `meetings` count is a measurement only when this is `connected`. Under either
+             *     other answer it says nothing about the day, and a client must not draw it as "no
+             *     meetings".
+             * @enum {string}
+             */
+            calendar?: "connected" | "not_connected" | "unreadable";
+            /**
+             * @description The reader's next booked customer meeting — linked to a contact, lead or company the
+             *     reader may see — within the next 30 days. Present only when the meetings lane
+             *     answered and holds no meeting left today, so an empty day still says when the next
+             *     conversation is. Absent when the lane did not answer, when a meeting remains today,
+             *     or when nothing is booked in the window. `participants` names only contacts the
+             *     reader may see.
+             */
+            next_meeting?: components["schemas"]["Contact360NextMeeting"];
         };
         /**
          * @description Whose weekly plans this read looked at, present only when `scope` is `team` and the
@@ -41989,6 +42054,10 @@ export interface components {
              *     A machine write with no customer-facing meaning is not Magic, and folding it
              *     in would turn internal churn into apparent value. Reporting the count instead
              *     means a preview showing five lines can never imply it is showing everything.
+             *
+             *     The `unknown_entity_type` entry counts workspace-wide machine actions this build
+             *     cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
+             *     absence for any other seat is not a zero.
              */
             not_shown: components["schemas"]["MagicNotShown"][];
             /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
@@ -42016,7 +42085,9 @@ export interface components {
              *     meaning: a maintenance sweep, a projection refresh.
              *     `unknown_entity_type` — an entity kind this build cannot scope, and therefore
              *     cannot safely show. Counted rather than served: showing a row this read cannot
-             *     place is showing a row it cannot prove the reader may see.
+             *     place is showing a row it cannot prove the reader may see. The count is
+             *     workspace-wide machine actions, not the reader's own, and is reported only to a
+             *     seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
              *     `out_of_scope` — a row about a record outside the reader's own scope. Counted
              *     so the total is honest, and never named.
              * @enum {string}
