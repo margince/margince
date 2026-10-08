@@ -142,8 +142,11 @@ func (s *Store) DemoteLead(
 		if err != nil {
 			return err
 		}
-		if err := restoreDemotedLead(ctx, tx, id, setBy, lead); err != nil {
-			return err
+		if _, err := tx.Exec(ctx,
+			`UPDATE lead SET status = 'engaged', status_set_by = $2, archived_at = NULL,
+			        promoted_contact_id = NULL, promoted_at = NULL, qualified_deal_id = NULL
+			 WHERE id = $1`, id, setBy); err != nil {
+			return restoreFailure(err, lead)
 		}
 
 		auditID, err := storekit.Audit(ctx, tx, "demote", "lead", id.UUID,
@@ -409,18 +412,12 @@ func refuseIfColleagueWorkedOnCreated(
 	return nil
 }
 
-// restoreDemotedLead puts a promoted lead back on the open ladder. Its address
-// may have been taken by a live lead while it was away, which is the same
+// restoreFailure answers a failed restore of a promoted lead. Its address may
+// have been taken by a live lead while it was away, which is the same
 // duplicate-email conflict create and update answer.
-func restoreDemotedLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, setBy string, lead crmcontracts.Lead) error {
-	if _, err := tx.Exec(ctx,
-		`UPDATE lead SET status = 'engaged', status_set_by = $2, archived_at = NULL,
-		        promoted_contact_id = NULL, promoted_at = NULL, qualified_deal_id = NULL
-		 WHERE id = $1`, id, setBy); err != nil {
-		if mapped, ok := leadUniqueViolation(err, (*string)(lead.Email)); ok {
-			return mapped
-		}
-		return fmt.Errorf("restore lead: %w", err)
+func restoreFailure(err error, lead crmcontracts.Lead) error {
+	if mapped, ok := leadUniqueViolation(err, (*string)(lead.Email)); ok {
+		return mapped
 	}
-	return nil
+	return fmt.Errorf("restore lead: %w", err)
 }
