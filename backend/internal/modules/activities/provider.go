@@ -10,7 +10,6 @@ package activities
 
 import (
 	"context"
-	"encoding/json"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -75,11 +74,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	update := activityUpdateInput(req, in.IfVersion)
-	var sent map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &sent); err != nil {
-		return datasource.EntityRef{}, err
-	}
-	update.clearNulled(func(field string) bool { return string(sent[field]) == "null" })
+	update.Clear = in.Clear
 	update.Trail = in.Trail
 	v, err := p.store.UpdateActivity(ctx, ids.From[ids.ActivityKind](in.Ref.ID), update)
 	return ref(datasource.EntityActivity, v.Id), err

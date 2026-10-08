@@ -12,6 +12,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -38,9 +39,9 @@ type UpdateActivityInput struct {
 	RemindAt        *time.Time
 	AssigneeID      *ids.UserID
 	IsDone          *bool
-	// Clear* carry an explicit JSON null: the wire cannot say "remove this"
-	// through a nil pointer, which reads the same as "not mentioned".
-	ClearDueAt, ClearRemindAt, ClearAssignee bool
+	// Clear names the fields sent as an explicit JSON null, which a nil pointer
+	// cannot tell from a field not mentioned.
+	Clear []string
 	// MeetingStatus is how the meeting went, and it is meaningful only on a
 	// meeting. The pairing is refused in the mapping against the kind the ROW
 	// carries — a patch cannot change a kind, so the stored one is the only
@@ -79,11 +80,12 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
-	current, err := admitActivityPatch(ctx, tx, id, &in)
+	current, held, err := admitActivityPatch(ctx, tx, id, &in)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if in.changesNothing(current) {
+	// A held row still reaches the UPDATE, whose trigger owes the 423.
+	if !held && in.changesNothing(current) {
 		return current, nil
 	}
 	// Every placeholder is derived from the argument slice rather than
@@ -122,7 +124,7 @@ func updateActivityInTx(
 		WHERE id = $%[1]d`,
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
-		arg(in.ClearDueAt), arg(in.ClearRemindAt), arg(in.ClearAssignee)),
+		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id"))),
 		args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -168,10 +170,12 @@ func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool
 
 // clearsAValue is true when a null names a field that currently holds one.
 func (in UpdateActivityInput) clearsAValue(current crmcontracts.Activity) bool {
-	return (in.ClearDueAt && current.DueAt != nil) ||
-		(in.ClearRemindAt && current.RemindAt != nil) ||
-		(in.ClearAssignee && current.AssigneeId != nil)
+	return (in.clears("due_at") && current.DueAt != nil) ||
+		(in.clears("remind_at") && current.RemindAt != nil) ||
+		(in.clears("assignee_id") && current.AssigneeId != nil)
 }
+
+func (in UpdateActivityInput) clears(field string) bool { return slices.Contains(in.Clear, field) }
 
 // admitActivityPatch takes the write lock and answers whether this patch may
 // land on this row, returning the row as it stood before it.
@@ -187,39 +191,39 @@ func (in UpdateActivityInput) clearsAValue(current crmcontracts.Activity) bool {
 // the request carried rather than the canonical form.
 func admitActivityPatch(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in *UpdateActivityInput,
-) (crmcontracts.Activity, error) {
+) (crmcontracts.Activity, bool, error) {
 	// The row lock makes the version compare and the coalesce update
 	// below one race-free unit: without it two concurrent edits both
 	// pass the compare and the loser silently overwrites the winner.
 	held, err := lockActivityForWrite(ctx, tx, id.UUID)
 	if err != nil {
-		return crmcontracts.Activity{}, err
+		return crmcontracts.Activity{}, false, err
 	}
 	// Reading the row is not the licence to change it: customer identity
 	// is workspace-readable, so the write arm is what keeps a colleague's
 	// correspondence theirs.
 	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
-		return crmcontracts.Activity{}, err
+		return crmcontracts.Activity{}, held, err
 	}
 	// A held row must reach the UPDATE afterwards so its own CHECK trigger —
 	// not this read — is what refuses the write.
 	current, err := readActivityForWrite(ctx, tx, id, held)
 	if err != nil {
-		return crmcontracts.Activity{}, err
+		return crmcontracts.Activity{}, held, err
 	}
 	// held skips this: activity_refuse_restricted_mutation refuses every write
 	// to a held row regardless of version, so it owes 423, not a 409 inviting a
 	// retry the row can never accept.
 	if !held && in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion {
-		return crmcontracts.Activity{}, apperrors.ErrVersionSkew
+		return crmcontracts.Activity{}, held, apperrors.ErrVersionSkew
 	}
 	if err := renormalizeTranscriptPatch(current, in); err != nil {
-		return crmcontracts.Activity{}, err
+		return crmcontracts.Activity{}, held, err
 	}
 	if !held && in.Subject != nil && current.Kind == crmcontracts.ActivityKindTask {
 		subject, err := taskSubject(*in.Subject)
 		if err != nil {
-			return crmcontracts.Activity{}, err
+			return crmcontracts.Activity{}, held, err
 		}
 		in.Subject = &subject
 	}
@@ -234,16 +238,16 @@ func admitActivityPatch(
 	// request, and answering 422 first would invite the caller to fix the
 	// field and try again against a row that will refuse them either way.
 	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
-		return crmcontracts.Activity{}, &MeetingStatusKindError{Kind: string(current.Kind)}
+		return crmcontracts.Activity{}, held, &MeetingStatusKindError{Kind: string(current.Kind)}
 	}
 	if !held && !in.calendarSettlement && changesInvitation(*in) {
 		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
-			return crmcontracts.Activity{}, err
+			return crmcontracts.Activity{}, held, err
 		}
 	}
 	if !held {
 		if err := validateActivityDuration(in.DurationSeconds); err != nil {
-			return crmcontracts.Activity{}, err
+			return crmcontracts.Activity{}, held, err
 		}
 	}
 	// Only a CHANGE of assignee is a routing decision. Re-sending the current
@@ -252,10 +256,10 @@ func admitActivityPatch(
 	unchanged := in.AssigneeID != nil && current.AssigneeId != nil && ids.UUID(*current.AssigneeId) == in.AssigneeID.UUID
 	if !unchanged {
 		if err := ensureAssigneeCanHoldWork(ctx, tx, in.AssigneeID); err != nil {
-			return crmcontracts.Activity{}, err
+			return crmcontracts.Activity{}, held, err
 		}
 	}
-	return current, nil
+	return current, held, nil
 }
 
 // renormalizeTranscriptPatch re-runs ADR-0058's normalizer on a body PATCH

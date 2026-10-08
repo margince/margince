@@ -5,9 +5,8 @@
 
 package integration
 
-// Four routes whose answer departed from what crm.yaml declares: an activity
-// patch that could not clear a nullable field, and three refusals that used the
-// wrong status or named the wrong field.
+// An activity patch clears a nullable field it is sent as null, and the
+// refusals below answer with the status and field crm.yaml declares.
 
 import (
 	"net/http"

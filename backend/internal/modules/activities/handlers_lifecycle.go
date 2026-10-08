@@ -22,10 +22,7 @@ func (h Handlers) UpdateActivity(w http.ResponseWriter, r *http.Request, id crmc
 		return
 	}
 	in := activityUpdateInput(req, ifVersion)
-	in.clearNulled(func(field string) bool {
-		raw, present := httperr.PresentField(r, field)
-		return present && raw == nil
-	})
+	in.Clear = httperr.ClearedFields(r)
 	activity, err := h.store.UpdateActivity(r.Context(), pathID[ids.ActivityKind](id), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
