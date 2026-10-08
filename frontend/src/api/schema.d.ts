@@ -34975,6 +34975,7 @@ export interface components {
             rows: {
                 [key: string]: unknown;
             }[];
+            /** @description Groups that matched. `rows` is capped at the report row limit, so a total above its length means this answer is the top of a longer one rather than all of it. The drill-through's `total_rows` counts source rows for the same reason. */
             total_rows?: number;
             /** @description Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded. */
             excluded_by_permission?: number | null;

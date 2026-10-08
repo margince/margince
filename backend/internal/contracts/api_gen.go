@@ -41077,8 +41077,10 @@ type ReportResult struct {
 	Rows []map[string]interface{} `json:"rows"`
 
 	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
-	Timezone  string `json:"timezone"`
-	TotalRows *int   `json:"total_rows,omitempty"`
+	Timezone string `json:"timezone"`
+
+	// TotalRows Groups that matched. `rows` is capped at the report row limit, so a total above its length means this answer is the top of a longer one rather than all of it. The drill-through's `total_rows` counts source rows for the same reason.
+	TotalRows *int `json:"total_rows,omitempty"`
 }
 
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.

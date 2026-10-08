@@ -48057,7 +48057,13 @@ components:
           type: array
           items: { type: object, additionalProperties: true }
           description: Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
-        total_rows: { type: integer }
+        total_rows:
+          type: integer
+          description: >-
+            Groups that matched. `rows` is capped at the report row limit, so a
+            total above its length means this answer is the top of a longer one
+            rather than all of it. The drill-through's `total_rows` counts source
+            rows for the same reason.
         excluded_by_permission: { type: [integer, 'null'], description: 'Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded.' }
         population_narrowed: { $ref: '#/components/schemas/PopulationNarrowed' }
         generated_at: { type: string, format: date-time }

@@ -210,7 +210,7 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 			// empty array says "none matched". reportOutcome.Rows guarantees
 			// it, so this is the shape both transports already agree on.
 			"rows":         outcome.Rows,
-			"total_rows":   len(outcome.Rows),
+			"total_rows":   outcome.TotalRows,
 			"generated_at": outcome.GeneratedAt,
 			// The frame, same as the HTTP envelope carries. A number without
 			// the zone that cut its days and the month its year opens is not
