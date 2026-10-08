@@ -309,11 +309,6 @@ const ACCEPTED = new Map<string, string>([
   ],
   ["stat-card", "a card: the strip's tile, and the tile filling its cell"],
   ["arhit", "the agent orb's hit area, sized to the orb rather than to a verb"],
-  [
-    "avatar",
-    "a contact's MARK inside something pressable — a picture sized to the row " +
-      "it stands in, and nothing anybody aims at on its own",
-  ],
   ["fdz", "a drop ZONE is an area to aim at, not a control"],
   ["fdz-input", "the invisible file input covering that zone"],
   ["filterpill", "chip-shaped, and the chip is its own rung on the toolbar"],
