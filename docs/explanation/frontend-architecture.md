@@ -143,8 +143,14 @@ the bar; everything else lives behind **More**, which opens the same element
 over the screen. One `<nav>` element means screen readers find one `navigation`
 role, and there is no second list to keep the same. At this size the rows of
 the routes not on the bar are `display:none`, so **More** carries
-`aria-current="page"` for them. It drops that value once **More** is open, so
-two elements never both claim the current page.
+`aria-current="page"` for them.
+
+That value sits on the place a hidden row stands for. Some pages sit below such
+a place: a company, lead or project record, a Filters and views page, or one
+list. There the top bar's trail claims the page, so **More** says `"true"`. A contact
+or deal record leaves **More** without the value, because the bar shows that
+place and claims the page. **More** drops the value once it is open, so two
+elements never both claim the current page.
 
 The third of the 5 places is the agent, which is not a place to go to. It
 reports and does not move you, and it belongs to the whole session, not to one
@@ -340,6 +346,7 @@ even if the test tree breaks.
 | Design test | `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
 | Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/src/app/serviceworker-registrar.test.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/app/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
 | CSS file owners | `design-system/stylesheetnamespace.test.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
+| Timeline rows | `design-system/timelinerows.test.ts` | a rule that reaches the `li` of a `.timeline` list by anything but `>` from the `.timeline` part, which also reaches `li` items inside a row; a sibling (`+`, `~`) of such a row passes. It reads every `.css` under `frontend/src` and the frontend of each extension. It fails closed when the selectors it parses and a plain count of the text disagree |
 | Token values | `design-system/tokens.test.ts` | a Ledger-Green value that drifts from the design source |
 | Type check and build | `pnpm build` (`tsc -b && vite build`) | any type error |
 | Unit tests | `pnpm test` (Vitest) | the `*.test.tsx` files beside the code |

@@ -1025,6 +1025,7 @@ seems
 seen
 segment
 select
+selectors
 self
 sell
 send
@@ -1220,6 +1221,7 @@ total
 touch
 trace
 track
+trail
 transaction
 transcript
 transport
