@@ -14,7 +14,8 @@ grant, and to see the numbers you need `ai_diagnostics` read.
   tier. It covers `24 h`, `7 d` or `30 d`, with `p50`, `p95` and cost. A row opens the call log
   for only these calls.
 - **Model tiers card.** The mark next to a tier opens its health, with its
-  line for 7 days and how it sorts its hosts.
+  line for 7 days and how it sorts its hosts. The health counts only the calls of
+  the model the tier has now, so a tier you bind to another model starts with none.
 - **AI tasks card.** **Edit** opens the sheet of a task. **Recent calls** says how
   many calls have an answer, and from which step of the route. It also says why a step gave a
   call up (`timed out`, `failed`, `not sure enough`). The latency view puts the

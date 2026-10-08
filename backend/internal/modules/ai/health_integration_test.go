@@ -25,8 +25,15 @@ func ladderRow(logical ids.UUID, attempt int, terminal bool, tier Tier, reason, 
 }
 
 // rungHealthAfter records each logical call through CallMeter.Record and reads
-// the health report back, keyed by tier.
+// the health report back, keyed by tier, with no lane's binding known.
 func rungHealthAfter(t *testing.T, logicalCalls ...[]Call) map[string]RungHealth {
+	t.Helper()
+	return rungHealthBoundTo(t, nil, logicalCalls...)
+}
+
+// rungHealthBoundTo is rungHealthAfter with each tier in bound serving the
+// model bound names.
+func rungHealthBoundTo(t *testing.T, bound map[Tier]ModelRef, logicalCalls ...[]Call) map[string]RungHealth {
 	t.Helper()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
@@ -36,7 +43,7 @@ func rungHealthAfter(t *testing.T, logicalCalls ...[]Call) map[string]RungHealth
 			t.Fatalf("recording %+v: %v", attempts, err)
 		}
 	}
-	report, err := NewMeter(env.dbFor(ws)).RungHealthReport(diagnosticsReader(ws))
+	report, err := NewMeter(env.dbFor(ws)).RungHealthReport(diagnosticsReader(ws), bound)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +147,7 @@ func TestRungHealthAnswersATiedLatestAttemptTheSameOnEveryRead(t *testing.T) {
 	}
 	var first *RungHealth
 	for range 5 {
-		report, err := NewMeter(env.dbFor(ws)).RungHealthReport(diagnosticsReader(ws))
+		report, err := NewMeter(env.dbFor(ws)).RungHealthReport(diagnosticsReader(ws), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -160,5 +167,59 @@ func TestRungHealthAnswersATiedLatestAttemptTheSameOnEveryRead(t *testing.T) {
 	}
 	if first == nil {
 		t.Fatalf("no %s rung in the report", TierCheapCloud)
+	}
+}
+
+// madeBy is one answered or failed attempt on tier by provider's model.
+func madeBy(tier Tier, provider, modelID, sentinel string) []Call {
+	row := ladderRow(ids.NewV7(), 1, true, tier, "", sentinel)
+	row.Provider, row.ModelID = provider, modelID
+	return []Call{row}
+}
+
+// A lane rebound to another model reads as that model, which has made no call:
+// the failures of the model it was bound to before are not the new one's, and
+// shown on its row they would send an admin to replace a model that works.
+func TestRungHealthDropsTheAttemptsOfTheModelATierWasBoundToBefore(t *testing.T) {
+	bound := map[Tier]ModelRef{
+		TierPremium:   {Provider: "gemini", Model: "gemini-3.5-flash"},
+		TierEmbedLane: {Provider: "gemini", Model: "text-embedding-005"},
+	}
+	rungs := rungHealthBoundTo(t, bound,
+		madeBy(TierPremium, "openai_compatible", "gpt-5.4-mini", "provider_error"),
+		madeBy(TierEmbedLane, "openai", "text-embedding-3-small", "provider_error"),
+	)
+	for _, tier := range []Tier{TierPremium, TierEmbedLane} {
+		if rung, ok := rungs[string(tier)]; ok {
+			t.Errorf("%s = %+v, want no row: every attempt was made by a model it is no longer bound to", tier, rung)
+		}
+	}
+}
+
+// Only the previous model's attempts leave the row: the bound model's own keep
+// counting, a tier rebound to the model it already had keeps its history, and
+// a tier the binding does not name keeps every attempt it made.
+func TestRungHealthKeepsTheAttemptsOfTheModelATierIsBoundToNow(t *testing.T) {
+	bound := map[Tier]ModelRef{
+		TierPremium:    {Provider: "gemini", Model: "gemini-3.5-flash"},
+		TierCheapCloud: {Provider: "test", Model: "test-model"},
+	}
+	rungs := rungHealthBoundTo(t, bound,
+		madeBy(TierPremium, "openai_compatible", "gpt-5.4-mini", "provider_error"),
+		madeBy(TierPremium, "gemini", "gemini-3.5-flash", ""),
+		madeBy(TierCheapCloud, "test", "test-model", "provider_unavailable"),
+		madeBy(TierLocalSmall, "ollama", "retired-model", "provider_unavailable"),
+	)
+	premium := rungs[string(TierPremium)]
+	if premium.Calls != 1 || premium.Failures != 0 || !premium.Healthy() || premium.LastSentinel != "" {
+		t.Errorf("%s = %+v, want the bound model's 1 answered call alone", TierPremium, premium)
+	}
+	cheap := rungs[string(TierCheapCloud)]
+	if cheap.Calls != 1 || cheap.Failures != 1 || cheap.LastSentinel != "provider_unavailable" {
+		t.Errorf("%s = %+v, want its bound model's failure kept", TierCheapCloud, cheap)
+	}
+	unnamed := rungs[string(TierLocalSmall)]
+	if unnamed.Calls != 1 || unnamed.Failures != 1 {
+		t.Errorf("%s = %+v, want every attempt of a tier the binding does not name", TierLocalSmall, unnamed)
 	}
 }

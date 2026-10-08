@@ -21626,7 +21626,8 @@ export interface components {
             /**
              * @description Attempts this tier made in the window, each counted once — including one that failed
              *     and handed the call to the next tier, and each same-tier retry. Cache hits are not
-             *     counted.
+             *     counted. Only the attempts of the model the tier is bound to now count, so a tier
+             *     rebound to another model drops the attempts of the one before it.
              */
             calls: number;
             /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached. */

@@ -17,8 +17,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -242,6 +244,45 @@ func TestAiHealthReportsTheMedianLatency(t *testing.T) {
 	if got.Rungs[0].MedianLatencyMs != 200 {
 		t.Errorf("median = %d, want 200 — the middle of 100/200/300",
 			got.Rungs[0].MedianLatencyMs)
+	}
+}
+
+// A lane reads as the model its router serves now. The seeded attempts were
+// made by `test/test-model`; premium has since been bound to another model, so
+// its failure is not premium's any more, while local_large, which the binding
+// does not name, keeps the attempt it made.
+func TestAiHealthCountsALaneAgainstTheModelItServesNow(t *testing.T) {
+	cfg, err := ai.ParseRouting([]byte(`profile: eu_hosted
+tiers:
+  local_small: {provider: fake, model: fake-small}
+  premium: {provider: fake, model: fake-large}
+embeddings: {provider: fake, model: fake-embed, dimensions: 8}
+`))
+	if err != nil {
+		t.Fatalf("parsing the routing fixture: %v", err)
+	}
+	router, err := ai.NewRouter(cfg, nil, ai.DefaultMonthlyTokens, nil, false, nil)
+	if err != nil {
+		t.Fatalf("NewRouter: %v", err)
+	}
+	e := apptest.SetupAppWithOptions(t, compose.WithLaneHealthBindings(router))
+	e.BootstrapWorkspace(t)
+	seedRungCall(t, e, "premium", "provider_error", 40, time.Now().Add(-5*time.Minute))
+	seedRungCall(t, e, "local_large", "provider_error", 40, time.Now().Add(-5*time.Minute))
+
+	var got crmcontracts.AiHealth
+	if status := e.Call(t, http.MethodGet, "/v1/ai/health", nil, nil, &got); status != http.StatusOK {
+		t.Fatalf("GET /v1/ai/health = %d, want 200", status)
+	}
+	rungs := map[string]crmcontracts.AiRungHealth{}
+	for _, r := range got.Rungs {
+		rungs[r.Tier] = r
+	}
+	if rung, ok := rungs["premium"]; ok {
+		t.Errorf("premium = %+v, want no row: its only attempt was made by the model it was bound to before", rung)
+	}
+	if rung := rungs["local_large"]; rung.Calls != 1 || rung.Failures != 1 {
+		t.Errorf("local_large = %+v, want its 1 failed attempt kept", rung)
 	}
 }
 

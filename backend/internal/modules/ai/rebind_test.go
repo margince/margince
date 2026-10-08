@@ -171,3 +171,25 @@ func TestConcurrentReadsNeverSeeAHalfAppliedRebind(t *testing.T) {
 	close(stop)
 	wg.Wait()
 }
+
+// The health read keys a lane's calls on the model this reports, so it must
+// move with a rebind and name the embed lane beside the tiers.
+func TestBoundModelsFollowsARebind(t *testing.T) {
+	r, err := NewRouter(parsed(t, rebindFrom), nil, DefaultMonthlyTokens, nil, false, nil)
+	if err != nil {
+		t.Fatalf("NewRouter: %v", err)
+	}
+	if err := r.Rebind(parsed(t, strings.ReplaceAll(rebindFrom, "first-", "second-"))); err != nil {
+		t.Fatalf("Rebind: %v", err)
+	}
+	bound := r.BoundModels()
+	want := map[Tier]ModelRef{
+		TierPremium:   {Provider: "fake", Model: "second-large"},
+		TierEmbedLane: {Provider: "fake", Model: "second-embed"},
+	}
+	for tier, ref := range want {
+		if bound[tier] != ref {
+			t.Errorf("BoundModels()[%s] = %+v, want %+v", tier, bound[tier], ref)
+		}
+	}
+}
