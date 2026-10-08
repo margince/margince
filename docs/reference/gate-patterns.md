@@ -23,13 +23,13 @@ where you had to stop.
 
 | Level | How it reads the tree | Can it miss something? |
 |---|---|---|
-| **H3: total** | Holds two *lists* side by side. It matches every item on one side against every item on the other. | No. A new item shows up in one list, and the diff names it. |
+| **H3: total** | Holds two *lists* side by side. It matches every item on one side against every item on the other. | No, as long as the two lists come from separate sources (see [Parity](#a-parity)). A new item shows up in one list, and the diff names it. |
 | **H2: structure** | Reads Go into an AST and walks it. | Yes, at each call it cannot follow: through an interface, a stored field, or a closure. |
 | **H1: text** | Runs a regex over source or SQL text. | Yes, at each way of writing that the regex does not cover, such as a query built with `+`. |
 
 H1 is a good level to use. Go sends SQL as plain strings, so most SQL gates *have* to be H1. A good
-H1 gate says which forms it cannot see, and counts what it found. That way a broken regex fails,
-and does not find nothing in silence.
+H1 gate says which forms it cannot see, counts what it found, and fails when the count is under a
+floor. That way a broken regex fails, and does not find nothing in silence.
 
 ---
 
@@ -211,7 +211,8 @@ at all. No gate kept the rule for a shape the code already had.
 **How:** scan the whole body of text, not only the folder where you expect the problem. Check that
 there are no matches outside the approved sites. Here what you scan *is* the gate.
 
-**How strong:** H1 to H2. The weak point is what you scan, not the regex.
+**How strong:** H1 to H2. It can miss in two ways: a place it does not scan, and a form the regex does
+not match. What you scan is the weaker of the two; the regex case is below.
 
 **Use when** the right answer is "in no place" or "only here":
 

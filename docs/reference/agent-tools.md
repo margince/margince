@@ -213,7 +213,7 @@ Many operations carry it. These are the ones an agent may expect to reach:
 | Operation | Why no agent may call it |
 |---|---|
 | `coldStartReadback`, `coldStartPreview` | They *create* the company, so there is no record for a verb that works on a record to point at. The `enrich` tool keeps the two company routes. |
-| `createRecordGrant`, `revokeRecordGrant` | The grant verbs refuse a principal that is not human when the grant is used. So a share an agent staged and a human approved was refused each time it would have applied. |
+| `createRecordGrant`, `revokeRecordGrant` | The grant verbs refuse a principal that is not human when a staged approval is carried out. So when an agent staged a share and a human approved it, the share was still refused each time. |
 | `renderOffer`, `regenerateOffer` | No tool backs them, and none can today. |
 | `sendOffer` | It *is* the sales promise: the version can no longer change, and how it converts to the base currency is fixed from then on. Nothing leaves the installation: to send an offer moves nothing over the wire, and delivery to the other party is a separate feature that does not exist yet. |
 

@@ -122,9 +122,10 @@ What starts it: an issue `closed`, a daily check, and manual dispatch. An issue 
 `Closes #N`, by hand, as not planned, or as a copy of another. It removes `status: in progress` and leaves the
 assignees, who are the record of who did the work. On close the label comes off at once.
 
-The daily check finds a close no event reports, and a failed run. A workflow makes such a close
-with `GITHUB_TOKEN`, which starts no run. The daily check does what it can. GitHub can delay or drop
-a scheduled run, so such a label can stay for more than a day. GitHub keeps labels on close, so
+The daily check also finds two cases the close event missed. In the first, no run started: a
+workflow that closes an issue with `GITHUB_TOKEN` starts no run. In the second, the run failed.
+
+The daily check does what it can. GitHub can delay or drop a scheduled run, so such a label can stay for more than a day. GitHub keeps labels on close, so
 without this workflow a closed issue would read as work someone still has. It checks nothing out,
 and holds only `issues: write`.
 

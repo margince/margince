@@ -151,7 +151,7 @@ One rule turns a promise read out of a meeting transcript or an email into work
 (`compose/commitmentdispatch.go`):
 
 - A promise the customer made goes on their contact as something to watch. It never becomes a task. The deal page lists the open ones for its account (`GET /deals/{id}/commitments`) with the quoted words. A reader who may update contacts gets a way to dismiss a wrong reading.
-- A promise a named colleague made becomes their task. Read at or above `CommitmentTaskConfidence`, Margince writes it at once, captured by the reader (`agent:…`). Below that, Margince makes it a proposal to them as a `commitment_task` card, and writes it when they accept.
+- A promise a named colleague made becomes their task. When the confidence of the reader in the promise is at or above `CommitmentTaskConfidence`, Margince writes the task at once, captured by the reader (`agent:…`). Below that, Margince makes it a proposal to them as a `commitment_task` card, and writes it when they accept.
 - A promise nobody can be named for goes as a proposal to the member the reading belongs to, and to accept it makes it theirs.
 - A promise in mail only one member may read stays with that member. If a colleague made it in that mail, it goes as a proposal to the owner, not as a task for the colleague. The task it turns into is visible to its holder alone.
 - In mail, only what the sender wrote counts: words they quote from earlier in the thread do not count as theirs.

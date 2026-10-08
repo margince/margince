@@ -31,8 +31,8 @@ milestone fits it yet:
 | `priority: normal` | A real bug that is narrow, guarded, or out of reach today; work that keeps the code in good shape; test lane work; small fixes. |
 | `priority: low` | A wish, not a bug, or it needs a product decision before it is work at all. |
 
-Use `critical` when the issue stops someone else from working, or the data of someone is wrong right
-now. A gate that fails only some of the time fits: while nobody can trust a red run, nobody can read any other
+Use `critical` when the issue stops others from doing any work, not only one line of it. Use it too
+when the data of someone is wrong right now. A gate that fails only some of the time fits: while nobody can trust a red run, nobody can read any other
 result.
 
 ## Area
@@ -109,9 +109,11 @@ remove them.
 **`security` does not report a security hole**. This repository is public.
 [SECURITY.md](../../SECURITY.md) sends a hole someone can use to a private GitHub Security
 Advisory, never a public issue or pull request. A public report before a fix ships puts every
-install at risk. The label is for work that makes the code harder to attack, where no live attack
+install at risk.
+
+The label is for work that makes the code harder to attack, where no live attack
 works. The test comes from `SECURITY.md`: if you can write the steps that make the attack work, it
-belongs in an advisory. Some cases:
+belongs in an advisory. A hole you think exists but cannot yet show also goes to an advisory, not to a public issue. Some cases:
 
 - a read from one tenant into another;
 - a way out of row scope or RBAC;

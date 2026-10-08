@@ -1,9 +1,9 @@
 <!-- prose:plain -->
 # AI thinking levels
 
-`thinking` is how hard a model thinks before it answers. A site in `backend/api/ai-tasks.yaml` may set a **floor**. The request goes up to at least
-that level, and never below what the adapter would send without it. The level on a binding comes before the site; the full order is under
-[Which level wins](#which-level-wins). Each provider maps the floor to its own field on the wire, or
+`thinking` is how hard a model thinks before it answers. A site in `backend/api/ai-tasks.yaml` may set a **floor**. Unless a stronger setting wins, the request goes up to at least
+that level, and never below what the adapter would send without it. The request options, a level for the task and the
+level on a binding all come before the site. The full order is under [Which level wins](#which-level-wins). Each provider maps the floor to its own field on the wire, or
 sends nothing when it cannot know the field or cannot send it.
 
 The adapter default is not always the model default. Margince already sends a structured Gemini
@@ -18,9 +18,10 @@ request at `low`, which is under the default of a Gemini 3 Flash or Pro model.
 | `medium` | A middle think. |
 | `high` | A long think. |
 
-A site that does not need thinking leaves out `thinking`. There is no `none` floor: a floor of nothing asks
-for nothing. Floors, efforts and levels are on one scale: `none` < `minimal` < `low` < `medium` <
-`high` < `xhigh` < `max`.
+A site may set only the four levels above. A site that does not need thinking leaves out `thinking`, so a site
+cannot set `none`: a floor of nothing asks for nothing. Margince compares a floor with the efforts and levels a
+model lists on one scale. That scale also holds values only a model may list: `none` < `minimal` < `low`
+< `medium` < `high` < `xhigh` < `max`.
 
 ## Which level wins
 
@@ -108,8 +109,8 @@ cheap_cloud:
 
 ## How to check
 
-- **Certification record:** `site_thinking` names the floor of each site on a rung that maps
-  one. It is the floor asked for, not what Margince sent on the wire.
+- **Certification record:** `site_thinking` names the floor of each site, on a rung whose adapter maps
+  a floor to its wire. It is the floor asked for, not what Margince sent on the wire.
 - **Call trace:** `reasoning_tokens` on the call shows how much the model really thought.
 - **Certification page:** a record row reads `(this site: thinking low)` where a site ran
   under a floor ([ai-certification.md](ai-certification.md)).
