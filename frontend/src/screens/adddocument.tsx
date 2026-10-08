@@ -32,7 +32,11 @@ import {
   DEAL_SEARCH_REACH,
   walkAccountDeals,
 } from "./adddocument.dealsearch";
-import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
+import {
+  ACCEPTED_ATTACHMENT_ATTR,
+  type AttachmentParent,
+  uploadAttachment,
+} from "./attachmentupload";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Adding a document to the record the dialog was opened from — an account's
@@ -430,6 +434,7 @@ export function AddDocumentDialog({
           emptyLabel={t("docs.add.fileEmpty")}
           file={file}
           onPick={setFile}
+          accept={ACCEPTED_ATTACHMENT_ATTR}
         />
       </div>
       <div className="actions">
