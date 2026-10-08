@@ -46,8 +46,9 @@ Two files, one board. `dealroomthreads.tsx` draws for both sides and takes the v
   Until that exists, the tile draws the type mark on `--bg3`. Then the threads in place, the contact card, the
   last block, and the mark (`Wordmark`). Three of its parts are **new parts of the contract**, one pull request each
   after the new style:
-  - `"New since your last visit"`: derived from the buyer's `last_seen_at`, against the document and thread
-    times the view already carries, with no schema change.
+  - `"New since your last visit"`: compares document and thread times with the buyer's `last_seen_at` as it was
+    when the page opened. The buyer view carries none of these times today. So the contract must add
+    them, and say what the buyer sees the first time.
   - **Next steps written by the seller**: a `next_steps` list on the room beside `welcome_message`, edited on
     the seller page under Title and welcome.
   - **`"Book a call"`**: a link to the `#/book/<hostSlug>` page of the room's steward, the
@@ -68,9 +69,9 @@ record page one ladder. That work is in Step 3 (`composed.css`, `pagezones.css`,
 | Width | What changes |
 |---|---|
 | Above 1400px | The full layout: five readings, the 360, two columns `3fr/2fr`. The details panel opens beside the reading at 300px. |
-| 1200–1400px (both ends included) | Readings keep five across at 22px numbers. When the details panel is open, it takes the readings to 21px, and the columns stay two. |
-| 720–1200px | Readings wrap to three, then two per row, and the two columns stack into one. The details panel opens as a **drawer over the page** (`Modal intent="drawer"`, 560px), and never makes the reading smaller. The tab strip scrolls to the side inside its own box (`TableScroll` rule: the page never scrolls to the side). |
-| < 720px | The head stacks: mark and name, then facts, then the verbs as **the first base verb + more** only. The head's first verb keeps its outline, and the rest move into `more`. Only a lead's Qualify is filled, as in every other place. Readings sit two per row. The spine scrolls to the side in its own box (`.co-spine-scroll` already does). The map scrolls (`.rmap-scroll` already does), and the rail becomes the phone bar. |
+| Above 1200px, up to 1400px | Readings keep five across at 22px numbers. When the details panel is open, it takes the readings to 21px, and the columns stay two. |
+| Above 720px, up to 1200px | Readings wrap to three, then two per row, and the two columns stack into one. The details panel opens as a **drawer over the page** (`Modal intent="drawer"`, 560px), and never makes the reading smaller. The tab strip scrolls to the side inside its own box (`TableScroll` rule: the page never scrolls to the side). |
+| 720px and below | The head stacks: mark and name, then facts, then the verbs as **the first base verb + more** only. The head's first verb keeps its outline, and the rest move into `more`. Only a lead's Qualify is filled, as in every other place. Readings sit two per row. The spine scrolls to the side in its own box (`.co-spine-scroll` already does). The map scrolls (`.rmap-scroll` already does), and the rail becomes the phone bar. |
 | 390px | The sweep that exists: no scroll to the side, 44px targets, `--stickyBottomInset`. |
 
 Rules:
@@ -134,7 +135,7 @@ the state forms in section 3.4. They come at 1024px and 390px, and the axe tests
 ## 9. Then the rest
 
 The other screens: Worklist, Reports (with Explain), Ask Margince, Filters & views, and Settings (the second
-level). Then the Deal Room, the `⌘K` palette (`palette.tsx`), and compose (`compose.tsx`, 3,500 lines: a token
+level). Then the Deal Room, the `⌘K` palette (`palette.tsx`), and compose (`compose.tsx`, 2,693 lines: a token
 and drawer pass only). Then Home/Brief, the Pipeline board (`PipelineBoard`, `DealCard`), the list pages
 (`ListTable`), the first-run steps, booking, the buyer room, imports, and privacy settings. Each one is a pass of
 tokens and the pane over a screen that exists, in the order the rail lists them.

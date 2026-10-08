@@ -106,7 +106,7 @@ never one job row that loops over every workspace.
    ([write-backbone.md](../explanation/write-backbone.md#6-correlation--causation-the-trace)).
    `workspaceJobCtx` binds the tenant and only the tenant.
 
-   A `Work` of a dispatcher instead calls one of the helpers that cover every workspace (`dispatchWith`,
+   A `Work` of a dispatcher instead calls one of the fan-out helpers (`dispatchWith`,
    `dispatchOne`, `runPerWorkspace`, `runPerEveryWorkspace`, `runEach`). It makes no tenant write of its own:
 
    ```go
@@ -184,7 +184,7 @@ The failures you meet first, in the order you would meet them:
 | `jobrole_test.go` | `X declares both WorkspaceID() and FleetWide()` | A job does one workspace's work or hands out work, never both |
 | `jobwirekey_test.go` | `X.F ships as json:"ws", want json:"workspace_id"` | `args->>'workspace_id'` cannot see a different key. A `null` there reads as a dispatcher, not as tenant work the query cannot see |
 | `jobwirekey_test.go` | `X is a dispatcher (it declares FleetWide()) but ships a json:"workspace_id" key` | Put the workspace on the child jobs it adds to the queue. The args of the dispatcher carry none |
-| `jobfleetwide_test.go` | `W works FleetWide args X but never fans out` | A dispatcher must call one of the helpers that cover every workspace (`dispatchWith`, `dispatchOne`, `runPerWorkspace`, `runPerEveryWorkspace`, `runEach`). If it does tenant work instead, it is `WorkspaceScoped` |
+| `jobfleetwide_test.go` | `W works FleetWide args X but never fans out` | A dispatcher must call one of the fan-out helpers (`dispatchWith`, `dispatchOne`, `runPerWorkspace`, `runPerEveryWorkspace`, `runEach`). If it does tenant work instead, it is `WorkspaceScoped` |
 | `jobfleetwide_test.go` | `W works FleetWide args X and issues a tenant write` | Move the write into the workspace worker, where it can pass or fail as its own row |
 | `jobfault_test.go` | `a worker return must be nil, jobs.Fault(...), or a river control return — a raw cause is written verbatim into river_job.errors` | Put the return in `jobs.FaultContext(ctx, err)` |
 | `jobfault_test.go` | `W logs an error and returns nil — River will record this job as completed while the work failed` | Return the failure. Or accept it with `fault: {nil_after_logging: …}`, and name the retry rule that does the work later |

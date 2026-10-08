@@ -16,7 +16,7 @@ is the **reference unit**. It owns data and serves routes. It works with an outs
 key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/de`
 (a country pack) and `fixtures/extensions/crm-hello` (the smallest unit that runs) are the smaller shapes.
 
-A unit owns **all six** surfaces, frontend included. `extensions/<name>/frontend/` is a pnpm package whose
+A unit can ship a frontend too. `extensions/<name>/frontend/` is a pnpm package whose
 default export the web app mounts at `#/ext/<name>`. A unit that ships no screen still gets a route and a
 plain card about it, on its own.
 
@@ -141,8 +141,8 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 ```
 
 `rt` is the **only** thing the core hands a unit. The core makes a new one for each call, and it stops
-working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()` and
-`rt.Tx()`.
+working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()`,
+`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`.
 
 What the surface will serve, and what it will not:
 

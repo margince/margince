@@ -12,7 +12,7 @@ certify a model **binding** that already exists (another model for the same work
 [certify-an-ai-model.md](certify-an-ai-model.md) instead. For the branch and pull request steps every change
 goes through, see [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-> Everything here is free but one step. Steps 1–7 need no model, no key and no network. Only step 8
+> Everything here is free but one step. Steps 1–7 need no model, no key and no call to a provider. Only step 8
 > (`make e2e-ai`) calls a real provider, and it costs money on **your own API key**; Margince runs no model of its
 > own. You do not have to run it. A site that was never certified shows as `absent`, and you may open
 > a pull request in that state.

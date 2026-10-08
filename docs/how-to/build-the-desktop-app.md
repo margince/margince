@@ -29,7 +29,8 @@ machine. On Windows the oldest version is the one PostgreSQL 16 needs (Windows 1
 `MSYS2` need the same.
 
 Both need about 1 GB free for the folder and the database. Neither writes a single byte outside its own
-folder: no installer, no registry keys, no `~/Library`, no `%APPDATA%`.
+folder: no installer, no registry keys, no `~/Library`, no `%APPDATA%`. Attachments are the one case outside it,
+if you move them to another place yourself (see below).
 
 ## Or download one already built
 
@@ -269,8 +270,8 @@ rm -rf ~/Margince/data ~/Margince/margince.yaml ~/Margince/margince.env
 Remove-Item -Recurse -Force $HOME\Margince\data, $HOME\Margince\margince.yaml, $HOME\Margince\margince.env
 ```
 
-The next start sets up a new installation with a new password. To remove everything, delete the folder; nothing
-is stored outside it.
+The next start sets up a new installation with a new password. To remove everything, delete the folder. Nothing
+is stored outside it, unless you moved the attachments with `MARGINCE_BLOBSTORE_*`: delete that place too.
 
 ## When something goes wrong
 
@@ -285,7 +286,7 @@ start and stop only; each service writes its own file.
 | `"a database from a previous session is still running"` | Windows: a launcher was ended before it stopped Postgres, and the Postgres it left behind could not be stopped. Sign out and back in |
 | Windows SmartScreen blocks the first start | The build is not signed. "More info" → "Run anyway" |
 | Windows: `"VCRUNTIME140.dll was not found"` | The Microsoft Visual C++ files in [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe) are not installed, and the bundle does not include it |
-| Attachments or logos fail | No object store. Set `MARGINCE_BLOBSTORE_*` |
+| Attachments or logos fail | The launcher cannot write to `data/blobs`, or the place that `MARGINCE_BLOBSTORE_*` names cannot be reached. Check that setting, or remove it to use the default |
 | AI answers look canned | No tier has a model, or the provider of that model has no key. So the stand-in model of the launcher runs the AI features. Open **Settings → AI**: bind each tier, and put the provider's key under **Model provider keys** |
 | `"no licence is configured and this installation is production"` | `MARGINCE_ENV` was set to `production` in `margince.env` with no `MARGINCE_LICENSE` beside it. Give the token, or remove that line so the default `dev` mode applies |
 | Dates and times look wrong on Windows | The first run set the time zone to `UTC`. Set `timezone` in `margince.yaml` |

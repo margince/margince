@@ -45,14 +45,14 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
 
 2. **Run the generator** with `make gen`.
    It writes the generated files again; never edit them by hand.
-   They are `internal/contracts/api_gen.go` (types and `ServerInterface`) and
-   `internal/compose/stubs_gen.go` (a new **501** stub).
-   The third is `internal/compose/agentpolicy_gen.go` (the agent access row).
+   They are `backend/internal/contracts/api_gen.go` (types and `ServerInterface`) and
+   `backend/internal/compose/stubs_gen.go` (a new **501** stub).
+   The third is `backend/internal/compose/agentpolicy_gen.go` (the agent access row).
    The build now compiles, and the endpoint answers `501` until you write it.
 
 3. **Write the handler in its own module.**
    Add the method that matches the generated signature to that module's `Handlers`
-   (`internal/modules/<name>/`).
+   (`backend/internal/modules/<name>/`).
    Do the work through the module's `*Store` or `*Service`, and follow the store shape.
    That means `WithWorkspaceTx`, the `auth` gate at the start, and `storekit.Audit` and `Emit` for any change.
    See how a store reads and writes in [explanation/backend-onboarding.md](../explanation/backend-onboarding.md#how-a-store-reads-and-writes-the-shape).

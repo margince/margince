@@ -170,8 +170,8 @@ The record pages, each with every state it handles today, are in
 [adopt-the-design-records.md](adopt-the-design-records.md). Section 3 is the company, as the reference; then
 section 4 contact, section 5 deal, section 6 lead and section 7 project. The rest is in
 [adopt-the-design-surfaces.md](adopt-the-design-surfaces.md) (section 8, sections `8a–c`, section 9). That
-is the sub pages and maps, both sides of the Deal Room, and the width ladder. It is also records that are empty and records that
-are full, and the other screens. The section numbers below point to those pages.
+covers the sub pages and maps, both sides of the Deal Room, and the width ladder. It also covers empty and full
+records, and the other screens. The section numbers below point to those pages.
 
 ## 10. Order and pull request list
 

@@ -17,7 +17,7 @@ for good.
 In `backend/internal/modules/identity/internal/policy/policy.go`:
 
 1. Add the name to `coreObjects`.
-   This is the closed set that `Parse` checks against, so nothing outside it can ever be granted.
+   `Parse` checks each object against this set and the objects that extensions register at start.
 2. In `defaults.go`, decide for **each system role** if the new object matches that role's base grant.
    The roles are `admin`, `management`, `manager`, `rep`, `read_only` and `ops`.
    If it matches, there is nothing to write: `grid` gives every core object the base grant.
@@ -81,30 +81,35 @@ and lanes. Copy the shape of the newest RBAC backfill in `backend/migrations/cor
   with the seeded matrix, verb by verb.
 
 **The `down` removes the key.** The grant goes with the object it names. A role document that still names
-an object outside the closed set would fail every sign-in (see below). Copy the down half of the same
-backfill pair.
+an object outside the set grants nothing on it and logs a warning at each sign-in (see below). Copy the down
+half of the same backfill pair.
 
-### The typo that locks users out of sign-in
+### The typo that grants nothing
 
-`policy.Parse` **refuses** an object key it does not know:
+`policy.Parse` **drops** an object key it does not know, and logs a warning:
 
 ```go
 for object := range doc.Objects {
-    if !IsCoreObject(object) {
-        return Document{}, fmt.Errorf("policy: unknown object %q in permissions document", object)
+    if IsGrantableObject(object) {
+        continue
     }
+    delete(doc.Objects, object)
+    slog.Default().Warn("policy: dropping a grant on an object this installation does not know", "object", object)
 }
 ```
 
-`loadGrants` calls `Parse`. It runs on the **sign-in** path, when a session is read, and when
-`identity/authority.go` works out an agent's rights again. A role with a bad document is a data error to
-show. The whole sign-in fails; it does not drop to no access.
+A key that `Parse` knows is a core object or one that an extension registers at start. `loadGrants` calls `Parse`. It runs
+on the **sign-in** path, when a session is read, and when `identity/authority.go` works out an agent's rights
+again. Sign-in still works, and the rest of the document still applies. Only a document that is not JSON at
+all, or a `row_scope` that nothing can read, fails the whole sign-in.
 
-So a typo in the JSON path of the migration does more harm than a missing grant. Say you write
+So a typo in the JSON path of the migration fails with no error. Say you write
 `'{objects,webook_subscription}'`. The migration passes and the object is never granted. Then **every user
-who holds that role is locked out**, because the document now names an object outside the closed set. Write
-the path from the same string you added to `coreObjects`. Prove it by running the integration lane in step
-6. A path with a typo leaves the object with no grant, and the matching tests fail on that.
+who holds that role is refused the object**, and the only sign is a warning in the log.
+
+Write the path from
+the same string you added to `coreObjects`. Prove it by running the integration lane in step 6. A path with a
+typo leaves the object with no grant, and the matching tests fail on that.
 
 ## 4. Build the published matrix again
 
