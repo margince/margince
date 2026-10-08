@@ -337,93 +337,93 @@ function InstallationSettingsForm({
         {!canManage && (
           <p id={denialId}>{t("installationSettings.readOnly")}</p>
         )}
-        <SettingList>
-          <SettingRow
-            label={t("installationSettings.name")}
-            description={t("installationSettings.nameHint")}
-            value={settings.name}
-            control={editVerb("name", t("installationSettings.name"))}
-          />
-          <SettingRow
-            label={t("installationSettings.timezone")}
-            description={t("installationSettings.timezoneHint")}
-            value={settings.timezone}
-            control={editVerb("timezone", t("installationSettings.timezone"))}
-          />
-          <SettingRow
-            label={t("installationSettings.baseCurrency")}
-            description={currencyNote(settings, t)}
-            value={settings.base_currency}
-            control={editVerb(
-              "base_currency",
-              t("installationSettings.baseCurrency"),
-            )}
-          />
-          <RegionalSettingsRows settings={settings} editVerb={editVerb} />
-          <SettingRow
-            label={t("installationSettings.baseLanguage")}
-            description={t("installationSettings.baseLanguageHint")}
-            // The language's own name, not its code: "Deutsch" is what an
-            // operator recognises, and `en` is what the wire carries.
-            value={languageName(settings.base_language, t)}
-            control={editVerb(
-              "base_language",
-              t("installationSettings.baseLanguage"),
-            )}
-          />
-          <SettingRow
-            label={t("installationSettings.fiscalYearStart")}
-            description={t("installationSettings.fiscalYearStartHint")}
-            // The month's name and the span it produces, because the number
-            // alone answers the wrong question: an admin is deciding what a
-            // report will SAY, and "April — FY2026/27" shows that where "4"
-            // makes them work it out.
-            value={fiscalYearStartSummary(
-              settings.fiscal_year_start_month,
-              locale,
-              new Date().getFullYear(),
-            )}
-            control={editVerb(
-              "fiscal_year_start_month",
-              t("installationSettings.fiscalYearStart"),
-            )}
-          />
-          <SettingRow
-            label={t("installationSettings.forwardMeasure")}
-            description={t("installationSettings.forwardMeasureHint")}
-            // The measure's own sentence rather than the stored word: an admin
-            // is deciding what a projection MEANS, and "manager_call" does not
-            // say that the call replaces the projection instead of adding to it.
-            value={t(
-              `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
-            )}
-            control={editVerb(
-              "forecast_forward_measure",
-              t("installationSettings.forwardMeasure"),
-            )}
-          />
-        </SettingList>
-        {editing !== null && (
-          <InstallationProfileDialog
-            settings={settings}
-            draft={draft}
-            focus={editing}
-            canManage={canManage}
-            dirty={dirty}
-            pending={update.isPending}
-            refused={refused}
-            blanketError={
-              update.isError && refused.size === 0
-                ? problemMessageOf(update.error, t)
-                : null
-            }
-            describe={describe}
-            onChange={setDraft}
-            onClose={() => setEditing(null)}
-            onSubmit={submit}
-          />
-        )}
       </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("installationSettings.name")}
+          description={t("installationSettings.nameHint")}
+          value={settings.name}
+          control={editVerb("name", t("installationSettings.name"))}
+        />
+        <SettingRow
+          label={t("installationSettings.timezone")}
+          description={t("installationSettings.timezoneHint")}
+          value={settings.timezone}
+          control={editVerb("timezone", t("installationSettings.timezone"))}
+        />
+        <SettingRow
+          label={t("installationSettings.baseCurrency")}
+          description={currencyNote(settings, t)}
+          value={settings.base_currency}
+          control={editVerb(
+            "base_currency",
+            t("installationSettings.baseCurrency"),
+          )}
+        />
+        <RegionalSettingsRows settings={settings} editVerb={editVerb} />
+        <SettingRow
+          label={t("installationSettings.baseLanguage")}
+          description={t("installationSettings.baseLanguageHint")}
+          // The language's own name, not its code: "Deutsch" is what an
+          // operator recognises, and `en` is what the wire carries.
+          value={languageName(settings.base_language, t)}
+          control={editVerb(
+            "base_language",
+            t("installationSettings.baseLanguage"),
+          )}
+        />
+        <SettingRow
+          label={t("installationSettings.fiscalYearStart")}
+          description={t("installationSettings.fiscalYearStartHint")}
+          // The month's name and the span it produces, because the number
+          // alone answers the wrong question: an admin is deciding what a
+          // report will SAY, and "April — FY2026/27" shows that where "4"
+          // makes them work it out.
+          value={fiscalYearStartSummary(
+            settings.fiscal_year_start_month,
+            locale,
+            new Date().getFullYear(),
+          )}
+          control={editVerb(
+            "fiscal_year_start_month",
+            t("installationSettings.fiscalYearStart"),
+          )}
+        />
+        <SettingRow
+          label={t("installationSettings.forwardMeasure")}
+          description={t("installationSettings.forwardMeasureHint")}
+          // The measure's own sentence rather than the stored word: an admin
+          // is deciding what a projection MEANS, and "manager_call" does not
+          // say that the call replaces the projection instead of adding to it.
+          value={t(
+            `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
+          )}
+          control={editVerb(
+            "forecast_forward_measure",
+            t("installationSettings.forwardMeasure"),
+          )}
+        />
+      </SettingList>
+      {editing !== null && (
+        <InstallationProfileDialog
+          settings={settings}
+          draft={draft}
+          focus={editing}
+          canManage={canManage}
+          dirty={dirty}
+          pending={update.isPending}
+          refused={refused}
+          blanketError={
+            update.isError && refused.size === 0
+              ? problemMessageOf(update.error, t)
+              : null
+          }
+          describe={describe}
+          onChange={setDraft}
+          onClose={() => setEditing(null)}
+          onSubmit={submit}
+        />
+      )}
     </Panel>
   );
 }
@@ -536,8 +536,8 @@ function InstallationProfileDialog({
           </Field>
 
           {/* A section INSIDE the dialog's own heading: the currency rule needs
-            the room to be explained, and level 3 is what keeps that from
-            minting a second heading at the dialog's own rank. */}
+              the room to be explained, and level 3 is what keeps that from
+              minting a second heading at the dialog's own rank. */}
           <SectionHeader
             level={3}
             title={t("installationSettings.currencyTitle")}
@@ -678,7 +678,7 @@ function InstallationProfileDialog({
           </div>
 
           {/* Only what no field claimed: a refusal on the input AND again below
-            states one problem twice, and the second is what nobody reads. */}
+              states one problem twice, and the second is what nobody reads. */}
           {blanketError !== null ? (
             <Callout tone="danger" kind="outcome" title={refusalTitle}>
               {blanketError}

@@ -175,24 +175,34 @@ function kindHelp(kind: string, t: Translator): string {
 export function AutonomySettingsCard() {
   const t = useT();
   const query = useAutonomy();
+  const rows = query.data?.data ?? [];
 
   return (
     <Panel title={t("autonomy.title")}>
       <PanelBody className="form-stack">
         <PanelIntro>{t("autonomy.sub")}</PanelIntro>
-        {/* An empty list is its own answer, and it is not a blank card: this
-            installation routes this seat nothing of any kind, so there is no
-            switch to offer and no track record to be behind on. Saying so here
-            is also what keeps noneDecidedYet from having to speak for a set
-            that does not exist. */}
-        <QueryGate
-          pendingLabel={t("autonomy.title")}
-          query={query}
-          empty={(settings) => settings.data.length === 0}
-        >
-          {(settings) => <AutonomyChoices rows={settings.data} />}
-        </QueryGate>
+        {rows.length > 0 && noneDecidedYet(rows) && (
+          <Callout
+            tone="info"
+            kind="standing"
+            title={t("autonomy.noneDecidedYetTitle")}
+          >
+            {t("autonomy.noneDecidedYet")}
+          </Callout>
+        )}
       </PanelBody>
+      {/* An empty list is its own answer, and it is not a blank card: this
+          installation routes this seat nothing of any kind, so there is no
+          switch to offer and no track record to be behind on. Saying so here
+          is also what keeps noneDecidedYet from having to speak for a set
+          that does not exist. */}
+      <QueryGate
+        pendingLabel={t("autonomy.title")}
+        query={query}
+        empty={(settings) => settings.data.length === 0}
+      >
+        {(settings) => <AutonomyChoices rows={settings.data} />}
+      </QueryGate>
     </Panel>
   );
 }
@@ -205,16 +215,7 @@ function AutonomyChoices({
   const update = useUpdateAutonomy();
   return (
     <>
-      {noneDecidedYet(rows) && (
-        <Callout
-          tone="info"
-          kind="standing"
-          title={t("autonomy.noneDecidedYetTitle")}
-        >
-          {t("autonomy.noneDecidedYet")}
-        </Callout>
-      )}
-      <SettingList>
+      <SettingList bleed="settings">
         {rows.map((row) => (
           <SettingRow
             key={row.kind}
@@ -238,13 +239,15 @@ function AutonomyChoices({
         ))}
       </SettingList>
       {update.isError && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("autonomy.updateFailed")}
-        >
-          {problemMessageOf(update.error, t)}
-        </Callout>
+        <PanelBody>
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("autonomy.updateFailed")}
+          >
+            {problemMessageOf(update.error, t)}
+          </Callout>
+        </PanelBody>
       )}
     </>
   );

@@ -36,91 +36,93 @@ export function LicenseHolderCard({
 
   return (
     <Panel title={t("license.holder.title")}>
-      <PanelBody>
-        {holder.in_grace ? (
-          // The license stopped being current and still works. This is the one
-          // state upstream calls out: it passes today and will stop passing.
-          <Callout
-            kind="standing"
-            tone="danger"
-            title={t("license.grace.title")}
-          >
-            {t("license.grace.body", { expiry })}
-          </Callout>
-        ) : (
-          holder.renewal_due && (
-            // Inside the warning window. Amber: nothing has gone wrong yet,
-            // and a renewal is a thing to plan rather than to fix now. The
-            // calendar glyph rather than the tone's, because this notice is
-            // about a DATE rather than about how bad the news is.
+      {(holder.in_grace || holder.renewal_due) && (
+        <PanelBody>
+          {holder.in_grace ? (
+            // The license stopped being current and still works. This is the one
+            // state upstream calls out: it passes today and will stop passing.
             <Callout
               kind="standing"
-              tone="warning"
-              icon={CalendarClock}
-              title={t("license.renewal.title")}
+              tone="danger"
+              title={t("license.grace.title")}
             >
-              {t("license.renewal.body", { expiry })}
+              {t("license.grace.body", { expiry })}
             </Callout>
-          )
-        )}
-        {/* Each claim is a fact the license asserts, so it reads as a row: the
-            claim on the left and its value on the right, at the one x every
-            other answer on these pages sits at. It was a two-column `<dl>` with
-            its own grid and its own gaps — a third layout for the shape
-            `SettingRow` is. `control={null}` because there is nothing to press:
-            a license is changed by changing the deployment.
+          ) : (
+            holder.renewal_due && (
+              // Inside the warning window. Amber: nothing has gone wrong yet,
+              // and a renewal is a thing to plan rather than to fix now. The
+              // calendar glyph rather than the tone's, because this notice is
+              // about a DATE rather than about how bad the news is.
+              <Callout
+                kind="standing"
+                tone="warning"
+                icon={CalendarClock}
+                title={t("license.renewal.title")}
+              >
+                {t("license.renewal.body", { expiry })}
+              </Callout>
+            )
+          )}
+        </PanelBody>
+      )}
+      {/* Each claim is a fact the license asserts, so it reads as a row: the
+          claim on the left and its value on the right, at the one x every
+          other answer on these pages sits at. It was a two-column `<dl>` with
+          its own grid and its own gaps — a third layout for the shape
+          `SettingRow` is. `control={null}` because there is nothing to press:
+          a license is changed by changing the deployment.
 
-            Every claim except the identifiers and the expiry is optional. A
-            license issued before those claims existed verifies exactly like any
-            other, so each row renders only when the token carries it — an empty
-            row would say something is missing from THIS license rather than from
-            the vocabulary it was issued under. */}
-        <SettingList>
-          {holder.company && (
-            <SettingRow
-              label={t("license.holder.company")}
-              value={holder.company}
-              control={null}
-            />
-          )}
-          {(holder.contact_name || holder.contact_email) && (
-            <SettingRow
-              label={t("license.holder.contact")}
-              value={
-                <>
-                  {holder.contact_name}
-                  {holder.contact_name && holder.contact_email && " · "}
-                  {holder.contact_email}
-                </>
-              }
-              control={null}
-            />
-          )}
+          Every claim except the identifiers and the expiry is optional. A
+          license issued before those claims existed verifies exactly like any
+          other, so each row renders only when the token carries it — an empty
+          row would say something is missing from THIS license rather than from
+          the vocabulary it was issued under. */}
+      <SettingList bleed="settings">
+        {holder.company && (
           <SettingRow
-            label={t("license.holder.installation")}
-            value={holder.subject}
+            label={t("license.holder.company")}
+            value={holder.company}
             control={null}
           />
+        )}
+        {(holder.contact_name || holder.contact_email) && (
           <SettingRow
-            // The label follows the fact. "Valid until" beside a date that has
-            // already passed states the opposite of what the notice above says.
-            label={
-              holder.in_grace
-                ? t("license.holder.expiredOn")
-                : t("license.holder.validUntil")
+            label={t("license.holder.contact")}
+            value={
+              <>
+                {holder.contact_name}
+                {holder.contact_name && holder.contact_email && " · "}
+                {holder.contact_email}
+              </>
             }
-            value={expiry}
             control={null}
           />
-          <SettingRow
-            label={t("license.holder.id")}
-            // The support reference, verbatim: somebody reads it aloud or
-            // copies it into a ticket.
-            value={<span>{holder.id}</span>}
-            control={null}
-          />
-        </SettingList>
-      </PanelBody>
+        )}
+        <SettingRow
+          label={t("license.holder.installation")}
+          value={holder.subject}
+          control={null}
+        />
+        <SettingRow
+          // The label follows the fact. "Valid until" beside a date that has
+          // already passed states the opposite of what the notice above says.
+          label={
+            holder.in_grace
+              ? t("license.holder.expiredOn")
+              : t("license.holder.validUntil")
+          }
+          value={expiry}
+          control={null}
+        />
+        <SettingRow
+          label={t("license.holder.id")}
+          // The support reference, verbatim: somebody reads it aloud or
+          // copies it into a ticket.
+          value={<span>{holder.id}</span>}
+          control={null}
+        />
+      </SettingList>
     </Panel>
   );
 }

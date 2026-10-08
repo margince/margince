@@ -350,7 +350,7 @@ export function EmbedReindexCard() {
           const isRunning = data.status === "reembedding";
           return (
             <>
-              <SettingList>
+              <SettingList bleed="settings">
                 <SettingRow
                   label={t("embedreindex.statusLabel")}
                   control={
@@ -480,13 +480,17 @@ export function EmbedReindexCard() {
     );
   }
 
+  // The status rows stand straight in the panel; a withheld or unbound notice
+  // is a sentence under the intro.
+  const listsStatus = canRead && bound;
   // No bottom margin of its own: `.settings-stack` owns the gap between cards.
   return (
     <Panel title={t("embedreindex.title")}>
       <PanelBody>
         <PanelIntro>{t("embedreindex.sub")}</PanelIntro>
-        <CardBoundary>{body}</CardBoundary>
+        {!listsStatus && <CardBoundary>{body}</CardBoundary>}
       </PanelBody>
+      {listsStatus && <CardBoundary>{body}</CardBoundary>}
     </Panel>
   );
 }
