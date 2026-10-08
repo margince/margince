@@ -28,6 +28,15 @@ ones stage for confirm-first approval, and both stay capped by the granting huma
 Every call re-authenticates, so a revoked passport stops working on the next tool call rather than at
 the next login. What a passport carries: [authorization.md](authorization.md#what-a-passport-is).
 
+**Files reach a record from Surface A only.** `attach_document`
+carries the whole file in its arguments, and both places that keep a call's arguments would keep the
+file too: an approval stores them in `approval.proposed_change`, and a run stores each step in
+`agent_run.trace`. So the tool is 🟢 with no staging path, and
+`TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
+scheduled agent's tool list names any tool whose argument bound is over 1 MiB. An agent can attach a
+file and list a record's files (`list_documents`); no tool downloads a file or returns its contents.
+The size and type bounds are in [configuration.md](../reference/configuration.md#uploads).
+
 ## The reason-act-observe loop (Surface B)
 
 The runner (`internal/modules/agents/runner/`) is where the model proposes and the governed tool

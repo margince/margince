@@ -1378,8 +1378,27 @@ security invariant and is not configurable: several handlers decode the body
 with no bound of their own, and two of those routes are unauthenticated.
 
 One JSON route reads more: `POST /mcp` with `Content-Type: application/json`
-takes up to 8 MiB, because an agent attaches a file inline as base64. That
-admits a file of about 6 MB, and the number is not configurable either.
+takes up to 8 MiB (`agents.MaxMCPRequestBytes`), because `attach_document`
+carries a file inline as base64. That admits a decoded file of about 6.2 MB, and
+`attach_document` takes the smaller of that and `uploads.attachment_mb`. Neither
+number is configurable. A larger request is refused `413` naming the limit.
+
+The wider body admits one tool's arguments. Every other tool refuses arguments
+over 1 MiB before it runs, because `ToolSpec.MaxArgsBytes` defaults to the JSON
+bound and only `attach_document` raises it. One process holds at most 4 MCP
+requests over 1 MiB at once (`maxLargeMCPBodiesInFlight` in
+`backend/internal/modules/agents/httpmcp.go`), since each is held in memory
+several times while it is decoded. A fifth is refused `503` with `Retry-After: 1`.
+
+Every upload that files a document, the app's and `attach_document` alike, must
+be one of the kinds in `attachmentTypes`
+(`backend/internal/modules/activities/attachmenttypes.go`); any other answers
+`422 unsupported_file_type`. HTML and zip are accepted because Margince only
+serves a stored file as a download; SVG and executables are refused. An accepted
+declared type wins over the extension. An empty or `application/octet-stream`
+type, which browsers send for `.msg` and `.md`, is resolved from the extension.
+No bytes are sniffed. Files captured with an email are stored whatever their
+kind, as a record of what was sent.
 
 | Key | Default | Route |
 |---|---|---|

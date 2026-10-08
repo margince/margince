@@ -43,6 +43,17 @@ The upload form always shows the limit that applies ("Up to {size}."). A larger 
 A document in a knowledge document set has a lower limit, **5 MB by default**, which can also be set between 1 MB and 100 MB.
 Also called: file size limit, upload limit, how big can a file be.
 
+### Which kinds of file can I upload?
+Margince takes these kinds of file as a document on a record, or as a file on an email you write:
+- PDF, Word, Excel and slide files: `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.odt`, `.ods`, `.odp`, `.rtf`
+- Text files: `.txt`, `.csv`, `.md`, `.html`, `.htm`
+- Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.heic`, `.heif`, `.tif`, `.tiff`
+- Archives and saved emails: `.zip`, `.eml`, `.msg`
+Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused.
+Files that arrive with a captured email are kept even when they are of another kind.
+A document set takes fewer kinds; see [Which files can a document set take?](#which-files-can-a-document-set-take).
+Also called: supported file types, file formats, can I upload an archive.
+
 ## Documents
 
 A document in Margince is filed against **a company**, **a contact**, or
