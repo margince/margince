@@ -228,6 +228,7 @@ list
 local
 log
 look
+lookup
 machine
 mail
 mailbox

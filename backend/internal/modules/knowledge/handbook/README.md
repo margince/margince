@@ -28,6 +28,7 @@ Settings in Margince, by page:
 - How do I change my password, display name, language or theme? → [Your own settings](your-own-settings.md)
 - How do I add an email signature or set up my writing voice? → [Your own settings](your-own-settings.md)
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
+- How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
 - How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
@@ -51,6 +52,7 @@ Records, deals and mail in Margince, by page:
 - How do I see my weekly review or plan my week? → [Your week](your-week.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
+- What does the import preview show, and how do I correct companies with a spreadsheet? → [Settings](settings.md)
 
 ## The pages
 
@@ -149,12 +151,17 @@ Records, deals and mail in Margince, by page:
   who here already knows somebody, and how that is measured. Asking a colleague
   for a warm introduction, and the four answers they can give. What a website
   read will and will not do.
+- [Meetings and booking](meetings-and-booking.md): sending a meeting
+  invitation, offering times and sharing personal links. What the invitation
+  states mean, and moving, cancelling or retrying a meeting. Reminders, what
+  counts as busy, and what a guest sees.
 - [Your own settings](your-own-settings.md): changing your password, display
   name, language and theme. Your email signature, the hours others can book,
   and your writing voice. Your agent passports and your mailbox connections.
   What the last 24 hours of your mail turned into.
 - [Settings](settings.md): how to open Settings, every settings page and which
-  one you need. Whose state each changes, and which permission opens it.
+  one you need. Whose state each changes, and which permission opens it. The
+  import preview, running a file again, and correcting companies by their ID.
 
 ## How this handbook is written
 
