@@ -128,9 +128,7 @@ type openAICompatChatResponse struct {
 }
 
 func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	ctx, attempt := trackHTTPAttempt(ctx)
-	resp, err := c.completeChat(ctx, req)
-	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema), attempt)
+	return completeOnOpenAIWire(ctx, req, c.completeChat)
 }
 
 func (c *openAICompatClient) completeChat(ctx context.Context, req model.Request) (model.Response, error) {

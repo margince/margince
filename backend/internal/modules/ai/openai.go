@@ -136,9 +136,7 @@ type openaiResponse struct {
 }
 
 func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	ctx, attempt := trackHTTPAttempt(ctx)
-	resp, err := c.completeResponse(ctx, req)
-	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema), attempt)
+	return completeOnOpenAIWire(ctx, req, c.completeResponse)
 }
 
 func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) (model.Response, error) {
