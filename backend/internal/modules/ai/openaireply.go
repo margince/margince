@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-// openaiReplyText walks output[]: a type:"reasoning" item can precede the
-// message, and a type:"refusal" part is a first-class outcome — never
-// output[0].content[0]. A schema-bound reply is the first message that carries
-// text: a model can add a second message after it, and joined the two are not
-// one document. Commentary is working notes, not the answer, once a final_answer exists.
+// openaiReplyText walks output[], never output[0].content[0]: a reasoning
+// item can precede the message, and a refusal part is an outcome of its own.
+// A schema-bound reply is the first message with text, since a model can add
+// a second one and the two joined are not one document. Once a final_answer
+// exists, commentary messages are working notes and are skipped.
 func openaiReplyText(ctx context.Context, out openaiResponse, schemaBound bool) (string, error) {
 	skipCommentary := slices.ContainsFunc(out.Output, func(item openaiOutputItem) bool { return item.Phase == "final_answer" })
 	var text strings.Builder
@@ -38,7 +38,7 @@ func openaiReplyText(ctx context.Context, out openaiResponse, schemaBound bool) 
 }
 
 // openaiCutOff reports a response the output ceiling stopped: an answer,
-// truncated, rather than a failed call. Only Complete reads it — a stream ends
+// truncated, rather than a failed call. Only Complete reads it; a stream ends
 // on truncatedError, the port's model.ErrOutputTruncated.
 func openaiCutOff(out openaiResponse) bool {
 	return out.Status == "incomplete" && out.IncompleteDetails.Reason == openaiMaxOutputTokens
@@ -48,7 +48,7 @@ func openaiCutOff(out openaiResponse) bool {
 // failed call carries the API's error, an incomplete one names why generation
 // stopped (max_output_tokens, content_filter), and a missing status means the
 // body was not a terminal Responses object at all. Any of them read as a clean
-// answer would silently hand the caller a truncated or filtered result —
+// answer would hand the caller a truncated or filtered result, so
 // "completed" is the only success.
 func openaiTerminalStatus(ctx context.Context, out openaiResponse) error {
 	switch out.Status {
