@@ -2,9 +2,15 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordZoneProvider } from "../app/recordzone";
-import { formatDateTime } from "../format/format";
+import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
+import {
+  beforeHistoryWeeklyNumbers,
+  partlyRecordedWeeklyNumbers,
+  sharedWeeklyNumbers,
+  zeroWeekCounts,
+} from "./brief.fixtures";
 import { fleetDeal, jsonResponse, render, run, stubApi } from "./brief.testkit";
 
 // The week just gone, split from brief.test.tsx when that file crossed the
@@ -644,5 +650,112 @@ describe("BriefScreen — the week against the one before", () => {
       // with the outcomes for the one comparison the row makes.
       expect(strip.contains(reading)).toBe(false);
     }
+  });
+});
+
+// ── A zero its source never measured ──
+
+describe("BriefScreen — figures whose source had not started", () => {
+  const review = {
+    id: "01a04000-0000-7000-8000-00000000000a",
+    local_week_start: "2026-06-29",
+    generated_at: "2026-07-06T06:00:00Z",
+    as_of: "2026-07-06T06:00:00Z",
+    counts: { ...zeroWeekCounts },
+    deals: [],
+  };
+
+  const mount = async (fixture: unknown) => {
+    stubApi({
+      "GET /weekly-reviews/latest": () => jsonResponse(fixture),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<BriefScreen />);
+    return screen.findByTestId("weekly-strip");
+  };
+  const card = (strip: HTMLElement, label: string) => {
+    const found = [...strip.querySelectorAll<HTMLElement>(".stat-card")].find(
+      (each) =>
+        each.querySelector(".stat-card-label-text")?.textContent === label,
+    );
+    if (!found) throw new Error(`no card labelled ${label}`);
+    return {
+      value: found.querySelector(".stat-card-value")?.textContent,
+      detail: found.querySelector(".stat-card-detail")?.textContent,
+    };
+  };
+  const recordedFrom = (iso: string) =>
+    en["brief.weekly.recordedFrom"].replace(
+      "{date}",
+      formatDateAbbrev(iso, "en", "UTC"),
+    );
+
+  it("says a week before recorded history was not recorded, never 0", async () => {
+    const strip = await mount({
+      ...review,
+      counts: { ...zeroWeekCounts, tasks_completed: 0 },
+      numeric_summary: beforeHistoryWeeklyNumbers,
+    });
+
+    const values = [...strip.querySelectorAll(".stat-card-value")].map(
+      (value) => value.textContent,
+    );
+    expect(values).toHaveLength(7);
+    expect(new Set(values)).toEqual(new Set([en["brief.weekly.notRecorded"]]));
+    expect(card(strip, en["brief.weekly.dealsWon"]).detail).toBe(
+      recordedFrom("2026-09-21T09:00:00Z"),
+    );
+    // The headline names the gap instead of reading the zeros as a quiet week.
+    const glance = screen.getByTestId("brief-glance");
+    expect(glance.textContent).toContain(en["brief.week.beforeHistory"]);
+    expect(glance.textContent).not.toContain(en["brief.week.quiet"]);
+  });
+
+  it("keeps a partly recorded figure with its qualifier", async () => {
+    const strip = await mount({
+      ...review,
+      counts: {
+        ...zeroWeekCounts,
+        deals_won: 3,
+        deals_lost: 1,
+        leads_routed: 9,
+        leads_answered_in_target: 7,
+        meetings_held: 5,
+        meetings_with_next_step: 3,
+      },
+      numeric_summary: partlyRecordedWeeklyNumbers,
+    });
+
+    expect(card(strip, en["brief.weekly.dealsWon"])).toEqual({
+      value: "3",
+      detail: en["brief.weekly.partialFrom"].replace(
+        "{date}",
+        formatDateAbbrev("2026-09-10T08:00:00Z", "en", "UTC"),
+      ),
+    });
+    expect(card(strip, en["brief.weekly.meetingsHeld"])).toEqual({
+      value: "3 of 5",
+      detail: "Some meeting history predates confirmed outcomes.",
+    });
+    expect(card(strip, en["brief.weekly.leadsAnswered"])).toEqual({
+      value: en["brief.weekly.notRecorded"],
+      detail: "No lead source in scope.",
+    });
+    expect(
+      screen.getByText(en["brief.weekly.dealsMoved"]).nextSibling?.textContent,
+    ).toBe(en["brief.weekly.partialValue"].replace("{value}", "0"));
+  });
+
+  it("draws a review frozen before coverage existed exactly as before", async () => {
+    const strip = await mount({
+      ...review,
+      counts: { ...zeroWeekCounts, deals_lost: 1 },
+      numeric_summary: sharedWeeklyNumbers,
+    });
+
+    expect(strip.textContent).not.toContain(en["brief.weekly.notRecorded"]);
+    expect(card(strip, en["brief.week.lostLabel"]).value).toBe("1");
+    expect(card(strip, en["brief.weekly.dealsWon"]).value).toBe("0");
   });
 });

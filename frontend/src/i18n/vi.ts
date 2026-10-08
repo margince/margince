@@ -608,6 +608,15 @@ export const vi = {
   "brief.weekly.noCommitments": "Không có mục đến hạn",
   "brief.weekly.basis":
     "Công việc CRM đã ghi nhận trong tuần đã kết thúc. Thiếu bản ghi không có nghĩa là không làm việc.",
+  "brief.weekly.notRecorded": "Không được ghi nhận",
+  "brief.weekly.recordedFrom": "Ghi nhận từ {date}",
+  "brief.weekly.noRecords": "Nguồn này chưa có bản ghi",
+  "brief.weekly.partialFrom": "Một phần tuần: tính từ {date}",
+  "brief.weekly.partialValue": "{value} (một phần)",
+  "brief.week.beforeHistory":
+    "Tuần này nằm trước các bản ghi đầu tiên nên không có số liệu để báo cáo.",
+  "teamweekly.headline.notRecorded":
+    "Một số số liệu của tuần này không được ghi nhận nên đã được lược bỏ.",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.undated": "Chưa có ngày",
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",

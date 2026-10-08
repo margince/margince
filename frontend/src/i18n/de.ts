@@ -618,6 +618,15 @@ export const de = {
   "brief.weekly.noCommitments": "Keine fällig",
   "brief.weekly.basis":
     "Erfasste CRM-Arbeit dieser abgeschlossenen Woche. Fehlende Datensätze belegen keine Inaktivität.",
+  "brief.weekly.notRecorded": "Nicht erfasst",
+  "brief.weekly.recordedFrom": "Erfasst ab {date}",
+  "brief.weekly.noRecords": "Keine Datensätze aus dieser Quelle",
+  "brief.weekly.partialFrom": "Teilwoche: gezählt ab {date}",
+  "brief.weekly.partialValue": "{value} (teilweise)",
+  "brief.week.beforeHistory":
+    "Diese Woche liegt vor den ersten Datensätzen und hat daher keine Zahlen.",
+  "teamweekly.headline.notRecorded":
+    "Einige Zahlen wurden für diese Woche nicht erfasst und fehlen hier.",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.undated": "Kein Datum",
   "home.receipt.confidence": "Forecast-Konfidenz aktualisiert",

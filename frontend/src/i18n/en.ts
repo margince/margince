@@ -599,6 +599,15 @@ export const en = {
   "brief.weekly.noCommitments": "None due",
   "brief.weekly.basis":
     "Recorded CRM work for this closed week. Missing records do not establish inactivity.",
+  "brief.weekly.notRecorded": "Not recorded",
+  "brief.weekly.recordedFrom": "Recorded from {date}",
+  "brief.weekly.noRecords": "No records from this source",
+  "brief.weekly.partialFrom": "Partial week: counted from {date}",
+  "brief.weekly.partialValue": "{value} (partial)",
+  "brief.week.beforeHistory":
+    "This week falls before the first records, so it has no figures to report.",
+  "teamweekly.headline.notRecorded":
+    "Some figures were not recorded for this week and are left out.",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",

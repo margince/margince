@@ -22,7 +22,14 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
-import { weeklyNumericStatus } from "./brief.numeric";
+import {
+  anyUnrecorded,
+  beforeRecordedHistory,
+  figureReading,
+  figureShown,
+  type WeeklyFigure,
+  weeklyNumericStatus,
+} from "./brief.numeric";
 import { BriefTeamSelect, weekTeams } from "./brief.teamselect";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
 import { OutlookPanel } from "./brief.waterfall";
@@ -153,10 +160,11 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
   const counts = review.counts;
+  const numeric = weeklyNumericStatus(review.numeric_summary);
   if (
     counts.reps_counted === 0 ||
     (review.reps_unread ?? 0) > 0 ||
-    weeklyNumericStatus(review.numeric_summary).partial
+    numeric.partial
   )
     return (
       <Heading size="medium" className="teamweekly-headline">
@@ -164,6 +172,18 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
           counts.reps_counted === 0
             ? "teamweekly.headline.unmeasured"
             : "teamweekly.headline.partial",
+        )}
+      </Heading>
+    );
+  // The headline's clauses quote counts side by side, so one unrecorded
+  // source would put a zero that measured nothing beside figures that did.
+  if (anyUnrecorded(numeric.figures))
+    return (
+      <Heading size="medium" className="teamweekly-headline">
+        {t(
+          beforeRecordedHistory(numeric.figures)
+            ? "brief.week.beforeHistory"
+            : "teamweekly.headline.notRecorded",
         )}
       </Heading>
     );
@@ -262,12 +282,16 @@ function wonValue(
 function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const counts = review.counts;
-  const { bookingsUnavailable, meetingsUnavailable } = weeklyNumericStatus(
-    review.numeric_summary,
-  );
+  const { figures } = weeklyNumericStatus(review.numeric_summary);
   const n = (value: number) => formatNumber(value, locale);
   const won = wonValue(review, locale);
+  const place = { t, locale, zone: recordZone };
+  const reading = (
+    figure: WeeklyFigure,
+    shown: { value: string; detail?: string },
+  ) => figureReading(figures[figure], shown.value, place) ?? shown;
   // A SHARE NEEDS A DENOMINATOR. "0 of 0" is a rate nobody could have scored,
   // and the basis line beside it explains a measurement that was never taken —
   // so a week that routed no lead, held no meeting or carried no commitment
@@ -292,46 +316,47 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
       <StatCard
         narrow="row"
         label={t("teamweekly.card.firstResponse")}
-        {...share(
-          counts.leads_answered_in_target,
-          counts.leads_routed,
-          "teamweekly.card.noLeads",
-          t("teamweekly.card.firstResponseBasis", {
-            breached: n(counts.leads_breached),
-          }),
+        {...reading(
+          "leads",
+          share(
+            counts.leads_answered_in_target,
+            counts.leads_routed,
+            "teamweekly.card.noLeads",
+            t("teamweekly.card.firstResponseBasis", {
+              breached: n(counts.leads_breached),
+            }),
+          ),
         )}
       />
       <StatCard
         narrow="row"
         label={t("teamweekly.card.meetings")}
-        {...(meetingsUnavailable
-          ? {
-              value: t("reporting.unavailable"),
-              detail: review.numeric_summary?.meetings_coverage.reason,
-            }
-          : share(
-              counts.meetings_with_next_step,
-              counts.meetings_held,
-              "teamweekly.card.noMeetings",
-              t("teamweekly.card.meetingsBasis"),
-            ))}
+        {...reading(
+          "meetings",
+          share(
+            counts.meetings_with_next_step,
+            counts.meetings_held,
+            "teamweekly.card.noMeetings",
+            t("teamweekly.card.meetingsBasis"),
+          ),
+        )}
       />
       <StatCard
         narrow="row"
         label={t("teamweekly.card.commitments")}
-        {...share(
-          counts.commitments_kept,
-          counts.commitments_due,
-          "teamweekly.card.noCommitments",
-          t("teamweekly.card.commitmentsBasis"),
+        {...reading(
+          "commitments",
+          share(
+            counts.commitments_kept,
+            counts.commitments_due,
+            "teamweekly.card.noCommitments",
+            t("teamweekly.card.commitmentsBasis"),
+          ),
         )}
       />
       <StatCard
         narrow="row"
         label={t("teamweekly.card.won")}
-        value={
-          bookingsUnavailable ? t("reporting.unavailable") : n(counts.deals_won)
-        }
         // What the wins were WORTH, beside how many were lost. The count alone
         // says a week of five small renewals and a week of one company-making
         // deal are the same week — and the money was computed, FX-converted and
@@ -340,16 +365,16 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         // It rides the won slot rather than taking a sixth: five is what a
         // strip can be read across as one comparison. The lost count stays,
         // because it is a different fact rather than a delta the money replaces.
-        detail={
-          bookingsUnavailable
-            ? review.numeric_summary?.bookings_coverage.reason
-            : won === undefined
+        {...reading("won", {
+          value: n(counts.deals_won),
+          detail:
+            won === undefined
               ? t("teamweekly.card.wonBasis", { lost: n(counts.deals_lost) })
               : t("teamweekly.card.wonBasisValue", {
                   value: won,
                   lost: n(counts.deals_lost),
-                })
-        }
+                }),
+        })}
       />
       <StatCard
         narrow="row"
@@ -384,32 +409,25 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const { locale } = useLocale();
   const counts = review.counts;
   const numeric = weeklyNumericStatus(review.numeric_summary);
-  const rows = [
-    { key: "teamweekly.movement.won" as const, value: counts.deals_won },
-    { key: "teamweekly.movement.lost" as const, value: counts.deals_lost },
+  const movements: [WeeklyFigure, MessageKey, number][] = [
+    ["won", "teamweekly.movement.won", counts.deals_won],
+    ["lost", "teamweekly.movement.lost", counts.deals_lost],
     // ADVANCED sits with the two outcomes above it rather than with the
     // activity rows below, because it is the same kind of fact: what happened
     // to the team's deals. Without it a week that moved eleven deals and closed
     // none read as a week where nothing happened, which is the week most teams
     // have and the one a lead most needs to see.
-    { key: "teamweekly.movement.moved" as const, value: counts.deals_moved },
-    {
-      key: "teamweekly.movement.meetings" as const,
-      value: counts.meetings_held,
-    },
-    { key: "teamweekly.movement.leads" as const, value: counts.leads_routed },
-  ].filter(
-    (row) =>
-      !(row.key === "teamweekly.movement.won" && numeric.bookingsUnavailable) &&
-      !(
-        row.key === "teamweekly.movement.meetings" &&
-        numeric.meetingsUnavailable
-      ),
-  );
+    ["moved", "teamweekly.movement.moved", counts.deals_moved],
+    ["meetings", "teamweekly.movement.meetings", counts.meetings_held],
+    ["leads", "teamweekly.movement.leads", counts.leads_routed],
+  ];
+  const rows = movements
+    .filter(([figure]) => figureShown(numeric.figures[figure]))
+    .map(([, key, value]) => ({ key, value }));
   // One baseline for every bar. A per-row max would draw four full bars and say
   // nothing about which number is the big one.
   const max = Math.max(...rows.map((row) => row.value));
-  if (max === 0) {
+  if (rows.length === 0 || max === 0) {
     return null;
   }
 
