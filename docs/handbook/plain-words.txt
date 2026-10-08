@@ -190,7 +190,7 @@ certify
 champion
 change
 channel
-character
+characters
 chart
 chase
 chat
@@ -494,7 +494,7 @@ gone
 governance
 grant
 graph
-greet
+greeting
 grey
 gross
 group

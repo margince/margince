@@ -950,7 +950,6 @@ setting
 settle
 setup
 several
-sha
 shadow
 shape
 share
