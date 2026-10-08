@@ -42,32 +42,6 @@ func (e *OfferNotSentError) FieldFault() (field, code, message string) {
 	return offerStatusField, "offer_not_sent", e.Error()
 }
 
-// OfferLapsedError maps to 422: an offer past its valid-until date is no longer
-// a price the seller stands behind, so it cannot go out or re-price the deal.
-type OfferLapsedError struct{ ValidUntil string }
-
-func (e *OfferLapsedError) Error() string {
-	return "the offer was valid until " + e.ValidUntil + "; regenerate it with a later date"
-}
-
-// FieldFault names the date that has passed.
-func (e *OfferLapsedError) FieldFault() (field, code, message string) {
-	return "valid_until", "offer_lapsed", e.Error()
-}
-
-// refuseLapsedOffer is the one rule for "past its date": the day after
-// valid_until, in UTC, is the first day the offer is dead.
-func (s *Store) refuseLapsedOffer(current crmcontracts.Offer) error {
-	if current.ValidUntil == nil {
-		return nil
-	}
-	today := s.clock().UTC().Truncate(24 * time.Hour)
-	if current.ValidUntil.Time.Before(today) {
-		return &OfferLapsedError{ValidUntil: current.ValidUntil.Format("2006-01-02")}
-	}
-	return nil
-}
-
 // SendOffer runs draft → sent: freezes fx_rate_to_base as of today (422
 // when the daily rate is missing — never rate=1, RT-PR-C2), captures the
 // buyer/issuer snapshots and emits offer.sent. An empty offer has
