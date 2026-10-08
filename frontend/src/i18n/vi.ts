@@ -16,7 +16,6 @@ import type { MessageKey } from "./en";
 export const vi = {
   "reporting.latestSnapshot": "Ảnh chụp mới nhất",
   "reporting.contextDetails": "Chi tiết báo cáo",
-  "reporting.pipelineFilter": "Cơ hội đang mở · dự kiến chốt",
   "reporting.targetRemaining": "Còn {amount}",
   "reporting.targetExceeded": "Vượt mục tiêu {amount}",
   "reporting.targetPeriodSummary": "{actual} trên {target} · {percent}%",
@@ -63,7 +62,6 @@ export const vi = {
   "reporting.remaining": "Còn lại",
   "reporting.ownerMetric": "{metric} theo thành viên",
   "reporting.quarterStart": "Chọn tháng đầu quý tài chính.",
-  "reporting.additional": "Phân tích khác",
   "reporting.settings": "Cài đặt báo cáo",
   "reporting.execution.skipped": "Đã bỏ qua",
   "reporting.execution.suspended": "Tạm dừng",
@@ -89,6 +87,7 @@ export const vi = {
   "reporting.shareSnapshot": "Ảnh chụp để chia sẻ",
   "reporting.capturePending": "Đã xếp hàng chụp. Kết quả sẽ xuất hiện tại đây.",
   "reporting.createReport": "Tạo từ Hiệu suất",
+  "reporting.newCustomReport": "Báo cáo tùy chỉnh mới",
   "reporting.observations_one": "Quan sát: {count}",
   "reporting.observations_other": "Quan sát: {count}",
   "reporting.observationsUnavailable": "Chưa có cỡ mẫu",
@@ -1524,6 +1523,12 @@ export const vi = {
   "views.deleteAsk":
     "Xóa {name} sẽ gỡ thẻ của nó. Các bản ghi trong đó không thay đổi.",
   "views.deleteConfirm": "Xóa bộ lọc",
+  "views.renameTitle": "Đổi tên chế độ xem",
+  "views.renamed": "Đã đổi tên chế độ xem",
+  "views.deleteTitle": "Xóa chế độ xem này?",
+  "views.deleteBody":
+    "“{name}” sẽ rời khỏi Bộ lọc & chủ đề. Không bản ghi nào thay đổi.",
+  "views.deleted": "Đã xóa chế độ xem: “{name}”",
   "list.viewMine": "Của tôi",
   "list.viewCustomers": "Khách hàng",
   "list.viewProspects": "Khách tiềm năng",
@@ -2822,10 +2827,11 @@ export const vi = {
   "tagResult.contacts": "Liên hệ",
   "tagResult.companies": "Công ty",
   "tagResult.deals": "Deal",
+  "tagResult.leads": "Lead",
   "tagResult.viewAll": "Xem tất cả {count} {kind}",
   "tagResult.resultsTitle": "Bản ghi có thẻ này",
   "tagResult.nothingCarries":
-    "Chưa có bản ghi nào mang thẻ này. Hãy gán thẻ từ một liên hệ, công ty hoặc deal.",
+    "Chưa có bản ghi nào mang thẻ này. Hãy gán thẻ từ một liên hệ, công ty, deal hoặc lead.",
   "tagResult.loadingRows": "Đang tải {kind}…",
   "tagResult.noneLeft": "Không còn bản ghi nào mang thẻ",
   "tagResult.unnamed": "Chưa có tên",
@@ -4703,6 +4709,23 @@ export const vi = {
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
   "analytics.sectionQuestions": "Báo cáo tùy chỉnh",
+  "analytics.sectionReports": "Báo cáo",
+  "analytics.setup": "Thiết lập",
+  "analytics.attention": "Cần bạn chú ý",
+  "analytics.attentionChecks_one": "Kiểm tra dự báo cần trả lời: 1",
+  "analytics.attentionChecks_other": "Kiểm tra dự báo cần trả lời: {count}",
+  "analytics.attentionChecksDetail": "Hãy trả lời trước khi cập nhật dự báo.",
+  "analytics.attentionChecksAction": "Xem trong Dự báo",
+  "analytics.attentionUnpriced":
+    "{priced} trên {eligible} deal đang mở có số tiền",
+  "analytics.attentionUnpricedDetail":
+    "Deal chưa có số tiền không đóng góp vào dự báo.",
+  "analytics.attentionUnpricedAction": "Mở Dự báo",
+  "analytics.attentionCoverage_one":
+    "Nguồn dữ liệu chưa được kiểm tra đầy đủ: 1",
+  "analytics.attentionCoverage_other":
+    "Nguồn dữ liệu chưa được kiểm tra đầy đủ: {count}",
+  "analytics.attentionCoverageAction": "Xem độ phủ dữ liệu",
   "analytics.reportDealsByStage": "Tất cả deal theo giai đoạn",
   "analytics.reportLeadsByStatus": "Lead theo trạng thái",
   "analytics.reportActivitiesByKind": "Hoạt động theo loại",
@@ -9373,6 +9396,10 @@ export const vi = {
     "Đang chờ: mọi mô hình tác vụ này dùng được đều bị chặn.",
   "aiTasks.deferral.nowInteractive":
     "Đang lỗi: mọi mô hình tác vụ này dùng được đều bị chặn.",
+  "aiTasks.deferral.degrades":
+    "Khi mọi mô hình của tác vụ này ngừng hoạt động, hết hạn mức hoặc bị từ chối khóa, tác vụ vẫn trả lời từ dữ kiện của chính nó mà không cần mô hình, thay vì thất bại.",
+  "aiTasks.deferral.nowDegrades":
+    "Đang trả lời từ dữ kiện của chính nó: mọi mô hình tác vụ này dùng được đều bị chặn.",
   "aiTasks.deferral.skipping":
     "Nhà cung cấp bị chặn sẽ được bỏ qua, và mô hình kế tiếp sẽ trả lời.",
   "aiTasks.embeddingsEdit":
@@ -9582,6 +9609,7 @@ export const vi = {
   "capturePurge.done": "Đóng",
   "capturePurge.failed":
     "Việc xóa chưa hoàn tất. Một số thư có thể đã bị xóa vĩnh viễn. Hãy kiểm tra lại xem còn lại những gì.",
+  "capturePurge.refused": "Việc xóa bị từ chối nên chưa có gì bị hủy.",
   "capturePurge.wouldDestroy_one": "{count} thư sẽ bị xóa vĩnh viễn.",
   "capturePurge.wouldDestroy_other": "{count} thư sẽ bị xóa vĩnh viễn.",
   "capturePurge.destroyed_one": "Đã xóa vĩnh viễn {count} thư.",
@@ -10058,6 +10086,7 @@ export const vi = {
   "contact.action.call": "Gọi",
   "contact.action.meetings": "Lịch hẹn",
   "contact.action.workAsLead": "Theo dõi như lead",
+  "contact.action.openLead": "Mở lead",
   "contact.action.addTask": "Thêm việc",
   "contact.action.research": "Nghiên cứu",
 
@@ -10437,15 +10466,73 @@ export const vi = {
   "provider.category.jobHistory": "vai trò trước đây",
 
   // Tr\u00ecnh d\u1ee5ng b\u1ed9 l\u1ecdc (AC-filters-and-views-3/4).
-  "filters.joinAll": "T\u1ea4T C\u1ea2 \u00b7 AND",
-  "filters.joinAny": "B\u1ea4T K\u1ef2 \u00b7 OR",
-  "filters.joinLabel":
-    "C\u00e1ch nh\u00f3m n\u00e0y k\u1ebft h\u1ee3p c\u00e1c \u0111i\u1ec1u ki\u1ec7n",
   "filters.removeGroup": "X\u00f3a nh\u00f3m",
   "filters.addGroup": "Th\u00eam nh\u00f3m",
   "filters.addClause": "Th\u00eam \u0111i\u1ec1u ki\u1ec7n",
-  "filters.emptyGroup":
-    "Ch\u01b0a c\u00f3 \u0111i\u1ec1u ki\u1ec7n \u2014 nh\u00f3m tr\u1ed1ng kh\u00f4ng kh\u1edbp v\u1edbi g\u00ec, h\u00e3y th\u00eam m\u1ed9t \u0111i\u1ec1u ki\u1ec7n.",
+  "filters.addToGroup": "Thêm điều kiện vào nhóm",
+  "filters.find": "Tìm {records} thỏa mãn…",
+  "filters.hint.start":
+    "Thêm một điều kiện để xem có bao nhiêu {records} khớp.",
+  "filters.hint.finish":
+    "Hoàn tất điều kiện để xem có bao nhiêu {records} khớp.",
+  "filters.hint.update": "Hoàn tất điều kiện để cập nhật số lượng.",
+  "filters.startOr": "hoặc",
+  "filters.start.buildTitle": "Tạo từng điều kiện một",
+  "filters.start.buildBody":
+    "Chọn một trường, cách so sánh và một giá trị. Thêm điều kiện khác khi cần.",
+  "filters.describeChanges": "Mô tả thay đổi bằng lời thường",
+  "filters.connector.matchAll":
+    "{word}: khớp tất cả điều kiện này. Nhấn để khớp bất kỳ điều kiện nào.",
+  "filters.connector.matchAny":
+    "{word}: khớp bất kỳ điều kiện nào. Nhấn để khớp tất cả.",
+  "filters.group.all": "Tất cả điều kiện này",
+  "filters.group.any": "Bất kỳ điều kiện nào",
+  "filters.rowsMore": "Thêm tùy chọn cho các điều kiện này",
+  "filters.groupMore": "Thêm tùy chọn cho nhóm này",
+  "filters.proposed": "Đề xuất",
+  "filters.switch.title": "Chuyển sang {records}?",
+  "filters.switch.body.contacts":
+    "Các điều kiện sẽ bị xóa vì chúng dùng trường của liên hệ.",
+  "filters.switch.body.companies":
+    "Các điều kiện sẽ bị xóa vì chúng dùng trường của công ty.",
+  "filters.switch.body.deals":
+    "Các điều kiện sẽ bị xóa vì chúng dùng trường của deal.",
+  "filters.switch.body.leads":
+    "Các điều kiện sẽ bị xóa vì chúng dùng trường của khách hàng tiềm năng.",
+  "filters.switch.confirm": "Chuyển và xóa",
+  "filters.showMore": "Hiển thị tối đa 100",
+  "filters.save": "Lưu",
+  "filters.unsavedFilter": "Bộ lọc chưa lưu",
+  "filters.footMore": "Thêm tùy chọn cho bộ lọc này",
+  "filters.exporting": "Đang xuất…",
+  "filters.saveAsNew": "Lưu thành chế độ xem mới",
+  "filters.saveTitle": "Lưu bộ lọc này",
+  "filters.namePlaceholder":
+    "{records} ở Đức, không có hoạt động trong 45 ngày",
+  "filters.keepAs": "Giữ dưới dạng",
+  "filters.keepViewHint":
+    "Chỉ bạn tìm thấy được. Số lượng được đếm lại mỗi lần bạn mở.",
+  "filters.keepListHint":
+    "Được kiểm tra 15 phút một lần và ghi lại bản ghi nào vào hay rời danh sách. Chọn ai có thể tìm thấy.",
+  "filters.purpose": "Mục đích (không bắt buộc)",
+  "filters.viewSaved": "Đã lưu chế độ xem",
+  "filters.listCreated": "Đã tạo danh sách động “{name}”",
+  "filters.view.facts": "Chế độ xem đã lưu · {records} · Chỉ mình tôi",
+  "filters.listFacts": "Danh sách động · {records} · {who}",
+  "filters.view.saveAsList": "Lưu thành danh sách động",
+  "filters.editConditions": "Sửa điều kiện",
+  "filters.done": "Xong",
+  "filters.noChanges": "Chưa có thay đổi",
+  "filters.unsavedChanges": "Thay đổi chưa lưu",
+  "filters.discardChanges": "Bỏ thay đổi",
+  "filters.saveChanges": "Lưu thay đổi",
+  "filters.changesSaved": "Đã lưu thay đổi",
+  "filters.view.conflict":
+    "Chế độ xem này đã thay đổi kể từ khi bạn mở. Hãy tải lại để xem phiên bản mới nhất.",
+  "filters.view.reload": "Tải lại chế độ xem",
+  "filters.view.gone": "Chế độ xem đã lưu này đã bị xóa hoặc không tìm thấy.",
+  "filters.backToLibrary": "Quay lại Bộ lọc & chủ đề",
+  "filters.emptyGroup": "Nhóm trống không khớp với bản ghi nào.",
   "filters.field": "Tr\u01b0\u1eddng",
   "filters.field.amount": "Giá trị quy đổi",
   "filters.field.city": "Thành phố",
@@ -10492,6 +10579,42 @@ export const vi = {
   "filters.op.atLeast": "\u00edt nh\u1ea5t l\u00e0",
   "filters.op.lessThan": "nh\u1ecf h\u01a1n",
   "filters.op.atMost": "nhi\u1ec1u nh\u1ea5t l\u00e0",
+  "filters.join.and": "và",
+  "filters.join.or": "hoặc",
+  "filters.sentence.clause": "{field} {op} {value}",
+  "filters.sentence.clauseBare": "{field} {op}",
+  "filters.sentence.group": "({clauses})",
+  "filters.sentence.pendingValue": "…",
+  "filters.sentence.emptyGroup": "một nhóm trống",
+  "filters.sentence.retiredField": "một trường đã ngừng sử dụng",
+  "filters.sentence.inCounted": "là một trong",
+  "filters.sentence.withinLast_one": "nằm trong 1 ngày qua",
+  "filters.sentence.withinLast_other": "nằm trong {count} ngày qua",
+  "filters.sentence.moreThanAgo": "cách đây hơn",
+  "filters.sentence.atLeastAgo": "cách đây ít nhất",
+  "filters.sentence.daysAgo_one": "{count} ngày",
+  "filters.sentence.daysAgo_other": "{count} ngày",
+  "filters.sentence.conditions_one": "{count} điều kiện",
+  "filters.sentence.conditions_other": "{count} điều kiện",
+  "filters.sentence.ref.stage_one": "{count} giai đoạn",
+  "filters.sentence.ref.stage_other": "{count} giai đoạn",
+  "filters.sentence.ref.pipeline_one": "{count} pipeline",
+  "filters.sentence.ref.pipeline_other": "{count} pipeline",
+  "filters.sentence.ref.app_user_one": "{count} thành viên",
+  "filters.sentence.ref.app_user_other": "{count} thành viên",
+  "filters.sentence.ref.team_one": "{count} nhóm",
+  "filters.sentence.ref.team_other": "{count} nhóm",
+  "filters.sentence.ref.company_one": "{count} công ty",
+  "filters.sentence.ref.company_other": "{count} công ty",
+  "filters.sentence.ref.tag_one": "{count} thẻ",
+  "filters.sentence.ref.tag_other": "{count} thẻ",
+  "filters.sentence.ref.retiredTag_one": "{count} thẻ đã lưu trữ",
+  "filters.sentence.ref.retiredTag_other": "{count} thẻ đã lưu trữ",
+  "filters.sentence.someRetired": "{tags}, trong đó {retired} thẻ đã lưu trữ",
+  "filters.sentence.retiredTagNote":
+    "Với bộ lọc, không bản ghi nào mang thẻ đã lưu trữ.",
+  "filters.sentence.ref.project_one": "{count} dự án",
+  "filters.sentence.ref.project_other": "{count} dự án",
   "filters.tab.leads": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
   "filters.matchLeads_one": "{count} kh\u00e1ch ti\u1ec1m n\u0103ng kh\u1edbp",
   "filters.matchLeads_other":
@@ -10501,31 +10624,18 @@ export const vi = {
   "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",
   "filters.date.daysAgoCount":
     "{field}: s\u1ed1 ng\u00e0y tr\u01b0\u1edbc h\u00f4m nay",
-  "filters.saveList": "L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
-  "filters.saveListTitle":
-    "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
   "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
-  "filters.propose.label":
-    "M\u00f4 t\u1ea3 danh s\u00e1ch b\u1eb1ng l\u1eddi th\u01b0\u1eddng",
+  "filters.propose.label": "Mô tả {records} bạn muốn tìm",
   "filters.propose.hint":
-    "Margince \u0111\u1ec1 xu\u1ea5t \u0111i\u1ec1u ki\u1ec7n cho b\u1ed9 l\u1ecdc b\u00ean d\u01b0\u1edbi. Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c l\u01b0u cho \u0111\u1ebfn khi b\u1ea1n b\u1ea5m L\u01b0u.",
-  "filters.propose.placeholder":
-    "C\u00f4ng ty \u1edf \u0110\u1ee9c kh\u00f4ng c\u00f3 ho\u1ea1t \u0111\u1ed9ng trong 45 ng\u00e0y qua",
-  "filters.propose.submit": "\u0110\u1ec1 xu\u1ea5t b\u1ed9 l\u1ecdc",
+    "Các điều kiện đề xuất được hiển thị để bạn xem lại. Không có gì được lưu cho đến khi bạn lưu.",
+  "filters.propose.placeholder": "Ở Đức, không có hoạt động trong 45 ngày qua",
+  "filters.propose.submit": "Đề xuất điều kiện",
   "filters.propose.busy":
     "\u0110ang \u0111\u1ecdc m\u00f4 t\u1ea3 c\u1ee7a b\u1ea1n",
   "filters.propose.noModel":
     "B\u1ed9 l\u1ecdc b\u1eb1ng l\u1eddi th\u01b0\u1eddng c\u1ea7n m\u1ed9t m\u00f4 h\u00ecnh AI \u0111\u00e3 \u0111\u01b0\u1ee3c c\u1ea5u h\u00ecnh. B\u1ea1n v\u1eabn c\u00f3 th\u1ec3 t\u1ef1 x\u00e2y d\u1ef1ng b\u1ed9 l\u1ecdc.",
   "filters.propose.unreadable":
-    "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c \u0111\u1ec1 xu\u1ea5t. H\u00e3y th\u1eed m\u00f4 t\u1ea3 danh s\u00e1ch theo c\u00e1ch kh\u00e1c.",
-  "filters.propose.readyTitle":
-    "B\u1ed9 l\u1ecdc \u0111\u00e3 s\u1eb5n s\u00e0ng",
-  "filters.propose.readyBody":
-    "B\u1ed9 l\u1ecdc c\u1ee7a b\u1ea1n \u0111\u00e3 c\u00f3 \u0111i\u1ec1u ki\u1ec7n. Thay ch\u00fang b\u1eb1ng \u0111\u1ec1 xu\u1ea5t, ho\u1eb7c th\u00eam \u0111\u1ec1 xu\u1ea5t v\u00e0o.",
-  "filters.propose.replace": "Thay b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
-  "filters.propose.add":
-    "Th\u00eam v\u00e0o b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
-  "filters.propose.discard": "B\u1ecf \u0111\u1ec1 xu\u1ea5t",
+    "Không đọc được đề xuất. Hãy thử mô tả theo cách khác.",
   "filters.propose.unusedTitle": "Kh\u00f4ng d\u00f9ng \u0111\u01b0\u1ee3c",
   "filters.propose.unusedDismiss": "\u1ea8n",
   "filters.propose.unusedItem":
@@ -10540,12 +10650,20 @@ export const vi = {
     "{field} c\u00f3 c\u00e1c l\u1ef1a ch\u1ecdn b\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c xem, n\u00ean kh\u00f4ng th\u1ec3 ki\u1ec3m tra gi\u00e1 tr\u1ecb.",
   "filters.propose.reason.tooMany":
     "B\u1ed9 l\u1ecdc \u0111\u00e3 ch\u1ee9a nhi\u1ec1u \u0111i\u1ec1u ki\u1ec7n nh\u1ea5t c\u00f3 th\u1ec3.",
+  "filters.proposal.title_one":
+    "Margince đã đề xuất {count} điều kiện từ “{text}”.",
+  "filters.proposal.title_other":
+    "Margince đã đề xuất {count} điều kiện từ “{text}”.",
+  "filters.proposal.body":
+    "Các dòng nét đứt là đề xuất: hãy thay đổi bất cứ điều gì, và dòng nào bạn thay đổi sẽ thuộc về bạn.",
+  "filters.proposal.keepAll": "Giữ tất cả",
+  "filters.proposal.replaceMine": "Thay điều kiện của tôi",
+  "filters.foot.proposed_one":
+    "{count} điều kiện đề xuất trong bộ lọc này. Khi lưu, chúng vẫn được giữ.",
+  "filters.foot.proposed_other":
+    "{count} điều kiện đề xuất trong bộ lọc này. Khi lưu, chúng vẫn được giữ.",
   "lists.page": "Danh s\u00e1ch",
-  "lists.section.label": "Hi\u1ec3n th\u1ecb",
-  "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
-  "lists.section.lists":
-    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
-  "lists.section.build": "T\u1ea1o b\u1ed9 l\u1ecdc",
+  "lists.loading": "Đang tải danh sách",
   "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",
   "lists.kind.shortlist": "Danh s\u00e1ch ch\u1ecdn",
   "lists.type.contact": "Li\u00ean h\u1ec7",
@@ -10573,20 +10691,9 @@ export const vi = {
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.health.retiredField":
     "D\u00f9ng tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
-  "lists.library.title":
-    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
-  "lists.library.search": "T\u00ecm danh s\u00e1ch",
-  "lists.library.all": "T\u1ea5t c\u1ea3",
-  "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
-  "lists.library.empty":
-    "Ch\u01b0a c\u00f3 danh s\u00e1ch \u0111\u01b0\u1ee3c chia s\u1ebb n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
-  "lists.library.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
   "lists.col.name": "T\u00ean",
   "lists.col.kind": "Lo\u1ea1i",
   "lists.col.recordType": "B\u1ea3n ghi",
-  "lists.col.count": "B\u1ea1n th\u1ea5y \u0111\u01b0\u1ee3c",
-  "lists.col.steward": "Ph\u1ee5 tr\u00e1ch",
-  "lists.col.sharing": "Chia s\u1ebb v\u1edbi",
   "lists.noSteward": "Ch\u01b0a c\u00f3 ai",
   "lists.newShortlist": "Danh s\u00e1ch ch\u1ecdn m\u1edbi",
   "lists.newShortlistTitle": "T\u1ea1o danh s\u00e1ch ch\u1ecdn",
@@ -10608,6 +10715,7 @@ export const vi = {
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
   "lists.head.facts":
     "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y: {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
+  "lists.filterLine": "Bộ lọc: {records} có {sentence}",
   "lists.head.exported_one":
     "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
   "lists.head.exported_other":
@@ -10706,13 +10814,6 @@ export const vi = {
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
   "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
-  "lists.views.empty":
-    "Ch\u01b0a c\u00f3 ch\u1ebf \u0111\u1ed9 xem n\u00e0o. H\u00e3y t\u1ea1o b\u1ed9 l\u1ecdc r\u1ed3i b\u1ea5m L\u01b0u b\u1ed9 l\u1ecdc.",
-  "lists.views.loading":
-    "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
-  "lists.myLists.title": "Danh s\u00e1ch c\u1ee7a t\u00f4i",
-  "lists.myLists.empty":
-    "Ch\u01b0a c\u00f3 danh s\u00e1ch ri\u00eang t\u01b0 n\u00e0o. Danh s\u00e1ch ch\u1ec9 b\u1ea1n t\u00ecm th\u1ea5y s\u1ebd hi\u1ec7n \u1edf \u0111\u00e2y. Khi chia s\u1ebb, danh s\u00e1ch s\u1ebd chuy\u1ec3n sang ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb.",
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label":
     "{entered} bản ghi vào và {left} bản ghi rời đi kể từ lần bạn xem trước",
@@ -10734,9 +10835,11 @@ export const vi = {
   "lists.history.liveNote":
     "Việc kiểm tra chạy 15 phút một lần và ưu tiên các danh sách lâu nhất chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết lần kiểm tra gần nhất. Bản ghi vào hay rời đi được ghi nhận tại lần kiểm tra phát hiện ra thay đổi đó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
   "lists.editFilter": "S\u1eeda b\u1ed9 l\u1ecdc",
+  "lists.filterCannotOpen": "Không thể mở bộ lọc của danh sách này tại đây.",
+  "lists.savedTo": "Đã lưu vào “{name}”",
   "lists.editingTitle": "\u0110ang s\u1eeda b\u1ed9 l\u1ecdc c\u1ee7a {name}",
   "lists.editingBody":
-    "L\u01b0u v\u00e0o danh s\u00e1ch \u0111\u1ec3 thay \u0111\u1ed5i c\u00e1c b\u1ea3n ghi m\u00e0 n\u00f3 ch\u1ee9a. L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng s\u1ebd t\u1ea1o m\u1ed9t danh s\u00e1ch m\u1edbi.",
+    "Lưu vào danh sách để thay đổi các bản ghi mà nó chứa. Để giữ một bản sao, hãy lưu bộ lọc thành chế độ xem mới.",
   "lists.saveFilterTo": "L\u01b0u v\u00e0o {name}",
   "lists.saveFilterTitle":
     "Thay \u0111\u1ed5i b\u1ed9 l\u1ecdc c\u1ee7a {name}?",
@@ -10770,22 +10873,71 @@ export const vi = {
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
   "filters.title": "B\u1ed9 l\u1ecdc & ch\u1ee7 \u0111\u1ec1",
   "filters.subtitle":
-    "T\u1ea1o b\u1ed9 l\u1ecdc, xem n\u00f3 ch\u1ecdn nh\u1eefng g\u00ec, r\u1ed3i l\u01b0u th\u00e0nh ch\u1ee7 \u0111\u1ec1.",
+    "Mọi chế độ xem đã lưu và danh sách bạn có thể dùng, và nơi bắt đầu một bộ lọc mới.",
+  "filters.library.loading": "Đang tải chế độ xem và danh sách",
+  "filters.library.search": "Tìm chế độ xem và danh sách",
+  "filters.library.all": "Tất cả",
+  "filters.library.newFilter": "Bộ lọc mới",
+  "filters.new.contacts": "Bộ lọc liên hệ mới",
+  "filters.new.companies": "Bộ lọc công ty mới",
+  "filters.new.deals": "Bộ lọc deal mới",
+  "filters.new.leads": "Bộ lọc khách tiềm năng mới",
+  "filters.library.whichRecords": "Lọc loại bản ghi nào?",
+  "filters.library.mine": "Chỉ mình tôi",
+  "filters.library.shared": "Được chia sẻ",
+  "filters.library.views": "Chế độ xem đã lưu",
+  "filters.library.kindView": "Chế độ xem đã lưu",
+  "filters.library.rowMore": "Thao tác khác cho {name}",
+  "filters.library.records.contact_one": "{count} liên hệ",
+  "filters.library.records.contact_other": "{count} liên hệ",
+  "filters.library.records.company_one": "{count} công ty",
+  "filters.library.records.company_other": "{count} công ty",
+  "filters.library.records.deal_one": "{count} giao dịch",
+  "filters.library.records.deal_other": "{count} giao dịch",
+  "filters.library.records.lead_one": "{count} khách tiềm năng",
+  "filters.library.records.lead_other": "{count} khách tiềm năng",
+  "filters.library.records.project_one": "{count} dự án",
+  "filters.library.records.project_other": "{count} dự án",
+  "filters.library.recordsSeen": "{records} bạn có thể xem",
+  "filters.library.mineEmpty": "Chế độ xem bạn lưu sẽ hiện ở đây.",
+  "filters.library.sharedEmpty":
+    "Chưa có danh sách được chia sẻ. Danh sách chia sẻ với một nhóm hoặc toàn công ty sẽ hiện ở đây.",
+  "filters.library.noHits":
+    "Không có chế độ xem hay danh sách nào khớp với “{q}”.",
+  "filters.library.clearSearch": "Xóa tìm kiếm",
+  "filters.library.noTypeHits.contacts":
+    "Không có chế độ xem hay danh sách liên hệ nào.",
+  "filters.library.noTypeHits.companies":
+    "Không có chế độ xem hay danh sách công ty nào.",
+  "filters.library.noTypeHits.deals":
+    "Không có chế độ xem hay danh sách giao dịch nào.",
+  "filters.library.noTypeHits.leads":
+    "Không có chế độ xem hay danh sách khách tiềm năng nào.",
+  "filters.library.noTypeHits.projects": "Không có danh sách dự án nào.",
+  "filters.library.truncated":
+    "Đang hiện {limit} mục đầu tiên. Hãy tìm kiếm để thu hẹp danh sách.",
+  "filters.library.listsFailed": "Không tải được danh sách.",
+  "filters.library.viewsFailed": "Không tải được chế độ xem đã lưu.",
+  "filters.library.showArchived": "Hiện danh sách đã lưu trữ",
+  "filters.library.hideArchived": "Ẩn danh sách đã lưu trữ",
+  "filters.library.firstRunTitle":
+    "Chưa có chế độ xem hay danh sách nào được lưu",
+  "filters.library.firstRunBody":
+    "Bộ lọc tìm bản ghi theo các trường của chúng. Hãy lưu nó thành chế độ xem cho riêng bạn, hoặc thành danh sách động để đồng nghiệp tìm thấy.",
+  "filters.library.viewsEmptyTitle": "Chưa có chế độ xem đã lưu",
+  "filters.library.viewsEmptyBody":
+    "Bộ lọc tìm bản ghi theo các trường của chúng. Hãy lưu nó thành chế độ xem để mở lại sau.",
   "filters.objectLabel": "L\u1ecdc lo\u1ea1i b\u1ea3n ghi n\u00e0o",
   "filters.tab.contacts": "Liên hệ",
   "filters.tab.companies": "C\u00f4ng ty",
   "filters.tab.deals": "Deal",
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
-  "filters.dynamic":
-    "\u0110\u1ed9ng \u2014 t\u00ednh l\u1ea1i sau m\u1ecdi s\u1ef1 ki\u1ec7n",
   "filters.matchContacts_one": "{count} li\u00ean h\u1ec7 kh\u1edbp",
   "filters.matchContacts_other": "{count} li\u00ean h\u1ec7 kh\u1edbp",
   "filters.matchCompanies_one": "{count} c\u00f4ng ty kh\u1edbp",
   "filters.matchCompanies_other": "{count} c\u00f4ng ty kh\u1edbp",
   "filters.matchDeals_one": "{count} deal kh\u1edbp",
   "filters.matchDeals_other": "{count} deal kh\u1edbp",
-  "filters.noFilterYet":
-    "Th\u00eam \u0111i\u1ec1u ki\u1ec7n \u0111\u1ec3 xem k\u1ebft qu\u1ea3",
   "filters.countUnavailable":
     "Kh\u00f4ng l\u1ea5y \u0111\u01b0\u1ee3c s\u1ed1 l\u01b0\u1ee3ng",
   "filters.loadingVocabulary":
@@ -10796,8 +10948,9 @@ export const vi = {
   "filters.resultsCaption":
     "Trang \u0111\u1ea7u c\u1ee7a k\u1ebft qu\u1ea3 kh\u1edbp \u2014 \u0111\u1ee7 \u0111\u1ec3 ki\u1ec3m tra b\u1ed9 l\u1ecdc, kh\u00f4ng ph\u1ea3i to\u00e0n b\u1ed9.",
   "filters.noMatches":
-    "Kh\u00f4ng c\u00f3 b\u1ea3n ghi n\u00e0o kh\u1edbp b\u1ed9 l\u1ecdc n\u00e0y.",
-  "filters.loadView": "T\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
+    "Không có {records} nào khớp các điều kiện này. Hãy nới lỏng một điều kiện: chuyển một liên kết sang “hoặc”, hoặc xóa điều kiện cụ thể nhất.",
+  "filters.noMatchesLoosen":
+    "Không có {records} nào khớp bộ lọc này. Hãy nới lỏng hoặc xóa một điều kiện.",
   "filters.pickRecord": "Ch\u1ecdn m\u1ed9t",
   "filters.searchRecords": "Tìm kiếm công ty",
   "filters.typeToSearch": "Nhập để tìm",
@@ -10808,6 +10961,8 @@ export const vi = {
   "filters.removeRecord": "Xóa {record}",
   "filters.loadingRecords": "\u0110ang t\u1ea3i l\u1ef1a ch\u1ecdn\u2026",
   "filters.pickValue": "Ch\u1ecdn gi\u00e1 tr\u1ecb",
+  "filters.amountUnpriced":
+    "Số tiền này không có đơn vị tiền tệ xác định nên không thể hiển thị hoặc thay đổi.",
   "filters.exportCsv": "Xu\u1ea5t CSV",
   "filters.exportJson": "Xu\u1ea5t JSON",
 

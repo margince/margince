@@ -94,18 +94,29 @@ type Runner struct {
 // New builds a River client over the given pool. The pool must outlive the
 // runner (River holds it for the client's lifetime).
 func New(pool *pgxpool.Pool, cfg Config, log *slog.Logger) (*Runner, error) {
-	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
-		Queues:          cfg.Queues,
-		Workers:         cfg.Workers,
-		PeriodicJobs:    cfg.PeriodicJobs,
-		SoftStopTimeout: cfg.SoftStopTimeout,
-		Logger:          log,
-		TestOnly:        cfg.TestOnly,
-	})
+	client, err := river.NewClient(riverpgxv5.New(pool), riverConfig(cfg, log))
 	if err != nil {
 		return nil, fmt.Errorf("jobs: new client: %w", err)
 	}
 	return &Runner{client: client}, nil
+}
+
+// riverConfig is the worker client's River configuration.
+//
+// ReindexerSchedule is never: River's default rebuilds its job indexes at
+// midnight UTC, and that statement needs the index's owner. The worker connects
+// as the restricted application role, which holds no DDL, so every index would
+// answer a permission error each night. Rebuilding them is the owner role's job.
+func riverConfig(cfg Config, log *slog.Logger) *river.Config {
+	return &river.Config{
+		Queues:            cfg.Queues,
+		Workers:           cfg.Workers,
+		PeriodicJobs:      cfg.PeriodicJobs,
+		SoftStopTimeout:   cfg.SoftStopTimeout,
+		Logger:            log,
+		ReindexerSchedule: river.NeverSchedule(),
+		TestOnly:          cfg.TestOnly,
+	}
 }
 
 // NewInserter builds an insert-only Runner for a role that enqueues jobs

@@ -7,7 +7,6 @@ import type { MessageKey } from "./en";
 export const de = {
   "reporting.latestSnapshot": "Letzter Snapshot",
   "reporting.contextDetails": "Berichtsdetails",
-  "reporting.pipelineFilter": "Offene Pipeline · erwarteter Abschluss",
   "reporting.targetRemaining": "{amount} fehlen zum Ziel",
   "reporting.targetExceeded": "{amount} über dem Ziel",
   "reporting.targetPeriodSummary": "{actual} von {target} · {percent} %",
@@ -54,7 +53,6 @@ export const de = {
   "reporting.remaining": "Verbleibend",
   "reporting.ownerMetric": "{metric} nach Teammitglied",
   "reporting.quarterStart": "Wähle den ersten Monat des Geschäftsquartals.",
-  "reporting.additional": "Weitere Auswertungen",
   "reporting.settings": "Berichtseinstellungen",
   "reporting.execution.skipped": "Übersprungen",
   "reporting.execution.suspended": "Pausiert",
@@ -81,6 +79,7 @@ export const de = {
   "reporting.capturePending":
     "Stand vorgemerkt. Er erscheint hier, sobald er bereit ist.",
   "reporting.createReport": "Aus Performance erstellen",
+  "reporting.newCustomReport": "Neuer eigener Bericht",
   "reporting.observations_one": "Beobachtung: {count}",
   "reporting.observations_other": "Beobachtungen: {count}",
   "reporting.observationsUnavailable": "Stichprobengröße nicht verfügbar",
@@ -1553,6 +1552,12 @@ export const de = {
   "views.deleteAsk":
     "Das Löschen von {name} entfernt den Tab. Die Datensätze darin bleiben unverändert.",
   "views.deleteConfirm": "Ansicht löschen",
+  "views.renameTitle": "Ansicht umbenennen",
+  "views.renamed": "Ansicht umbenannt",
+  "views.deleteTitle": "Diese Ansicht löschen?",
+  "views.deleteBody":
+    "„{name}“ verschwindet aus Filter und Ansichten. Kein Datensatz ändert sich.",
+  "views.deleted": "Ansicht gelöscht: „{name}“",
   "list.viewMine": "Meine",
   "list.viewCustomers": "Kunden",
   "list.viewProspects": "Interessenten",
@@ -2853,10 +2858,11 @@ export const de = {
   "tagResult.contacts": "Kontakte",
   "tagResult.companies": "Unternehmen",
   "tagResult.deals": "Deals",
+  "tagResult.leads": "Leads",
   "tagResult.viewAll": "Alle {count} {kind} anzeigen",
   "tagResult.resultsTitle": "Datensätze mit diesem Tag",
   "tagResult.nothingCarries":
-    "Noch keine Datensätze mit diesem Tag. Vergib es bei einem Kontakt, einem Unternehmen oder einem Deal.",
+    "Noch keine Datensätze mit diesem Tag. Vergib es bei einem Kontakt, einem Unternehmen, einem Deal oder einem Lead.",
   "tagResult.loadingRows": "{kind} werden geladen…",
   "tagResult.noneLeft": "Keine Datensätze mehr mit diesem Tag",
   "tagResult.unnamed": "Ohne Namen",
@@ -4759,7 +4765,7 @@ export const de = {
   "analytics.reportDeals": "Offene Deals nach Phase",
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
-  "analytics.sectionPipeline": "Pipeline-Analyse",
+  "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Leistung",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",
@@ -4768,6 +4774,24 @@ export const de = {
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
   "analytics.sectionQuestions": "Eigene Berichte",
+  "analytics.sectionReports": "Berichte",
+  "analytics.setup": "Einrichtung",
+  "analytics.attention": "Braucht deine Aufmerksamkeit",
+  "analytics.attentionChecks_one": "1 Prüfung zur Einschätzung offen",
+  "analytics.attentionChecks_other": "{count} Prüfungen zur Einschätzung offen",
+  "analytics.attentionChecksDetail":
+    "Beantworte sie, bevor du die Einschätzung aktualisierst.",
+  "analytics.attentionChecksAction": "In Forecast prüfen",
+  "analytics.attentionUnpriced":
+    "{priced} von {eligible} offenen Deals sind bepreist",
+  "analytics.attentionUnpricedDetail":
+    "Ein Deal ohne Preis trägt nichts zum Forecast bei.",
+  "analytics.attentionUnpricedAction": "Forecast öffnen",
+  "analytics.attentionCoverage_one":
+    "1 Datenquelle wurde nicht vollständig geprüft",
+  "analytics.attentionCoverage_other":
+    "{count} Datenquellen wurden nicht vollständig geprüft",
+  "analytics.attentionCoverageAction": "Datenabdeckung ansehen",
   "analytics.reportDealsByStage": "Alle Deals nach Phase",
   "analytics.reportLeadsByStatus": "Leads nach Status",
   "analytics.reportActivitiesByKind": "Aktivitäten nach Art",
@@ -9469,6 +9493,10 @@ export const de = {
     "Wartet gerade: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
   "aiTasks.deferral.nowInteractive":
     "Schlägt gerade fehl: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
+  "aiTasks.deferral.degrades":
+    "Wenn jedes Modell dieser Aufgabe ausgefallen, ohne Guthaben oder mit abgelehntem Schlüssel ist, antwortet sie trotzdem ohne Modell aus ihren eigenen Fakten, statt zu scheitern.",
+  "aiTasks.deferral.nowDegrades":
+    "Antwortet gerade aus eigenen Fakten: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
   "aiTasks.deferral.skipping":
     "Ein gesperrter Anbieter wird übersprungen, und das nächste Modell antwortet.",
   "aiTasks.embeddingsEdit":
@@ -9675,6 +9703,8 @@ export const de = {
   "capturePurge.done": "Schließen",
   "capturePurge.failed":
     "Die Löschung wurde nicht abgeschlossen. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
+  "capturePurge.refused":
+    "Das Löschen wurde abgelehnt, daher wurde nichts vernichtet.",
   "capturePurge.wouldDestroy_one": "{count} Nachricht würde vernichtet.",
   "capturePurge.wouldDestroy_other": "{count} Nachrichten würden vernichtet.",
   "capturePurge.destroyed_one": "{count} Nachricht vernichtet.",
@@ -10178,6 +10208,7 @@ export const de = {
   "contact.action.call": "Anrufen",
   "contact.action.meetings": "Termine",
   "contact.action.workAsLead": "Als Lead bearbeiten",
+  "contact.action.openLead": "Lead öffnen",
   "contact.action.addTask": "Aufgabe hinzufügen",
   "contact.action.research": "Recherche",
 
@@ -10563,14 +10594,74 @@ export const de = {
   "provider.category.jobHistory": "frühere Rollen",
 
   // Der Filter-Baukasten (AC-filters-and-views-3/4).
-  "filters.joinAll": "Alle (UND)",
-  "filters.joinAny": "Mindestens eine (ODER)",
-  "filters.joinLabel": "Verknüpfungsmodus",
   "filters.removeGroup": "Gruppe entfernen",
   "filters.addGroup": "Gruppe hinzuf\u00fcgen",
   "filters.addClause": "Bedingung hinzuf\u00fcgen",
-  "filters.emptyGroup":
-    "Noch keine Bedingungen. Eine leere Gruppe trifft auf nichts zu; füge eine Bedingung hinzu.",
+  "filters.addToGroup": "Bedingung zur Gruppe hinzufügen",
+  "filters.find": "{records} finden, bei denen…",
+  "filters.hint.start":
+    "Füge eine Bedingung hinzu, um zu sehen, wie viele {records} passen.",
+  "filters.hint.finish":
+    "Vervollständige die Bedingung, um zu sehen, wie viele {records} passen.",
+  "filters.hint.update":
+    "Vervollständige die Bedingung, um die Anzahl zu aktualisieren.",
+  "filters.startOr": "oder",
+  "filters.start.buildTitle": "Bedingung für Bedingung aufbauen",
+  "filters.start.buildBody":
+    "Wähle ein Feld, wie es verglichen wird, und einen Wert. Füge nach und nach weitere Bedingungen hinzu.",
+  "filters.describeChanges": "Änderungen in eigenen Worten beschreiben",
+  "filters.connector.matchAll":
+    "{word}: Alle davon müssen zutreffen. Drücke, damit eine reicht.",
+  "filters.connector.matchAny":
+    "{word}: Eine davon muss zutreffen. Drücke, damit alle zutreffen müssen.",
+  "filters.group.all": "Alle davon",
+  "filters.group.any": "Mindestens eine davon",
+  "filters.rowsMore": "Mehr zu diesen Bedingungen",
+  "filters.groupMore": "Mehr zu dieser Gruppe",
+  "filters.proposed": "Vorgeschlagen",
+  "filters.switch.title": "Zu {records} wechseln?",
+  "filters.switch.body.contacts":
+    "Die Bedingungen werden gelöscht, weil sie Kontaktfelder nennen.",
+  "filters.switch.body.companies":
+    "Die Bedingungen werden gelöscht, weil sie Unternehmensfelder nennen.",
+  "filters.switch.body.deals":
+    "Die Bedingungen werden gelöscht, weil sie Deal-Felder nennen.",
+  "filters.switch.body.leads":
+    "Die Bedingungen werden gelöscht, weil sie Lead-Felder nennen.",
+  "filters.switch.confirm": "Wechseln und löschen",
+  "filters.showMore": "Bis zu 100 anzeigen",
+  "filters.save": "Speichern",
+  "filters.unsavedFilter": "Nicht gespeicherter Filter",
+  "filters.footMore": "Mehr zu diesem Filter",
+  "filters.exporting": "Wird exportiert…",
+  "filters.saveAsNew": "Als neue Ansicht speichern",
+  "filters.saveTitle": "Diesen Filter speichern",
+  "filters.namePlaceholder": "Deutsche {records}, seit 45 Tagen ruhig",
+  "filters.keepAs": "Speichern als",
+  "filters.keepViewHint":
+    "Nur du findest sie. Bei jedem Öffnen wird neu gezählt.",
+  "filters.keepListHint":
+    "Wird alle 15 Minuten geprüft und hält fest, wer hinzukommt und wer geht. Wähle, wer sie finden kann.",
+  "filters.purpose": "Zweck (optional)",
+  "filters.viewSaved": "Ansicht gespeichert",
+  "filters.listCreated": "Live-Liste „{name}“ erstellt",
+  "filters.view.facts": "Gespeicherte Ansicht · {records} · Privat",
+  "filters.listFacts": "Live-Liste · {records} · {who}",
+  "filters.view.saveAsList": "Als Live-Liste speichern",
+  "filters.editConditions": "Bedingungen bearbeiten",
+  "filters.done": "Fertig",
+  "filters.noChanges": "Noch keine Änderungen",
+  "filters.unsavedChanges": "Nicht gespeicherte Änderungen",
+  "filters.discardChanges": "Änderungen verwerfen",
+  "filters.saveChanges": "Änderungen speichern",
+  "filters.changesSaved": "Änderungen gespeichert",
+  "filters.view.conflict":
+    "Diese Ansicht hat sich geändert, seit du sie geöffnet hast. Lade sie neu, um die aktuelle Fassung zu sehen.",
+  "filters.view.reload": "Ansicht neu laden",
+  "filters.view.gone":
+    "Diese gespeicherte Ansicht wurde gelöscht oder ist nicht auffindbar.",
+  "filters.backToLibrary": "Zurück zu Filter und Ansichten",
+  "filters.emptyGroup": "Eine leere Gruppe trifft auf nichts zu.",
   "filters.field": "Feld",
   "filters.field.amount": "Umgerechneter Betrag",
   "filters.field.city": "Stadt",
@@ -10616,6 +10707,42 @@ export const de = {
   "filters.op.atLeast": "ist mindestens",
   "filters.op.lessThan": "ist kleiner als",
   "filters.op.atMost": "ist h\u00f6chstens",
+  "filters.join.and": "und",
+  "filters.join.or": "oder",
+  "filters.sentence.clause": "{field} {op} {value}",
+  "filters.sentence.clauseBare": "{field} {op}",
+  "filters.sentence.group": "({clauses})",
+  "filters.sentence.pendingValue": "…",
+  "filters.sentence.emptyGroup": "eine leere Gruppe",
+  "filters.sentence.retiredField": "ein stillgelegtes Feld",
+  "filters.sentence.inCounted": "ist in der Auswahl:",
+  "filters.sentence.withinLast_one": "liegt höchstens einen Tag zurück",
+  "filters.sentence.withinLast_other": "liegt höchstens {count} Tage zurück",
+  "filters.sentence.moreThanAgo": "liegt mehr als",
+  "filters.sentence.atLeastAgo": "liegt mindestens",
+  "filters.sentence.daysAgo_one": "{count} Tag zurück",
+  "filters.sentence.daysAgo_other": "{count} Tage zurück",
+  "filters.sentence.conditions_one": "{count} Bedingung",
+  "filters.sentence.conditions_other": "{count} Bedingungen",
+  "filters.sentence.ref.stage_one": "{count} Phase",
+  "filters.sentence.ref.stage_other": "{count} Phasen",
+  "filters.sentence.ref.pipeline_one": "{count} Pipeline",
+  "filters.sentence.ref.pipeline_other": "{count} Pipelines",
+  "filters.sentence.ref.app_user_one": "{count} Teammitglied",
+  "filters.sentence.ref.app_user_other": "{count} Teammitglieder",
+  "filters.sentence.ref.team_one": "{count} Team",
+  "filters.sentence.ref.team_other": "{count} Teams",
+  "filters.sentence.ref.company_one": "{count} Unternehmen",
+  "filters.sentence.ref.company_other": "{count} Unternehmen",
+  "filters.sentence.ref.tag_one": "{count} Tag",
+  "filters.sentence.ref.tag_other": "{count} Tags",
+  "filters.sentence.ref.retiredTag_one": "{count} archiviertes Tag",
+  "filters.sentence.ref.retiredTag_other": "{count} archivierte Tags",
+  "filters.sentence.someRetired": "{tags}, davon {retired} archiviert",
+  "filters.sentence.retiredTagNote":
+    "Für Filter trägt kein Datensatz ein archiviertes Tag.",
+  "filters.sentence.ref.project_one": "{count} Projekt",
+  "filters.sentence.ref.project_other": "{count} Projekte",
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "Passender Lead: {count}",
   "filters.matchLeads_other": "Passende Leads: {count}",
@@ -10623,26 +10750,18 @@ export const de = {
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
   "filters.date.daysAgoCount": "{field}: Tage vor heute",
-  "filters.saveList": "Als Live-Liste speichern",
-  "filters.saveListTitle": "Diesen Filter als Live-Liste speichern",
   "filters.saveListConfirm": "Liste speichern",
-  "filters.propose.label": "Beschreibe die Liste in eigenen Worten",
+  "filters.propose.label": "Beschreibe die {records}, die du suchst",
   "filters.propose.hint":
-    "Margince schlägt Bedingungen für den Filter darunter vor. Gespeichert wird erst, wenn du auf Speichern drückst.",
+    "Vorgeschlagene Bedingungen werden zur Prüfung angezeigt. Gespeichert wird erst, wenn du speicherst.",
   "filters.propose.placeholder":
-    "Unternehmen in Deutschland ohne Aktivität in den letzten 45 Tagen",
-  "filters.propose.submit": "Filter vorschlagen",
+    "In Deutschland, ohne Aktivität in den letzten 45 Tagen",
+  "filters.propose.submit": "Bedingungen vorschlagen",
   "filters.propose.busy": "Deine Beschreibung wird gelesen",
   "filters.propose.noModel":
     "Filter aus eigenen Worten brauchen ein konfiguriertes KI-Modell. Du kannst den Filter weiterhin von Hand bauen.",
   "filters.propose.unreadable":
-    "Der Vorschlag ließ sich nicht lesen. Beschreibe die Liste anders.",
-  "filters.propose.readyTitle": "Ein Filter ist bereit",
-  "filters.propose.readyBody":
-    "Dein Filter hat schon Bedingungen. Ersetze sie durch den Vorschlag oder füge den Vorschlag hinzu.",
-  "filters.propose.replace": "Aktuellen Filter ersetzen",
-  "filters.propose.add": "Zum aktuellen Filter hinzufügen",
-  "filters.propose.discard": "Vorschlag verwerfen",
+    "Der Vorschlag ließ sich nicht lesen. Versuche es mit einer anderen Beschreibung.",
   "filters.propose.unusedTitle": "Nicht verwendet",
   "filters.propose.unusedDismiss": "Ausblenden",
   "filters.propose.unusedItem": "„{phrase}“: {reason}",
@@ -10654,11 +10773,20 @@ export const de = {
     "{field} hat Optionen, die du nicht sehen kannst, deshalb ließ sich der Wert nicht prüfen.",
   "filters.propose.reason.tooMany":
     "Der Filter enthält schon so viele Bedingungen, wie er fassen kann.",
+  "filters.proposal.title_one":
+    "Margince hat {count} Bedingung aus „{text}“ vorgeschlagen.",
+  "filters.proposal.title_other":
+    "Margince hat {count} Bedingungen aus „{text}“ vorgeschlagen.",
+  "filters.proposal.body":
+    "Gestrichelte Zeilen sind Vorschläge: Ändere, was du willst, und eine Zeile, die du änderst, gehört dir.",
+  "filters.proposal.keepAll": "Alle behalten",
+  "filters.proposal.replaceMine": "Meine Bedingungen ersetzen",
+  "filters.foot.proposed_one":
+    "{count} vorgeschlagene Bedingung in diesem Filter. Beim Speichern bleibt sie erhalten.",
+  "filters.foot.proposed_other":
+    "{count} vorgeschlagene Bedingungen in diesem Filter. Beim Speichern bleiben sie erhalten.",
   "lists.page": "Liste",
-  "lists.section.label": "Anzeigen",
-  "lists.section.views": "Meine Ansichten",
-  "lists.section.lists": "Geteilte Ansichten",
-  "lists.section.build": "Erstellen",
+  "lists.loading": "Liste wird geladen",
   "lists.kind.live": "Live-Liste",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Kontakte",
@@ -10681,19 +10809,9 @@ export const de = {
   "lists.health.ownerless": "Niemand verantwortlich",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
   "lists.health.retiredField": "Nutzt ein stillgelegtes Feld",
-  "lists.library.title": "Geteilte Ansichten",
-  "lists.library.search": "Listen durchsuchen",
-  "lists.library.all": "Alle",
-  "lists.library.kind": "Listentyp",
-  "lists.library.empty":
-    "Noch keine geteilten Listen. Speichere einen Filter als Live-Liste oder lege eine Shortlist an.",
-  "lists.library.loading": "Listen werden geladen",
   "lists.col.name": "Name",
   "lists.col.kind": "Typ",
   "lists.col.recordType": "Datens\u00e4tze",
-  "lists.col.count": "F\u00fcr dich sichtbar",
-  "lists.col.steward": "Verantwortlich",
-  "lists.col.sharing": "Geteilt mit",
   "lists.noSteward": "Niemand",
   "lists.newShortlist": "Neue Shortlist",
   "lists.newShortlistTitle": "Shortlist anlegen",
@@ -10713,6 +10831,7 @@ export const de = {
   "lists.unnamed": "Ohne Namen",
   "lists.head.facts":
     "{type} \u00b7 {visible} f\u00fcr dich sichtbar \u00b7 wer sie finden kann: {sharing} \u00b7 verantwortlich: {steward}",
+  "lists.filterLine": "Filter: {records}, für die gilt: {sentence}",
   "lists.head.exported_one": "{count}-mal exportiert, zuletzt am {when}",
   "lists.head.exported_other": "{count}-mal exportiert, zuletzt am {when}",
   "lists.archived.title": "Diese Liste ist archiviert",
@@ -10798,12 +10917,6 @@ export const de = {
   "lists.add": "Hinzuf\u00fcgen",
   "lists.shortlist": "Shortlist",
   "lists.pickShortlist": "Shortlist w\u00e4hlen",
-  "lists.views.empty":
-    "Noch keine Ansichten. Erstelle einen Filter und klicke auf \u201eAnsicht speichern\u201c.",
-  "lists.views.loading": "Gespeicherte Filter werden geladen",
-  "lists.myLists.title": "Meine Listen",
-  "lists.myLists.empty":
-    "Keine privaten Listen. Hier steht jede Liste, die nur du findest. Teilst du sie, wandert sie zu den geteilten Ansichten.",
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label":
     "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
@@ -10826,9 +10939,12 @@ export const de = {
   "lists.history.liveNote":
     "Die Prüfung läuft alle 15 Minuten und nimmt sich zuerst die Listen vor, die am längsten nicht geprüft wurden. Bei sehr vielen Listen kann eine Liste daher länger warten; „Zuletzt geprüft“ zeigt, wann es war. Wer hinzukam oder wegfiel, wird zum Zeitpunkt der Prüfung festgehalten, die die Änderung bemerkt hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
   "lists.editFilter": "Filter bearbeiten",
+  "lists.filterCannotOpen":
+    "Der Filter dieser Liste lässt sich hier nicht öffnen.",
+  "lists.savedTo": "In „{name}“ gespeichert",
   "lists.editingTitle": "Du bearbeitest den Filter von {name}",
   "lists.editingBody":
-    "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. „Als Live-Liste speichern“ legt stattdessen eine neue Liste an.",
+    "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. Um stattdessen eine Kopie zu behalten, speichere den Filter als neue Ansicht.",
   "lists.saveFilterTo": "In {name} speichern",
   "lists.saveFilterTitle": "Filter von {name} ändern?",
   "lists.saveFilterBody":
@@ -10862,28 +10978,78 @@ export const de = {
   // Die Oberfl\u00e4che \u201eFilter & Ansichten\u201c.
   "filters.title": "Filter und Ansichten",
   "filters.subtitle":
-    "Filter erstellen, Treffer in der Vorschau prüfen und als Ansicht speichern.",
+    "Jede gespeicherte Ansicht und Liste, die du nutzen kannst, und der Ort, an dem ein neuer Filter beginnt.",
+  "filters.library.loading": "Ansichten und Listen werden geladen",
+  "filters.library.search": "Ansichten und Listen durchsuchen",
+  "filters.library.all": "Alle",
+  "filters.library.newFilter": "Neuer Filter",
+  "filters.new.contacts": "Neuer Kontaktfilter",
+  "filters.new.companies": "Neuer Unternehmensfilter",
+  "filters.new.deals": "Neuer Deal-Filter",
+  "filters.new.leads": "Neuer Lead-Filter",
+  "filters.library.whichRecords": "Welche Datensätze filtern?",
+  "filters.library.mine": "Privat",
+  "filters.library.shared": "Geteilt",
+  "filters.library.views": "Gespeicherte Ansichten",
+  "filters.library.kindView": "Gespeicherte Ansicht",
+  "filters.library.rowMore": "Weitere Aktionen für {name}",
+  "filters.library.records.contact_one": "{count} Kontakt",
+  "filters.library.records.contact_other": "{count} Kontakte",
+  "filters.library.records.company_one": "{count} Unternehmen",
+  "filters.library.records.company_other": "{count} Unternehmen",
+  "filters.library.records.deal_one": "{count} Deal",
+  "filters.library.records.deal_other": "{count} Deals",
+  "filters.library.records.lead_one": "{count} Lead",
+  "filters.library.records.lead_other": "{count} Leads",
+  "filters.library.records.project_one": "{count} Projekt",
+  "filters.library.records.project_other": "{count} Projekte",
+  "filters.library.recordsSeen": "{records}, die du sehen kannst",
+  "filters.library.mineEmpty": "Hier stehen die Ansichten, die du speicherst.",
+  "filters.library.sharedEmpty":
+    "Noch keine geteilten Listen. Hier steht jede Liste, die mit einem Team oder allen geteilt ist.",
+  "filters.library.noHits": "Keine Ansicht und keine Liste passt zu „{q}“.",
+  "filters.library.clearSearch": "Suche leeren",
+  "filters.library.noTypeHits.contacts":
+    "Keine Ansichten oder Listen für Kontakte.",
+  "filters.library.noTypeHits.companies":
+    "Keine Ansichten oder Listen für Unternehmen.",
+  "filters.library.noTypeHits.deals": "Keine Ansichten oder Listen für Deals.",
+  "filters.library.noTypeHits.leads": "Keine Ansichten oder Listen für Leads.",
+  "filters.library.noTypeHits.projects": "Keine Listen für Projekte.",
+  "filters.library.truncated":
+    "Die ersten {limit} werden angezeigt. Suche, um die Liste einzugrenzen.",
+  "filters.library.listsFailed": "Listen wurden nicht geladen.",
+  "filters.library.viewsFailed": "Gespeicherte Ansichten wurden nicht geladen.",
+  "filters.library.showArchived": "Archivierte Listen anzeigen",
+  "filters.library.hideArchived": "Archivierte Listen ausblenden",
+  "filters.library.firstRunTitle":
+    "Noch keine gespeicherten Ansichten oder Listen",
+  "filters.library.firstRunBody":
+    "Ein Filter findet Datensätze über ihre Felder. Speichere ihn als Ansicht für dich oder als Live-Liste, die andere finden.",
+  "filters.library.viewsEmptyTitle": "Noch keine gespeicherten Ansichten",
+  "filters.library.viewsEmptyBody":
+    "Ein Filter findet Datensätze über ihre Felder. Speichere ihn als Ansicht, um ihn wieder zu öffnen.",
   "filters.objectLabel": "Datensatztyp",
   "filters.tab.contacts": "Kontakte",
   "filters.tab.companies": "Unternehmen",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
-  "filters.dynamic": "Dynamisch: wird bei jedem Ereignis aktualisiert",
   "filters.matchContacts_one": "Passender Kontakt: {count}",
   "filters.matchContacts_other": "Passende Kontakte: {count}",
   "filters.matchCompanies_one": "Passendes Unternehmen: {count}",
   "filters.matchCompanies_other": "Passende Unternehmen: {count}",
   "filters.matchDeals_one": "Passender Deal: {count}",
   "filters.matchDeals_other": "Passende Deals: {count}",
-  "filters.noFilterYet": "Bedingung hinzufügen, um Treffer anzuzeigen",
   "filters.countUnavailable": "Anzahl nicht verf\u00fcgbar",
   "filters.loadingVocabulary": "Felder werden geladen…",
   "filters.noFields": "Keine filterbaren Felder f\u00fcr diesen Datensatztyp.",
   "filters.resultsTitle": "Passende Datens\u00e4tze",
   "filters.resultsCaption":
     "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
-  "filters.noMatches": "Keine Datensätze passen zu diesem Filter.",
-  "filters.loadView": "Gespeicherten Filter laden",
+  "filters.noMatches":
+    "Keine {records} passen zu diesen Bedingungen. Lockere eine: Stell eine Verknüpfung auf „oder“ um, oder entferne die genaueste Bedingung.",
+  "filters.noMatchesLoosen":
+    "Keine {records} passen zu diesem Filter. Lockere oder entferne eine Bedingung.",
   "filters.pickRecord": "Datensatz auswählen",
   "filters.searchRecords": "Unternehmen durchsuchen",
   "filters.typeToSearch": "Zum Suchen tippen",
@@ -10894,6 +11060,8 @@ export const de = {
   "filters.removeRecord": "{record} entfernen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert auswählen",
+  "filters.amountUnpriced":
+    "Dieser Betrag hat keine bekannte Währung und kann deshalb weder angezeigt noch geändert werden.",
   "filters.exportCsv": "CSV exportieren",
   "filters.exportJson": "JSON exportieren",
 

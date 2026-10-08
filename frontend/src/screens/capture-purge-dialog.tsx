@@ -6,7 +6,7 @@ import { Heading } from "../design-system/heading";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { usePurgeExclusion } from "./capture-exclusions.queries";
-import { problemMessageOf } from "./common";
+import { problemCodeOf, problemMessageOf } from "./common";
 
 // Destroying the mail a rule already matched, and saying what that did.
 //
@@ -68,7 +68,13 @@ export function PurgeDialog({
           <Callout
             tone="danger"
             kind="outcome"
-            title={t("capturePurge.failed")}
+            title={t(
+              // A permission refusal is answered before the cascade starts, so
+              // nothing was destroyed; any other failure may have come halfway.
+              problemCodeOf(purge.error) === "permission_denied"
+                ? "capturePurge.refused"
+                : "capturePurge.failed",
+            )}
           >
             {problemMessageOf(purge.error, t)}
           </Callout>

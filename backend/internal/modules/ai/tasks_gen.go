@@ -178,7 +178,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "bb16b18f9270e3f587916f05013bf4d4a17a8c64f09f30b7cd8d32b06c2025e9"
+const TaskContractHash = "f4e62d028c83b01a75553ee601d218edd7785491c89cdc489e824dca68c25dd4"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -299,6 +299,18 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskVoiceBuild:                    ExecutionModeBackground,
 	TaskWeeklyLearnings:               ExecutionModeBackground,
 	TaskWeeklyReview:                  ExecutionModeBackground,
+}
+
+// taskDegradesOnOutage lists the interactive tasks that answer from the record's
+// own facts once no model can, compiled from on_outage. Every other interactive
+// task fails fast, and a background task waits.
+var taskDegradesOnOutage = map[Task]bool{
+	TaskCorpusAsk:  true,
+	TaskDealHealth: true,
+	TaskDraftReply: true,
+	TaskGrowthFit:  true,
+	TaskOfferDraft: true,
+	TaskSummarize:  true,
 }
 
 // knownTiers is the routing config's tier-name validation set: the

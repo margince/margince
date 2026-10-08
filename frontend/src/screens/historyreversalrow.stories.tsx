@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
 import type { PairRow } from "./historyreversal";
 import { ReversalPairRow } from "./historyreversalrow";
-import { StoryProviders } from "./story-utils";
+import { expectNameAndValueApart, StoryProviders } from "./story-utils";
 
 // A reversal and the change it reverses, drawn as ONE line the reader can
 // open. history.stories.tsx exercises this shape through the whole panel;
@@ -88,7 +88,10 @@ type Story = StoryObj<typeof Row>;
 
 // Closed: one line, the field's settled value, and the net caption, neither
 // audit row shown yet.
-export const Collapsed: Story = { render: () => <Row row={pair} /> };
+export const Collapsed: Story = {
+  render: () => <Row row={pair} />,
+  play: ({ canvasElement }) => expectNameAndValueApart(canvasElement),
+};
 
 // The same closed row in dark: the net caption and the settled value sit on
 // the panel's own tint, so this is the story that shows whether either
@@ -96,6 +99,30 @@ export const Collapsed: Story = { render: () => <Row row={pair} /> };
 export const CollapsedDark: Story = {
   ...Collapsed,
   globals: { theme: "dark" },
+};
+
+// A reversal that put back only part of what it reversed: the collapsed face
+// shows the movement still standing as a diff, under its own caption.
+export const Residual: Story = {
+  render: () => (
+    <Row
+      row={{
+        ...pair,
+        reversed: {
+          ...reversed,
+          before: { amount_minor: 2500000, name: "Globex" },
+          after: { amount_minor: 4150000, name: "Globex Renewal" },
+        },
+        reversal: {
+          ...reversal,
+          before: { name: "Globex Renewal" },
+          after: { name: "Globex" },
+        },
+        whollyUndone: false,
+      }}
+    />
+  ),
+  play: ({ canvasElement }) => expectNameAndValueApart(canvasElement),
 };
 
 // Opened: the two member rows it collapsed, each the ordinary

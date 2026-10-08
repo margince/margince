@@ -46,7 +46,7 @@ Also called: restore a user, re-enable an account.
 
 ### A colleague left: who gets their deals, and how do I reassign their records?
 When a colleague leaves and is deactivated in Margince, their deals, leads, contacts and companies stay owned by them: nothing is reassigned automatically. Hand the work over before you deactivate them.
-1. List what they own: **Filters and views** → **Add clause** → **Owner**.
+1. List what they own: **Filters and views** → **New filter** → **Contacts** → **Add condition** → **Owner**.
 2. **Deals** and **Leads**: tick the rows on the table and press **Assign** in the bulk bar; see [Lists, filters and views](lists-filters-and-views.md).
 3. **Contacts**, **Companies** and **Projects**, one at a time: **Owner** in **Details**, or **More actions** → **Assign to a colleague** on a project.
 Also called: offboarding, handover, a rep left, transfer a colleague's accounts.

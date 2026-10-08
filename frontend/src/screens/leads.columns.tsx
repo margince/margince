@@ -16,7 +16,12 @@ import {
 } from "./leadpresentation";
 import { type LeadSource, sourceLabelFor } from "./leadsources";
 import { terminalBadge } from "./leadstanding";
-import { createdColumn, lastActivityColumn, ownerColumn } from "./recordlist";
+import {
+  createdColumn,
+  lastActivityColumn,
+  ownerColumn,
+  tagsColumn,
+} from "./recordlist";
 
 type Lead = components["schemas"]["Lead"];
 type Translate = ReturnType<typeof useT>;
@@ -117,6 +122,7 @@ export function leadColumns(
 
       cell: (lead: Lead) => <span>{sourceLabelFor(lead, sources, t)}</span>,
     },
+    tagsColumn<Lead>(t),
     ownerColumn<Lead>(t),
     createdColumn<Lead>(t, locale, recordZone),
   ];

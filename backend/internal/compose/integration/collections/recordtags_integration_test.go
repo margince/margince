@@ -210,12 +210,12 @@ func TestRecordTagsCarriesArchivedWordsMarked(t *testing.T) {
 	}
 }
 
-// The three advertised types only. `taggable` admits lead and project, and
-// answering for them here would ship a surface no screen offers.
+// The advertised types only. `taggable` admits project too, and answering for
+// it here would ship a surface no screen offers.
 func TestRecordTagsRefusesATypeItDoesNotServe(t *testing.T) {
 	e := tagEnv(t)
 	var problem integration.AnyMap
-	if status := e.Call(t, "GET", "/v1/records/lead/"+ids.NewV7().String()+"/tags", nil, nil, &problem); status != http.StatusUnprocessableEntity {
-		t.Fatalf("reading a lead's tags: status=%d body=%v, want 422", status, problem)
+	if status := e.Call(t, "GET", "/v1/records/project/"+ids.NewV7().String()+"/tags", nil, nil, &problem); status != http.StatusUnprocessableEntity {
+		t.Fatalf("reading a project's tags: status=%d body=%v, want 422", status, problem)
 	}
 }

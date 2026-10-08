@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
+import { replaceDial, useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { type ISODate, isISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
-import { Select } from "../design-system/select";
 import { formatDateTime } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { AnalyticsAttention } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
 import { problemCodeOf, QueryGate, throwProblem } from "./common";
 import { ReportingCharts } from "./reporting.charts";
@@ -31,7 +31,8 @@ type Catalog = components["schemas"]["ReportingCatalog"];
 
 export function ReportingOverview({
   scope,
-}: Readonly<{ scope: AnalyticsScope }>) {
+  scopeControl,
+}: Readonly<{ scope: AnalyticsScope; scopeControl?: ReactNode }>) {
   const t = useT();
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
@@ -59,6 +60,7 @@ export function ReportingOverview({
               {(pipelines) => (
                 <OverviewBody
                   scope={scope}
+                  scopeControl={scopeControl}
                   catalog={catalog}
                   template={setup.definition.template}
                   pipelines={pipelines.data}
@@ -77,28 +79,23 @@ function useOverviewFilters(
   pipelines: readonly components["schemas"]["Pipeline"][],
 ) {
   const [params] = useUrlParams();
-  const setParam = (key: string, value: string) => {
-    const next = new Map(currentParams());
-    next.set(key, value);
-    replaceParams(next);
-  };
   const template =
     params.get("view") === "sdr"
       ? "sdr"
       : params.get("view") === "sales"
         ? "sales"
         : defaultTemplate;
-  const setTemplate = (value: string) => setParam("view", value);
+  const setTemplate = (value: string) => replaceDial("view", value);
   const from = params.get("from") ?? "";
   const through = params.get("through") ?? "";
   const start: ISODate | "" = isISODate(from) ? from : "";
   const end: ISODate | "" = isISODate(through) ? through : "";
-  const setStart = (value: string) => setParam("from", value);
-  const setEnd = (value: string) => setParam("through", value);
+  const setStart = (value: string) => replaceDial("from", value);
+  const setEnd = (value: string) => replaceDial("through", value);
   const period =
     REPORTING_PERIODS.find((value) => value === params.get("period")) ??
     "this_month";
-  const setPeriod = (value: string) => setParam("period", value);
+  const setPeriod = (value: string) => replaceDial("period", value);
   const defaultPipeline =
     pipelines.find((pipeline) => pipeline.is_default)?.id ??
     pipelines[0]?.id ??
@@ -108,13 +105,14 @@ function useOverviewFilters(
       ? ""
       : (pipelines.find((pipeline) => pipeline.id === params.get("pipeline"))
           ?.id ?? defaultPipeline);
-  const setPipelineId = (value: string) => setParam("pipeline", value || "all");
+  const setPipelineId = (value: string) =>
+    replaceDial("pipeline", value || "all");
   const targetBasis: ReportingSelection["target_basis"] =
     period === "this_quarter" ? "fiscal_quarter" : "month";
-  const setTargetBasis = (value: string) => setParam("target", value);
+  const setTargetBasis = (value: string) => replaceDial("target", value);
   const closeWindow: ReportingSelection["close_window"] =
     params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
-  const setCloseWindow = (value: string) => setParam("close", value);
+  const setCloseWindow = (value: string) => replaceDial("close", value);
   return {
     template,
     setTemplate,
@@ -135,11 +133,13 @@ function useOverviewFilters(
 
 function OverviewBody({
   scope,
+  scopeControl,
   catalog,
   template: defaultTemplate,
   pipelines,
 }: Readonly<{
   scope: AnalyticsScope;
+  scopeControl?: ReactNode;
   catalog: Catalog;
   template: "sales" | "sdr";
   pipelines: readonly components["schemas"]["Pipeline"][];
@@ -225,6 +225,7 @@ function OverviewBody({
   return (
     <>
       <div className="reporting-controlbar">
+        {scopeControl}
         <SegmentedControl
           label={t("reporting.view")}
           options={["sales", "sdr"]}
@@ -238,7 +239,7 @@ function OverviewBody({
         <ReportingFilters
           selection={selection}
           showScope={false}
-          showCloseWindow={false}
+          showCloseWindow={template === "sales"}
           showPipeline={template === "sales"}
           showTargets={false}
           dates={{
@@ -280,6 +281,9 @@ function OverviewBody({
       </div>
       {!validPeriod && <p role="status">{t("reporting.chooseDates")}</p>}
       {invalidSelection && <ErrorLine error={query.error} />}
+      {/* Its sources are its own, so a failed or unasked evaluation does not
+          take the list down with it. */}
+      {(!validPeriod || query.isError) && <AnalyticsAttention scope={scope} />}
       {validPeriod && !invalidSelection && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
@@ -298,31 +302,8 @@ function OverviewBody({
               )}
               <ReportingCharts
                 evaluation={evaluation}
+                afterSummary={<AnalyticsAttention scope={scope} />}
                 onEvidence={setEvidence}
-                pipelineControls={
-                  template === "sales" ? (
-                    <Select
-                      aria-label={t("reporting.pipelineFilter")}
-                      value={closeWindow}
-                      options={[
-                        { value: "all_open", label: t("reporting.all_open") },
-                        {
-                          value: "fiscal_quarter",
-                          label: t("reporting.fiscal_quarter"),
-                        },
-                      ]}
-                      onChange={(value) => {
-                        if (
-                          value === "all_open" ||
-                          value === "fiscal_quarter"
-                        ) {
-                          setCloseWindow(value);
-                          setEvidence(null);
-                        }
-                      }}
-                    />
-                  ) : undefined
-                }
               />
               {evidence && (
                 <ReportingEvidenceDrawer

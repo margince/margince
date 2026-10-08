@@ -314,6 +314,11 @@ func fillLegalTrioFromCensus(fields []evidencedField, entities []corpusLegalEnti
 		return fields
 	}
 	entity := entities[0]
+	// Kept in the census for the abstention count, but with its evidence block
+	// refused there is nothing to cite, and the profile refuses a field without.
+	if strings.TrimSpace(entity.EvidenceSnippet) == "" {
+		return fields
+	}
 	// Only a legal page speaks for legal identity — the same authority test
 	// applyLegalGate applies, so a census sighting from anywhere else cannot
 	// enter through this door either.

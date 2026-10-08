@@ -4358,6 +4358,9 @@
           "deals": {
             "type": "integer"
           },
+          "leads": {
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },
@@ -4370,6 +4373,7 @@
           "companies",
           "contacts",
           "deals",
+          "leads",
           "name",
           "tag_id"
         ]

@@ -64,6 +64,7 @@ test.describe("Analytics sections", () => {
       "analytics.sectionForecast",
       "analytics.sectionPipeline",
       "analytics.sectionPerformance",
+      "analytics.sectionDelivery",
     ] as const) {
       await expect(
         strip.getByRole("button", { name: t(key) }),
@@ -78,14 +79,7 @@ test.describe("Analytics sections", () => {
       ["analytics.sectionPerformance", "reporting.bookings_trend"],
       ["analytics.sectionDelivery", "analytics.reportProjectsByPhase"],
     ] as const) {
-      if (key === "analytics.sectionDelivery") {
-        await page
-          .getByRole("button", { name: t("reporting.additional") })
-          .click();
-        await page.getByRole("button", { name: t(key), exact: true }).click();
-      } else {
-        await strip.getByRole("button", { name: t(key) }).click();
-      }
+      await strip.getByRole("button", { name: t(key), exact: true }).click();
       await expect(
         page.getByText(t(expected)).first(),
         `pressing ${t(key)} drew no ${t(expected)} — the control routes nowhere`,

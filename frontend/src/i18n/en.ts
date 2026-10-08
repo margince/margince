@@ -5,7 +5,6 @@
 export const en = {
   "reporting.latestSnapshot": "Latest snapshot",
   "reporting.contextDetails": "Reporting details",
-  "reporting.pipelineFilter": "Open pipeline · expected close",
   "reporting.targetRemaining": "{amount} remaining",
   "reporting.targetExceeded": "{amount} above target",
   "reporting.targetPeriodSummary": "{actual} of {target} · {percent}%",
@@ -52,7 +51,6 @@ export const en = {
   "reporting.remaining": "Remaining",
   "reporting.ownerMetric": "{metric} by team member",
   "reporting.quarterStart": "Choose the first month of the fiscal quarter.",
-  "reporting.additional": "More analysis",
   "reporting.settings": "Reporting settings",
   "reporting.execution.skipped": "Skipped",
   "reporting.execution.suspended": "Paused",
@@ -79,6 +77,7 @@ export const en = {
   "reporting.capturePending":
     "Snapshot queued. It will appear here when ready.",
   "reporting.createReport": "Create from Performance",
+  "reporting.newCustomReport": "New custom report",
   "reporting.observations_one": "Observation: {count}",
   "reporting.observations_other": "Observations: {count}",
   "reporting.observationsUnavailable": "Sample size unavailable",
@@ -1585,6 +1584,11 @@ export const en = {
   "views.deleteAsk":
     "Deleting {name} removes its tab. The records it lists are not changed.",
   "views.deleteConfirm": "Delete view",
+  "views.renameTitle": "Rename view",
+  "views.renamed": "View renamed",
+  "views.deleteTitle": "Delete this view?",
+  "views.deleteBody": "“{name}” leaves Filters and views. No records change.",
+  "views.deleted": "View deleted: “{name}”",
   "list.viewMine": "Mine",
   "list.viewCustomers": "Customers",
   "list.viewProspects": "Prospects",
@@ -2913,10 +2917,11 @@ export const en = {
   "tagResult.contacts": "Contacts",
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
+  "tagResult.leads": "Leads",
   "tagResult.viewAll": "View all {count} {kind}",
   "tagResult.resultsTitle": "Records with this tag",
   "tagResult.nothingCarries":
-    "No records have this tag yet. Apply it from any contact, company or deal.",
+    "No records have this tag yet. Apply it from any contact, company, deal or lead.",
   "tagResult.loadingRows": "Loading {kind}…",
   "tagResult.noneLeft": "No records have this tag anymore",
   "tagResult.unnamed": "Unnamed",
@@ -4858,7 +4863,7 @@ export const en = {
   "analytics.reportDeals": "Open deals by stage",
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
-  "analytics.sectionPipeline": "Pipeline analysis",
+  "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Performance",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
@@ -4867,6 +4872,22 @@ export const en = {
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
   "analytics.sectionQuestions": "Custom reports",
+  "analytics.sectionReports": "Reports",
+  "analytics.setup": "Setup",
+  "analytics.attention": "Needs your attention",
+  "analytics.attentionChecks_one": "1 forecast check to answer",
+  "analytics.attentionChecks_other": "{count} forecast checks to answer",
+  "analytics.attentionChecksDetail":
+    "Answer them before you update the forecast.",
+  "analytics.attentionChecksAction": "Review in Forecast",
+  "analytics.attentionUnpriced": "{priced} of {eligible} open deals are priced",
+  "analytics.attentionUnpricedDetail":
+    "A deal without a price adds nothing to the forecast.",
+  "analytics.attentionUnpricedAction": "Open Forecast",
+  "analytics.attentionCoverage_one": "1 data source was not fully checked",
+  "analytics.attentionCoverage_other":
+    "{count} data sources were not fully checked",
+  "analytics.attentionCoverageAction": "View data coverage",
   "analytics.reportDealsByStage": "All deals by stage",
   "analytics.reportLeadsByStatus": "Leads by status",
   "analytics.reportActivitiesByKind": "Activities by type",
@@ -9598,6 +9619,10 @@ export const en = {
     "Waiting now: every model this task can use is blocked.",
   "aiTasks.deferral.nowInteractive":
     "Failing now: every model this task can use is blocked.",
+  "aiTasks.deferral.degrades":
+    "When every model this task can use is down, out of credit or refusing its key, it still answers from its own facts, without a model, instead of failing.",
+  "aiTasks.deferral.nowDegrades":
+    "Answering from its own facts now: every model this task can use is blocked.",
   "aiTasks.deferral.skipping":
     "A blocked provider is skipped, and the next model in line answers.",
   "aiTasks.embeddingsEdit":
@@ -9803,6 +9828,7 @@ export const en = {
   "capturePurge.done": "Close",
   "capturePurge.failed":
     "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
+  "capturePurge.refused": "The deletion was refused, so nothing was destroyed.",
   "capturePurge.wouldDestroy_one": "{count} message would be destroyed.",
   "capturePurge.wouldDestroy_other": "{count} messages would be destroyed.",
   "capturePurge.destroyed_one": "{count} message destroyed.",
@@ -10308,6 +10334,7 @@ export const en = {
   "contact.action.call": "Call",
   "contact.action.meetings": "Meetings",
   "contact.action.workAsLead": "Work as a lead",
+  "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
 
@@ -10703,14 +10730,73 @@ export const en = {
   // per reading rather than per symbol: the same `gte` is "on or after" a date
   // and "at least" a quantity, and one label for both would send a reader
   // looking for a calendar on a score.
-  "filters.joinAll": "All (AND)",
-  "filters.joinAny": "Any (OR)",
-  "filters.joinLabel": "Match mode",
   "filters.removeGroup": "Remove group",
-  "filters.addGroup": "Add group",
-  "filters.addClause": "Add clause",
-  "filters.emptyGroup":
-    "No clauses yet. An empty group matches nothing; add a clause.",
+  "filters.addGroup": "Add a group",
+  "filters.addClause": "Add condition",
+  "filters.addToGroup": "Add condition to group",
+  "filters.find": "Find {records} where…",
+  "filters.hint.start": "Add a condition to see how many {records} match.",
+  "filters.hint.finish":
+    "Finish the condition to see how many {records} match.",
+  "filters.hint.update": "Finish the condition to update the count.",
+  "filters.startOr": "or",
+  "filters.start.buildTitle": "Build it condition by condition",
+  "filters.start.buildBody":
+    "Pick a field, how to compare it, and a value. Add more conditions as you go.",
+  "filters.describeChanges": "Describe changes in plain words",
+  // Named by the word the button shows, then what pressing it does (WCAG
+  // 2.5.3): {word} is filters.join.and or filters.join.or.
+  "filters.connector.matchAll":
+    "{word}: match all of these. Press to match any.",
+  "filters.connector.matchAny":
+    "{word}: match any of these. Press to match all.",
+  "filters.group.all": "All of these",
+  "filters.group.any": "Any of these",
+  "filters.rowsMore": "More for these conditions",
+  "filters.groupMore": "More for this group",
+  "filters.proposed": "Proposed",
+  "filters.switch.title": "Switch to {records}?",
+  "filters.switch.body.contacts":
+    "The conditions are cleared, because they name contact fields.",
+  "filters.switch.body.companies":
+    "The conditions are cleared, because they name company fields.",
+  "filters.switch.body.deals":
+    "The conditions are cleared, because they name deal fields.",
+  "filters.switch.body.leads":
+    "The conditions are cleared, because they name lead fields.",
+  "filters.switch.confirm": "Switch and clear",
+  "filters.showMore": "Show up to 100",
+  "filters.save": "Save",
+  "filters.unsavedFilter": "Unsaved filter",
+  "filters.footMore": "More for this filter",
+  "filters.exporting": "Exporting…",
+  "filters.saveAsNew": "Save as new view",
+  "filters.saveTitle": "Save this filter",
+  "filters.namePlaceholder": "German {records}, quiet for 45 days",
+  "filters.keepAs": "Keep it as",
+  "filters.keepViewHint":
+    "Only you can find it. It counts again each time you open it.",
+  "filters.keepListHint":
+    "Checked every 15 minutes, and records who joins and leaves. Choose who can find it.",
+  "filters.purpose": "Purpose (optional)",
+  "filters.viewSaved": "View saved",
+  "filters.listCreated": "Live List “{name}” created",
+  "filters.view.facts": "Saved view · {records} · Only me",
+  "filters.listFacts": "Live List · {records} · {who}",
+  "filters.view.saveAsList": "Save as Live List",
+  "filters.editConditions": "Edit conditions",
+  "filters.done": "Done",
+  "filters.noChanges": "No changes yet",
+  "filters.unsavedChanges": "Unsaved changes",
+  "filters.discardChanges": "Discard changes",
+  "filters.saveChanges": "Save changes",
+  "filters.changesSaved": "Changes saved",
+  "filters.view.conflict":
+    "This view changed since you opened it. Reload it to see the latest version.",
+  "filters.view.reload": "Reload view",
+  "filters.view.gone": "This saved view was deleted or cannot be found.",
+  "filters.backToLibrary": "Back to Filters and views",
+  "filters.emptyGroup": "An empty group matches nothing.",
   "filters.field": "Field",
   "filters.field.amount": "Converted amount",
   "filters.field.city": "City",
@@ -10737,7 +10823,7 @@ export const en = {
   "filters.value": "Value",
   "filters.values": "Values",
   "filters.addValue": "Add value",
-  "filters.removeClause": "Remove {field} clause",
+  "filters.removeClause": "Remove {field} condition",
   "filters.existsLabel": "Field has value",
   "filters.hasValue": "has a value",
   "filters.isEmpty": "is empty",
@@ -10756,6 +10842,42 @@ export const en = {
   "filters.op.atLeast": "is at least",
   "filters.op.lessThan": "is less than",
   "filters.op.atMost": "is at most",
+  "filters.join.and": "and",
+  "filters.join.or": "or",
+  "filters.sentence.clause": "{field} {op} {value}",
+  "filters.sentence.clauseBare": "{field} {op}",
+  "filters.sentence.group": "({clauses})",
+  "filters.sentence.pendingValue": "…",
+  "filters.sentence.emptyGroup": "an empty group",
+  "filters.sentence.retiredField": "a retired field",
+  "filters.sentence.inCounted": "is any of",
+  "filters.sentence.withinLast_one": "is within the last day",
+  "filters.sentence.withinLast_other": "is within the last {count} days",
+  "filters.sentence.moreThanAgo": "is more than",
+  "filters.sentence.atLeastAgo": "is at least",
+  "filters.sentence.daysAgo_one": "{count} day ago",
+  "filters.sentence.daysAgo_other": "{count} days ago",
+  "filters.sentence.conditions_one": "{count} condition",
+  "filters.sentence.conditions_other": "{count} conditions",
+  "filters.sentence.ref.stage_one": "{count} stage",
+  "filters.sentence.ref.stage_other": "{count} stages",
+  "filters.sentence.ref.pipeline_one": "{count} pipeline",
+  "filters.sentence.ref.pipeline_other": "{count} pipelines",
+  "filters.sentence.ref.app_user_one": "{count} team member",
+  "filters.sentence.ref.app_user_other": "{count} team members",
+  "filters.sentence.ref.team_one": "{count} team",
+  "filters.sentence.ref.team_other": "{count} teams",
+  "filters.sentence.ref.company_one": "{count} company",
+  "filters.sentence.ref.company_other": "{count} companies",
+  "filters.sentence.ref.tag_one": "{count} tag",
+  "filters.sentence.ref.tag_other": "{count} tags",
+  "filters.sentence.ref.retiredTag_one": "{count} archived tag",
+  "filters.sentence.ref.retiredTag_other": "{count} archived tags",
+  "filters.sentence.someRetired": "{tags}, {retired} archived",
+  "filters.sentence.retiredTagNote":
+    "For filters, no record carries an archived tag.",
+  "filters.sentence.ref.project_one": "{count} project",
+  "filters.sentence.ref.project_other": "{count} projects",
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "{count} lead matches",
   "filters.matchLeads_other": "{count} leads match",
@@ -10763,26 +10885,18 @@ export const en = {
   "filters.date.daysAgo": "Days ago",
   "filters.date.mode": "How the date is given",
   "filters.date.daysAgoCount": "{field}: days before today",
-  "filters.saveList": "Save as Live List",
-  "filters.saveListTitle": "Save this filter as a Live List",
   "filters.saveListConfirm": "Save list",
-  "filters.propose.label": "Describe the list in plain words",
+  "filters.propose.label": "Describe the {records} you want",
   "filters.propose.hint":
-    "Margince proposes conditions for the filter below. Nothing is saved until you press Save.",
+    "Proposed conditions are shown for review. Nothing is saved until you save.",
   "filters.propose.placeholder":
-    "Companies in Germany with no activity in the last 45 days",
-  "filters.propose.submit": "Propose filter",
+    "In Germany, with no activity in the last 45 days",
+  "filters.propose.submit": "Propose conditions",
   "filters.propose.busy": "Reading your description",
   "filters.propose.noModel":
     "Plain-words filters need an AI model configured. You can still build the filter by hand.",
   "filters.propose.unreadable":
-    "The proposal could not be read. Try describing the list another way.",
-  "filters.propose.readyTitle": "A filter is ready",
-  "filters.propose.readyBody":
-    "Your filter already has conditions. Replace them with the proposal, or add the proposal to them.",
-  "filters.propose.replace": "Replace current filter",
-  "filters.propose.add": "Add to current filter",
-  "filters.propose.discard": "Discard proposal",
+    "The proposal could not be read. Try describing it another way.",
   "filters.propose.unusedTitle": "Could not use",
   "filters.propose.unusedDismiss": "Dismiss",
   "filters.propose.unusedItem": "“{phrase}”: {reason}",
@@ -10794,11 +10908,20 @@ export const en = {
     "{field} lists options you cannot see, so the value could not be checked.",
   "filters.propose.reason.tooMany":
     "The filter already holds as many conditions as it can.",
+  "filters.proposal.title_one":
+    "Margince proposed {count} condition from “{text}”.",
+  "filters.proposal.title_other":
+    "Margince proposed {count} conditions from “{text}”.",
+  "filters.proposal.body":
+    "Dashed rows are proposals: change anything, and a row you change becomes yours.",
+  "filters.proposal.keepAll": "Keep all",
+  "filters.proposal.replaceMine": "Replace my conditions",
+  "filters.foot.proposed_one":
+    "{count} proposed condition in this filter. Saving keeps it.",
+  "filters.foot.proposed_other":
+    "{count} proposed conditions in this filter. Saving keeps them.",
   "lists.page": "List",
-  "lists.section.label": "Show",
-  "lists.section.views": "My views",
-  "lists.section.lists": "Shared views",
-  "lists.section.build": "Build",
+  "lists.loading": "Loading list",
   "lists.kind.live": "Live List",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Contacts",
@@ -10821,19 +10944,9 @@ export const en = {
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
   "lists.health.retiredField": "Uses a retired field",
-  "lists.library.title": "Shared views",
-  "lists.library.search": "Search lists",
-  "lists.library.all": "All",
-  "lists.library.kind": "List type",
-  "lists.library.empty":
-    "No shared lists yet. Save a filter as a Live List, or start a Shortlist.",
-  "lists.library.loading": "Loading lists",
   "lists.col.name": "Name",
   "lists.col.kind": "Type",
   "lists.col.recordType": "Records",
-  "lists.col.count": "You can see",
-  "lists.col.steward": "Steward",
-  "lists.col.sharing": "Shared with",
   "lists.noSteward": "Nobody",
   "lists.newShortlist": "New Shortlist",
   "lists.newShortlistTitle": "Start a Shortlist",
@@ -10852,6 +10965,7 @@ export const en = {
   "lists.unnamed": "Unnamed",
   "lists.head.facts":
     "{type} · {visible} you can see · who can find it: {sharing} · looked after by {steward}",
+  "lists.filterLine": "Filter: {records} where {sentence}",
   "lists.head.exported_one": "Exported {count} time, last on {when}",
   "lists.head.exported_other": "Exported {count} times, last on {when}",
   "lists.archived.title": "This list is archived",
@@ -10935,11 +11049,6 @@ export const en = {
   "lists.add": "Add",
   "lists.shortlist": "Shortlist",
   "lists.pickShortlist": "Pick a Shortlist",
-  "lists.views.empty": "No views yet. Build a filter and press Save view.",
-  "lists.views.loading": "Loading saved filters",
-  "lists.myLists.title": "My lists",
-  "lists.myLists.empty":
-    "No private lists. A list only you can find shows here. Share it and it moves to Shared views.",
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label": "{entered} joined and {left} left since your last visit",
   "lists.head.lastChecked": "Last checked {when}",
@@ -10960,9 +11069,11 @@ export const en = {
   "lists.history.liveNote":
     "The check runs every 15 minutes and takes the lists checked longest ago first, so with very many lists one can wait longer; “Last checked” says when it was. Who joined and left is recorded as of the check that noticed it, and a record that joins and leaves between two checks is not recorded.",
   "lists.editFilter": "Edit filter",
+  "lists.filterCannotOpen": "This list’s filter cannot be opened here.",
+  "lists.savedTo": "Saved to “{name}”",
   "lists.editingTitle": "Editing the filter of {name}",
   "lists.editingBody":
-    "Save to the list to change which records it holds. Save as Live List makes a new list instead.",
+    "Save to the list to change which records it holds. To keep a copy instead, save the filter as a new view.",
   "lists.saveFilterTo": "Save to {name}",
   "lists.saveFilterTitle": "Change the filter of {name}?",
   "lists.saveFilterBody":
@@ -10998,33 +11109,80 @@ export const en = {
   // placeholder that some grammars cannot place.
   "filters.title": "Filters and views",
   "filters.subtitle":
-    "Build a filter, preview its matches and save it as a view.",
+    "Every saved view and list you can use, and where a new filter starts.",
+  "filters.library.loading": "Loading views and lists",
+  "filters.library.search": "Search views and lists",
+  "filters.library.all": "All",
+  "filters.library.newFilter": "New filter",
+  "filters.new.contacts": "New contact filter",
+  "filters.new.companies": "New company filter",
+  "filters.new.deals": "New deal filter",
+  "filters.new.leads": "New lead filter",
+  "filters.library.whichRecords": "Filter which records?",
+  "filters.library.mine": "Only me",
+  "filters.library.shared": "Shared",
+  "filters.library.views": "Saved views",
+  "filters.library.kindView": "Saved view",
+  "filters.library.rowMore": "More actions for {name}",
+  "filters.library.records.contact_one": "{count} contact",
+  "filters.library.records.contact_other": "{count} contacts",
+  "filters.library.records.company_one": "{count} company",
+  "filters.library.records.company_other": "{count} companies",
+  "filters.library.records.deal_one": "{count} deal",
+  "filters.library.records.deal_other": "{count} deals",
+  "filters.library.records.lead_one": "{count} lead",
+  "filters.library.records.lead_other": "{count} leads",
+  "filters.library.records.project_one": "{count} project",
+  "filters.library.records.project_other": "{count} projects",
+  "filters.library.recordsSeen": "{records} you can see",
+  "filters.library.mineEmpty": "Views you save show here.",
+  "filters.library.sharedEmpty":
+    "No shared lists yet. A list shared with a team or everyone shows here.",
+  "filters.library.noHits": "No views or lists match “{q}”.",
+  "filters.library.clearSearch": "Clear search",
+  "filters.library.noTypeHits.contacts": "No contact views or lists.",
+  "filters.library.noTypeHits.companies": "No company views or lists.",
+  "filters.library.noTypeHits.deals": "No deal views or lists.",
+  "filters.library.noTypeHits.leads": "No lead views or lists.",
+  "filters.library.noTypeHits.projects": "No project lists.",
+  "filters.library.truncated":
+    "Showing the first {limit}. Search to narrow the list.",
+  "filters.library.listsFailed": "Lists did not load.",
+  "filters.library.viewsFailed": "Saved views did not load.",
+  "filters.library.showArchived": "Show archived lists",
+  "filters.library.hideArchived": "Hide archived lists",
+  "filters.library.firstRunTitle": "No saved views or lists yet",
+  "filters.library.firstRunBody":
+    "A filter finds records by their fields. Save it as a view for yourself, or as a Live List others can find.",
+  "filters.library.viewsEmptyTitle": "No saved views yet",
+  "filters.library.viewsEmptyBody":
+    "A filter finds records by their fields. Save it as a view to open it again.",
   "filters.objectLabel": "Record type",
   "filters.tab.contacts": "Contacts",
   "filters.tab.companies": "Companies",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
-  "filters.dynamic": "Dynamic: updates on every event",
   "filters.matchContacts_one": "{count} contact matches",
   "filters.matchContacts_other": "{count} contacts match",
   "filters.matchCompanies_one": "{count} company matches",
   "filters.matchCompanies_other": "{count} companies match",
   "filters.matchDeals_one": "{count} deal matches",
   "filters.matchDeals_other": "{count} deals match",
-  "filters.noFilterYet": "Add a clause to preview matches",
-  // The count when the server was asked and did not answer. It must not fall
-  // back to noFilterYet: a reader looking at a finished clause would read a
-  // refusal as their own unfinished work. Three words, because this sits in a
-  // header row beside two buttons; the reason and the retry go in the results
-  // card below, which is the only row wide enough for a sentence.
+  // The count when the server was asked and did not answer. It must not read
+  // as the hint to finish a condition: a reader looking at a finished one
+  // would read a refusal as their own unfinished work. Three words, because it
+  // sits beside the results title; the reason and the retry go in the panel
+  // body, which is the only row wide enough for a sentence.
   "filters.countUnavailable": "Count unavailable",
   "filters.loadingVocabulary": "Loading fields…",
   "filters.noFields": "No filterable fields for this record type.",
   "filters.resultsTitle": "Matching records",
   "filters.resultsCaption":
     "First page of matches, for checking the filter. Not the full selection.",
-  "filters.noMatches": "No records match this filter.",
-  "filters.loadView": "Load saved filter",
+  "filters.noMatches":
+    "No {records} match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
+  "filters.noMatchesLoosen":
+    "No {records} match this filter. Loosen or remove a condition.",
   "filters.pickRecord": "Select record",
   "filters.searchRecords": "Search companies",
   "filters.typeToSearch": "Type to search",
@@ -11035,6 +11193,8 @@ export const en = {
   "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Select value",
+  "filters.amountUnpriced":
+    "This amount has no known currency, so it cannot be shown or changed.",
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 

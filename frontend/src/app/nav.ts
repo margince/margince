@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
+import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
 import { type EntityKind, SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN } from "./extensions";
@@ -31,6 +32,7 @@ export type {
   NavTrailLevel,
 } from "./subnav";
 export {
+  currentClaim,
   entryLabel,
   navEntryHref,
   navEntryRoute,
@@ -368,18 +370,17 @@ function primaryLevel(route: Route): NavTrailLevel {
 }
 
 // Whether the active row is only the SECTION the page sits in rather than the
-// page itself — which is true exactly when the route opens a page of its own
-// below the screen: a RECORD, or a reserved segment that names its own page
-// (`#/contacts/import`). The test is the top bar's own: `recordKindOf` and
-// `reservedPageTitle` decide whether the trail up there ends in a page below the
-// list and claims it, so deriving the row's answer from the same functions is
-// what keeps exactly one element claiming `aria-current="page"`. Asking
-// `route.id !== undefined` instead read every segment as a page:
-// `#/filters/companies` picks the object tab OF the filters page, and the row
-// that leads there was demoted to an ancestor of a page that does not exist.
+// page itself: true exactly where the top bar's trail ends in a page of its own
+// below the screen. That is a record, a reserved segment that names its own page
+// (`#/contacts/import`), or a page below the Filters and views library. The trail
+// asks the same three predicates, which keeps exactly one element claiming
+// `aria-current="page"`; `route.id !== undefined` would demote the row on a
+// segment that opens no page, such as `#/filters/views`, the library itself.
 function opensAPageBelow(route: Route): boolean {
   return (
-    recordKindOf(route) !== undefined || reservedPageTitle(route) !== undefined
+    recordKindOf(route) !== undefined ||
+    reservedPageTitle(route) !== undefined ||
+    opensAFocusedFiltersPage(route)
   );
 }
 
@@ -404,6 +405,10 @@ function activeRowFor(route: Route): string {
   // no screen and marks no row, which is the honest answer for one.
   if (route.screen === CUSTOM_SCREEN) {
     return route.id ?? route.screen;
+  }
+  // One list is a page of the library that lists it, and has no row of its own.
+  if (route.screen === "lists") {
+    return "filters";
   }
   return route.screen;
 }

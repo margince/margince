@@ -1,9 +1,9 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
 
 // Where Enter lands when the reader has not picked a row. A screen the words
@@ -12,6 +12,7 @@ import { type Command, CommandPalette } from "./palette";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   window.location.hash = "";
   vi.unstubAllGlobals();
 });
@@ -59,7 +60,7 @@ describe("CommandPalette Enter", () => {
   // Half a name is still a search: a reader who stops typing at "strai" wants
   // to see what matched, so Enter opens the results rather than one record.
   it("opens every result on Enter when the words only begin a record's name", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     hits([{ type: "company", id: "o1", title: "Straight" }]);
     renderPalette();
     await user.type(screen.getByRole("searchbox"), "strai");
@@ -69,7 +70,7 @@ describe("CommandPalette Enter", () => {
   });
 
   it("opens the record on Enter when the words name it whole", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     hits([
       { type: "company", id: "o1", title: "Straight" },
       { type: "contact", id: "p1", title: "Anna Becker" },
@@ -84,7 +85,7 @@ describe("CommandPalette Enter", () => {
   // Until the search answers, the palette cannot know the words name a record,
   // and the results page is where a reader lands; the record leads it there.
   it("opens every result on Enter pressed before the search has answered", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
@@ -98,7 +99,7 @@ describe("CommandPalette Enter", () => {
   // The arrows still choose: the see-all row leads, and the hits sit one
   // press below it.
   it("opens the hit the reader arrowed to", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     hits([{ type: "company", id: "o1", title: "Straight" }]);
     renderPalette();
     await user.type(screen.getByRole("searchbox"), "strai");
@@ -108,7 +109,7 @@ describe("CommandPalette Enter", () => {
   });
 
   it("goes to the screen the words name rather than to the results", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     hits([{ type: "deal", id: "d1", title: "Pipeline review" }]);
     renderPalette();
     await user.type(screen.getByRole("searchbox"), "pipeline");

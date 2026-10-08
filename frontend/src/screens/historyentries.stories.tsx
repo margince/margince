@@ -6,6 +6,7 @@ import { userEvent, within } from "storybook/test";
 import { RecordHistory } from "./historyentries";
 import {
   emptyPage,
+  expectNameAndValueApart,
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -78,6 +79,7 @@ export const Entries: Story = {
     });
     return <Panel />;
   },
+  play: ({ canvasElement }) => expectNameAndValueApart(canvasElement),
 };
 
 // The same change list in dark: the agent-actor line reads "on behalf of"

@@ -155,9 +155,15 @@ const OUTAGE_RULE = {
     rule: "aiTasks.deferral.embedding",
     now: "aiTasks.deferral.nowEmbedding",
   },
+  degrades: {
+    rule: "aiTasks.deferral.degrades",
+    now: "aiTasks.deferral.nowDegrades",
+  },
 } as const satisfies Record<string, { rule: MessageKey; now: MessageKey }>;
 
-function outageRule(mode: string) {
+function outageRule(row: Feature) {
+  if (row.degrades_on_outage === true) return OUTAGE_RULE.degrades;
+  const mode = row.execution_mode;
   if (mode === "background" || mode === "embedding") return OUTAGE_RULE[mode];
   return OUTAGE_RULE.interactive;
 }
@@ -168,7 +174,7 @@ function OutageNote({
 }: Readonly<{ row: Feature; providers: ProviderHealth | undefined }>) {
   const t = useT();
   const blocked = blockedOnChain(row, providers);
-  const rule = outageRule(row.execution_mode);
+  const rule = outageRule(row);
   const lead = row.effective_candidates[0]?.provider;
   let now: string | null = null;
   if (deferredNow(row, blocked)) now = t(rule.now);
