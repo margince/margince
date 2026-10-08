@@ -189,6 +189,26 @@ export const AWaitingRowWithEveryVerb: Story = {
   },
 };
 
+/** A message the reader sent that nobody answered: the follow-up is the answer. */
+export const AFollowUpRow: Story = {
+  args: {
+    item: {
+      ...waitingRow(),
+      source: "awaiting_reply",
+      category: "tasks",
+      consequence: "none",
+      title: "The proposal we discussed",
+      because: [
+        { kind: "you_wrote_last" },
+        { kind: "no_reply_days", value: { kind: "days", days: 3 } },
+      ],
+    },
+    href: rowHref(waitingRow()),
+    owner: "",
+    primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
+  },
+};
+
 /**
  * A LANE WHOSE VERBS ARE EQUAL has no answer, and nothing on the line is
  * filled.

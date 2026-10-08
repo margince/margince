@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -49,6 +50,7 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	identity.BaseCurrency.WithFreeze(deals.BaseCurrencyFreeze(identity.BaseCurrency.Key()))
 
 	var defs []settings.Definition
+	defs = append(defs, activities.Definitions()...)
 	defs = append(defs, ai.Definitions()...)
 	defs = append(defs, capture.Definitions()...)
 	defs = append(defs, consent.Definitions()...)

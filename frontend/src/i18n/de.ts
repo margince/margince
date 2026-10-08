@@ -671,6 +671,7 @@ export const de = {
     "{count} Deals ohne Preis · nicht enthalten",
   "brief.coverage.source.generic": "Weitere Arbeit",
   "brief.coverage.source.weekly_commitment": "Wochenzusagen",
+  "brief.coverage.source.awaiting_reply": "Nachfassen",
   "brief.coverage.source.batch": "Gruppierte Arbeit",
   "brief.coverage.source.introduction_request": "Vorstellungsanfragen",
   "brief.coverage.source.automation_run": "Automatisierungsfehler",
@@ -749,6 +750,8 @@ export const de = {
   "brief.plan.open": "Wochenplan öffnen",
   "worklist.source.weekly_commitment": "Wochenzusage",
   "worklist.untitled.weekly_commitment": "Wochenzusage",
+  "worklist.source.awaiting_reply": "Nachfassen",
+  "worklist.untitled.awaiting_reply": "Nachfassen",
   "brief.plan.select": "Deal, Lead, Kontakt, Unternehmen oder Projekt suchen",
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
   "brief.forecast.period":
@@ -11622,6 +11625,11 @@ export const de = {
   "worklist.because.meeting_booked.value": "Termin vereinbart für {value}",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
+  "worklist.because.you_wrote_last": "du hast zuletzt geschrieben",
+  "worklist.because.no_reply_days": "keine Antwort",
+  "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort",
+  "worklist.because.no_reply_days.value_other":
+    "seit {value} Tagen keine Antwort",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
@@ -11815,6 +11823,7 @@ export const de = {
   "worklist.verb.draft_reply": "Lesen und antworten",
   // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.
   "worklist.verb.draft_reply_now": "Antwort entwerfen",
+  "worklist.verb.draft_follow_up_now": "Nachfass-Mail entwerfen",
   // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.
   "worklist.verb.draft_email": "E-Mail schreiben",
   "worklist.verb.draft_email_now": "E-Mail entwerfen",

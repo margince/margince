@@ -26,6 +26,7 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "weekly_commitment")
     return "worklist.source.weekly_commitment";
+  if (item.source === "awaiting_reply") return "worklist.source.awaiting_reply";
   if (item.source === "brief_item" && item.kind) {
     const signal = item.kind;
     if ((BRIEF_SIGNALS as readonly string[]).includes(signal)) {

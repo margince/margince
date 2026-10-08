@@ -38,7 +38,8 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 	rows = append(rows, planRows.planRows...)
 	// Waiting messages are read beside the assembled day.
 	rows = append(rows,
-		classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant))
+		classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant),
+		classifyAwaiting(AwaitedReply{SentAt: rankInstant}, rankInstant))
 	// And the FOLD, which mints rows of its own after everything above has run.
 	// A census that stopped at the classifiers never met the one producer that
 	// synthesises a row rather than classifying one, so a batch reached readers

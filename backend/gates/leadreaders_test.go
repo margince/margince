@@ -57,6 +57,7 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/awaitingreply.go":                  "the follow-up reminder's customer test: an EXISTS asking whether a message the reader sent went to a working lead. No lead column is selected; what reaches the caller is their own sent message under their activity content gate. Removing the arm hides a reminder, never discloses a lead",
 	"internal/modules/contacts/mergerelink.go:relinkLeadsToContact": "a contact merge moves the leads worked from the merged-away contact onto the survivor; `lead` is read only in the NOT EXISTS that keeps a second live lead off the survivor, and nothing is selected. The merge itself takes contact:update and holds both contacts writable",
 	"internal/platform/auth/leadinquiry.go":                         "the shared task predicate withholds untouched automatic intake tasks unsupported by a live inquiry or caused by a historical import. No lead column is selected; removing it widens the separately gated activity result",
 	"internal/modules/notices/store.go:inTheReadersLane":            "the delivery predicate withholds automatic response notices unsupported by a live inquiry. No lead column is selected; removing this predicate only widens the acting recipient's notice lane",

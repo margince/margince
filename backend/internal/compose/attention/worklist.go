@@ -162,8 +162,9 @@ func (s *Service) worklistIn(
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
+	withPins, awaitingErr := withPins.readingAwaiting(ctx, day.AsOf)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	failed := append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, beside.failed...)
+	failed := append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, awaitingErr}, beside.failed...)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
@@ -201,7 +202,7 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf, s.money)
-	rows = append(rows, s.planRows...)
+	rows = append(append(rows, s.planRows...), s.followUps.rows...)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	rows = append(rows, waits...)
 	// What the night thought of each deal, onto whichever row is about it — the
@@ -260,6 +261,9 @@ func (s *Service) worklistFrom(
 	// cap leaves teammates past it never asked.
 	if s.planCoverage != nil {
 		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
+	}
+	if s.followUps.read {
+		bounded[sourceAwaitingReply] = s.followUps.cut
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach

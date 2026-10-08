@@ -91,7 +91,11 @@ export function WaitingReply({
               // rather than the composer; this control mounts the composer
               // itself, on every row it is drawn on, so the weaker word would
               // under-promise what pressing it does.
-              label: t("worklist.verb.draft_reply_now"),
+              label: t(
+                item.source === "awaiting_reply"
+                  ? "worklist.verb.draft_follow_up_now"
+                  : "worklist.verb.draft_reply_now",
+              ),
               intent: replyIntent(item, t, locale),
             }
           : undefined
@@ -130,5 +134,11 @@ function replyIntent(
   )[0];
   // The composer's own phrase for answering a message, not a second spelling
   // of it: one sentence reaches the model whichever surface opened the drawer.
-  return intentAbout(t("contact.composer.intentReply"), why);
+  // A follow-up is anchored on OUR message, which has nothing of theirs to
+  // reply to.
+  const phrase =
+    item.source === "awaiting_reply"
+      ? t("contact.composer.intentFollowUp")
+      : t("contact.composer.intentReply");
+  return intentAbout(phrase, why);
 }

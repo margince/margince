@@ -18411,6 +18411,7 @@ const (
 	WorklistItemSourceAiWorkHealth        WorklistItemSource = "ai_work_health"
 	WorklistItemSourceApproval            WorklistItemSource = "approval"
 	WorklistItemSourceAutomationRun       WorklistItemSource = "automation_run"
+	WorklistItemSourceAwaitingReply       WorklistItemSource = "awaiting_reply"
 	WorklistItemSourceBatch               WorklistItemSource = "batch"
 	WorklistItemSourceBounce              WorklistItemSource = "bounce"
 	WorklistItemSourceBriefItem           WorklistItemSource = "brief_item"
@@ -18443,6 +18444,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceApproval:
 		return true
 	case WorklistItemSourceAutomationRun:
+		return true
+	case WorklistItemSourceAwaitingReply:
 		return true
 	case WorklistItemSourceBatch:
 		return true
@@ -18549,6 +18552,7 @@ const (
 	WorklistReachSourceAiWorkHealth        WorklistReachSource = "ai_work_health"
 	WorklistReachSourceApproval            WorklistReachSource = "approval"
 	WorklistReachSourceAutomationRun       WorklistReachSource = "automation_run"
+	WorklistReachSourceAwaitingReply       WorklistReachSource = "awaiting_reply"
 	WorklistReachSourceBatch               WorklistReachSource = "batch"
 	WorklistReachSourceBounce              WorklistReachSource = "bounce"
 	WorklistReachSourceBriefItem           WorklistReachSource = "brief_item"
@@ -18581,6 +18585,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceApproval:
 		return true
 	case WorklistReachSourceAutomationRun:
+		return true
+	case WorklistReachSourceAwaitingReply:
 		return true
 	case WorklistReachSourceBatch:
 		return true
@@ -18652,6 +18658,7 @@ const (
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindNoNextStep         WorklistReasonKind = "no_next_step"
+	WorklistReasonKindNoReplyDays        WorklistReasonKind = "no_reply_days"
 	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
 	WorklistReasonKindOpenedOverdue      WorklistReasonKind = "opened_overdue"
 	WorklistReasonKindOutcomeUnrecorded  WorklistReasonKind = "outcome_unrecorded"
@@ -18666,6 +18673,7 @@ const (
 	WorklistReasonKindStale              WorklistReasonKind = "stale"
 	WorklistReasonKindUnassigned         WorklistReasonKind = "unassigned"
 	WorklistReasonKindWaitingDays        WorklistReasonKind = "waiting_days"
+	WorklistReasonKindYouWroteLast       WorklistReasonKind = "you_wrote_last"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReasonKind enum.
@@ -18709,6 +18717,8 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindNoNextStep:
 		return true
+	case WorklistReasonKindNoReplyDays:
+		return true
 	case WorklistReasonKindNoReplyHistory:
 		return true
 	case WorklistReasonKindOpenedOverdue:
@@ -18736,6 +18746,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindUnassigned:
 		return true
 	case WorklistReasonKindWaitingDays:
+		return true
+	case WorklistReasonKindYouWroteLast:
 		return true
 	default:
 		return false

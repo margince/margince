@@ -649,6 +649,7 @@ export const en = {
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
   "brief.coverage.source.generic": "Other work",
   "brief.coverage.source.weekly_commitment": "Weekly commitments",
+  "brief.coverage.source.awaiting_reply": "Follow-ups",
   "brief.coverage.source.batch": "Grouped work",
   "brief.coverage.source.introduction_request": "Introduction requests",
   "brief.coverage.source.automation_run": "Automation failures",
@@ -726,6 +727,8 @@ export const en = {
   "brief.plan.open": "Open weekly plan",
   "worklist.source.weekly_commitment": "Weekly commitment",
   "worklist.untitled.weekly_commitment": "Weekly commitment",
+  "worklist.source.awaiting_reply": "Follow-up",
+  "worklist.untitled.awaiting_reply": "Follow-up",
   "brief.plan.select": "Find a deal, lead, contact, company or project",
   "brief.plan.period": "Current plan · week of {date}",
   "brief.forecast.period":
@@ -11760,6 +11763,10 @@ export const en = {
   "worklist.because.meeting_booked.value": "meeting booked for {value}",
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
+  "worklist.because.you_wrote_last": "you wrote last",
+  "worklist.because.no_reply_days": "no reply",
+  "worklist.because.no_reply_days.value_one": "no reply for {value} day",
+  "worklist.because.no_reply_days.value_other": "no reply for {value} days",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",
@@ -11967,6 +11974,7 @@ export const en = {
   // Where the composer actually opens, the verb is the ACT rather than the way
   // to it. The two labels are separate keys because the two clicks differ.
   "worklist.verb.draft_reply_now": "Draft reply",
+  "worklist.verb.draft_follow_up_now": "Draft follow-up",
   // A FIRST message rather than an answer to one. Separate keys because the two
   // are different acts: a row saying "reply" over an opening outreach names a
   // conversation that has not happened yet.

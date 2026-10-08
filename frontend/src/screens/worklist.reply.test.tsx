@@ -70,3 +70,27 @@ describe("a buyer waiting on a reply", () => {
     expect(screen.queryByRole("button", { name: /^reply$/i })).toBeNull();
   });
 });
+
+describe("a message the reader sent and nobody answered", () => {
+  it("offers to draft the follow-up from the row", async () => {
+    stub(
+      aDayWith(
+        aWaitingBuyer({
+          source: "awaiting_reply",
+          category: "tasks",
+          title: "the proposal we discussed",
+          move: {
+            action: "draft_reply",
+            activity_id: "01a05500-0000-7000-8000-0000000000c1",
+          },
+        }),
+      ),
+    );
+    renderWorklist();
+
+    await screen.findByText(/the proposal we discussed/);
+    expect(
+      await screen.findByRole("button", { name: /draft follow-up/i }),
+    ).not.toBeNull();
+  });
+});

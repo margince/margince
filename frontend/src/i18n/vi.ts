@@ -662,6 +662,7 @@ export const vi = {
     "{count} cơ hội không có giá trị so sánh được nên không được tính.",
   "brief.coverage.source.generic": "Công việc khác",
   "brief.coverage.source.weekly_commitment": "Cam kết tuần",
+  "brief.coverage.source.awaiting_reply": "Việc cần theo dõi",
   "brief.coverage.source.batch": "Nhóm công việc",
   "brief.coverage.source.introduction_request": "Yêu cầu giới thiệu",
   "brief.coverage.source.automation_run": "Lỗi tự động hóa",
@@ -739,6 +740,8 @@ export const vi = {
   "brief.plan.open": "Mở kế hoạch tuần",
   "worklist.source.weekly_commitment": "Cam kết trong tuần",
   "worklist.untitled.weekly_commitment": "Cam kết trong tuần",
+  "worklist.source.awaiting_reply": "Theo dõi",
+  "worklist.untitled.awaiting_reply": "Theo dõi",
   "brief.plan.select":
     "Tìm giao dịch, khách hàng tiềm năng, liên hệ, công ty hoặc dự án",
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
@@ -11527,6 +11530,12 @@ export const vi = {
   "worklist.because.meeting_booked.value": "đã hẹn họp vào {value}",
   "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
+  "worklist.because.you_wrote_last": "bạn viết sau cùng",
+  "worklist.because.no_reply_days": "chưa có phản hồi",
+  "worklist.because.no_reply_days.value_one":
+    "chưa có phản hồi sau {value} ngày",
+  "worklist.because.no_reply_days.value_other":
+    "chưa có phản hồi sau {value} ngày",
   "worklist.because.response_overdue": "quá hạn trả lời",
   "worklist.because.response_due_soon": "sắp đến hạn trả lời",
   "worklist.because.response_due_soon.value": "cần trả lời trước {value}",
@@ -11692,6 +11701,7 @@ export const vi = {
   "worklist.verb.draft_reply": "Đọc và trả lời",
   // Nơi trình soạn thảo thực sự mở ra, động từ là HÀNH ĐỘNG.
   "worklist.verb.draft_reply_now": "Soạn câu trả lời",
+  "worklist.verb.draft_follow_up_now": "Soạn thư theo dõi",
   // Một thư ĐẦU TIÊN, không phải câu trả lời cho thư đã có.
   "worklist.verb.draft_email": "Mở để viết",
   "worklist.verb.draft_email_now": "Soạn email",
