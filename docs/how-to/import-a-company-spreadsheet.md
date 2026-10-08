@@ -1,16 +1,13 @@
 <!-- prose:plain -->
-# Import a spreadsheet of companies
+# Import a spreadsheet of companies over MCP or REST
 
-Put a CSV of companies into the CRM through an assistant over MCP, or over REST. A run can **add**
-companies you do not have, and **correct** ones you do.
+This page is for a developer or an assistant that imports a CSV of companies through MCP or REST. A
+user who imports in the app reads the handbook: the [Settings](../handbook/settings.md) page covers
+**Data import**, its preview, correcting companies and running a file again. Undo is in
+[What is kept, what is destroyed](../handbook/retention-exports-and-deletion.md).
 
-Every import shows a preview before it writes. The preview counts what the commit will do, row by row, and
-nothing lands until you approve the run.
-
-> **Undo covers only what a run created.** A human who has signed in can undo a CSV run that is done. It
-> archives the rows that run created and that no one has touched since. It does not touch edited rows, and
-> names them. It cannot get back a company that existed *before* the run: a correction writes over the
-> old values, and no call puts them back.
+A run can **add** companies you do not have, and **correct** ones you do. Every run shows a preview
+before it writes, and nothing lands until the run is approved.
 
 ## The shape of a run
 
@@ -59,23 +56,18 @@ anything is written. The answer lists what it does take.
 the value is the email of a Margince user, the record also links to that user, so it shows their current
 name. `author` is set when the import creates the record. A later file does not change it.
 
-**A file of contacts takes `lead` or `contact`.** Pick by its source:
-
-- A list from a machine takes `lead`. That is a list pulled from web pages, a list you paid for, or a
-  list of contacts scanned at an event. Its rows land with no work on them yet, and someone turns the good
-  ones into contacts.
-- A file of contacts the business already knows takes `contact`. That is a move off another CRM, or a
-  customer list from a system you no longer use. Those rows were checked in that other system, so they
-  land as contacts, through the same checks for copies.
+**A file of contacts takes `lead` or `contact`.** A list from a machine (pulled from web pages, paid for,
+or scanned at an event) takes `lead`. A file of contacts the business already knows, such as a move off
+another CRM, takes `contact`.
 
 ### What happens to a company you already have
 
-`on_duplicate` decides. It takes `create` or `skip`. `create` is the default: it lands a second record,
-and files the pair for review. `skip` leaves the record you have as it is.
+`on_duplicate` decides. It takes `create` or `skip`. `create` is the default, and the one the app uses:
+it lands a second record, and files the pair for review. `skip` leaves the record you have as it is.
 
 For a spreadsheet, `create` is most often the wrong pick. 100 rows of companies you already have become
-100 copies, and each one needs a merge. The preview tells you how many before you commit; see
-`duplicates` below.
+100 copies, and each one needs a merge. The report's `duplicates` count tells you how many before you
+commit.
 
 **Neither of these corrects anything.** For that, the file has to say *which* company each row is.
 
@@ -88,49 +80,27 @@ id,display_name,city
 01a02ed1-0866-7567-b567-2abcf76e5c1e,Kestrel Data,Bremen
 ```
 
-A row with an `id` **updates that company**. The ID names one record, so there is no match and no guess.
-Read the companies out first to get their IDs, edit the file, and import it back.
-
-Rules for the `id` column:
-
-- **An empty `id` creates a company, as usual.** One file can carry corrections and new companies
-  together, as long as some other column names every row. A file whose *only* naming column is `id` needs
-  one on every row. A row that nothing names cannot be imported again, and no one can undo it; see `source_key` below.
-- **Margince refuses an ID that matches no record**, and reports the row as a skip that says so. It never
-  creates the row under a new ID. So a stale export, or a typing error, sends you back to the file, and
-  leaves no record you did not expect.
-- **Nothing is written to `id` itself.** It names the record, and is not a value the record holds.
+A row with an `id` **updates that company**. Read the companies out first to get their IDs, edit the
+file, and import it back. An empty `id` creates a company. An ID that matches no record is reported as a
+skip, never created under a new ID. Nothing is written to `id` itself.
 
 ### Which column names a row
 
 Every row needs one column that names it *within your file*. That column makes an import of the same file
-update rows, and not copy them. It also lets an undo find what a run created. The importer uses the
-company name by default. `source_key` names a different column when you want another one.
+update rows, not copy them, and lets an undo find what a run created. The importer uses the company name
+by default; `source_key` names a different column. The report's `source_key_used` says which one it used.
 
-Two shapes work:
-
-- **A file of corrections only.** `id,city` is enough. The ID names the row and the record, and every
-  row must have one.
-- **A file of both.** Map a column every row has (the company name will do), and leave the `id` column
-  empty on the rows that are new.
-
-Margince reports a row with no naming value at all as a line it cannot use, and does not import it. So
-nothing lands that no one could find again later.
+Over the API, a file of corrections only (`id,city`) is enough: the ID names every row. The app's
+**Data import** screen always asks for the name column, so there a file of corrections carries both.
 
 ### Why not match on the name?
 
-A name does not tell you which company it is. The matcher that finds *likely* copies answers one question:
-should a human look at this pair? To answer it, the matcher makes names less exact:
+The matcher that finds *likely* copies answers one question: should a human look at this pair? To answer
+it, it makes names less exact. It drops the legal form, and scores a trade name against a registered one.
+Where several companies share a name, it picks one, with no rule for which.
 
-- It drops the legal form, so `Acme Inc` and `Acme GmbH` are the same text. The CRM sends those to a
-  human to review, because they can be different companies.
-- It scores a trade name against a registered one. So `Kestrel Data` in your row matches a company
-  registered under that name, but that trades as something else.
-- Two companies may share a name, and that is allowed. Nothing stops it, and where several match, the
-  matcher picks one, with no rule for which.
-
-Each of those does no harm when the result is "show a human two records". When the result decides a write,
-each one can write over the wrong company, and you cannot undo that. An ID fails in none of these ways.
+Each of those does no harm when the result is a review. When the result decides a write, each one can write over the wrong company, and no
+call undoes that. An ID fails in none of these ways.
 
 ## Reading the report before you commit
 
@@ -148,34 +118,19 @@ each one can write over the wrong company, and you cannot undo that. An ID fails
 }
 ```
 
-- **These counts add up to `rows_read`**: `created`, `updated`, `unchanged` and `skipped`. Every row has one
-  result. If they do not add up, the report is missing something.
-- **`duplicates` is not part of that count.** It counts rows that are already counted under another
-  result. It is the number to look at. "100 companies, 94 of them already here" is a different decision
-  from "100 new companies". `created` by itself cannot tell them from each other.
-- **`unchanged` means matched, and nothing is different.** It is separate from `updated`, so that a file
-  you already applied, when you run it again, reports no work. It does not report 100 writes, and an
-  audit log to match.
-- **A company you cannot see changes nothing.** It is not counted or named, and does not change the result.
+`created`, `updated`, `unchanged` and `skipped` add up to `rows_read`. `duplicates` is not part of that
+count: it counts rows already counted under another result, and it is the number to read before a commit.
+The app's preview shows the four, not `duplicates`.
 
-More on that last point: Margince creates your row as it would if no such company existed. A company you
-*can* see is still reported, even when a company you cannot see is a closer match. To skip on that one
-would tell you that it exists, and that is a fact about the private record of someone else. The cost is a copy, which
-the review queue picks up. A skip would tell someone a private fact, and no merge undoes that.
-
-**`issues` names any row that will not land**, in the words of the file, not the database. Examples are a
-`size_band` it cannot use, or an ID that matches no record. Fix those in the source, and preview again.
+A company the caller cannot see is not counted or named. Margince creates the row as if no such company
+existed, because a skip would tell the caller that a private record exists. The cost is a copy, which the
+review queue picks up. No merge takes back a private fact once it is told.
 
 ## Committing
 
 Approve the run by its ID. The commit saves its place as it goes, and it is idempotent on the source key.
-So a second run of the same file ends in the same state, and does not make copies. A run that stops in the
-middle starts again from where it stopped, and not from the start.
-
-A correction is not recorded as something the run created. So `undo` archives only the companies a run
-added, and never one that was already there and was edited.
-
-The report keeps its shape after the commit: the same fields then report what the run *did*.
+A run that stops in the middle starts again from where it stopped. The report keeps its shape after the
+commit: the same fields then report what the run *did*.
 
 ## Asking an assistant to do it
 
@@ -189,14 +144,12 @@ Or, for a file of corrections:
 > Read out our companies with their IDs, then import this CSV. Each row carries
 > the ID of the company it updates.
 
-The assistant runs on your passport. So it can do what you could do on your own in the app, and the import
-commits without a separate approval step. The limits on you are the limits on it. They are your seat, your
-grants, your row scope, and the scopes you gave when you created the passport. See
+The assistant runs on your passport. The limits on you are the limits on it. They are your seat, your grants,
+your row scope, and the scopes you gave when you created the passport. See
 [connect-an-mcp-client.md](connect-an-mcp-client.md).
 
 An installation can require a confirm for `commit_import`. The commit then waits for a human, like any call
-that needs a confirm first. The assistant cannot upload a file for you or undo a run, because both need
-your own session. So over MCP the CSV goes across as text in the request.
+that needs a confirm first.
 
 ## See also
 
