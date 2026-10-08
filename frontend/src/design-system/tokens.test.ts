@@ -176,7 +176,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     );
   });
 
-  // The surface ladder is a set of RELATIONS, not four independent colours, and
+  // The surface ladder is a set of relations, not four independent colours, and
   // every one of them carries weight: a card well sits below the page ground,
   // and the elevated surface sits above it. A retune that keeps all four values
   // plausible and inverts one pair breaks a state the eye reads without

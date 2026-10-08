@@ -105,11 +105,20 @@ export const specimenNote = "specimen-note";
 export const specimenToken = "specimen-token";
 export const specimenIntro = "specimen-intro";
 
+/** The root font size a rem resolves against, 16 when the page gives none. */
+function rootFontSize(): number {
+  const size = Number.parseFloat(
+    getComputedStyle(document.documentElement).fontSize,
+  );
+  return Number.isFinite(size) && size > 0 ? size : 16;
+}
+
 /** A length as both units, from a resolved value or a measured width. */
 export function describeLength(value: string, width: number): string {
+  const rem = rootFontSize();
   const parsed = /^(-?[\d.]+)(px|rem)$/.exec(value);
   const px = parsed
-    ? Number(parsed[1]) * (parsed[2] === "rem" ? 16 : 1)
+    ? Number(parsed[1]) * (parsed[2] === "rem" ? rem : 1)
     : width;
-  return `${Number((px / 16).toFixed(3))}rem · ${Number(px.toFixed(2))}px`;
+  return `${Number((px / rem).toFixed(3))}rem · ${Number(px.toFixed(2))}px`;
 }
