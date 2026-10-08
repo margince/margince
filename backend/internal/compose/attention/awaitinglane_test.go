@@ -5,11 +5,13 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -80,8 +82,9 @@ func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 }
 
 type countingAwaiting struct {
-	rows  []AwaitedReply
-	calls int
+	rows        []AwaitedReply
+	calls       int
+	meetingsErr error
 }
 
 func (c *countingAwaiting) AwaitingReplies(context.Context, time.Time) ([]AwaitedReply, bool, error) {
@@ -90,7 +93,28 @@ func (c *countingAwaiting) AwaitingReplies(context.Context, time.Time) ([]Awaite
 }
 
 func (c *countingAwaiting) MeetingFollowUps(context.Context, time.Time) ([]AwaitedReply, bool, error) {
-	return nil, false, nil
+	return nil, false, c.meetingsErr
+}
+
+// The two reads fail apart: a refused or failed meeting read names its own
+// source and keeps the replies that were read.
+func TestAFailedMeetingReadKeepsTheReplies(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
+	for err, want := range map[error]crmcontracts.WorklistSourceUnavailableReason{
+		apperrors.ErrPermissionDenied:        crmcontracts.WorklistSourceUnavailableReasonWithheld,
+		errors.New("the database went away"): crmcontracts.WorklistSourceUnavailableReasonFailed,
+	} {
+		reader := &countingAwaiting{rows: []AwaitedReply{{ActivityID: ids.NewV7(), SentAt: at}}, meetingsErr: err}
+		s := &Service{awaiting: reader, taskScope: TasksMine, now: func() time.Time { return at }}
+		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		if len(scoped.followUps.rows) != 1 || refusals[0] != nil {
+			t.Errorf("%v: kept %d replies, refusal %v; want the one reply kept", err, len(scoped.followUps.rows), refusals[0])
+		}
+		if refusals[1] == nil || refusals[1].Source != sourceMeetingFollowUp || refusals[1].Reason != want {
+			t.Errorf("%v: meeting refusal = %+v, want %s on %s", err, refusals[1], want, sourceMeetingFollowUp)
+		}
+	}
 }
 
 // A meeting is not a message to answer: the row offers a fresh message to the
