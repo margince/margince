@@ -389,6 +389,35 @@ elif [[ "${CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the frontend suite's verdict depends on the calendar"
 fi
 
+if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]]; then
+  report "the backend suite's verdict depends on the calendar" "priority: normal,area: ci-tests,bug" \
+"\`make backend-clock-drift\` failed on the scheduled run of \`main\` at +200 days: $RUN_URL
+
+The suite passes today and fails 200 days from now, so at least one test asserts
+against an instant something compares to \`now\` to decide a state. It will start
+failing on its own, on a commit that touches nothing near it — the confirmed
+instance was a task seeded seven days out, asserted to group as \`later\`, coming
+back \`this_week\` on a Thursday.
+
+READ THE FAILURES BEFORE FIXING THEM, because this lane has two failure modes and
+they are not the same finding:
+
+- A fixture whose claim depends on the day. Fix it at the fixture: assert the
+  thing no calendar can move (overdue or not, rather than which bucket), or take
+  the base instant from \`clocktest.Now(t)\` so the offset reaches it.
+- The lane's own. If the clock did not actually move, or a time service
+  re-synced mid-run, \`scripts/clock-drift-host.sh\` says so and the run is void
+  rather than a finding about the tree. A red that blames the tree for the lane
+  is what teaches a reader to ignore a scheduled lane, so rule this out first.
+
+Reproduce locally with \`BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift\`.
+Read a green from it as weaker than this lane's: \`CURRENT_TIMESTAMP\` and
+stored column \`DEFAULT\`s keep the real date under that applier."\
+    || unreported=1
+elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]]; then
+  resolve "the backend suite's verdict depends on the calendar"
+fi
+
 if [[ "${CACHE_RESULT:-}" = "failure" ]]; then
   report "the Actions build-cache reaper is failing" "priority: normal,area: ci-tests,bug" \
 "\`scripts/reap-build-caches.sh\` failed on the scheduled run: $RUN_URL

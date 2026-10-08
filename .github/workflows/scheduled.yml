@@ -266,6 +266,69 @@ jobs:
         working-directory: .
         run: make check-backend
 
+  # The backend's counterpart to fe-clock-drift: the suite's verdict must not
+  # depend on the calendar. It moves the runner's own clock, and
+  # scripts/clock-drift-host.sh says why no other shift reaches both Go and
+  # Postgres.
+  #
+  # Order matters: checkout, module download, the gate binaries and the compose
+  # pull all finish at the real date, because a 200-day jump expires the TLS
+  # certificates they verify. Only then does the clock move.
+  backend-clock-drift:
+    # The DAILY cadence, spelled per job for the reason backend-lane states: a
+    # job with no `if` runs on every trigger the workflow has.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
+    name: backend clock drift (main, +200 days)
+    runs-on: ubuntu-latest
+    # Longer than backend-lane's 45: this runs the integration lane too, on one
+    # runner rather than across the six shards ci.yml splits it into.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      BACKEND_CLOCK_SKEW: machine:200
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # rbacbaselineerafixture_test.go reads the migration baseline commit and
+          # fails rather than degrades on a shallow checkout.
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: integration
+      - name: Install the pinned gate binaries
+        run: make tools
+      - name: Gate binaries onto PATH
+        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      # Every step that needs the network has finished by here.
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      - name: Compile the suites at the real date
+        run: make -C backend build
+      # The offset comes from BACKEND_CLOCK_SKEW rather than being spelled again.
+      # The restore below is the copy that matters: raising the skew here and
+      # leaving a literal there hands the runner back with its clock in the
+      # past, which is the poisoning that step exists to prevent.
+      - name: Move the runner's clock forward
+        run: ./scripts/clock-drift-host.sh move "${BACKEND_CLOCK_SKEW##*:}"
+      - name: The backend suites at the moved clock
+        run: make backend-clock-drift
+      # The clock goes back even when the suites failed. A runner handed back to
+      # the pool 200 days ahead poisons whatever runs on it next, and that
+      # failure would surface in someone else's lane with nothing to point at.
+      - name: Restore the clock
+        if: always()
+        run: ./scripts/clock-drift-host.sh restore "${BACKEND_CLOCK_SKEW##*:}"
+
   # PERF-3/PERF-7 on the SMB tier, weekly. It is the only job here gated on a
   # cadence rather than running every time the workflow fires: the daily lane
   # must not pay 40+ minutes of contact seeding for a budget nobody merges
@@ -696,7 +759,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -740,6 +803,7 @@ jobs:
           RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
           LANE_RESULT: ${{ needs.backend-lane.result }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
+          BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}

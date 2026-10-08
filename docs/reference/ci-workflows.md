@@ -191,6 +191,7 @@ because a diff exists.
 | SonarCloud quality gate | daily | `main`'s stored gate, read through the API (no re-scan) | It is not a required PR check, so nothing else reads it. `main-health.yml` publishes the analysis. |
 | backend lane | daily | The backend gate, unconditionally | A docs-only commit after a breaking one matches no classifier scope, so every gate skips and the run reports green over a broken tree. |
 | frontend clock drift | daily | The vitest suite run as if it were 200 days from now, with the same verdict | A fixture whose absolute date a component compares to `now` breaks on a calendar date, with no diff. |
+| backend clock drift | daily | The Go suites, unit and real-Postgres, run on a runner whose clock is 200 days ahead, with the same verdict | The same calendar breakage on the backend, where a test can read either Go's clock or Postgres' `now()`. |
 | PERF-3/PERF-7 budgets | weekly | `make bench-perf-check`: the budgets on the SMB tier (10,000 seeded contacts), writing no record | Weekly is enough for a budget that no merge depends on. |
 | model-driven use cases (`make e2e-llm`) | weekly | The deck scenarios driven by a real assistant, checking what it said | The deterministic suite pins payloads and refusals and stays green while the surface becomes undrivable by a model. |
 
@@ -201,6 +202,17 @@ Notes on the jobs:
 - No static rule finds the next clock-dependent test: "an absolute date in a file
   that never pins the clock" matches 129 files, nearly all harmless. The gate is
   therefore a second run.
+- Several hundred backend test files read the wall clock, and
+  `backend/gates/testdata/wallclockfixtures.txt` holds the count. Several
+  hundred more compare against Postgres' `now()`, so the shift must reach both
+  clocks. Moving the runner's clock is the only shift that does;
+  `scripts/clock-drift-host.sh` says why.
+- Every step that needs the network finishes before the jump, because 200 days
+  expires the TLS certificates those steps verify. The clock is restored even on
+  failure, so the runner does not return to the pool 200 days ahead.
+  `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` reproduces the
+  lane locally under the weaker database applier, and
+  `backend/internal/shared/clockskew` says what each applier reaches.
 - The model lane costs real tokens. It skips rather than fails when
   `ANTHROPIC_API_KEY` is absent, so an unfunded lane does not turn `main` red
   every Monday; a skipped job says "not configured" where a red one says
