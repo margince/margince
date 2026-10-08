@@ -29754,10 +29754,9 @@ export interface components {
              *     moment the API could not be told.
              *
              *     An omitted field is unchanged, like every other field on this patch. Sending
-             *     an explicit `null` is also unchanged rather than a clear: this request maps
-             *     onto the same coalescing update `due_at` and `remind_at` take, which cannot
-             *     tell an absent field from a null one. Recording the wrong outcome is fixed by
-             *     sending the right one.
+             *     an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
+             *     `remind_at` and `assignee_id`, where `null` removes the value. Recording the
+             *     wrong outcome is fixed by sending the right one.
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
