@@ -33,7 +33,15 @@ export function productionModulesUnder(dir: string): string[] {
   );
 }
 
-type Edges = "all" | "values";
+// "scanned" is a text scan for a string after `from` or `import`: a superset
+// of "all" at a hundredth of a parse, so it can clear a graph but not convict.
+type Edges = "all" | "values" | "scanned";
+
+const GAP = String.raw`(?:\s|/\*[\s\S]*?\*/|//[^\n]*\n)*`;
+const SPECIFIER_SCAN = new RegExp(
+  String.raw`\b(?:from|import)${GAP}\(?${GAP}["'\`]([^"'\`\n]+)["'\`]`,
+  "g",
+);
 
 // Every walk crosses the same shared subgraph — the design system, the api
 // client, i18n — so a module is parsed once for the run, not once per entry
@@ -41,6 +49,7 @@ type Edges = "all" | "values";
 const resolvedImports: Record<Edges, Map<string, string[]>> = {
   all: new Map(),
   values: new Map(),
+  scanned: new Map(),
 };
 
 // An MDX page's imports are ESM lines outside its code fences; the prose and
@@ -48,21 +57,32 @@ const resolvedImports: Record<Edges, Map<string, string[]>> = {
 const MDX_FENCE = /^```[\s\S]*?^```/gm;
 const MDX_IMPORT = /^import\s[^;]*?["'][^"'\n]+["'];?/gm;
 
-function sourceOf(file: string): ts.SourceFile {
+function importText(file: string): string {
+  const text = readFileSync(file, "utf8");
   if (!isDocsPage(file)) {
-    return sourceFileAt(file);
+    return text;
   }
-  const imports =
-    readFileSync(file, "utf8").replace(MDX_FENCE, "").match(MDX_IMPORT) ?? [];
-  return parseSource(file, imports.join("\n"));
+  return (text.replace(MDX_FENCE, "").match(MDX_IMPORT) ?? []).join("\n");
 }
 
-function edgesOf(file: string, edges: Edges): string[] {
+function sourceOf(file: string): ts.SourceFile {
+  return isDocsPage(file)
+    ? parseSource(file, importText(file))
+    : sourceFileAt(file);
+}
+
+function specifiersOf(file: string, edges: Edges): string[] {
+  return edges === "scanned"
+    ? [...importText(file).matchAll(SPECIFIER_SCAN)].map((match) => match[1])
+    : moduleSpecifiers(sourceOf(file), edges);
+}
+
+export function edgesOf(file: string, edges: Edges): string[] {
   const known = resolvedImports[edges].get(file);
   if (known) {
     return known;
   }
-  const found = moduleSpecifiers(sourceOf(file), edges)
+  const found = specifiersOf(file, edges)
     .map((specifier) => resolveRelative(file, specifier))
     .filter((next): next is string => next !== null);
   resolvedImports[edges].set(file, found);
@@ -70,13 +90,13 @@ function edgesOf(file: string, edges: Edges): string[] {
 }
 
 /**
- * The shortest import path from `entry` to any of `targets`, as absolute
- * paths from the entry on, or null when none is reachable. A path rather than
- * a boolean, because the offending edge is usually several hops in and
- * invisible from the entry.
+ * The shortest import path from `entry` (or the nearest of several) to any of
+ * `targets`, as absolute paths from the entry on, or null when none is
+ * reachable. A path rather than a boolean, because the offending edge is
+ * usually several hops in and invisible from the entry.
  */
 export function importPathTo(
-  entry: string,
+  entry: string | readonly string[],
   targets: ReadonlySet<string> | ((file: string) => boolean),
   // Type-only edges count by default: a type import naming the heavy half
   // couples the two, and a later value import across it would pass review.
@@ -86,11 +106,13 @@ export function importPathTo(
     typeof targets === "function"
       ? targets
       : (file: string) => targets.has(file);
-  if (isTarget(entry)) {
-    return [entry];
+  const starts = typeof entry === "string" ? [entry] : entry;
+  const hit = starts.find(isTarget);
+  if (hit !== undefined) {
+    return [hit];
   }
-  const seen = new Set([entry]);
-  const queue: string[][] = [[entry]];
+  const seen = new Set(starts);
+  const queue: string[][] = starts.map((start) => [start]);
   for (let trail = queue.shift(); trail; trail = queue.shift()) {
     for (const next of edgesOf(trail[trail.length - 1], edges)) {
       if (seen.has(next)) {
@@ -117,16 +139,35 @@ export function loadsTestRunner(file: string): boolean {
   if (known !== undefined) {
     return known;
   }
-  const loads = moduleSpecifiers(sourceOf(file), "values").some((specifier) =>
-    TEST_RUNNER.test(specifier),
-  );
+  const loads =
+    importText(file).includes("vitest") &&
+    moduleSpecifiers(sourceOf(file), "values").some((specifier) =>
+      TEST_RUNNER.test(specifier),
+    );
   runnerModules.set(file, loads);
   return loads;
 }
 
 /** Each entry's value-import path to a module that loads the test runner. */
 export function testRunnerReach(entries: readonly string[]): string[][] {
-  return entries
+  // The scan costs a fraction of a parse, so only an entry it flags pays for
+  // the exact walk, which may still clear it of a type-only path.
+  return offenders(entries, "scanned")
     .map((entry) => importPathTo(entry, loadsTestRunner, "values"))
     .filter((path): path is string[] => path !== null);
+}
+
+// One walk per offender from every remaining entry, not one per entry: each
+// clean entry's walk would cross the whole graph again.
+function offenders(entries: readonly string[], edges: Edges): string[] {
+  const found: string[] = [];
+  let remaining = [...entries];
+  let path = importPathTo(remaining, loadsTestRunner, edges);
+  while (path !== null) {
+    const offender = path[0];
+    found.push(offender);
+    remaining = remaining.filter((entry) => entry !== offender);
+    path = importPathTo(remaining, loadsTestRunner, edges);
+  }
+  return entries.filter((entry) => found.includes(entry));
 }

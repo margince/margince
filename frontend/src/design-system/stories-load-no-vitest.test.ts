@@ -8,11 +8,11 @@ import { existsSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  importPathTo,
+  edgesOf,
   loadsTestRunner,
   testRunnerReach,
 } from "../../scripts/lib/import-reach";
-import { filesUnder } from "../../scripts/lib/source-tree";
+import { filesMatching } from "../../scripts/lib/source-tree";
 import { isDocsPage, storyCensus } from "../../scripts/lib/story-files";
 
 const frontendRoot = resolve(__dirname, "..", "..");
@@ -30,17 +30,18 @@ describe("no file Storybook loads reaches vitest", () => {
     expect(census.suffixes).not.toBeNull();
     expect(census.files.length).toBeGreaterThan(0);
     expect(
-      filesUnder(join(frontendRoot, "src")).filter(loadsTestRunner).length,
-    ).toBeGreaterThan(0);
+      filesMatching(join(frontendRoot, "src"), /\.test\.tsx?$/).some(
+        loadsTestRunner,
+      ),
+    ).toBe(true);
     const paired = census.files
       .filter((file) => !isDocsPage(file))
       .flatMap((story) => {
         const component = componentBeside(story);
         return component === undefined ? [] : [{ story, component }];
       });
-    const reached = paired.filter(
-      ({ story, component }) =>
-        importPathTo(story, new Set([component]), "values") !== null,
+    const reached = paired.filter(({ story, component }) =>
+      edgesOf(story, "scanned").includes(component),
     );
     expect(reached.length).toBeGreaterThan(paired.length / 2);
   });

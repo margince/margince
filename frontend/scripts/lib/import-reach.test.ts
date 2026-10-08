@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  edgesOf,
   importPathTo,
   productionModulesUnder,
   testRunnerReach,
@@ -81,6 +82,36 @@ describe("the import walk the split gates share", () => {
     write("heavy.tsx", "");
 
     expect(importPathTo(at("entry.ts"), new Set([at("heavy.tsx")]))).toBeNull();
+  });
+
+  it("scans every edge the parser finds, in every import form", () => {
+    write(
+      "forms.tsx",
+      [
+        'import a from "./a";',
+        'import * as b from "./b";',
+        'import { type C, c } from "./c";',
+        'import type { D } from "./d";',
+        'import "./e";',
+        'export { f } from "./f";',
+        'export * from "./g";',
+        'export type { H } from "./h";',
+        'import {\n  i,\n} from "./i";',
+        'const j = () => import(/* lazy */ "./j");',
+        "const l = () => import(`./l`);",
+        'export const k = <p>{"./k"}</p>;',
+      ].join("\n"),
+    );
+    const modules = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "l"];
+    for (const name of [...modules, "k"]) {
+      write(`${name}.ts`);
+    }
+    const expected = modules.map((name) => `${name}.ts`);
+
+    expect(named(edgesOf(at("forms.tsx"), "all"))?.sort()).toEqual(expected);
+    expect(named(edgesOf(at("forms.tsx"), "scanned"))?.sort()).toEqual(
+      expected,
+    );
   });
 
   it("walks value edges alone when asked, keeping a separate cache per mode", () => {
