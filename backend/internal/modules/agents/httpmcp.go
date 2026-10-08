@@ -334,6 +334,12 @@ func (h *httpMCPHandler) writeBodyRefusal(w http.ResponseWriter, r *http.Request
 	var tooLarge *http.MaxBytesError
 	switch {
 	case errors.Is(err, errLargeBodiesBusy):
+		// The server drains an unread body before it answers; an expired read
+		// deadline ends that drain, so a sender that paused still hears this.
+		if err := http.NewResponseController(w).SetReadDeadline(time.Now()); err != nil {
+			h.server.log.Warn("mcp: a busy refusal may wait on the rest of the body", "err", err)
+		}
+		w.Header().Set("Connection", "close")
 		w.Header().Set("Retry-After", "1")
 		httperr.ServiceUnavailable(w, r, "This server is already handling as many large MCP requests "+
 			"as it can hold. Wait a moment and send the call again.")

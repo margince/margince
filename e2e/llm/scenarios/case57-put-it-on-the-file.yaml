@@ -68,11 +68,11 @@ must_mention:
 # in nothing the seed writes, so a match is the file retyped, whichever field
 # of log_activity carries it. The second entry is the logo's markup.
 must_not_call_with:
-  - "log_activity~AlSi9Cu3|foundry is at capacity|calendar week 44|Cast housings for their 2027"
+  - "log_activity~AlSi9Cu3|foundry is at capacity|calendar week 44|Cast housings for their 2027|Sample run of 40|Sample approval meeting|plant manager, our sales engineer"
   - "log_activity~<svg|xmlns|PHN2ZyB4bWxucz"
 
 must_end_with:
-  - company "Aachener Metallwerke GmbH" document=fbc851cb17f6584e421fec7ec33a59a887f1bfecbabfc4310b760053225f61f3 *.md
+  - company "Aachener Metallwerke GmbH" document=fbc851cb17f6584e421fec7ec33a59a887f1bfecbabfc4310b760053225f61f3 visit-notes.md
   - company "Aachener Metallwerke GmbH" documents=1
 
 # Each is about what the answer TELLS the user, which no world check reads.

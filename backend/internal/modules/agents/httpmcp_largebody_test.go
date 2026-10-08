@@ -102,6 +102,22 @@ func TestADeclaredLargeRequestIsRefusedBeforeItsBodyIsRead(t *testing.T) {
 	}
 }
 
+// An undeclared body that outgrows the bound while every slot is taken is
+// refused at once, not after the server waits to drain the rest of it.
+func TestAChunkedLargeRequestIsRefusedWithoutWaitingForItsBody(t *testing.T) {
+	h, srv := largeBodyHandler(t, NewRegistry(nil, nil))
+	for range maxLargeMCPBodiesInFlight {
+		h.largeBodies <- struct{}{}
+	}
+
+	answer := stalledPost(t, srv, "Transfer-Encoding: chunked\r\n",
+		fmt.Sprintf("%x\r\n%s\r\n", httperr.MaxBodyBytes+1, strings.Repeat(" ", httperr.MaxBodyBytes+1)))
+
+	if answer.status != http.StatusServiceUnavailable || answer.header.Get("Retry-After") == "" {
+		t.Fatalf("answered %d (Retry-After %q), want 503 with Retry-After", answer.status, answer.header.Get("Retry-After"))
+	}
+}
+
 // A sender that stops partway holds its slot only for the read budget; the
 // slot is free again once it is answered, whether it declared a length or not.
 func TestAStalledLargeSenderGivesItsSlotBack(t *testing.T) {
