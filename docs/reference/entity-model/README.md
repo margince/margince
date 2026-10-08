@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 294 |
-| Columns | 3503 |
+| Columns | 3504 |
 | Foreign keys | 476 |
 | Owning areas | 36 |
 
@@ -39,7 +39,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 24 | 126 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 126 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 43 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 40 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
@@ -157,7 +157,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 24 | 126 |
+| [`app_user`](identity.md#app_user) | identity | 25 | 126 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 3 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |

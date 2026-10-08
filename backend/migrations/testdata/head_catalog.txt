@@ -982,6 +982,7 @@ public.app_user.greeting_name text gen=- def=-
 public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
 public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
+public.app_user.last_active_at timestamp with time zone gen=- def=-
 public.app_user.locale text gen=- def=-
 public.app_user.locked_until timestamp with time zone gen=- def=-
 public.app_user.morning_brief_delivery text gen=- def=-

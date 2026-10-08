@@ -150,7 +150,7 @@ func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
 			if _, err := e.svc.SeatNames(tc.ctx, []ids.UserID{e.admin.UserID}); err == nil {
 				t.Error("SeatNames named a colleague")
 			}
-			if _, err := e.svc.GetUser(tc.ctx, e.member.UserID); err == nil {
+			if _, err := e.svc.GetUser(tc.ctx, Identity{}, e.member.UserID); err == nil {
 				t.Error("GetUser served one member")
 			}
 		})
@@ -169,10 +169,10 @@ func TestTheSingleMemberReadIsForMemberAdministratorsOnly(t *testing.T) {
 	if _, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{}); err != nil {
 		t.Fatalf("a member was refused the roster every seat may read: %v", err)
 	}
-	if _, err := e.svc.GetUser(e.wsCtx(e.member), e.admin.UserID); err == nil {
+	if _, err := e.svc.GetUser(e.wsCtx(e.member), e.member, e.admin.UserID); err == nil {
 		t.Error("a member without user_admin read a single member's roles and teams")
 	}
-	if _, err := e.svc.GetUser(e.wsCtx(e.admin), e.member.UserID); err != nil {
+	if _, err := e.svc.GetUser(e.wsCtx(e.admin), e.admin, e.member.UserID); err != nil {
 		t.Errorf("a member administrator was refused the read they administer with: %v", err)
 	}
 }
@@ -265,7 +265,7 @@ func TestTheMemberReadFollowsAnyAdministrationVerbNotReadAlone(t *testing.T) {
 	if err := auth.Require(e.wsCtx(deleter), objectUserAdmin, principal.ActionRead); err == nil {
 		t.Fatal("the fixture holds user_admin.read, so the assertion below proves nothing")
 	}
-	if _, err := e.svc.GetUser(e.wsCtx(deleter), e.member.UserID); err != nil {
+	if _, err := e.svc.GetUser(e.wsCtx(deleter), deleter, e.member.UserID); err != nil {
 		t.Errorf("a holder of user_admin.delete cannot read back the seat it just wrote: %v", err)
 	}
 }

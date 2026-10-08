@@ -223,3 +223,43 @@ func TestWireTeam(t *testing.T) {
 		t.Errorf("CreatedAt = %v, want %v", got.CreatedAt, created)
 	}
 }
+
+// Last-active follows ListUserSessions' reach: a non-admin delegate sees it on a
+// member they outrank and never on an admin, and a request with no human caller
+// sees it on nobody.
+func TestLastActiveIsWithheldWhereTheCallerCouldNotListTheSessions(t *testing.T) {
+	seen := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	admin, rep := ids.NewV7(), ids.NewV7()
+	grants := map[ids.UUID]seatGrants{admin: {roles: []string{roleAdmin}}, rep: {roles: []string{"rep"}}}
+	delegate := &Identity{Roles: []string{"member_admin"}}
+	for _, c := range []struct {
+		name   string
+		caller *Identity
+		target ids.UUID
+		shown  bool
+	}{
+		{"an admin on an admin", &Identity{Roles: []string{roleAdmin}}, admin, true},
+		{"a delegate on a rep", delegate, rep, true},
+		{"a delegate on an admin", delegate, admin, false},
+		{"no human caller", nil, rep, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			rows := []userRow{{ID: c.target, LastActiveAt: &seen}}
+			withholdActivity(c.caller, rows, grants)
+			if shown := rows[0].LastActiveAt != nil; shown != c.shown {
+				t.Errorf("last active shown = %v, want %v", shown, c.shown)
+			}
+		})
+	}
+}
+
+func TestWireUserWithRolesCarriesLastActive(t *testing.T) {
+	seen := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	got := wireUserWithRoles(userRow{ID: ids.NewV7(), LastActiveAt: &seen})
+	if got.LastActiveAt == nil || !got.LastActiveAt.Equal(seen) {
+		t.Errorf("LastActiveAt = %v, want %v", got.LastActiveAt, seen)
+	}
+	if wireUser(userRow{ID: ids.NewV7(), LastActiveAt: &seen}).LastActiveAt != nil {
+		t.Error("the roster every member reads carries a colleague's last activity")
+	}
+}

@@ -74,7 +74,7 @@ func callMemberVerb(e *revocationEnv, h Handlers, caller Identity, action member
 // memberState is what a member verb changes, read as the admin.
 func memberState(t *testing.T, e *revocationEnv, userID ids.UserID) string {
 	t.Helper()
-	row, err := e.svc.GetUser(e.wsCtx(e.admin), userID)
+	row, err := e.svc.GetUser(e.wsCtx(e.admin), e.admin, userID)
 	if err != nil {
 		t.Fatal(err)
 	}

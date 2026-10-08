@@ -16,6 +16,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -105,6 +106,61 @@ func TestOnlyADeadCredentialIsReaped(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Reaping a member's dead sessions keeps the latest request they made on their
+// seat, so the last activity survives with no session row left.
+func TestTheReapKeepsAMembersLastActivity(t *testing.T) {
+	_, pool := setupIdentityDB(t)
+	ctx := context.Background()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer rollback(t, tx)
+
+	user := seedReapUser(ctx, t, tx)
+	last := time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at, revoked_at, last_seen_at)
+		 VALUES ($1, 'reap-older', now() + interval '1 day', now() + interval '1 day', now(), $2::timestamptz - interval '1 hour'),
+		        ($1, 'reap-latest', now() - interval '1 minute', now() + interval '1 day', now(), $2)`,
+		user, last); err != nil {
+		t.Fatalf("seeding two dead sessions: %v", err)
+	}
+
+	if err := reapDeadCredentials(ctx, tx, "session"); err != nil {
+		t.Fatalf("reaping sessions: %v", err)
+	}
+	if n := reapCount(ctx, t, tx, "session"); n != 0 {
+		t.Errorf("%d sessions survive the reap, want none", n)
+	}
+	if kept := seatLastActive(ctx, t, tx, user); kept == nil || !kept.Equal(last) {
+		t.Errorf("the seat's last activity after the reap = %v, want %v", kept, last)
+	}
+
+	// A later reap of an older session never moves it back.
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at, revoked_at, last_seen_at)
+		 VALUES ($1, 'reap-stale', now() + interval '1 day', now() + interval '1 day', now(), $2::timestamptz - interval '1 day')`,
+		user, last); err != nil {
+		t.Fatalf("seeding a stale dead session: %v", err)
+	}
+	if err := reapDeadCredentials(ctx, tx, "session"); err != nil {
+		t.Fatalf("reaping sessions again: %v", err)
+	}
+	if kept := seatLastActive(ctx, t, tx, user); kept == nil || !kept.Equal(last) {
+		t.Errorf("an older reaped session moved the seat's last activity to %v, want %v", kept, last)
+	}
+}
+
+func seatLastActive(ctx context.Context, t *testing.T, tx pgx.Tx, user string) *time.Time {
+	t.Helper()
+	var at *time.Time
+	if err := tx.QueryRow(ctx, `SELECT last_active_at FROM app_user WHERE id = $1`, user).Scan(&at); err != nil {
+		t.Fatalf("reading the seat: %v", err)
+	}
+	return at
 }
 
 // A table nobody wrote a rule for fails rather than sweeping nothing: a reaper

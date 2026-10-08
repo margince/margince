@@ -59,8 +59,22 @@ func reapDeadCredentials(ctx context.Context, tx pgx.Tx, table string) error {
 		// saying so beats sweeping nothing and reading as swept.
 		return fmt.Errorf("identity: no dead-row rule for credential table %q", table)
 	}
-	_, err := tx.Exec(ctx,
-		`DELETE FROM `+table+` WHERE id IN (SELECT id FROM `+table+
-			` WHERE `+dead+` LIMIT $1)`, expiredCredentialReapLimit)
+	reap := `DELETE FROM ` + table + ` WHERE id IN (SELECT id FROM ` + table +
+		` WHERE ` + dead + ` LIMIT $1)`
+	if table == "session" {
+		reap = keepingLastActivity(reap)
+	}
+	_, err := tx.Exec(ctx, reap, expiredCredentialReapLimit)
 	return err
+}
+
+// keepingLastActivity moves the latest request each member's reaped sessions
+// made onto app_user in the statement that deletes them, so the roster's last
+// activity outlives the rows.
+func keepingLastActivity(sessionReap string) string {
+	return `WITH reaped AS (` + sessionReap + ` RETURNING user_id, last_seen_at)
+	UPDATE app_user SET last_active_at = r.last_seen_at
+	  FROM (SELECT user_id, max(last_seen_at) AS last_seen_at FROM reaped GROUP BY user_id) r
+	 WHERE app_user.id = r.user_id
+	   AND (app_user.last_active_at IS NULL OR app_user.last_active_at < r.last_seen_at)`
 }
