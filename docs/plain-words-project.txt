@@ -2,6 +2,7 @@
 a
 about
 above
+abschlüsse
 absence
 absent
 abstention
@@ -109,6 +110,7 @@ availability
 available
 avoid
 away
+b
 back
 backfill
 badge
@@ -119,6 +121,7 @@ bare
 barrier
 base
 batch
+bcc
 be
 bearing
 because
@@ -173,6 +176,7 @@ button
 buy
 by
 byte
+bücher
 cache
 cadence
 calculated
@@ -193,6 +197,7 @@ carry
 case
 catalog
 catch
+cc
 census
 certificate
 certification
@@ -253,6 +258,7 @@ composite
 compute
 concrete
 condition
+conduct
 confidence
 config's
 configuration
@@ -274,6 +280,7 @@ content
 context
 contract
 contractual
+contrib
 contribute
 control
 conventional
@@ -305,12 +312,16 @@ currency
 current
 custom
 customer's
+cyclonedx
+dachpartner
 dark
 data
 database
 dataset
 date
 day
+db
+ddl
 deadlock
 deal
 decide
@@ -340,14 +351,14 @@ destructive
 developer
 dialog
 did
-differ
+diff
 different
-diffing
 digest
 digit
 dir
 direct
 direction
+directive
 disable
 disagree
 disarm
@@ -378,6 +389,7 @@ drew
 drift
 drop
 dropdown
+dsn
 due
 dumb
 duplicate
@@ -388,6 +400,7 @@ each
 early
 earn
 easily
+ec
 edge
 edit
 editable
@@ -416,6 +429,7 @@ equality
 erase
 error
 essentials
+eu
 evaluate
 even
 event
@@ -490,12 +504,14 @@ forward
 found
 four
 fourth
+fp
 frame
 free
 frequency
 fresh
 from
 front
+frontier
 full
 function
 gap
@@ -511,6 +527,7 @@ gist
 give
 given
 glued
+gmbh
 go
 goods
 got
@@ -519,6 +536,7 @@ grader
 grant
 green
 greet
+grep
 ground
 group
 grow
@@ -565,6 +583,7 @@ hour
 hover
 how
 however
+hubspot
 human
 hypercare
 hyphen
@@ -575,6 +594,7 @@ idempotent
 identical
 identifier
 identity
+idna
 if
 ignore
 image
@@ -582,6 +602,7 @@ implementation
 import
 in
 inbound
+inc
 include
 index
 indigo
@@ -613,7 +634,9 @@ invite
 invoice
 involvement
 involves
+ir
 is
+isc
 isolation
 issue
 it
@@ -622,6 +645,9 @@ itself
 january
 job
 join
+jsdom
+json
+jsx
 judge
 just
 keep
@@ -680,6 +706,7 @@ location
 lock
 log
 login
+logistik
 long
 look
 loop
@@ -687,7 +714,9 @@ loopback
 lose
 lower
 lowest
+lucide
 machine
+macrotask
 made
 mail
 mailbox
@@ -699,6 +728,7 @@ manifest
 many
 map
 margin
+margince
 mark
 market
 markup
@@ -729,7 +759,9 @@ mirror
 mismatch
 miss
 mistake
+mistral's
 mixed
+mlx
 mock
 modal
 mode
@@ -744,16 +776,19 @@ more
 most
 mount
 move
+msys
 much
 multi
 multipart
 multiplies
 must
 mutation
+n
 name
 namespace
 narrow
 native
+nav
 navigation
 need
 neither
@@ -763,13 +798,16 @@ never
 new
 newline
 next
+nginx
 nightly
 no
 nobody
 noise
+nomad
 non
 none
 nor
+nordwind
 normal
 not
 note
@@ -778,11 +816,13 @@ notice
 noun
 now
 number
+oauth
 object
 objection
 obligation
 observe
 obtain
+oci
 of
 off
 offered
@@ -796,6 +836,7 @@ onboard
 once
 one
 open
+openrouter
 operation
 operational
 operator
@@ -823,7 +864,9 @@ over
 overlay
 overwrite
 owe
+owl
 own
+p
 pack
 package
 page
@@ -847,6 +890,7 @@ pattern
 pause
 pay
 payload
+pdfs
 pending
 per
 period
@@ -910,16 +954,21 @@ provable
 prove
 provider
 proxy
+prs
 public
 publish
 pull
+punycode
 purchase
 purge
+purl
 purpose
 pursue
 pursuit
 push
 put
+pypi
+python
 qualify
 query
 question
@@ -928,6 +977,7 @@ quick
 quiet
 quotation
 quote
+qwen
 rail
 raise
 ran
@@ -1082,6 +1132,8 @@ settle
 setup
 seven
 several
+sha
+shacl
 shape
 share
 sharper
@@ -1094,6 +1146,7 @@ sibling
 side
 sidebar
 sideways
+sigint
 sign
 signal
 silence
@@ -1126,12 +1179,14 @@ sovereign
 space
 spam
 span
+spdx
 spec
 speed
 spell
 spellings
 spent
 split
+sso
 stable
 stack
 stage
@@ -1149,6 +1204,7 @@ status
 statute
 statutory
 stay
+stdlib
 step
 still
 stop
@@ -1188,6 +1244,7 @@ system
 tab
 table
 tag
+tailwind
 take
 taken
 taller
@@ -1263,6 +1320,7 @@ troubleshooting
 true
 trust
 truth
+tsx
 turn
 twice
 two
@@ -1274,9 +1332,11 @@ under
 undo
 unedited
 unit
+unix
 unless
 unlicensed
 unpinned
+unprivileged
 unreachable
 unready
 unrestricted
@@ -1296,6 +1356,7 @@ usable
 use
 user's
 usual
+uwg
 valid
 validation
 validator
@@ -1309,6 +1370,7 @@ verdict
 verify
 version
 via
+vietnam
 view
 viewport
 violation
@@ -1372,6 +1434,8 @@ write
 written
 wrong
 wrote
+x
+xadd
 year
 yet
 you

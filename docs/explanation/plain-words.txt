@@ -650,7 +650,6 @@ jitter
 job
 join
 journey
-jpeg
 judge
 jurisdiction
 just
@@ -659,7 +658,6 @@ keep
 kept
 key
 keyset
-kib
 kill
 kind
 know
@@ -915,7 +913,6 @@ plain
 plan
 platform
 plus
-png
 pod
 point
 policy
@@ -1368,7 +1365,6 @@ update
 upload
 upsert
 upstream
-urls
 us
 use
 user's
