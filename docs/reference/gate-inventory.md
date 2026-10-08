@@ -390,6 +390,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `benchfilenames_test.go` | H2 | A file behind the bench build tag says so in its name, so `git ls-files '\*\_bench\_test.go'` lists every bench in the tree. |
 | `bulktoolschema_test.go` | H1 | bulk\_update\_records advertises one schema for four modes. |
 | `capturedbytyping_test.go` | H2 | `captured\_by` records the principal, and a principal is not a user row. |
 | `cursorrefusal_test.go` | H2 | A page token a caller hands back is either one this server minted or it is not, and that question has one answer on the wire: the contract's `422 code: malformed\_cursor`, which tells the caller to re-issue the request without the token. |

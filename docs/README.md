@@ -126,6 +126,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-ai-task.md](how-to/add-an-ai-task.md): add a new AI task.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md): write a test case that
   certifies a model.
+- [design-a-bench-case.md](how-to/design-a-bench-case.md): add a screen to the daily-use speed test
+  (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
@@ -157,6 +159,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
+- [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
+  with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.
 - [ci-workflows.md](reference/ci-workflows.md): the GitHub workflows that run next to the merge check.
 - [platform-toolkit.md](reference/platform-toolkit.md): shared code for every module.

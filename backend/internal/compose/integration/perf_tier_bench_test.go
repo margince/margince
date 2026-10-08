@@ -10,7 +10,7 @@ package integration
 // red on a budget breach, and emits the ADR-0021 graph-store trigger
 // evidence.
 //
-// It carries the `bench` tag, so no merge gate runs it — `make vet` and both
+// It carries the `bench` tag, so no merge gate runs it; `make vet` and both
 // golangci passes still type-check it, which is the only thing standing
 // between a by-hand lane and rot. It ran in the standing integration lane
 // until it stopped being a signal there: the lane could only afford the SMB
@@ -18,13 +18,13 @@ package integration
 // wearing the same id (see the tier check below). Its p95 is also the
 // second-largest of twenty samples, taken on a runner sharing one Postgres
 // with the rest of the lane. What it cost to keep was 37.9s of every merge
-// gate — a quarter of its package.
+// gate, a quarter of its package.
 //
 // The write-path regression it once caught by TIMING OUT rather than by
 // measuring is now held deterministically, by the seq_scan count in
 // lastactivity_integration_test.go. Run this one with `make bench-perf`
 // (mid-market, writes a record) or `make bench-perf-check` (SMB, writes
-// nothing) — the scheduled workflow runs the latter weekly. Mid-market is by
+// nothing); the scheduled workflow runs the latter weekly. Mid-market is by
 // hand only: its seed does not finish inside a CI budget, so no schedule
 // measures the tier the SLO actually binds at.
 
@@ -157,7 +157,7 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 	}
 
 	// The ADR-0021 trigger evidence is computed and reported on every
-	// run — a passing run is the "substrate confirmed" record.
+	// run; a passing run is the "substrate confirmed" record.
 	evidence := report.TriggerEvidence()
 	t.Log(evidence.String())
 	if evidence.GraphAssemblyP95 <= 0 {
@@ -167,7 +167,7 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 		t.Fatalf("trigger evidence names tier %s, ran %s", evidence.Tier, spec.tier)
 	}
 
-	// The published page's PERF-3/PERF-7 rows come from here, but ONLY when a
+	// The published page's PERF-3/PERF-7 rows come from here, but only when a
 	// human asked for them: `make bench-perf` sets MARGINCE_BENCH_RECORD and the
 	// standing integration lane does not. Written before the gate, so a breach
 	// is recorded rather than hidden by its own failure.
@@ -186,7 +186,7 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 func writeTierBenchRecord(t *testing.T, owner *pgx.Conn, report search.BenchReport) {
 	t.Helper()
 	// PERF-7's SLO binds at mid-market. A run on any smaller tier still measures
-	// something real, and the page has to say which — otherwise the canary's
+	// something real, and the page has to say which; otherwise the canary's
 	// number reads as the bound being met.
 	caveat := ""
 	if report.Tier != search.BenchTierMidMarket {
@@ -221,7 +221,7 @@ func writeTierBenchRecord(t *testing.T, owner *pgx.Conn, report search.BenchRepo
 func benchFTSQuery(t *testing.T, store *search.Store, actx context.Context, spec benchTierSpec) search.QueryStats {
 	t.Helper()
 	// Only the seeded companies carry "gmbh", so every contact this finds came
-	// through the arm: a bench whose reader lost the arm fails here, not quietly.
+	// through the arm: a bench whose reader lost the arm fails here, not silently.
 	viaEmployer, err := store.Search(actx, search.Input{Query: "gmbh", Types: []string{"contact"}, WithEmployees: true})
 	if err != nil {
 		t.Fatal(err)
@@ -315,7 +315,7 @@ func benchReaderCtx(ws ids.UUID, objects ...string) context.Context {
 }
 
 // seedBenchTier bulk-loads one volume tier through the owner
-// connection (set-based inserts — the write shape has its own suites)
+// connection (set-based inserts; the write shape has its own suites)
 // and returns the graph-anchor contact the PERF-7 query measures.
 // benchExec runs one seeding statement through the owner connection,
 // failing with the tier it was sizing.
@@ -354,7 +354,7 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	analyze(`company`)
 
 	// Background timeline volume: activities linked cyclically across
-	// the contact population — the activity_link fan the recursive walk
+	// the contact population: the activity_link fan the recursive walk
 	// competes with.
 	exec(`INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
 	      SELECT CASE WHEN i % 5 = 0 THEN 'task' ELSE 'email' END,
@@ -371,12 +371,12 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	// are separate statements with an ANALYZE between them rather than the
 	// one chained CTE they used to be: a CTE cannot analyse what it is still
 	// writing, so every trigger call planned against an empty `activity` and
-	// drove the lookup from there — one scan of the whole activity table per
+	// drove the lookup from there: one scan of the whole activity table per
 	// link, quadratic in the tier. No installation plans that way; none of
 	// them is unanalysed.
 	//
 	// The cyclic assignment precomputes each row's target ordinal so the
-	// join is a plain hashable equijoin — an expression joining both
+	// join is a plain hashable equijoin; an expression joining both
 	// sides' row_numbers forces the planner into a nested loop that is
 	// pathological at the mid-market tier.
 	exec(`WITH total AS (
@@ -417,7 +417,7 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 }
 
 // seedBenchAnchor seeds the measured anchor: one contact with a hot 360
-// — touches linked to it AND to companies, so hop 2 has real
+// of touches linked to it and to companies, so hop 2 has real
 // expansion work.
 func seedBenchAnchor(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpec) ids.UUID {
 	t.Helper()

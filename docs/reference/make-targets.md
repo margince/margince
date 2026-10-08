@@ -234,7 +234,9 @@ The distribution is lopsided. On a quiet laptop the frontend's five core legs me
 | `bench-record` | PERF-1/PERF-4: record open and save p50/p95/p99, measured over HTTP against the booted app (needs `db-up`) |
 | `bench-capture` | CAP-PARAM-1: capture-to-timeline latency, 60 s p95, over the auto-create path (needs `db-up`) |
 | `bench-dispatch` | AC-W2: workflow trigger→dispatch p95 against the 200 ms budget (needs `db-up`). Writes no record, because AC-W2 has no published budget row, so it is the one `bench-*` target that re-renders nothing |
-| `perfdoc` | Re-render `docs/reference/performance-budgets.md` from the committed benchmark records. Every `bench-*` target runs it as its last step, so the page updates on every measurement; run it alone after editing the published-budget table in `backend/tools/gen-perfdoc` |
+| `bench-daily` | PERF-1/2/7/8/9/10 for the screens a rep and a manager open every day, measured over HTTP on a mid-market corpus, writing a record (needs `db-up`). `MARGINCE_BENCH_DAILY_SCALE` scales the corpus; at a value other than `1` the record goes to the git-ignored `docs/reference/perfbench/dev/`, which `perfdoc` never reads, so the published pages stay as they were. The run leaves `margince_bench_daily` (`BENCH_DAILY_DB_NAME`) in place to debug a slow row against. A failed run has still written its record and stops before `perfdoc`; run `make perfdoc` to render it |
+| `bench-daily-clean` | Drop the database `bench-daily` leaves behind. Nothing else drops it, and the next `bench-daily` recreates it from empty |
+| `perfdoc` | Re-render `docs/reference/performance-budgets.md` and `docs/reference/benchmark.md` from the committed benchmark records. Every `bench-*` target that writes a record runs it as its last step, so the page updates on every measurement; run it alone after editing the published-budget table in `backend/tools/gen-perfdoc` |
 | `tidy` | `go mod tidy` |
 
 ### Weekly reviews and seed-reset
@@ -243,7 +245,7 @@ A weekly review is a frozen reading of one week, written once under `uq_weekly_r
 
 ### The `bench` lane: measurements, run by hand
 
-`bench-perf`, `bench-perf-check`, `bench-record`, `bench-capture` and `bench-dispatch` carry `//go:build integration && bench`, so no merge gate runs them: not `make check`, not the integration lane. They report the numbers behind the budgets `acceptance-standards.md` publishes, which is why each prints p50/p95/p99 beside its budget. `bench-mobile` below is the frontend half of the same posture.
+`bench-perf`, `bench-perf-check`, `bench-record`, `bench-capture`, `bench-dispatch` and `bench-daily` carry `//go:build integration && bench`, so no merge gate runs them: not `make check`, not the integration lane. They report the numbers behind the budgets `acceptance-standards.md` publishes, which is why each prints p50/p95/p99 beside its budget. `bench-mobile` below is the frontend half of the same posture.
 
 They are still type-checked on every `make check`: both golangci passes carry the tag, and `gates/lintbuildtagreach_test.go` fails if either stops. Nothing else compiles these files, so this check is what catches a renamed helper before someone runs a benchmark by hand.
 
@@ -252,8 +254,8 @@ Each target that publishes a budget re-renders `performance-budgets.md` from eve
 The weekly scheduled workflow runs `bench-perf-check` on the SMB tier, which is where unwatched drift gets found. Rules for that run:
 
 - The merge gate does not run PERF-3/PERF-7. A PERF-7 row measured below mid-market renders `inconclusive`, never `within budget`, so an SMB run in the merge gate cannot answer the mid-market budget.
-- The scheduled run uses SMB because the mid-market tier seeds 250k contacts and 500k activities. It does not finish inside `go test`'s 30m budget (SMB 46.6s, mid-market killed at 1800.7s on a fast laptop).
-- It writes nothing. `MARGINCE_BENCH_RECORD=1` is set by `bench-perf` alone, because publishing a number stays a human's act.
+- The scheduled run uses SMB because mid-market's PERF-3 p95 sits close to its budget on a laptop, and a runner's spread could file a breach that is not one. The seed itself is fast at both tiers (SMB 12.4s, mid-market 151.4s on a fast laptop); `backend/Makefile` above `bench-perf-check` gives the full reasoning.
+- It writes nothing. Of the two targets that run its suite, only `bench-perf` sets `MARGINCE_BENCH_RECORD=1`, because publishing a number stays a human's act. `bench-record`, `bench-capture` and `bench-daily` write their own records with no switch, since nothing scheduled runs them.
 - The write-path regression a timed canary would catch is held deterministically by the `seq_scan` count in `lastactivity_integration_test.go`.
 
 ## Root-only (frontend lane)
