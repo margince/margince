@@ -18,15 +18,7 @@ package compose
 // established: a table keyed by the language, with the shipped set as the
 // census, so a language the product gains fails a test rather than a reader.
 
-import (
-	"context"
-	"log/slog"
-
-	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
-)
+import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 
 // signalSummaryCopy is one language's set. Every field is required — a partial
 // set is a silent English fallback in miniature, and the census refuses one.
@@ -67,22 +59,4 @@ func signalSummaryCopyFor(lang textlang.Lang) signalSummaryCopy {
 		return said
 	}
 	return signalSummaryByLang[textlang.English]
-}
-
-// baseLanguageForSummary resolves the installation's base language inside the
-// transaction the producer already holds.
-//
-// It never fails the caller, for the reason identity.BaseLanguageForPrompt
-// documents: refusing to file a real observation about an account because a
-// settings read failed trades a fact for a formatting preference. The failure
-// IS logged, because this returns a language and nothing else, so the caller
-// has no way to notice a degraded resolve and say so itself.
-func baseLanguageForSummary(ctx context.Context, tx pgx.Tx) textlang.Lang {
-	lang, err := identity.BaseLanguageOf(ctx, tx)
-	if err != nil {
-		slog.WarnContext(ctx, "the installation's base language could not be read; this summary is English",
-			"reason", err)
-		return textlang.English
-	}
-	return textlang.Lang(lang)
 }

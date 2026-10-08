@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -105,6 +106,8 @@ const auditFieldDecidedByLevel = "decided_by_level"
 // other "stop writing to me" — and collapsing them would make a re-grant
 // silently undo a stop the subject never lifted.
 func (s *Store) Suppress(ctx context.Context, in SuppressInput) error {
+	// A reason of only spaces says nothing, so it records nothing.
+	in.Reason = strings.TrimSpace(in.Reason)
 	sub, level, err := admitSuppress(ctx, in)
 	if err != nil {
 		return err

@@ -494,3 +494,22 @@ func TestPromoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
 		t.Fatalf("the current version was refused: %v", err)
 	}
 }
+
+// A promoted lead's address can be taken by a live lead while it is away, and
+// demoting it back onto the ladder is then the same duplicate-email collision
+// create and update answer.
+func TestDemoteOfALeadWhoseEmailALiveLeadNowHoldsIsADuplicate(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "promoted-then-taken@example.test")
+	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
+		t.Fatalf("promote: %v", err)
+	}
+	e.seedLead(t, "promoted-then-taken@example.test")
+
+	_, err := e.store.DemoteLead(e.ctx, lead, "promoted the wrong prospect")
+
+	var duplicate *DuplicateLeadError
+	if !errors.As(err, &duplicate) {
+		t.Fatalf("demote answered %v, want a duplicate-email conflict", err)
+	}
+}

@@ -53444,7 +53444,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Lead was never promoted, or has already been demoted. */
+            /** @description Lead was never promoted, has already been demoted, or a live lead now holds its email (`duplicate_email`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -53505,7 +53505,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The lead is not disqualified, so there is nothing to reopen. */
+            /** @description The lead is not disqualified, so there is nothing to reopen, or a live lead now holds its email (`duplicate_email`). */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -526,3 +526,18 @@ func TestAStopEverythingStillConfirmsItself(t *testing.T) {
 		}
 	}
 }
+
+// A reason of only spaces says nothing, and the stop's recorded explanation
+// must not read as if somebody had written one.
+func TestASuppressionReasonOfOnlySpacesRecordsNoReason(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: suppressibleKind, Reason: "   \t ",
+	}); err != nil {
+		t.Fatalf("recording a stop: %v", err)
+	}
+	if _, _, source := liveSuppressionRow(t, e, e.contact); source != "recorded by a contact" {
+		t.Errorf("source = %q, want the door alone: the reason was only spaces", source)
+	}
+}
