@@ -126,10 +126,6 @@ type backfillPass struct {
 // first means a workspace part-way through recovery still answers "who was in
 // this" with something true.
 var backfillPasses = []backfillPass{
-	// Mail a seat sent from another address of theirs, still stored as
-	// received. Ahead of the replay, which reads a message's further parties as
-	// the seat's own statement only once the row is attested outbound.
-	{repairOwnSentMailBatch, ownSentMailRepairPerTick},
 	// The CCs and meeting attendees of activities whose two ends are recorded.
 	{replayParticipantsBatch, participantReplayBatch},
 	// The meetings whose attendees were read under the earlier rule, which bound no
@@ -147,6 +143,10 @@ var backfillPasses = []backfillPass{
 	// And after that, because the names it recovers are what a stale display
 	// name is refreshed from.
 	{repairStaleDisplayNamesBatch, participantReplayBatch},
+	// Mail a seat sent from another address of theirs, still stored as
+	// received. Last, so a fault of its own stops none of the passes above; a
+	// claim hands the row back to the replay for the next tick.
+	{repairOwnSentMailBatch, ownSentMailRepairPerTick},
 }
 
 // drainPass runs one pass's batches until a batch finds nothing or the tick's

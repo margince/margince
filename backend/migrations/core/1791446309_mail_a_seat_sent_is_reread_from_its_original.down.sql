@@ -3,4 +3,5 @@
 
 SET LOCAL lock_timeout = '3s';
 
+DROP TABLE IF EXISTS activity_own_sent_mail_repair_cutoff;
 DROP TABLE IF EXISTS activity_own_sent_mail_repair;

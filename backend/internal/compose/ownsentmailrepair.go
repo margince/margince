@@ -75,25 +75,40 @@ func repairOwnSentMailBatch(ctx context.Context, pool *pgxpool.Pool, limit int, 
 	})
 }
 
-// selectOwnSentMailCandidates offers every live, unrestricted received email
-// one seat's own Gmail or Graph connection captured. No narrower prefilter:
-// which addresses are the seat's is capture's question, and a SQL copy of it
-// that missed a spelling would leave rows unrepaired with nothing to say so.
+// selectOwnSentMailCandidates offers the live, unrestricted, non-bulk received
+// emails captured before the cutoff by one seat's own Gmail or Graph
+// connection, whose counterparty is an address that seat alone has proven.
+// The proven addresses come from capture (UnambiguouslyProvedAddressesTx),
+// in every spelling a stored counterparty can take, so the offer reads no
+// original that cannot be claimed, and capture still judges each row.
 //
 // The connection is read out of captured_by as the participant replay reads
 // it, and so is the stored original: the link first, the natural key for a row
 // carrying none. A stamp from before provenance named the seat is a bare
 // `connector:gmail`, and stands for the seat when that seat alone imported it.
 //
-// A `not_the_seats` verdict is judged again once the seat holds an address or
-// a mailbox it did not hold when judged, because that verdict was about the
-// addresses the seat held then. Every other verdict reads only the original
-// and the row, which do not change.
+// A `not_the_seats` verdict is offered again: the offer holds only rows whose
+// sender is proven now, so a row it reaches again has regained its standing.
+// Every other verdict reads only the original and the row.
 func selectOwnSentMailCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]ownSentMailCandidate, error) {
+	proved, err := capture.UnambiguouslyProvedAddressesTx(ctx, tx)
+	if err != nil || len(proved) == 0 {
+		return nil, err
+	}
+	var seats []ids.UUID
+	var addresses []string
+	for _, p := range proved {
+		for _, spelling := range p.Spellings() {
+			seats = append(seats, p.Seat)
+			addresses = append(addresses, spelling)
+		}
+	}
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, ci.user_id, a.counterparty_email, rc.id
+		SELECT DISTINCT a.id, ci.user_id, a.counterparty_email, rc.id
 		  FROM activity a
 		  JOIN capture_import ci ON ci.activity_id = a.id
+		  JOIN unnest($4::uuid[], $5::text[]) AS proved(seat, address)
+		    ON proved.seat = ci.user_id AND proved.address = a.counterparty_email
 		  JOIN raw_capture rc
 		    ON rc.id = a.raw_capture_id
 		    OR (a.raw_capture_id IS NULL
@@ -101,21 +116,17 @@ func selectOwnSentMailCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]o
 		  LEFT JOIN activity_own_sent_mail_repair r ON r.activity_id = a.id
 		 WHERE a.kind = 'email' AND a.direction = 'inbound'
 		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
-		   AND NOT a.has_calendar_part AND coalesce(a.counterparty_email, '') <> ''
+		   AND NOT a.has_calendar_part AND NOT a.bulk_mail_attested
+		   AND a.created_at < (SELECT captured_before FROM activity_own_sent_mail_repair_cutoff)
 		   AND split_part(a.captured_by, ':', 1) = 'connector'
 		   AND split_part(a.captured_by, ':', 2) = ANY($2)
 		   AND (split_part(a.captured_by, ':', 3) = ci.user_id::text
 		     OR (split_part(a.captured_by, ':', 3) = '' AND NOT EXISTS (
 		         SELECT 1 FROM capture_import other
 		          WHERE other.activity_id = a.id AND other.user_id <> ci.user_id)))
-		   AND (r.activity_id IS NULL
-		     OR (r.outcome = $3 AND (
-		         EXISTS (SELECT 1 FROM capture_owner_identity oi
-		                  WHERE oi.user_id = ci.user_id AND oi.created_at > r.settled_at)
-		      OR EXISTS (SELECT 1 FROM capture_connection cc
-		                  WHERE cc.user_id = ci.user_id AND cc.created_at > r.settled_at))))
+		   AND (r.activity_id IS NULL OR r.outcome = $3)
 		 ORDER BY a.id
-		 LIMIT $1`, limit, capture.ProviderFiledMailTransports(), capture.OwnSentMailNotTheSeats)
+		 LIMIT $1`, limit, capture.ProviderFiledMailTransports(), capture.OwnSentMailNotTheSeats, seats, addresses)
 	if err != nil {
 		return nil, fmt.Errorf("compose: selecting received mail a seat may have sent: %w", err)
 	}

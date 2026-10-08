@@ -275,10 +275,16 @@ public.activity_meeting_rsvp_backfill_pkey CREATE UNIQUE INDEX activity_meeting_
 public.activity_own_sent_mail_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_own_sent_mail_repair.activity_id uuid NOT NULL gen=- def=-
 public.activity_own_sent_mail_repair.activity_own_sent_mail_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_own_sent_mail_repair.activity_own_sent_mail_repair_outcome_check CHECK ((outcome = ANY (ARRAY['claimed'::text, 'unchanged'::text, 'delivered'::text, 'not_the_seats'::text, 'unreadable'::text, 'erased'::text])))
+public.activity_own_sent_mail_repair.activity_own_sent_mail_repair_outcome_check CHECK ((outcome = ANY (ARRAY['claimed'::text, 'unchanged'::text, 'delivered'::text, 'not_the_seats'::text, 'no_recipient'::text, 'unreadable'::text, 'erased'::text])))
 public.activity_own_sent_mail_repair.activity_own_sent_mail_repair_pkey PRIMARY KEY (activity_id)
 public.activity_own_sent_mail_repair.outcome text NOT NULL gen=- def=-
 public.activity_own_sent_mail_repair.settled_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_own_sent_mail_repair_cutoff acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_own_sent_mail_repair_cutoff.activity_own_sent_mail_repair_cutoff_pkey PRIMARY KEY (singleton)
+public.activity_own_sent_mail_repair_cutoff.activity_own_sent_mail_repair_cutoff_singleton_check CHECK (singleton)
+public.activity_own_sent_mail_repair_cutoff.captured_before timestamp with time zone NOT NULL gen=- def=now()
+public.activity_own_sent_mail_repair_cutoff.singleton boolean NOT NULL gen=- def=true
+public.activity_own_sent_mail_repair_cutoff_pkey CREATE UNIQUE INDEX activity_own_sent_mail_repair_cutoff_pkey ON public.activity_own_sent_mail_repair_cutoff USING btree (singleton)
 public.activity_own_sent_mail_repair_pkey CREATE UNIQUE INDEX activity_own_sent_mail_repair_pkey ON public.activity_own_sent_mail_repair USING btree (activity_id)
 public.activity_participant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_participant.activity_id uuid NOT NULL gen=- def=-

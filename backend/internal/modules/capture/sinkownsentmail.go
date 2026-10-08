@@ -83,7 +83,13 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 	_, seat := capturePrincipal(ctx)
 	switch {
 	case direction == connector.DirectionInbound:
-		return receivedFromTheSeatTx(ctx, tx, seat, stored)
+		// Unambiguously: an address two seats proved, a shared mailbox, is
+		// nobody's to claim, or whichever seat synced first would take it.
+		proved, err := ProvedUnambiguouslyTx(ctx, tx, seat, stored)
+		if err != nil || proved {
+			return proved, err
+		}
+		return ownAddressHeldAloneTx(ctx, tx, seat, stored)
 	case direction == connector.DirectionOutbound && foldAddress(stored) == foldAddress(recipient):
 		var sentBySeat bool
 		err := tx.QueryRow(ctx, `
@@ -95,17 +101,6 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 		return sentBySeat, nil
 	}
 	return false, nil
-}
-
-// receivedFromTheSeatTx is the standing to turn round mail received from
-// sender. Unambiguously in both arms: an address two seats hold is a shared
-// mailbox, and whichever seat synced first would otherwise take its mail.
-func receivedFromTheSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender string) (bool, error) {
-	proved, err := ProvedUnambiguouslyTx(ctx, tx, seat, sender)
-	if err != nil || proved {
-		return proved, err
-	}
-	return ownAddressHeldAloneTx(ctx, tx, seat, sender)
 }
 
 // ownAddressHeldAloneTx reports that address is one of the acting seat's own

@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 295 |
-| Columns | 3506 |
+| Tables | 296 |
+| Columns | 3508 |
 | Foreign keys | 477 |
 | Owning areas | 36 |
 
@@ -99,7 +99,7 @@ erDiagram
 | [collections](collections.md) | 10 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 37 |
+| [compose](compose.md) | 38 |
 | [consent](consent.md) | 18 |
 | [contacts](contacts.md) | 39 |
 | [continuity](continuity.md) | 1 |
@@ -138,6 +138,7 @@ erDiagram
 | [`activity_meeting_history`](activities.md#activity_meeting_history) | activities | 12 | 0 |
 | [`activity_meeting_rsvp_backfill`](compose.md#activity_meeting_rsvp_backfill) | compose | 3 | 0 |
 | [`activity_own_sent_mail_repair`](compose.md#activity_own_sent_mail_repair) | compose | 3 | 0 |
+| [`activity_own_sent_mail_repair_cutoff`](compose.md#activity_own_sent_mail_repair_cutoff) | compose | 2 | 0 |
 | [`activity_participant`](activities.md#activity_participant) | activities | 9 | 0 |
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
 | [`activity_reader_state`](activities.md#activity_reader_state) | activities | 8 | 0 |

@@ -15,6 +15,8 @@ package capture
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -88,32 +90,13 @@ func SeatProvedAddressTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address 
 	if folded == "" || seat == ids.Nil {
 		return false, nil
 	}
-	// The label is stored in whatever shape the provider gave it — `Rep
-	// <rep@co>` included — so it is folded in Go rather than compared in SQL,
-	// the way ownerIdentitiesTx already folds it. A display-form label compared
-	// as a whole address matches no header.
-	rows, err := tx.Query(ctx, `
-		SELECT account_label FROM capture_connection
-		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
-		   AND status = 'connected' AND provider = ANY($2)`,
-		seat, providerAttestedLabels)
+	proved, err := provedAddressesTx(ctx, tx)
 	if err != nil {
-		return false, fmt.Errorf("capture: reading whether a seat proved %s: %w", address, err)
+		return false, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var candidate string
-		if err := rows.Scan(&candidate); err != nil {
-			return false, fmt.Errorf("capture: reading whether a seat proved %s: %w", address, err)
-		}
-		if foldAddress(bareAddress(candidate)) == folded {
-			return true, nil
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return false, fmt.Errorf("capture: reading whether a seat proved %s: %w", address, err)
-	}
-	return false, nil
+	return slices.ContainsFunc(proved, func(p ProvedAddress) bool {
+		return p.Seat == seat && p.Address == folded
+	}), nil
 }
 
 // SeatsProvingAddressTx counts the seats that have proven one address.
@@ -130,30 +113,11 @@ func SeatsProvingAddressTx(ctx context.Context, tx pgx.Tx, address string) (int,
 	if folded == "" {
 		return 0, nil
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT user_id, account_label FROM capture_connection
-		 WHERE coalesce(account_label, '') <> '' AND archived_at IS NULL
-		   AND status = 'connected' AND provider = ANY($1)`,
-		providerAttestedLabels)
+	proved, err := provedAddressesTx(ctx, tx)
 	if err != nil {
-		return 0, fmt.Errorf("capture: counting who proved %s: %w", address, err)
+		return 0, err
 	}
-	defer rows.Close()
-	seats := map[ids.UUID]struct{}{}
-	for rows.Next() {
-		var seat ids.UUID
-		var candidate string
-		if err := rows.Scan(&seat, &candidate); err != nil {
-			return 0, fmt.Errorf("capture: counting who proved %s: %w", address, err)
-		}
-		if foldAddress(bareAddress(candidate)) == folded {
-			seats[seat] = struct{}{}
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return 0, fmt.Errorf("capture: counting who proved %s: %w", address, err)
-	}
-	return len(seats), nil
+	return len(seatsProving(proved)[folded]), nil
 }
 
 // ProvedUnambiguouslyTx is the answer the binding rule actually asks for: this
@@ -173,4 +137,83 @@ func ProvedUnambiguouslyTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, addres
 		return false, err
 	}
 	return count == 1, nil
+}
+
+// ProvedAddress is one address one seat has proven: folded, and as the
+// provider's label spelled it once the display name is stripped.
+type ProvedAddress struct {
+	Seat    ids.UUID
+	Address string
+	Label   string
+}
+
+// Spellings are the forms a stored counterparty_email of this address can take:
+// capture folds a header's address case-only (correspondence.Fold), and
+// foldAddress also normalises the domain.
+func (p ProvedAddress) Spellings() []string {
+	label := strings.ToLower(strings.TrimSpace(p.Label))
+	if label == p.Address {
+		return []string{p.Address}
+	}
+	return []string{p.Address, label}
+}
+
+// UnambiguouslyProvedAddressesTx is ProvedUnambiguouslyTx asked of every
+// address at once: each address one seat alone has proven, with that seat.
+func UnambiguouslyProvedAddressesTx(ctx context.Context, tx pgx.Tx) ([]ProvedAddress, error) {
+	proved, err := provedAddressesTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	seats := seatsProving(proved)
+	return slices.DeleteFunc(proved, func(p ProvedAddress) bool {
+		return len(seats[p.Address]) != 1
+	}), nil
+}
+
+// provedAddressesTx reads every address a seat has proven, from the connection
+// labels SeatProvedAddressTx admits.
+//
+// The label is stored in whatever shape the provider gave it, `Rep <rep@co>`
+// included, so it is folded in Go rather than compared in SQL, the way
+// ownerIdentitiesTx already folds it. A display-form label compared as a whole
+// address matches no header.
+func provedAddressesTx(ctx context.Context, tx pgx.Tx) ([]ProvedAddress, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT user_id, account_label FROM capture_connection
+		 WHERE coalesce(account_label, '') <> '' AND archived_at IS NULL
+		   AND status = 'connected' AND provider = ANY($1)`,
+		providerAttestedLabels)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the addresses seats proved: %w", err)
+	}
+	defer rows.Close()
+	var out []ProvedAddress
+	for rows.Next() {
+		var seat ids.UUID
+		var label string
+		if err := rows.Scan(&seat, &label); err != nil {
+			return nil, fmt.Errorf("capture: reading the addresses seats proved: %w", err)
+		}
+		bare := bareAddress(label)
+		if folded := foldAddress(bare); folded != "" {
+			out = append(out, ProvedAddress{Seat: seat, Address: folded, Label: bare})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("capture: reading the addresses seats proved: %w", err)
+	}
+	return out, nil
+}
+
+// seatsProving groups proven addresses by address, naming each seat once.
+func seatsProving(proved []ProvedAddress) map[string]map[ids.UUID]struct{} {
+	out := map[string]map[ids.UUID]struct{}{}
+	for _, p := range proved {
+		if out[p.Address] == nil {
+			out[p.Address] = map[ids.UUID]struct{}{}
+		}
+		out[p.Address][p.Seat] = struct{}{}
+	}
+	return out
 }

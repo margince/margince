@@ -505,6 +505,8 @@ var tableOwners = map[string]string{
 	// from another address of theirs. The same bookkeeping, owned here for the
 	// same reason.
 	"activity_own_sent_mail_repair": "internal/compose",
+	// The one-row bound on that pass: mail captured before its migration ran.
+	"activity_own_sent_mail_repair_cutoff": "internal/compose",
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
 	"suggestion_dismissal": "internal/compose/company360",
