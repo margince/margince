@@ -123,6 +123,10 @@ internal/compose/integration/contract_lifecycle_integration_test.go 1
 internal/compose/integration/controllerpayloadsweep_integration_test.go 2
 internal/compose/integration/customfields/customfields_vocab_http_integration_test.go 1
 internal/compose/integration/customfields_vocab_integration_test.go 1
+internal/compose/integration/daily_bench_test.go 1
+internal/compose/integration/daily_flows_bench_test.go 4
+internal/compose/integration/daily_seats_bench_test.go 1
+internal/compose/integration/daily_seed_bench_test.go 2
 internal/compose/integration/dealfigures_integration_test.go 2
 internal/compose/integration/dealforecasthistory_integration_test.go 1
 internal/compose/integration/dealstatus_facts_integration_test.go 1
@@ -166,7 +170,7 @@ internal/compose/integration/nextstepagreement_integration_test.go 2
 internal/compose/integration/no_activity_reminder_workqueue_integration_test.go 1
 internal/compose/integration/noticecase_integration_test.go 4
 internal/compose/integration/noticesubjectwrote_integration_test.go 1
-internal/compose/integration/perfbench_integration_test.go 1
+internal/compose/integration/perf_tier_bench_test.go 1
 internal/compose/integration/project360_integration_test.go 7
 internal/compose/integration/project360dealmask_integration_test.go 1
 internal/compose/integration/project_legal_hold_integration_test.go 3
