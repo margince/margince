@@ -2,10 +2,13 @@
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the Focus cards on Morning, and the weekly
-review. The server ranks every row once, by hard levels and then by a fixed order of tie-breaks. Focus is a
+review. The server ranks every row once, by one fixed order of ranking steps. Focus is a
 cut of that same order, taken before the queue's filter and page limit, so no client can rank work on its
-own. Promises read from a conversation reach the queue through one dispatch rule. The weekly job freezes
-each member's week and then each team's, and never changes a frozen week. The user-facing rules are in the
+own. Promises read from a conversation reach the queue through one dispatch rule.
+
+The weekly job freezes
+each member's week and then each team's. A frozen week never changes, except that a team week with no
+measured member is replaced by its first real measure. The user-facing rules are in the
 handbook pages `your-day.md` and `your-week.md`; this page holds the reasons and the code.
 
 The code:
@@ -24,9 +27,12 @@ A row gets a hard level that says what kind of work it is (`rank.go`). From the 
 `levelBlocking` and `levelRoutine`. A level is never a score. With a score, a big enough pile of cheap work
 outranks one customer who waits; with levels, sixty duplicate merges never reach the top.
 
-`rankSteps` in `ranksteps.go` is the order of tie-breaks. Both the sort and the "why it ranks here" sentence walk it in this order: `pin`, `band`, `crowded`, `level`, `deadline`, `expected_revenue`, `opportunity`,
-`waiting_days`, `relationship`, `occurrence`. One slice serves both, so a step that can decide a pair always
-explains it too. Deadline leads the tie-breaks because a date somebody agreed to is the one fact on the page
+`rankSteps` in `ranksteps.go` is the order of ranking steps, and `less` stops at the first step that decides
+a pair. `pin`, `band` and `crowded` come before `level`, so a crowded row can sort below a row of a lower level. The steps, in order,
+are `pin`, `band`, `crowded`, `level`, `deadline`, `expected_revenue`, `opportunity`,
+`waiting_days`, `relationship`, `occurrence`. Both the sort and the "why it ranks here" sentence walk them.
+One slice serves both, so a step that can decide a pair always
+explains it too. Deadline leads the steps after `level` because a date somebody agreed to is the one fact on the page
 that runs out.
 
 Bands are headings drawn from the level and the source, never stored (`bands.go`). `bandOrder` is `now`,

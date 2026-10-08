@@ -283,7 +283,7 @@ dates say.
 
 Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its future date, and its forecast category drops one step. The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks, and is at least 7 days away. With fewer than 20 won deals, Margince uses 14 days per stage.
 
-A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Changes made for you** on **Home**, to accept or undo; see [Your day and your week](your-day.md#changes-made-for-you). To stop these changes on your deals, see [Approvals](approvals.md).
+A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Changes made for you** on **Home**, to accept or undo; see [Your day](your-day.md#changes-made-for-you). To stop these changes on your deals, see [Approvals](approvals.md).
 
 ## Reading the numbers
 

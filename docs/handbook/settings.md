@@ -41,7 +41,7 @@ Things for the whole company in Margince each have one settings page.
 - Create a team or change who is in it: **Teams**.
 - Create, rename, narrow or archive a role: **Roles and permissions**.
 - See how many seats are in use: **Seats and license**.
-- Change the company name, time zone, base currency, date format or exchange rates: **Company profile**.
+- Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
 - Set up single sign-on or the Google and Microsoft apps: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
 - Set up webhooks or a provider of contact data: **Integrations**.
@@ -104,7 +104,7 @@ The Company profile page in Settings (group **Company**) holds your own company'
 
 **Installation** and **Currency** hold the company's name, time zone and base currency, which Admin and Ops change.
 
-**Date format** and **Time format** sit on the **Installation** card too, and set how every screen shows dates and times for the whole company. **Use interface language** follows each user's app language. The fixed choices are **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23** for dates, and **24-hour · 17:30** or **12-hour · 05:30 pm** for times. They also apply to dates you type, such as a close date. Stored dates and time zones stay the same, and the browser's own date picker still works its own way.
+**Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
 **Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate starts today or later, and a past rate never changes. So a new rate never changes the numbers of past months. Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
 
