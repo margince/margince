@@ -162,7 +162,7 @@ func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) 
 	if err := openaiTerminalStatus(ctx, out); err != nil && !cutOff {
 		return model.Response{}, withSpend(err, resp)
 	}
-	text, err := openaiReplyText(ctx, out)
+	text, err := openaiReplyText(ctx, out, len(req.ResponseSchema) > 0)
 	if err != nil {
 		return model.Response{}, withSpend(err, resp)
 	}
@@ -180,12 +180,17 @@ func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) 
 
 // openaiReplyText walks output[]: a type:"reasoning" item can precede the
 // message, and a type:"refusal" part is a first-class outcome — never
-// output[0].content[0].
-func openaiReplyText(ctx context.Context, out openaiResponse) (string, error) {
+// output[0].content[0]. A schema-bound reply is the first message that carries
+// text: a model can add a second message after it, and joined the two are not
+// one document.
+func openaiReplyText(ctx context.Context, out openaiResponse, schemaBound bool) (string, error) {
 	var text strings.Builder
 	for _, item := range out.Output {
 		if item.Type != "message" {
 			continue
+		}
+		if schemaBound && text.Len() > 0 {
+			break
 		}
 		for _, part := range item.Content {
 			switch part.Type {
