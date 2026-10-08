@@ -16,10 +16,10 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -121,22 +121,24 @@ func SeatsProvingAddressTx(ctx context.Context, tx pgx.Tx, address string) (int,
 }
 
 // ProvedUnambiguouslyTx is the answer the binding rule actually asks for: this
-// seat proved the address AND no other seat did.
+// seat proved the address, and no other seat did.
 //
 // One function rather than two calls at the call site, because the two
-// questions are one rule — "may this address speak for this seat" — and a
+// questions are one rule, "may this address speak for this seat", and a
 // caller that asked only the first would attribute a shared mailbox to whoever
 // synced first.
 func ProvedUnambiguouslyTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
-	proved, err := SeatProvedAddressTx(ctx, tx, seat, address)
-	if err != nil || !proved {
-		return false, err
+	folded := foldAddress(bareAddress(address))
+	if folded == "" || seat == ids.Nil {
+		return false, nil
 	}
-	count, err := SeatsProvingAddressTx(ctx, tx, address)
+	proved, err := provedAddressesTx(ctx, tx)
 	if err != nil {
 		return false, err
 	}
-	return count == 1, nil
+	seats := seatsProving(proved)[folded]
+	_, mine := seats[seat]
+	return mine && len(seats) == 1, nil
 }
 
 // ProvedAddress is one address one seat has proven: folded, and as the
@@ -151,7 +153,7 @@ type ProvedAddress struct {
 // capture folds a header's address case-only (correspondence.Fold), and
 // foldAddress also normalises the domain.
 func (p ProvedAddress) Spellings() []string {
-	label := strings.ToLower(strings.TrimSpace(p.Label))
+	label := correspondence.Fold(p.Label)
 	if label == p.Address {
 		return []string{p.Address}
 	}

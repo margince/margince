@@ -144,8 +144,7 @@ var backfillPasses = []backfillPass{
 	// name is refreshed from.
 	{repairStaleDisplayNamesBatch, participantReplayBatch},
 	// Mail a seat sent from another address of theirs, still stored as
-	// received. Last, so a fault of its own stops none of the passes above; a
-	// claim hands the row back to the replay for the next tick.
+	// received. Last, so a fault of its own stops none of the passes above.
 	{repairOwnSentMailBatch, ownSentMailRepairPerTick},
 }
 

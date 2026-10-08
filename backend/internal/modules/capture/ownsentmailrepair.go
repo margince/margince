@@ -51,14 +51,17 @@ const (
 )
 
 // StoredOwnSentMail is one row stored as received from sender, captured by
-// seat's own Gmail or Graph connection. Participants are its original's
-// further parties as mailmap reads them, To before Cc.
+// seat's own Gmail or Graph connection.
 type StoredOwnSentMail struct {
-	Activity     ids.ActivityID
-	Seat         ids.UUID
-	Sender       string
-	Participants []connector.MessageParticipant
+	Activity ids.ActivityID
+	Seat     ids.UUID
+	Sender   string
 }
+
+// OwnSentMailParties reads an original's further parties, To before Cc.
+// mailmap.ParticipantsOf is the implementation; compose injects it, because
+// mailmap imports capture.
+type OwnSentMailParties func(original []byte) ([]connector.MessageParticipant, error)
 
 // ReclaimStoredOwnSentMailTx re-reads one stored received message against its
 // original and, where the seat wrote it from another address of theirs, claims
@@ -70,7 +73,8 @@ type StoredOwnSentMail struct {
 // filing, the absent Received header is the only other evidence, and a seat can
 // declare an address that is not theirs.
 func ReclaimStoredOwnSentMailTx(
-	ctx context.Context, tx pgx.Tx, claim OwnSentMailClaim, row StoredOwnSentMail, original []byte,
+	ctx context.Context, tx pgx.Tx, claim OwnSentMailClaim, readParties OwnSentMailParties,
+	row StoredOwnSentMail, original []byte,
 ) (string, error) {
 	delivered, readable := carriesDeliveryHop(original)
 	if !readable {
@@ -89,15 +93,19 @@ func ReclaimStoredOwnSentMailTx(
 	}
 	pass.OnBehalfOf = row.Seat
 	ctx = principal.WithActor(ctx, pass)
+	parties, err := readParties(original)
+	if err != nil {
+		return OwnSentMailUnreadable, nil //nolint:nilerr // unreadable is the recorded verdict, not a fault
+	}
 	self, err := ownerIdentitiesTx(ctx, tx)
 	if err != nil {
 		return "", err
 	}
-	at := sentToAt(row.Participants, self)
+	at := sentToAt(parties, self)
 	if at < 0 {
 		return OwnSentMailNoRecipient, nil
 	}
-	recipient := row.Participants[at].Email
+	recipient := parties[at].Email
 	// The original can outlive an erasure of its recipient; the row must not
 	// gain the address back from it.
 	erased, err := storekit.EmailSuppressed(ctx, tx, recipient)

@@ -39,11 +39,12 @@ const (
 
 // repairMessage is one message as the seat's mailbox holds it. received adds
 // the hop a delivering server prepends.
-func repairMessage(from, messageID string, received bool) []byte {
+func repairMessage(from, to, messageID string, received bool) []byte {
 	lines := []string{
 		"From: Founder <" + from + ">",
-		"To: " + repairBuyer,
+		"To: " + to,
 		"Cc: " + repairSeatMailbox,
+		"Bcc: hidden@customer.example",
 		"Subject: following up",
 		"Date: Wed, 04 Jun 2026 08:00:00 +0000",
 		"Message-ID: <" + messageID + ">",
@@ -60,7 +61,12 @@ func repairMessage(from, messageID string, received bool) []byte {
 // migration does for mail captured before it ran.
 func seedReceivedMail(t *testing.T, e *integration.Env, from, messageID string, received bool) ids.UUID {
 	t.Helper()
-	raw := repairMessage(from, messageID, received)
+	return seedReceivedMailTo(t, e, from, repairBuyer, messageID, received)
+}
+
+func seedReceivedMailTo(t *testing.T, e *integration.Env, from, to, messageID string, received bool) ids.UUID {
+	t.Helper()
+	raw := repairMessage(from, to, messageID, received)
 	msg, err := mailmap.Parse(raw, repairSeatMailbox)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", messageID, err)
@@ -121,7 +127,7 @@ func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
 	seedRepairSeat(t, e)
 	id := seedReceivedMail(t, e, repairFormerSelf, "former-sent@previous-employer.example", false)
 	if got := storedEndsOf(t, e, id); got.direction != "inbound" || got.counterparty != repairFormerSelf {
-		t.Fatalf("seeded as %+v, want the pre-fix shape: inbound from %s", got, repairFormerSelf)
+		t.Fatalf("seeded as %+v, want the shape such mail was stored in: inbound from %s", got, repairFormerSelf)
 	}
 
 	runOwnSentMailRepair(t, e)
@@ -137,10 +143,6 @@ func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
 		id, ownSentMailRepairActor); seat != e.AdminUser.String() {
 		t.Errorf("the claim's audit row speaks for %q, want the seat whose mailbox stored it", seat)
 	}
-	// The replay read the row as received before the claim; it reads it again.
-	if n := e.WsCount(t, `SELECT count(*) FROM activity_participant_replay WHERE activity_id = $1`, id); n != 0 {
-		t.Errorf("the claimed email still carries %d participant replay markers, want it offered to the replay again", n)
-	}
 }
 
 // A replay changes nothing. The marker keeps the row from being offered again,
@@ -155,16 +157,11 @@ func TestTheOwnSentMailRepairReplaysWithoutASecondClaim(t *testing.T) {
 
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), ownSentMailRepairActor)
 	row := capture.StoredOwnSentMail{Activity: ids.From[ids.ActivityKind](id), Seat: e.AdminUser, Sender: repairFormerSelf}
-	raw := repairMessage(repairFormerSelf, "replayed@previous-employer.example", false)
-	parties, err := mailmap.ParticipantsOf(raw, "")
-	if err != nil {
-		t.Fatalf("reading the parties: %v", err)
-	}
-	row.Participants = parties.Participants
+	raw := repairMessage(repairFormerSelf, repairBuyer, "replayed@previous-employer.example", false)
 	var verdict string
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		verdict, err = capture.ReclaimStoredOwnSentMailTx(ctx, tx, activities.ClaimOwnSentMailTx, row, raw)
+		verdict, err = capture.ReclaimStoredOwnSentMailTx(ctx, tx, activities.ClaimOwnSentMailTx, ownSentMailParties, row, raw)
 		return err
 	}); err != nil {
 		t.Fatalf("judging the claimed row again: %v", err)
@@ -180,13 +177,15 @@ func TestTheOwnSentMailRepairReplaysWithoutASecondClaim(t *testing.T) {
 
 func TestTheOwnSentMailRepairLeavesMailItCannotClaim(t *testing.T) {
 	cases := []struct {
-		name, verdict            string
+		name, to, verdict        string
 		received, buyerWasErased bool
 	}{
 		// A delivering hop says the mailbox received it, whoever the From names.
-		{"delivered from the seat's address", capture.OwnSentMailDelivered, true, false},
+		{"delivered from the seat's address", repairBuyer, capture.OwnSentMailDelivered, true, false},
 		// The original outlived the recipient's erasure; the claim would write it back.
-		{"to an erased recipient", capture.OwnSentMailErased, false, true},
+		{"to an erased recipient", repairBuyer, capture.OwnSentMailErased, false, true},
+		// Blind-copied alone, nobody is named as written to, as live capture reads it.
+		{"to the seat and a blind copy", repairSeatMailbox, capture.OwnSentMailNoRecipient, false, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -196,7 +195,7 @@ func TestTheOwnSentMailRepairLeavesMailItCannotClaim(t *testing.T) {
 				e.WsExec(t, `INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1)`,
 					storekit.SuppressionHash(repairBuyer))
 			}
-			id := seedReceivedMail(t, e, repairFormerSelf, "kept@"+strings.ReplaceAll(tc.name, " ", "-")+".example", tc.received)
+			id := seedReceivedMailTo(t, e, repairFormerSelf, tc.to, "kept@"+strings.ReplaceAll(tc.name, " ", "-")+".example", tc.received)
 
 			runOwnSentMailRepair(t, e)
 
