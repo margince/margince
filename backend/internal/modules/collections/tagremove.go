@@ -33,14 +33,19 @@ import (
 // Removing a tagging that is not there is NOT an error — the caller asked for
 // a state, and the state is already true (idempotent by intent, which is what
 // makes a retry safe).
-func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType string, entityID ids.UUID) error {
+// It answers the removal's audit id, the handle RestoreTagRemoval takes, and
+// ids.Nil when the record did not carry the tag.
+func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType string, entityID ids.UUID) (ids.UUID, error) {
 	if err := requireTagRemoval(ctx, entityType, entityID); err != nil {
-		return err
+		return ids.Nil, err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := removeTagTx(ctx, tx, tagID, entityType, entityID, nil)
+	var removal ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		removal, err = removeTagTx(ctx, tx, tagID, entityType, entityID, nil)
 		return err
 	})
+	return removal, err
 }
 
 // RemoveTagTx is RemoveTag inside a caller-opened transaction, for a bulk
@@ -50,7 +55,8 @@ func (s *Store) RemoveTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, ent
 	if err := requireTagRemoval(ctx, entityType, entityID); err != nil {
 		return false, err
 	}
-	return removeTagTx(ctx, tx, tagID, entityType, entityID, nil)
+	removal, err := removeTagTx(ctx, tx, tagID, entityType, entityID, nil)
+	return removal != ids.Nil, err
 }
 
 // RemoveTagAssignmentTx is RemoveTagTx held to one assignment: it takes the tag
@@ -63,7 +69,8 @@ func (s *Store) RemoveTagAssignmentTx(
 	if err := requireTagRemoval(ctx, entityType, entityID); err != nil {
 		return false, err
 	}
-	return removeTagTx(ctx, tx, tagID, entityType, entityID, &assignment)
+	removal, err := removeTagTx(ctx, tx, tagID, entityType, entityID, &assignment)
+	return removal != ids.Nil, err
 }
 
 // requireTagRemoval is the object half of taking a tag off a record: the
@@ -94,36 +101,35 @@ func requireTagRemoval(ctx context.Context, entityType string, entityID ids.UUID
 // that never existed is not-found here.
 func removeTagTx(
 	ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID, assignment *ids.UUID,
-) (bool, error) {
+) (ids.UUID, error) {
 	var exists bool
 	if err := tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1)`, tagID).Scan(&exists); err != nil {
-		return false, err
+		return ids.Nil, err
 	}
 	if !exists {
-		return false, apperrors.ErrNotFound
+		return ids.Nil, apperrors.ErrNotFound
 	}
 	// Same reasoning as applyTagTx: removing a tag CHANGES the record too,
 	// so the gate is write authority, not merely visibility.
 	if err := auth.EnsureWritableLive(ctx, tx, entityType, entityID); err != nil {
-		return false, err
+		return ids.Nil, err
 	}
-	tag, err := tx.Exec(ctx, `
+	kept := storekit.TagAssignment{TagID: tagID.UUID}
+	err := tx.QueryRow(ctx, `
 		DELETE FROM taggable WHERE tag_id = $1 AND entity_type = $2 AND entity_id = $3
-		   AND ($4::uuid IS NULL OR id = $4)`,
-		tagID, entityType, entityID, assignment)
-	if err != nil {
-		return false, err
-	}
+		   AND ($4::uuid IS NULL OR id = $4)
+		RETURNING assigned_by, assigned_by_kind, assigned_at`,
+		tagID, entityType, entityID, assignment).Scan(&kept.AssignedBy, &kept.AssignedByKind, &kept.AssignedAt)
 	// Audited only when something was actually removed: an audit row for a
 	// tagging that was never there describes an event that did not happen.
-	if tag.RowsAffected() == 0 {
-		return false, nil
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, nil
 	}
-	_, err = storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{
-		"removed": map[string]any{"entity_type": entityType, "entity_id": entityID},
-	})
-	return err == nil, err
+	if err != nil {
+		return ids.Nil, err
+	}
+	return auditTagLink(ctx, tx, tagID, tagRemoved, linkImage{EntityType: entityType, EntityID: entityID, TagAssignment: &kept})
 }
 
 // CheckTagChange refuses a tag verb before any record is tried: no read grant

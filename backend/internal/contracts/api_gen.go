@@ -40784,6 +40784,12 @@ type RelinkThreadRequest struct {
 	ThreadKey string `json:"thread_key"`
 }
 
+// RemovalUndo The way back from taking a tag off a record or a record off a Shortlist. A removal answers it, and the matching restore route takes it back unchanged.
+type RemovalUndo struct {
+	// AuditId The removal's own history entry, which kept who added the link and when, so the restore puts it back as it was.
+	AuditId openapi_types.UUID `json:"audit_id"`
+}
+
 // RenameCustomFieldRequest Merge-PATCH; `label` only — `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent).
 type RenameCustomFieldRequest struct {
 	Label *string `json:"label,omitempty"`
@@ -54377,6 +54383,9 @@ type AddListMemberJSONRequestBody = ListMemberChangeRequest
 // RemoveListMemberJSONRequestBody defines body for RemoveListMember for application/json ContentType.
 type RemoveListMemberJSONRequestBody = ListMemberChangeRequest
 
+// RestoreListMemberJSONRequestBody defines body for RestoreListMember for application/json ContentType.
+type RestoreListMemberJSONRequestBody = RemovalUndo
+
 // SaveMailDraftJSONRequestBody defines body for SaveMailDraft for application/json ContentType.
 type SaveMailDraftJSONRequestBody = MailDraftInput
 
@@ -54640,6 +54649,9 @@ type RemoveTagJSONRequestBody = ApplyTagRequest
 
 // ApplyTagJSONRequestBody defines body for ApplyTag for application/json ContentType.
 type ApplyTagJSONRequestBody = ApplyTagRequest
+
+// RestoreTagApplicationJSONRequestBody defines body for RestoreTagApplication for application/json ContentType.
+type RestoreTagApplicationJSONRequestBody = RemovalUndo
 
 // MergeTagsJSONRequestBody defines body for MergeTags for application/json ContentType.
 type MergeTagsJSONRequestBody = MergeTagsRequest
@@ -66698,6 +66710,9 @@ type ServerInterface interface {
 	// Take one record off a Shortlist, with an optional note on why.
 	// (POST /lists/{id}/members/remove)
 	RemoveListMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back a record the caller took off a Shortlist.
+	// (POST /lists/{id}/members/restore)
+	RestoreListMember(w http.ResponseWriter, r *http.Request, id Id)
 	// Say why a record is, or is not, on a list.
 	// (GET /lists/{id}/members/{recordId}/why)
 	ExplainListMember(w http.ResponseWriter, r *http.Request, id Id, recordId openapi_types.UUID)
@@ -67328,6 +67343,9 @@ type ServerInterface interface {
 	// Apply a tag to an entity (contact/company/deal/lead/project).
 	// (POST /tags/{id}/apply)
 	ApplyTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back a tag the caller took off a record.
+	// (POST /tags/{id}/apply/restore)
+	RestoreTagApplication(w http.ResponseWriter, r *http.Request, id Id)
 	// Fold this tag into another, moving every record that carries it.
 	// (POST /tags/{id}/merge)
 	MergeTags(w http.ResponseWriter, r *http.Request, id Id)
@@ -70550,6 +70568,12 @@ func (_ Unimplemented) RemoveListMember(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Put back a record the caller took off a Shortlist.
+// (POST /lists/{id}/members/restore)
+func (_ Unimplemented) RestoreListMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Say why a record is, or is not, on a list.
 // (GET /lists/{id}/members/{recordId}/why)
 func (_ Unimplemented) ExplainListMember(w http.ResponseWriter, r *http.Request, id Id, recordId openapi_types.UUID) {
@@ -71807,6 +71831,12 @@ func (_ Unimplemented) RemoveTag(w http.ResponseWriter, r *http.Request, id Id) 
 // Apply a tag to an entity (contact/company/deal/lead/project).
 // (POST /tags/{id}/apply)
 func (_ Unimplemented) ApplyTag(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back a tag the caller took off a record.
+// (POST /tags/{id}/apply/restore)
+func (_ Unimplemented) RestoreTagApplication(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93599,6 +93629,38 @@ func (siw *ServerInterfaceWrapper) RemoveListMember(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreListMember operation middleware
+func (siw *ServerInterfaceWrapper) RestoreListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreListMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ExplainListMember operation middleware
 func (siw *ServerInterfaceWrapper) ExplainListMember(w http.ResponseWriter, r *http.Request) {
 
@@ -102705,6 +102767,38 @@ func (siw *ServerInterfaceWrapper) ApplyTag(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreTagApplication operation middleware
+func (siw *ServerInterfaceWrapper) RestoreTagApplication(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreTagApplication(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // MergeTags operation middleware
 func (siw *ServerInterfaceWrapper) MergeTags(w http.ResponseWriter, r *http.Request) {
 
@@ -107395,6 +107489,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/lists/{id}/members/remove", wrapper.RemoveListMember)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/members/restore", wrapper.RestoreListMember)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lists/{id}/members/{recordId}/why", wrapper.ExplainListMember)
 	})
 	r.Group(func(r chi.Router) {
@@ -108023,6 +108120,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tags/{id}/apply", wrapper.ApplyTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tags/{id}/apply/restore", wrapper.RestoreTagApplication)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tags/{id}/merge", wrapper.MergeTags)

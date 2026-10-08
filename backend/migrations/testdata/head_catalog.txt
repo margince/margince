@@ -4968,6 +4968,7 @@ public.list_member_event.list_member_event_entity_type_check CHECK ((entity_type
 public.list_member_event.list_member_event_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_member_event.list_member_event_pkey PRIMARY KEY (id)
 public.list_member_event.list_member_event_reason_check CHECK ((reason = ANY (ARRAY['chosen'::text, 'bulk'::text, 'record_archived'::text, 'record_restored'::text, 'evaluated'::text, 'filter_changed'::text, 'automation'::text])))
+public.list_member_event.member_note text gen=- def=-
 public.list_member_event.note text gen=- def=-
 public.list_member_event.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.list_member_event.reason text NOT NULL gen=- def=-

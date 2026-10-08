@@ -116,7 +116,7 @@ func TestUndoingABulkTagLeavesATagSomebodyPutBackSince(t *testing.T) {
 	}
 	tags := collections.NewStore(e.DB())
 	reapplied := ids.UUID(items[0].Id)
-	if err := tags.RemoveTag(e.Admin(), tag, "contact", reapplied); err != nil {
+	if _, err := tags.RemoveTag(e.Admin(), tag, "contact", reapplied); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tags.ApplyTag(e.Admin(), tag, "contact", reapplied); err != nil {
