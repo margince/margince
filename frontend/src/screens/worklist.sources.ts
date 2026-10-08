@@ -17,6 +17,7 @@ const coverageNames = new Map<string, MessageKey>([
   ["conversation_claim", "brief.coverage.source.conversation_claim"],
   ["customer_waiting", "brief.coverage.source.customer_waiting"],
   ["awaiting_reply", "brief.coverage.source.awaiting_reply"],
+  ["meeting_follow_up", "brief.coverage.source.meeting_follow_up"],
   ["lead_response", "brief.coverage.source.lead_response"],
   ["deal_at_risk", "brief.coverage.source.deal_at_risk"],
   ["meeting", "brief.coverage.source.meeting"],

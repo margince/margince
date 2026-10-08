@@ -15,9 +15,17 @@
 // the tree allows and this is one idea that reads whole on its own.
 
 import { useQueryClient } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Button } from "../design-system/atoms";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
+import {
+  ChannelReplyAction,
+  ComposeModal,
+  RELINK_KINDS,
+  type RelinkKind,
+} from "./compose";
 import { intentAbout } from "./compose.intent";
 import { phrasedReasons, reasonText } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
@@ -77,6 +85,9 @@ export function WaitingReply({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  if (item.source === "meeting_follow_up") {
+    return <MeetingFollowUp item={item} to={to} />;
+  }
   return (
     <ChannelReplyAction
       activityId={item.id}
@@ -141,4 +152,47 @@ function replyIntent(
       ? t("contact.composer.intentFollowUp")
       : t("contact.composer.intentReply");
   return intentAbout(phrase, why);
+}
+
+/**
+ * Following up after a meeting: a FRESH message to the contact the reader met.
+ * A meeting is not a message, so there is nothing to thread a reply onto; the
+ * composer is told what to write instead.
+ */
+function MeetingFollowUp({
+  item,
+  to,
+}: Readonly<{
+  item: WorklistItem;
+  to: { type: RelinkKind; id: string };
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <>
+      <Button variant="ai" onClick={() => setOpen((seq) => (seq ?? 0) + 1)}>
+        <Sparkles aria-hidden="true" />
+        {t("worklist.verb.draft_follow_up_now")}
+      </Button>
+      {open !== null && (
+        <ComposeModal
+          key={open}
+          entityType={to.type}
+          entityId={to.id}
+          contactId={item.contact?.id}
+          kind="email"
+          intent={intentAbout(
+            t("contact.composer.intentFollowUp"),
+            item.title ?? undefined,
+          )}
+          open
+          onClose={() => setOpen(null)}
+          onSent={() =>
+            void queryClient.invalidateQueries({ queryKey: worklistKey })
+          }
+        />
+      )}
+    </>
+  );
 }

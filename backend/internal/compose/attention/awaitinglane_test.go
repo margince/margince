@@ -89,3 +89,31 @@ func (c *countingAwaiting) AwaitingReplies(context.Context, time.Time) ([]Awaite
 	c.calls++
 	return c.rows, false, nil
 }
+
+func (c *countingAwaiting) MeetingFollowUps(context.Context, time.Time) ([]AwaitedReply, bool, error) {
+	return nil, false, nil
+}
+
+// A meeting is not a message to answer: the row offers a fresh message to the
+// contact, and only when it names one.
+func TestAMeetingFollowUpOffersAMessageToTheContactItWasWith(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
+	row := classifyMeetingFollowUp(AwaitedReply{
+		ActivityID: ids.NewV7(), Subject: "Discovery workshop", SentAt: at.Add(-3 * 24 * time.Hour),
+		ContactID: ids.NewV7(),
+	}, at).item
+	if row.Source != sourceMeetingFollowUp || row.Category != crmcontracts.WorklistItemCategoryMeetings {
+		t.Fatalf("row filed as %s/%s", row.Source, row.Category)
+	}
+	if row.Move != nil {
+		t.Fatalf("move = %+v, want none: there is no message to draft a reply to", row.Move)
+	}
+	if !slices.Contains(row.Actions, crmcontracts.WorklistItemActionsReply) {
+		t.Fatalf("actions = %v, want reply to the contact", row.Actions)
+	}
+	nobody := classifyMeetingFollowUp(AwaitedReply{ActivityID: ids.NewV7(), SentAt: at, CompanyID: ids.NewV7()}, at).item
+	if slices.Contains(nobody.Actions, crmcontracts.WorklistItemActionsReply) {
+		t.Fatalf("a meeting naming no contact offers a message: %v", nobody.Actions)
+	}
+}

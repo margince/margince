@@ -663,6 +663,7 @@ export const vi = {
   "brief.coverage.source.generic": "Công việc khác",
   "brief.coverage.source.weekly_commitment": "Cam kết tuần",
   "brief.coverage.source.awaiting_reply": "Việc cần theo dõi",
+  "brief.coverage.source.meeting_follow_up": "Theo dõi sau cuộc họp",
   "brief.coverage.source.batch": "Nhóm công việc",
   "brief.coverage.source.introduction_request": "Yêu cầu giới thiệu",
   "brief.coverage.source.automation_run": "Lỗi tự động hóa",
@@ -742,6 +743,7 @@ export const vi = {
   "worklist.untitled.weekly_commitment": "Cam kết trong tuần",
   "worklist.source.awaiting_reply": "Theo dõi",
   "worklist.untitled.awaiting_reply": "Theo dõi",
+  "worklist.untitled.meeting_follow_up": "Cuộc họp",
   "brief.plan.select":
     "Tìm giao dịch, khách hàng tiềm năng, liên hệ, công ty hoặc dự án",
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
@@ -2940,10 +2942,10 @@ export const vi = {
     '"{label}" không được khách hàng tiềm năng nào dùng và sẽ biến mất khỏi danh sách.',
   "followUpSettings.title": "Theo dõi",
   "followUpSettings.sub":
-    "Khi nào một thư gửi khách hàng hiện lại trên trang chủ của người gửi để theo dõi.",
+    "Khi nào một thư gửi khách hàng hiện lại trên trang chủ để theo dõi.",
   "followUpSettings.days": "Nhắc sau (ngày)",
   "followUpSettings.daysHint":
-    "Số ngày một thư đã gửi có thể chưa được trả lời trước khi người gửi được nhắc theo dõi, từ 1 đến 30.",
+    "Số ngày một thư đã gửi có thể chưa được trả lời trước khi có lời nhắc theo dõi, từ 1 đến 30.",
   "followUpSettings.outOfRange": "Nhập số ngày nguyên từ 1 đến 30.",
   "leadHandling.title": "Xử lý khách hàng tiềm năng",
   "leadHandling.sub": "Cách cài đặt này xử lý một khách hàng tiềm năng mới.",
@@ -11543,6 +11545,10 @@ export const vi = {
     "chưa có phản hồi sau {value} ngày",
   "worklist.because.no_reply_days.value_other":
     "chưa có phản hồi sau {value} ngày",
+  "worklist.because.met_days_ago": "đã gặp",
+  "worklist.because.met_days_ago.value_one": "đã gặp {value} ngày trước",
+  "worklist.because.met_days_ago.value_other": "đã gặp {value} ngày trước",
+  "worklist.because.nothing_sent_since": "chưa gửi gì từ đó",
   "worklist.because.response_overdue": "quá hạn trả lời",
   "worklist.because.response_due_soon": "sắp đến hạn trả lời",
   "worklist.because.response_due_soon.value": "cần trả lời trước {value}",

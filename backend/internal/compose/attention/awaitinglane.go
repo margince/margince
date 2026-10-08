@@ -20,12 +20,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const sourceAwaitingReply = "awaiting_reply"
+const (
+	sourceAwaitingReply   = "awaiting_reply"
+	sourceMeetingFollowUp = "meeting_follow_up"
+)
 
 // Awaiting reads the messages the reader sent that nobody has answered.
 type Awaiting interface {
 	// cut reports that the read stopped at its own bound.
 	AwaitingReplies(ctx context.Context, asOf time.Time) (rows []AwaitedReply, cut bool, err error)
+	// MeetingFollowUps are the reader's meetings with a customer they have
+	// sent nothing to since; SentAt is when the meeting started.
+	MeetingFollowUps(ctx context.Context, asOf time.Time) (rows []AwaitedReply, cut bool, err error)
 }
 
 // AwaitedReply is one message the reader sent and is still waiting on.
@@ -44,9 +50,10 @@ type AwaitedReply struct {
 // followUpRead is the reader's follow-ups, read per request like planRows:
 // read says the source ran, cut that it stopped at its bound.
 type followUpRead struct {
-	rows []ranked
-	read bool
-	cut  bool
+	rows        []ranked
+	read        bool
+	cut         bool
+	meetingsCut bool
 }
 
 // WithAwaiting binds the follow-up reader. Unbound, the source is absent.
@@ -64,11 +71,14 @@ func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service
 	if s.awaiting == nil || s.taskScope == TasksOwnedBy || s.taskScope == TasksUnassigned {
 		return &scoped, nil
 	}
-	var rows []AwaitedReply
-	var cut bool
+	var rows, meetings []AwaitedReply
+	var cut, meetingsCut bool
 	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
-		rows, cut, err = s.awaiting.AwaitingReplies(ctx, asOf)
+		if rows, cut, err = s.awaiting.AwaitingReplies(ctx, asOf); err != nil {
+			return err
+		}
+		meetings, meetingsCut, err = s.awaiting.MeetingFollowUps(ctx, asOf)
 		return err
 	})
 	switch {
@@ -82,9 +92,14 @@ func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service
 			Source: sourceAwaitingReply, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
 	}
-	scoped.followUps = followUpRead{rows: make([]ranked, 0, len(rows)), read: true, cut: cut}
+	scoped.followUps = followUpRead{
+		rows: make([]ranked, 0, len(rows)+len(meetings)), read: true, cut: cut, meetingsCut: meetingsCut,
+	}
 	for _, row := range rows {
 		scoped.followUps.rows = append(scoped.followUps.rows, classifyAwaiting(row, asOf))
+	}
+	for _, meeting := range meetings {
+		scoped.followUps.rows = append(scoped.followUps.rows, classifyMeetingFollowUp(meeting, asOf))
 	}
 	return &scoped, nil
 }
@@ -130,5 +145,44 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 	return ranked{
 		item: row, waitingDays: days, waitingRank: orderingAge(days), occurredAt: sent,
 		ownerRef: ownedByWhoeverIsReading(), contact: awaited.ContactID,
+	}
+}
+
+// classifyMeetingFollowUp is one meeting the reader owes a follow-up. The
+// composer writes a fresh message to the contact rather than a reply, since a
+// meeting is not a message to answer, so the row needs a contact to write to.
+func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) ranked {
+	days := daysSince(met.SentAt, asOf)
+	row := crmcontracts.WorklistItem{
+		Id:          met.ActivityID.String(),
+		Source:      sourceMeetingFollowUp,
+		Category:    crmcontracts.WorklistItemCategoryMeetings,
+		Level:       levelPromise,
+		Consequence: crmcontracts.WorklistItemConsequenceNone,
+		Because: []crmcontracts.WorklistReason{
+			reason("met_days_ago", daysValue(days)), reason("nothing_sent_since", nil),
+		},
+		Actions: []crmcontracts.WorklistItemActions{},
+		Subject: waitingSubject(WaitingCustomer{
+			DealID: met.DealID, ContactID: met.ContactID, CompanyID: met.CompanyID,
+		}),
+	}
+	if met.Subject != "" {
+		row.Title = &met.Subject
+	}
+	if !met.ContactID.IsZero() {
+		row.Contact = &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(met.ContactID)}
+	}
+	if openableSubject(row.Subject) {
+		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
+		if row.Contact != nil {
+			row.Actions = append(row.Actions, crmcontracts.WorklistItemActionsReply)
+		}
+	}
+	held := met.SentAt
+	row.OccurredAt = &held
+	return ranked{
+		item: row, waitingDays: days, waitingRank: orderingAge(days), occurredAt: held,
+		ownerRef: ownedByWhoeverIsReading(), contact: met.ContactID,
 	}
 }

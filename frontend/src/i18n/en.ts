@@ -650,6 +650,7 @@ export const en = {
   "brief.coverage.source.generic": "Other work",
   "brief.coverage.source.weekly_commitment": "Weekly commitments",
   "brief.coverage.source.awaiting_reply": "Follow-ups",
+  "brief.coverage.source.meeting_follow_up": "Follow-ups after meetings",
   "brief.coverage.source.batch": "Grouped work",
   "brief.coverage.source.introduction_request": "Introduction requests",
   "brief.coverage.source.automation_run": "Automation failures",
@@ -729,6 +730,7 @@ export const en = {
   "worklist.untitled.weekly_commitment": "Weekly commitment",
   "worklist.source.awaiting_reply": "Follow-up",
   "worklist.untitled.awaiting_reply": "Follow-up",
+  "worklist.untitled.meeting_follow_up": "Meeting",
   "brief.plan.select": "Find a deal, lead, contact, company or project",
   "brief.plan.period": "Current plan · week of {date}",
   "brief.forecast.period":
@@ -3030,7 +3032,7 @@ export const en = {
     "“{label}” is not used by any lead and is removed from the list.",
   "followUpSettings.title": "Follow-ups",
   "followUpSettings.sub":
-    "When a message sent to a customer comes back on the sender's Home as a follow-up.",
+    "When a message sent to a customer comes back on the sender’s Home as a follow-up.",
   "followUpSettings.days": "Remind after (days)",
   "followUpSettings.daysHint":
     "Days a sent message can go unanswered before its sender is reminded to follow up, 1 to 30.",
@@ -11774,6 +11776,10 @@ export const en = {
   "worklist.because.no_reply_days": "no reply",
   "worklist.because.no_reply_days.value_one": "no reply for {value} day",
   "worklist.because.no_reply_days.value_other": "no reply for {value} days",
+  "worklist.because.met_days_ago": "met",
+  "worklist.because.met_days_ago.value_one": "met {value} day ago",
+  "worklist.because.met_days_ago.value_other": "met {value} days ago",
+  "worklist.because.nothing_sent_since": "nothing sent since",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",

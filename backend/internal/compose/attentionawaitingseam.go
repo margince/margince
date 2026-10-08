@@ -49,3 +49,20 @@ func (w attentionAwaiting) AwaitingReplies(
 	}
 	return out, len(rows) >= activities.AwaitingReplyScanCap, nil
 }
+
+func (w attentionAwaiting) MeetingFollowUps(
+	ctx context.Context, asOf time.Time,
+) ([]attention.AwaitedReply, bool, error) {
+	rows, err := w.store.MeetingsAwaitingFollowUp(ctx, asOf)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]attention.AwaitedReply, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, attention.AwaitedReply{
+			ActivityID: row.ActivityID, Subject: row.Subject, SentAt: row.SentAt,
+			ContactID: row.ContactID, CompanyID: row.CompanyID, DealID: row.DealID,
+		})
+	}
+	return out, len(rows) >= activities.AwaitingReplyScanCap, nil
+}

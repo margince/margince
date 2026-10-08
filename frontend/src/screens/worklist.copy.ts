@@ -729,6 +729,7 @@ export const KNOWN_SOURCES = {
   conversation_claim: true,
   customer_waiting: true,
   awaiting_reply: true,
+  meeting_follow_up: true,
   lead_response: true,
   deal_at_risk: true,
   meeting: true,
@@ -744,7 +745,6 @@ export const KNOWN_SOURCES = {
   automation_run: true,
   notice: true,
   introduction_request: true,
-  // An undecided domain, and a group of decisions: neither names one record.
   domain_question: true,
   batch: true,
 } as const;

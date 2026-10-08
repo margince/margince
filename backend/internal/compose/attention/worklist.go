@@ -263,7 +263,7 @@ func (s *Service) worklistFrom(
 		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
 	}
 	if s.followUps.read {
-		bounded[sourceAwaitingReply] = s.followUps.cut
+		bounded[sourceAwaitingReply], bounded[sourceMeetingFollowUp] = s.followUps.cut, s.followUps.meetingsCut
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach

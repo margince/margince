@@ -672,6 +672,7 @@ export const de = {
   "brief.coverage.source.generic": "Weitere Arbeit",
   "brief.coverage.source.weekly_commitment": "Wochenzusagen",
   "brief.coverage.source.awaiting_reply": "Nachfassen",
+  "brief.coverage.source.meeting_follow_up": "Nachfassen nach Terminen",
   "brief.coverage.source.batch": "Gruppierte Arbeit",
   "brief.coverage.source.introduction_request": "Vorstellungsanfragen",
   "brief.coverage.source.automation_run": "Automatisierungsfehler",
@@ -752,6 +753,7 @@ export const de = {
   "worklist.untitled.weekly_commitment": "Wochenzusage",
   "worklist.source.awaiting_reply": "Nachfassen",
   "worklist.untitled.awaiting_reply": "Nachfassen",
+  "worklist.untitled.meeting_follow_up": "Termin",
   "brief.plan.select": "Deal, Lead, Kontakt, Unternehmen oder Projekt suchen",
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
   "brief.forecast.period":
@@ -11637,6 +11639,10 @@ export const de = {
   "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort",
   "worklist.because.no_reply_days.value_other":
     "seit {value} Tagen keine Antwort",
+  "worklist.because.met_days_ago": "getroffen",
+  "worklist.because.met_days_ago.value_one": "vor {value} Tag getroffen",
+  "worklist.because.met_days_ago.value_other": "vor {value} Tagen getroffen",
+  "worklist.because.nothing_sent_since": "seitdem nichts geschickt",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",

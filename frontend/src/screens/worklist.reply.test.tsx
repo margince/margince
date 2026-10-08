@@ -94,3 +94,25 @@ describe("a message the reader sent and nobody answered", () => {
     ).not.toBeNull();
   });
 });
+
+describe("a meeting the reader has sent nothing after", () => {
+  it("offers to draft a follow-up to the contact they met", async () => {
+    stub(
+      aDayWith(
+        aWaitingBuyer({
+          source: "meeting_follow_up",
+          category: "meetings",
+          title: "Discovery workshop",
+          contact: { id: "01a05500-0000-7000-8000-0000000000c2" },
+        }),
+      ),
+    );
+    renderWorklist();
+
+    await screen.findByText(/Discovery workshop/);
+    expect(
+      await screen.findByRole("button", { name: /draft follow-up/i }),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /^reply$/i })).toBeNull();
+  });
+});

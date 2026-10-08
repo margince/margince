@@ -18427,6 +18427,7 @@ const (
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
 	WorklistItemSourceLeadResponse        WorklistItemSource = "lead_response"
 	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
+	WorklistItemSourceMeetingFollowUp     WorklistItemSource = "meeting_follow_up"
 	WorklistItemSourceMeetingOutcome      WorklistItemSource = "meeting_outcome"
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceNoticeCase          WorklistItemSource = "notice_case"
@@ -18476,6 +18477,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceLeadResponse:
 		return true
 	case WorklistItemSourceMeeting:
+		return true
+	case WorklistItemSourceMeetingFollowUp:
 		return true
 	case WorklistItemSourceMeetingOutcome:
 		return true
@@ -18568,6 +18571,7 @@ const (
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
 	WorklistReachSourceLeadResponse        WorklistReachSource = "lead_response"
 	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
+	WorklistReachSourceMeetingFollowUp     WorklistReachSource = "meeting_follow_up"
 	WorklistReachSourceMeetingOutcome      WorklistReachSource = "meeting_outcome"
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceNoticeCase          WorklistReachSource = "notice_case"
@@ -18618,6 +18622,8 @@ func (e WorklistReachSource) Valid() bool {
 		return true
 	case WorklistReachSourceMeeting:
 		return true
+	case WorklistReachSourceMeetingFollowUp:
+		return true
 	case WorklistReachSourceMeetingOutcome:
 		return true
 	case WorklistReachSourceNotice:
@@ -18656,10 +18662,12 @@ const (
 	WorklistReasonKindMeetingBooked      WorklistReasonKind = "meeting_booked"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
+	WorklistReasonKindMetDaysAgo         WorklistReasonKind = "met_days_ago"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindNoNextStep         WorklistReasonKind = "no_next_step"
 	WorklistReasonKindNoReplyDays        WorklistReasonKind = "no_reply_days"
 	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
+	WorklistReasonKindNothingSentSince   WorklistReasonKind = "nothing_sent_since"
 	WorklistReasonKindOpenedOverdue      WorklistReasonKind = "opened_overdue"
 	WorklistReasonKindOutcomeUnrecorded  WorklistReasonKind = "outcome_unrecorded"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
@@ -18713,6 +18721,8 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindMeetingUnprepared:
 		return true
+	case WorklistReasonKindMetDaysAgo:
+		return true
 	case WorklistReasonKindNoChampion:
 		return true
 	case WorklistReasonKindNoNextStep:
@@ -18720,6 +18730,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindNoReplyDays:
 		return true
 	case WorklistReasonKindNoReplyHistory:
+		return true
+	case WorklistReasonKindNothingSentSince:
 		return true
 	case WorklistReasonKindOpenedOverdue:
 		return true

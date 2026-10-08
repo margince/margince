@@ -209,6 +209,27 @@ export const AFollowUpRow: Story = {
   },
 };
 
+/** A meeting with nothing sent since: the follow-up is a fresh message. */
+export const AMeetingFollowUpRow: Story = {
+  args: {
+    item: {
+      ...waitingRow(),
+      source: "meeting_follow_up",
+      category: "meetings",
+      consequence: "none",
+      title: "Discovery workshop",
+      move: undefined,
+      because: [
+        { kind: "met_days_ago", value: { kind: "days", days: 3 } },
+        { kind: "nothing_sent_since" },
+      ],
+    },
+    href: rowHref(waitingRow()),
+    owner: "",
+    primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
+  },
+};
+
 /**
  * A LANE WHOSE VERBS ARE EQUAL has no answer, and nothing on the line is
  * filled.
