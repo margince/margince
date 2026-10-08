@@ -204,6 +204,8 @@ type capturedFileRow struct {
 	withheld bool
 }
 
+// No allowlist here, unlike UploadAttachment: a sender's file is evidence of what
+// was sent, and refusing its kind would lose the record of it.
 func insertCapturedAttachment(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, account *ids.UUID,
 	from CapturedFileSource, row capturedFileRow,

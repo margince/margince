@@ -17,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -534,5 +535,93 @@ func TestTheScopeFilteredCatalogRefusesToBeStored(t *testing.T) {
 				"may store it and answer another credential from it, and that request never reaches the server to be audited",
 				tc.passport, tc.got, "private, no-store")
 		}
+	}
+}
+
+// An agent attaching a file sends it inline as base64, so the ceiling is the
+// largest file it can attach: the refusal must name it and point to the app.
+func TestARequestOverTheMCPCeilingIsRefusedWithTheLimitNamed(t *testing.T) {
+	h := NewHTTPHandler(NewRegistry(nil, nil), authenticatedForTest,
+		func(*http.Request) string { return "" }, "margince-crm", "test", discardLog())
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	ping := `{"jsonrpc":"2.0","id":1,"method":"ping"}`
+	post := func(size int) (int, []byte) {
+		resp, err := http.Post(srv.URL, "application/json",
+			strings.NewReader(ping+strings.Repeat(" ", size-len(ping))))
+		if err != nil {
+			t.Fatalf("POST: %v", err)
+		}
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Errorf("closing response body: %v", err)
+			}
+		}()
+		raw, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("reading the answer: %v", err)
+		}
+		return resp.StatusCode, raw
+	}
+
+	if status, raw := post(MaxMCPRequestBytes); status != http.StatusOK {
+		t.Fatalf("a body of exactly the ceiling answered %d, want 200: %s", status, raw)
+	}
+	status, raw := post(MaxMCPRequestBytes + 1)
+	if status != http.StatusRequestEntityTooLarge {
+		t.Fatalf("a body one byte over the ceiling answered %d, want 413: %s", status, raw)
+	}
+	var problem struct{ Code, Detail string }
+	if err := json.Unmarshal(raw, &problem); err != nil {
+		t.Fatalf("decoding the refusal %q: %v", raw, err)
+	}
+	if problem.Code != "body_too_large" {
+		t.Errorf("code = %q, want body_too_large", problem.Code)
+	}
+	for _, want := range []string{"8.3 MB", "Margince app"} {
+		if !strings.Contains(problem.Detail, want) {
+			t.Errorf("detail %q does not mention %q", problem.Detail, want)
+		}
+	}
+}
+
+// Large requests take a slot; a full set refuses another with 503 while small
+// requests still pass, and a finished request gives its slot back.
+func TestLargeMCPRequestsAreBoundedInFlight(t *testing.T) {
+	h, ok := NewHTTPHandler(NewRegistry(nil, nil), authenticatedForTest,
+		func(*http.Request) string { return "" }, "margince-crm", "test", discardLog()).(*httpMCPHandler)
+	if !ok {
+		t.Fatal("NewHTTPHandler no longer answers the MCP handler")
+	}
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	ping := `{"jsonrpc":"2.0","id":1,"method":"ping"}`
+	post := func(size int) (int, string) {
+		resp, err := http.Post(srv.URL, "application/json", strings.NewReader(ping+strings.Repeat(" ", size-len(ping))))
+		if err != nil {
+			t.Fatalf("POST: %v", err)
+		}
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("closing response body: %v", err)
+		}
+		return resp.StatusCode, resp.Header.Get("Retry-After")
+	}
+	for range maxLargeMCPBodiesInFlight {
+		h.largeBodies <- struct{}{}
+	}
+
+	if status, retry := post(httperr.MaxBodyBytes + 1); status != http.StatusServiceUnavailable || retry == "" {
+		t.Fatalf("a large request with every slot taken answered %d (Retry-After %q), want 503 with Retry-After",
+			status, retry)
+	}
+	if status, _ := post(httperr.MaxBodyBytes); status != http.StatusOK {
+		t.Fatalf("a request at the ordinary bound answered %d, want 200: it takes no slot", status)
+	}
+	<-h.largeBodies
+	if status, _ := post(httperr.MaxBodyBytes + 1); status != http.StatusOK {
+		t.Fatalf("a large request with a slot free answered %d, want 200", status)
+	}
+	if held := len(h.largeBodies); held != maxLargeMCPBodiesInFlight-1 {
+		t.Errorf("%d slots are held after the request finished, want %d", held, maxLargeMCPBodiesInFlight-1)
 	}
 }

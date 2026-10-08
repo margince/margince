@@ -24846,6 +24846,9 @@ paths:
         metadata + object key. `captured_by` is server-stamped from the authenticated
         principal, never the request. The parent entity must be visible to the caller
         (a hidden or cross-tenant entity answers 404, never leaks existence).
+        The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
+        Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
+        answers 422 `unsupported_file_type`.
       requestBody:
         required: true
         content:

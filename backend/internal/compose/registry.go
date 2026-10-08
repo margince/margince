@@ -51,10 +51,12 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 
 // registryFeatures are what a server role adds to the tool surface. firstDrafts
 // is a pointer to the server's own engines, so options binding a model lane
-// after the registry is built still reach draft_email.
+// after the registry is built still reach draft_email. served is the Server
+// whose object store the document tools write to; without one they store nothing.
 type registryFeatures struct {
 	lists       bool
 	firstDrafts *firstMessageEngines
+	served      *Server
 }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
@@ -140,6 +142,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterDuplicateTools(registry, duplicateQueueSeam(db))
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
+	agents.RegisterDocumentTools(registry, documentSeam{srv: features.served, db: db})
 	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider))
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
