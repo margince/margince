@@ -9,8 +9,6 @@ package activities
 // the transactional write shape.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/settings"
-
 	"context"
 	"net/http"
 
@@ -18,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
