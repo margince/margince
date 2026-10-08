@@ -1470,6 +1470,8 @@ span.error-line {
 }
 
 .table-scroll {
+  /* Contains absolutely placed cell content (sr-only labels) so it scrolls with the table. */
+  position: relative;
   overflow-x: auto;
 }
 

@@ -208,8 +208,8 @@ you always know whether an AI model was used.
 Each document in a set moves through a visible state as it is taken in:
 
 - **Queued**
-- **Indexing…**
-- **Searchable**
+- **Importing…**
+- **Imported**
 - **Could not be read**, with "Why this file could not be read"
 
 The set shows how much of it can be searched: "{documents} documents ·

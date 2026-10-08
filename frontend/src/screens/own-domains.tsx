@@ -10,10 +10,12 @@ import { useCanWrite } from "../app/capability";
 import { Button, EmptyState, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
+import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { captureValueMessage } from "./capturevalue";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // The own-domain surface (CAP-WIRE-2a, ADR-0082/A127): which domains this
@@ -249,15 +251,14 @@ function CuratedDomains({
               : t("ownDomains.candidate")
           }
           control={
-            <Button
+            <IconAction
               variant="ghost"
-              aria-label={t("ownDomains.remove", { domain: domain.domain })}
+              label={t("ownDomains.remove", { domain: domain.domain })}
+              icon={<Trash2 aria-hidden />}
               disabled={pending}
               reasonId={refusal}
               onClick={() => onRemove(domain.domain)}
-            >
-              <Trash2 aria-hidden />
-            </Button>
+            />
           }
         />
       ))}
@@ -302,7 +303,7 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             tone="danger"
             title={t("ownDomains.addFailed")}
           >
-            {problemMessageOf(add.error, t)}
+            {captureValueMessage(add.error, "domain", t)}
           </Callout>
         )}
       </form>

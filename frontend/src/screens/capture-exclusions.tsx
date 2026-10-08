@@ -14,6 +14,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
+import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -21,6 +22,7 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useFolderOptions } from "./capture-exclusions.queries";
 import { PurgeDialog } from "./capture-purge-dialog";
+import { captureValueMessage } from "./capturevalue";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
@@ -271,9 +273,10 @@ function ExclusionRows({
               {/* Removing the RULE stops future capture; the other destroys
                   what it already matched. Two different acts, and only one of
                   them is irreversible, so they are two controls. */}
-              <Button
+              <IconAction
                 variant="ghost"
-                aria-label={t("capturePurge.open", { value: rule.value })}
+                label={t("capturePurge.open", { value: rule.value })}
+                icon={<Flame aria-hidden />}
                 disabled={pending}
                 reasonId={
                   bindsEveryone(rule) && !canManageWorkspace
@@ -281,14 +284,11 @@ function ExclusionRows({
                     : undefined
                 }
                 onClick={() => onPurge(rule.id, rule.value)}
-              >
-                <Flame aria-hidden />
-              </Button>
-              <Button
+              />
+              <IconAction
                 variant="ghost"
-                aria-label={t("captureExclusions.remove", {
-                  value: rule.value,
-                })}
+                label={t("captureExclusions.remove", { value: rule.value })}
+                icon={<Trash2 aria-hidden />}
                 disabled={pending}
                 reasonId={
                   bindsEveryone(rule) && !canManageWorkspace
@@ -296,9 +296,7 @@ function ExclusionRows({
                     : undefined
                 }
                 onClick={() => onRemove(rule.id)}
-              >
-                <Trash2 aria-hidden />
-              </Button>
+              />
             </>
           }
         />
@@ -441,7 +439,7 @@ function ExcludeDialog({
             kind="outcome"
             title={t("captureSettings.addFailed")}
           >
-            {problemMessageOf(add.error, t)}
+            {captureValueMessage(add.error, add.variables?.kind, t)}
           </Callout>
         )}
       </form>

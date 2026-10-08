@@ -1002,8 +1002,8 @@ export const en = {
   "confidence.med": "medium",
   "confidence.low": "low",
 
-  "autonomy.auto": "automatic",
-  "autonomy.confirm": "approval first",
+  "autonomy.auto": "Automatic",
+  "autonomy.confirm": "Approval first",
 
   "nav.brief": "Home",
   "nav.contacts": "Contacts",
@@ -3455,7 +3455,7 @@ export const en = {
   "recordRoles.listLabel": "Roles",
   "recordRoles.loading": "Loading roles…",
   "recordRoles.readOnly": "Only an administrator can change these roles.",
-  "recordRoles.builtIn": "Built in",
+  "recordRoles.builtIn": "Built-in",
   "recordRoles.addOpen": "Add role",
   "recordRoles.addTitle": "Add responsibility role",
   "recordRoles.recordTypes": "Applies to",
@@ -5589,7 +5589,7 @@ export const en = {
 
   "agents.connected": "Connected agents",
   "agents.connectedSub":
-    "MCP clients with their own credential, limited to the access you approved",
+    "MCP clients with their own credential, limited to the access you approved.",
   "agents.noneConnected": "No agents connected yet.",
   "agents.connectedOn": "connected {date}",
   "agents.disconnect": "Disconnect",
@@ -5615,7 +5615,7 @@ export const en = {
   "settings.tokenOnce": "Copy it now. This credential is shown only once.",
   "settings.token": "Credential",
   "settings.autonomy": "Autonomy tiers",
-  "settings.autonomySub": "What runs immediately and what waits for approval",
+  "settings.autonomySub": "What runs immediately and what waits for approval.",
   "settings.tierRead":
     "Read, summarize, draft: runs immediately and is fully logged.",
   "settings.tierSend":
@@ -5737,7 +5737,7 @@ export const en = {
     "A background job was running when the reset began. It fails against the deleted data and logs one harmless error.",
 
   "settings.jobs": "Background jobs",
-  "settings.jobsSub": "Queued background jobs and failed jobs by owner",
+  "settings.jobsSub": "Queued background jobs and failed jobs by owner.",
   "jobs.adminOnly":
     "Background job health covers the whole installation and requires a permission your role does not have.",
   "jobs.empty":
@@ -5904,7 +5904,8 @@ export const en = {
   "audit.viaDealRoom": "in the Deal Room",
   "audit.viaNamed": "via {client}",
   "audit.noHumanAuthority": "No human authority recorded",
-  "settings.auditSub": "Every action, attributed to a user, agent or connector",
+  "settings.auditSub":
+    "Every action, attributed to a user, agent or connector.",
   "settings.auditAdminOnly":
     "Your role cannot read the full audit log. It records every actor and every record they accessed.",
   "settings.auditFilters": "Filters",
@@ -5920,7 +5921,8 @@ export const en = {
   "settings.auditRule": "Authorization rule",
   "settings.auditOnBehalf": "on behalf of",
   "settings.privacy": "Privacy requests",
-  "settings.privacySub": "Data subject requests with their statutory deadlines",
+  "settings.privacySub":
+    "Data subject requests with their statutory deadlines.",
   "settings.due": "due {date}",
 
   "privacy.addPurpose": "Add purpose",
@@ -6033,6 +6035,7 @@ export const en = {
   "privacynotice.right.complain": "Complain to your data protection authority.",
   "notice.claimed": "Claimed",
   "notice.unclaimed": "Unclaimed",
+  "notice.ownerOf": "Owner of {duty}",
   "notice.excuse": "End without sending",
   "notice.excuseTitle": "End duty without sending disclosure",
   "notice.excuseWhich": "Reason type",
@@ -6124,7 +6127,7 @@ export const en = {
   "restricted.pin.confirm": "Pin and hold",
   "retention.title": "Retention",
   "retention.sub":
-    "How long each record type is kept, and what happens when its window ends",
+    "How long each record type is kept, and what happens when its window ends.",
   "retention.retainOnly": "Retain-only mode",
   "retention.retainOnlyHelp":
     "While on, this installation destroys nothing: no anonymizing and no erasing, whatever a policy below says. Archiving still runs; an archived record is kept, not destroyed.",
@@ -6955,7 +6958,7 @@ export const en = {
   // The header verb names the whole act it opens a dialog for; the dialog's own
   // submit is the bare verb, so no two buttons on this surface read the same.
   "consumerMail.addOpen": "Add domain",
-  "consumerMail.remove": "Remove",
+  "consumerMail.remove": "Remove {domain}",
   "consumerMail.none":
     "No domains added. The shipped list applies to every domain.",
   "consumerMail.adminOnly": "You do not have permission to change this list.",
@@ -8360,8 +8363,8 @@ export const en = {
   "knowledge.deleteConfirm.body":
     "The file, its extracted text and its search index are permanently deleted.",
   "knowledge.ingest.queued": "Queued",
-  "knowledge.ingest.running": "Indexing…",
-  "knowledge.ingest.done": "Searchable",
+  "knowledge.ingest.running": "Importing…",
+  "knowledge.ingest.done": "Imported",
   "knowledge.ingest.failed": "Could not be read",
   "knowledge.ingestDetailTitle": "Why this file could not be read",
   "knowledge.upload.label": "Add document",
@@ -9221,6 +9224,8 @@ export const en = {
   "aicalls.empty": "No AI calls recorded yet.",
   "aicalls.detail.identity":
     "Served {served} via {provider} (configured: {configured})",
+  "aicalls.detail.identityNoModel":
+    "Served {served} via {provider} (no model configured)",
   "aicalls.detail.source": "Served identity source: {source}",
   "aicalls.detail.context": "Injected context: {scopes}",
   "aicalls.detail.contextNone": "No company context injected",
@@ -9824,7 +9829,7 @@ export const en = {
   "ownerIdentities.notRetroactive":
     "Applies from the next message. Mail already captured stays, and a contact already created from an alias stays until you merge or remove it.",
   "ownerIdentities.empty": "No other addresses added.",
-  "ownerIdentities.remove": "Remove address",
+  "ownerIdentities.remove": "Remove {value}",
   "ownerIdentities.added": "Address added",
   "ownerIdentities.confirm": "Add",
   "ownerIdentities.kindLabel": "Type",
@@ -9839,6 +9844,10 @@ export const en = {
   "ownerIdentities.removeFailed": "Address not removed",
   "ownerIdentities.addFailed": "Address not added",
   "ownerIdentities.domainPlaceholder": "example.com",
+  "captureValue.refusedAddress":
+    "Enter one email address, for example name@example.com.",
+  "captureValue.refusedDomain":
+    "Enter a bare domain such as example.com, with no address, scheme or path.",
   "captureExclusions.scope.user": "Your mailboxes",
   "captureExclusions.scope.workspace": "Whole company",
   "captureExclusions.kind.address": "Address",
@@ -12304,7 +12313,7 @@ export const en = {
     "Turning a transition on does not start moving deals. Margince keeps asking until the record above meets the threshold, then applies moves automatically.",
   "stageAutomation.offTitle": "Stage automation is switched off",
   "stageAutomation.offBody":
-    "No deal moves by itself while this is off, whatever a transition below is set to. An admin turns it on for the whole installation in stage automation settings.",
+    "No deal moves by itself while this is off, whatever a transition below is set to. Whoever runs this installation turns it on in the installation’s configuration.",
   "stageAutomation.modeHint":
     "When on and the record qualifies, Margince moves the deal and notifies you afterward.",
   "stageAutomation.notEarnedYet": "Not qualified yet: {why}",

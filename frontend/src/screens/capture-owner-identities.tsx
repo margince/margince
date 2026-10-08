@@ -12,11 +12,13 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
+import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { captureValueMessage } from "./capturevalue";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
@@ -211,14 +213,13 @@ function IdentityRows({
             description={learned === null ? undefined : t(learned)}
             value={t(kindLabel[identity.kind])}
             control={
-              <Button
+              <IconAction
                 variant="ghost"
                 disabled={pending}
-                aria-label={t("ownerIdentities.remove")}
+                label={t("ownerIdentities.remove", { value: identity.value })}
+                icon={<Trash2 aria-hidden />}
                 onClick={() => onRemove(identity.id)}
-              >
-                <Trash2 aria-hidden />
-              </Button>
+              />
             }
           />
         );
@@ -279,7 +280,7 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             kind="outcome"
             title={t("ownerIdentities.addFailed")}
           >
-            {problemMessageOf(add.error, t)}
+            {captureValueMessage(add.error, add.variables?.kind, t)}
           </Callout>
         )}
       </form>

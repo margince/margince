@@ -83,10 +83,16 @@ button.evidence-chip:hover {
   overflow-wrap: anywhere;
 }
 
-.confidence {
+.confidence,
+.autonomy {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* The tier's dot and its word wrap as one, never the dot alone on a line. */
+.autonomy {
+  white-space: nowrap;
 }
 .confidence-high .dot {
   background: var(--success);

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { ExtensionAccessCard } from "./extension-access";
 import {
   installFetchStub,
@@ -52,7 +53,13 @@ function story(
 ) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({}, { roles, seat }),
+      "GET /me": meRoute(
+        {
+          extension_access: ["read"],
+          role_admin: roles.includes("admin") ? ["read", "update"] : ["read"],
+        },
+        { roles, seat },
+      ),
       "GET /extensions": () => jsonResponse({ extensions }),
       // `roles`, which is what RoleDirectory names — not the `data` envelope the
       // paginated collections use. Keyed wrong, the read narrowed to an empty
@@ -122,31 +129,25 @@ export const UnitsWithGrantsDark: Story = {
   render: story([YOGI, DE], ["admin"], { ext_yogi_briefing: READ }),
 };
 
-// The matrix at 390px, where it is the widest thing in settings that is not a
-// table of figures: a role column plus four CRUD columns, with both header rows
-// and the role names deliberately nowrap. It is meant to scroll inside
-// `.ext-matrix-wrap` rather than push the page sideways (the no-horizontal-page-
-// scroll rule), and the scroller holds the checkboxes themselves so it stays
-// keyboard-reachable. This is the width at which the stacked row's
-// `.settingrow-measure` wrapper earns its place: without the `min-width: 0` it
-// carries, the grid grows to its own width inside a flex control column and the
-// PAGE scrolls instead of the table. Above it, the version Badge shares the
-// panel head with the unit name on ONE line: the band is a fixed height, so a
-// name too long for the room left beside the version ends in an ellipsis rather
-// than pushing the badge onto a second row.
-//
-// The link to the unit's own page belongs on that line too and no story can
-// show it. It renders from the SPA's generated screen registry rather than from
-// the API's list, and the registry every story runs against is the vanilla one,
-// empty by construction — narrowing a composed build is the only way to watch
-// the link truncate.
-//
-// Storybook applies the viewport from the MANAGER, by resizing the preview
-// iframe — so the fe-uat capture, which loads a bare iframe.html, renders this at
-// the harness's own width and its PNG is NOT a picture of a phone. Review it in
-// Storybook, or by narrowing the browser.
+// The matrix at 390px: a role column plus four CRUD columns, wider than the
+// phone, so it scrolls inside its `TableScroll` while the card keeps its width.
+// The link to the unit's own page renders from the SPA's generated screen
+// registry, which is empty in every story, so no story can show it truncate.
 export const UnitsWithGrantsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story([YOGI, DE], ["admin"], { ext_yogi_briefing: READ }),
+  play: async ({ canvasElement }) => {
+    const matrix = await within(canvasElement).findByRole("table");
+    const card = matrix.closest<HTMLElement>(".panel");
+    if (!card) throw new Error("the matrix rendered outside its card");
+    await expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+    // A hidden label placed against a box outside the scroller widens the page
+    // once the grid is wide enough to reach the card's edge.
+    const scroller = matrix.closest(".table-scroll");
+    if (!scroller) throw new Error("the matrix rendered outside its scroller");
+    for (const hidden of matrix.querySelectorAll<HTMLElement>(".sr-only")) {
+      await expect(scroller.contains(hidden.offsetParent)).toBe(true);
+    }
+  },
 };

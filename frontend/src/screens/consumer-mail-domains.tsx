@@ -15,6 +15,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { useSettledValue } from "../design-system/debouncedsearch";
 import { Heading } from "../design-system/heading";
+import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -22,6 +23,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { captureValueMessage } from "./capturevalue";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import "./consumer-mail-domains.css";
 
@@ -276,15 +278,16 @@ export function ConsumerMailDomainsCard() {
                           label={entry.domain}
                           value={t(kindLabel[entry.kind])}
                           control={
-                            <Button
+                            <IconAction
                               variant="ghost"
-                              aria-label={t("consumerMail.remove")}
+                              label={t("consumerMail.remove", {
+                                domain: entry.domain,
+                              })}
+                              icon={<Trash2 aria-hidden />}
                               disabled={remove.isPending}
                               reasonId={canManage ? undefined : denialId}
                               onClick={() => remove.mutate(entry.id)}
-                            >
-                              <Trash2 aria-hidden />
-                            </Button>
+                            />
                           }
                         />
                       ))}
@@ -395,7 +398,7 @@ function AddConsumerMailDialog({
             kind="outcome"
             title={t("consumerMail.addFailed")}
           >
-            {problemMessageOf(add.error, t)}
+            {captureValueMessage(add.error, "domain", t)}
           </Callout>
         )}
       </form>

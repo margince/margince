@@ -1008,8 +1008,8 @@ export const vi = {
   "confidence.med": "trung bình",
   "confidence.low": "thấp",
 
-  "autonomy.auto": "tự động thực thi",
-  "autonomy.confirm": "xác nhận trước",
+  "autonomy.auto": "Tự động thực thi",
+  "autonomy.confirm": "Xác nhận trước",
 
   "nav.brief": "Trang chủ",
   "nav.contacts": "Liên hệ",
@@ -5367,7 +5367,7 @@ export const vi = {
 
   "agents.connected": "Agent đã kết nối",
   "agents.connectedSub":
-    "Các client MCP giữ thông tin xác thực của riêng mình, với đúng quyền bạn đã tick khi cấp quyền",
+    "Các client MCP giữ thông tin xác thực của riêng mình, với đúng quyền bạn đã tick khi cấp quyền.",
   "agents.noneConnected": "Chưa có Agent nào kết nối.",
   "agents.connectedOn": "kết nối {date}",
   "agents.disconnect": "Ngắt kết nối",
@@ -5393,7 +5393,7 @@ export const vi = {
   "settings.tokenOnce": "Sao chép ngay — token này chỉ hiển thị một lần.",
   "settings.token": "token",
   "settings.autonomy": "Bậc tự chủ",
-  "settings.autonomySub": "cái gì chạy ngay, cái gì chờ trong hộp phê duyệt",
+  "settings.autonomySub": "Cái gì chạy ngay, cái gì chờ trong hộp phê duyệt.",
   "settings.tierRead":
     "Đọc, tóm tắt, soạn nháp — chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
@@ -5673,7 +5673,7 @@ export const vi = {
   "audit.viaNamed": "qua {client}",
   "audit.noHumanAuthority": "Không ghi nhận người uỷ quyền",
   "settings.auditSub":
-    "mọi hành động đều được quy trách — người, Agent hay connector",
+    "Mọi hành động đều được quy trách: người, Agent hay connector.",
   "settings.auditAdminOnly":
     "Đọc toàn bộ dấu vết cần quyền mà ghế của bạn không có. Nó ghi lại mọi người thực hiện và mọi bản ghi họ chạm tới, nên không mở cho tất cả mọi người.",
   "settings.auditFilters": "Bộ lọc",
@@ -5689,7 +5689,7 @@ export const vi = {
   "settings.auditRule": "Quy tắc phân quyền",
   "settings.auditOnBehalf": "thay mặt",
   "settings.privacy": "Hộp yêu cầu quyền riêng tư",
-  "settings.privacySub": "yêu cầu của chủ thể dữ liệu kèm thời hạn luật định",
+  "settings.privacySub": "Yêu cầu của chủ thể dữ liệu kèm thời hạn luật định.",
   "settings.due": "hạn {date}",
 
   "privacy.purposesReadOnly":
@@ -5809,6 +5809,7 @@ export const vi = {
     "Khiếu nại với cơ quan bảo vệ dữ liệu của quý vị.",
   "notice.claimed": "Đã nhận",
   "notice.unclaimed": "Chưa ai nhận",
+  "notice.ownerOf": "Phụ trách {duty}",
   "notice.excuse": "Kết thúc mà không gửi",
   "notice.excuseTitle": "Kết thúc nghĩa vụ này mà không gửi thông báo",
   "notice.excuseWhich": "Bạn đang ghi nhận điều gì?",
@@ -5902,7 +5903,7 @@ export const vi = {
   "restricted.pin.confirm": "Ghim và giữ lại",
   "retention.title": "Lưu giữ dữ liệu",
   "retention.sub":
-    "mỗi loại bản ghi được giữ trong bao lâu, và điều gì xảy ra khi hết thời hạn",
+    "Mỗi loại bản ghi được giữ trong bao lâu, và điều gì xảy ra khi hết thời hạn.",
   "retention.retainOnly": "Chế độ chỉ lưu giữ",
   "retention.retainOnlyHelp":
     "Khi bật, bản triển khai này không phá huỷ bất cứ gì: không ẩn danh hoá và không xoá, bất kể chính sách bên dưới nói gì. Việc lưu trữ vẫn chạy — bản ghi được lưu trữ là bản ghi vẫn còn.",
@@ -6730,7 +6731,7 @@ export const vi = {
   "consumerMail.kind.never": "Một công ty thật — bỏ qua danh sách có sẵn",
   "consumerMail.add": "Thêm",
   "consumerMail.addOpen": "Thêm tên miền",
-  "consumerMail.remove": "Gỡ",
+  "consumerMail.remove": "Gỡ {domain}",
   "consumerMail.none":
     "Chưa thêm gì. Danh sách có sẵn quyết định mọi tên miền.",
   "consumerMail.adminOnly": "Bạn không có quyền thay đổi danh sách này.",
@@ -8118,8 +8119,8 @@ export const vi = {
   "knowledge.deleteConfirm.body":
     "Tệp, văn bản rút ra từ nó và chỉ mục tìm kiếm dựng trên nó đều bị hủy. Không thể hoàn tác.",
   "knowledge.ingest.queued": "Đang chờ đọc",
-  "knowledge.ingest.running": "Đang đọc",
-  "knowledge.ingest.done": "Tìm kiếm được",
+  "knowledge.ingest.running": "Đang nhập…",
+  "knowledge.ingest.done": "Đã nhập",
   "knowledge.ingest.failed": "Không đọc được",
   "knowledge.ingestDetailTitle": "Lý do không đọc được tệp này",
   "knowledge.upload.label": "Thêm tài liệu",
@@ -8995,6 +8996,8 @@ export const vi = {
   "aicalls.empty": "Chưa ghi nhận lượt gọi AI nào.",
   "aicalls.detail.identity":
     "Phục vụ bằng {served} qua {provider} (cấu hình: {configured})",
+  "aicalls.detail.identityNoModel":
+    "Phục vụ bằng {served} qua {provider} (chưa cấu hình mô hình)",
   "aicalls.detail.source": "Nguồn danh tính phục vụ: {source}",
   "aicalls.detail.context": "Ngữ cảnh đưa vào: {scopes}",
   "aicalls.detail.contextNone": "Không đưa ngữ cảnh công ty nào vào",
@@ -9605,7 +9608,7 @@ export const vi = {
   "ownerIdentities.notRetroactive":
     "Áp dụng từ thư kế tiếp. Thư đã thu thập vẫn giữ nguyên, và liên hệ đã tạo từ một bí danh vẫn còn cho đến khi bạn gộp hoặc xoá.",
   "ownerIdentities.empty": "Bạn chưa khai báo địa chỉ nào khác.",
-  "ownerIdentities.remove": "Rút lại địa chỉ này",
+  "ownerIdentities.remove": "Rút lại {value}",
   "ownerIdentities.added": "Đã thêm địa chỉ.",
   "ownerIdentities.confirm": "Thêm",
   "ownerIdentities.kindLabel": "Bạn đang khai báo gì?",
@@ -9620,6 +9623,9 @@ export const vi = {
   "ownerIdentities.removeFailed": "Chưa rút lại địa chỉ",
   "ownerIdentities.addFailed": "Chưa thêm địa chỉ",
   "ownerIdentities.domainPlaceholder": "vidu.com",
+  "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
+  "captureValue.refusedDomain":
+    "Chỉ nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
   "captureExclusions.scope.user": "Chỉ tôi",
   "captureExclusions.scope.workspace": "Toàn tổ chức",
   "captureExclusions.kind.address": "Địa chỉ",
@@ -12040,7 +12046,7 @@ export const vi = {
     "Bật một bước chuyển không làm nó bắt đầu di chuyển giao dịch. Margince vẫn hỏi cho đến khi hồ sơ ở trên đạt ngưỡng, rồi tự áp dụng — bạn không phải quay lại.",
   "stageAutomation.offTitle": "Tự động hóa giai đoạn đang tắt",
   "stageAutomation.offBody":
-    "Khi đang tắt, không giao dịch nào tự chuyển, bất kể bước chuyển bên dưới được đặt thế nào. Quản trị viên bật nó cho toàn bộ bản cài đặt trong cài đặt tự động hóa giai đoạn.",
+    "Khi đang tắt, không giao dịch nào tự chuyển, bất kể bước chuyển bên dưới được đặt thế nào. Bên vận hành bản cài đặt này bật nó trong cấu hình của bản cài đặt.",
   "stageAutomation.modeHint":
     "Khi bật và hồ sơ đã đạt, Margince chuyển giao dịch rồi báo cho bạn sau.",
   "stageAutomation.notEarnedYet": "Chưa đạt: {why}",

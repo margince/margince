@@ -1025,8 +1025,8 @@ export const de = {
   "confidence.med": "mittel",
   "confidence.low": "niedrig",
 
-  "autonomy.auto": "automatisch",
-  "autonomy.confirm": "erst Freigabe",
+  "autonomy.auto": "Automatisch",
+  "autonomy.confirm": "Erst Freigabe",
 
   "nav.brief": "Startseite",
   "nav.contacts": "Kontakte",
@@ -5435,7 +5435,7 @@ export const de = {
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
-    "MCP-Clients mit eigenen Zugangsdaten, beschränkt auf den Zugriff, den du freigegeben hast",
+    "MCP-Clients mit eigenen Zugangsdaten, beschränkt auf den Zugriff, den du freigegeben hast.",
   "agents.noneConnected": "Noch keine Agenten verbunden.",
   "agents.connectedOn": "verbunden {date}",
   "agents.disconnect": "Trennen",
@@ -5463,7 +5463,7 @@ export const de = {
     "Jetzt kopieren. Diese Zugangsdaten werden nur einmal angezeigt.",
   "settings.token": "Zugangsdaten",
   "settings.autonomy": "Autonomiestufen",
-  "settings.autonomySub": "Was sofort läuft und was auf Freigabe wartet",
+  "settings.autonomySub": "Was sofort läuft und was auf Freigabe wartet.",
   "settings.tierRead":
     "Lesen, zusammenfassen, entwerfen: läuft sofort und wird vollständig protokolliert.",
   "settings.tierSend":
@@ -5583,7 +5583,7 @@ export const de = {
 
   "settings.jobs": "Hintergrund-Jobs",
   "settings.jobsSub":
-    "Wartende und fehlgeschlagene Hintergrund-Jobs nach Zuständigkeit",
+    "Wartende und fehlgeschlagene Hintergrund-Jobs nach Zuständigkeit.",
   "jobs.adminOnly":
     "Der Zustand der Hintergrund-Jobs umfasst die gesamte Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
   "jobs.empty":
@@ -5744,7 +5744,7 @@ export const de = {
   "audit.viaNamed": "über {client}",
   "audit.noHumanAuthority": "Keine menschliche Autorisierung erfasst",
   "settings.auditSub":
-    "Jede Aktion, zugeordnet zu Nutzerkonto, Agent oder Connector",
+    "Jede Aktion, zugeordnet zu Nutzerkonto, Agent oder Connector.",
   "settings.auditAdminOnly":
     "Deine Rolle darf das vollständige Audit-Log nicht lesen. Es verzeichnet alle Handelnden und jeden Datensatz, auf den sie zugegriffen haben.",
   "settings.auditFilters": "Filter",
@@ -5760,7 +5760,7 @@ export const de = {
   "settings.auditRule": "Berechtigungsregel",
   "settings.auditOnBehalf": "im Auftrag von",
   "settings.privacy": "Datenschutzanfragen",
-  "settings.privacySub": "Betroffenenanfragen mit ihren gesetzlichen Fristen",
+  "settings.privacySub": "Betroffenenanfragen mit ihren gesetzlichen Fristen.",
   "settings.due": "fällig am {date}",
 
   "privacy.purposesReadOnly":
@@ -5882,6 +5882,7 @@ export const de = {
     "Sich bei Ihrer Datenschutzbehörde beschweren.",
   "notice.claimed": "Übernommen",
   "notice.unclaimed": "Nicht übernommen",
+  "notice.ownerOf": "Zuständig für {duty}",
   "notice.excuse": "Ohne Versand beenden",
   "notice.excuseTitle": "Pflicht ohne Versand der Information beenden",
   "notice.excuseWhich": "Art des Grunds",
@@ -5975,7 +5976,7 @@ export const de = {
   "restricted.pin.confirm": "Festsetzen und sperren",
   "retention.title": "Aufbewahrung",
   "retention.sub":
-    "Wie lange jede Art von Datensatz aufbewahrt wird und was nach Ablauf der Frist geschieht",
+    "Wie lange jede Art von Datensatz aufbewahrt wird und was nach Ablauf der Frist geschieht.",
   "retention.retainOnly": "Nur-Aufbewahren-Modus",
   "retention.retainOnlyHelp":
     "Solange er aktiv ist, vernichtet diese Installation nichts: kein Anonymisieren und kein Löschen, unabhängig davon, was eine Regel unten vorsieht. Archivieren läuft weiter; ein archivierter Datensatz bleibt erhalten und wird nicht vernichtet.",
@@ -6806,7 +6807,7 @@ export const de = {
     "Unternehmensdomain, übersteuert mitgelieferte Liste",
   "consumerMail.add": "Hinzufügen",
   "consumerMail.addOpen": "Domain hinzufügen",
-  "consumerMail.remove": "Entfernen",
+  "consumerMail.remove": "{domain} entfernen",
   "consumerMail.none":
     "Keine Domains hinzugefügt. Für jede Domain gilt die mitgelieferte Liste.",
   "consumerMail.adminOnly":
@@ -8192,8 +8193,8 @@ export const de = {
   "knowledge.deleteConfirm.body":
     "Die Datei, ihr extrahierter Text und ihr Suchindex werden endgültig gelöscht.",
   "knowledge.ingest.queued": "Eingereiht",
-  "knowledge.ingest.running": "Wird indexiert…",
-  "knowledge.ingest.done": "Durchsuchbar",
+  "knowledge.ingest.running": "Wird importiert…",
+  "knowledge.ingest.done": "Importiert",
   "knowledge.ingest.failed": "Konnte nicht gelesen werden",
   "knowledge.ingestDetailTitle":
     "Warum diese Datei nicht gelesen werden konnte",
@@ -9086,6 +9087,8 @@ export const de = {
   "aicalls.empty": "Noch keine KI-Aufrufe aufgezeichnet.",
   "aicalls.detail.identity":
     "{served} über {provider} ausgeliefert (konfiguriert: {configured})",
+  "aicalls.detail.identityNoModel":
+    "{served} über {provider} ausgeliefert (kein Modell konfiguriert)",
   "aicalls.detail.source": "Quelle der ausgelieferten Identität: {source}",
   "aicalls.detail.context": "Eingefügter Kontext: {scopes}",
   "aicalls.detail.contextNone": "Kein Unternehmenskontext eingefügt",
@@ -9699,7 +9702,7 @@ export const de = {
   "ownerIdentities.notRetroactive":
     "Gilt ab der nächsten Nachricht. Bereits erfasste E-Mails bleiben, und ein bereits aus einem Alias angelegter Kontakt bleibt, bis du ihn zusammenführst oder entfernst.",
   "ownerIdentities.empty": "Keine weiteren Adressen hinzugefügt.",
-  "ownerIdentities.remove": "Adresse entfernen",
+  "ownerIdentities.remove": "{value} entfernen",
   "ownerIdentities.added": "Adresse hinzugefügt",
   "ownerIdentities.confirm": "Hinzufügen",
   "ownerIdentities.kindLabel": "Typ",
@@ -9714,6 +9717,10 @@ export const de = {
   "ownerIdentities.removeFailed": "Adresse nicht entfernt",
   "ownerIdentities.addFailed": "Adresse nicht hinzugefügt",
   "ownerIdentities.domainPlaceholder": "beispiel.de",
+  "captureValue.refusedAddress":
+    "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
+  "captureValue.refusedDomain":
+    "Gib nur die Domain ein, etwa beispiel.example, ohne Adresse, Schema oder Pfad.",
   "captureExclusions.scope.user": "Deine Postfächer",
   "captureExclusions.scope.workspace": "Gesamtes Unternehmen",
   "captureExclusions.kind.address": "Adresse",
@@ -12160,7 +12167,7 @@ export const de = {
     "Das Einschalten eines Übergangs verschiebt noch keine Deals. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und verschiebt dann automatisch.",
   "stageAutomation.offTitle": "Phasen-Automatik ist ausgeschaltet",
   "stageAutomation.offBody":
-    "Solange sie aus ist, bewegt sich kein Deal von selbst, unabhängig davon, was unten eingestellt ist. Admins schalten sie in den Einstellungen zur Phasen-Automatik für die gesamte Installation ein.",
+    "Solange sie aus ist, bewegt sich kein Deal von selbst, unabhängig davon, was unten eingestellt ist. Wer diese Installation betreibt, schaltet sie in deren Konfiguration ein.",
   "stageAutomation.modeHint":
     "Wenn eingeschaltet und die Bilanz ausreicht, verschiebt Margince den Deal und benachrichtigt dich danach.",
   "stageAutomation.notEarnedYet": "Noch nicht qualifiziert: {why}",

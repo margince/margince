@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import type { GrantSpec } from "../app/mefixture";
 import { NoticeCasesCard } from "./noticecases";
@@ -103,8 +103,34 @@ export default meta;
 
 type Story = StoryObj<typeof NoticeCasesCard>;
 
+// Every verb on a duty is drawn whole, inside the card that lists it.
+async function verbsFit({ canvasElement }: { canvasElement: HTMLElement }) {
+  const canvas = within(canvasElement);
+  const verbs = await canvas.findAllByRole("button", {
+    name: "End without sending",
+  });
+  for (const verb of verbs) {
+    const card = verb.closest<HTMLElement>(".panel");
+    if (!card) throw new Error("a duty rendered outside its card");
+    await expect(verb.scrollWidth).toBeLessThanOrEqual(verb.clientWidth);
+    await expect(verb.getBoundingClientRect().right).toBeLessThanOrEqual(
+      card.getBoundingClientRect().right,
+    );
+  }
+}
+
 /** An officer's queue: one duty late, one claimed, one ended with a ground. */
-export const Owed: Story = { render: duties([OVERDUE, CLAIMED, EXCUSED]) };
+export const Owed: Story = {
+  render: duties([OVERDUE, CLAIMED, EXCUSED]),
+  play: verbsFit,
+};
+
+export const OwedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: duties([OVERDUE, CLAIMED, EXCUSED]),
+  play: verbsFit,
+};
 
 /** Every duty discharged — which is a different sentence from "none found". */
 export const NothingOwed: Story = { render: duties([]) };

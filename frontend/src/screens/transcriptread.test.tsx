@@ -155,7 +155,7 @@ describe("reading a transcript for its next steps", () => {
     expect(await screen.findByText("48 lines read")).toBeTruthy();
     expect(screen.getByText("3 next steps awaiting review")).toBeTruthy();
     // The 🟡 tier is drawn, never spelled as an emoji.
-    expect(screen.getByRole("img", { name: "approval first" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Approval first" })).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Open Worklist" }));
     expect(window.location.hash).toContain("worklist");
@@ -177,7 +177,7 @@ describe("reading a transcript for its next steps", () => {
     // A correct empty answer is not a queue of work: nothing to review, and
     // nowhere to go.
     expect(screen.queryByRole("button", { name: "Open Worklist" })).toBeNull();
-    expect(screen.queryByRole("img", { name: "approval first" })).toBeNull();
+    expect(screen.queryByRole("img", { name: "Approval first" })).toBeNull();
   });
 
   it("explains a reading it could not finish, and never as an empty result", async () => {
