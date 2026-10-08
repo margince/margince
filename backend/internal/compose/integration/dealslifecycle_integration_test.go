@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type dealRead struct {
@@ -148,6 +149,18 @@ func TestADealCannotBeBornInAnotherPipelinesStage(t *testing.T) {
 	}, nil, &fault)
 	if field, code := fault.first(); status != http.StatusUnprocessableEntity || field != "stage_id" || code != "stage_not_in_pipeline" {
 		t.Errorf("a stage of another pipeline → %d %+v, want 422 stage_not_in_pipeline on stage_id", status, fault)
+	}
+}
+
+func TestADealBornInAStageThatDoesNotExistIsNotFound(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
+		"name": "Nowhere", "source": "manual",
+		"pipeline_id": stages.PipelineID, "stage_id": ids.NewV7().String(),
+	}, nil, nil); status != http.StatusNotFound {
+		t.Errorf("a stage nobody has → %d, want 404", status)
 	}
 }
 

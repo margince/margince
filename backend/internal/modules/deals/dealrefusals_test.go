@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 type fieldFaulted interface {
@@ -108,5 +109,16 @@ func TestALostReasonIsTrimmedBeforeItIsStored(t *testing.T) {
 	blank := " \t "
 	if _, _, err := store.stageTransitionPatch(context.Background(), nil, open, AdvanceDealInput{LostReason: &blank}, "lost"); err == nil {
 		t.Error("a blank reason closed the deal as lost")
+	}
+}
+
+func TestAnAgentUpdateNamingTheClosingFieldsIsRefusedBeforeAnyWrite(t *testing.T) {
+	provider := &Provider{}
+	_, err := provider.Update(context.Background(), datasource.UpdateInput{
+		Ref:   datasource.EntityRef{Type: datasource.EntityDeal},
+		Patch: map[string]any{"status": "lost", "lost_reason": "price"},
+	})
+	if field, code := faultOf(t, err); field != "status" || code != "set_by_advance" {
+		t.Errorf("an agent patch carrying status was refused on %s/%s", field, code)
 	}
 }
