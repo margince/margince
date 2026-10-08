@@ -106,7 +106,7 @@ type relinkCounts struct {
 const targetIDField = "target_id"
 
 // MergeContact merges contact source→target and returns the survivor.
-func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.ContactID) (crmcontracts.Contact, error) {
+func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.ContactID, ifVersion *int64) (crmcontracts.Contact, error) {
 	// target_id is required by the contract, which is true only if checked. An
 	// absent key decodes to the zero UUID, and the self-merge guard below does
 	// not catch it (a real source id never equals the zero one), so it reaches
@@ -130,7 +130,7 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = s.mergeContactTx(ctx, tx, sourceID, targetID, active)
+		out, err = s.mergeContactTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
 	return out, err
@@ -142,7 +142,7 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 // is what makes the target check hold until commit: without it a
 // concurrent merge(target→elsewhere) could archive the survivor
 // mid-merge, leaving relinked children pointing at a dead record.
-func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
+func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
 	// BEFORE LockPair, because recording a stop takes consent's lock and then
 	// reads the contact row. Locking the rows first and reaching for consent's
 	// lock later (inside carryStopsTx, below) inverts the order between the two
@@ -156,7 +156,7 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	src, tgt, err := mergePair(ctx, tx, "contact", sourceID, targetID, readContactMergeState)
+	src, tgt, err := mergePair(ctx, tx, "contact", sourceID, targetID, ifVersion, readContactMergeState)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}

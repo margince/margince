@@ -59,7 +59,7 @@ func TestMergeCompany_enrichmentFollowsTheSurvivor(t *testing.T) {
 		INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
 		VALUES ($1, 'icp', 'Mid-market manufacturers', '', '', 1, 'human', $2)`, src, by)
 
-	if _, err := e.Contacts.MergeCompany(admin, src, tgt); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -100,7 +100,7 @@ func TestMergeCompany_theMoneyFollowsTheSurvivor(t *testing.T) {
 		INSERT INTO contract (company_id, title, status, source, captured_by)
 		VALUES ($1, 'Framework agreement', 'active', 'manual', $2)`, src, by)
 
-	if _, err := e.Contacts.MergeCompany(admin, src, tgt); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -142,7 +142,7 @@ func TestMergeCompany_oneColleagueKeepsTwoRoles(t *testing.T) {
 		SELECT $1, $2, id, 'manual', $3 FROM record_role WHERE key = 'executive_sponsor'`,
 		tgt, e.Rep1, "human:"+e.Rep1.String())
 
-	if _, err := e.Contacts.MergeCompany(admin, src, tgt); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -175,7 +175,7 @@ func TestMergeCompany_theVATReceiptIsNeverDestroyed(t *testing.T) {
 		INSERT INTO company_vat_check (company_id, vat_number, status, consultation_number, checked_at, captured_by)
 		VALUES ($1, 'DE222222222', 'valid', 'WAPIAAAAX0000002', now(), $2)`, tgt, by)
 
-	if _, err := e.Contacts.MergeCompany(admin, src, tgt); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -224,7 +224,7 @@ func TestMergeCompany_dedupePairsSurviveTheirOwnMerge(t *testing.T) {
 		VALUES ('company', LEAST($1::uuid, $2::uuid), GREATEST($1::uuid, $2::uuid), 0.9, '{}'::jsonb, 'manual', $3, 'merged', now())`,
 		src, tgt, by)
 
-	if _, err := e.Contacts.MergeCompany(admin, src, tgt); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -276,7 +276,7 @@ func TestMergeCompany_theAddressFills(t *testing.T) {
 	}
 
 	survivor, err := e.Contacts.MergeCompany(admin,
-		companyIDOf(ids.UUID(source.Id)), companyIDOf(ids.UUID(target.Id)))
+		companyIDOf(ids.UUID(source.Id)), companyIDOf(ids.UUID(target.Id)), nil)
 	if err != nil {
 		t.Fatalf("merge: %v", err)
 	}

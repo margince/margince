@@ -87,7 +87,7 @@ func (c *carryEnv) emailRow(t *testing.T, contact ids.ContactID, address string)
 
 func (c *carryEnv) merge(t *testing.T, from, into ids.ContactID) {
 	t.Helper()
-	if _, err := c.contacts.MergeContact(c.admin, from, into); err != nil {
+	if _, err := c.contacts.MergeContact(c.admin, from, into, nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 }
@@ -412,7 +412,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenALinkWouldBeStranded(t *testing.T) {
 
 	plain := c.contactAt(t, "Unwired Plain", "plain@carry.test")
 	plainInto := c.contactAt(t, "Unwired Plain Survivor", "plain-survivor@carry.test")
-	if _, err := unwired.MergeContact(c.admin, plain, plainInto); err != nil {
+	if _, err := unwired.MergeContact(c.admin, plain, plainInto, nil); err != nil {
 		t.Fatalf("an ordinary merge was refused for want of a seam it did not need: %v", err)
 	}
 
@@ -420,7 +420,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenALinkWouldBeStranded(t *testing.T) {
 	holderInto := c.contactAt(t, "Unwired Holder Survivor", "holder-survivor@carry.test")
 	c.withdrawalLink(t, consent.WithdrawalMintInput{Address: "holder@carry.test", ContactID: holder})
 
-	_, err := unwired.MergeContact(c.admin, holder, holderInto)
+	_, err := unwired.MergeContact(c.admin, holder, holderInto, nil)
 	var notWired *contacts.SatelliteCarrierNotWiredError
 	if !errors.As(err, &notWired) {
 		t.Fatalf("the merge answered %v, want SatelliteCarrierNotWiredError", err)

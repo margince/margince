@@ -191,6 +191,7 @@ func readContactMergeState(ctx context.Context, tx pgx.Tx, id ids.ContactID) (cr
 // merging returns the survivor, so the refusal must disclose no more than the
 // caller could already read. An archived target can survive nothing.
 func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.ID[K],
+	ifVersion *int64,
 	read func(context.Context, pgx.Tx, ids.ID[K]) (T, *ids.UUID, error),
 ) (source, target T, err error) {
 	var zero T
@@ -202,6 +203,10 @@ func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind str
 		if mergedInto != nil && !mergedInto.IsZero() {
 			return zero, zero, &AlreadyMergedError{Kind: kind, IntoID: *mergedInto}
 		}
+		return zero, zero, err
+	}
+
+	if err := requireSourceVersion(ctx, tx, kind, sourceID.UUID, ifVersion); err != nil {
 		return zero, zero, err
 	}
 
@@ -220,6 +225,24 @@ func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind str
 		return zero, zero, err
 	}
 	return source, target, nil
+}
+
+// requireSourceVersion refuses the merge when the source's version differs from
+// the caller's If-Match. The pair lock is already held, so the version checked
+// is the one merged. Nil means no precondition.
+func requireSourceVersion(ctx context.Context, tx pgx.Tx, kind string, sourceID ids.UUID, ifVersion *int64) error {
+	if ifVersion == nil {
+		return nil
+	}
+	var current int64
+	err := tx.QueryRow(ctx, "SELECT version FROM "+pgx.Identifier{kind}.Sanitize()+" WHERE id = $1", sourceID).Scan(&current)
+	if err != nil {
+		return err
+	}
+	if current != *ifVersion {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
 }
 
 // relinkDemotingPrimary runs a relink UPDATE whose SET clause demotes the
