@@ -157,18 +157,19 @@ func (s *Store) RemoveMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID
 		return RemovedMember{}, err
 	}
 	kept := storekit.ListMembership{ListID: listID.UUID}
+	var rowID ids.UUID
 	err = tx.QueryRow(ctx, `
 		DELETE FROM list_member WHERE list_id = @list_id AND entity_type = @entity_type AND entity_id = @entity_id
-		RETURNING added_by, created_at, note`,
+		RETURNING id, added_by, created_at, note`,
 		pgx.StrictNamedArgs{listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID},
-	).Scan(&kept.AddedBy, &kept.CreatedAt, &kept.Note)
+	).Scan(&rowID, &kept.AddedBy, &kept.CreatedAt, &kept.Note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return RemovedMember{}, ErrNotMember
 	}
 	if err != nil {
 		return RemovedMember{}, err
 	}
-	auditID, err := recordMemberChange(ctx, tx, listID, change, memberRemoved, actor, &kept)
+	auditID, err := recordMemberChange(ctx, tx, listID, change, memberRemoved, actor, &linkImage{RowID: &rowID, ListMembership: &kept})
 	return RemovedMember{Note: kept.Note, AddedAt: kept.CreatedAt, AuditID: auditID}, err
 }
 
@@ -231,15 +232,15 @@ func admitShortlistChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, ent
 // outbox event of one change, and answers the audit row. A removal passes the
 // membership it took off, which its restore puts back.
 func recordMemberChange(
-	ctx context.Context, tx pgx.Tx, listID ids.ListID, change MemberChange, action, actor string, kept *storekit.ListMembership,
+	ctx context.Context, tx pgx.Tx, listID ids.ListID, change MemberChange, action, actor string, removed *linkImage,
 ) (ids.UUID, error) {
 	member := linkImage{EntityType: change.EntityType, EntityID: change.EntityID}
 	var memberNote *string
-	if kept != nil {
+	if removed != nil {
 		// The note is the subject's text: erasure deletes event rows, never audit_log.
-		provenance := *kept
-		memberNote, provenance.Note = kept.Note, nil
-		member.ListMembership = &provenance
+		provenance := *removed.ListMembership
+		memberNote, provenance.Note = provenance.Note, nil
+		member.RowID, member.ListMembership = removed.RowID, &provenance
 	}
 	if err := recordMemberEvent(ctx, tx, listID, change, action, actor, memberNote); err != nil {
 		return ids.Nil, err

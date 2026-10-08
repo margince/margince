@@ -65,8 +65,11 @@ func (r removal) decode(image *linkImage) error {
 // linkImage is the record a tag or list audit row names, plus a removal's
 // provenance.
 type linkImage struct {
-	EntityType string   `json:"entity_type"`
-	EntityID   ids.UUID `json:"entity_id"`
+	EntityType string    `json:"entity_type"`
+	EntityID   ids.UUID  `json:"entity_id"`
+	RowID      *ids.UUID `json:"row_id,omitempty"`
+	// Not created_at: the embedded ListMembership's would be shadowed.
+	RowCreatedAt *time.Time `json:"row_created_at,omitempty"`
 	*storekit.TagAssignment
 	*storekit.ListMembership
 }

@@ -83,7 +83,7 @@ func (f restoreFixture) removeTag(ctx context.Context, t *testing.T, tag ids.Tag
 
 func (f restoreFixture) tagProvenance(t *testing.T, tag ids.TagID, contact ids.UUID) string {
 	t.Helper()
-	return f.e.WsScalar(t, `SELECT concat_ws('|', assigned_by, assigned_by_kind, assigned_at) FROM taggable
+	return f.e.WsScalar(t, `SELECT concat_ws('|', id, created_at, assigned_by, assigned_by_kind, assigned_at) FROM taggable
 		WHERE tag_id = $1 AND entity_type = 'contact' AND entity_id = $2`, tag, contact)
 }
 
@@ -217,7 +217,7 @@ func (f restoreFixture) removeMember(ctx context.Context, t *testing.T, list ids
 
 func (f restoreFixture) memberProvenance(t *testing.T, list ids.ListID, contact ids.UUID) string {
 	t.Helper()
-	return f.e.WsScalar(t, `SELECT concat_ws('|', added_by, created_at, note) FROM list_member
+	return f.e.WsScalar(t, `SELECT concat_ws('|', id, added_by, created_at, note) FROM list_member
 		WHERE list_id = $1 AND entity_type = 'contact' AND entity_id = $2`, list, contact)
 }
 

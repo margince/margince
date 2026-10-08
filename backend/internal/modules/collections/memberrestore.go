@@ -15,15 +15,15 @@ import (
 )
 
 // reinsertMember serves both an un-archive and a removal's restore, so the two put a member back alike.
-const reinsertMember = `INSERT INTO list_member (list_id, entity_type, entity_id, added_by, created_at, note)
-	SELECT l.id, @entity_type, @entity_id, @added_by, @created_at, @note
+const reinsertMember = `INSERT INTO list_member (id, list_id, entity_type, entity_id, added_by, created_at, note)
+	SELECT COALESCE(@row_id::uuid, uuidv7()), l.id, @entity_type, @entity_id, @added_by, @created_at, @note
 	FROM list l WHERE l.id = @list_id AND l.archived_at IS NULL
 	ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING
 	RETURNING id, list_id, entity_type, entity_id, added_by, created_at, note`
 
-func reinsertMemberArgs(entityType string, id ids.UUID, kept storekit.ListMembership) pgx.StrictNamedArgs {
+func reinsertMemberArgs(entityType string, id ids.UUID, rowID *ids.UUID, kept storekit.ListMembership) pgx.StrictNamedArgs {
 	return pgx.StrictNamedArgs{
-		listIDField: kept.ListID, entityTypeField: entityType, entityIDField: id,
+		"row_id": rowID, listIDField: kept.ListID, entityTypeField: entityType, entityIDField: id,
 		"added_by": kept.AddedBy, "created_at": kept.CreatedAt, noteField: kept.Note,
 	}
 }
@@ -60,7 +60,7 @@ func (s *Store) RestoreMemberRemoval(ctx context.Context, listID ids.ListID, rem
 		}
 		kept := *record.ListMembership
 		kept.ListID, kept.Note = listID.UUID, change.Note
-		err = rowScanMember(tx.QueryRow(ctx, reinsertMember, reinsertMemberArgs(record.EntityType, record.EntityID, kept)), &out)
+		err = rowScanMember(tx.QueryRow(ctx, reinsertMember, reinsertMemberArgs(record.EntityType, record.EntityID, record.RowID, kept)), &out)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrRemovalMovedOn
 		}
@@ -93,7 +93,7 @@ func removedMemberNote(ctx context.Context, tx pgx.Tx, listID ids.ListID, r remo
 }
 
 func restoreArchivedMembership(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, kept storekit.ListMembership) (bool, error) {
-	back, err := storekit.TryInSavepoint(ctx, tx, reinsertMember, reinsertMemberArgs(entityType, id, kept))
+	back, err := storekit.TryInSavepoint(ctx, tx, reinsertMember, reinsertMemberArgs(entityType, id, nil, kept))
 	if err != nil || !back {
 		return false, err
 	}

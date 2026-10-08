@@ -23,8 +23,9 @@ const (
 )
 
 // reinsertTag serves both an un-archive and a removal's restore, so the two put a tagging back alike.
-const reinsertTag = `INSERT INTO taggable (tag_id, entity_type, entity_id, assigned_by, assigned_by_kind, assigned_at)
-	SELECT $1, $2, $3, $4, $5, $6 WHERE EXISTS (SELECT 1 FROM tag WHERE id = $1 AND archived_at IS NULL)
+const reinsertTag = `INSERT INTO taggable (id, tag_id, entity_type, entity_id, assigned_by, assigned_by_kind, assigned_at, created_at)
+	SELECT COALESCE($7::uuid, uuidv7()), $1, $2, $3, $4, $5, $6, COALESCE($8::timestamptz, now())
+	WHERE EXISTS (SELECT 1 FROM tag WHERE id = $1 AND archived_at IS NULL)
 	ON CONFLICT (tag_id, entity_type, entity_id) DO NOTHING
 	RETURNING id, tag_id, entity_type, entity_id, created_at`
 
@@ -62,7 +63,7 @@ func (s *Store) RestoreTagRemoval(ctx context.Context, tagID ids.TagID, removalI
 		}
 		kept := record.TagAssignment
 		err = tx.QueryRow(ctx, reinsertTag, tagID, record.EntityType, record.EntityID,
-			kept.AssignedBy, kept.AssignedByKind, kept.AssignedAt,
+			kept.AssignedBy, kept.AssignedByKind, kept.AssignedAt, record.RowID, record.RowCreatedAt,
 		).Scan(&out.ID, &out.TagID, &out.EntityType, &out.EntityID, &out.CreatedAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrRemovalMovedOn
@@ -95,5 +96,5 @@ func refuseRetiredTag(ctx context.Context, tx pgx.Tx, tagID ids.TagID) error {
 
 func restoreArchivedTag(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, kept storekit.TagAssignment) (bool, error) {
 	return storekit.TryInSavepoint(ctx, tx, reinsertTag,
-		kept.TagID, entityType, id, kept.AssignedBy, kept.AssignedByKind, kept.AssignedAt)
+		kept.TagID, entityType, id, kept.AssignedBy, kept.AssignedByKind, kept.AssignedAt, nil, nil)
 }

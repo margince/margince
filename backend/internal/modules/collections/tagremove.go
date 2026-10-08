@@ -116,11 +116,14 @@ func removeTagTx(
 		return ids.Nil, err
 	}
 	kept := storekit.TagAssignment{TagID: tagID.UUID}
+	var rowID ids.UUID
+	var createdAt time.Time
 	err := tx.QueryRow(ctx, `
 		DELETE FROM taggable WHERE tag_id = $1 AND entity_type = $2 AND entity_id = $3
 		   AND ($4::uuid IS NULL OR id = $4)
-		RETURNING assigned_by, assigned_by_kind, assigned_at`,
-		tagID, entityType, entityID, assignment).Scan(&kept.AssignedBy, &kept.AssignedByKind, &kept.AssignedAt)
+		RETURNING id, created_at, assigned_by, assigned_by_kind, assigned_at`,
+		tagID, entityType, entityID, assignment,
+	).Scan(&rowID, &createdAt, &kept.AssignedBy, &kept.AssignedByKind, &kept.AssignedAt)
 	// Audited only when something was actually removed: an audit row for a
 	// tagging that was never there describes an event that did not happen.
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -129,7 +132,9 @@ func removeTagTx(
 	if err != nil {
 		return ids.Nil, err
 	}
-	return auditTagLink(ctx, tx, tagID, tagRemoved, linkImage{EntityType: entityType, EntityID: entityID, TagAssignment: &kept})
+	return auditTagLink(ctx, tx, tagID, tagRemoved, linkImage{
+		EntityType: entityType, EntityID: entityID, RowID: &rowID, RowCreatedAt: &createdAt, TagAssignment: &kept,
+	})
 }
 
 // CheckTagChange refuses a tag verb before any record is tried: no read grant
