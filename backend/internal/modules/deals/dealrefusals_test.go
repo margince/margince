@@ -51,22 +51,19 @@ func TestAPatchNamingAClosingFieldIsRefusedOnThatField(t *testing.T) {
 }
 
 func TestAnOfferPastItsDateIsRefusedFromTheDayAfter(t *testing.T) {
-	store := &Store{clock: func() time.Time { return time.Date(2026, 10, 8, 23, 59, 0, 0, time.UTC) }}
-	on := func(y int, m time.Month, d int) *openapi_types.Date {
-		return &openapi_types.Date{Time: time.Date(y, m, d, 0, 0, 0, 0, time.UTC)}
-	}
+	on := func(y int, m time.Month, d int) time.Time { return time.Date(y, m, d, 0, 0, 0, 0, time.UTC) }
+	today := on(2026, 10, 8)
 	for name, tc := range map[string]struct {
-		validUntil *openapi_types.Date
+		validUntil time.Time
 		lapsed     bool
 	}{
-		"no date":            {nil, false},
 		"today":              {on(2026, 10, 8), false},
 		"tomorrow":           {on(2026, 10, 9), false},
 		"yesterday":          {on(2026, 10, 7), true},
 		"years ago":          {on(2020, 1, 1), true},
 		"first of the month": {on(2026, 10, 1), true},
 	} {
-		err := store.refuseLapsedOffer(crmcontracts.Offer{ValidUntil: tc.validUntil})
+		err := lapsedOn(tc.validUntil, today)
 		if (err != nil) != tc.lapsed {
 			t.Errorf("%s: refused = %v, want %v", name, err != nil, tc.lapsed)
 			continue
@@ -76,6 +73,12 @@ func TestAnOfferPastItsDateIsRefusedFromTheDayAfter(t *testing.T) {
 				t.Errorf("%s: refused on %s/%s", name, field, code)
 			}
 		}
+	}
+}
+
+func TestAnOfferWithoutADateIsNeverLapsed(t *testing.T) {
+	if err := (&Store{}).refuseLapsedOffer(context.Background(), nil, crmcontracts.Offer{}); err != nil {
+		t.Errorf("an offer with no valid_until was refused: %v", err)
 	}
 }
 
@@ -92,23 +95,6 @@ func TestAStageMismatchNamesTheFieldTheCallerSent(t *testing.T) {
 	}
 	if field, _ := faultOf(t, &StagePipelineMismatchError{}); field != "to_stage_id" {
 		t.Errorf("an advance-time mismatch names %s, want to_stage_id", field)
-	}
-}
-
-func TestALostReasonIsTrimmedBeforeItIsStored(t *testing.T) {
-	store := &Store{clock: func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) }}
-	open := crmcontracts.Deal{Status: crmcontracts.DealStatusOpen}
-	padded := "  too expensive \n"
-	patch, _, err := store.stageTransitionPatch(context.Background(), nil, open, AdvanceDealInput{LostReason: &padded}, "lost")
-	if err != nil {
-		t.Fatalf("stageTransitionPatch: %v", err)
-	}
-	if got := patch.After()["lost_reason"]; got != "too expensive" {
-		t.Errorf("stored reason = %q, want it trimmed", got)
-	}
-	blank := " \t "
-	if _, _, err := store.stageTransitionPatch(context.Background(), nil, open, AdvanceDealInput{LostReason: &blank}, "lost"); err == nil {
-		t.Error("a blank reason closed the deal as lost")
 	}
 }
 

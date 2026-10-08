@@ -4828,7 +4828,7 @@ paths:
     patch:
       tags: [Deals]
       operationId: updateDeal
-      summary: Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming `status`, `lost_reason`, `fx_rate_to_base` or `fx_rate_date` is refused 422.
+      summary: Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
       x-mcp-tool: { verb: update_record, record_type: deal, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -22534,7 +22534,7 @@ paths:
       tags: [Offers]
       operationId: archiveOffer
       summary: Archive (soft-delete) an offer.
-      description: An accepted offer prices its deal and is refused 409; archive any other status.
+      description: An accepted offer prices its deal and is refused 409 `offer_accepted`; archive any other status.
       x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write }
       responses:
         '200':
@@ -38624,10 +38624,10 @@ components:
             through unrelated edits. Null clears it.
         project_id: { type: [string, 'null'], format: uuid }
         owner_id: { type: [string, 'null'], format: uuid }
-        status: { type: string, enum: [open, won, lost] }
-        lost_reason: { type: [string, 'null'] }
-        fx_rate_to_base: { type: [string, 'null'], description: 'Native→base rate to FREEZE at close. Required (server may also compute it from the FX table) when transitioning to won with a non-base currency — satisfies the deal_closed_fx CHECK (formulas §6.1). Ignored while open.' }
-        fx_rate_date: { type: [string, 'null'], format: date }
+        status: { type: string, enum: [open, won, lost], description: 'Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.' }
+        lost_reason: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.' }
+        fx_rate_to_base: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal (formulas §6.1).' }
+        fx_rate_date: { type: [string, 'null'], format: date, description: 'Refused 422 `set_by_advance`; dated by the advance that closes the deal.' }
         forecast_category: { type: [string, 'null'], enum: [null, commit, best_case, pipeline, omitted] }
         expected_close_date: { type: [string, 'null'], format: date, description: 'On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.' }
         wait_until: { type: [string, 'null'], format: date }

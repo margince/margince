@@ -104,6 +104,9 @@ type Contribution struct {
 	InEvidence bool
 	InBestCase bool
 	InOpen     bool
+	// InLost marks a deal that closed lost: in no reading, kept so a movement
+	// can name the loss instead of calling it pushed out.
+	InLost bool
 	// Why an eligible deal contributed no money. Named rather than left to be
 	// inferred from a nil amount, because "we have no price" and "we could not
 	// convert it" are different facts and a reader is owed which one.
@@ -152,9 +155,8 @@ func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
 		if err != nil {
 			return Readings{}, err
 		}
-		// A lost deal is not pipeline: it is left out of every count that
-		// describes the pipeline, though its contribution row is still kept for
-		// the snapshot and the movement reading that watch it leave.
+		// A lost deal is in no reading, so no coverage count includes it; its
+		// contribution row is still kept for the snapshot.
 		if !deal.Lost {
 			out.EligibleCount++
 			if deal.AmountMinor != nil {
@@ -247,6 +249,8 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 	// April's won reading, and counting it in March's would report money the
 	// quarter did not bring in.
 	out.InWon = deal.Won && deal.ClosedAt != nil && period.ContainsInstant(*deal.ClosedAt)
+
+	out.InLost = deal.Lost
 
 	if !deal.Won && !deal.Lost && deal.ExpectedCloseDate != nil && period.ContainsDay(*deal.ExpectedCloseDate) {
 		out.InOpen = true

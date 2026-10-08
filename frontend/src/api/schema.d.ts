@@ -3209,7 +3209,7 @@ export interface paths {
         delete: operations["archiveDeal"];
         options?: never;
         head?: never;
-        /** Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming `status`, `lost_reason`, `fx_rate_to_base` or `fx_rate_date` is refused 422. */
+        /** Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. */
         patch: operations["updateDeal"];
         trace?: never;
     };
@@ -15207,7 +15207,7 @@ export interface paths {
         post?: never;
         /**
          * Archive (soft-delete) an offer.
-         * @description An accepted offer prices its deal and is refused 409; archive any other status.
+         * @description An accepted offer prices its deal and is refused 409 `offer_accepted`; archive any other status.
          */
         delete: operations["archiveOffer"];
         options?: never;
@@ -27539,12 +27539,19 @@ export interface components {
             project_id?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
-            /** @enum {string} */
+            /**
+             * @description Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.
+             * @enum {string}
+             */
             status?: "open" | "won" | "lost";
+            /** @description Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage. */
             lost_reason?: string | null;
-            /** @description Native→base rate to FREEZE at close. Required (server may also compute it from the FX table) when transitioning to won with a non-base currency — satisfies the deal_closed_fx CHECK (formulas §6.1). Ignored while open. */
+            /** @description Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal (formulas §6.1). */
             fx_rate_to_base?: string | null;
-            /** Format: date */
+            /**
+             * Format: date
+             * @description Refused 422 `set_by_advance`; dated by the advance that closes the deal.
+             */
             fx_rate_date?: string | null;
             /** @enum {string|null} */
             forecast_category?: null | "commit" | "best_case" | "pipeline" | "omitted";

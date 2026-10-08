@@ -5,7 +5,6 @@ package deals
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -26,36 +24,14 @@ import (
 // stage would put an string(DealOpen) deal on a won column — silent forecast
 // corruption, no CHECK trips.
 func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID) error {
-	var semantic string
-	err := tx.QueryRow(ctx,
-		`SELECT semantic FROM stage WHERE id = $1 AND pipeline_id = $2 AND archived_at IS NULL`+
-			lockLiveStageTarget,
-		stageID, pipelineID).Scan(&semantic)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return refuseUnplaceableBirthStage(ctx, tx, stageID)
-	}
+	stage, err := resolveLiveStage(ctx, tx, stageID, pipelineID, "stage_id")
 	if err != nil {
-		return fmt.Errorf("resolve target stage: %w", err)
+		return err
 	}
-	if StageSemantic(semantic).Terminal() {
-		return &TerminalStageOnCreateError{Semantic: semantic}
+	if StageSemantic(stage.semantic).Terminal() {
+		return &TerminalStageOnCreateError{Semantic: stage.semantic}
 	}
 	return nil
-}
-
-// refuseUnplaceableBirthStage answers for a stage that is not in the deal's
-// pipeline: a live stage of another pipeline is the caller's mismatch (422),
-// and only a stage that does not exist, or is archived, reads as not found.
-func refuseUnplaceableBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID) error {
-	var elsewhere bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM stage WHERE id = $1 AND archived_at IS NULL)`, stageID).Scan(&elsewhere); err != nil {
-		return fmt.Errorf("look for the stage in another pipeline: %w", err)
-	}
-	if elsewhere {
-		return &StagePipelineMismatchError{StageID: stageID, Field: "stage_id"}
-	}
-	return apperrors.ErrNotFound
 }
 
 // recordDealUpdate lands the write shape's audit row and its paired

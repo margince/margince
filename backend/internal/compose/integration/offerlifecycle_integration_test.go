@@ -52,7 +52,9 @@ func TestALapsedOfferCanNeitherBeSentNorAccepted(t *testing.T) {
 	var deal struct {
 		AmountMinor *int64 `json:"amount_minor"`
 	}
-	e.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &deal)
+	if status := e.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &deal); status != http.StatusOK {
+		t.Fatalf("reading the deal → %d", status)
+	}
 	priced := deal.AmountMinor
 	if status := e.Call(t, "POST", "/v1/offers/"+late+"/accept", nil, nil, &fault); status != http.StatusUnprocessableEntity {
 		t.Errorf("accepting a lapsed offer → %d %+v, want 422", status, fault)
@@ -60,7 +62,9 @@ func TestALapsedOfferCanNeitherBeSentNorAccepted(t *testing.T) {
 	var after struct {
 		AmountMinor *int64 `json:"amount_minor"`
 	}
-	e.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &after)
+	if status := e.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &after); status != http.StatusOK {
+		t.Fatalf("reading the deal again → %d", status)
+	}
 	if (priced == nil) != (after.AmountMinor == nil) || (priced != nil && *priced != *after.AmountMinor) {
 		t.Errorf("the refused acceptance still re-priced the deal: %v → %v", priced, after.AmountMinor)
 	}
@@ -79,8 +83,8 @@ func TestAnAcceptedOfferCannotBeArchivedWhileItPricesTheDeal(t *testing.T) {
 	}
 
 	var fault faultBody
-	if status := e.Call(t, "DELETE", "/v1/offers/"+offerID, nil, nil, &fault); status != http.StatusConflict {
-		t.Errorf("archiving the accepted offer → %d %+v, want 409", status, fault)
+	if status := e.Call(t, "DELETE", "/v1/offers/"+offerID, nil, nil, &fault); status != http.StatusConflict || fault.Code != "offer_accepted" {
+		t.Errorf("archiving the accepted offer → %d %+v, want 409 offer_accepted", status, fault)
 	}
 	if status := e.Call(t, "GET", "/v1/offers/"+offerID, nil, nil, nil); status != http.StatusOK {
 		t.Errorf("the accepted offer reads %d after the refused archive, want 200", status)

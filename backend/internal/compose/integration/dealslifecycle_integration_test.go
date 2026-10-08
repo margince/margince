@@ -74,8 +74,16 @@ func TestALostDealIsNotInTheForecastsOpenPipeline(t *testing.T) {
 	}
 	before := read()
 
-	now := time.Now().UTC()
-	quarterEnd := time.Date(now.Year(), ((now.Month()-1)/3+1)*3+1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+	var frame struct {
+		PeriodEnd string `json:"period_end"`
+	}
+	if status := e.Call(t, "GET", "/v1/forecast?period=quarter", nil, nil, &frame); status != http.StatusOK {
+		t.Fatalf("forecast frame → %d", status)
+	}
+	quarterEnd, err := time.Parse("2006-01-02", frame.PeriodEnd[:10])
+	if err != nil {
+		t.Fatalf("period_end %q: %v", frame.PeriodEnd, err)
+	}
 	var deal dealRead
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Will be lost", "amount_minor": 222200, "currency": "EUR", "source": "manual",
@@ -84,7 +92,7 @@ func TestALostDealIsNotInTheForecastsOpenPipeline(t *testing.T) {
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/deals/"+deal.ID, AnyMap{"forecast_category": "commit", "expected_close_date": quarterEnd.Format("2006-01-02")},
+	if status := e.Call(t, "PATCH", "/v1/deals/"+deal.ID, AnyMap{"forecast_category": "commit"},
 		map[string]string{"If-Match": strconv.FormatInt(deal.Version, 10)}, nil); status != http.StatusOK {
 		t.Fatalf("committing the deal → %d", status)
 	}
@@ -100,30 +108,6 @@ func TestALostDealIsNotInTheForecastsOpenPipeline(t *testing.T) {
 	}
 	if lost := read(); lost != before {
 		t.Errorf("after the deal was lost the forecast reads %+v, want the figures from before it existed %+v", lost, before)
-	}
-}
-
-func TestAPatchNamingTheClosingFieldsIsRefusedNotIgnored(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
-	stages := apptest.DiscoverSeededPipeline(t, e)
-	dealID := apptest.CreateOpenDeal(t, e, stages)
-	before := readDealStatus(t, e, dealID)
-
-	for _, body := range []AnyMap{
-		{"status": "lost", "lost_reason": "went with a competitor on price"},
-		{"fx_rate_to_base": "1.1"},
-		{"fx_rate_date": "2026-01-01"},
-	} {
-		var fault faultBody
-		status := e.Call(t, "PATCH", "/v1/deals/"+dealID, body,
-			map[string]string{"If-Match": strconv.FormatInt(before.Version, 10)}, &fault)
-		if field, _ := fault.first(); status != http.StatusUnprocessableEntity || field == "" {
-			t.Errorf("PATCH %v → %d %+v, want a 422 naming the field and pointing at advance", body, status, fault)
-		}
-	}
-	if after := readDealStatus(t, e, dealID); after.Version != before.Version || after.Status != "open" {
-		t.Errorf("the refused patches changed the deal: %+v → %+v", before, after)
 	}
 }
 

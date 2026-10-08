@@ -187,20 +187,6 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 	return in, nil
 }
 
-// ClosingViaPatchError maps to 422: closing a deal, and the rate frozen with
-// it, is POST /deals/{id}/advance's alone, so a patch naming them is refused
-// rather than answered 200 with nothing changed.
-type ClosingViaPatchError struct{ Field string }
-
-func (e *ClosingViaPatchError) Error() string {
-	return e.Field + " is set by POST /deals/{id}/advance, not by a patch"
-}
-
-// FieldFault names the closing field the patch carried.
-func (e *ClosingViaPatchError) FieldFault() (field, code, message string) {
-	return e.Field, "set_by_advance", e.Error()
-}
-
 // refuseClosingFields answers the first closing field a patch carries.
 func refuseClosingFields(req crmcontracts.UpdateDealRequest) error {
 	switch {
