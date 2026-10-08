@@ -45,7 +45,7 @@ Also called: file size limit, upload limit, how big can a file be.
 
 ### Which kinds of file can I upload?
 Margince takes these kinds of file as a document on a record, or as a file on an email you write:
-- PDF, Word, Excel and slide files: `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.odt`, `.ods`, `.odp`, `.rtf`
+- PDF, Word, Excel, slide, OpenDocument and RTF files: `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.odt`, `.ods`, `.odp`, `.rtf`
 - Text files: `.txt`, `.csv`, `.md`, `.html`, `.htm`
 - Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.heic`, `.heif`, `.tif`, `.tiff`
 - Archives and saved emails: `.zip`, `.eml`, `.msg`

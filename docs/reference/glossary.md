@@ -45,6 +45,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
 | Node | Node.js, the JavaScript runtime the web app's tools run on. |
 | Ollama | A tool that runs language models on your own machine. |
+| OpenDocument | The open file format for text, tables and slides. |
 | OpenRouter | A service that routes model calls to many AI providers. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |
@@ -52,6 +53,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | React | The JavaScript library the web app is built with. |
 | Redis | The in-memory store Margince uses as its event bus. |
 | REST | The style of HTTP API Margince offers next to MCP. |
+| RTF | Rich Text Format, a document format most word processors read. |
 | SonarCloud | A code quality service that scans each pull request. |
 | Telegram | A chat app Margince can send messages through. |
 | VAT | Value added tax, and the tax number a company is registered under. |
