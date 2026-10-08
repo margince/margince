@@ -140,9 +140,9 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	row := arg(id)
-	// done_at travels WITH is_done (the activity_done_at CHECK):
-	// completion stamps the moment, reopening clears it — so the flag is
-	// named once and read three times.
+	// done_at moves with is_done (the activity_done_at CHECK): completion
+	// stamps the moment and reopening clears it, so the flag is bound once and
+	// read three times.
 	done := arg(in.IsDone)
 	_, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE activity SET
