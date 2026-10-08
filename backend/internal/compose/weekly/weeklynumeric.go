@@ -65,8 +65,8 @@ func (e *Engine) measureTeamNumeric(
 	for _, member := range members {
 		owners = append(owners, member.UserID)
 	}
-	// The team's figures sum its members' weeks, so a family is measured from
-	// the first record any member's source holds.
+	// Every member, read or not: won and held above are measured over the team
+	// scope itself, and an unread member is reported in RepsUnread, not here.
 	numeric.Summary.FigureCoverage, err = figureCoverageOf(ctx, tx, owners, start, end)
 	if err != nil {
 		return err

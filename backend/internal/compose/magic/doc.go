@@ -38,7 +38,7 @@
 // AN ENTITY TYPE THIS BUILD CANNOT PLACE IS NOT SHOWN. It is counted in
 // not_shown instead. Serving a row this read cannot scope would be serving a row
 // it cannot prove the reader may see, and the failure would be silent: the row
-// looks like every other row. That count is workspace-wide, so only a seat
+// looks like every other row. That count is installation-wide, so only a seat
 // holding ai_diagnostics read is given it.
 //
 // AND A MACHINE WRITE IS NOT AUTOMATICALLY MAGIC. actor_type tells you a machine

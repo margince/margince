@@ -152,7 +152,7 @@ func doneSince(
 // receipt showing four lines implies those were the only four machine actions
 // in the window, which is the completeness claim the field exists to refuse.
 //
-// The count is workspace-wide, not the reader's own, so it is a diagnostic: a
+// The count is installation-wide, not the reader's own, so it is a diagnostic: a
 // seat without ai_diagnostics read gets no entry and the query never runs.
 func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, error) {
 	notShown := map[string]int{}

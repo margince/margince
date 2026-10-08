@@ -4047,10 +4047,10 @@ export const en = {
   "brief.readings.prepared": "All prepared",
   "brief.readings.calendarNotConnected": "Not connected",
   "brief.readings.calendarNotConnectedWhy":
-    "Connect your calendar to count meetings",
+    "Connect your calendar to count meetings.",
   "brief.readings.calendarUnreadable": "Not syncing",
   "brief.readings.calendarUnreadableWhy":
-    "Reconnect your calendar to count meetings",
+    "Reconnect your calendar to count meetings.",
   "brief.readings.nextMeeting": "Next: {date} · {subject}",
   "brief.readings.nextMeetingUntitled": "Next: {date}",
   "brief.readings.leads": "Prospecting",

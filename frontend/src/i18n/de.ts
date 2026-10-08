@@ -3961,10 +3961,10 @@ export const de = {
   "brief.readings.prepared": "Alle vorbereitet",
   "brief.readings.calendarNotConnected": "Nicht verbunden",
   "brief.readings.calendarNotConnectedWhy":
-    "Verbinde deinen Kalender, um Termine zu zählen",
+    "Verbinde deinen Kalender, um Termine zu zählen.",
   "brief.readings.calendarUnreadable": "Synchronisiert nicht",
   "brief.readings.calendarUnreadableWhy":
-    "Verbinde deinen Kalender neu, um Termine zu zählen",
+    "Verbinde deinen Kalender neu, um Termine zu zählen.",
   "brief.readings.nextMeeting": "Nächster Termin: {date} · {subject}",
   "brief.readings.nextMeetingUntitled": "Nächster Termin: {date}",
   "brief.readings.leads": "Akquise",

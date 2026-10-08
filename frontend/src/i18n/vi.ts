@@ -3919,10 +3919,10 @@ export const vi = {
   "brief.readings.prepared": "đã chuẩn bị đủ",
   "brief.readings.calendarNotConnected": "Chưa kết nối",
   "brief.readings.calendarNotConnectedWhy":
-    "Kết nối lịch của bạn để đếm cuộc họp",
+    "Kết nối lịch của bạn để đếm cuộc họp.",
   "brief.readings.calendarUnreadable": "Không đồng bộ",
   "brief.readings.calendarUnreadableWhy":
-    "Kết nối lại lịch của bạn để đếm cuộc họp",
+    "Kết nối lại lịch của bạn để đếm cuộc họp.",
   "brief.readings.nextMeeting": "Tiếp theo: {date} · {subject}",
   "brief.readings.nextMeetingUntitled": "Tiếp theo: {date}",
   "brief.readings.leads": "Khách hàng tiềm năng cần liên hệ",
