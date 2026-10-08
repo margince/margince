@@ -473,7 +473,6 @@ else
 em
 email
 embed
-emphasis
 empty
 emulation
 en
@@ -703,7 +702,6 @@ holds
 hole
 home
 honoured
-honours
 hook
 hop
 host
@@ -815,7 +813,6 @@ largest
 last
 latency
 later
-latter
 launch
 launcher's
 law
