@@ -51,7 +51,7 @@ func renderSignatureTemplate(template string, v signatureValues) (markup, text s
 // markupText is the text a reader of the markup sees, one line per line break
 // or paragraph, with blank lines a placeholder left behind removed.
 func markupText(markup string) (string, error) {
-	body := &xhtml.Node{Type: xhtml.ElementNode, Data: "body", DataAtom: atom.Body}
+	body := &xhtml.Node{Type: xhtml.ElementNode, Data: atom.Body.String(), DataAtom: atom.Body}
 	nodes, err := xhtml.ParseFragment(strings.NewReader(markup), body)
 	if err != nil {
 		return "", fmt.Errorf("activities: the signature does not parse as HTML: %w", err)

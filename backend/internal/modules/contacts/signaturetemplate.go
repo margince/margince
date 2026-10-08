@@ -10,13 +10,18 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // GetSignatureTemplate reads the workspace's signature layout through the
 // settings gate, so only a seat that may read installation settings sees it.
 func (s *Store) GetSignatureTemplate(ctx context.Context) (string, error) {
+	if err := auth.Require(ctx, "installation_settings", principal.ActionRead); err != nil {
+		return "", err
+	}
 	if s.settings == nil {
 		return "", fmt.Errorf("contacts: the signature template is not wired; the installation cannot read it")
 	}
@@ -27,6 +32,9 @@ func (s *Store) GetSignatureTemplate(ctx context.Context) (string, error) {
 // validates, gates and audits it. The send path sanitizes the markup, so what
 // an admin types never reaches a recipient unchecked.
 func (s *Store) SaveSignatureTemplate(ctx context.Context, template string) (string, error) {
+	if err := auth.Require(ctx, "installation_settings", principal.ActionUpdate); err != nil {
+		return "", err
+	}
 	if s.settings == nil {
 		return "", fmt.Errorf("contacts: the signature template is not wired; the installation cannot change it")
 	}
