@@ -9595,7 +9595,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: Lead was never promoted, or has already been demoted.
+          description: Lead was never promoted, has already been demoted, or a live lead now holds its email (`duplicate_email`).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -9641,7 +9641,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: The lead is not disqualified, so there is nothing to reopen.
+          description: The lead is not disqualified, so there is nothing to reopen, or a live lead now holds its email (`duplicate_email`).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
