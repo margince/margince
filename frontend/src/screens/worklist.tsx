@@ -8,7 +8,8 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { rosterOwnerNaming, useRoster } from "./entityref";
+import { rosterOwnerNaming } from "./entityref";
+import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { useWorklistAddress } from "./worklist.address";
 import {
@@ -249,13 +250,12 @@ function WorklistBody({
   onMore: () => void;
 }>) {
   const t = useT();
-  // Whose day this is, by name. The same roster read the owner picker above
-  // already makes, under the same key — so this resolves out of that cache and
-  // opens no request of its own, and asks for nothing at all on the reader's
-  // own day. `rosterOwnerNaming` answers null both for nobody and for an id
-  // this roster cannot name, which is the one answer this sentence needs: it
-  // has a wording that names no one.
-  const colleague = rosterOwnerNaming(useRoster("user", owner !== ""))(owner);
+  // Whose day this is, named by id, asking nothing on the reader's own day
+  // (`owner` is then ""). `rosterOwnerNaming` answers null for nobody and for
+  // an unnamed id alike, which is the one wording this sentence needs.
+  const colleague = rosterOwnerNaming(useMemberNames(owner ? [owner] : []))(
+    owner,
+  );
   // Default context follows seller work. An explicit choice may also name a
   // review row, whose record context must remain reachable from the queue.
   const selected = rowInHand(

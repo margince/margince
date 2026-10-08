@@ -36,6 +36,7 @@ func TestTheBasisARealSendRecordedFollowsTheMerge(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Consent Survivor", "emails": []AnyMap{{"email": "survivor@consent.test"}},
 	}, nil, &survivor); status != http.StatusCreated {
 		t.Fatalf("create the survivor → %d", status)

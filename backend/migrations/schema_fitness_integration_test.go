@@ -334,6 +334,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// Server-derived pointers: stamped from an operation's outcome,
 	// never accepted from the request body.
 	"lead.promoted_contact_id": "server-derived: stamped by PromoteLead",
+	"lead.from_contact_id":     "gated: CreateLead reads the contact through GetContact (contact:read and its row scope) before the insert, and a contact the caller cannot see is refused 422 on contact_id; CreateLeadTx refuses contact_id outright",
 	"lead.qualified_deal_id":   "server-derived: stamped by QualifyLead with the id of the deal the same transaction just created through deals.CreateDealTx, under the caller's own deal:create grant — never a request-supplied reference",
 	"contact.merged_into_id":   "server-derived: stamped by MergeContact",
 	"company.merged_into_id":   "server-derived: stamped by MergeCompany",

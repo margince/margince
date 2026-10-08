@@ -58,6 +58,12 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 - Mailbox imports report where their time goes on `/metrics`: every Gmail API
   call by op and result, each message's fetch, parse, transaction and
   follow-up time, pages and waits by cause, and the fleet's runs and progress.
+- An agent can put a file on a company, contact, deal, lead or project with the
+  `attach_document` MCP tool, and list a record's files with `list_documents`.
+  The file lands on the record's **Documents** tab at once, through the same
+  writer as an upload in the app. A file can be up to about 6.2 MB, or the
+  installation's `uploads.attachment_mb` if that is smaller. No tool downloads a
+  file or returns its contents, and no scheduled agent is given `attach_document`.
 
 ### Removed
 
@@ -93,6 +99,17 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   `Cross-Origin-Opener-Policy: same-origin` and
   `Cross-Origin-Resource-Policy: same-origin`, and nginx no longer sends its
   version. `robots.txt` refuses the common AI crawlers by name.
+
+- **Uploads take accepted kinds of file only.** A document uploaded in the
+  app, or attached by an agent, is refused `422 unsupported_file_type` unless it
+  is a PDF, Office or OpenDocument file, RTF, text, CSV, Markdown, HTML, a
+  common image, a zip archive or a saved email. SVG and executables are refused.
+  The file picker offers only those kinds. Files already stored, and files
+  captured with an email, are unaffected.
+- **`POST /mcp` reads up to 8 MiB of JSON**, so an agent can carry a file inline.
+  Every tool other than `attach_document` still refuses arguments over 1 MiB, and
+  one process holds at most 4 calls over 1 MiB at once; a fifth answers `503`
+  with `Retry-After`.
 
 ### Fixed
 

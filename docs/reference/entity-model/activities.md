@@ -753,7 +753,7 @@ The 24 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## mail_draft
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -765,6 +765,7 @@ The 24 tables owned by `activities`, as the migrations build them. [Back to the 
 | `bcc_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
 | `body` | `text`, default `''::text` | yes |  |
 | `cc_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
+| `grounding` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `html_body` | `text` |  | The editor's markup beside the plain body, so reopening restores the formatting. |
 | `subject` | `text`, default `''::text` | yes |  |
 | `to_addresses` | `text[]`, default `'{}'::text[]` | yes |  |

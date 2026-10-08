@@ -5,6 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { formatMoneyCompact } from "../format/format";
 import { en } from "../i18n/en";
+import {
+  beforeHistoryWeeklyNumbers,
+  partlyRecordedWeeklyNumbers,
+} from "./brief.fixtures";
 import { TeamWeeklyPanel, TeamWeeklySection } from "./brief.teamweekly";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
 import type { TeamWeeklyRep, TeamWeeklyReview } from "./teamweekly.queries";
@@ -581,4 +585,62 @@ it("refuses a whole-team performance verdict on partial coverage", async () => {
   expect(
     await screen.findByText(en["teamweekly.headline.partial"]),
   ).toBeTruthy();
+});
+
+// A source that had not started by the week's end measured nothing: its zero is
+// no outcome, so neither the headline nor the strip may read one off it.
+describe("figures whose source had not started", () => {
+  it("names a week before recorded history instead of scoring it", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(
+          review(
+            { deals_won: 0, deals_lost: 0, deals_moved: 0, leads_routed: 0 },
+            { numeric_summary: beforeHistoryWeeklyNumbers },
+          ),
+        ),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+    expect(
+      await screen.findByText(en["brief.week.beforeHistory"]),
+    ).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/won .* lost .* deals moved/);
+    expect(screen.getAllByText(en["brief.weekly.notRecorded"])).toHaveLength(4);
+    expect(screen.queryByText(en["teamweekly.movement.title"])).toBeNull();
+  });
+
+  it("drops an unrecorded family from the bars and keeps a partial one", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(
+          review(
+            {},
+            {
+              numeric_summary: {
+                ...partlyRecordedWeeklyNumbers,
+                meetings_coverage: { status: "ok", withheld: false },
+              },
+            },
+          ),
+        ),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+    expect(
+      await screen.findByText(en["teamweekly.headline.notRecorded"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["teamweekly.movement.leads"])).toBeNull();
+    expect(screen.getByText(en["teamweekly.movement.moved"])).toBeTruthy();
+    expect(screen.getAllByText(en["brief.weekly.notRecorded"])).toHaveLength(1);
+    // The partial won card keeps its lost-count line, and the qualifier follows.
+    const won = screen
+      .getByText(en["teamweekly.card.won"], {
+        selector: ".stat-card-label-text",
+      })
+      .closest(".stat-card");
+    expect(won?.querySelector(".stat-card-detail")?.textContent).toMatch(
+      new RegExp(
+        `^${en["teamweekly.card.wonBasis"].replace("{lost}", "1")} · Partial week: counted from `,
+      ),
+    );
+  });
 });

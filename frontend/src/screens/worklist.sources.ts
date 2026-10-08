@@ -19,6 +19,9 @@ const coverageNames = new Map<string, MessageKey>([
   ["lead_response", "brief.coverage.source.lead_response"],
   ["deal_at_risk", "brief.coverage.source.deal_at_risk"],
   ["meeting", "brief.coverage.source.meeting"],
+  // The meetings lane's side reads: they report failure but rank no rows.
+  ["calendar", "brief.coverage.source.calendar"],
+  ["next_meeting", "brief.coverage.source.next_meeting"],
   ["meeting_outcome", "brief.coverage.source.meeting_outcome"],
   ["relationship_decay", "brief.coverage.source.relationship_decay"],
   ["failed_approval", "brief.coverage.source.failed_approval"],

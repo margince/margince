@@ -44,7 +44,7 @@ func TestAScheduledRunDoesNotReleaseTheChangeItsCredentialProposed(t *testing.T)
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Runheld Co"}, nil, &company); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Runheld Co"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	approvalID := re.stageAsThePassport(t, company.ID)

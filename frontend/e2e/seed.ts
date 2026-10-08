@@ -217,6 +217,19 @@ export const stages = [
   },
 ];
 
+// The one colleague every spec drives. `/users` (the roster page) and
+// `/users/names` (the by-id name lookup) both read this array, so a seeded
+// name cannot drift from the roster's own.
+export const seats = [
+  {
+    id: "u1",
+    email: "lena@seed.test",
+    display_name: "Lena Fischer",
+    status: "active",
+    is_agent: false,
+  },
+];
+
 // One working lead for the leads list and page: named, owned by u1, scored,
 // promotable (it has an email), with the identity fields the inline rows edit.
 export const seededLead = {
@@ -1907,17 +1920,17 @@ export async function mockApi(
       });
     }
     if (path === "/users") {
-      return json(
-        page([
-          {
-            id: "u1",
-            email: "lena@seed.test",
-            display_name: "Lena Fischer",
-            status: "active",
-            is_agent: false,
-          },
-        ]),
-      );
+      return json(page(seats));
+    }
+    if (path === "/users/names") {
+      // Names only the ids the caller asked about; an id the roster does not
+      // hold is simply absent, matching the real endpoint's contract.
+      const asked = new Set(url.searchParams.getAll("id"));
+      return json({
+        data: seats
+          .filter((seat) => asked.has(seat.id))
+          .map(({ id, display_name }) => ({ id, display_name })),
+      });
     }
     if (path === "/pipelines") {
       // TWO boards, because the deals screen holds the pipeline in the address

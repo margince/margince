@@ -33,7 +33,7 @@ func (h Handlers) DraftContactEmail(w http.ResponseWriter, r *http.Request, id c
 	if !ok {
 		return
 	}
-	draft, err := h.svc.Draft(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)), req)
+	draft, _, err := h.svc.Draft(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)), req)
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return

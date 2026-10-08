@@ -11,7 +11,7 @@
   padding: var(--padCard);
 }
 .card-inset {
-  background: var(--bgCard);
+  background: var(--bgInset);
   border: 0;
   box-shadow: none;
 }
@@ -48,17 +48,8 @@
   background: var(--bgHover);
 }
 
-/* A cell with two facts that belong on two lines — a call's timestamp over the
- * reason it failed, say — rather than run together as one glued word. Named
- * for what it does, not for a caller, so any cell renderer can reach for it. */
-.cell-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
 .skeleton {
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-sm);
   animation: ds-pulse 1.4s var(--ease-in-out) infinite;
 }
@@ -872,10 +863,8 @@
 }
 /* A section header leading a card sits on the card's own padding — the 24px
  * page-flow top margin (inter-section rhythm down a .wrap) otherwise drops
- * the title below the card edge, and below the action button it shares a
- * .list-head row with. Owns both the plain and the list-head-wrapped case. */
-.card > .section-header:first-child,
-.card > .list-head:first-child > .section-header {
+ * the title below the card edge. */
+.card > .section-header:first-child {
   margin-top: 0;
 }
 /* Filter/status tabs above a result list: the gap to the content below rides
@@ -1051,11 +1040,6 @@ span.error-line {
   justify-content: flex-end;
 }
 
-/* A card that stacks above the next one in a rail. */
-.card-stack {
-  margin-bottom: var(--gapCards);
-}
-
 /* A dialog's own heading, where the content has no SectionHeader of its own. */
 .modal-title {
   margin-bottom: var(--space-3);
@@ -1188,14 +1172,14 @@ span.error-line {
 .input[aria-disabled="true"],
 .textarea:disabled,
 .textarea[aria-disabled="true"] {
-  background: var(--bgCard);
+  background: var(--bgInset);
   cursor: not-allowed;
 }
 /* The shell owns the boundary for a field that has something inside it, so it
    is the shell that has to dim — the input within it draws no fill of its own. */
 .field-shell:has(:disabled),
 .field-shell:has([aria-disabled="true"]) {
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* The field's OUTLINE, moved off the input, for the fields that have something
@@ -1754,6 +1738,38 @@ span.error-line {
      collapsing to its text. 138px is the label, the figure and one basis line
      with the figure's own air around it. */
   min-block-size: 138px;
+}
+
+/* The compact card, inside a strip that asked for it (`StatStrip density`).
+   One step down the same heading scale, tighter air, and a one-line basis:
+   the row sits above the content a reader came for, so it must not fill the
+   first screen. The full figure stays on the value's tooltip. */
+[data-density="compact"] .stat-card {
+  padding: var(--space-3);
+  min-block-size: 0;
+}
+/* A narrow tile cannot hold the name and its receipt on one line; the receipt
+   drops under the name rather than cutting it to a stub. */
+[data-density="compact"] .stat-card-label {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+[data-density="compact"] .stat-card-label-text {
+  flex-shrink: 0;
+  max-inline-size: 100%;
+}
+[data-density="compact"] .stat-card-value {
+  font: var(--fontHeadingSmall);
+  font-variant-numeric: tabular-nums;
+  margin-block-end: var(--space-1);
+}
+[data-density="compact"] .stat-card-detail {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  margin-block-end: 0;
+}
+[data-density="compact"] .stat-card-foot {
+  padding-top: var(--space-1);
 }
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card

@@ -32,6 +32,8 @@ type recordingComms struct {
 	accountSent []RecordLink
 	// accountDrafted is that evidence for the FIRST-message draft.
 	accountDrafted []RecordLink
+	// grounding is what the first-message engine reports it wrote from.
+	grounding []EvidenceRef
 }
 
 func (c *recordingComms) DraftEmail(context.Context, ids.UUID, string) (string, string, error) {
@@ -40,7 +42,7 @@ func (c *recordingComms) DraftEmail(context.Context, ids.UUID, string) (string, 
 
 func (c *recordingComms) DraftCompanyEmail(_ context.Context, links []RecordLink, _ string) (FirstDraft, error) {
 	c.accountDrafted = links
-	return FirstDraft{Subject: "Following up", Body: "As discussed."}, nil
+	return FirstDraft{Subject: "Following up", Body: "As discussed.", Grounding: c.grounding}, nil
 }
 
 func (c *recordingComms) SendEmail(context.Context, ids.UUID, SendEmailArgs) (SendEmailResult, error) {

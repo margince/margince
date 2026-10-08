@@ -190,6 +190,7 @@ func foldProject(in *Input, view crmcontracts.Contact360, projectID *ids.Project
 			continue
 		}
 		folded := ProjectIn{
+			ID:    projectID.String(),
 			Name:  project.Name,
 			Phase: string(project.Phase),
 		}
@@ -418,7 +419,7 @@ func foldMeeting(in *Input, view crmcontracts.Contact360, now time.Time) {
 	if !attends(meeting, view.Contact.Id) {
 		return
 	}
-	folded := MeetingIn{StartsAt: meeting.StartsAt.UTC().Format(time.RFC3339)}
+	folded := MeetingIn{ActivityID: meeting.ActivityId.String(), StartsAt: meeting.StartsAt.UTC().Format(time.RFC3339)}
 	if meeting.Subject != nil {
 		folded.Subject = *meeting.Subject
 	}

@@ -2,19 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
 import { ENTITY, type EntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
-import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
 import {
-  type RosterKind,
-  type useRoster,
-  type useRosterNames,
-  useRosterWalk,
-} from "./roster";
+  ENTITY_NAME_KEY,
+  fetchEntityName,
+  type NameReading,
+  readingOf,
+  usableName,
+} from "./entityref.queries";
+import { useMemberName } from "./membernames";
+import { type RosterKind, useRosterWalk } from "./roster";
 
 // A cross-record reference rendered as the target's display name plus a
 // backlink to its 360, resolved by id. Records point at each other by id
@@ -27,150 +26,25 @@ import {
 // a name that is coming, a name that is never coming, and a name nobody could
 // read at all are three different facts.
 //
-// `user`/`team` are the one exception to the "resolved name is a link"
-// rule: there is no 360 to send them to, so they resolve off the shared
-// roster list (`/users` / `/teams`) and always render as plain text, never
-// touching the ENTITY registry (which has no `user`/`team` entry).
+// `user`/`team` are the one exception to the "resolved name is a link" rule:
+// there is no 360 to send them to, so a resolved name always renders as plain
+// text and never touches the ENTITY registry, which has no `user`/`team`
+// entry. A user is named by id (`/users/names`); a team is still named off
+// the roster walk (see `RosterRef`).
 
-// The record kinds share the app-wide ENTITY registry (routes + vocabulary);
-// user/team are EntityRef-only: they have no 360 to route to, so they resolve
-// off the shared roster list and render as plain text.
+export {
+  ENTITY_NAME_KEY,
+  fetchEntityName,
+  useEntityName,
+} from "./entityref.queries";
 export type { RosterKind } from "./roster";
 export {
   RosterPartialNote,
   useRoster,
-  useRosterNames,
   useRosterPartial,
   useRosterPartialHint,
 } from "./roster";
 export type EntityRefKind = EntityKind | RosterKind;
-
-type User = components["schemas"]["User"];
-type Team = components["schemas"]["Team"];
-
-/**
- * What a read that carried no name is allowed to mean.
- *
- * A 404 is an ANSWER: the record is gone, or row-scope hides its existence from
- * this reader (the API hides a row it may not see rather than admitting it),
- * and no amount of waiting or asking again will produce a name. That is the
- * settled reading the id fallback exists for.
- *
- * Every other failure — a 403 on the object, a 5xx, a dropped connection — is a
- * read that never arrived, and it THROWS so react-query holds it as an error.
- * Flattened to null it would be indistinguishable from the answer above, and
- * the two say opposite things about whether this is worth asking again.
- */
-function unnamedOrThrow(error: unknown, response: Response): null {
-  if (response.status === 404) {
-    return null;
-  }
-  throwProblem(error);
-}
-
-// Each entity endpoint names its display field differently. Missing names
-// resolve to null because React Query rejects undefined query results.
-const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
-  {
-    contact: async (id) => {
-      const { data, error, response } = await api.GET("/contacts/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return data.full_name ?? null;
-    },
-    company: async (id) => {
-      const { data, error, response } = await api.GET("/companies/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return data.display_name ?? null;
-    },
-    lead: async (id) => {
-      const { data, error, response } = await api.GET("/leads/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return leadIdentityName(data) || null;
-    },
-    project: async (id) => {
-      const { data, error, response } = await api.GET("/projects/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return data.name ?? null;
-    },
-    deal: async (id) => {
-      const { data, error, response } = await api.GET("/deals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return data.name ?? null;
-    },
-  };
-
-export function fetchEntityName(
-  kind: EntityKind,
-  id: string,
-): Promise<string | null> {
-  return NAME_READERS[kind](id);
-}
-
-// The resolved display name only, sharing EntityRef's exact cache entry so
-// nothing is fetched twice. Exported for chrome that wants the name as plain
-// text rather than as EntityRef's navigating button — the breadcrumb names the
-// record you are already looking at, so linking it would go nowhere.
-/**
- * The segment that marks a query as ONE record's display name.
- *
- * Named because two readers key on it: the reads below, and the data layer,
- * which brings every mounted name back after a successful write
- * (app/queryclient.ts). A write can rename its record, and the trail at the top
- * of the window is naming it — held apart by a literal in two files, a rename
- * would have gone on showing the old name until the reader reloaded.
- */
-export const ENTITY_NAME_KEY = "ref";
-
-export function useEntityName(
-  kind: EntityKind,
-  id: string | null | undefined,
-): { name: string | null; reading: NameReading } {
-  const query = useQuery({
-    queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: () => fetchEntityName(kind, id ?? ""),
-    enabled: Boolean(id),
-    staleTime: 60_000,
-  });
-  // The reading travels with the name, because a caller handed only `null`
-  // cannot tell a name that is still coming from one that will never come, and
-  // every caller that has had to guess has guessed the id.
-  return { name: usableName(query.data), reading: readingOf(query) };
-}
-
-/**
- * The three readings of a reference the page cannot put a name to.
- *
- * `pending` is a read that has not answered yet, and it is allowed to say so.
- * `unnamed` is a read that ANSWERED and carried no name — a record with a blank
- * display field, or one the API will not admit exists (see `unnamedOrThrow`);
- * there the id is what is left, and on the surfaces that keep this fallback —
- * an audit row, a history entry, a record the reader may not open — it is the
- * one traceable fact, so it stays. `failed` is a read that never arrived, and
- * it may not borrow either spelling: painting the id while the name is still on
- * its way is how a record page came to show a uuid for a moment on every load,
- * and painting it for a 403 or a 500 states as settled fact a question nothing
- * answered.
- */
-type NameReading = "pending" | "failed" | "unnamed";
-
-function readingOf(
-  query: Readonly<{ isPending: boolean; isError: boolean }>,
-): NameReading {
-  if (query.isPending) {
-    return "pending";
-  }
-  return query.isError ? "failed" : "unnamed";
-}
 
 /**
  * What a roster that could not name an id is allowed to say.
@@ -198,27 +72,18 @@ export function rosterReading(
 }
 
 /**
- * What to call a roster id the walk could not name.
- *
- * `unlisted` is the CALLER's sentence, because only the caller knows what the id
- * was for — an account's owner, a request's assignee — and it is the one reading
- * that claims the roster answered about them. The other two readings say the
- * same thing wherever they happen: a read still in flight has said nothing yet,
- * and a read that failed or stopped short of the workspace has said nothing
- * about THIS id.
- *
- * A picker whose current value matches no option renders blank (`Select` falls
- * back to its placeholder, and to a non-breaking space without one), which is
- * indistinguishable from unset — so a value the roster cannot name still needs a
- * label, and this is the one that is honest about why it has no name.
+ * What a reading is allowed to say once there is no name to show:
+ * `unlisted` is the CALLER's sentence, because only the caller knows what the
+ * id was for (an account's owner, a request's assignee), and it is the one
+ * reading that claims the read answered about them. The other two readings
+ * say the same thing wherever they happen: a read still in flight has said
+ * nothing yet, and one that failed has said nothing about this id.
  */
-export function rosterMissLabel(
-  roster: Readonly<{ isPending: boolean; isError: boolean }>,
-  partial: boolean,
+function missLabel(
+  reading: NameReading,
   t: ReturnType<typeof useT>,
   unlisted: string,
 ): string {
-  const reading = rosterReading(roster, partial);
   if (reading === "pending") {
     return t("common.loading");
   }
@@ -226,16 +91,24 @@ export function rosterMissLabel(
 }
 
 /**
- * A caller-supplied or read-back name is usable only when it says something.
+ * What to call a roster id the WALK could not name.
  *
- * Blank and whitespace-only are the same claim — the source has nothing —
- * rather than a record whose name is a space, so neither skips the lookup and
- * neither becomes a label. A button carrying one is a link a reader can neither
- * read nor find.
+ * A team is named this way: teams carry no invited seats, so the walk's page
+ * budget was never a naming question for them. A colleague is named by id
+ * through `useMemberName`, which answers about that id alone and has no walk to
+ * stop short.
+ *
+ * A picker whose current value matches no option renders blank, which reads
+ * as unset, so a value the roster cannot name still needs a label, and this is
+ * the one that says truthfully why it has none.
  */
-function usableName(name: string | null | undefined): string | null {
-  const trimmed = name?.trim();
-  return trimmed ? trimmed : null;
+export function rosterMissLabel(
+  roster: Readonly<{ isPending: boolean; isError: boolean }>,
+  partial: boolean,
+  t: ReturnType<typeof useT>,
+  unlisted: string,
+): string {
+  return missLabel(rosterReading(roster, partial), t, unlisted);
 }
 
 function UnnamedRef({
@@ -253,13 +126,6 @@ function UnnamedRef({
     return <span title={id}>{t("ref.nameLoadFailed")}</span>;
   }
   return <span title={id}>{id}</span>;
-}
-
-function rosterName(kind: RosterKind, entry: User | Team): string | null {
-  if (kind === "user") {
-    return (entry as User).display_name ?? null;
-  }
-  return (entry as Team).name ?? null;
 }
 
 /**
@@ -327,29 +193,61 @@ export function EntityRef({
 
 // A workspace user or team: no 360 exists to send the reader to, so a resolved
 // name renders as plain text and the reference never becomes a link.
+//
+// A user is named by id and a team is still named off the walk. The asymmetry
+// is intended: teams carry no invited seats, so the walk's budget was never a
+// naming question for them. A `/teams/names` read would make both arms one.
 function RosterRef({
   kind,
   id,
   name,
 }: Readonly<{ kind: RosterKind; id: string; name?: string | null }>) {
-  // A caller-supplied name wins here exactly as it does for a record: the
-  // connection graph returns its own labels, and falling straight through to
-  // the roster showed the reader a raw uuid until — and unless — /users
-  // resolved it.
-  const supplied = usableName(name);
-  const roster = useRosterWalk(kind, supplied == null);
-  const match = roster.data?.entries.find((entry) => entry.id === id);
-  const resolved =
-    supplied ?? (match ? usableName(rosterName(kind, match)) : null);
+  if (kind === "user") {
+    return <UserRef id={id} name={name} />;
+  }
+  return <TeamRef id={id} name={name} />;
+}
+
+// A resolved name as plain text, or the reading `UnnamedRef` owes a reader who
+// gets none, shared by both roster arms so neither draws its fallback
+// differently from the other.
+function resolvedOrFallback(
+  id: string,
+  resolved: string | null,
+  reading: NameReading,
+) {
   if (resolved == null) {
-    return (
-      <UnnamedRef
-        id={id}
-        reading={rosterReading(roster, roster.data?.partial === true)}
-      />
-    );
+    return <UnnamedRef id={id} reading={reading} />;
   }
   return <span title={id}>{resolved}</span>;
+}
+
+function UserRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
+  // A caller-supplied name wins here exactly as it does for a record: the
+  // connection graph returns its own labels rather than a raw uuid until the
+  // by-id read resolves.
+  const supplied = usableName(name);
+  const query = useMemberName(supplied == null ? id : null);
+  return resolvedOrFallback(
+    id,
+    supplied ?? usableName(query.data),
+    readingOf(query),
+  );
+}
+
+function TeamRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
+  const supplied = usableName(name);
+  const roster = useRosterWalk("team", supplied == null);
+  const match = roster.data?.entries.find((entry) => entry.id === id);
+  // `match` is `User | Team`; only a Team has `name`, so the property check
+  // narrows it without a cast.
+  const resolved =
+    supplied ?? (match && "name" in match ? usableName(match.name) : null);
+  return resolvedOrFallback(
+    id,
+    resolved,
+    rosterReading(roster, roster.data?.partial === true),
+  );
 }
 
 /** A record with a 360 behind it: a resolved name is also the backlink. */
@@ -419,81 +317,65 @@ function RecordRef({
 }
 
 /**
- * rosterOwnerName names a record's owner off ONE roster page — the read a
- * record header already makes — rather than walking the whole roster for a
- * single name. An owner the page does not carry gets the roster's own
- * reading of why, never a bare id.
+ * rosterOwnerName names a record's owner by id, the same by-id read every
+ * other reference in this file resolves through, never a walk. An owner the
+ * read has not named yet gets that read's own reading of why, never a bare id.
  */
 export function rosterOwnerName(
   ownerId: string | null | undefined,
-  roster: ReturnType<typeof useRosterNames>,
-  partial: boolean,
+  name: ReturnType<typeof useMemberName>,
   t: ReturnType<typeof useT>,
   unowned: string,
 ): string {
   if (!ownerId) {
     return unowned;
   }
-  const found = (roster.data ?? []).find(
-    (entry) => "display_name" in entry && entry.id === ownerId,
+  return (
+    usableName(name.data) ?? missLabel(readingOf(name), t, t("ref.notInRoster"))
   );
-  if (found && "display_name" in found) {
-    return found.display_name;
-  }
-  return rosterMissLabel(roster, partial, t, t("ref.notInRoster"));
 }
 
 /**
  * How a caller that maps records onto cards names their owners.
  *
- * A function rather than the roster itself, for the same reason the company
- * mapping takes `CompanyNaming`: the mapper is pure and the roster is a query,
- * and a mapper that reads a query's `.data` is one that every story and test
- * of it has to assemble a query for. Null is BOTH "unowned" and "the roster
- * cannot name this id" — on a card the two draw the same nothing, and the
- * table's owner column is where they are told apart.
+ * A function rather than the map itself, for the same reason the company
+ * mapping takes `CompanyNaming`: the mapper is pure and `useMemberNames`'s
+ * result is a hook's, and a mapper that reads one directly is one that every
+ * story and test of it has to assemble a hook result for. Null is both
+ * "unowned" and "the read has not named this id": on a card the two draw
+ * the same nothing, and the table's owner column is where they are told
+ * apart.
  */
 export type OwnerNaming = (ownerId: string | null | undefined) => string | null;
 
 export function rosterOwnerNaming(
-  roster: ReturnType<typeof useRoster>,
+  names: ReadonlyMap<string, string>,
 ): OwnerNaming {
-  return (ownerId) => {
-    if (!ownerId) {
-      return null;
-    }
-    const found = (roster.data ?? []).find((entry) => entry.id === ownerId);
-    return found && "display_name" in found ? found.display_name : null;
-  };
+  return (ownerId) => (ownerId ? (names.get(ownerId) ?? null) : null);
 }
 
 /**
  * The owner of a record, by name, for a list column.
  *
- * Reads the shared roster cache (the same walked entry EntityRef and the Share
- * picker use), so a list of 50 rows costs no extra request. An owner the roster
- * cannot name still renders rather than going blank, because a blank owner
- * column reads as unowned, and unowned is a different fact with its own filter
- * — but it renders as the same unnamed reference every other cross-record
- * reference gets, not as a truncated id, which is a non-answer that has also
- * lost the ability to be looked up.
+ * Reads `useMemberName`, batching every id asked for within one tick into a
+ * single request, so a list of 50 rows costs one request rather than fifty.
+ * An owner the read cannot name still renders rather than going blank (a
+ * blank column reads as unowned, a different fact with its own filter), but
+ * as the same unnamed reference every other cross-record reference gets, not
+ * a truncated id, which is a non-answer that has also lost the ability to be
+ * looked up.
  */
 export function OwnerName({
   ownerId,
   unowned,
 }: Readonly<{ ownerId?: string | null; unowned: string }>) {
-  const roster = useRosterWalk("user", Boolean(ownerId));
+  const query = useMemberName(ownerId);
   if (!ownerId) {
     return <span>{unowned}</span>;
   }
-  const named = roster.data?.entries.find((entry) => entry.id === ownerId);
-  if (named && "display_name" in named) {
-    return <span>{named.display_name}</span>;
+  const resolved = usableName(query.data);
+  if (resolved != null) {
+    return <span>{resolved}</span>;
   }
-  return (
-    <UnnamedRef
-      id={ownerId}
-      reading={rosterReading(roster, roster.data?.partial === true)}
-    />
-  );
+  return <UnnamedRef id={ownerId} reading={readingOf(query)} />;
 }

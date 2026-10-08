@@ -32,8 +32,8 @@
 971 frontend/src/screens/connectors.tsx
 1125 frontend/src/screens/analytics.test.tsx
 1312 frontend/src/screens/company-context.tsx
-1328 frontend/src/screens/listquery.test.tsx
-1385 frontend/src/screens/listquery.tsx
+1278 frontend/src/screens/listquery.test.tsx
+1384 frontend/src/screens/listquery.tsx
 1306 frontend/src/screens/offers.tsx
 1365 frontend/src/app/agentrail.test.tsx
 1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx

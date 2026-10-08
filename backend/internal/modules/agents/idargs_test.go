@@ -255,6 +255,19 @@ func (seamProbeInbox) DecideApprovalBundle(context.Context, ids.UUID, bool, stri
 	return nil, errSeamReached
 }
 
+// seamProbeDocuments answers that a call reached the attachment store.
+type seamProbeDocuments struct{}
+
+func (seamProbeDocuments) Attach(context.Context, DocumentUpload) (AttachedDocument, error) {
+	return AttachedDocument{}, errSeamReached
+}
+
+func (seamProbeDocuments) List(context.Context, RecordLink, string, int) (DocumentPage, error) {
+	return DocumentPage{}, errSeamReached
+}
+
+func (seamProbeDocuments) MaxBytes(context.Context) int64 { return 0 }
+
 // idProbeDispatcher is the whole product surface behind the real dispatcher,
 // with the seam probe underneath. fullRegistry passes nil seams, which is
 // enough to read specs and panics the moment a handler runs; this walk runs
@@ -336,6 +349,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterDocumentTools(r, seamProbeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})

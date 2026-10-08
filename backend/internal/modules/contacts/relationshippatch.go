@@ -54,7 +54,7 @@ func refusePatch(ctx context.Context, tx pgx.Tx, current relationshipRow, in Upd
 	// capacity into a word the create path refuses. Asked on the PATCHED
 	// value: a patch that leaves role alone keeps whatever already passed.
 	if in.Role != nil {
-		if err := validBillingContactRole(current.Kind, in.Role); err != nil {
+		if err := validRoleForKind(current.Kind, in.Role); err != nil {
 			return err
 		}
 	}

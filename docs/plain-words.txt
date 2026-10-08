@@ -81,6 +81,7 @@ commit
 company
 compliance
 concept
+conduct
 confirm
 conflict
 connect
@@ -99,7 +100,6 @@ cover
 craftsmanship
 credential
 custom
-customer
 daily
 data
 database
@@ -146,7 +146,7 @@ field
 file
 fill
 find
-finding
+findings
 first
 fix
 fixation
@@ -183,6 +183,7 @@ help
 here
 history
 hold
+holds
 hole
 hook
 host
@@ -202,7 +203,6 @@ into
 is
 issue
 it
-its
 itself
 job
 keep
@@ -233,6 +233,7 @@ mail
 mailbox
 maintain
 make
+maker
 many
 map
 mark
@@ -241,7 +242,7 @@ may
 mean
 measure
 meet
-meeting
+meetings
 merge
 message
 migration
@@ -270,10 +271,13 @@ now
 number
 of
 off
+offers
 old
+older
 on
 once
 one
+only
 open
 or
 order
@@ -383,11 +387,10 @@ separate
 sequence
 serious
 serve
-server
 service
 session
 set
-setting
+settings
 setup
 shape
 share
@@ -444,7 +447,7 @@ then
 there
 these
 they
-thing
+things
 think
 third
 this
@@ -477,6 +480,8 @@ up
 us
 use
 user
+user's
+users
 value
 version
 vulnerability

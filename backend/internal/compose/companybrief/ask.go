@@ -221,7 +221,7 @@ func prepAnswer(companyID string, in Input, say spoken) []Sentence {
 	if len(in.Contacts) > 0 {
 		if len(in.Contacts) > 1 {
 			sentences = append(sentences, Sentence{
-				Text: countPhrase(len(in.Contacts), say.say(floor.KnownContactOne), say.say(floor.KnownContactMany)) + ".",
+				Text: countPhrase(len(in.Contacts), say.Say(floor.KnownContactOne), say.Say(floor.KnownContactMany)) + ".",
 				// The count names nobody, so it cites the contact the list
 				// starts with and gives the reader somewhere to open.
 				Evidence: []Evidence{{EntityType: citeContact, EntityID: in.Contacts[0].ID}},
@@ -266,7 +266,7 @@ func taskID(task TaskIn) string { return task.ID }
 func contactID(contact NamedIn) string { return contact.ID }
 
 func contactLine(contact NamedIn, say spoken) string {
-	return fmt.Sprintf(say.say(floor.KnownContactLine), contact.Name)
+	return fmt.Sprintf(say.Say(floor.KnownContactLine), contact.Name)
 }
 
 // openTasksLine counts the open tasks and anchors the count on the one that is
@@ -277,10 +277,10 @@ func contactLine(contact NamedIn, say spoken) string {
 // than one told nothing.
 func openTasksLine(tasks []TaskIn, say spoken) Sentence {
 	earliest := earliestDue(tasks)
-	counted := countPhrase(len(tasks), say.say(floor.OpenTaskOne), say.say(floor.OpenTaskMany))
+	counted := countPhrase(len(tasks), say.Say(floor.OpenTaskOne), say.Say(floor.OpenTaskMany))
 	text := counted + "."
 	if due := shortDate(earliest.Due, say); due != "" {
-		text = fmt.Sprintf(say.say(floor.TasksEarliestDue), counted, due)
+		text = fmt.Sprintf(say.Say(floor.TasksEarliestDue), counted, due)
 	}
 	return Sentence{Text: text, Evidence: []Evidence{{EntityType: citeActivity, EntityID: earliest.ID}}}
 }
@@ -305,13 +305,13 @@ func openTaskLine(task TaskIn, say spoken) string {
 	// The subject is quoted for the same reason an activity's is: a task can be
 	// raised from mail this workspace did not write, and it must read as theirs.
 	if due := shortDate(task.Due, say); due != "" {
-		return fmt.Sprintf(say.say(floor.OpenTaskDue), task.Name, due)
+		return fmt.Sprintf(say.Say(floor.OpenTaskDue), task.Name, due)
 	}
-	return fmt.Sprintf(say.say(floor.OpenTaskNamed), task.Name)
+	return fmt.Sprintf(say.Say(floor.OpenTaskNamed), task.Name)
 }
 
 func openDealLine(deal DealIn, say spoken) string {
-	line := fmt.Sprintf(say.say(floor.OpenDealNamed), deal.Name)
+	line := fmt.Sprintf(say.Say(floor.OpenDealNamed), deal.Name)
 	if deal.Stage != "" {
 		line += ", " + deal.Stage
 	}
@@ -323,7 +323,7 @@ func openDealLine(deal DealIn, say spoken) string {
 		line += ", " + amount + " " + deal.Currency
 	}
 	if deal.Stalled {
-		line += ", " + say.say(floor.DealStalledMark)
+		line += ", " + say.Say(floor.DealStalledMark)
 	}
 	return line + "."
 }

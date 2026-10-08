@@ -42,6 +42,7 @@ func TestRejectingACompanyOverHTTPAnswersBothHalves(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies", map[string]any{
+		"source":       "manual",
 		"display_name": "Expensify Ltd",
 		"domains":      []map[string]any{{"domain": "expensify.test", "is_primary": true}},
 	}, nil, &created); status != http.StatusCreated {
@@ -101,6 +102,7 @@ func TestRejectingACompanyOverHTTPRefusesAReasonItCannotStore(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies", map[string]any{
+		"source":       "manual",
 		"display_name": "Typed By Hand Ltd",
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("seeding the company → %d", status)

@@ -14,6 +14,7 @@ package compose
 // This proves the sweep recognises both system lanes, not just one.
 
 import (
+	"context"
 	"log/slog"
 	"testing"
 	"time"
@@ -60,7 +61,7 @@ func TestDomainTriageReadResumesAfterBudgetDeferral(t *testing.T) {
 
 	setRecoveryAllowance(t, e, 1000000)
 	recovery := newAIBudgetResumeWorker(e.Pool, slog.New(slog.DiscardHandler))
-	if err := recovery.resumeWorkspace(e.Admin(), e.WS); err != nil {
+	if err := recovery.resumeWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("resumeWorkspace returned an error for a domain-triage read: %v", err)
 	}
 

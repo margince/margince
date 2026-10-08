@@ -139,9 +139,7 @@ func openedInWeek(
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = "true"
-	}
+	scope = orUnbounded(scope)
 	// The review prints the week's created value, so a mask that withholds a
 	// deal's figure has to withhold it from this sum too. A masked row arrives
 	// null and the NOT NULL filter beside it then drops the row, which is the
@@ -188,9 +186,7 @@ func closedInWeek(
 	if err != nil {
 		return 0, 0, err
 	}
-	if scope == "" {
-		scope = "true"
-	}
+	scope = orUnbounded(scope)
 	// Both halves of the closed figure sum the converted amount, so both take
 	// the mask: a withheld number reappears whole in a total, and won-and-lost
 	// is the total a review is read for.

@@ -25,10 +25,12 @@ func TestTheRecordImporterDoorsCarryTheAuthor(t *testing.T) {
 	name := " Anna Müller "
 
 	contactIn, err := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{
+		Source:   "manual",
 		FullName: "Imported", SourceSystem: &hubspot, SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	assertAuthor(t, "contact", contactIn.Author, err, seat)
 	companyIn, err := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{
+		Source:      "manual",
 		DisplayName: "Imported", SourceSystem: &hubspot, SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	assertAuthor(t, "company", companyIn.Author, err, seat)
@@ -41,8 +43,8 @@ func TestTheRecordImporterDoorsCarryTheAuthor(t *testing.T) {
 func TestTheRecordClientDoorsRefuseAnAuthor(t *testing.T) {
 	legacy := "legacy_crm"
 	name := "Anna Müller"
-	_, contactErr := contactCreateInput(crmcontracts.CreateContactRequest{FullName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
-	_, companyErr := companyCreateInput(crmcontracts.CreateCompanyRequest{DisplayName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
+	_, contactErr := contactCreateInput(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
+	_, companyErr := companyCreateInput(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
 	_, leadErr := leadCreateInput(crmcontracts.CreateLeadRequest{FullName: ptr("X"), SourceSystem: &legacy, SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {
 		assertAuthorRefused(t, record, err, "reserved_source_author")
@@ -53,8 +55,8 @@ func TestTheRecordClientDoorsRefuseAnAuthor(t *testing.T) {
 // on a record naming no source is refused there too.
 func TestTheRecordImporterDoorsRefuseAnAuthorFromNowhere(t *testing.T) {
 	name := "Anna Müller"
-	_, contactErr := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{FullName: "X", SourceAuthorName: &name})
-	_, companyErr := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{DisplayName: "X", SourceAuthorName: &name})
+	_, contactErr := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceAuthorName: &name})
+	_, companyErr := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceAuthorName: &name})
 	_, leadErr := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{FullName: ptr("X"), SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {
 		assertAuthorRefused(t, record, err, "source_author_needs_a_source")

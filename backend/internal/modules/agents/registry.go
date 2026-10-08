@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -158,6 +159,9 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 
+	if err := withinArgsBound(spec, in); err != nil {
+		return nil, 0, err
+	}
 	res, err := splitReserved(in)
 	if err != nil {
 		return nil, 0, err
@@ -341,13 +345,20 @@ func (r *Registry) tierResolverFor(ctx context.Context, t mcp.Tool, name string,
 	}
 }
 
+// errFileCannotWait answers a confirm-first call that carries a file: staging it
+// would keep the file's bytes in the approval, so nothing is staged.
+var errFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
+
 // stageRefusedCall parks a 🟡 call the gate refused as a staged approval, so
 // the human decision the refusal asks for has somewhere to land; a retry
 // carrying its approval_id redeems it. A tool that cannot describe its own
 // staging target has nothing to park, so the refusal stands as the answer.
 func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string, args json.RawMessage, diffHash string, refusal error) error {
 	stageable, ok := t.(stageableTool)
-	if !ok {
+	switch {
+	case !ok && t.Spec().MaxArgsBytes > httperr.MaxBodyBytes:
+		return fmt.Errorf("%w: %w", errFileCannotWait, refusal)
+	case !ok:
 		return refusal
 	}
 	info, err := stageable.StageInfo(ctx, args)

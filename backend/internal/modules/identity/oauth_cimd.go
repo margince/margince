@@ -309,7 +309,8 @@ func validCIMD(body []byte, clientID string) (cimdDocument, error) {
 	}
 	if doc.ClientID != clientID {
 		return cimdDocument{}, errors.New(
-			"identity: the client's metadata document claims a different client_id than the URL it was fetched from")
+			"identity: the client's metadata document claims a different client_id than the URL it was fetched from",
+		)
 	}
 	if strings.TrimSpace(doc.ClientName) == "" {
 		return cimdDocument{}, errors.New("identity: the client's metadata document names no client_name")
@@ -323,7 +324,8 @@ func validCIMD(body []byte, clientID string) (cimdDocument, error) {
 		// CIMD becomes the way to register the redirect DCR refuses.
 		if !validRedirectURI(raw) {
 			return cimdDocument{}, fmt.Errorf(
-				"identity: the client's metadata document lists redirect uri %q, which must be https or http on localhost", raw)
+				"identity: the client's metadata document lists redirect uri %q, which must be https or http on localhost", raw,
+			)
 		}
 	}
 	return doc, nil

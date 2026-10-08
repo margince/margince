@@ -231,6 +231,10 @@ var composedIntents = map[string]bool{
 	// a different question from "who does this payload name". Read-only, and
 	// every record it names is read back through the datasource seam.
 	"resolve_entities": true,
+	// The agent's door to a record's files: the multipart attachment routes stay
+	// human-only, and both tools reach the same store those routes write and read.
+	"attach_document": true,
+	"list_documents":  true,
 }
 
 // An intent may write inside the workspace; it may NOT reach outside it.

@@ -608,6 +608,15 @@ export const vi = {
   "brief.weekly.noCommitments": "Không có mục đến hạn",
   "brief.weekly.basis":
     "Công việc CRM đã ghi nhận trong tuần đã kết thúc. Thiếu bản ghi không có nghĩa là không làm việc.",
+  "brief.weekly.notRecorded": "Không được ghi nhận",
+  "brief.weekly.recordedFrom": "Ghi nhận từ {date}",
+  "brief.weekly.noRecords": "Nguồn này chưa có bản ghi",
+  "brief.weekly.partialFrom": "Một phần tuần: tính từ {date}",
+  "brief.weekly.partialValue": "{value} (một phần)",
+  "brief.week.beforeHistory":
+    "Tuần này nằm trước các bản ghi đầu tiên nên không có số liệu để báo cáo.",
+  "teamweekly.headline.notRecorded":
+    "Một số số liệu của tuần này không được ghi nhận nên đã được lược bỏ.",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.undated": "Chưa có ngày",
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
@@ -638,6 +647,13 @@ export const vi = {
     "{won} thắng · {lost} thua · {moved} cơ hội chuyển giai đoạn · {leads} khách hàng tiềm năng được giao",
   "brief.schedule.unavailable": "Không thể kiểm tra lịch của bạn.",
   "brief.schedule.more": "Tải thêm mục để xem các cuộc họp còn lại.",
+  "brief.schedule.notConnected":
+    "Chưa có lịch nào được kết nối, nên không thể hiển thị cuộc họp hôm nay.",
+  "brief.schedule.unreadable":
+    "Lịch của bạn không đồng bộ, nên không thể hiển thị cuộc họp hôm nay.",
+  "brief.schedule.connect": "Kết nối lịch",
+  "brief.schedule.reconnect": "Kết nối lại lịch",
+  "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
   "brief.readings.riskPartial":
     "Chỉ tính giá trị đã biết; chưa kiểm tra được một số công việc về cơ hội.",
   "brief.readings.unpricedCount_one":
@@ -658,6 +674,8 @@ export const vi = {
   "brief.coverage.source.relationship_decay": "Mối quan hệ ít liên lạc",
   "brief.coverage.source.meeting_outcome": "Theo dõi sau cuộc họp",
   "brief.coverage.source.meeting": "Cuộc họp sắp tới",
+  "brief.coverage.source.calendar": "Kết nối lịch",
+  "brief.coverage.source.next_meeting": "Cuộc họp tiếp theo",
   "brief.coverage.source.deal_at_risk": "Giao dịch được đánh dấu",
   "brief.coverage.source.lead_response": "Khách hàng tiềm năng được phân công",
   "brief.coverage.source.customer_waiting": "Tin nhắn chưa trả lời",
@@ -3899,6 +3917,14 @@ export const vi = {
   "brief.readings.needsPrep_other": "{count} chưa chuẩn bị",
   "brief.readings.prepUnknown": "không kiểm tra được hết",
   "brief.readings.prepared": "đã chuẩn bị đủ",
+  "brief.readings.calendarNotConnected": "Chưa kết nối",
+  "brief.readings.calendarNotConnectedWhy":
+    "Kết nối lịch của bạn để đếm cuộc họp.",
+  "brief.readings.calendarUnreadable": "Không đồng bộ",
+  "brief.readings.calendarUnreadableWhy":
+    "Kết nối lại lịch của bạn để đếm cuộc họp.",
+  "brief.readings.nextMeeting": "Tiếp theo: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Tiếp theo: {date}",
   "brief.readings.leads": "Khách hàng tiềm năng cần liên hệ",
   "brief.readings.leadsBasis": "Công việc đã lên kế hoạch cho khách tiềm năng",
   "brief.readings.leadsDue": "tiếp theo đến hạn {value}",
@@ -10086,6 +10112,7 @@ export const vi = {
   "contact.action.call": "Gọi",
   "contact.action.meetings": "Lịch hẹn",
   "contact.action.workAsLead": "Theo dõi như lead",
+  "contact.action.openLead": "Mở lead",
   "contact.action.addTask": "Thêm việc",
   "contact.action.research": "Nghiên cứu",
 

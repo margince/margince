@@ -200,6 +200,9 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 	refresh = refreshTokenPrefix + raw
 	// replaced_by stays NULL: the first token in a chain succeeds nothing,
 	// and rotation is what fills the forward link.
+	if err := reapDeadCredentials(ctx, tx, "oauth_refresh_token"); err != nil {
+		return ids.Nil, "", err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO oauth_refresh_token (grant_id, token_hash, expires_at)
 		VALUES ($1, $2, now() + $3::interval)`,

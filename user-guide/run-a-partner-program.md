@@ -1,10 +1,11 @@
+<!-- prose:plain -->
 # Partner programs
 
 ## In short
 
-Some deals come to you because somebody else brought them: an agency that
-recommended you, a consultancy that sells you into its clients, a hosting
-company whose customers need your software.
+Some deals come to you because someone else brought them. It may be an agency
+that recommended you, a consultancy that sells you into its clients, or a
+hosting company whose customers need your software.
 
 A partner program is how you keep track of those partners and pay them. In
 Margince you can:
@@ -21,7 +22,7 @@ Margince you can:
 Partners cannot log in to see their own numbers; see *What this cannot do*
 below.
 
-Margince does not pay anybody. You settle a partner in whatever system you pay
+Margince does not pay anyone. You settle a partner in whatever system you pay
 partners from; Margince holds the record of what was earned, agreed and
 settled. Marking an entry *Paid* here says your finance system already paid it.
 
@@ -39,7 +40,7 @@ A partner deal has two:
 - the **partner**, who brought it to you and gets a share.
 
 They are different companies. If you find yourself putting the same company in
-both, stop: that is a company buying for itself, and nobody is owed anything.
+both, stop: that is a company buying for itself, and no one is owed anything.
 
 Margince keeps the two apart on every screen. A company's **Deals** tab shows
 what *it* is buying. Its **Partner** tab shows what it has *brought you*.
@@ -166,7 +167,7 @@ old one already paid.
 - **Margince does not move money.** Approving and marking paid are record
   keeping: they say what your finance system has agreed and settled.
 - **Partners cannot see any of this.** There is no partner login, and none is
-  planned. When a partner asks what they have earned, somebody on your side
+  planned. When a partner asks what they have earned, someone on your side
   opens their company page and tells them.
 - **No tier, no commission.** Win a deal a partner with no margin tier
   sourced and no entry appears, with no warning, because there is no rate to

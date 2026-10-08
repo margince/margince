@@ -1,8 +1,9 @@
+<!-- prose:plain -->
 # Run your first project
 
 ## In short
 
-A deal ends the day it is won. The work it was sold for does not: the rollout
+A deal ends the day it is won. The work it was sold for does not. The rollout
 runs for months, a second deal lands on the same work a year later, and the
 email about it never stops. A **project** is where Margince keeps that body of
 work, from the first conversation, through the deal and delivery, to the day
@@ -13,7 +14,7 @@ In Margince you can:
 - Start a project while the deal is still being pursued, so the early
   conversations are already filed where the delivery team will look for them.
 - Have Margince give it a key such as `NER-1`. Every email whose subject
-  carries `[NER-1]` is filed under it automatically, including the replies you
+  carries `[NER-1]` is filed under it automatically. That includes the replies you
   send from the deal or the project, which carry the key without you typing it.
 - Win the deal and watch the project move into delivery by itself.
 - Write email from inside the project, with the AI reading only what belongs
@@ -26,23 +27,22 @@ key rules and the vocabulary, see
 email finds its project and what that means for retention, see
 [handbook/capture.md](../docs/handbook/capture.md).
 
-No code, no API. You need a sign-in, a company in Margince (the walkthrough
-uses a fictional customer, *Nordwind Logistik*, recorded as a company), and
-one contact at that company.
+No code, no API. You need a sign-in, a company in Margince, and one contact at that
+company. The walkthrough uses a fictional customer, *Nordwind Logistik*, recorded as a company.
 
 ## 1. Why a project exists at all
 
 Open **Pipeline** and look at any deal. It has a value, a stage, a close date.
 When it is won it becomes a line in a report and stops moving.
 
-Now think about what an ERP rollout at Nordwind involves: a scoping workshop
-before the proposal, the proposal, the contract, six months of delivery, a
-go-live, hypercare, and, if it goes well, a phase-2 deal for the warehouse
-module. One deal cannot hold that. Two deals cannot hold it either, because the
+Now think about what an ERP rollout at Nordwind involves. There is a scoping
+workshop before the proposal, then the proposal, the contract and six months of
+delivery. Then come a go-live and hypercare and, if it goes well, a phase-2 deal
+for the warehouse module. One deal cannot hold that. Two deals cannot hold it either, because the
 conversation in between belongs to neither.
 
-A project holds it. It is started on a company, it carries several deals over
-time, and everything filed under it (mail, notes, tasks, contracts) stays
+A project holds it. It is started on a company, and it carries several deals over
+time. Everything filed under it (mail, notes, tasks, contracts) stays
 together on one page.
 
 Open **Projects** in the left navigation. On a fresh installation you see the
@@ -66,13 +66,13 @@ proposal", the project exists.
 2. Fill in **Deal name** (`Nordwind ERP licences and rollout`) and **Value**
    (`180000`).
 3. Pick the **Company**: *Nordwind Logistik*. Until you do, the **Project**
-   field is disabled, because the projects a deal may be filed under depend on
+   field is disabled. The projects a deal may be filed under depend on
    its company.
 4. Open **Project** and choose **New project…**. One more field appears:
    **Project name**.
 5. Enter the project name: `Nordwind ERP rollout`. Give it a different name
    from the deal. When you search for the project later, a deal with the same
-   name sits next to it in the results and the two are hard to tell apart.
+   name sits next to it in the results. The two are then hard to tell apart.
 6. Press **Create**.
 
 You land on the deal page. Beside the company name you should see a chip
@@ -89,7 +89,7 @@ pursuit. The project exists before you know whether the deal will happen.
 ## 3. The key it was given
 
 Look under the project's name. Beside the phase is a short chip, something like
-**NER-1**. Nobody typed it: Margince made it from the project's name when the
+**NER-1**. No one typed it: Margince made it from the project's name when the
 project was created, and it cannot be edited. Hover it and the tooltip says
 what it is for:
 
@@ -134,19 +134,19 @@ The proposal goes out; Nordwind is evaluating. Move the project from
    in the phase history with the reason you give.* Type a reason
    (`Scoping workshop booked; proposal in progress.`) and press **Move**.
 
-The phase under the name now reads **Pursuing**, and the **Phase history** on
+The phase under the name now reads **Pursuing**. The **Phase history** on
 the right shows *Initiative → Pursuing* with the date, your name and your
 reason in quotation marks. The list of phases above it shows how long the
 project spent in each one.
 
-While the deal is pursued, log what happens on the **deal**: open the deal,
+While the deal is pursued, log what happens on the **deal**. Open the deal,
 use **Log activity** (a note *Kickoff call with Nordwind IT*, for example) and
 press **Log**. The note lands on the deal's timeline.
 
 It does not appear on the project's timeline yet. A note on a deal is filed
 under the deal; the project's **Timeline** shows only what is filed under the
-project. To move it, press **Relink** on the note, search for *Nordwind ERP
-rollout*, pick the **project** (not the deal of the same name) and press
+project. To move it, press **Relink** on the note and search for *Nordwind ERP
+rollout*. Pick the **project** (not the deal of the same name) and press
 **Relink**. Now open the project: the timeline shows the note and the
 **Activities** figure reads 1. Email does this filing by itself once the key is
 in the subject; see step 7.
@@ -165,9 +165,9 @@ Nordwind signs on a purchase order.
 The deal now reads **won**. Click the project chip.
 
 The project's phase reads **Delivering**. You did not press anything on the
-project: winning a deal moves its project into delivery at the same moment, so
-no report ever sees a won deal on a project still being pursued. The **Phase
-history** shows *Pursuing → Delivering* with your name, and the figures at the
+project. Winning a deal moves its project into delivery at the same moment.
+So no report ever sees a won deal on a project still being pursued. The **Phase
+history** shows *Pursuing → Delivering* with your name. The figures at the
 top have moved: **Open deal value** is `€0.00`, **Won deal value** is
 `€180,000.00`.
 
@@ -177,7 +177,7 @@ Two limits on this automatic move:
   **Delivering** stays there, because a second deal landing on running work is
   not a restart.
 - It never reopens a **Closed** project. A renewal won years later does not
-  bring back an engagement somebody chose to end. The deal reads won, the
+  bring back an engagement someone chose to end. The deal reads won, the
   project stays closed, and reopening is a decision a human makes, with a
   reason (step 6).
 
@@ -216,7 +216,7 @@ The Companies card now shows both: *Nordwind Logistik: Customer* and
 *DACHPartner GmbH: Partner*.
 
 Now a deal on **DACHPartner** can be filed under this project. A deal may name
-any project one of its companies is on, whatever role that company holds, so
+any project one of its companies is on, whatever role that company holds. So
 the partner's own commercial work sits on the same project as the customer's.
 
 Margince refuses the following, and shows the reason on screen:
@@ -225,7 +225,7 @@ Margince refuses the following, and shows the reason on screen:
   another before taking this one off.*
 <!-- prose:allow sentence the refusal message is quoted as the screen shows it -->
 - **Removing a company with deals here.** *This company still has 1
-  deal(s) on the project; move or close them before taking the company off.*
+  `deal(s)` on the project; move or close them before taking the company off.*
   Winning or losing a deal does not clear this, because the count is of deals
   that still exist. Point them at another project, or archive them.
 
@@ -238,7 +238,7 @@ When go-live is signed off:
 1. Press **Closed** in the **Phase** row.
 2. The dialog **Move to Closed** says: *Closing ends the project's delivery.
    It can be reopened later, and the reason stays on record.* The **Reason**
-   field is required here (*A closed project needs a reason*), and
+   field is required here (*A closed project needs a reason*).
    **Close project** stays disabled until you type one. Enter
    `Go-live signed off by Nordwind on 22 Aug; hypercare handed to support.`
    and press **Close project**.
@@ -266,7 +266,7 @@ timeline. Above the Subject field is one control:
 And the **Subject** field already contains `[NER-1]`.
 
 Open the picker and you get **No project**, then every live project Nordwind
-is on, including any where it is a partner or a subcontractor and not the
+is on. That includes any where it is a partner or a subcontractor and not the
 customer.
 
 - **Choosing a project** puts its `[KEY]` at the front of the Subject.
@@ -313,7 +313,7 @@ This is [issue #2422](https://github.com/margince/margince/issues/2422).
 ### Writing to an account from the company page
 
 Open the company page (**Companies** → *Nordwind Logistik*) and press
-**Write email**. A new mail is filed under a project the same way: the
+**Write email**. A new mail is filed under a project the same way. The
 **Project** picker is the same control, in the same place, filling the Subject
 with the same tag. There is no thread to inherit from, so it starts on the
 company's only live project when it has one, and on **No project** otherwise.
@@ -353,15 +353,15 @@ like `[2026]`, stays.
 ## 8. Agents over MCP
 
 Everything above is available to an agent connected over MCP, with the same
-permissions the signed-in person holds:
+permissions the signed-in user holds:
 
 - `read_project_360` reads the whole project page: phase history with time
   per phase, deals, stakeholders, contracts, documents, open commitments,
   timeline.
 - `catch_me_up_on` with a `project_id` answers "what has been going on?" for
   the project, reading only what is filed under it or under no project.
-- `prepare_handoff` collects what the delivery side needs from the sales side
-  (owner, client contacts, what was sold, by when, what is promised) and names
+- `prepare_handoff` collects what the delivery side needs from the sales side:
+  owner, client contacts, what was sold, by when, what is promised. It names
   each gap the records leave.
 - `advance_project_phase` moves a phase, with the same closing-needs-a-reason
   rule. It runs straight away when the agent's access allows it; the agent's

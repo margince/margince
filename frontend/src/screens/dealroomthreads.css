@@ -83,7 +83,7 @@
   align-items: flex-end;
   height: 112px;
   overflow: hidden;
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-bottom: 1px solid var(--borderSubtle);
 }
 

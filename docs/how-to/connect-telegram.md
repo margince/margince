@@ -1,57 +1,61 @@
+<!-- prose:plain -->
 # Connect a Telegram bot
 
-Bind a Telegram bot so Margince captures the messages customers send it onto the timeline, creating
-contacts and activities through the one dedupe chokepoint, and so a rep can reply from that timeline.
-Everything here is done in the app. The REST surface behind it is the contract
-(`backend/api/crm.yaml`, `/channel-connections*`), and nothing below requires you to call it by hand.
-For the inbound side (the connector seam, the one Sink, credential custody), read
-[explanation/capture-connectors.md](../explanation/capture-connectors.md). For the outbound half (the
+Bind a Telegram bot, and Margince captures the messages customers send it into the timeline. It creates
+contacts and activities through the one place that finds copies, and a rep can reply from that timeline.
+You do all of it in the app. The REST surface behind it is the contract (`backend/api/crm.yaml`,
+`/channel-connections*`), and nothing below needs you to call it by hand.
+
+For the side that takes messages in (the connector seam, the one Sink, how the credential is kept), read
+[explanation/capture-connectors.md](../explanation/capture-connectors.md). For the side that sends (the
 staging row, the gates, the dispatcher), read
 [explanation/outbound-messaging.md](../explanation/outbound-messaging.md).
 
-> **Single-company installation.** One installation serves one company; the server resolves
-> it itself, so nothing you do here selects a tenant. `channel_connection` carries no tenant column at
-> all, and core tables carry no row-level security. "The bot" below means the one installation's bot.
+> **One company per installation.** One installation serves one company, and the server works out which
+> one on its own, so nothing you do here picks a tenant. `channel_connection` has no tenant column at all,
+> and core tables have no row-level security. "The bot" below means the one bot of the installation.
 
 ## What kind of connection this is
 
-A bot binding is **not** a mailbox. A mailbox (**Settings → Connections → Connected inboxes**) is one
-human's grant over their own mail; a Telegram bot is an **admin binding one bot for everybody**. Three
-consequences:
+A bot binding is **not** a mailbox. A mailbox (**Settings → Connections → Connected inboxes**) is the
+grant of one human over their own mail. A Telegram bot is an **admin who binds one bot for every user**.
+That has these results:
 
-- **One live bot, full stop.** `uq_channel_connection_provider` is a partial unique index over the live
-  rows, keyed on `(provider)`. Every outbound reply resolves the installation's bot, so with two live
-  bindings the send path refuses to guess. A second bot would remove the ability to reply on either.
-  The card enforces this in the UI too: the **Connect a Telegram bot** action disappears once one is
-  bound, leaving **Replace token** and **Disconnect** as the only verbs.
-- **Admin/ops bind it; everyone reads it.** The `channel_connection` RBAC object grants
-  create/update/delete to `admin` and `ops` only, while `management`, `manager`, `rep` and `read_only`
-  all hold read. A rep needs to know whether the channel is live before expecting a reply to arrive
-  there. Every operation is also `x-agent-access: human-only`: the bot token grants read of every
-  message the bot receives, so an agent must never bind one on its own initiative.
-- **The customer messages the bot first.** A Telegram bot cannot open a conversation. A contact becomes
-  reachable only when an inbound message binds a channel identity for them. So the composer's
-  **How to send** picker offers Telegram only for someone who already has a conversation on it, and
-  labels it *"Continues your Telegram conversation"*.
+- **One live bot, and no more.** `uq_channel_connection_provider` is a unique index over only the live
+  rows, keyed on `(provider)`. Every reply that goes out looks up the bot of the installation, so with two
+  live bindings the send path refuses to guess. A second bot would remove the way to reply on either
+  one.
+- The card holds this rule on the screen too. Once a bot has a binding, the **Connect a Telegram bot** button
+  is no longer there. That leaves **Replace token** and **Disconnect** as the only actions.
+- **Admin and ops bind it; all read it.** The RBAC grants for `channel_connection` give create,
+  update and delete to `admin` and `ops` only. `management`, `manager`, `rep` and `read_only` all hold
+  read. A rep needs to know whether the channel is live before they expect a reply to come there.
+- Every action is also `x-agent-access: human-only`. The bot token can read every message the bot gets,
+  so an agent must never bind one on its own.
+- **The customer writes to the bot first.** A Telegram bot cannot start a chat. A contact can only be
+  reached once a message from them binds a channel identity for them. So the **How to send** list in the
+  composer offers Telegram only for someone who already has a chat on it. It labels it
+  `Continues your Telegram conversation`.
 
-Compared with a mailbox connector, several things are absent: no OAuth app, no consent redirect, no
-callback URI, and no inbound HTTP route at all. **Ingress long-polls**, so this installation dials out
-and is never dialled.
+A mailbox connector has several things that this one does not. There is no OAuth app, no consent
+redirect, no callback URI, and no HTTP route for messages that come in. **Messages come in by long poll**: this
+installation calls out, and nothing ever calls in.
 
 ## Before you start
 
 You need two things:
 
-- **A bot token from BotFather.** Message [@BotFather](https://t.me/BotFather) on Telegram, send
-  `/newbot`, and keep the token it issues. It has the shape `<bot id>:<secret>`. The server
-  shape-checks that before spending a network call on it, so a pasted bot *username* comes back
-  refused without an attempt.
-- **The vault key**, `MARGINCE_KEYVAULT_ROOT_KEY` (base64 of 32 bytes), on **both** the api and the
-  worker. The api seals the token on connect; the worker unseals it on every poll. Without a vault the
-  card renders **"Messaging channels aren't configured in this deployment."** instead of a connect
-  action. The api refuses every mutating path by name instead of storing a token nothing could unseal,
-  and the worker registers **neither** Telegram job (`telegram_poll` and `telegram_poll_sweep` both
-  declare `registration: {when: [ChannelVault], absent: registers_nothing}`).
+- **A bot token from BotFather.** Write to [@BotFather](https://t.me/BotFather) on Telegram, send
+  `/newbot`, and keep the token it gives you. It has the shape `<bot id>:<secret>`. The server checks
+  that shape before it spends a network call on it. So when you paste the *user name* of a bot, it comes
+  back refused, without a call.
+- **The vault key**, `MARGINCE_KEYVAULT_ROOT_KEY` (`base64` of 32 bytes), on **both** the API and the
+  worker. The API seals the token on connect, and the worker opens it on every poll.
+
+Without a vault, the card shows `Messaging channels aren't configured in this deployment.`, and no
+connect button. The API refuses every path that changes data, by name, so it does not store a token that
+nothing could open. And the worker registers **neither** Telegram job. Both `telegram_poll` and
+`telegram_poll_sweep` declare `registration: {when: [ChannelVault], absent: registers_nothing}`.
 
 ```sh
 export MARGINCE_KEYVAULT_ROOT_KEY="$(openssl rand -base64 32)"  # base64 of exactly 32 bytes
@@ -61,214 +65,240 @@ This surface does **not** need or read any of these:
 
 | Not needed | Why |
 |---|---|
-| An OAuth app / client id + secret | There is no consent handshake; the token *is* the credential. |
-| `MARGINCE_CONNECTOR_STATE_KEY` | Nothing to sign: there is no redirect and no state round-trip. |
-| `MARGINCE_PUBLIC_BASE_URL` | Nothing is ever told where to reach this installation. |
-| A callback / redirect URI | Same. `WithChannelSurface()` takes no deployment configuration at all. |
-| An inbound webhook route | The poller calls `getUpdates`; connect actively **clears** any webhook the bot arrives carrying, because Telegram refuses `getUpdates` while one is registered. |
+| An OAuth app, or a client ID and secret | There is no consent step; the token *is* the credential. |
+| `MARGINCE_CONNECTOR_STATE_KEY` | There is nothing to sign: no redirect, and no state that goes out and comes back. |
+| `MARGINCE_PUBLIC_BASE_URL` | Nothing needs to know where to reach this installation. |
+| A callback or redirect URI | The same. `WithChannelSurface()` takes no deployment config at all. |
+| A webhook route for messages that come in | The poller calls `getUpdates`. The connect step **clears** any webhook the bot already has, because Telegram refuses `getUpdates` while one is registered. |
 
-> Restart with `make dev` after setting the vault key.
+> Start again with `make dev` after you set the vault key.
 
 ## Connect
 
-1. **Settings → Connections.** The **Telegram bot** card sits below **Connected inboxes**, subtitled
-   *"One bot receives and sends messages for the whole company."* With nothing bound, its roster
-   row reads *"No bot is connected yet."*
-2. Click **Connect a Telegram bot** in the card header.
-3. Paste the BotFather token into **Bot token**, a password field hinted *"Paste the token BotFather
-   gave you when you created the bot. We seal it in the credential vault and never show it again."*
-   The form retains nothing after a failed submit, so a retry starts from an empty box.
-4. **Connect.** On success the modal reads **"Connected as @yourbot."** with a status badge and a
-   **Done** button. The card behind it re-reads the connection list to prove the binding, so it never
-   claims one the server did not confirm.
+1. Open **Settings → Connections**. The **Telegram bot** card is below **Connected inboxes**.
+2. Click **Connect a Telegram bot** on the card.
+3. Paste the BotFather token into **Bot token**, which is a password field.
+4. Click **Connect**. When it works, the panel reads `Connected as @yourbot.`, with a status badge and a
+   **Done** button.
 
-The worker's `telegram_poll_sweep` dispatcher (every `30s`) picks the binding up on its next tick and
-long-polls it. The cursor starts at `0` ("whatever Telegram still holds"), so a freshly connected bot
-collects the messages already waiting for it.
+The card has the line `One bot receives and sends messages for the whole company.` under its title. With
+no bot, its row reads `No bot is connected yet.` The help text on the token field says
+`Paste the token BotFather gave you when you created the bot. We seal it in the credential vault and never show it again.`
 
-**A failed connect leaves nothing half-connected.** Connect runs a fixed order:
+The form keeps nothing after a failed send, so when you try again you start from an empty box. After it
+connects, the card behind the panel reads the list of connections again to prove the binding. So it never
+claims one that the server did not confirm.
 
-1. `getMe` validates the token and yields the bot id and @username.
-2. `deleteWebhook` clears any registration. `drop_pending_updates` is not sent, because those pending
-   updates are the customer's messages.
-3. The token is sealed in the vault.
-4. The row is inserted `connected` with a zero cursor, in **one transaction with its audit row**.
+The `telegram_poll_sweep` dispatcher of the worker runs every `30s`. On its next turn it picks the
+binding up, and starts a long poll on it. The cursor starts at `0` ("whatever Telegram still holds"), so
+a new bot gets the messages that already wait for it.
 
-Nothing follows that write, because a poll dials out and there is no registration to make. No server
-produces the schema's `pending` status. The UI still renders it as *"Pending — not yet confirmed live"*
-if one arrives from an older or foreign server, so it never reads as healthy. A failure anywhere before
-the commit leaves nothing behind except a vault entry, which the path destroys itself on a lost
-uniqueness race.
+**A failed connect leaves no part done.** Connect runs in a fixed order:
 
-## What the card shows once it is bound
+1. `getMe` checks the token, and returns the bot ID and the @ user name.
+2. `deleteWebhook` clears any webhook that is registered. Connect does not send `drop_pending_updates`, because those
+   waiting updates are the messages of the customer.
+3. Margince seals the token in the vault.
+4. Margince adds the row as `connected`, with a cursor of 0, in **one transaction with its audit row**.
 
-One row: **Telegram · @yourbot**, a status badge, and the two verbs that change it.
+Nothing comes after that write, because a poll calls out, and there is nothing to register. No server
+makes the `pending` status of the schema. The screen still shows it as
+`Pending — not yet confirmed live` if one comes from an older server, or a server from another source. So it
+never looks live.
+
+A failure at any step before the commit leaves nothing behind but a vault entry. The path deletes that
+entry itself when another write takes the unique index first.
+
+## What the card shows once a bot has a binding
+
+It shows one row: `Telegram · @yourbot`, a status badge, and the two actions that change it.
 
 | Badge | Status | Meaning |
 |---|---|---|
-| **Capturing** | `connected` | Live. Polled every dispatcher tick. |
-| **Needs reconnect** | `reauth_required` | Telegram refused the sealed token. No retry repairs it; use **Replace token**. |
-| **Sync error** | `error` | Another consumer holds this bot's updates. Find and stop it (a second installation, a staging stack, an unrelated integration). |
-| **Disconnected** | `disconnected` | Archived. Filtered out of the roster. |
+| **Capturing** | `connected` | Live. Polled on every turn of the dispatcher. |
+| **Needs reconnect** | `reauth_required` | Telegram refused the sealed token. No retry can repair it; use **Replace token**. |
+| **Sync error** | `error` | Another reader holds the updates of this bot. Find it and stop it: a second installation, a staging stack, or some other integration. |
+| **Disconnected** | `disconnected` | Archived, and not in the list. |
 
-Neither parked status is polled again until an operator acts: the due-scan selects only `connected`
-rows, which ends the retry loop. The reason is recorded in the audit trail's `poll_stopped_because`,
-because the row itself has no column for it.
+Margince does not poll either stopped status again until an operator does something. The scan for due rows picks
+only `connected` rows, and that ends the retry loop. The audit log records the reason in
+`poll_stopped_because`, because the row itself has no column for it.
 
 ## Rotate the token
 
-**Replace token** on the row, paste the new token, submit. The modal is titled **"Replace the bot
-token"** and keeps the connection's **current status badge visible** while you work, so a binding that
-ingress has parked still reads as parked while an edit form is open on it.
+Click **Replace token** on the row, paste the new token, and send it. The panel has the title
+`Replace the bot token`. It keeps the **current status badge of the connection** on the screen while you work.
+So a binding that the poll has stopped still reads as stopped while an edit form is open on it.
 
-Rotating goes **in place**; it is never a disconnect/reconnect cycle. What survives and what resets:
+To rotate happens **in place**; it is never a disconnect and then a reconnect. Here is what stays, and
+what starts again:
 
-- **The row survives**, and with it every channel identity binding and all captured history. Telegram
-  user ids are global and the identity's unique key omits the bot id, so identities keep resolving
-  across a rotation, even a swap to a *different* bot.
-- **The ingress cursor restarts** (`poll_offset = 0`). `update_id` is a per-bot sequence. Inheriting
-  the outgoing bot's position would ask the incoming bot for updates numbered beyond anything it has
-  ever sent, and every message it had received would be skipped without notice.
-- **The connection is never not-live.** A poll dials out, so the row alone decides which token the next
-  poll spends, and repointing the row is the whole change.
-- **The superseded token is destroyed** from the vault once the row names the new one; nothing else
-  would ever collect it.
-- The incoming bot's webhook is cleared, for the same reason connect clears one. The outgoing bot needs
-  nothing; it stops being polled the instant the row stops naming it.
+- **The row stays**, and with it every channel identity binding and all captured history. Telegram user
+  IDs are the same for all bots, and the unique key of the identity leaves out the bot ID. So identities
+  still match after you rotate, even after a swap to a *different* bot.
+- **The poll cursor starts again** (`poll_offset = 0`). `update_id` is a count for each bot. Say the new bot
+  kept the place of the old bot in that count. Then the poll would ask it for numbers past any it has
+  sent. Every message sent to it would be skipped, and no one would know.
+- **Rotation never takes the connection down.** A poll calls out, so only the row decides which token the next poll
+  uses. To point the row at the new token is the whole change.
+- **Margince deletes the old token** from the vault once the row names the new one. Nothing else would
+  ever remove it.
+- Margince clears the webhook of the new bot, for the same reason connect clears one. The old bot needs
+  nothing: it stops being polled as soon as the row stops naming it.
 
-A rotation that lands while a poll or a send is mid-flight is fenced. The poll's offset advance carries
-a `channel_id = <the bot it actually spoke to>` predicate. The send path re-reads the binding's version
-immediately before spending the credential; a mismatch is a transient refusal, so the delivery
-re-resolves instead of parking.
+Say you rotate while a poll or a send is in the middle. A fence keeps it safe. The step where the poll
+moves its place forward carries a `channel_id = <the bot it actually spoke to>` check. The send path
+reads the version of the binding again right before it uses the credential. If they do not match, it refuses for
+a short time, so the delivery looks up the binding again and does not stop.
 
 ## Disconnect
 
-**Disconnect** on the row, then confirm **"Disconnect this bot?"**: *"This deletes the stored token and
-stops checking the bot for new messages. Capture and sending stop immediately; everything already
-captured stays in your CRM."* Three kinds of state, three different outcomes:
+Click **Disconnect** on the row, then confirm `Disconnect this bot?`. The text says:
+`This deletes the stored token and stops checking the bot for new messages. Capture and sending stop immediately; everything already captured stays in your CRM.`
+
+Three kinds of state have three different results:
 
 | | What happens |
 |---|---|
-| The binding row | **Archived**, status `disconnected`. Archiving stops ingress (the due-scan selects only live `connected` rows) and frees the live-row unique index, so the same bot (or another) can be connected here again later. |
-| The bot token | **Destroyed** in the vault. Withdrawing a connection removes the credential as well as the row. |
-| Captured activities, contacts, channel identities | **Kept.** Disconnecting stops capture; it does not erase history. (Erasure is Art. 17's job; see [explanation/privacy-and-consent.md](../explanation/privacy-and-consent.md).) |
+| The binding row | **Archived**, status `disconnected`. That stops the poll (the scan for due rows picks only live `connected` rows). It also frees the unique index on live rows, so the same bot, or another one, can connect here again later. |
+| The bot token | **Deleted** in the vault. To take back a connection removes the credential, and the row too. |
+| Captured activities, contacts, channel identities | **Kept.** To disconnect stops capture; it does not erase history. (To erase is the job of Art. 17; see [explanation/privacy-and-consent.md](../explanation/privacy-and-consent.md).) |
 
-Like connect and rotate, this needs the vault: without one it refuses instead of archiving a row whose
-sealed token nothing could then destroy.
+Like connect and rotate, this needs the vault. Without one it refuses, so it does not archive a row whose
+sealed token nothing could then delete.
 
-## Verify end-to-end
+## Check it from end to end
 
-1. **The bot is bound.** **Settings → Connections** shows the Telegram row reading **Capturing**.
-2. **A customer message becomes an activity.** From a **second** Telegram account, open a private chat
-   with the bot and send a message. Within about one dispatcher tick it appears on the timeline as an
-   activity with `kind: message`, `channel_provider: telegram`, `direction: inbound`,
-   provenance-stamped `connector:telegram`. Every captured channel message files as the one `message`
-   kind, and `channel_provider` names the transport, so asking for Telegram means
-   `channel_provider=telegram`. A message whose payload is media with no words reads as a bracketed
-   placeholder (`[photo]`, `[voice message]`), so the timeline still shows the customer reached out.
-3. **The contact was auto-created.** The Sink routes the sender through the contacts module's
-   **dedupe chokepoint**, as it routes a mail counterparty. The contact is **ownerless**. A workspace
-   bot acts for no one human, and the connection's `connected_by` is audit only, so the connecting
-   admin is never made the owner. **No company is derived**, because a channel identity
-   carries no mail domain to derive one from.
-4. **Grant consent.** Open the contact, find the **Consent** section, and **Grant** the purpose you
-   intend to send under (some purposes need a double opt-in token first). Outbound is default-deny *per
-   purpose*: a grant for one purpose never authorizes another.
-5. **Reply from the timeline.** **Reply** on the inbound entry opens the composer with no Subject and
-   no Cc (a channel has neither) and asks for a **Consent purpose**. Confirm at **"Send this
-   message?"**: *"You are sending this message now. This is an outbound, irreversible action."*
-   - **You never name the recipient.** The entry you replied to *is* the conversation, and its
-     `channel_provider` names the medium. The server resolves the recipient as the channel identity of
-     the contact that conversation is with. The request carries only the body, the consent purpose, and
-     optionally attachments already in the record library (named by id, never uploaded here).
-   - Without a grant the send is suppressed and the composer says so: **"Send blocked — no consent"**,
-     with a **Review consent** link back to the contact. That refusal is why the surface shows a
-     purpose picker.
-   - **Reply does not appear** for a contact the channel cannot reach: an unbound identity, or one
-     Telegram has reported as blocking the bot. A button that could only fail is not offered.
-6. **The reply is filed on its conversation.** The outbound activity carries the anchor's
-   `thread_key`, so capture's reply detection matches the customer's next inbound message against it
-   and emits `engagement.reply` naming `telegram` as the channel.
-7. **The token is never echoed.** No read surface returns it: not the roster, not the connect
-   response, not the audit trail (the audit images carry the provider, bot id, label and status, never
-   a vault ref).
+1. **The bot has a binding.** **Settings → Connections** shows the Telegram row as **Capturing**.
+2. **A customer message turns into an activity.** From a **second** Telegram account, open a private chat
+   with the bot and send a message.
+3. **The contact was created.** The Sink sends the sender through the one place that finds copies, in
+   the contacts module. It does the same for the sender of a mail.
+4. **Grant consent.** Open the contact, find the **Consent** section, and **Grant** the purpose you mean
+   to send under.
+5. **Reply from the timeline.** Click **Reply** on the entry from the customer, pick a **Consent purpose**, and
+   confirm.
+6. **The reply is filed on its chat.** The activity that goes out carries the `thread_key` of the first
+   message.
+7. **The token never shows.** No read returns it: not the list, not the connect response, and not the
+   audit log.
+
+More on step 2: within about one turn of the dispatcher, the message appears on the timeline as an
+activity. It has `kind: message`, `channel_provider: telegram` and `direction: inbound`, and the stamp
+`connector:telegram`. Every captured channel message files as the one `message` kind, and
+`channel_provider` names the transport. So to ask for Telegram means `channel_provider=telegram`. A
+message with media and no words reads as a short label inside `[ ]`, such as `[photo]` or
+`[voice message]`. So the
+timeline still shows that the customer wrote.
+
+More on step 3: the contact has **no owner**. A bot for the whole workspace works for no one human, and the
+`connected_by` of the connection is for the audit only. So the admin who connected the bot never becomes
+the owner. **Margince makes no company**, because a channel identity has no mail domain to make one from.
+
+More on step 4: some purposes need a double opt-in token first. Sending is refused by default *for each
+purpose*: a grant for one purpose never allows another.
+
+More on step 5: **Reply** opens the composer with no Subject and no Cc, because a channel has neither. It
+asks for a **Consent purpose**. You confirm at `Send this message?`, which says
+`You are sending this message now. This is an outbound, irreversible action.`
+
+- **You never name who gets the message.** The entry you replied to *is* the chat, and its
+  `channel_provider` names the channel. The server finds the channel identity of the contact that chat is
+  with. The request carries only the body, the consent purpose, and if you want, files already stored
+  in Margince. It names them by ID, and you do not add them here.
+- Without a grant, Margince holds the send back, and the composer says so:
+  `Send blocked — no consent`, with a **Review consent** link back to the contact. That is why the
+  surface shows a list of purposes to pick from.
+- **Reply does not appear** for a contact the channel cannot reach. That is an identity with no binding,
+  or one that Telegram has reported as blocking the bot. Margince does not offer a button that could only fail.
+
+More on step 6: so the reply check of capture matches the next message from the customer against it. It
+sends the `engagement.reply` event, which names `telegram` as the channel.
+
+More on step 7: the audit images carry the provider, bot ID, label and status, and never a vault reference.
 
 ## When connecting fails
 
-Every refusal is RFC 7807 with a fixed `detail`, and the modal renders that `detail` verbatim in a
-danger callout instead of flattening it to "couldn't connect". Telegram's own `description` text never
-reaches the wire; it rides the wrapped error logged server-side. The `code` column is what you will
-find in a log or an audit row.
+Every refused call answers with RFC 7807, and a fixed `detail`. The panel shows that `detail` word for word, in a warning
+box, and does not turn it into `couldn't connect`. The `description` text from Telegram never reaches
+the wire: it stays in the error that the server logs. The `code` column is what you will find in
+a log or an audit row.
 
-| What the callout tells you | `code` (status) | What it calls for |
+| What the warning box tells you | `code` (status) | What to do |
 |---|---|---|
-| The token was refused, or cannot be a BotFather token at all | `channel_token_rejected` (400) | Check the token BotFather issued, and that it has not been revoked. |
-| A bot is already connected here | `channel_workspace_already_bound` (409) | Disconnect it first, or **Replace token** to point the existing binding at a different bot. |
-| Someone else changed this connection while you had it open | `version_skew` (409) | Re-open the card and retry; nothing was written. |
-| Telegram could not be reached | `channel_provider_unreachable` (502) | Nothing was changed; retry once the provider is back. |
-| Telegram understood the request and refused it | `channel_provider_rejected` (502) | Nothing was changed; check the bot has not been restricted or deleted in BotFather. |
-| No credential store is configured | `channel_credentials_not_configured` (503) | Set `MARGINCE_KEYVAULT_ROOT_KEY` and restart. |
-| Messaging channels aren't configured in this deployment | `channel_connections_not_configured` (503) | This process role composes no channel store, and says so with a 503 instead of a 500. `cmd/api` serves it. |
-| You may not change this | `permission_denied` (403) | Read is available to every role; binding is admin/ops. |
-| No such connection | `not_found` (404) | Existence-hiding: an archived binding reads the same. Re-open the card. |
-| (no callout) | `conflict` (409) | The provider is not one this binary implements, or some unique index other than the live-row rule refused the write. Only `telegram` is implemented; this is the fallback and adds no second binding rule. |
+| The token was refused, or cannot be a BotFather token at all | `channel_token_rejected` (400) | Check the token BotFather gave you, and that no one revoked it. |
+| A bot is already connected here | `channel_workspace_already_bound` (409) | Disconnect it first, or use **Replace token** to point the binding at a different bot. |
+| Someone else changed this connection while it was open for you | `version_skew` (409) | Open the card again and try again; nothing was written. |
+| Telegram could not be reached | `channel_provider_unreachable` (502) | Nothing was changed; try again once the provider is back. |
+| Telegram read the request and refused it | `channel_provider_rejected` (502) | Nothing was changed; check that no one has limited or deleted the bot in BotFather. |
+| No credential store is set up | `channel_credentials_not_configured` (503) | Set `MARGINCE_KEYVAULT_ROOT_KEY`, and restart. |
+| `Messaging channels aren't configured in this deployment` | `channel_connections_not_configured` (503) | This server role has no channel store, and says so with a 503 and not a 500. `cmd/api` serves it. |
+| You may not change this | `permission_denied` (403) | Every role can read; only admin and ops can bind. |
+| No such connection | `not_found` (404) | This keeps it secret whether the row exists: an archived binding reads the same. Open the card again. |
+| (no warning box) | `conflict` (409) | This binary has no code for that provider, or some unique index other than the rule on live rows refused the write. Margince has code only for `telegram`. This is the last answer, and adds no second rule for bindings. |
 
 ## Limits
 
-- **No backfill, ever.** The Bot API exposes no history endpoint, and Telegram retains unacknowledged
-  updates for only about 24 hours, so there is nothing to page backward through. The Telegram connector
-  is not a `Backfiller`; capture starts at connect time.
-- **Latency is one dispatcher tick.** `telegram_poll_sweep` runs every `30s` and enqueues one
-  `telegram_poll` job per live binding. Each holds a 25-second long poll open (`telegram_poll`'s job
-  timeout is `2m`, which must exceed the long poll plus the client's headroom). A poll that comes back
-  *with* updates ends its job, so a backlog drains at one Bot API batch per tick. The per-bot
-  uniqueness that satisfies Telegram's one-consumer rule is declared on the args type
-  (`TelegramPollArgs.InsertOpts`), so no inserter can drop it by omission.
-- **A blocked bot is a recipient problem.** Telegram answers `403` for "bot was blocked by the user"
-  and for a deactivated account. A staged delivery **parks at once** instead of burning the retry
-  ladder, and the park reason says retrying and reconnecting the channel both change nothing.
-  Separately, Telegram reports the block as a `my_chat_member` update, which sets `blocked_at` on the
-  contact's channel identity; from then on the **Reply** button is not offered at all. Unblocking
-  clears it, ordered by the update's own `update_id` so two transitions cannot apply backwards.
-- **Private chats only.** Group and supergroup messages are refused before anything is stored. A bot in
-  a group runs in Telegram's default privacy mode and would see only fragments. A reply resolves its
-  recipient through the sender's *private* chat, so a group-filed message could never be answered where
-  it came from.
-- **Inbound media is named, not downloaded.** The body carries the text or the caption; a wordless
-  message reads as `[photo]` / `[document]` / `[attachment]`. Fetching the file itself is out of scope.
-- **A reply is not nested under one message.** The chat *is* the conversation, so an outbound
-  channel delivery is staged unanchored instead of guessing at the capture provider's natural-key
-  format.
+- **No backfill, ever.** The Bot API has no history endpoint. Telegram keeps updates that no one has read
+  for only about 24 hours, so there is nothing to page back through. The Telegram connector is not a
+  `Backfiller`; capture starts when you connect.
+- **Messages wait up to one dispatcher turn.** `telegram_poll_sweep` runs every `30s`, and
+  queues one `telegram_poll` job for each live binding. Each job holds a long poll open for 25 seconds.
+  The time limit of a `telegram_poll` job is `2m`, which must be more than the long poll plus some time
+  for the client.
+- A poll that comes back *with* updates ends its job. So when many messages wait, they clear at one Bot API
+  answer per turn. Telegram allows one reader per bot. The rule that keeps one job per bot is declared on
+  the type of the job values (`TelegramPollArgs.InsertOpts`). So no code that adds a job can leave it out.
+- **A block is a problem with the user.** Telegram answers `403` for
+  "bot was blocked by the user", and for an account that is turned off. A staged delivery **stops at
+  once**, and does not spend the retry ladder. The reason says that to try again or to reconnect the
+  channel both change nothing.
+- On its own path, Telegram reports the block as a `my_chat_member` update. That sets `blocked_at` on the
+  channel identity of the contact, and from then on Margince does not offer the **Reply** button at all.
+  When the user ends the block, that clears it. The `update_id` of the update sets the order, so two
+  changes cannot apply in the wrong order.
+- **Private chats only.** Margince refuses messages from group and `supergroup` chats before it stores any data.
+  A bot in a group runs in the default privacy mode of Telegram, and would see only parts of the chat. A
+  reply finds who gets it through the *private* chat of the sender. So a message filed from a group could
+  never be answered where it started.
+- **Margince names media; it does not get files.** The body carries the text or the
+  `caption`. A message
+  with no words reads as `[photo]` / `[document]` / `[attachment]`. To get the file itself is out of
+  scope.
+- **A reply goes to the whole chat.** So a channel delivery that goes out is staged on
+  its own. It does not guess at how the capture provider keys its messages.
 
 ## Where the code lives
 
 | | |
 |---|---|
-| The workspace binding: connect ordering, the write shape, the RBAC gate | `backend/internal/modules/capture/channelconn.go` |
-| Rotate + disconnect (in-place repoint, archive, credential destruction) | `backend/internal/modules/capture/channelconnedit.go` |
-| The `/channel-connections` transport + the wire-code mapping | `backend/internal/modules/capture/handlers_channel.go` |
-| The poller's reads/writes: due scan, poll target, cursor advance, park | `backend/internal/modules/capture/channelpoll.go` |
-| Send-side resolve of the bot + the replacement fence | `backend/internal/modules/capture/channelsend.go` |
-| The channel counterparty auto-create + the erasure mutex | `backend/internal/modules/capture/sinkchannel.go` |
-| Bot API boundary, sentinels, token shape check | `backend/internal/modules/capture/telegram/api.go`, `auth.go` |
-| The pure update → activity mapping, and the membership (block/unblock) parse | `backend/internal/modules/capture/telegram/normalize.go`, `membership.go` |
-| The registered connector + its `MessageSender` seam | `backend/internal/modules/capture/telegram/send.go` |
-| Composition: the connect surface, the poll dispatcher + worker, the ingest worker | `backend/internal/compose/channelconnect.go`, `telegrampoll.go`, `telegrampollscope.go`, `telegramingest.go` |
-| Reachability (`blocked_at`) and the identity binding | `backend/internal/modules/contacts/channelidentity.go` |
-| The governed reply: recipient resolution, gate order, staging | `backend/internal/modules/activities/channelsend.go` |
-| The tables | `channel_connection`, `contact_channel_identity`, `erasure_suppression` channel rows, `comms_outbound`'s channel shape |
+| The workspace binding: the order of connect, the write shape, the RBAC gate | `backend/internal/modules/capture/channelconn.go` |
+| Rotate and disconnect (point in place, archive, delete the credential) | `backend/internal/modules/capture/channelconnedit.go` |
+| The `/channel-connections` transport, and how it maps wire codes | `backend/internal/modules/capture/handlers_channel.go` |
+| The reads and writes of the poller: due scan, poll target, cursor move, stop | `backend/internal/modules/capture/channelpoll.go` |
+| How a send finds the bot, and the fence for a new token | `backend/internal/modules/capture/channelsend.go` |
+| How a channel contact is created, and how it waits for an erase | `backend/internal/modules/capture/sinkchannel.go` |
+| Where Margince meets the Bot API, the error values, the token shape check | `backend/internal/modules/capture/telegram/api.go`, `auth.go` |
+| How an update turns into an activity, and how a block, or its end, is read | `backend/internal/modules/capture/telegram/normalize.go`, `membership.go` |
+| The registered connector, and its `MessageSender` seam | `backend/internal/modules/capture/telegram/send.go` |
+| Setup: the connect surface, the poll dispatcher and worker, the worker that takes messages in | `backend/internal/compose/channelconnect.go`, `telegrampoll.go`, `telegrampollscope.go`, `telegramingest.go` |
+| Whether a contact can be reached (`blocked_at`), and the identity binding | `backend/internal/modules/contacts/channelidentity.go` |
+| The reply and its rules: how it finds who gets it, the order of gates, staging | `backend/internal/modules/activities/channelsend.go` |
+| The tables | `channel_connection`, `contact_channel_identity`, the channel rows of `erasure_suppression`, and the channel shape of `comms_outbound` |
 | The REST contract | `backend/api/crm.yaml` (`/channel-connections*`, `/activities/{id}/send-message`) |
-| The job declarations | `backend/api/jobs.yaml` (`telegram_poll_sweep`, `telegram_poll`, `telegram_ingest`) |
-| The card, the connect/replace modal, and the status vocabulary | `frontend/src/screens/connectors.tsx`, `telegram-connect-form.tsx`, `connector-status.ts` |
-| The reply composer and the timeline **Reply** action | `frontend/src/screens/compose.tsx`, `contacttransports.ts` |
+| Where jobs are declared | `backend/api/jobs.yaml` (`telegram_poll_sweep`, `telegram_poll`, `telegram_ingest`) |
+| The card, the panel to connect or replace, and the words for each status | `frontend/src/screens/connectors.tsx`, `telegram-connect-form.tsx`, `connector-status.ts` |
+| The reply composer, and the **Reply** button on the timeline | `frontend/src/screens/compose.tsx`, `contacttransports.ts` |
 
 ## Where to go next
 
-- The inbound seam this rides on (the one Sink, the dedupe chokepoint, credential custody):
-  [explanation/capture-connectors.md](../explanation/capture-connectors.md).
-- The outbound half (the staging row, the seat/consent gates, the dispatcher, at-most-once):
+- The seam for messages that come in (the one Sink, the one place that finds copies, how the credential is
+  kept): [explanation/capture-connectors.md](../explanation/capture-connectors.md).
+- The side that sends (the staging row, the seat and consent gates, the dispatcher, at most once):
   [explanation/outbound-messaging.md](../explanation/outbound-messaging.md).
-- Connecting a mailbox instead (Gmail, IMAP, Graph, Calendar):
+- To connect a mailbox in place of a bot (Gmail, IMAP, Graph, Calendar):
   [how-to/connect-a-mailbox.md](connect-a-mailbox.md).
-- The consent model the reply gate reads: [explanation/privacy-and-consent.md](../explanation/privacy-and-consent.md).
-- Every flag and env var, the vault key included: [reference/configuration.md](../reference/configuration.md).
+- The consent model that the reply gate reads:
+  [explanation/privacy-and-consent.md](../explanation/privacy-and-consent.md).
+- Every flag and environment value, with the vault key:
+  [reference/configuration.md](../reference/configuration.md).

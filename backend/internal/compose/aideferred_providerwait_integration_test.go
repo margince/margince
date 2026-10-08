@@ -116,7 +116,7 @@ func TestWebsiteReadsSplitTheBudgetWaitFromTheProviderWait(t *testing.T) {
 	if budget != 1 || provider != 1 {
 		t.Fatalf("site_read counts budget=%d provider=%d, want 1 and 1", budget, provider)
 	}
-	if err := newAIBudgetResumeWorker(e.Pool, slog.New(slog.DiscardHandler)).resumeWorkspace(e.Admin(), e.WS); err != nil {
+	if err := newAIBudgetResumeWorker(e.Pool, slog.New(slog.DiscardHandler)).resumeWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatal(err)
 	}
 	if next, err := nextAttempt["budget"](); err != nil || !next.Before(farFuture) {
