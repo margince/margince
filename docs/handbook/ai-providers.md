@@ -9,7 +9,7 @@ which work in another place, under **Model tiers**.
 
 ### Where do I set up an AI provider?
 To set up an AI provider in Margince, open **Settings**, then **AI models**, and
-choose **Manage** on the provider's row under **Providers**.
+choose **Edit** on the provider's row under **Providers**.
 The provider's sheet opens on the right. **Connection** holds its key and, for
 the providers that need them, where it is reached; **Prices** holds what its
 models cost.
@@ -133,6 +133,62 @@ A model tier says its provider has no host when the provider cannot be reached
 until one is set. **OpenAI-compatible** and **Jev-compatible** have no address
 of their own. Open that provider's sheet under **Providers**, pick its
 **Service**, and choose **Save connection**; the tier can then be saved.
+
+### How do I see how many model calls failed, how long they took and what they cost?
+To read the model calls of your installation, open **Settings**, then **AI models**.
+You need **AI diagnostics read** to see the figures.
+- **Providers**: each row reads like "7 d: 98 calls · 11 failed (4 timeouts)".
+  **Edit** opens the sheet, and **Recent calls** there splits the calls **By host**, **By model** or **By tier**.
+- **Recent calls** covers **24 h**, **7 d** or **30 d**, with **p50**, **p95** and **Cost**.
+  Open a row to see only the calls that ended there.
+- **Model tiers**: the mark next to a tier opens its health for the last 7 days.
+  It counts only the calls of the model the tier has now, so a tier you move to another model starts with none.
+- **AI tasks**: **Edit** opens the task's sheet. **Recent calls** there shows "How calls got an answer", step by step.
+  It also says why a step passed a call on, such as "timed out", "failed" or "not sure enough".
+  Under "How long calls take, against the timeout", **p50** and **p95** sit beside the timeout that stops a call.
+
+Also called: AI call log, model latency, AI cost per task, failed AI calls.
+
+### How do I choose which OpenRouter hosts serve a model tier?
+To choose how OpenRouter picks a host, open **Model tiers**, choose **Edit** on the tier, and fill **Serving**.
+Host routing applies only when the tier's provider is **OpenAI-compatible** and its **Service** is OpenRouter.
+- Leave **Serving JSON** empty for the shipped default: sort by throughput, fp16 or bf16, require parameters.
+- Write `{}` to let OpenRouter route on its own.
+- To speed up the slowest calls, sort by `throughput`. Sorting by `latency` reached slower hosts in our tests.
+- `preferred_max_latency` and `preferred_min_throughput` only change the order of hosts. Use them with a sort or a filter.
+- `max_price` leaves out the hosts that cost more. With a sort, it can leave out the host the sort would choose.
+The form checks with the server as you type, and lists each problem with its line.
+**What OpenRouter will be asked for** shows the whole request in plain words.
+Each line says where it comes from: **Margince default**, **Connection**, **You set here** or **Each task**.
+Also called: OpenRouter routing, provider routing, host sort, OpenRouter throughput.
+
+### How do I stop OpenRouter hosts from keeping or training on our data?
+To set privacy for OpenRouter, open the **OpenAI-compatible** sheet under **Providers**.
+While its **Service** is OpenRouter, the sheet shows **OpenRouter settings**.
+- **Zero data retention**: only hosts that keep nothing.
+- **Refuse hosts that train on prompts**.
+- **Distillable models only**: only models whose license allows reusing output.
+- **Allow fallbacks**: try another host when the preferred one fails.
+- **Use only these hosts** and **Never use**: lists of OpenRouter host names.
+These apply to every tier on the connection, and no tier can loosen them.
+Saving a tier with a value that disagrees with the connection is refused.
+Settings in your OpenRouter account also apply, and this sheet does not show them.
+Also called: OpenRouter privacy, data retention, ZDR, data collection.
+
+### How do I set a task's thinking level and timeouts?
+To change how one AI task calls its model, open **AI tasks** under **Settings**, then **AI models**, and choose **Edit** on the task.
+The same users who may change a provider may change these.
+- **Thinking level** is sent to every provider through its own thinking setting.
+  A model with no thinking control ignores it. **Default (the binding and each prompt decide)** sends nothing of its own.
+- **Decision model timeout** shows only on a task that asks a decision model first.
+  It runs from 5 to 60 seconds, 15 by default. After it, the task falls back to its tier model.
+  If **p95** is close to the line and the fallback answers, give it a little more time.
+- **Model call timeout** runs from 10 to 300 seconds, 300 by default. A call that runs longer is stopped, and the next tier gets a try.
+  Lower it when a host stops answering and the tier above it works.
+
+**Save settings** applies to the whole installation within a minute. **Reset to defaults** removes the task's own values.
+To check the change, come back to **Recent calls** after some calls. A call's own page shows the **Request settings sent** with it.
+Also called: AI timeout, reasoning effort, thinking budget, slow AI task.
 
 ### How do I see whether an AI provider is working?
 To see whether an AI provider is working in Margince, open **Settings**, then **System health**, and read the **AI provider status** card.

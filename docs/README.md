@@ -99,20 +99,18 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
-- [connect-a-mailbox.md](how-to/connect-a-mailbox.md): connect a mailbox through Gmail, IMAP, Microsoft
-  or Google Calendar.
+- [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
+  and calendar capture need.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local Ollama model, with no
   cloud key.
-- [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): see what tools a company runs, from
-  its public web data.
-- [check-a-vat-number.md](how-to/check-a-vat-number.md): check the VAT number of a company with the EU
-  register.
+- [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): turn on the public lookup of what
+  a company runs.
+- [check-a-vat-number.md](how-to/check-a-vat-number.md): turn on VAT number checks against the EU
+  register, and find why one gets no answer.
 - [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md): which mail goes out through which server.
-- [connect-telegram.md](how-to/connect-telegram.md): connect a Telegram bot to a workspace.
-- [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md): import your own LinkedIn
-  contacts.
+- [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
-  companies.
+  companies over MCP or REST.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a
   cloud model provider.
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
@@ -132,8 +130,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
-- [tune-ai-requests.md](how-to/tune-ai-requests.md): read what model calls cost, and set how each task
-  calls its model.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md): build the desktop app for macOS or
   Windows.
 - [update-the-handbook.md](how-to/update-the-handbook.md): change the handbook so **Ask your documents** can answer
