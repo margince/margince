@@ -2938,6 +2938,13 @@ export const vi = {
   "leadReasons.removeTitle": "Xóa lý do này?",
   "leadReasons.removeBody":
     '"{label}" không được khách hàng tiềm năng nào dùng và sẽ biến mất khỏi danh sách.',
+  "followUpSettings.title": "Theo dõi",
+  "followUpSettings.sub":
+    "Khi nào một thư gửi khách hàng hiện lại trên trang chủ của người gửi để theo dõi.",
+  "followUpSettings.days": "Nhắc sau (ngày)",
+  "followUpSettings.daysHint":
+    "Số ngày một thư đã gửi có thể chưa được trả lời trước khi người gửi được nhắc theo dõi, từ 1 đến 30.",
+  "followUpSettings.outOfRange": "Nhập số ngày nguyên từ 1 đến 30.",
   "leadHandling.title": "Xử lý khách hàng tiềm năng",
   "leadHandling.sub": "Cách cài đặt này xử lý một khách hàng tiềm năng mới.",
   "leadHandling.firstResponse": "Mục tiêu phản hồi đầu tiên",

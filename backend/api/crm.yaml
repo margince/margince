@@ -9371,6 +9371,45 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /activities/follow-up-settings:
+    get:
+      tags: [Activities]
+      operationId: getFollowUpSettings
+      summary: How long a sent message may go unanswered before the worklist reminds its sender.
+      description: |
+        The workspace's follow-up window: a message a seat sent to a customer that is still
+        the last word after this many days comes back on the sender's worklist as a
+        follow-up. Read by every role; changed by admin/ops. Governed by the
+        `installation_settings` RBAC object.
+      responses:
+        '200':
+          description: The follow-up settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowUpSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [Activities]
+      operationId: updateFollowUpSettings
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Change the follow-up window (admin/ops).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FollowUpSettings' }
+      responses:
+        '200':
+          description: The updated follow-up settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowUpSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /leads/settings:
     get:
       tags: [Leads]
@@ -43128,6 +43167,16 @@ components:
         label: { type: string, minLength: 1 }
         sort_order: { type: integer }
         active: { type: boolean }
+
+    FollowUpSettings:
+      type: object
+      required: [follow_up_after_days]
+      properties:
+        follow_up_after_days:
+          type: integer
+          minimum: 1
+          maximum: 30
+          description: Days a sent message may stay unanswered before its sender is reminded to follow up.
 
     LeadSettings:
       type: object

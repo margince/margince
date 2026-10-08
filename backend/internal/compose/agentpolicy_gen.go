@@ -402,6 +402,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/worklist/response":                                             {Op: "getResponseMetrics", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/team":                                                 {Op: "getTeamBoard", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/acquisition-sources/{id}":                                    {Op: "updateAcquisitionSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PATCH /v1/activities/follow-up-settings":                               {Op: "updateFollowUpSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/activities/{id}":                                             {Op: "updateActivity", Access: "tool", Tool: "update_record", RecordType: "activity", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/activities/{id}/audience":                                    {Op: "setActivityAudience", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/activity-review-templates/{id}":                              {Op: "updateActivityReviewTemplate", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

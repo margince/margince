@@ -2968,6 +2968,13 @@ export const de = {
   "leadReasons.removeTitle": "Grund entfernen?",
   "leadReasons.removeBody":
     "„{label}“ wird von keinem Lead verwendet und wird aus der Liste entfernt.",
+  "followUpSettings.title": "Nachfassen",
+  "followUpSettings.sub":
+    "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Startseite des Absenders erscheint.",
+  "followUpSettings.days": "Erinnern nach (Tagen)",
+  "followUpSettings.daysHint":
+    "So viele Tage darf eine gesendete Nachricht unbeantwortet bleiben, bevor der Absender ans Nachfassen erinnert wird, 1 bis 30.",
+  "followUpSettings.outOfRange": "Gib eine ganze Zahl von 1 bis 30 Tagen ein.",
   "leadHandling.title": "Lead-Bearbeitung",
   "leadHandling.sub": "Wie neue Leads bearbeitet werden.",
   "leadHandling.firstResponse": "Zielzeit für die erste Antwort",

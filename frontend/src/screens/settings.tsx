@@ -107,6 +107,7 @@ import { CustomFieldsAdmin } from "./customfields";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
+import { FollowUpSettingsCard } from "./followupsettings";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -219,16 +220,15 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     // ---- company ----
     case "company":
       // The installation's own facts, then the money, then the company profile
-      // the AI reads. The currency pair stays ADJACENT and nothing is allowed
-      // between them: the base currency is declared in the second card of
-      // InstallationSettingsCard and every rate below converts to it, and
-      // before they were merged the lock reason was explained on one page while
-      // the consequence landed on another.
+      // the AI reads, then the follow-up window. The currency pair stays
+      // ADJACENT: the base currency is declared in InstallationSettingsCard and
+      // every rate below converts to it.
       return (
         <>
           <InstallationSettingsCard />
           <FxRatesCard />
           <CompanyContextCard />
+          <FollowUpSettingsCard />
         </>
       );
     case "authentication":

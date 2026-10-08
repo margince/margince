@@ -43,6 +43,14 @@ func (stubs) LogActivity(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 	httperr.NotImplemented(w, r, "LogActivity")
 }
 
+func (stubs) GetFollowUpSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetFollowUpSettings")
+}
+
+func (stubs) UpdateFollowUpSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateFollowUpSettings")
+}
+
 func (stubs) RelinkActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.RelinkActivitiesParams) {
 	httperr.NotImplemented(w, r, "RelinkActivities")
 }

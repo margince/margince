@@ -101,6 +101,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
+		WithSettings(NewSettingsStore(pool)).
 		WithConsent(gate).
 		WithSendPreview(gate).
 		// The SAME seam the check_availability tool reads, so the two doors

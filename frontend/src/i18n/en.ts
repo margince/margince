@@ -3028,6 +3028,13 @@ export const en = {
   "leadReasons.removeTitle": "Remove this reason?",
   "leadReasons.removeBody":
     "“{label}” is not used by any lead and is removed from the list.",
+  "followUpSettings.title": "Follow-ups",
+  "followUpSettings.sub":
+    "When a message sent to a customer comes back on the sender's Home as a follow-up.",
+  "followUpSettings.days": "Remind after (days)",
+  "followUpSettings.daysHint":
+    "Days a sent message can go unanswered before its sender is reminded to follow up, 1 to 30.",
+  "followUpSettings.outOfRange": "Enter a whole number of days from 1 to 30.",
   "leadHandling.title": "Lead handling",
   "leadHandling.sub": "How new leads are handled.",
   "leadHandling.firstResponse": "First-response target",

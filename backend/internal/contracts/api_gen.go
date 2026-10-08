@@ -34248,6 +34248,12 @@ type FinanceInvoiceStatus string
 // and the reader is told it is not current.
 type FinanceSummaryState string
 
+// FollowUpSettings defines model for FollowUpSettings.
+type FollowUpSettings struct {
+	// FollowUpAfterDays Days a sent message may stay unanswered before its sender is reminded to follow up.
+	FollowUpAfterDays int `json:"follow_up_after_days"`
+}
+
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
 type ForecastAssurance struct {
 	AsOf time.Time `json:"as_of"`
@@ -53983,6 +53989,9 @@ type UpdateAcquisitionSourceJSONRequestBody = UpdateAcquisitionSourceRequest
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
 type LogActivityJSONRequestBody = CreateActivityRequest
 
+// UpdateFollowUpSettingsJSONRequestBody defines body for UpdateFollowUpSettings for application/json ContentType.
+type UpdateFollowUpSettingsJSONRequestBody = FollowUpSettings
+
 // RelinkActivitiesJSONRequestBody defines body for RelinkActivities for application/json ContentType.
 type RelinkActivitiesJSONRequestBody = RelinkActivitiesRequest
 
@@ -65407,6 +65416,12 @@ type ServerInterface interface {
 	// Log an activity (the `log_activity` MCP verb).
 	// (POST /activities)
 	LogActivity(w http.ResponseWriter, r *http.Request, params LogActivityParams)
+	// How long a sent message may go unanswered before the worklist reminds its sender.
+	// (GET /activities/follow-up-settings)
+	GetFollowUpSettings(w http.ResponseWriter, r *http.Request)
+	// Change the follow-up window (admin/ops).
+	// (PATCH /activities/follow-up-settings)
+	UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 	// Re-associate a named set of activities to a chosen record, in one transaction.
 	// (POST /activities/relink-bulk)
 	RelinkActivities(w http.ResponseWriter, r *http.Request, params RelinkActivitiesParams)
@@ -67783,6 +67798,18 @@ func (_ Unimplemented) ListActivities(w http.ResponseWriter, r *http.Request, pa
 // Log an activity (the `log_activity` MCP verb).
 // (POST /activities)
 func (_ Unimplemented) LogActivity(w http.ResponseWriter, r *http.Request, params LogActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How long a sent message may go unanswered before the worklist reminds its sender.
+// (GET /activities/follow-up-settings)
+func (_ Unimplemented) GetFollowUpSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change the follow-up window (admin/ops).
+// (PATCH /activities/follow-up-settings)
+func (_ Unimplemented) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72869,6 +72896,48 @@ func (siw *ServerInterfaceWrapper) LogActivity(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LogActivity(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFollowUpSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetFollowUpSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFollowUpSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateFollowUpSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateFollowUpSettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -106234,6 +106303,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities", wrapper.LogActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/follow-up-settings", wrapper.GetFollowUpSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/activities/follow-up-settings", wrapper.UpdateFollowUpSettings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/relink-bulk", wrapper.RelinkActivities)
