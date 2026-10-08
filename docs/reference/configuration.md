@@ -27,42 +27,36 @@ The api and the worker follow the same rules, and each reads only the values it 
 
 | Kind of value | Sources, first match wins | When no source has a value |
 |---|---|---|
-| Flag or `MARGINCE_*` variable | flag → environment variable → default | The default. A required value, such as `MARGINCE_DSN`, stops the process at boot. |
+| Flag or `MARGINCE_*` variable | flag → environment variable → default | The default. |
 | Key in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | The default. |
-| Setting an admin changes | value saved in the database → default | The default, until an admin saves one. |
-| Seed in `margince.yaml` | `margince.yaml` → default | Read once, when the company is created. |
+| Setting an admin changes | value saved in the database → default | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
+| Seed in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | Used when the company is created, and again by a data reset. |
 | AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
-| Secret in `margince.yaml` | the `${file:…}` or `${env:…}` it references | Depends on the field; see below. |
-| License | `MARGINCE_LICENSE` → `license.token` in `margince.yaml` | The installation runs unlicensed. |
+| SMTP password | `email.smtp.password` reference → the copy sealed in the vault | The relay is used without authentication. |
+| License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run unlicensed. |
 
-**Posture.** `MARGINCE_ENV` sets it: `production` (also when unset or unrecognised), `dev` or `test`.
-The overlay file is the base path with the posture added, for example `margince.dev.yaml`. A scalar
-in the overlay replaces the base value, a mapping merges key by key, and a list replaces the whole
-list. An overlay cannot remove a key. A file that exists but does not parse, or names an unknown
-key, is a boot error.
+**Posture.** `MARGINCE_ENV` picks the overlay; how the two files merge is in
+[The file layer is two files](#the-file-layer-is-two-files-a-base-and-the-postures-overlay).
 
 **Seeds.** These are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes,
 retention, starter automations, booking page, `ai_routing`). The api writes them in one transaction
 when it boots on a database with no company. Without `bootstrap_admin` it prints a one-time setup
-token instead, and the first person to claim the installation creates the company from the same
-seeds. After that the database holds these values: editing the seeds changes nothing, and the
-sections can be deleted. Every other section of the file is read at each boot.
+token instead, and the person who claims the installation enters the company and the first admin;
+the `seeds.*` values still apply. After that, editing the seeds changes nothing until a data reset
+(`operations.allow_data_reset`), which applies `seeds.*` again from the current file. Every other
+section of the file is read at each boot.
 
 **Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
-value. A save outside the range of a setting is refused with a 422 that names the field. Editing
+value. A value the setting's own check refuses gets a 422 that names the setting. Editing
 `margince.yaml` never changes a saved setting.
 
 **Model binding.** The binding says which model serves each AI tier and which model embeds. It is a
 setting: `seeds.ai_routing` gives a new installation its first value, and Settings → AI changes it.
 Without a binding or `--ai-fake`, the worker does not start its AI runner or its embedding lane.
-`MARGINCE_AI_ROUTING` is not read.
 
-**Secrets.** A secret field in `margince.yaml` holds a reference, `${file:/run/secrets/name}` or
-`${env:MARGINCE_NAME}`, never the value; a literal is refused when the file is read. An empty
-bootstrap password or license reference is an error that names the field, so a mistyped path does
-not pass as "no license". An empty SMTP password means a relay without authentication. The license
-reads `MARGINCE_LICENSE` before its reference.
-
+**Secrets.** An empty bootstrap password or license reference is an error that names the field.
+Sealed copies of the SMTP password and the license are in
+[The vault also holds the two deployment credentials](#the-vault-also-holds-the-two-deployment-credentials).
 
 ## Common log flags (api, worker)
 
