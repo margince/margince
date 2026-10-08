@@ -31,7 +31,8 @@ fields an object carries, and no way to add to what a field may be.
 
 Each type maps to one column type:
 
-- `number` → `numeric`, passed both ways as a string and never a `float`, so the value stays correct.
+- `number` → `numeric`, read back as a string and never a `float`. A request decodes a JSON number as
+  a `float64` by default, so a caller that needs every digit sends the value as a string.
 - `currency` → `bigint` in the smallest money unit, with the `ISO-4217` code kept in the catalog row
   instead of the column.
 - `picklist` → `text` plus a generated `CHECK` constraint.
@@ -76,8 +77,8 @@ closing.
 
 A label that looks like a new object, a relationship, a formula, or a check rule is refused. It is never
 accepted as a text column instead. It answers a 422 `structural_change_refused` that names
-the way out (`details.route: source_development_path`). Runtime custom fields add small single-value
-facts to objects that already exist; anything that changes the data model ships as a reviewed source change.
+the way out (`details.route: source_development_path`). Runtime custom fields add small facts (one value or a
+list of choices) to objects that already exist. Anything that changes the data model ships as a reviewed source change.
 
 The check looks for key words in the label. It refuses some labels that are right, because accepting a
 wrong label costs far more than refusing a right one. A "Linked Contract" text column would look like a

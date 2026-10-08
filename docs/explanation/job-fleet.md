@@ -372,8 +372,8 @@ return extension.Reschedule(classProviderUnavailable, pollRetryDelay, cause)
 the failing kind**. The message follows the same rule, so declaring a class gives both. It keeps the
 wait within `[1s, 15m]` before the wait reaches the queue:
 
-- **The floor of `1s`** is needed because River stops the whole process on a length of time below zero. A
-  unit that derived one from a clock would take the worker process down instead of failing a tick.
+- **The floor of `1s`** is needed because River panics on a length of time below zero. River catches
+  the panic and fails that attempt, so a unit that derived one from a clock would turn a wait into a failure.
 - **The cap of `15m`** keeps a deferred row something you can measure. Both readers count a `scheduled` row as
   waiting, but every "how long has this waited" reading counts only rows with
   `scheduled_at <= now()`. A row deferred by hours would wait without ever showing how long it waited.

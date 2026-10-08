@@ -166,6 +166,7 @@ by
 byte
 cache
 cadence
+calculation
 calendar
 call
 callback
@@ -240,6 +241,7 @@ commercial
 commission
 commit
 common
+communication
 company
 compare
 compile
@@ -347,6 +349,7 @@ die
 diff
 different
 digest
+digit
 direct
 direction
 directory
@@ -645,6 +648,7 @@ kind
 know
 known
 label
+lack
 ladder
 landed
 landing
@@ -670,7 +674,7 @@ legal
 length
 less
 let
-letter
+lettered
 level
 lexical
 library
@@ -732,8 +736,8 @@ mean
 meant
 measure
 meet
-meeting
 meeting's
+meetings
 member
 membership
 menu
@@ -800,6 +804,7 @@ odd
 of
 off
 offered
+offering
 official
 offline
 offset
@@ -852,6 +857,7 @@ page
 pair
 palette
 panel
+panic
 parameter
 parent
 park
@@ -1287,6 +1293,7 @@ too
 tool
 toolchain
 toolkit
+tooltips
 top
 topic
 total
@@ -1383,6 +1390,7 @@ whether
 which
 while
 white
+whitespace
 who
 whole
 whose

@@ -211,11 +211,11 @@ the text lands. Both write a row per recipient into `communication_decision`.
 
 The answer is no by default, and an allow rests on evidence, never on a purpose key the caller
 supplies. The engine resolves a kind from what the send is: the thread it answers, the invoice it is
-about, the form it uses. It then checks what that kind requires. A reply is allowed because this
+about, the template it uses. It then checks what that kind requires. A reply is allowed because this
 recipient is on the thread the subject opened. An invoice is allowed because a live invoice reaches
 them through the company they work for now.
 
-A sales mail still needs consent, and there a `requires_double_opt_in` purpose needs a confirmed
+A marketing mail still needs consent, and there a `requires_double_opt_in` purpose needs a confirmed
 `consent_event`. A send whose kind nothing supports is `review`, never a silent pass.
 
 The engine must tell an **answer** (park: a human can do something about it) from a **fault** (retry:
@@ -466,8 +466,8 @@ The binding is the `DraftRef` on the input of the mail send. `Store.recordDraftO
 or not at all. The result comes from checking the served text against what was sent: `accepted` when
 the tokens are the same, `edited_sent` otherwise.
 
-The way it measures how much the two texts agree is **pinned**. It is a Levenshtein score over text
-tokens, on NFC text in small letters, with each run of empty characters made into one. It is pinned because a later
+The way it measures how much the two texts agree is **pinned**. It is a Levenshtein ratio over tokens.
+The text is NFC normalized and case folded, and each run of whitespace becomes one space. It is pinned because a later
 corpus is built after the fact from these rows. A meaning that drifted would break every decision made
 from the rows already stored.
 
