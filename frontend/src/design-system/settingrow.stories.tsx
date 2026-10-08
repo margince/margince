@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button, Card, Disclosure, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DataTable } from "./datatable";
+import { Panel, PanelBody, PanelIntro } from "./panel";
 import { Select } from "./select";
 import { SettingList, SettingRow } from "./settingrow";
 import { Switch } from "./switch";
@@ -160,3 +161,117 @@ function Catalog() {
 }
 
 export const Catalogue: Story = { render: () => <Catalog /> };
+
+// bleed="settings": a form standing straight in the Panel. The hairlines reach
+// the pane's edges and the row text keeps the intro's x; no row lights up.
+function AccountForm() {
+  const [digest, setDigest] = useState(true);
+  return (
+    <Panel title="Account">
+      <PanelBody>
+        <PanelIntro>How this workspace reaches you.</PanelIntro>
+      </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label="Reply-to address"
+          value="marek@gradion.com"
+          control={<Button variant="ghost">Edit</Button>}
+        />
+        <SettingRow
+          label="Weekly digest"
+          description="One mail on Monday with what moved."
+          control={
+            <Switch
+              label="Weekly digest"
+              labelHidden
+              checked={digest}
+              onChange={setDigest}
+            />
+          }
+        />
+        <SettingRow
+          label="Refused domains"
+          layout="stack"
+          control={
+            <DataTable
+              label="Refused domains"
+              columns={[
+                {
+                  key: "domain",
+                  header: "Domain",
+                  render: (row: RefusedDomain) => row.domain,
+                },
+                {
+                  key: "by",
+                  header: "Decided by",
+                  render: (row: RefusedDomain) => row.by,
+                },
+              ]}
+              rows={REFUSED}
+              rowKey={(row) => row.domain}
+            />
+          }
+        />
+      </SettingList>
+      <PanelBody>
+        <PanelIntro>Changes apply to the next mail sent.</PanelIntro>
+      </PanelBody>
+    </Panel>
+  );
+}
+
+export const BleedSettings: Story = { render: () => <AccountForm /> };
+
+// bleed="records": one row per thing, so every row takes a table row's hover,
+// pressable or not.
+function RolesList() {
+  return (
+    <Panel title="Roles">
+      <PanelBody>
+        <PanelIntro>What each role may read and change.</PanelIntro>
+      </PanelBody>
+      <SettingList bleed="records">
+        <SettingRow
+          label="Administrator"
+          description="Every setting and every record."
+          value="2 members"
+          control={<Button variant="ghost">Edit</Button>}
+        />
+        <SettingRow
+          label="Sales rep"
+          description="Their own deals and the accounts on them."
+          value="5 members"
+          control={<Button variant="ghost">Edit</Button>}
+        />
+        <SettingRow
+          label="Read only"
+          description="Reads every record and changes none."
+          value="1 member"
+          control={null}
+        />
+      </SettingList>
+    </Panel>
+  );
+}
+
+export const BleedRecords: Story = { render: () => <RolesList /> };
+
+// The phone gate's browser runs at 390px only under `uat-phone`; the frame is
+// the page's own gutter, so the pane meets it the way a settings page does.
+export const BleedAtPhoneWidth: Story = {
+  render: () => (
+    <div
+      style={{
+        display: "grid",
+        gap: "var(--space-4)",
+        padding: "var(--padCard)",
+      }}
+    >
+      <AccountForm />
+      <RolesList />
+    </div>
+  ),
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

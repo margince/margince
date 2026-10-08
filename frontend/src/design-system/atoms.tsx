@@ -1214,15 +1214,29 @@ export { useScrollRegion } from "./scrollregion";
  */
 export function TableScroll({
   label,
+  bleed,
   className,
   children,
-}: Readonly<{ label: string; className?: string; children: ReactNode }>) {
+}: Readonly<{
+  label: string;
+  // Spans the pane when standing straight in a `Panel`, inert inside a body:
+  // rules edge to edge, first and last cell padded to the body's x.
+  bleed?: boolean;
+  className?: string;
+  children: ReactNode;
+}>) {
   const box = useRef<HTMLDivElement | null>(null);
   const region = useScrollRegion(box, label);
   return (
     <div
       ref={box}
-      className={["table-scroll", className ?? ""].filter(Boolean).join(" ")}
+      className={[
+        "table-scroll",
+        bleed ? "table-scroll-bleed" : "",
+        className ?? "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       {...region}
     >
       {children}

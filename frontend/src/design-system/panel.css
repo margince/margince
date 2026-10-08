@@ -25,14 +25,8 @@
  * What does not fit on one band is not header content — a toolbar row or a
  * `PanelBody` under the head is where it belongs.
  *
- * That is the one distinction that decides every rule in this file: a rule
- * dividing the CARD from its content runs edge to edge, and a rule dividing two
- * pieces of the content stops at the padding. The header and the footer are the
- * card's own chrome — the same band every card on every screen of this product
- * draws — so their rules are the first kind. Everything BELOW the header (the
- * body seam, the row hairlines, `SettingList`'s rules) is the second, and stops
- * where the content stops. A page that mixed the two inside one card read as two
- * grids, which is what a sweep of the settings pages showed. */
+ * Its rule divides the CARD from its content, so it runs edge to edge; where a
+ * rule between two pieces of content stops is the seam rule's call, below. */
 .panel-head {
   display: flex;
   align-items: center;
@@ -121,37 +115,22 @@
   content: none;
 }
 
-/* THE SEAM RULE, and it is one rule: a boundary between two sections of a card
- * is a hairline inset to the card's padding, and a section that wants air
- * instead takes spacing and no line at all. There is no third option, because
- * the third option is
- * what the tree had — twenty-odd independent `border-top: 1px solid
- * var(--borderSubtle)` declarations across the screen sheets, seven of them
- * drawn as `border-bottom` instead, six full-bleed and seven inset by the
- * body's own 20px, with a `:last-child` reset on about half. The same card
- * could therefore show a line that reached its edges above one section and a
- * line that stopped 20px short above the next.
- *
- * Every rule BETWEEN two pieces of content is inset — this seam, the row
- * hairlines, and `SettingList`'s rules between its rows. The header's and the
- * footer's are not: those bands are the card's own chrome, identical on every
- * card in the product, and their rules divide the card from its content rather
- * than the content from itself. A pseudo-element rather than a border, because
- * a border cannot be inset. It is absolutely positioned inside the body it
- * belongs to, so it never becomes a flex item of that body.
- *
- * Declared as adjacency rather than as an opt-in class so a caller cannot
- * forget it, and so two sections that ARE adjacent cannot disagree about
- * whether they are. Two screens had already discovered the same missing rule
- * independently and spelled it themselves, one of them without a reset — which
- * is what a rule the caller has to remember gets you. */
+/* THE SEAM RULE: a rule between content is inset to the pane's padding, except
+ * beside a list that bleeds. A pseudo-element, as a border cannot be inset. */
 .panel-body + .panel-body::before,
-.panel-row + .panel-body::before {
+.panel-row + .panel-body::before,
+.panel > .settinglist-bleed + .panel-body::before,
+.panel > .table-scroll-bleed + .panel-body::before {
   content: "";
   position: absolute;
   inset: 0 var(--padPanel) auto;
   height: 1px;
   background: var(--borderSubtle);
+}
+.panel-row-record + .panel-body::before,
+.panel > .settinglist-bleed + .panel-body::before,
+.panel > .table-scroll-bleed + .panel-body::before {
+  inset: 0 0 auto;
 }
 
 /* An empty state inside a card is a SENTENCE, not a stage.
@@ -242,8 +221,8 @@
 
 /* A hairline row whose CONTENT runs edge to edge, in the panel's own margin
  * rather than the body's — the shape every list inside a panel wants. The rule
- * between two rows is inset to that margin, like every other rule in a card, so
- * a panel of rows and a panel of `SettingRow`s draw their hairlines at one x.
+ * between two rows is inset to that margin, so a panel of rows and a panel of
+ * `SettingRow`s draw their hairlines at one x.
  * No rule on the first row: the header above it already draws that line.
  *
  * The rule and the hover are TWO shapes, and this one is only the rule. Held
@@ -275,6 +254,16 @@
 .panel-head + .panel-row::before {
   content: none;
 }
+/* record: one row per thing, so it reads as a table row, rule and hover alike. */
+.panel-row-record {
+  transition: background-color var(--dur-state) var(--ease-out);
+}
+.panel-row-record:hover {
+  background: var(--bgHover);
+}
+.panel-row-record::before {
+  inset: 0 0 auto;
+}
 
 /* The footer band — the card's own chrome, so edge to edge like the header. */
 .panel-foot {
@@ -297,8 +286,11 @@
   padding: 0 var(--padPanel) var(--padPanel);
 }
 /* Directly under the header there is no body above to be spaced off, so the
- * strip pays for its own top interval. */
-.panel-head + .panel-actions {
+ * strip pays for its own top interval; so it does under a list's last row. */
+.panel-head + .panel-actions,
+.panel-row-record + .panel-actions,
+.panel > .settinglist-bleed + .panel-actions,
+.panel > .table-scroll-bleed + .panel-actions {
   padding-top: var(--space-4);
 }
 

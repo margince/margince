@@ -247,9 +247,9 @@ export function PanelIntro({
 // PanelRow is the hairline row every list inside a panel wants: content that
 // runs edge to edge rather than sitting in the body's padding, with a rule
 // against the row above it (none on the first). The rule itself is inset to the
-// panel's padding, like every rule BETWEEN two pieces of a card's content — see
-// the seam rule in panel.css. The header's and the footer's rules are the card's
-// own chrome and stay edge to edge.
+// panel's padding unless the row is a `record`. The seam rule in panel.css
+// says where it stops. The header's and the footer's rules are the card's own
+// chrome and stay edge to edge.
 //
 // A row is INERT unless the caller says otherwise, which is the reverse of what
 // this component shipped with. The hover fill was unconditional, so a panel
@@ -261,6 +261,7 @@ export function PanelIntro({
 // itself a target.
 export function PanelRow({
   interactive,
+  record,
   children,
   className,
 }: Readonly<{
@@ -271,6 +272,9 @@ export function PanelRow({
   // A row that merely CONTAINS a control is not this. Its control draws its
   // own hover, and a fill behind it claims a hit area the row does not have.
   interactive?: boolean;
+  // One row per THING in a list of them (a model tier, a member): the hairline
+  // runs edge to edge and the row takes a table row's hover, pressable or not.
+  record?: boolean;
   children: ReactNode;
   className?: string;
 }>) {
@@ -279,6 +283,7 @@ export function PanelRow({
       className={[
         "panel-row",
         interactive ? "panel-row-interactive" : "",
+        record ? "panel-row-record" : "",
         className ?? "",
       ]
         .filter(Boolean)

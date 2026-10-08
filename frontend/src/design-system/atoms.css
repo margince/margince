@@ -47,6 +47,19 @@
 .table tbody tr:hover td {
   background: var(--bgHover);
 }
+/* bleed: the table spans the pane, and its outer cells keep the pane's padding
+   so the first column lines up with a PanelBody's text. */
+.panel > .table-scroll-bleed > .table > * > tr > :first-child {
+  padding-inline-start: var(--padPanel);
+}
+.panel > .table-scroll-bleed > .table > * > tr > :last-child {
+  padding-inline-end: var(--padPanel);
+}
+/* Inset, because the pane's `overflow: hidden` clips a ring drawn outside it. */
+.panel > .table-scroll-bleed:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 
 /* A cell with two facts that belong on two lines — a call's timestamp over the
  * reason it failed, say — rather than run together as one glued word. Named

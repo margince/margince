@@ -123,23 +123,65 @@ describe("PanelRow separates the hairline from the press", () => {
     expect(row?.classList.contains("panel-row-interactive")).toBe(true);
     expect(row?.classList.contains("panel-row-on")).toBe(true);
   });
+
+  it("marks a row of a record list apart from a press target", () => {
+    const { container } = render(<PanelRow record>Deep tier</PanelRow>);
+    const row = container.querySelector(".panel-row");
+    expect(row?.classList.contains("panel-row-record")).toBe(true);
+    expect(row?.classList.contains("panel-row-interactive")).toBe(false);
+  });
+
+  it("leaves a plain row out of the record list", () => {
+    const { container } = render(<PanelRow>Renewal date</PanelRow>);
+    expect(
+      container
+        .querySelector(".panel-row")
+        ?.classList.contains("panel-row-record"),
+    ).toBe(false);
+  });
 });
 
 // A deleted rule body still parses and still paints, so the stylesheet is
 // asserted on directly rather than trusting the class list above: the hover
 // fill has to exist, and it has to hang on the interactive class alone.
-describe("panel.css keeps the row's hover on the interactive variant", () => {
-  it("declares the hover fill only for an interactive row", () => {
-    const css = panelCss();
+describe("panel.css keeps the row's hover on its two variants", () => {
+  it("declares the hover fill only for an interactive row and a record row", () => {
+    const css = stripComments(panelCss());
     const hovers = [...css.matchAll(/([^{}]*:hover)\s*\{([^}]*)\}/g)].filter(
       ([, selector]) => selector.includes(".panel-row"),
     );
-    expect(hovers.length).toBe(1);
-    const [selector, body] = [hovers[0][1].trim(), hovers[0][2]];
-    expect(selector).toBe(".panel-row-interactive:hover");
+    expect(hovers.map(([, selector]) => selector.trim())).toEqual([
+      ".panel-row-interactive:hover",
+      ".panel-row-record:hover",
+    ]);
     // The body is the point of the variant. An emptied rule reads as a live
     // one to every gate that only counts selectors.
-    expect(body).toMatch(/background:\s*var\(--bgHover\)/);
+    for (const [, , body] of hovers) {
+      expect(body).toMatch(/background:\s*var\(--bgHover\)/);
+    }
+  });
+
+  // A record list reads as a table: its rows' rules reach the pane's edges, and
+  // so does the seam under its last row.
+  it("runs a record row's hairline and the seam under it edge to edge", () => {
+    const rules = cssRules(panelCss());
+    const insetOf = (selector: string) =>
+      rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => declaredValue(rule.block, "inset"))
+        .filter((value) => value !== undefined)
+        .at(-1);
+    expect(insetOf(".panel-row-record::before")).toBe("0 0 auto");
+    for (const lead of [
+      ".panel-row-record",
+      ".panel > .settinglist-bleed",
+      ".panel > .table-scroll-bleed",
+    ]) {
+      expect(insetOf(`${lead} + .panel-body::before`)).toBe("0 0 auto");
+    }
+    expect(insetOf(".panel-body + .panel-body::before")).toBe(
+      "0 var(--padPanel) auto",
+    );
   });
 
   it("leaves the bare row its hairline and nothing that suggests a press", () => {
@@ -152,10 +194,8 @@ describe("panel.css keeps the row's hover on the interactive variant", () => {
     expect(body).not.toMatch(/transition/);
 
     // The hairline is drawn as an inset pseudo-element rather than a border,
-    // because a border cannot stop at the card's padding — every rule BETWEEN
-    // two pieces of a card's content does, and only the header's and footer's
-    // run edge to edge. Asserted on the rule that draws it, so an inset that
-    // gets dropped back onto the row's own border still fails here.
+    // because a border cannot stop at the card's padding. Asserted on the rule
+    // that draws it, so an inset dropped back onto the row's border fails here.
     const line = /(?:^|\n)\.panel-row::before\s*\{([^}]*)\}/.exec(panelCss());
     expect(line).not.toBeNull();
     const drawn = line?.[1] ?? "";
