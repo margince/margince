@@ -557,7 +557,8 @@ func TestAnInvitedAdminIsNotAnotherActiveAdmin(t *testing.T) {
 		t.Fatalf("invite a second admin: %v", err)
 	}
 	if err := e.svc.RedeemPasswordReset(
-		principal.WithCorrelationID(e.wsCtx(e.admin), ids.NewV7()), rawToken, "an-admin-password-2"); err != nil {
+		principal.WithCorrelationID(e.wsCtx(e.admin), ids.NewV7()), rawToken, "an-admin-password-2",
+	); err != nil {
 		t.Fatalf("redeem: %v", err)
 	}
 	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin, DeactivateUserInput{UserID: e.admin.UserID}); err != nil {

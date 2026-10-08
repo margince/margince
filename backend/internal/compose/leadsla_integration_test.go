@@ -135,6 +135,17 @@ func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
 	if assignee == nil || *assignee != e.Rep1 {
 		t.Errorf("task assignee = %v, want the escalation target %s", assignee, e.Rep1)
 	}
+	// System work about the lead, not a touch of it: a human origin would
+	// make the breach the lead's latest activity.
+	var origin string
+	if err := owner.QueryRow(context.Background(), `
+		SELECT a.origin FROM activity a JOIN activity_link l ON l.activity_id = a.id
+		WHERE l.lead_id = $1 AND a.kind = 'task'`, lead).Scan(&origin); err != nil {
+		t.Fatal(err)
+	}
+	if origin != activities.OriginSystemRemediation {
+		t.Errorf("escalation task origin = %q, want %q", origin, activities.OriginSystemRemediation)
+	}
 
 	// The notify half, which nothing here asked about until it panicked. A
 	// breach the escalation names a target for writes that contact a durable

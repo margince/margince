@@ -82,7 +82,7 @@ func TestDraftEmailBuildsTheRequestTheContactComposerBuilds(t *testing.T) {
 		t.Fatalf("firstMessageOf: %v", err)
 	}
 	engines := &firstMessageEngines{contact: engine(tool)}
-	if _, err := engines.draft(agent, message, intent); err != nil {
+	if _, _, err := engines.draft(agent, message, intent); err != nil {
 		t.Fatalf("draft_email's engine: %v", err)
 	}
 

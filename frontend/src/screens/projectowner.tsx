@@ -12,12 +12,7 @@ import { useT } from "../i18n";
 import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
 import { useUpdateRecord } from "./edit";
 import type { Project } from "./projects.form";
-import {
-  memberName,
-  RosterPartialNote,
-  useRoster,
-  useRosterPartial,
-} from "./roster";
+import { RosterPartialNote, useRoster, useRosterPartial } from "./roster";
 
 // Hands a project directly to a named colleague. The Owner select beside
 // this (projects.form.ts) only ever offers keep-current/Me/Unassign; naming
@@ -60,11 +55,9 @@ export function AssignProjectOwnerAction({
     invalidate: "projects",
     recordKey: "project",
     recordId: project.id,
-    savedMessage: (updated) =>
-      t("project.assignOwnerDone", {
-        name:
-          memberName(roster.data, updated.owner_id ?? "") ?? pickedName.current,
-      }),
+    // Named off the pick, never a re-read: the write sends only that option's id.
+    savedMessage: () =>
+      t("project.assignOwnerDone", { name: pickedName.current }),
     onDone: () => setOpen(false),
   });
 

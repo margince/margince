@@ -103,7 +103,7 @@
   height: 24px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgInset);
   color: var(--textSecondary);
   font: var(--fontBodySmall);
 }

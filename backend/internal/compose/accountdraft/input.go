@@ -42,8 +42,10 @@ type Input struct {
 	// Server-derived, never read out of the counterparty's own text.
 	Envelope draftfloor.Envelope `json:"envelope"`
 
-	Company  string `json:"company"`
-	Industry string `json:"industry,omitempty"`
+	// CompanyID never reaches the model; it names the account for Grounding.
+	CompanyID string `json:"-"`
+	Company   string `json:"company"`
+	Industry  string `json:"industry,omitempty"`
 	// Description is the one line a contact wrote about what this company does
 	// (core 0203). Short, human, and the fastest way for a draft to sound like
 	// it knows who it is writing to.
@@ -129,10 +131,11 @@ func (d DealIn) MarshalJSON() ([]byte, error) {
 	}{wire: wire(d), Amount: amount})
 }
 
-// ProjectIn is the body of work the message is about. It carries no id: a
-// project is not a record a reason may cite, and an id the grounding filter
-// refuses only invites a citation it drops.
+// ProjectIn is the body of work the message is about. Its id never reaches the
+// model: a project is not a record a reason may cite, and an id the grounding
+// filter refuses only invites a citation it drops.
 type ProjectIn struct {
+	ID   string `json:"-"`
 	Name string `json:"name"`
 	// Key is the handle a human writes in a subject line, when the project
 	// has one.
@@ -205,6 +208,7 @@ func FromView(
 		Intent:     strings.TrimSpace(req.Intent),
 		RewriteOf:  strings.TrimSpace(req.RewriteOf),
 		Envelope:   req.Envelope,
+		CompanyID:  view.Company.Id.String(),
 		Company:    view.Company.DisplayName,
 		Recipient:  recipientOf(contact),
 		Recent:     foldRecent(view),
@@ -257,6 +261,7 @@ func findProject(view crmcontracts.Company360, projectID ids.ProjectID) (Project
 // open tasks and the unfiled ones — never another project's.
 func projectFact(project crmcontracts.Company360Project, view crmcontracts.Company360) ProjectIn {
 	out := ProjectIn{
+		ID:    project.ProjectId.String(),
 		Name:  project.Name,
 		Phase: string(project.Phase),
 	}

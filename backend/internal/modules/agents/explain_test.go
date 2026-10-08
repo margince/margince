@@ -195,3 +195,24 @@ func TestExplainAdmitsARemedyOnlyIfItFitsTheBudget(t *testing.T) {
 		t.Errorf("explain = %q, want it to report the one remedy it withheld", got[max(0, len(got)-300):])
 	}
 }
+
+// A 501 is the installation lacking the capability, and the app's upload shares
+// the object store, so the agent tells the user instead of changing its arguments.
+func TestExplainSendsAnUnimplementedCapabilityToTheApp(t *testing.T) {
+	srv := NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+
+	got := srv.explain("attach_document", &httperr.DetailedError{
+		Status: 501, Code: "not_implemented",
+		Detail: "this server has no object store configured, so files cannot be stored or read here",
+	})
+
+	for _, want := range []string{"not_implemented", "files cannot be stored", "not available here", "Do not retry"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("explain = %q, want it to say %q", got, want)
+		}
+	}
+	if strings.Contains(got, "Correct the arguments") {
+		t.Errorf("explain = %q, sends the agent to change arguments no change can fix", got)
+	}
+}

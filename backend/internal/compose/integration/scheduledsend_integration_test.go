@@ -59,6 +59,7 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 		ID string `json:"id"`
 	}
 	if status := p.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": name,
 		"emails":    []AnyMap{{"email": email}},
 	}, nil, &contact); status != http.StatusCreated {
@@ -910,7 +911,7 @@ func (p *preflightEnv) seedCompany(t *testing.T, name string) ids.UUID {
 		ID string `json:"id"`
 	}
 	if status := p.Call(t, "POST", "/v1/companies",
-		AnyMap{"display_name": name}, nil, &created); status != http.StatusCreated {
+		AnyMap{"source": "manual", "display_name": name}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("seeding %s → %d, want 201", name, status)
 	}
 	id, err := ids.Parse(created.ID)

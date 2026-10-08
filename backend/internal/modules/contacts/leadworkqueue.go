@@ -138,7 +138,6 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 		IncludeArchived: in.IncludeArchived, CapturedByKind: in.CapturedByKind,
 		AiWritten: in.AiWritten, entity: leadEntity, OwnerID: in.OwnerID,
 		OwnerTeamID: in.OwnerTeamID, Unassigned: in.Unassigned, Query: nil,
-		nameColumn: leadNameColumn,
 	}
 	filters, err := shared.clauses(ctx, active, defaultSort, arg)
 	if err != nil {

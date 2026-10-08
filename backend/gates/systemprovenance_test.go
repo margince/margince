@@ -8,11 +8,10 @@ package gates
 // A scheduled pass binds its provenance through one helper.
 //
 // The system principal and a fresh correlation id are two calls that belong
-// together: every audit row and outbox event such a pass leaves carries both,
-// and a pass that binds only one writes a trail nobody can read back — rows
-// with no actor, or rows nobody can replay as one story. Neither omission fails
-// anything at the call site, and neither is visible until somebody goes looking
-// for what the machine did.
+// together: every audit row and outbox event such a pass leaves carries both.
+// A pass that binds only one fails at its first write, not where it skipped the
+// binding: storekit refuses an audit with no actor and an emit with no
+// correlation id, so the gap shows up at run time, far from its cause.
 //
 // They were spelled together in forty-odd places, and the shape had already
 // cost something: internal/compose/integration/scope.go built the retention

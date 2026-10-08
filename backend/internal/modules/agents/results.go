@@ -282,6 +282,9 @@ type FirstDraft struct {
 	AIDisclosure string
 	SavedDraftID *ids.UUID
 	NotSaved     string
+	// Grounding lists the records the text was written from, links or not; the
+	// answer rests on each of them, so a replay re-proves each.
+	Grounding []EvidenceRef
 }
 
 // ContextAnchor names the record an assembled picture was built around.

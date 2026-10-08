@@ -214,6 +214,11 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 	// namespace existed; this one never did, so a caller could spell the
 	// importer's namespace on a project and have the trust ladder read it back
 	// as captured history.
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateProjectInput{}, err
+	}
+	req.Source = source
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateProjectInput{}, err
 	}

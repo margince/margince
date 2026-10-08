@@ -9,6 +9,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -92,6 +94,16 @@ func orderByLeadSourceLabel(context.Context, func(any) int) (string, error) {
 // ListLeads is the row-scoped lead list read: quick-find, the status and
 // owner filters, and keyset pagination under the validated sort.
 func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontracts.Lead, storekit.Page, error) {
+	// Narrowing by a contact the caller cannot open would tell them which lead
+	// it is worked through, so such a contact matches nothing.
+	if in.FromContactID != nil {
+		if _, err := s.GetContact(ctx, *in.FromContactID, storekit.IncludeArchived); err != nil {
+			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+				return []crmcontracts.Lead{}, storekit.Page{}, nil
+			}
+			return nil, storekit.Page{}, err
+		}
+	}
 	if in.Sort == nil || *in.Sort == "" {
 		return s.listLeadWorkQueue(ctx, in)
 	}
@@ -117,7 +129,6 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 				Unassigned:      in.Unassigned,
 				Query:           nil,
 				Cursor:          in.Cursor,
-				nameColumn:      leadNameColumn,
 				Membership:      in.Membership,
 			}.clauses(ctx, active, sorted, arg)
 			if err != nil {
@@ -161,6 +172,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if clause := storekit.TagFilterClause(ctx, leadEntity, "lead.id", in.TagIDs, in.TagMode, arg); clause != "" {
 		where = append(where, clause)
 	}
+	if in.FromContactID != nil {
+		where = append(where, storekit.SQLf("lead.from_contact_id = $%d", arg(*in.FromContactID)))
+	}
 	return where
 }
 
@@ -169,6 +183,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 // the list attach through here.
 func attachLeadRows(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
 	if err := stampLeadsWritable(ctx, tx, leads); err != nil {
+		return err
+	}
+	if err := withholdUnreadableSourceContacts(ctx, tx, leads); err != nil {
 		return err
 	}
 	return storekit.AttachRowTags(ctx, tx, leadEntity, leads,

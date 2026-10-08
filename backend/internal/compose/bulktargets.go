@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -66,6 +67,11 @@ func archiveIsBehindErasure(ctx context.Context, tx pgx.Tx, archiveAuditID ids.U
 	return rowIsBehindTheErasureBoundary(ctx, tx, AuditRow{ID: archiveAuditID})
 }
 
+// unarchiveWith is what an un-archive needs besides the record.
+func unarchiveWith(pending []storekit.LeftBehind) storekit.RestoreWith {
+	return storekit.RestoreWith{Erased: archiveIsBehindErasure, Links: collections.ArchivedLinkRestore(), PendingLinks: pending}
+}
+
 type contactBulkTarget struct{ store *contacts.Store }
 
 func (t contactBulkTarget) lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error) {
@@ -85,7 +91,7 @@ func (t contactBulkTarget) restore(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
 ) (storekit.RestoreReport, error) {
 	return t.store.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](id), &version,
-		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
+		unarchiveWith(pending))
 }
 
 type companyBulkTarget struct{ store *contacts.Store }
@@ -107,7 +113,7 @@ func (t companyBulkTarget) restore(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
 ) (storekit.RestoreReport, error) {
 	return t.store.RestoreCompanyTx(ctx, tx, ids.From[ids.CompanyKind](id), &version,
-		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
+		unarchiveWith(pending))
 }
 
 type dealBulkTarget struct{ store *deals.Store }
@@ -129,7 +135,7 @@ func (t dealBulkTarget) restore(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
 ) (storekit.RestoreReport, error) {
 	return t.store.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](id), &version,
-		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
+		unarchiveWith(pending))
 }
 
 type leadBulkTarget struct{ store *contacts.Store }

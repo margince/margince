@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 294 |
-| Columns | 3501 |
-| Foreign keys | 475 |
+| Columns | 3504 |
+| Foreign keys | 476 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -40,11 +40,11 @@ Ranked by how many foreign keys point at them.
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 24 | 126 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 42 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 43 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 40 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 22 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 36 | 14 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 37 | 14 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
@@ -69,6 +69,7 @@ erDiagram
     project ||--o{ deal : project_id
     app_user ||--o{ deal : source_author_id
     stage ||--o{ deal : stage_id
+    contact ||--o{ lead : from_contact_id
     app_user ||--o{ lead : owner_id
     project ||--o{ lead : project_id
     contact ||--o{ lead : promoted_contact_id
@@ -227,7 +228,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 32 | 42 |
+| [`contact`](contacts.md#contact) | contacts | 32 | 43 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
@@ -283,7 +284,7 @@ erDiagram
 | [`finance_payment`](finance.md#finance_payment) | finance | 16 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
-| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 26 | 0 |
+| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 27 | 0 |
 | [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 26 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
@@ -296,7 +297,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 36 | 14 |
+| [`lead`](contacts.md#lead) | contacts | 37 | 14 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 8 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
@@ -307,10 +308,10 @@ erDiagram
 | [`list_evaluation`](collections.md#list_evaluation) | collections | 6 | 0 |
 | [`list_live_member`](collections.md#list_live_member) | collections | 5 | 0 |
 | [`list_member`](collections.md#list_member) | collections | 7 | 0 |
-| [`list_member_event`](collections.md#list_member_event) | collections | 10 | 0 |
+| [`list_member_event`](collections.md#list_member_event) | collections | 11 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
 | [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
-| [`mail_draft`](activities.md#mail_draft) | activities | 14 | 0 |
+| [`mail_draft`](activities.md#mail_draft) | activities | 15 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_invitation`](activities.md#meeting_invitation) | activities | 19 | 1 |
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |

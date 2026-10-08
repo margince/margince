@@ -1,54 +1,56 @@
+<!-- prose:plain -->
 # Re-certify the whole corpus
 
-A tree-wide change (a rename that rewrites every fixture, a prompt-builder edit,
-a grader change) stales every certification record at once. The readiness report
+A change to the whole tree makes every certification record stale at once. Examples are a rename that
+changes every fixture, an edit to how prompts are built, or a grader change. The readiness report
 then reads `0 of N shipped sites carry a current record`, and no band on it
-describes a request this build sends.
+describes a request that this build sends.
 
-The loop that clears it: **run** both preset sweeps, **analyse** what moved
-before calling anything a regression, **fix or flag** what the analysis finds,
-**re-run** only what you changed. What the lane is, what the report's states
-mean, and how a verdict is decided are in
-[certify-an-ai-model.md](certify-an-ai-model.md).
+The loop that clears it goes like this. **Run** both preset sweeps, and **look into** what changed
+before you call a change a regression. **Fix or flag** what you find, and
+**run again** only what you changed.
 
-> **The sweep is the expensive step.** Two full passes over the corpus is every
-> shipped site times `RUNS` times two bindings, billed to your own BYOK budget.
-> The analysis in section 3 is free, and several of its answers change what you
-> would otherwise pay to re-run, so do not skip ahead to a fix.
+The page [certify-an-ai-model.md](certify-an-ai-model.md) covers
+what the lane is, what the states of the report mean, and how a verdict is decided.
 
-## 1. Capture the report before you spend
+> **The sweep is the step that costs money.** Two full passes over the corpus are every
+> shipped site, times `RUNS`, times two bindings, and they come out of your own BYOK budget.
+> The work in section 3 is free, and some of its answers change what it
+> would cost to run again. So do not skip to a fix.
+
+## 1. Capture the report first
 
 ```bash
 mkdir -p .tmp
 (cd backend && make e2e-ai-report) | tee .tmp/readiness-before.txt
 ```
 
-`.tmp/` is gitignored and may not exist yet, since this step runs before anything
-else has written there.
+`.tmp/` is gitignored, and may not exist yet, because this step runs before any
+other step writes there.
 
-Keep this file. A stale row names **which part of its stamp moved** (the case,
-the prompt this build sends, or how a run is graded), and the sweep overwrites
-that. Once the records are rewritten, the report can no longer attribute
-anything.
+Keep this file. A stale row names **which part of its stamp changed**: the case,
+the prompt this build sends, or how a run is graded. The sweep writes over
+that. Once the sweep writes the records again, the report can no longer say what caused
+a change.
 
-Each cause needs a different response, which is why the report separates them:
+Each cause needs a different answer, which is why the report keeps them separate:
 
-- **the case**: somebody rewrote the test. A band that moves is measuring a
-  different question, and re-certifying is a matter of course.
+- **the case**: someone wrote the test again. A band that moves is measuring a
+  different question, and you re-certify as normal.
 - **the prompt this build sends**: the product changed. The new band describes
-  the new prompt; a drop is a consequence of a product change, and somebody
-  should be told which change.
-- **how a run is graded**: the judge's request or the scoring rule moved. A
-  band can move with neither the test nor the product touched. This reads as a
-  model regression and is not one.
+  the new prompt. A drop comes from a product change, and someone
+  should know which change.
+- **how a run is graded**: the request of the judge, or the scoring rule, changed. A
+  band can move when no one touched the test or the product. This looks like a
+  model regression, and it is not one.
 
 Section 3 reads the file.
 
 ## 2. Run both preset sweeps
 
 The presets in [`config/presets/`](../../config/presets/README.md) are the two
-bindings worth a sweep: they are named, committed and reusable, so the records
-they produce are comparable with everybody else's.
+bindings worth a sweep. They have names, they are committed, and you can use them again. So the records
+they make can be compared with the records of all other users.
 
 ```bash
 cd backend
@@ -62,65 +64,67 @@ make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
   TRACE="$PWD/../.tmp/aicert/openrouter" RESUME="$PWD/../.tmp/aicert/openrouter/resume"
 ```
 
-> **Check the judge is still served** before you start. A judge is a model on
-> somebody else's catalogue, and it can be withdrawn between sweeps. When it is,
-> the task's own calls are made and billed, then every run fails judging with
-> `No endpoints found`, three attempts each, and no record is written. Check the
-> endpoints rather than the model list, because a broker keeps a slug listed
-> after the last host behind it has gone. For OpenRouter that is
-> `GET /api/v1/models/<slug>/endpoints`: an empty list, or only `:batch`, means
-> it cannot judge. Compare against a model you know works, because one 404 says
+> **Check that the judge is still served** before you start. A judge is a model in
+> the catalog of another company, and it can stop being served between sweeps. If it does,
+> the task still makes its own calls, at full cost. Then every run fails at the judge step with
+> `No endpoints found`, three tries each, and the run writes no record.
+
+> Check the
+> endpoints, and not the model list, because a broker keeps a slug in the list
+> after the last host behind it has stopped. For OpenRouter, that is
+> `GET /api/v1/models/<slug>/endpoints`. An empty list, or only `:batch`, means
+> it cannot judge. Compare with a model you know works, because one 404 says
 > nothing about a model on its own.
 
-`TRACE=`/`RESUME=` must be **absolute**, as the Makefile's default is. A Go test
-runs with its working directory set to the package under test, so `../.tmp/…`
-typed here would land under `backend/internal/compose/` rather than beside the
-repo.
+`TRACE=` and `RESUME=` must be **full** paths, like the default in the Makefile. A Go test
+runs with its working folder set to the package under test. So `../.tmp/…`
+typed here would end up under `backend/internal/compose/`, and not next to the
+repository.
 
-Keep one judge across a sweep; `judge_served_model` names it on every record.
+Keep one judge for a whole sweep; `judge_served_model` names it on every record.
 The judge rules and the default judge are in
 [certify-an-ai-model.md](certify-an-ai-model.md#prerequisites).
 
-The commands above also encode these rules:
+The commands above also follow these rules:
 
-- **Separate `TRACE=` and `RESUME=` directories per pass.** They can then run
-  concurrently: the records they write are disjoint, one file per
-  (task, provider, model, env), and neither replays the other's journal.
-- **`RESUME=` is a six-hour, same-binary cache.** Any Go edit invalidates the
-  whole journal, so finish the analysis and the fix before restarting a cut-short
-  run, or it re-pays for everything.
+- **Use separate folders for each pass.** Give each pass its own `TRACE=` and `RESUME=`. Then they can run
+  at the same time. The records they write are separate: one file for each
+  task, provider, model and environment. And no pass replays the journal of the other.
+- **`RESUME=` is a cache that lasts 6 hours.** It holds only for the same program. Any Go edit makes
+  the whole journal stale. So finish the work in section 3 and the fix before you start a run that stopped early
+  again, or the whole run costs money again.
 
 Expect these outcomes:
 
-- **`document_extract` writes no `openrouter_cloud` record and that run exits
-  `FAIL`.** The OpenAI-compatible wire's `input:` vocabulary is text and image
-  only, so the adapter refuses the PDF rather than dropping it. The run's other
-  tasks still write their records. Tracked as a gap, not a regression; the
-  preset's own README states it.
-- **A sweep measures each task's fallback too.** A routed run certifies every
-  distinct model a task's ladder binds, so a preset whose tiers bind different
-  models costs about twice a single-model one. `frontier` is on no shipped
-  task's ladder, so a model bound only there is never reached.
+- **`document_extract` writes no `openrouter_cloud` record, and that run ends with
+  `FAIL`.** The `input:` vocabulary of the `openai_compatible` wire is text and image
+  only, so the adapter refuses the PDF, and does not drop it. The other
+  tasks of the run still write their records. It is tracked as a gap, not a regression, and the
+  README of the preset says so.
+- **A sweep also measures fallbacks.** A routed run certifies every
+  separate model that the ladder of a task points to. So a preset whose tiers point to different
+  models costs about twice as much as one with one model. `frontier` is on the ladder of no shipped
+  task, so a model set only there is never reached.
 - **A sweep skips what is already current** (`STALE_ONLY`, on by default). A
-  tree-wide change leaves records stale, so they run anyway; `STALE_ONLY=0` is
-  for re-sampling current ones, such as a same-prompt variance check.
-- **`make e2e-ai-report` ends with a table per preset**: each task's first rung
-  and fallback with its record's state, `same model` or `none`. A fallback
-  `absent` there is the gap a buyer meets on the first failed call.
+  change to the whole tree leaves records stale, so they run all the same. `STALE_ONLY=0` is
+  for a new sample of current records, such as a check of how much one prompt moves between runs.
+- **`make e2e-ai-report` ends with a table for each preset.** It shows the first rung of each task,
+  and its fallback, with the state of its record: `same model` or `none`. A fallback that is
+  `absent` there is the gap that a buyer meets on the first failed call.
 
-## 3. Analyse before you call anything a regression
+## 3. Look into the change before you call it a regression
 
-Re-read the report and compare it with the file from section 1.
+Read the report again, and compare it with the file from section 1.
 
-**A band that dropped under a moved case** is a new baseline. Reading it as a
-worse model sends you hunting a regression that does not exist and hides the one
-that does. After a tree-wide rename, expect nearly every row to sit under a moved
-case. Summarise those as *"new baselines"*, and look again only at the rows that
+**A band that dropped under a changed case** is a new baseline. If you read it as a
+drop in the model, you look for a regression that does not exist. And you miss the one
+that does. After a rename in the whole tree, expect most rows to be under a changed
+case. Call these *"new baselines"*, and look again only at the rows that
 moved for another reason.
 
-**Confirm the judge did not change.** A judge swap moves bands on its own and
-reads like model decay. Every record names the grader that scored it, so
-this is checkable rather than assumed:
+**Confirm that the judge is the same.** A new judge moves bands on its own, and
+looks like a drop in the model. Every record names the grader that scored it, so
+you can check this, and you do not have to take it on trust:
 
 ```bash
 for f in $(git diff --name-only -- backend/internal/compose/aicert/records); do
@@ -129,40 +133,40 @@ for f in $(git diff --name-only -- backend/internal/compose/aicert/records); do
 done
 ```
 
-Silence means every band moved for a reason other than its grader, and the
+If it prints nothing, every band moved for a reason other than its grader, and the
 summary can say so.
 
-**Read the trace for anything still unexplained.** A task failing every run
-identically is deterministic and has a nameable cause; the payload trace holds
+**Read the trace for what is still open.** A task that fails every run
+in the same way is deterministic, and has a cause you can name. The payload trace holds
 what the model was sent and what it answered
 ([certify-an-ai-model.md](certify-an-ai-model.md#4-see-the-prompts--trace-requestresponse-for-tuning)).
-Example: `enrich` failed 3/3 with `no surviving title` because the model filed the
-title under `role`, a key the prompt offered beside `title` with nothing to
-choose between them, and which no column mirrors.
+For example, `enrich` failed 3/3 with `no surviving title`. The model filed the
+title under `role`, a key that the prompt gave next to `title`, with nothing to
+choose between them. And no column holds a copy of that key.
 
 ## 4. Fix, or flag
 
-**Fix it in the same change** when the cause is in reach: a prompt that offers
-two words for one thing, a validator disagreeing with its rubric. Hold the fix
-with a test that fails without it: derive what the test expects from the thing
-that owns it rather than writing a second copy, and watch it go red before you
+**Fix it in the same change** when the cause is in reach. Examples are a prompt that gives
+two words for one thing, or a validator that does not agree with its rubric. Hold the fix
+with a test that fails without it. Take what the test expects from the thing
+that owns it, and do not write a second copy. Watch the test go red before you
 trust it.
 
-**Open an issue** when the fix needs a product or architecture decision, or lives
-in another module. Label it with one `priority:` and one `area:`, per
-[issue-labels.md](../reference/issue-labels.md).
+**Open an issue** when the fix needs a product or architecture decision, or is
+in another module. Label it with one `priority:` and one `area:`, as
+[issue-labels.md](../reference/issue-labels.md) says.
 
-Either way, say which rows are **new baselines** and which are **findings** when you
-report the sweep. A list of band changes with no attribution gives a reader nothing to act on.
+In both cases, say which rows are **new baselines** and which are **findings** when you
+report the sweep. A list of band changes that does not say what caused them gives a reader nothing to work on.
 
-## 5. Re-run only what you changed
+## 5. Run again only what you changed
 
-**Let the report say what to re-run** rather than assuming your fix was
-task-local. A prompt edit inside one task's builder moves that task's stamp and
-nothing else, and the re-run is then one task on each preset: seconds and cents
-instead of another sweep. An edit to something shared moves every stamp that
-reads it, the same blast radius that started this loop. `make e2e-ai-report`
-tells the two apart for free:
+**Let the report say what to run again**, and do not expect that your fix
+touched only one task. A prompt edit in the builder of one task moves the stamp of that task and
+nothing else. Then the new run is one task on each preset: a few seconds and a small cost,
+and not another sweep. An edit to something shared moves every stamp that
+reads it, with the same reach as the change that started this loop. `make e2e-ai-report`
+shows which case it is, for free:
 
 ```bash
 cd backend
@@ -170,18 +174,18 @@ make e2e-ai TASK=<task> ROUTING=config/presets/gemini_cloud.yaml RESUME=
 make e2e-ai TASK=<task> ROUTING=config/presets/openrouter_cloud.yaml RESUME=
 ```
 
-Run it again afterwards and read the headline: every site current means the fix
-was as local as you thought. Anything still `stale` is a task your change
-reached and this re-run did not: repeat for each, or run the section 2 sweep
+Run it again after that, and read the first line. If every site is current, the fix
+stayed as local as you expected. A task that is still `stale` is one that your change
+reached, and that this new run skipped. Run it again for each one, or run the sweep of section 2
 again if the list is long.
 
-`RESUME=` (empty) forces fresh measurement, because the prompt changed and a
+`RESUME=` (empty) makes it measure again, because the prompt changed and a
 replayed journal would answer the old one.
 
-## 6. Regenerate both generated pages
+## 6. Generate both generated pages again
 
-Two committed pages render from what you just changed, each held by its own drift
-gate, and **a prompt change moves both**:
+Two committed pages come from what you changed, and its own drift
+gate holds each one. **A prompt change moves both**:
 
 ```bash
 cd backend
@@ -189,24 +193,25 @@ go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
 go test ./internal/compose/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts
 ```
 
-The second is the one that gets forgotten. The page
+Users miss the second one. The page
 [ai-certification.md](../reference/ai-certification.md) tracks the *records*, so
-a records-only sweep needs it alone.
-[ai-prompts.md](../reference/ai-prompts.md) mirrors every instruction this build
-sends a model, so a fix that edits a prompt stales that page too. Its
-gate lives in the `internal/compose` package rather than in `aicert`, which is
-why running the certification tests alone leaves it green and CI red.
+a sweep that changes only records needs only that page.
 
-Then run the package whole rather than your own tests by name (`go test
-./internal/compose/ -count=1`), because a drift gate you did not think to name
+The page [ai-prompts.md](../reference/ai-prompts.md) copies every instruction that this build
+sends a model, so a fix that edits a prompt makes that page stale too. Its
+gate is in the `internal/compose` package, and not in `aicert`. That is
+why the certification tests alone leave it green, while CI is red.
+
+Then run the whole package, and not only your own tests by name:
+`go test ./internal/compose/ -count=1`. A drift gate that you would not think to name
 may be the one that catches this.
 
 ## What this loop does not tell you
 
-- **Anything about the `frontier` rung** (section 2), or about any binding neither
-  preset names. Records for those come from `MODEL=` runs and stay stale through
-  a sweep; they are not preset bindings and the sweep does not claim them.
-- **Whether a site survives real input.** Every record measures the corpus
-  fixture. A site can be certified at reliability 1.00 and fail on what
-  production hands it; [debug-an-ai-task.md](debug-an-ai-task.md) covers that
+- **The `frontier` rung** (section 2), and any binding that no
+  preset names. Records for these come from `MODEL=` runs, and stay stale through
+  a sweep. They are not preset bindings, and the sweep does not claim them.
+- **Whether a site works on real input.** Every record measures the corpus
+  fixture. A site can be certified at reliability 1.00, and still fail on what
+  production gives it; [debug-an-ai-task.md](debug-an-ai-task.md) covers that
   question.

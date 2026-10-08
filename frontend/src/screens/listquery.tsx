@@ -968,25 +968,24 @@ export function ListTable<Row>({
     </>
   ) : undefined;
 
-  // Pressing a tab pins it AND restores the list state it holds. The surface
-  // rewrites the sort and the filters itself; the archived toggle and the page
-  // size are this layer's, because they are part of the ListQuery the fetchers
-  // read and the surface knows nothing about a saved view's stored state.
-  //
-  // The toggle is rewritten unconditionally, exactly as the filters are: a view
-  // describes the WHOLE list, so an archived toggle left on from the previous
-  // tab both widens the view the reader just picked and stops that tab matching
-  // itself. Page size is the one dial a tab may make no claim about — a preset
-  // never claims one, and a saved view only where its stored blob carried one —
-  // so the reader's own choice survives a tab that carries none.
+  // Pressing a tab pins it and restores the list state it holds: the surface
+  // rewrites sort and filters, this layer the ListQuery dials the surface cannot
+  // see. Search and the archived toggle are rewritten unconditionally, because a
+  // view describes the whole list and a leftover would stop the tab matching
+  // itself. Page size is the one dial a tab may leave unclaimed, so the reader's
+  // own choice survives a tab that carries none.
   const applyViewState = (index: number) => {
     pickView(index);
     const picked = railViews[index];
     if (!picked) {
       return;
     }
+    // At once, so a word still settling cannot land on the tab just picked.
+    committed.current = picked.q;
+    setLocalSearch(picked.q);
     setQuery((prev) => ({
       ...prev,
+      q: picked.q,
       includeArchived: picked.includeArchived,
       perPage: picked.perPage ?? prev.perPage,
     }));

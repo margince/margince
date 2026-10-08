@@ -16,24 +16,16 @@ package contactbrief
 // puts the object, and a glued sentence cannot move it. The one part that does
 // slot is the ABOUT phrase, because it is a noun phrase in all three.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
+import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 
-// phrase is one sentence in every language, kept together so a translator reads
-// the three side by side and a reviewer can see at a glance that they say the
-// same thing. Keyed per language instead, each sentence sat in a different
-// block a hundred lines from its siblings.
-type phrase struct{ en, de, vi string }
+// The tables below are read by the writers in this package; the primitive they
+// are built from is shared, because six private copies of one three-field
+// struct is six places for a fallback to differ.
+type phrase = langcopy.Phrase
 
-func (p phrase) in(lang textlang.Lang) string {
-	switch lang {
-	case textlang.German:
-		return p.de
-	case textlang.Vietnamese:
-		return p.vi
-	default:
-		return p.en
-	}
-}
+type spoken = langcopy.Spoken
+
+func phrasesFor(lang string) spoken { return langcopy.For(lang) }
 
 // briefPhrases is the floor's sentence set. Every field is answered in all
 // three languages by floor below, which
@@ -80,150 +72,128 @@ type briefPhrases struct {
 
 var floor = briefPhrases{
 	IdentityTitleEmployer: phrase{
-		en: "%s is %s at %s.",
-		de: "%s ist %s bei %s.",
-		vi: "%s là %s tại %s.",
+		En: "%s is %s at %s.",
+		De: "%s ist %s bei %s.",
+		Vi: "%s là %s tại %s.",
 	},
 	IdentityEmployer: phrase{
-		en: "%s works at %s.",
-		de: "%s arbeitet bei %s.",
-		vi: "%s làm việc tại %s.",
+		En: "%s works at %s.",
+		De: "%s arbeitet bei %s.",
+		Vi: "%s làm việc tại %s.",
 	},
 	IdentityTitle: phrase{
-		en: "%s is %s.",
-		de: "%s ist %s.",
-		vi: "%s là %s.",
+		En: "%s is %s.",
+		De: "%s ist %s.",
+		Vi: "%s là %s.",
 	},
 	IdentityBare: phrase{
-		en: "%s is recorded here with no title or employer.",
-		de: "%s ist hier ohne Position und ohne Arbeitgeber erfasst.",
-		vi: "%s được ghi nhận ở đây mà không có chức danh hay nơi làm việc.",
+		En: "%s is recorded here with no title or employer.",
+		De: "%s ist hier ohne Position und ohne Arbeitgeber erfasst.",
+		Vi: "%s được ghi nhận ở đây mà không có chức danh hay nơi làm việc.",
 	},
 
 	AnsweredAfterADay: phrase{
-		en: "They answered after a day of silence.",
-		de: "Nach einem Tag ohne Kontakt kam eine Antwort.",
-		vi: "Họ đã trả lời sau một ngày im lặng.",
+		En: "They answered after a day of silence.",
+		De: "Nach einem Tag ohne Kontakt kam eine Antwort.",
+		Vi: "Họ đã trả lời sau một ngày im lặng.",
 	},
 	AnsweredAfterDays: phrase{
-		en: "They answered after %d days of silence.",
-		de: "Nach %d Tagen ohne Kontakt kam eine Antwort.",
-		vi: "Họ đã trả lời sau %d ngày im lặng.",
+		En: "They answered after %d days of silence.",
+		De: "Nach %d Tagen ohne Kontakt kam eine Antwort.",
+		Vi: "Họ đã trả lời sau %d ngày im lặng.",
 	},
 	AnsweredAfterLong: phrase{
-		en: "They answered after a long silence.",
-		de: "Nach langer Zeit ohne Kontakt kam eine Antwort.",
-		vi: "Họ đã trả lời sau một thời gian dài im lặng.",
+		En: "They answered after a long silence.",
+		De: "Nach langer Zeit ohne Kontakt kam eine Antwort.",
+		Vi: "Họ đã trả lời sau một thời gian dài im lặng.",
 	},
 	QuietForADay: phrase{
-		en: "This relationship has been quiet for a day.",
-		de: "Diese Beziehung ist seit einem Tag ruhig.",
-		vi: "Mối quan hệ này đã im ắng một ngày.",
+		En: "This relationship has been quiet for a day.",
+		De: "Diese Beziehung ist seit einem Tag ruhig.",
+		Vi: "Mối quan hệ này đã im ắng một ngày.",
 	},
 	QuietForDays: phrase{
-		en: "This relationship has been quiet for %d days.",
-		de: "Diese Beziehung ist seit %d Tagen ruhig.",
-		vi: "Mối quan hệ này đã im ắng %d ngày.",
+		En: "This relationship has been quiet for %d days.",
+		De: "Diese Beziehung ist seit %d Tagen ruhig.",
+		Vi: "Mối quan hệ này đã im ắng %d ngày.",
 	},
 	GoneQuiet: phrase{
-		en: "This relationship has gone quiet.",
-		de: "Diese Beziehung ist ruhig geworden.",
-		vi: "Mối quan hệ này đã trở nên im ắng.",
+		En: "This relationship has gone quiet.",
+		De: "Diese Beziehung ist ruhig geworden.",
+		Vi: "Mối quan hệ này đã trở nên im ắng.",
 	},
 	BandMoved: phrase{
-		en: "The relationship moved from %s to %s.",
-		de: "Die Beziehung hat sich von %s zu %s verändert.",
-		vi: "Mối quan hệ chuyển từ %s sang %s.",
+		En: "The relationship moved from %s to %s.",
+		De: "Die Beziehung hat sich von %s zu %s verändert.",
+		Vi: "Mối quan hệ chuyển từ %s sang %s.",
 	},
 	RelationshipMoved: phrase{
-		en: "The relationship changed: %s.",
-		de: "Die Beziehung hat sich verändert: %s.",
-		vi: "Mối quan hệ đã thay đổi: %s.",
+		En: "The relationship changed: %s.",
+		De: "Die Beziehung hat sich verändert: %s.",
+		Vi: "Mối quan hệ đã thay đổi: %s.",
 	},
-	UnrecordedBand: phrase{en: "unrecorded", de: "nicht erfasst", vi: "chưa ghi nhận"},
+	UnrecordedBand: phrase{En: "unrecorded", De: "nicht erfasst", Vi: "chưa ghi nhận"},
 
 	RecordedRoleOnDeal: phrase{
-		en: "They are the recorded %s on %s.",
-		de: "Erfasst als %s bei %s.",
-		vi: "Được ghi nhận là %s trong %s.",
+		En: "They are the recorded %s on %s.",
+		De: "Erfasst als %s bei %s.",
+		Vi: "Được ghi nhận là %s trong %s.",
 	},
 	OnDealNoRole: phrase{
-		en: "They sit on %s, with no buying role recorded.",
-		de: "Beteiligt an %s, ohne erfasste Rolle im Kaufprozess.",
-		vi: "Có tham gia %s, nhưng chưa ghi nhận vai trò mua hàng.",
+		En: "They sit on %s, with no buying role recorded.",
+		De: "Beteiligt an %s, ohne erfasste Rolle im Kaufprozess.",
+		Vi: "Có tham gia %s, nhưng chưa ghi nhận vai trò mua hàng.",
 	},
 
 	CaresPriority: phrase{
-		en: "They are focused on %s.",
-		de: "Im Mittelpunkt steht %s.",
-		vi: "Họ đang tập trung vào %s.",
+		En: "They are focused on %s.",
+		De: "Im Mittelpunkt steht %s.",
+		Vi: "Họ đang tập trung vào %s.",
 	},
 	CaresObjection: phrase{
-		en: "They have %s still unresolved.",
-		de: "Offen ist weiterhin %s.",
-		vi: "Họ vẫn còn vướng mắc về %s.",
+		En: "They have %s still unresolved.",
+		De: "Offen ist weiterhin %s.",
+		Vi: "Họ vẫn còn vướng mắc về %s.",
 	},
 	CaresBoth: phrase{
-		en: "They are focused on %s, with %s still unresolved.",
-		de: "Im Mittelpunkt steht %s, offen ist weiterhin %s.",
-		vi: "Họ đang tập trung vào %s, và vẫn còn vướng mắc về %s.",
+		En: "They are focused on %s, with %s still unresolved.",
+		De: "Im Mittelpunkt steht %s, offen ist weiterhin %s.",
+		Vi: "Họ đang tập trung vào %s, và vẫn còn vướng mắc về %s.",
 	},
 
 	WithheldMessage: phrase{
-		en: "The most recent message on this contact is one you may not read.",
-		de: "Die jüngste Nachricht zu diesem Kontakt dürfen Sie nicht lesen.",
-		vi: "Tin nhắn gần đây nhất của liên hệ này là tin bạn không được phép đọc.",
+		En: "The most recent message on this contact is one you may not read.",
+		De: "Die jüngste Nachricht zu diesem Kontakt dürfen Sie nicht lesen.",
+		Vi: "Tin nhắn gần đây nhất của liên hệ này là tin bạn không được phép đọc.",
 	},
 
 	TheyWroteLastOpen: phrase{
-		en: "They wrote last, %s, and it is unanswered.",
-		de: "Zuletzt kam eine Nachricht von dort, %s, und sie ist unbeantwortet.",
-		vi: "Họ là bên viết gần đây nhất, %s, và vẫn chưa được trả lời.",
+		En: "They wrote last, %s, and it is unanswered.",
+		De: "Zuletzt kam eine Nachricht von dort, %s, und sie ist unbeantwortet.",
+		Vi: "Họ là bên viết gần đây nhất, %s, và vẫn chưa được trả lời.",
 	},
 	TheyWroteLastClosed: phrase{
-		en: "They wrote last, %s.",
-		de: "Zuletzt kam eine Nachricht von dort, %s.",
-		vi: "Họ là bên viết gần đây nhất, %s.",
+		En: "They wrote last, %s.",
+		De: "Zuletzt kam eine Nachricht von dort, %s.",
+		Vi: "Họ là bên viết gần đây nhất, %s.",
 	},
 	YouWroteLastOpen: phrase{
-		en: "You wrote last, %s, with no reply yet.",
-		de: "Zuletzt ging eine Nachricht von hier hinaus, %s, bisher ohne Antwort.",
-		vi: "Bạn là bên viết gần đây nhất, %s, và chưa có hồi âm.",
+		En: "You wrote last, %s, with no reply yet.",
+		De: "Zuletzt ging eine Nachricht von hier hinaus, %s, bisher ohne Antwort.",
+		Vi: "Bạn là bên viết gần đây nhất, %s, và chưa có hồi âm.",
 	},
 	YouWroteLastClosed: phrase{
-		en: "You wrote last, %s.",
-		de: "Zuletzt ging eine Nachricht von hier hinaus, %s.",
-		vi: "Bạn là bên viết gần đây nhất, %s.",
+		En: "You wrote last, %s.",
+		De: "Zuletzt ging eine Nachricht von hier hinaus, %s.",
+		Vi: "Bạn là bên viết gần đây nhất, %s.",
 	},
 	LastCaptured: phrase{
-		en: "The last thing captured was %s.",
-		de: "Zuletzt erfasst wurde %s.",
-		vi: "Điều được ghi nhận gần đây nhất là %s.",
+		En: "The last thing captured was %s.",
+		De: "Zuletzt erfasst wurde %s.",
+		Vi: "Điều được ghi nhận gần đây nhất là %s.",
 	},
 
-	AboutSaying:  phrase{en: "saying %q", de: "mit dem Wortlaut %q", vi: "với nội dung %q"},
-	AboutSubject: phrase{en: "about %q", de: "zum Thema %q", vi: "về chủ đề %q"},
-	AboutKind:    phrase{en: "a %s", de: "%s", vi: "%s"},
-}
-
-// spoken is the floor resolved to one language, so the writers below read a
-// sentence rather than a lookup.
-type spoken struct {
-	lang textlang.Lang
-}
-
-func (s spoken) say(p phrase) string { return p.in(s.lang) }
-
-// phrasesFor answers the floor's language for a code, falling back to English
-// for anything this build does not speak.
-//
-// The fallback is not a guess: an unknown code reaches here only from a stored
-// setting this build no longer ships, and English is what BaseLanguageForPrompt
-// itself falls back to. Writing the floor in English is worse than writing it
-// in the reader's language and better than writing nothing.
-func phrasesFor(lang string) spoken {
-	if textlang.Known(lang) {
-		return spoken{lang: textlang.Lang(lang)}
-	}
-	return spoken{lang: textlang.English}
+	AboutSaying:  phrase{En: "saying %q", De: "mit dem Wortlaut %q", Vi: "với nội dung %q"},
+	AboutSubject: phrase{En: "about %q", De: "zum Thema %q", Vi: "về chủ đề %q"},
+	AboutKind:    phrase{En: "a %s", De: "%s", Vi: "%s"},
 }

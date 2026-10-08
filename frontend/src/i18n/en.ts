@@ -599,6 +599,15 @@ export const en = {
   "brief.weekly.noCommitments": "None due",
   "brief.weekly.basis":
     "Recorded CRM work for this closed week. Missing records do not establish inactivity.",
+  "brief.weekly.notRecorded": "Not recorded",
+  "brief.weekly.recordedFrom": "Recorded from {date}",
+  "brief.weekly.noRecords": "No records from this source",
+  "brief.weekly.partialFrom": "Partial week: counted from {date}",
+  "brief.weekly.partialValue": "{value} (partial)",
+  "brief.week.beforeHistory":
+    "This week falls before the first records, so it has no figures to report.",
+  "teamweekly.headline.notRecorded":
+    "Some figures were not recorded for this week and are left out.",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",
@@ -628,6 +637,13 @@ export const en = {
   "brief.schedule.unavailable": "Calendar did not load.",
   "brief.schedule.more":
     "Load more agenda items to see the remaining meetings.",
+  "brief.schedule.notConnected":
+    "No calendar is connected, so today’s meetings cannot be shown.",
+  "brief.schedule.unreadable":
+    "Your calendar is not syncing, so today’s meetings cannot be shown.",
+  "brief.schedule.connect": "Connect a calendar",
+  "brief.schedule.reconnect": "Reconnect your calendar",
+  "brief.schedule.nextAt": "Next meeting at {time}",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "1 deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -644,6 +660,8 @@ export const en = {
   "brief.coverage.source.relationship_decay": "Quiet relationships",
   "brief.coverage.source.meeting_outcome": "Meeting follow-up",
   "brief.coverage.source.meeting": "Upcoming meetings",
+  "brief.coverage.source.calendar": "Calendar connection",
+  "brief.coverage.source.next_meeting": "Next meeting",
   "brief.coverage.source.deal_at_risk": "Flagged deals",
   "brief.coverage.source.lead_response": "Assigned leads",
   "brief.coverage.source.customer_waiting": "Unanswered messages",
@@ -2894,12 +2912,11 @@ export const en = {
   "tags.more": "+{count} more",
   "tags.showLess": "Show less",
   "tags.removeTag": "Remove {name}",
-  "tags.removeTitle": "Remove {name} from this record?",
+  "tags.removed": "{name} removed from this record",
+  "tags.restored": "{name} is back on this record",
   "tags.addedBy": "Added by {who} · {when}",
   "tags.addedByUndated": "Added by {who}",
   "tags.addedOn": "Added {when}",
-  "tags.visibleWorkspaceWide": "Tag names are visible across the company.",
-  "tags.removeFromRecord": "Remove from this record",
   "tags.withheld": "Hidden for your role",
   "tags.emptyTitle": "No tags yet",
   "tags.emptyBody":
@@ -4027,6 +4044,14 @@ export const en = {
   "brief.readings.needsPrep_other": "{count} need prep",
   "brief.readings.prepUnknown": "Prep not checked",
   "brief.readings.prepared": "All prepared",
+  "brief.readings.calendarNotConnected": "Not connected",
+  "brief.readings.calendarNotConnectedWhy":
+    "Connect your calendar to count meetings.",
+  "brief.readings.calendarUnreadable": "Not syncing",
+  "brief.readings.calendarUnreadableWhy":
+    "Reconnect your calendar to count meetings.",
+  "brief.readings.nextMeeting": "Next: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Next: {date}",
   "brief.readings.leads": "Prospecting",
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
@@ -10335,6 +10360,7 @@ export const en = {
   "contact.action.call": "Call",
   "contact.action.meetings": "Meetings",
   "contact.action.workAsLead": "Work as a lead",
+  "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
 
@@ -11036,7 +11062,6 @@ export const en = {
   "lists.why.inDays_one": "in {count} day",
   "lists.why.inDays_other": "in {count} days",
   "lists.remove": "Take off the Shortlist",
-  "lists.removeTitle": "Take this record off the Shortlist?",
   "lists.note": "Why (optional)",
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.record.title": "Lists",
@@ -11045,6 +11070,8 @@ export const en = {
   "lists.record.check": "Check a Live List",
   "lists.record.checkPick": "Pick a Live List",
   "lists.record.truncated": "And more lists not shown here.",
+  "lists.record.takenOff": "Taken off {name}",
+  "lists.record.putBack": "Back on {name}",
   "lists.addToShortlist": "Add to Shortlist",
   "lists.add": "Add",
   "lists.shortlist": "Shortlist",

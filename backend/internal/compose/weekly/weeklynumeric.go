@@ -47,7 +47,9 @@ func (e *Engine) measureNumeric(ctx context.Context, tx pgx.Tx, review *Review, 
 	return nil
 }
 
-func (e *Engine) measureTeamNumeric(ctx context.Context, tx pgx.Tx, review *TeamReview, now time.Time) error {
+func (e *Engine) measureTeamNumeric(
+	ctx context.Context, tx pgx.Tx, review *TeamReview, members []TeamMember, plans memberPlans, now time.Time,
+) error {
 	if e.numeric == nil {
 		return nil
 	}
@@ -59,6 +61,17 @@ func (e *Engine) measureTeamNumeric(ctx context.Context, tx pgx.Tx, review *Team
 	if err != nil {
 		return err
 	}
+	owners := make([]ids.UUID, 0, len(members))
+	for _, member := range members {
+		owners = append(owners, member.UserID)
+	}
+	// Every member, read or not: won and held above are measured over the team
+	// scope itself, and an unread member is reported in RepsUnread, not here.
+	numeric.Summary.FigureCoverage, err = figureCoverageOf(ctx, tx, owners, start, end)
+	if err != nil {
+		return err
+	}
+	numeric.Summary.FigureCoverage.Commitments = plans.coverage(start, end)
 	review.NumericSummary = &numeric.Summary
 	review.Counts.DealsWon = numeric.Won
 	review.Counts.MeetingsHeld = numeric.Held

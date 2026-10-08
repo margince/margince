@@ -14,14 +14,14 @@
  * notched at the bottom right. Nothing about who said what rests on colour.
  *
  * A solid fill and no hairline: the bubble is a shape, and an outline around a
- * filled shape draws the same edge twice. --bgCard rather than --bgElevated
+ * filled shape draws the same edge twice. --bgInset rather than --bgElevated
  * because the column it sits in is already elevated — a bubble the same colour
  * as its surface has to borrow the border back to exist at all. */
 .ob-conv-narration p {
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-xs) var(--r-lg) var(--r-lg) var(--r-lg);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-conv-speaker {
@@ -335,8 +335,8 @@
   border-radius: var(--r-md);
   background: var(--bgElevated);
   transition:
-    border-color 0.14s ease,
-    background 0.14s ease;
+    border-color var(--dur-state) ease,
+    background var(--dur-state) ease;
 }
 
 .ob-decision-card:hover {
@@ -444,7 +444,7 @@
   margin-left: calc(20px + var(--space-3));
   padding: var(--space-4);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-decision-proof-head {
@@ -1285,8 +1285,8 @@
   cursor: pointer;
   text-align: start;
   transition:
-    border-color 0.14s ease,
-    background 0.14s ease;
+    border-color var(--dur-state) ease,
+    background var(--dur-state) ease;
 }
 
 .ob-connect-card:hover:not(:disabled) {
@@ -1566,7 +1566,7 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-company-card-facts dt {
@@ -2015,7 +2015,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  transition: background 0.14s ease;
+  transition: background var(--dur-state) ease;
 }
 
 /* The collapsed weight: the row IS its button — a caret, label, preview and
@@ -2146,7 +2146,7 @@
   padding: var(--space-3);
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-triage-omitted svg {

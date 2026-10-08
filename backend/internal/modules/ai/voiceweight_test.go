@@ -43,9 +43,10 @@ func TestAVoiceWeightMustBeANumberInRange(t *testing.T) {
 // Both write paths validate separately, so fixing one would have left the
 // other open. They answer through the same check and say the same sentence.
 func TestBothVoiceWritePathsRefuseANaNWeight(t *testing.T) {
+	nan := math.NaN()
 	_, _, err := validateDeclaredSource(IngestSourceInput{
 		Kind: voiceSourceKindEmail, Register: voiceRegisterEmail,
-		SourceLabel: "a label", Content: "some text", Weight: math.NaN(),
+		SourceLabel: "a label", Content: "some text", Weight: &nan,
 	})
 	var refusal *CorpusIngestError
 	if !errors.As(err, &refusal) {

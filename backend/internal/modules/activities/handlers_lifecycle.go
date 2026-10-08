@@ -21,8 +21,9 @@ func (h Handlers) UpdateActivity(w http.ResponseWriter, r *http.Request, id crmc
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	activity, err := h.store.UpdateActivity(r.Context(), pathID[ids.ActivityKind](id),
-		activityUpdateInput(req, ifVersion))
+	in := activityUpdateInput(req, ifVersion)
+	in.Clear = httperr.ClearedFields(r)
+	activity, err := h.store.UpdateActivity(r.Context(), pathID[ids.ActivityKind](id), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

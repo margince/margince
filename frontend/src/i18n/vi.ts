@@ -608,6 +608,15 @@ export const vi = {
   "brief.weekly.noCommitments": "Không có mục đến hạn",
   "brief.weekly.basis":
     "Công việc CRM đã ghi nhận trong tuần đã kết thúc. Thiếu bản ghi không có nghĩa là không làm việc.",
+  "brief.weekly.notRecorded": "Không được ghi nhận",
+  "brief.weekly.recordedFrom": "Ghi nhận từ {date}",
+  "brief.weekly.noRecords": "Nguồn này chưa có bản ghi",
+  "brief.weekly.partialFrom": "Một phần tuần: tính từ {date}",
+  "brief.weekly.partialValue": "{value} (một phần)",
+  "brief.week.beforeHistory":
+    "Tuần này nằm trước các bản ghi đầu tiên nên không có số liệu để báo cáo.",
+  "teamweekly.headline.notRecorded":
+    "Một số số liệu của tuần này không được ghi nhận nên đã được lược bỏ.",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.undated": "Chưa có ngày",
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
@@ -638,6 +647,13 @@ export const vi = {
     "{won} thắng · {lost} thua · {moved} cơ hội chuyển giai đoạn · {leads} khách hàng tiềm năng được giao",
   "brief.schedule.unavailable": "Không thể kiểm tra lịch của bạn.",
   "brief.schedule.more": "Tải thêm mục để xem các cuộc họp còn lại.",
+  "brief.schedule.notConnected":
+    "Chưa có lịch nào được kết nối, nên không thể hiển thị cuộc họp hôm nay.",
+  "brief.schedule.unreadable":
+    "Lịch của bạn không đồng bộ, nên không thể hiển thị cuộc họp hôm nay.",
+  "brief.schedule.connect": "Kết nối lịch",
+  "brief.schedule.reconnect": "Kết nối lại lịch",
+  "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
   "brief.readings.riskPartial":
     "Chỉ tính giá trị đã biết; chưa kiểm tra được một số công việc về cơ hội.",
   "brief.readings.unpricedCount_one":
@@ -658,6 +674,8 @@ export const vi = {
   "brief.coverage.source.relationship_decay": "Mối quan hệ ít liên lạc",
   "brief.coverage.source.meeting_outcome": "Theo dõi sau cuộc họp",
   "brief.coverage.source.meeting": "Cuộc họp sắp tới",
+  "brief.coverage.source.calendar": "Kết nối lịch",
+  "brief.coverage.source.next_meeting": "Cuộc họp tiếp theo",
   "brief.coverage.source.deal_at_risk": "Giao dịch được đánh dấu",
   "brief.coverage.source.lead_response": "Khách hàng tiềm năng được phân công",
   "brief.coverage.source.customer_waiting": "Tin nhắn chưa trả lời",
@@ -2804,12 +2822,11 @@ export const vi = {
   "tags.more": "+{count} nữa",
   "tags.showLess": "Thu gọn",
   "tags.removeTag": "Gỡ {name}",
-  "tags.removeTitle": "Gỡ {name} khỏi bản ghi này?",
+  "tags.removed": "Đã gỡ {name} khỏi bản ghi này",
+  "tags.restored": "Đã gắn lại {name} cho bản ghi này",
   "tags.addedBy": "Được thêm bởi {who} · {when}",
   "tags.addedByUndated": "Được thêm bởi {who}",
   "tags.addedOn": "Đã thêm {when}",
-  "tags.visibleWorkspaceWide": "Tên tag hiển thị cho toàn bộ tổ chức.",
-  "tags.removeFromRecord": "Gỡ khỏi bản ghi này",
   "tags.withheld": "Đã ẩn — vai trò của bạn không đọc được từ vựng tag",
   "tags.emptyTitle": "Chưa có tag",
   "tags.emptyBody":
@@ -3899,6 +3916,14 @@ export const vi = {
   "brief.readings.needsPrep_other": "{count} chưa chuẩn bị",
   "brief.readings.prepUnknown": "không kiểm tra được hết",
   "brief.readings.prepared": "đã chuẩn bị đủ",
+  "brief.readings.calendarNotConnected": "Chưa kết nối",
+  "brief.readings.calendarNotConnectedWhy":
+    "Kết nối lịch của bạn để đếm cuộc họp.",
+  "brief.readings.calendarUnreadable": "Không đồng bộ",
+  "brief.readings.calendarUnreadableWhy":
+    "Kết nối lại lịch của bạn để đếm cuộc họp.",
+  "brief.readings.nextMeeting": "Tiếp theo: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Tiếp theo: {date}",
   "brief.readings.leads": "Khách hàng tiềm năng cần liên hệ",
   "brief.readings.leadsBasis": "Công việc đã lên kế hoạch cho khách tiềm năng",
   "brief.readings.leadsDue": "tiếp theo đến hạn {value}",
@@ -10087,6 +10112,7 @@ export const vi = {
   "contact.action.call": "Gọi",
   "contact.action.meetings": "Lịch hẹn",
   "contact.action.workAsLead": "Theo dõi như lead",
+  "contact.action.openLead": "Mở lead",
   "contact.action.addTask": "Thêm việc",
   "contact.action.research": "Nghiên cứu",
 
@@ -10797,8 +10823,6 @@ export const vi = {
   "lists.why.inDays_one": "trong {count} ng\u00e0y n\u1eefa",
   "lists.why.inDays_other": "trong {count} ng\u00e0y n\u1eefa",
   "lists.remove": "G\u1ee1 kh\u1ecfi danh s\u00e1ch ch\u1ecdn",
-  "lists.removeTitle":
-    "G\u1ee1 b\u1ea3n ghi n\u00e0y kh\u1ecfi danh s\u00e1ch ch\u1ecdn?",
   "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
   "lists.noteHint":
     "\u0110\u01b0\u1ee3c l\u01b0u c\u00f9ng thay \u0111\u1ed5i \u0111\u1ec3 \u0111\u1ed3ng nghi\u1ec7p bi\u1ebft l\u00fd do.",
@@ -10810,6 +10834,8 @@ export const vi = {
   "lists.record.checkPick": "Ch\u1ecdn m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
   "lists.record.truncated":
     "V\u00e0 c\u00f2n danh s\u00e1ch kh\u00e1c kh\u00f4ng hi\u1ec3n th\u1ecb \u1edf \u0111\u00e2y.",
+  "lists.record.takenOff": "Đã gỡ khỏi {name}",
+  "lists.record.putBack": "Đã thêm lại vào {name}",
   "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",

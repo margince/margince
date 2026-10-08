@@ -39,7 +39,7 @@ func ResumeBudgetScans(ctx context.Context, db *database.DB, resume BudgetScanRe
 			return nil, err
 		}
 		return pgx.CollectRows(rows, pgx.RowToStructByPos[budgetScan])
-	}, func(row budgetScan) ids.UUID { return row.ID }, func(tx pgx.Tx, row budgetScan) error {
+	}, func(row budgetScan) ids.UUID { return row.ID }, func(ctx context.Context, tx pgx.Tx, row budgetScan) error {
 		// Bound the recovery caller here; the callback also resolves the original
 		// requester, whose authority may have changed since the scan was queued.
 		if err := auth.EnsureVisible(ctx, tx, "company", row.CompanyID); err != nil {

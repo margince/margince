@@ -126,6 +126,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-ai-task.md](how-to/add-an-ai-task.md): add a new AI task.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md): write a test case that
   certifies a model.
+- [design-a-bench-case.md](how-to/design-a-bench-case.md): add a screen to the daily-use speed test
+  (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
@@ -144,7 +146,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.
   Generated.
-- [brief-priorities.md](reference/brief-priorities.md): how the app builds the morning list of work.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
 - [agent-tools.md](reference/agent-tools.md): each agent tool, and what it may do.
 - [mcp-info.md](reference/mcp-info.md): the MCP tools as a client sees them. Generated.
@@ -157,6 +158,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
+- [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
+  with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.
 - [ci-workflows.md](reference/ci-workflows.md): the GitHub workflows that run next to the merge check.
 - [platform-toolkit.md](reference/platform-toolkit.md): shared code for every module.
@@ -261,6 +264,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 - [customer-requests.md](explanation/customer-requests.md): how the app finds and tracks what a customer
   asks for.
+- [home-and-worklist.md](explanation/home-and-worklist.md): how the app builds the morning list of work, and
+  the review that follows it.
 - [frontend-architecture.md](explanation/frontend-architecture.md): how the web app is built.
 - [pwa.md](explanation/pwa.md): the app you can install from the web.
 - [contact-record-page.md](explanation/contact-record-page.md): the contact record page.

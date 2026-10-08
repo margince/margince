@@ -12,7 +12,7 @@ import type { MessageKey } from "../i18n/en";
 import { useMe } from "./common";
 import { rosterMissLabel } from "./entityref";
 import type { List } from "./lists.queries";
-import { useRosterNames, useRosterPartial } from "./roster";
+import { useRoster, useRosterPartial } from "./roster";
 
 const SHARINGS = ["private", "team", "workspace"] as const;
 
@@ -38,7 +38,7 @@ const OWNER_TEAMS = "owner-teams";
 /** A team's name off the roster, or the honest reason there is none yet. */
 function useTeamName(): (teamId: string) => string {
   const t = useT();
-  const teams = useRosterNames("team", true);
+  const teams = useRoster("team", true);
   const partial = useRosterPartial("team", true);
   return (teamId) => {
     const found = teams.data?.find((team) => team.id === teamId);

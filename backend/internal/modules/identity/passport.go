@@ -15,8 +15,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -104,6 +106,32 @@ func (e *InvalidScopeError) Error() string {
 	return "scope " + e.Scope + " is not one of read|draft|write|send|enrich"
 }
 
+// InvalidPassportFieldError maps to 422 naming Field: a request value the
+// contract bounds (unique scopes, a label of at most maxPassportLabelRunes).
+type InvalidPassportFieldError struct{ Field, Code, Message string }
+
+func (e *InvalidPassportFieldError) Error() string { return e.Field + ": " + e.Message }
+
+// maxPassportLabelRunes is the label bound crm.yaml declares as maxLength,
+// which counts characters rather than bytes.
+const maxPassportLabelRunes = 120
+
+// admitCallerChosenFields refuses what IssuePassportRequest forbids on the
+// wire. An OAuth-minted passport derives its label from the client id and is
+// not caller-chosen, so only the local doors run this.
+func admitCallerChosenFields(in IssuePassportInput) error {
+	if in.Label != nil && utf8.RuneCountInString(*in.Label) > maxPassportLabelRunes {
+		return &InvalidPassportFieldError{Field: "label", Code: "label_too_long", Message: fmt.Sprintf("must be at most %d characters", maxPassportLabelRunes)}
+	}
+	if in.TTL != nil && (*in.TTL <= 0 || *in.TTL > maxPassportTTL) {
+		return &InvalidPassportFieldError{Field: "ttl_hours", Code: "ttl_out_of_range", Message: fmt.Sprintf("must be 1 to %d hours", int(maxPassportTTL/time.Hour))}
+	}
+	if len(slices.Compact(slices.Sorted(slices.Values(in.Scopes)))) != len(in.Scopes) {
+		return &InvalidPassportFieldError{Field: "scopes", Code: "duplicate_scope", Message: "must not repeat a scope"}
+	}
+	return nil
+}
+
 // IssuePassport mints a passport for the authenticated human in id — the
 // A1/local path, where the passport answers to no OAuth grant.
 func (s *Service) IssuePassport(ctx context.Context, id Identity, in IssuePassportInput) (IssuedPassport, error) {
@@ -177,11 +205,16 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 			return IssuedPassport{}, &InvalidScopeError{Scope: sc}
 		}
 	}
+	if grantID == nil {
+		if err := admitCallerChosenFields(in); err != nil {
+			return IssuedPassport{}, err
+		}
+	}
 	ttl := defaultPassportTTL
 	if in.TTL != nil {
 		ttl = *in.TTL
 		if ttl <= 0 || ttl > maxPassportTTL {
-			return IssuedPassport{}, &InvalidScopeError{Scope: fmt.Sprintf("ttl %s (max %s)", ttl, maxPassportTTL)}
+			return IssuedPassport{}, fmt.Errorf("passport lifetime %s is outside 0 to %s", ttl, maxPassportTTL)
 		}
 	}
 

@@ -17557,6 +17557,27 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyFigureCoverageStatus.
+const (
+	WeeklyFigureCoverageStatusNotRecorded WeeklyFigureCoverageStatus = "not_recorded"
+	WeeklyFigureCoverageStatusPartial     WeeklyFigureCoverageStatus = "partial"
+	WeeklyFigureCoverageStatusRecorded    WeeklyFigureCoverageStatus = "recorded"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyFigureCoverageStatus enum.
+func (e WeeklyFigureCoverageStatus) Valid() bool {
+	switch e {
+	case WeeklyFigureCoverageStatusNotRecorded:
+		return true
+	case WeeklyFigureCoverageStatusPartial:
+		return true
+	case WeeklyFigureCoverageStatusRecorded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WeeklyLearningCitationSubjectType.
 const (
 	WeeklyLearningCitationSubjectTypeCommitment WeeklyLearningCitationSubjectType = "commitment"
@@ -17776,6 +17797,27 @@ func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
 	case WeeklyReviewOutlookPeriodKindWeeklyOutlookPeriodQuarter:
 		return true
 	case WeeklyReviewOutlookPeriodKindWeeklyOutlookPeriodWeek:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistCalendar.
+const (
+	WorklistCalendarConnected    WorklistCalendar = "connected"
+	WorklistCalendarNotConnected WorklistCalendar = "not_connected"
+	WorklistCalendarUnreadable   WorklistCalendar = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the WorklistCalendar enum.
+func (e WorklistCalendar) Valid() bool {
+	switch e {
+	case WorklistCalendarConnected:
+		return true
+	case WorklistCalendarNotConnected:
+		return true
+	case WorklistCalendarUnreadable:
 		return true
 	default:
 		return false
@@ -28291,6 +28333,11 @@ type CompanyEmailDraft struct {
 	// reader deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
+	// LanguageUndetermined True when the draft's language could not be determined from the contact's own correspondence, so it is written in the default rather than in theirs.
+	// The causes are deliberately not distinguished on the wire, and there are more than two: the reader may see none of that contact's mail, the contact may have written nothing readable, the evidence may be too short or mixed to call, or the language may be one the detector does not support. Every one of them means the same thing to a client — the draft is sendable and its language is a fallback rather than a choice.
+	// A client should say so beside the note, for the same reason voice_degraded is said: a reader fluent only in the default cannot tell a fallback from a choice, and would forward an English note to a customer who writes in German believing the product had checked. Absent reads as false.
+	LanguageUndetermined *bool `json:"language_undetermined,omitempty"`
+
 	// Reasoning What the draft was written from, as separate claims rather than a sentence in
 	// the body. A SIBLING of the body on purpose (DRAFT-AC-N-4): a body that
 	// explains itself is a body the rep has to edit before sending, and the two
@@ -31654,7 +31701,7 @@ type CreateLeadRequest struct {
 	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
 	CompanyName         *string `json:"company_name,omitempty"`
 
-	// ContactId An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise); it is not linked to the lead or changed. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+	// ContactId An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise). The lead records it as `from_contact_id`, and the contact itself is not changed. A contact already worked through a live lead answers 409 `duplicate_contact_lead` with that lead's id. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
 	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
 	Email     *openapi_types.Email `json:"email,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
@@ -36000,9 +36047,12 @@ type Lead struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
-	FirstResponseAt *time.Time         `json:"first_response_at,omitempty"`
-	FullName        *string            `json:"full_name,omitempty"`
-	Id              openapi_types.UUID `json:"id"`
+	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
+
+	// FromContactId The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. While this lead is live, a second create from the same contact answers 409 `duplicate_contact_lead` naming this lead.
+	FromContactId *openapi_types.UUID `json:"from_contact_id,omitempty"`
+	FullName      *string             `json:"full_name,omitempty"`
+	Id            openapi_types.UUID  `json:"id"`
 
 	// LastActivityAt Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
@@ -36901,7 +36951,9 @@ type MagicNotShown struct {
 	// meaning: a maintenance sweep, a projection refresh.
 	// `unknown_entity_type` — an entity kind this build cannot scope, and therefore
 	// cannot safely show. Counted rather than served: showing a row this read cannot
-	// place is showing a row it cannot prove the reader may see.
+	// place is showing a row it cannot prove the reader may see. The count is
+	// workspace-wide machine actions, not the reader's own, and is reported only to a
+	// seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 	// `out_of_scope` — a row about a record outside the reader's own scope. Counted
 	// so the total is honest, and never named.
 	Reason MagicNotShownReason `json:"reason"`
@@ -36911,7 +36963,9 @@ type MagicNotShown struct {
 // meaning: a maintenance sweep, a projection refresh.
 // `unknown_entity_type` — an entity kind this build cannot scope, and therefore
 // cannot safely show. Counted rather than served: showing a row this read cannot
-// place is showing a row it cannot prove the reader may see.
+// place is showing a row it cannot prove the reader may see. The count is
+// workspace-wide machine actions, not the reader's own, and is reported only to a
+// seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 // `out_of_scope` — a row about a record outside the reader's own scope. Counted
 // so the total is honest, and never named.
 type MagicNotShownReason string
@@ -36935,6 +36989,10 @@ type MagicReceipt struct {
 	// A machine write with no customer-facing meaning is not Magic, and folding it
 	// in would turn internal churn into apparent value. Reporting the count instead
 	// means a preview showing five lines can never imply it is showing everything.
+	//
+	// The `unknown_entity_type` entry counts workspace-wide machine actions this build
+	// cannot place, and is reported only to a seat holding `ai_diagnostics` read. Its
+	// absence for any other seat is not a zero.
 	NotShown []MagicNotShown `json:"not_shown"`
 
 	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
@@ -40781,6 +40839,12 @@ type RelinkThreadRequest struct {
 	ThreadKey string `json:"thread_key"`
 }
 
+// RemovalUndo The way back from taking a tag off a record or a record off a Shortlist. A removal answers it, and the matching restore route takes it back unchanged.
+type RemovalUndo struct {
+	// AuditId The removal's own history entry, which kept who added the link and when, so the restore puts it back as it was.
+	AuditId openapi_types.UUID `json:"audit_id"`
+}
+
 // RenameCustomFieldRequest Merge-PATCH; `label` only — `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent).
 type RenameCustomFieldRequest struct {
 	Label *string `json:"label,omitempty"`
@@ -41024,8 +41088,10 @@ type ReportResult struct {
 	Rows []map[string]interface{} `json:"rows"`
 
 	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
-	Timezone  string `json:"timezone"`
-	TotalRows *int   `json:"total_rows,omitempty"`
+	Timezone string `json:"timezone"`
+
+	// TotalRows Groups that matched. `rows` is capped at the report row limit, so a total above its length means this answer is the top of a longer one rather than all of it. The drill-through's `total_rows` counts source rows for the same reason.
+	TotalRows *int `json:"total_rows,omitempty"`
 }
 
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
@@ -42118,6 +42184,17 @@ type SearchResultTrustTier string
 
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
+
+// SeatName A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them.
+type SeatName struct {
+	DisplayName string             `json:"display_name"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// SeatNameListResponse defines model for SeatNameListResponse.
+type SeatNameListResponse struct {
+	Data []SeatName `json:"data"`
+}
 
 // SeatUsage How many full seats the installation is using, without what it is entitled to.
 //
@@ -44202,10 +44279,9 @@ type UpdateActivityRequest struct {
 	// moment the API could not be told.
 	//
 	// An omitted field is unchanged, like every other field on this patch. Sending
-	// an explicit `null` is also unchanged rather than a clear: this request maps
-	// onto the same coalescing update `due_at` and `remind_at` take, which cannot
-	// tell an absent field from a null one. Recording the wrong outcome is fixed by
-	// sending the right one.
+	// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
+	// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
+	// wrong outcome is fixed by sending the right one.
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
@@ -44224,10 +44300,9 @@ type UpdateActivityRequest struct {
 // moment the API could not be told.
 //
 // An omitted field is unchanged, like every other field on this patch. Sending
-// an explicit `null` is also unchanged rather than a clear: this request maps
-// onto the same coalescing update `due_at` and `remind_at` take, which cannot
-// tell an absent field from a null one. Recording the wrong outcome is fixed by
-// sending the right one.
+// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
+// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
+// wrong outcome is fixed by sending the right one.
 type UpdateActivityRequestMeetingStatus string
 
 // UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
@@ -44539,13 +44614,17 @@ type UpdateDealRequest struct {
 	// ExpectedCloseDate On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.
 	ExpectedCloseDate *openapi_types.Date                `json:"expected_close_date,omitempty"`
 	ForecastCategory  *UpdateDealRequestForecastCategory `json:"forecast_category,omitempty"`
-	FxRateDate        *openapi_types.Date                `json:"fx_rate_date,omitempty"`
 
-	// FxRateToBase Native→base rate to FREEZE at close. Required (server may also compute it from the FX table) when transitioning to won with a non-base currency — satisfies the deal_closed_fx CHECK (formulas §6.1). Ignored while open.
-	FxRateToBase *string             `json:"fx_rate_to_base,omitempty"`
-	LostReason   *string             `json:"lost_reason,omitempty"`
-	Name         *string             `json:"name,omitempty"`
-	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
+	// FxRateDate Refused 422 `set_by_advance`; dated by the advance that closes the deal.
+	FxRateDate *openapi_types.Date `json:"fx_rate_date,omitempty"`
+
+	// FxRateToBase Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal.
+	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
+
+	// LostReason Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.
+	LostReason *string             `json:"lost_reason,omitempty"`
+	Name       *string             `json:"name,omitempty"`
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
 	PartnerAttribution *UpdateDealRequestPartnerAttribution `json:"partner_attribution,omitempty"`
@@ -44554,11 +44633,13 @@ type UpdateDealRequest struct {
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
-	Priority             *UpdateDealRequestPriority `json:"priority,omitempty"`
-	ProjectId            *openapi_types.UUID        `json:"project_id,omitempty"`
-	Status               *UpdateDealRequestStatus   `json:"status,omitempty"`
-	WaitUntil            *openapi_types.Date        `json:"wait_until,omitempty"`
-	AdditionalProperties map[string]interface{}     `json:"-"`
+	Priority  *UpdateDealRequestPriority `json:"priority,omitempty"`
+	ProjectId *openapi_types.UUID        `json:"project_id,omitempty"`
+
+	// Status Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.
+	Status               *UpdateDealRequestStatus `json:"status,omitempty"`
+	WaitUntil            *openapi_types.Date      `json:"wait_until,omitempty"`
+	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
 // UpdateDealRequestCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
@@ -44573,7 +44654,7 @@ type UpdateDealRequestPartnerAttribution string
 // UpdateDealRequestPriority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
 type UpdateDealRequestPriority string
 
-// UpdateDealRequestStatus defines model for UpdateDealRequest.Status.
+// UpdateDealRequestStatus Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.
 type UpdateDealRequestStatus string
 
 // UpdateDealRoomDocumentRequest Any subset; omit a field to leave it unchanged.
@@ -45622,6 +45703,45 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyFigureCoverage Whether one figure family's source held records for the review's owner scope across
+// the week, so a zero can be told from an unmeasured week.
+//
+// `recorded` — the source held usable records in scope before the week began.
+// `partial` — the source's first usable record in scope falls inside the week, so the
+// figure counts only from `recorded_since`. `not_recorded` — the week ended before the
+// source's first record in scope, or the scope holds no record of that source at all.
+//
+// A client renders a `not_recorded` figure as unrecorded, never as 0: the zero beside it
+// is the absence of a source, not a measurement.
+type WeeklyFigureCoverage struct {
+	// Reason Why the figure carries this status, in words a reader can be shown.
+	Reason *string `json:"reason,omitempty"`
+
+	// RecordedSince The earliest usable record of this source in the review's owner scope, counting
+	// manually entered and imported records. Not the date a capture connection was made:
+	// a record keyed in by hand before any connection existed is still a record.
+	RecordedSince *time.Time                 `json:"recorded_since,omitempty"`
+	Status        WeeklyFigureCoverageStatus `json:"status"`
+}
+
+// WeeklyFigureCoverageStatus defines model for WeeklyFigureCoverage.Status.
+type WeeklyFigureCoverageStatus string
+
+// WeeklyFigureCoverageSet Whether each figure family on the review was measured over the week, by the source
+// that feeds it. Absent on a review frozen before figures carried their coverage; such a
+// review states no coverage either way. A family missing here has no coverage statement.
+type WeeklyFigureCoverageSet struct {
+	Commitments *WeeklyFigureCoverage `json:"commitments,omitempty"`
+
+	// Deals Covers the deals won, lost and moved.
+	Deals    *WeeklyFigureCoverage `json:"deals,omitempty"`
+	Leads    *WeeklyFigureCoverage `json:"leads,omitempty"`
+	Meetings *WeeklyFigureCoverage `json:"meetings,omitempty"`
+
+	// Tasks Covers the tasks completed, due and carried.
+	Tasks *WeeklyFigureCoverage `json:"tasks,omitempty"`
+}
+
 // WeeklyLearningCitation One row a learning was drawn from, by the name it carried that week.
 type WeeklyLearningCitation struct {
 	// Label What the row was CALLED when the learning was written, so a citation still reads after a rename.
@@ -45642,11 +45762,16 @@ type WeeklyNumericSummary struct {
 	BookingsCoverage ReportingCoverage `json:"bookings_coverage"`
 	Currency         string            `json:"currency"`
 	EvaluatedAt      time.Time         `json:"evaluated_at"`
-	Interval         ReportingWindow   `json:"interval"`
-	MeetingsCoverage ReportingCoverage `json:"meetings_coverage"`
-	Timezone         string            `json:"timezone"`
-	Version          string            `json:"version"`
-	WonMinor         *int64            `json:"won_minor,omitempty"`
+
+	// FigureCoverage Whether each figure family on the review was measured over the week, by the source
+	// that feeds it. Absent on a review frozen before figures carried their coverage; such a
+	// review states no coverage either way. A family missing here has no coverage statement.
+	FigureCoverage   *WeeklyFigureCoverageSet `json:"figure_coverage,omitempty"`
+	Interval         ReportingWindow          `json:"interval"`
+	MeetingsCoverage ReportingCoverage        `json:"meetings_coverage"`
+	Timezone         string                   `json:"timezone"`
+	Version          string                   `json:"version"`
+	WonMinor         *int64                   `json:"won_minor,omitempty"`
 }
 
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -46241,6 +46366,22 @@ type Worklist struct {
 	// labelled in ranked order — a client draws a heading where the band changes.
 	Bands *[]WorklistBand `json:"bands,omitempty"`
 
+	// Calendar Whether the reader's own calendar feeds the meetings this read counts. Present only
+	// for scope `mine`; a wider scope has no single calendar to answer for.
+	//
+	// `not_connected` — the reader has no live calendar connection: none was made, or every
+	// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+	// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+	//
+	// A zero `meetings` count is a measurement only when this is `connected`. Under either
+	// other answer it says nothing about the day, and a client must not draw it as "no
+	// meetings".
+	//
+	// Absent under scope `mine` when the read could not answer. A read that failed is
+	// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
+	// reader is refused is absent and named nowhere.
+	Calendar *WorklistCalendar `json:"calendar,omitempty"`
+
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
 	// pill counts, and what lets the page say how much it is not showing. Counted
 	// before any narrowing, so a filtered page still reports the categories it is
@@ -46275,6 +46416,18 @@ type Worklist struct {
 	// can still sit above sources that were cut short, and both statements are true at
 	// once.
 	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// NextMeeting The reader's next booked customer meeting — linked to a contact, lead or company the
+	// reader may see — within the next 30 days. Present only when the meetings lane
+	// answered and holds no meeting left today, so an empty day still says when the next
+	// conversation is. Any meeting left today, internal meetings included, means the day
+	// is not empty, so this is absent. Absent too when the lane did not answer, when
+	// nothing is booked in the window, or when its read failed. `participants` names only
+	// contacts the reader may see.
+	//
+	// A read that failed is named in `sources_unavailable` as source `next_meeting`,
+	// category `meetings`; a read the reader is refused is absent and named nowhere.
+	NextMeeting *Contact360NextMeeting `json:"next_meeting,omitempty"`
 
 	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
 	// due commitments were read across the team roster. Absent under every other scope.
@@ -46378,6 +46531,22 @@ type Worklist struct {
 	// `changed_since_snapshot` explains why the count moved. Neither is an error.
 	Walk *WorklistWalk `json:"walk,omitempty"`
 }
+
+// WorklistCalendar Whether the reader's own calendar feeds the meetings this read counts. Present only
+// for scope `mine`; a wider scope has no single calendar to answer for.
+//
+// `not_connected` — the reader has no live calendar connection: none was made, or every
+// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+//
+// A zero `meetings` count is a measurement only when this is `connected`. Under either
+// other answer it says nothing about the day, and a client must not draw it as "no
+// meetings".
+//
+// Absent under scope `mine` when the read could not answer. A read that failed is
+// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
+// reader is refused is absent and named nowhere.
+type WorklistCalendar string
 
 // WorklistFilter The narrowing this read applied. The same vocabulary the query parameter takes.
 type WorklistFilter string
@@ -51214,6 +51383,10 @@ type ListLeadsParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListLeadsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// FromContactId Only the leads worked from this contact (`from_contact_id` on the lead). The contact
+	// page asks it to find the open lead a contact is already worked through.
+	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
 }
 
 // ListLeadsParamsCapturedByKind defines parameters for ListLeads.
@@ -53223,8 +53396,9 @@ type ListUsersParams struct {
 	// IncludeInactive Admin management view — include deactivated/suspended members. Honored only for an admin caller.
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
 
-	// IncludeInvited Also list invited seats — members who have not signed in yet. For NAMING the colleagues records
-	// already point at (an imported record's owner is often an invited colleague); any member may ask.
+	// IncludeInvited Also list invited seats — members who have not signed in yet. Naming the colleagues a record
+	// already points at is `GET /users/names`, which answers id and display name alone; a roster row
+	// carries the member's email and seat status with it.
 	// Pickers leave it off, so nobody is offered work they cannot open.
 	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
@@ -53234,6 +53408,12 @@ type PreviewAccessParams struct {
 	// Role A live role's key — a seeded one or one made with `createRole`.
 	Role    string                `form:"role" json:"role"`
 	TeamIds *[]openapi_types.UUID `form:"team_ids,omitempty" json:"team_ids,omitempty"`
+}
+
+// NameSeatsParams defines parameters for NameSeats.
+type NameSeatsParams struct {
+	// Id The seats to name. Repeat the parameter for several, up to 100; more is `422`.
+	Id []openapi_types.UUID `form:"id" json:"id"`
 }
 
 // ListSavedViewsParams defines parameters for ListSavedViews.
@@ -54370,6 +54550,9 @@ type AddListMemberJSONRequestBody = ListMemberChangeRequest
 // RemoveListMemberJSONRequestBody defines body for RemoveListMember for application/json ContentType.
 type RemoveListMemberJSONRequestBody = ListMemberChangeRequest
 
+// RestoreListMemberJSONRequestBody defines body for RestoreListMember for application/json ContentType.
+type RestoreListMemberJSONRequestBody = RemovalUndo
+
 // SaveMailDraftJSONRequestBody defines body for SaveMailDraft for application/json ContentType.
 type SaveMailDraftJSONRequestBody = MailDraftInput
 
@@ -54633,6 +54816,9 @@ type RemoveTagJSONRequestBody = ApplyTagRequest
 
 // ApplyTagJSONRequestBody defines body for ApplyTag for application/json ContentType.
 type ApplyTagJSONRequestBody = ApplyTagRequest
+
+// RestoreTagApplicationJSONRequestBody defines body for RestoreTagApplication for application/json ContentType.
+type RestoreTagApplicationJSONRequestBody = RemovalUndo
 
 // MergeTagsJSONRequestBody defines body for MergeTags for application/json ContentType.
 type MergeTagsJSONRequestBody = MergeTagsRequest
@@ -60394,6 +60580,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "first_response_at")
 	}
 
+	if raw, found := object["from_contact_id"]; found {
+		err = json.Unmarshal(raw, &a.FromContactId)
+		if err != nil {
+			return fmt.Errorf("error reading 'from_contact_id': %w", err)
+		}
+		delete(object, "from_contact_id")
+	}
+
 	if raw, found := object["full_name"]; found {
 		err = json.Unmarshal(raw, &a.FullName)
 		if err != nil {
@@ -60755,6 +60949,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["first_response_at"], err = json.Marshal(a.FirstResponseAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'first_response_at': %w", err)
+		}
+	}
+
+	if a.FromContactId != nil {
+		object["from_contact_id"], err = json.Marshal(a.FromContactId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'from_contact_id': %w", err)
 		}
 	}
 
@@ -66325,7 +66526,7 @@ type ServerInterface interface {
 	// Get a deal by id (the 360 record).
 	// (GET /deals/{id})
 	GetDeal(w http.ResponseWriter, r *http.Request, id Id)
-	// Update a deal (partial). Closing requires terminal status + lost_reason if lost.
+	// Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
 	// (PATCH /deals/{id})
 	UpdateDeal(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealParams)
 	// Advance a deal to a new stage (audit-logged with prior + next stage).
@@ -66676,6 +66877,9 @@ type ServerInterface interface {
 	// Take one record off a Shortlist, with an optional note on why.
 	// (POST /lists/{id}/members/remove)
 	RemoveListMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back a record the caller took off a Shortlist.
+	// (POST /lists/{id}/members/restore)
+	RestoreListMember(w http.ResponseWriter, r *http.Request, id Id)
 	// Say why a record is, or is not, on a list.
 	// (GET /lists/{id}/members/{recordId}/why)
 	ExplainListMember(w http.ResponseWriter, r *http.Request, id Id, recordId openapi_types.UUID)
@@ -67306,6 +67510,9 @@ type ServerInterface interface {
 	// Apply a tag to an entity (contact/company/deal/lead/project).
 	// (POST /tags/{id}/apply)
 	ApplyTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back a tag the caller took off a record.
+	// (POST /tags/{id}/apply/restore)
+	RestoreTagApplication(w http.ResponseWriter, r *http.Request, id Id)
 	// Fold this tag into another, moving every record that carries it.
 	// (POST /tags/{id}/merge)
 	MergeTags(w http.ResponseWriter, r *http.Request, id Id)
@@ -67345,6 +67552,9 @@ type ServerInterface interface {
 	// Record a colleague who has already left. Admin-only, human-only.
 	// (POST /users/former)
 	CreateFormerMember(w http.ResponseWriter, r *http.Request)
+	// Name the colleagues behind a set of ids. Read-only.
+	// (GET /users/names)
+	NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams)
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
@@ -69826,7 +70036,7 @@ func (_ Unimplemented) GetDeal(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Update a deal (partial). Closing requires terminal status + lost_reason if lost.
+// Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
 // (PATCH /deals/{id})
 func (_ Unimplemented) UpdateDeal(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -70525,6 +70735,12 @@ func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id 
 // Take one record off a Shortlist, with an optional note on why.
 // (POST /lists/{id}/members/remove)
 func (_ Unimplemented) RemoveListMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back a record the caller took off a Shortlist.
+// (POST /lists/{id}/members/restore)
+func (_ Unimplemented) RestoreListMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71788,6 +72004,12 @@ func (_ Unimplemented) ApplyTag(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Put back a tag the caller took off a record.
+// (POST /tags/{id}/apply/restore)
+func (_ Unimplemented) RestoreTagApplication(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Fold this tag into another, moving every record that carries it.
 // (POST /tags/{id}/merge)
 func (_ Unimplemented) MergeTags(w http.ResponseWriter, r *http.Request, id Id) {
@@ -71863,6 +72085,12 @@ func (_ Unimplemented) ListAssignableRoles(w http.ResponseWriter, r *http.Reques
 // Record a colleague who has already left. Admin-only, human-only.
 // (POST /users/former)
 func (_ Unimplemented) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Name the colleagues behind a set of ids. Read-only.
+// (GET /users/names)
+func (_ Unimplemented) NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92439,6 +92667,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "from_contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from_contact_id", r.URL.Query(), &params.FromContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from_contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from_contact_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListLeads(w, r, params)
 	}))
@@ -93555,6 +93796,38 @@ func (siw *ServerInterfaceWrapper) RemoveListMember(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RemoveListMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreListMember operation middleware
+func (siw *ServerInterfaceWrapper) RestoreListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreListMember(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -102670,6 +102943,38 @@ func (siw *ServerInterfaceWrapper) ApplyTag(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreTagApplication operation middleware
+func (siw *ServerInterfaceWrapper) RestoreTagApplication(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreTagApplication(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // MergeTags operation middleware
 func (siw *ServerInterfaceWrapper) MergeTags(w http.ResponseWriter, r *http.Request) {
 
@@ -103182,6 +103487,47 @@ func (siw *ServerInterfaceWrapper) CreateFormerMember(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateFormerMember(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// NameSeats operation middleware
+func (siw *ServerInterfaceWrapper) NameSeats(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params NameSeatsParams
+
+	// ------------- Required query parameter "id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "id", r.URL.Query(), &params.Id, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.NameSeats(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -107360,6 +107706,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/lists/{id}/members/remove", wrapper.RemoveListMember)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/members/restore", wrapper.RestoreListMember)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lists/{id}/members/{recordId}/why", wrapper.ExplainListMember)
 	})
 	r.Group(func(r chi.Router) {
@@ -107990,6 +108339,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/tags/{id}/apply", wrapper.ApplyTag)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tags/{id}/apply/restore", wrapper.RestoreTagApplication)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tags/{id}/merge", wrapper.MergeTags)
 	})
 	r.Group(func(r chi.Router) {
@@ -108027,6 +108379,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/former", wrapper.CreateFormerMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/names", wrapper.NameSeats)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)

@@ -115,6 +115,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		if err := s.joinTeamsTx(ctx, tx, actor, newUserID.UUID, in.TeamIDs); err != nil {
 			return err
 		}
+		if err := reapDeadCredentials(ctx, tx, "auth_token"); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at)
 			 VALUES ($1, 'password_reset', $2, now() + $3::interval)`,

@@ -444,13 +444,13 @@ func TestEachSingleRecordRestoreEmitsItsEventAndNamesTheArchive(t *testing.T) {
 		run           func(tx pgx.Tx) (storekit.RestoreReport, error)
 	}{
 		{"contact", "contact.restored", contact.UUID, func(tx pgx.Tx) (storekit.RestoreReport, error) {
-			return e.Contacts.RestoreContactTx(ctx, tx, contact, nil, storekit.RestoreWith{Erased: archiveIsBehindErasure})
+			return e.Contacts.RestoreContactTx(ctx, tx, contact, nil, unarchiveWith(nil))
 		}},
 		{"company", "company.restored", company.UUID, func(tx pgx.Tx) (storekit.RestoreReport, error) {
-			return e.Contacts.RestoreCompanyTx(ctx, tx, company, nil, storekit.RestoreWith{Erased: archiveIsBehindErasure})
+			return e.Contacts.RestoreCompanyTx(ctx, tx, company, nil, unarchiveWith(nil))
 		}},
 		{"deal", "deal.restored", deal.UUID, func(tx pgx.Tx) (storekit.RestoreReport, error) {
-			return e.Deals.RestoreDealTx(ctx, tx, deal, nil, storekit.RestoreWith{Erased: archiveIsBehindErasure})
+			return e.Deals.RestoreDealTx(ctx, tx, deal, nil, unarchiveWith(nil))
 		}},
 	} {
 		if err := restoreIn(t, e, restore.run); err != nil {
@@ -479,7 +479,7 @@ func TestASingleRecordRestoreRefusesAMergedOrLiveContact(t *testing.T) {
 	}
 	for name, id := range map[string]ids.ContactID{"merged": source, "not_archived": target} {
 		err := restoreIn(t, e, func(tx pgx.Tx) (storekit.RestoreReport, error) {
-			return e.Contacts.RestoreContactTx(ctx, tx, id, nil, storekit.RestoreWith{Erased: archiveIsBehindErasure})
+			return e.Contacts.RestoreContactTx(ctx, tx, id, nil, unarchiveWith(nil))
 		})
 		var refusal *storekit.RestoreRefusal
 		if !errors.As(err, &refusal) || string(refusal.Reason) != name {

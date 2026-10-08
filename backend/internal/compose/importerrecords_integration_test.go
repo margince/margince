@@ -91,6 +91,7 @@ func recordWires(t *testing.T, e *integration.Env, system string, author wireAut
 	return []recordWire{
 		{
 			"contact", "/v1/contacts", encode(json.Marshal(crmcontracts.CreateContactRequest{
+				Source:   "manual",
 				FullName: "Imported Contact", SourceSystem: &system, SourceAuthorId: author.id, SourceAuthorName: author.name,
 			})),
 			func(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +100,7 @@ func recordWires(t *testing.T, e *integration.Env, system string, author wireAut
 		},
 		{
 			"company", "/v1/companies", encode(json.Marshal(crmcontracts.CreateCompanyRequest{
+				Source:      "manual",
 				DisplayName: "Imported Company", SourceSystem: &system, SourceAuthorId: author.id, SourceAuthorName: author.name,
 			})),
 			func(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +108,8 @@ func recordWires(t *testing.T, e *integration.Env, system string, author wireAut
 			},
 		},
 		{"deal", "/v1/deals", encode(json.Marshal(crmcontracts.CreateDealRequest{
-			Name: "Imported Deal", PipelineId: pipeline.Id, StageId: (*pipeline.Stages)[0].Id, SourceSystem: &system,
+			Source: "manual",
+			Name:   "Imported Deal", PipelineId: pipeline.Id, StageId: (*pipeline.Stages)[0].Id, SourceSystem: &system,
 			SourceAuthorId: author.id, SourceAuthorName: author.name,
 		})), func(w http.ResponseWriter, r *http.Request) { d.CreateDeal(w, r, crmcontracts.CreateDealParams{}) }},
 		{"project", "/v1/projects", encode(json.Marshal(crmcontracts.CreateProjectRequest{

@@ -2019,6 +2019,10 @@ func (stubs) RemoveListMember(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "RemoveListMember")
 }
 
+func (stubs) RestoreListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreListMember")
+}
+
 func (stubs) ExplainListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, recordId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ExplainListMember")
 }
@@ -2859,6 +2863,10 @@ func (stubs) ApplyTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontra
 	httperr.NotImplemented(w, r, "ApplyTag")
 }
 
+func (stubs) RestoreTagApplication(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreTagApplication")
+}
+
 func (stubs) MergeTags(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "MergeTags")
 }
@@ -2909,6 +2917,10 @@ func (stubs) ListAssignableRoles(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) CreateFormerMember(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "CreateFormerMember")
+}
+
+func (stubs) NameSeats(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.NameSeatsParams) {
+	httperr.NotImplemented(w, r, "NameSeats")
 }
 
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

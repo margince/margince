@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 82,
+    "tools": 84,
     "system_frame_tokens": 586,
-    "tokens": 29117,
+    "tokens": 29643,
     "median_tool_tokens": 292,
-    "mean_tool_tokens": 354
+    "mean_tool_tokens": 352
   },
   "agents": [
     {
@@ -46,12 +46,12 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 82,
-      "tokens": 3784,
-      "listing_tokens": 1900,
-      "step_schema_tokens": 1298,
+      "of_served_tools": 84,
+      "tokens": 3810,
+      "listing_tokens": 1913,
+      "step_schema_tokens": 1311,
       "percent_of_ceiling": 11,
-      "headroom_tokens": 19426,
+      "headroom_tokens": 19400,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -67,12 +67,12 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 82,
-      "tokens": 5156,
-      "listing_tokens": 2746,
-      "step_schema_tokens": 1824,
+      "of_served_tools": 84,
+      "tokens": 5183,
+      "listing_tokens": 2760,
+      "step_schema_tokens": 1837,
       "percent_of_ceiling": 15,
-      "headroom_tokens": 18054,
+      "headroom_tokens": 18027,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -95,12 +95,12 @@
       "tokens": 823
     },
     {
-      "name": "bulk_update_records",
-      "tokens": 809
+      "name": "list_records",
+      "tokens": 817
     },
     {
-      "name": "list_records",
-      "tokens": 803
+      "name": "bulk_update_records",
+      "tokens": 809
     },
     {
       "name": "compose_analytics_report",
@@ -120,7 +120,7 @@
     },
     {
       "name": "log_activity",
-      "tokens": 685
+      "tokens": 701
     },
     {
       "name": "create_record",
@@ -229,6 +229,10 @@
     {
       "name": "decide_approval",
       "tokens": 332
+    },
+    {
+      "name": "attach_document",
+      "tokens": 330
     },
     {
       "name": "forecast_input_checks",
@@ -381,6 +385,10 @@
     {
       "name": "remove_tag",
       "tokens": 166
+    },
+    {
+      "name": "list_documents",
+      "tokens": 165
     },
     {
       "name": "read_project_360",

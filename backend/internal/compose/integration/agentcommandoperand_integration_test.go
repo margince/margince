@@ -52,12 +52,14 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing(t *testing.
 	// visibility='owner' narrows it to owner_id, which is the admin and not
 	// the rep below, so the miss is genuine rather than incidental.
 	companyID := createdID(t, e, "/v1/companies", AnyMap{
+		"source":       "manual",
 		"display_name": "Capture-Private Inc", "owner_id": adminID,
 	})
 
 	wsA := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 	rep := ids.NewV7()
-	seedInWorkspace(t, e, wsA,
+	seedInWorkspace(
+		t, e, wsA,
 		stmt(`UPDATE company SET visibility = 'owner' WHERE id = $1`, companyID),
 		stmt(`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rep@example.com', 'Rep One')`, rep),
 		// Borrow the bootstrap admin's hash so the rep can actually sign in —

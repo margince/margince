@@ -459,6 +459,9 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		})).
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		// The controller particulars form reads and writes through the settings
+		// store; without it every read and write of the form is a server fault.
+		WithSettings(NewSettingsStore(pool)).
 		// The edge that writes an accepted correction, through contacts' own
 		// update path — so the subject's correction is governed by the same
 		// gates as any other edit to that field.

@@ -17,7 +17,7 @@
 }
 
 .dc-seat {
-  stroke: var(--bgCard);
+  stroke: var(--bgInset);
   stroke-width: 1.5;
 }
 
@@ -28,7 +28,7 @@
 /* A seat with a name and no two-way exchange. Hollow, because the gap is the
    point: a reader must be able to count the unengaged seats at a glance. */
 .dc-seat-quiet {
-  fill: var(--bgCard);
+  fill: var(--bgInset);
   stroke: var(--borderStrong);
   stroke-width: 2;
 }
@@ -76,7 +76,7 @@
 }
 
 .dc-swatch-quiet {
-  background: var(--bgCard);
+  background: var(--bgInset);
   border: 2px solid var(--borderStrong);
 }
 

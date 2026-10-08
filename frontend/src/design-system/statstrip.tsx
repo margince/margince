@@ -29,6 +29,7 @@ export function StatStrip({
   testId,
   label,
   floor,
+  density,
 }: Readonly<{
   children: ReactNode;
   // How the strip SITS in the layout around it — it lands on the strip's
@@ -47,6 +48,10 @@ export function StatStrip({
   // row is read across as one statement, and a caveat attached to one figure
   // invites the reading where the others are exact.
   floor?: ReactNode;
+  // Compact keeps every slot on one line at a work column's width and sets
+  // each card smaller, for a row that sits above the content a reader came
+  // for rather than being that content.
+  density?: "compact";
 }>) {
   // The column count follows the slots the caller actually drew. A fixed
   // template reserves cells nobody fills, and an empty cell on a plate reads
@@ -72,6 +77,7 @@ export function StatStrip({
       style={vars}
       aria-label={label}
       data-testid={testId}
+      data-density={density}
     >
       {children}
     </section>

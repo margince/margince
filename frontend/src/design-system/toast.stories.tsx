@@ -43,9 +43,10 @@ import {
  * stops looking for the real way back.
  *
  * **An Undo replaces a confirm only where the inverse is exact**: one call puts
- * the prior state back with nothing lost, as un-hiding a deal file does. A way
- * back that re-stamps who added it, drops a note, needs a reason, reaches
- * someone outside or changes access keeps its `ConfirmModal`.
+ * the prior state back with nothing lost, as un-hiding a deal file, putting a
+ * tag back on a record and putting a record back on a Shortlist do. A way back
+ * that re-stamps who added it, drops a note, needs a reason, reaches someone
+ * outside or changes access keeps its `ConfirmModal`.
  */
 const meta: Meta<typeof ToastRegion> = {
   title: "Components/Messaging/Toast",

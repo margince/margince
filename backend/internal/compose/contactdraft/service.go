@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Assembler is the caller's own composite read of the contact — the same seam
@@ -111,14 +112,15 @@ func (s *Service) WithVoice(reader draftvoice.Reader, log *slog.Logger) *Service
 	return s
 }
 
-// Draft writes one email. It performs no write of any kind.
+// Draft writes one email, and names the records it was written from so a
+// caller that keeps it can re-prove them. It performs no write of any kind.
 func (s *Service) Draft(
 	ctx context.Context, contactID ids.ContactID, req Request,
-) (crmcontracts.CompanyEmailDraft, error) {
+) (crmcontracts.CompanyEmailDraft, []datasource.EntityRef, error) {
 	// A human, or an agent holding draft: draft_email reaches this engine too
 	// (agentdraftseam.go), so one contact gets one draft whoever asks.
 	if err := auth.RequireHumanOrAgentScope(ctx, principal.ScopeDraft); err != nil {
-		return crmcontracts.CompanyEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	// The gates that matter run HERE, in the caller's own composite read: a
 	// contact they cannot read refuses before a word is written, a deal or
@@ -126,7 +128,7 @@ func (s *Service) Draft(
 	// cannot see refuses the scoped read itself (activities.RequireProjectScope).
 	view, err := s.view.AssembleScoped(ctx, contactID, contact360.AssembleOptions{ProjectID: req.ProjectID})
 	if err != nil {
-		return crmcontracts.CompanyEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	req.Envelope = s.envelope.Resolve(ctx,
 		draftfloor.Written{Body: CorrespondenceText(view), Rewrite: req.RewriteOf, Purpose: req.Intent},
@@ -135,15 +137,19 @@ func (s *Service) Draft(
 	// A project the caller can see but this contact is not part of is not a
 	// body of work a message to them can be about.
 	if req.ProjectID != nil && in.Project == nil {
-		return crmcontracts.CompanyEmailDraft{}, httperr.Validation("project_id", "not_found",
+		return crmcontracts.CompanyEmailDraft{}, nil, httperr.Validation("project_id", "not_found",
 			"that project is not one this contact is part of, or you cannot see it")
+	}
+	grounding, err := in.Grounding(datasource.EntityContact)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	// Loaded after the 360 read, so a caller who may not read this contact is
 	// refused before their voice profile is touched at all.
 	voice := draftvoice.Load(ctx, s.voice, s.log)
 	draft, by, err := Write(ctx, s.lane, in, voice)
 	if err != nil {
-		return crmcontracts.CompanyEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	out := Wire(draft, by, voice.Degraded, req.Envelope.Language)
 	// The scoped read's own report of what the narrowing kept, so the
@@ -152,9 +158,9 @@ func (s *Service) Draft(
 	// Nothing here is stored, so there is no ordering to respect — only the
 	// one read, over the reasons this draft actually cites.
 	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromReasons(out.Reasoning)); err != nil {
-		return crmcontracts.CompanyEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
-	return out, nil
+	return out, grounding, nil
 }
 
 // Wire maps the written draft onto the contract.

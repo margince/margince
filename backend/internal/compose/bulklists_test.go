@@ -37,19 +37,14 @@ func TestAListVerbNamesItsShortlistAndNoOwner(t *testing.T) {
 	}
 }
 
-// A forward change has no undo plan and knows no earlier membership; an undo
-// knows exactly the members its change took.
-func TestOnlyAnUndoPlanKnowsAnEarlierMembership(t *testing.T) {
-	id := openapi_types.UUID(ids.NewV7())
-	note := "met at the fair"
-	if _, known := (*bulkUndoPlan)(nil).membershipOf(id); known {
-		t.Error("a forward change claims an earlier membership")
+// An undo restores a record's link only from the removal its own change wrote.
+func TestAnUndoPlanRestoresOnlyFromARemovalItsChangeWrote(t *testing.T) {
+	id, removal := openapi_types.UUID(ids.NewV7()), openapi_types.UUID(ids.NewV7())
+	plan := &bulkUndoPlan{removals: map[openapi_types.UUID]openapi_types.UUID{id: removal}}
+	if got, err := plan.removalOf(id); err != nil || got != ids.UUID(removal) {
+		t.Errorf("removalOf(taken) = %v, %v; want the removal the change wrote", got, err)
 	}
-	plan := &bulkUndoPlan{members: map[openapi_types.UUID]collections.RemovedMember{id: {Note: &note}}}
-	if was, known := plan.membershipOf(id); !known || was.Note == nil || *was.Note != note {
-		t.Errorf("membershipOf(taken) = %+v, %v; want the note it was removed with", was, known)
-	}
-	if _, known := plan.membershipOf(openapi_types.UUID(ids.NewV7())); known {
-		t.Error("a record the change never took claims a membership")
+	if _, err := plan.removalOf(openapi_types.UUID(ids.NewV7())); !errors.Is(err, collections.ErrRemovalUnkept) {
+		t.Errorf("a record the change never took answered %v, want ErrRemovalUnkept", err)
 	}
 }

@@ -60,6 +60,10 @@ func TestDraftEmailLeavesTheDraftForItsHumanAndNeverOverTheirs(t *testing.T) {
 	if err != nil || waiting.ID != *first.SavedDraftID || !waiting.AgentDrafted || waiting.Content.Body != first.Body {
 		t.Fatalf("the human reads %+v (%v), want the agent's draft, marked", waiting, err)
 	}
+	if len(waiting.Grounding) != 1 || waiting.Grounding[0] != anchor || len(first.Grounding) != 1 {
+		t.Errorf("the draft is grounded on %+v (answer %+v), want the one contact it was written from",
+			waiting.Grounding, first.Grounding)
+	}
 
 	if _, err := store.SaveMailDraft(human, anchor, activities.MailDraftContent{Body: "My own words"}, &waiting.Version); err != nil {
 		t.Fatalf("the human saving over it: %v", err)

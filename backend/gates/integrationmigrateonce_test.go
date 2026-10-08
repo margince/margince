@@ -62,7 +62,7 @@ const testdbPackage = "internal/platform/testdb"
 // inlineMigrators are the suites outside migrationsPackage ratified to migrate
 // on their own, each bound to what the exception costs.
 var inlineMigrators = gatekit.Waive(map[string]string{
-	"internal/compose/integration/perfbench_integration_test.go": "seeds a large volume and asserts " +
+	"internal/compose/integration/perf_tier_bench_test.go": "seeds a large volume and asserts " +
 		"query-latency SLOs against it, so it needs pristine physical tables — a reset cycle leaves bloat " +
 		"and stale planner stats that move the very latencies under assertion. It migrates once for the " +
 		"whole suite, so the cost it opts back into is negligible. It now carries `integration && bench` " +

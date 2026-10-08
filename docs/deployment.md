@@ -1,27 +1,27 @@
+<!-- prose:plain -->
 # Deploying Margince (self-hosting)
 
-Margince ships deployment-target-agnostic container materials: you can run it on
-any container platform (Kubernetes, Nomad, Docker Compose, a plain host). This
-repo carries only the **generic** pieces; a concrete deployment (its domain,
-secrets, platform manifests) is yours to own, so keep those in your own infra repo.
+Margince ships deployment-target-agnostic container materials: you can run it on any container
+platform (Kubernetes, Nomad, Docker Compose, a plain host). This repo carries only the **generic**
+pieces; a concrete deployment (its domain, secrets, platform manifests) is yours to own. So keep
+those in your own infra repo.
 
 ## What ships in this repo
 
 | File | Purpose |
 |---|---|
 | `Dockerfile` (target `api`) | `cmd/api` (HTTP) + bundled `cmd/migrate`; applies migrations at boot |
-| `Dockerfile` (target `worker`) | `cmd/worker`: outbox relay, retention, Surface-B AI (no HTTP) |
+| `Dockerfile` (target `worker`) | `cmd/worker`. Outbox relay, retention, Surface-B AI (no HTTP) |
 | `Dockerfile` (target `web`) | the Vite SPA behind nginx-unprivileged |
 | `scripts/deploy/api-entrypoint.sh` | migrate as owner, then serve the API as app |
 | `scripts/deploy/worker-entrypoint.sh` | start the worker as app (no owner credential) |
 | `scripts/deploy/db-bootstrap.sql` | one-time DB role + database + extension setup |
 | `frontend/nginx.conf` | SPA static serving (listens on 8080, non-root) |
 
-The three roles live in the one root `Dockerfile`, each as a build target of
-the same name sharing a common Go builder base. Every image builds with the
+The three roles live in the one root `Dockerfile`, each as a build target of the same name sharing a
+common Go builder base. Every image builds with the
 **repo root** as context. The Go build folds in the `extensions/*` packs via
-`gen-composition`, and `docker buildx bake` builds all three through
-`docker-bake.hcl`:
+`gen-composition`, and `docker buildx bake` builds all three through `docker-bake.hcl`:
 
 ```bash
 docker build --target api    -t margince-api:local .
@@ -31,24 +31,22 @@ docker build --target web    -t margince-web:local .
 
 ## The two-role database model (required, read this first)
 
-Margince separates what serves traffic from what applies DDL, and that wall is
-made of table grants. A superuser ignores every grant, so **both** runtime roles
-must be neither a superuser nor granted `BYPASSRLS`. The api refuses to serve on
-an exempt runtime role. Two such roles are required:
+Margince separates what serves traffic from what applies DDL, and that wall is made of table grants.
+A superuser ignores every grant, so **both** runtime roles must be neither a superuser nor granted
+`BYPASSRLS`. The api refuses to serve on an exempt runtime role. Two such roles are required:
 
 - **`margince_owner`** owns the database + tables, runs migrations (DDL) and the
   custom-fields runtime-DDL pool.
 - **`margince_app`** is the runtime role the api + worker connect as. Its table
   grants are applied by the `0001_baseline` migration, which skips them unless
-  the role already exists, so create the role *before* the first migration runs.
+  the role already exists. So create the role *before* the first migration runs.
 
 The worker does not schedule River's nightly index rebuild, which needs the
-index owner. If queue fetches slow down, reindex as `margince_owner`, for example
+index owner. If queue fetches slow down, rebuild the index as `margince_owner`, for example
 `REINDEX INDEX CONCURRENTLY river_job_prioritized_fetching_index`.
 
-Create the roles + database + extensions **once**, as a Postgres superuser
-(pgvector is not a "trusted" extension, so a non-superuser cannot install it from
-a migration):
+Create the roles + database + extensions **once**, as a Postgres superuser (pgvector is not a
+"trusted" extension, so a non-superuser cannot install it from a migration):
 
 ```bash
 # Pass the passwords RAW (not pre-quoted) — the script quotes/escapes them.
@@ -61,11 +59,10 @@ It is idempotent. The app containers then hold only the two non-superuser DSNs.
 
 ## Configuration: everything via the environment
 
-The images bake in **no** instance configuration. All settings come from the
-runtime environment; the binaries resolve every flag from a `MARGINCE_*` env
-fallback. The full table of record is
-[`docs/reference/configuration.md`](reference/configuration.md); the annotated
-env template is [`.env.example`](../.env.example). The essentials:
+The images bake in **no** instance configuration. All settings come from the runtime environment;
+the binaries resolve every flag from a `MARGINCE_*` env fallback. The full table of record is
+[`docs/reference/configuration.md`](reference/configuration.md); the annotated env template is
+[`.env.example`](../.env.example). The essentials:
 
 | Var | Role | Meaning |
 |---|---|---|
@@ -77,56 +74,51 @@ env template is [`.env.example`](../.env.example). The essentials:
 | `MARGINCE_AI_ROUTING` | api, worker | **ignored, and warns.** The AI binding is a stored setting: declare it under `seeds.ai_routing` in `margince.yaml` before first boot, or set it under Settings → AI afterwards |
 | `MARGINCE_PUBLIC_BASE_URL` | api, worker | canonical external base URL (buyer-facing links / marketing mail) |
 
-Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides two
-licensing questions and nothing else. The first is which authorities are honoured
-(`dev`/`test` also accept our non-production licensers). The second is whether
-the installation may run unlicensed at all: with no license configured, `cmd/api`
-and `cmd/worker` refuse to boot unless the environment says non-production (see
-[configuration.md](reference/configuration.md#license)).
+Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides two licensing questions and
+nothing else. The first is which authorities are honoured (`dev`/`test` also accept our
+non-production licensers). The second is whether the installation may run unlicensed at all. With no
+license configured, `cmd/api` and `cmd/worker` refuse to boot unless the environment says
+non-production (see [configuration.md](reference/configuration.md#license)).
 
 The data reset is controlled by `operations.allow_data_reset`, below.
 
 ### First-boot bootstrap config
 
-On the first boot against an empty database the api bootstraps the company +
-admin from the file `MARGINCE_CONFIG` points to. Mount your own `margince.yaml`
-(see [`config/margince.example.yaml`](../config/margince.example.yaml)) at that
-path and set `MARGINCE_ADMIN_PASSWORD`. A missing config file just boots an
-existing installation.
+On the first boot against an empty database the api bootstraps the company + admin from the file
+`MARGINCE_CONFIG` points to. Mount your own `margince.yaml` (see
+[`config/margince.example.yaml`](../config/margince.example.yaml)) at that path and set
+`MARGINCE_ADMIN_PASSWORD`. A missing config file just boots an existing installation.
 
-The example ships with `operations:` commented out, and mounting it as-is
-keeps it that way. Uncommenting `operations.allow_data_reset` arms
-`POST /v1/admin/reset-data`, which purges this installation's tenant data back
-to its first-boot state and renders the "Reset data" button to every admin seat.
-A deployed installation leaves it off.
+The example ships with `operations:` commented out, and mounting it as-is keeps it that way.
+Uncommenting `operations.allow_data_reset` arms `POST /v1/admin/reset-data`, which purges this
+installation's tenant data back to its first-boot state and renders the "Reset data" button to every
+admin seat. A deployed installation leaves it off.
 
 To enable AI, declare the binding in the `margince.yaml` you already mount, under
-`seeds.ai_routing`. It is consumed at first boot and the database is
-authoritative afterwards, so an installation already running is rebound under
-Settings → AI instead. Each bound cloud provider needs its BYOK key, put in
-under Settings → AI → Model provider keys; the conventional environment variable
-(`GEMINI_API_KEY`, …) is read once, to seal a key into the vault on first boot.
-There is no routing file to mount for the api and the worker's serving role. The
-DB-less lanes still read one explicitly (`worker siteread`, `worker aitask` and
-the certification runner), so a deployment that runs those mounts a file for them
-and for nothing else.
+`seeds.ai_routing`. It is consumed at first boot and the database is authoritative afterwards, so an
+installation already running is rebound under Settings → AI instead. Each bound cloud provider needs
+its BYOK key, put in under Settings → AI → Model provider keys. The conventional environment
+variable (`GEMINI_API_KEY`, …) is read once, to seal a key into the vault on first boot. There is no
+routing file to mount for the api and the worker's serving role.
 
-The example config declares the MCP connector (`mcp.connector_enabled: true`)
-so a local stack works unedited. A deployment that mounts it as-is therefore
-serves `/mcp` and `/oauth/*`, and **must** set `MARGINCE_PUBLIC_BASE_URL`. The
-api refuses to boot on that gate without it. Remove the `mcp` block to keep the
-connector off; the code default is off, so an absent block exposes nothing.
+The DB-less lanes still read one explicitly (`worker siteread`, `worker aitask` and the
+certification runner). So a deployment that runs those mounts a file for them and for nothing else.
+
+The example config declares the MCP connector (`mcp.connector_enabled: true`) so a local stack works
+unedited. A deployment that mounts it as-is therefore serves `/mcp` and `/oauth/*`, and **must** set
+`MARGINCE_PUBLIC_BASE_URL`. The api refuses to boot on that gate without it. Remove the `mcp` block
+to keep the connector off; the code default is off, so an absent block exposes nothing.
 
 **Decide the retention posture before first boot** if the installation must keep
-everything. By default the shipped storage-limitation ladder runs. A meeting
-transcript and an AI payload are erased after a year, which supports the
-storage-limitation obligation of Art. 5(1)(e); whether a year is the right
-period is each installation's call, and the rules are editable. An unconverted
-lead is archived after a year (taken off every list, kept restorable); author
-`anonymize` for that policy where the lead's identity must not be kept. The
-[compliance handbook](handbook/compliance.md) lists what an installation reading
-employee mailboxes still owes, none of which this product checks. An
-installation under a contractual or statutory keep-everything obligation sets
+everything. By default the shipped storage-limitation ladder runs. A meeting transcript and an AI
+payload are erased after a year, which supports the storage-limitation obligation of `Art. 5(1)(e)`.
+Whether a year is the right period is each installation's call, and the rules are editable.
+
+An unconverted lead is archived after a year (taken off every list, kept restorable). Author
+`anonymize` for that policy where the lead's identity must not be kept. The [compliance
+handbook](handbook/compliance.md) lists what an installation reading employee mailboxes still owes,
+none of which this product checks. An installation under a contractual or statutory keep-everything
+obligation sets
 
 ```yaml
 seeds:
@@ -134,25 +126,23 @@ seeds:
     default_policy: retain_only
 ```
 
-which plants the same policy rows and suppresses every destructive action: no
-anonymize, no erase, whatever a policy says. Archive still runs, because
-archiving retains. The posture is a first-boot value only: an admin changes it
-afterwards on the privacy settings screen, and it survives restarts and upgrades
-because it is stored, not re-read from this file. Setting it here rather than in
-the UI closes the window between bootstrap planting the rows and the first admin
-sign-in, in which the nightly pass could otherwise fire.
+which plants the same policy rows and suppresses every destructive action: no anonymize, no erase,
+whatever a policy says. Archive still runs, because archiving retains. The posture is a first-boot
+value only. An admin changes it afterwards on the privacy settings screen, and it survives restarts
+and upgrades because it is stored, not re-read from this file. Setting it here rather than in the UI
+closes a window: the time between bootstrap planting the rows and the first admin sign-in. In that
+window the nightly pass could otherwise fire.
 
-Your `margince.yaml`'s `password_file` **must point to where the entrypoint writes
-`MARGINCE_ADMIN_PASSWORD`**: `secrets/admin-password` (i.e.
-`/app/secrets/admin-password`; the api's working dir is `/app`). Set that value in
-your config. (The example config's default differs, so change it to match.)
+The `password_file` in your `margince.yaml` **must point to where the entrypoint writes
+`MARGINCE_ADMIN_PASSWORD`**: `secrets/admin-password` (that is, `/app/secrets/admin-password`; the
+api's working dir is `/app`). Set that value in your config. (The example config's default differs,
+so change it to match.)
 
 **After the first boot succeeds, retire both:** remove the `bootstrap_admin`
-section from `margince.yaml` and unset `MARGINCE_ADMIN_PASSWORD`. Bootstrap
-values are read once, on the first boot; restarts never reconcile them into an
-existing company. Past that point the credential grants nothing and only sits at
-rest. The entrypoint stops writing the file once a company exists
-and says so on stderr if the variable is still set. Change an existing user's
+section from `margince.yaml` and unset `MARGINCE_ADMIN_PASSWORD`. Bootstrap values are read once, on
+the first boot; restarts never reconcile them into an existing company. Past that point the
+credential grants nothing and only sits at rest. The entrypoint stops writing the file once a
+company exists and says so on stderr if the variable is still set. Change an existing user's
 password with `margince-migrate reset-password` instead.
 
 ## Routing
@@ -166,27 +156,26 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
 
-Route the OAuth metadata documents and `security.txt` by those full paths. Do
-not use a `/.well-known/*` prefix: they are the only things the api serves under
-`/.well-known`, and a prefix rule takes `/.well-known/acme-challenge/…` away
-from whatever answers your certificate challenges. The webhook row is the api's
-because the caller is the provider. Each handler verifies its own push, so the
-SPA cannot stand in for it.
+Route the OAuth metadata documents and `security.txt` by those full paths. Do not use a
+`/.well-known/*` prefix. They are the only things the api serves under `/.well-known`, and a prefix
+rule takes `/.well-known/acme-challenge/…` away from whatever answers your certificate challenges.
+The webhook row is the api's because the caller is the provider. Each handler verifies its own push,
+so the SPA cannot stand in for it.
 
 Use one host, because these things cross the split:
 
 - The SPA calls the API **same-origin** at `location.origin + "/v1"`. There is no
   build-time API base, so the same web image works for any domain.
 - An MCP client discovers this installation at `/.well-known/oauth-*` and
-  connects at `/mcp` on that same origin: RFC 9728 discovery is a chain rooted in
+  connects at `/mcp` on that same origin. RFC 9728 discovery is a chain rooted in
   the resource server's own 401, which a split origin breaks. It must be the host
   `--public-base-url` names.
 - The consent flow crosses the two services in both directions. `GET
   /oauth/authorize` (api) redirects the human's browser to `/#/oauth-consent`
-  (web); that screen reads `/v1/oauth/consent-request` and posts the decision
-  back to `/oauth/authorize` (api). An ingress that serves `/` from somewhere
-  else than `/oauth/authorize`, or that routes `/oauth` to the web service, 404s
-  the human in the middle of approving a connection. It fails only there, since
+  (web). That screen reads `/v1/oauth/consent-request` and posts the decision
+  back to `/oauth/authorize` (api). Say an ingress serves `/` from somewhere
+  else than `/oauth/authorize`, or routes `/oauth` to the web service. Then it gives a 404
+  to the human in the middle of approving a connection. It fails only there, since
   the client's own handshake never touches the SPA.
 
 ## Health checks
@@ -198,61 +187,54 @@ Use one host, because these things cross the split:
 
 Point liveness at `/healthz`, readiness at `/readyz`, uptime monitors at `/v1/status`.
 
-`/readyz` also answers 503 while the **database is behind the binary**: there
-are versions this build ships that the ledger does not record, for the core and
-custom namespaces and for every composed unit. That is the ordinary rolling
-window: the new binary is up, the migration has not run, and its routes and
-jobs would fail on tables that do not exist yet. The process keeps running and
-recovers on its own once `migrate up` lands, so no restart is needed; the
-server log names the namespace and the versions, while the probe body names
-only the check (`unready: schema-migrations`). The worker probes the same
-thing for a sharper reason: its dispatcher ticks on a cadence, so there is no
+`/readyz` also answers 503 while the **database is behind the binary**. Then this build ships
+versions that the ledger does not record, for the core and custom namespaces and for every composed
+unit.
+
+That is the ordinary rolling window. The new binary is up, the migration has not run, and its routes
+and jobs would fail on tables that do not exist yet. The process keeps running and recovers on its
+own once `migrate up` lands, so no restart is needed. The server log names the namespace and the
+versions, while the probe body names only the check (`unready: schema-migrations`). The worker
+probes the same thing for a sharper reason: its dispatcher ticks on a cadence. So there is no
 request to carry the failure back to anybody.
 
-Custom-field creation also needs the API's owner-role schema pool. The image
-entrypoint supplies it automatically from `MARGINCE_OWNER_DSN`; `make dev`
-supplies the selected stack's owner connection. For a direct binary launch,
-set `MARGINCE_SCHEMA_DSN` explicitly. Keep it on the same database as the app
-connection, and keep `MARGINCE_DSN` on the restricted app role.
+Custom-field creation also needs the API's owner-role schema pool. The image entrypoint supplies it
+automatically from `MARGINCE_OWNER_DSN`; `make dev` supplies the selected stack's owner connection.
+For a direct binary launch, set `MARGINCE_SCHEMA_DSN` explicitly. Keep it on the same database as
+the app connection, and keep `MARGINCE_DSN` on the restricted app role.
 
-During installation acceptance, confirm the startup log says
-`api custom-field schema changes enabled (schema pool configured)`, then check
-readiness and exercise a custom-field create/value/readback on rehearsal data.
-A missing optional pool does not fail readiness, so a 200 alone cannot prove
-field creation works. Configuration and the 501 troubleshooting procedure are
-in [Custom-field schema pool](reference/configuration.md#custom-field-schema-pool-api--runtime-ddl).
+During installation acceptance, confirm the startup log says `api custom-field schema changes
+enabled (schema pool configured)`. Then check readiness and exercise a custom-field
+create/value/readback on rehearsal data. A missing optional pool does not fail readiness, so a 200
+alone cannot prove field creation works. Configuration and the 501 troubleshooting procedure are in
+[Custom-field schema pool](reference/configuration.md#custom-field-schema-pool-api--runtime-ddl).
 
 ## Alert on the agent bound, do not drain on it
 
-The per-Passport read bound counts in Redis and **fails
-closed**: with its counter store unreachable, every governed counter reports its
-threshold passed and the whole agent surface refuses. A control that cannot
-count must not answer "allowed". On the default api that is visible by accident:
-the inline relay probes the same Redis, so `/readyz` drains the pod. On a
+The per-Passport read bound counts in Redis and **fails closed**. With its counter store
+unreachable, every governed counter reports its threshold passed and the whole agent surface
+refuses. A control that cannot count must not answer "allowed". On the default api that is visible
+by accident: the inline relay probes the same Redis, so `/readyz` drains the pod. On a
 **split role** (`--inline-relay=false`, worker separate) nothing probes it: the
 pod reports healthy while every agent read refuses.
 
-It is not a readiness check, because readiness is per-pod: the probe
-would drain the pod for human traffic too, over a fault no human request can
-meet. Two gauges instead: `margince_agent_volume_bound` is 1 where the role
-composed a bound and 0 where it declared it serves no agent surface;
-`margince_agent_volume_answerable` is 0 where the bound could not read its store
-on its last attempt. Alert on `bound == 1 and answerable == 0`, and say this in
-the alert text:
+It is not a readiness check, because readiness is per-pod. The probe would drain the pod for human
+traffic too, over a fault no human request can meet. Two gauges instead.
+`margince_agent_volume_bound` is 1 where the role composed a bound, and 0 where it declared it
+serves no agent surface. `margince_agent_volume_answerable` is 0 where the bound could not read its
+store on its last attempt. Alert on `bound == 1 and answerable == 0`, and say this in the alert
+text:
 
 > Agent reads are refusing on this role. Human traffic is unaffected, so do not
 > drain the pod. Restore Redis.
 
-Every role renders both gauges,
-including one that composed no meter, so an absent series means nobody is
-scraping. The signal follows the last attempt in both directions and clears on
-its own.
+Every role renders both gauges, including one that composed no meter, so an absent series means
+nobody is scraping. The signal follows the last attempt in both directions and clears on its own.
 
 ## Deploy all three roles at one release (the guard that enforces it)
 
-Every release image carries the release it was built from, in three places
-derived from one build argument (`MARGINCE_RELEASE_VERSION`, set from
-`docker-bake.hcl`'s `VERSION`):
+Every release image carries the release it was built from, in three places derived from one build
+argument (`MARGINCE_RELEASE_VERSION`, set from the `VERSION` in `docker-bake.hcl`):
 
 | Where | How to read it | Who reads it |
 |---|---|---|
@@ -261,14 +243,13 @@ derived from one build argument (`MARGINCE_RELEASE_VERSION`, set from
 | the Go binary's link-time stamp, and the SPA bundle's compiled-in copy | the guard below. This is the value each role compares; the label and the file are for humans | the software itself |
 
 **Why any of this exists.** You pull each role image by tag, and two tag pulls
-are two requests. A publish landing between them hands you a set whose roles come
-from different releases, most easily with `latest`. The OCI distribution
-protocol cannot express "these three manifests, or none", so a registry has no
-way to refuse it at the pull. So the roles refuse it at the run:
+are two requests. A publish landing between them hands you a set whose roles come from different
+releases, most easily with `latest`. The OCI distribution protocol cannot express "these three
+manifests, or none", so a registry has no way to refuse it at the pull. So the roles refuse it at
+the run:
 
-- **api** is the authority, because its image ships `cmd/migrate` and its
-  entrypoint applies the schema before it serves:
-  the schema your installation runs on is the schema its release brought. At boot
+- **api** is the authority. Its image ships `cmd/migrate`, and its entrypoint
+  applies the schema before it serves. So the schema your installation runs on is the schema its release brought. At boot
   it records its own release as the installation's, and logs
   `installation release recorded from=… to=…` when that changes.
 - **worker** compares its release against that record and **exits** on a
@@ -276,50 +257,46 @@ way to refuse it at the pull. So the roles refuse it at the run:
   release. The message names no images or registry, because this software also
   runs from a plain host where "re-pull" is not an available action. On a
   container platform, re-pulling the set is what it means for you. Your
-  orchestrator will restart the worker, and it will exit again: a crash-looping
+  orchestrator will restart the worker, and it will exit again. A crash-looping
   worker with the two versions in its log is the intended, visible outcome. A
   torn pull does not fix itself, so neither does the crash loop.
 
   **The comparison runs at start only.** A worker that is already running when the
-  api records a new release is not checked again, so restarting the api alone
+  api records a new release is not checked again. So restarting the api alone
   leaves the old worker in service until something else restarts it
   ([#1734](https://github.com/margince/margince/issues/1734)).
-- **web**: the SPA compares its own release against the one
+- **web**. The SPA compares its own release against the one
   `GET /v1/auth/capabilities` reports and refuses to render the app, offering a
   reload. The probe is anonymous, so the check happens before anyone signs in.
   That matters, because a mixed set breaks the login request first.
 
 **The asymmetry is what makes an upgrade possible.** The api moves first by
-definition, so a rollout converges instead of deadlocking on two roles each
-waiting for the other. Rollback works for the same reason: the api states the
-release rather than advancing a counter, so going back to an older one needs no
-permission.
+definition, so a rollout converges instead of deadlocking on two roles each waiting for the other.
+Rollback works for the same reason: the api states the release rather than advancing a counter. So
+going back to an older one needs no permission.
 
 **Finish every api rollout.** Do not leave api replicas from two releases
-running. The recorded release is
-last writer wins: whichever api records last decides what release the
-installation is, including an older one. A `1970.42` pod that restarts after
-`1970.43` recorded will put the record back to `1970.42`, and every correctly
-deployed `1970.43` worker then refuses to start. Finish the api rollout rather
-than pausing it half-done, and the same for a rollback
+running. The recorded release is last writer wins: whichever api records last decides what release
+the installation is, including an older one. A `1970.42` pod that restarts after `1970.43` recorded
+will put the record back to `1970.42`, and every correctly deployed `1970.43` worker then refuses to
+start. Finish the api rollout rather than pausing it half-done, and the same for a rollback
 ([#1735](https://github.com/margince/margince/issues/1735)).
 
-A refusing role logs both releases and the fix. If an api replica from the
-previous release restarted after the new one recorded, restart the api at the
-intended release to restore the record. A torn pull and a half-finished api
-rollout look identical from a crash-looping worker, and only the first is the
-deployment's fault.
+A refusing role logs both releases and the fix. If an api replica from the previous release
+restarted after the new one recorded, restart the api at the intended release to restore the record.
+A torn pull and a half-finished api rollout look identical from a crash-looping worker, and only the
+first is the deployment's fault.
 
 **An unstamped image disables the guard entirely.** An absent or `dev` release is
-skipped by all three roles: the api records nothing, the worker compares nothing
-and starts, and the SPA reports no release and never blocks. An unstamped api
-**leaves a recorded release unchanged**. It does not clear the record, so one
-locally built binary run against a real installation cannot disarm the guard for
-the roles that boot after it.
+skipped by all three roles. The api records nothing, the worker compares nothing and starts, and the
+SPA reports no release and never blocks. An unstamped api
+**leaves a recorded release unchanged**. It does not clear the record. So one
+locally built binary run against a real installation cannot disarm the guard for the roles that boot
+after it.
 
 That makes a locally built image (`docker build --target api .`, which passes no
-`MARGINCE_RELEASE_VERSION`) usable. It also means that **a deploy recipe that
-builds these targets itself gets no guard** unless it stamps them.
+`MARGINCE_RELEASE_VERSION`) usable. It also means that **a deploy recipe that builds these targets
+itself gets no guard** unless it stamps them.
 
 To get one, pass the same value to all three roles:
 
@@ -329,19 +306,17 @@ docker build --target web    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID"
 docker build --target worker --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" .
 ```
 
-It does **not** have to be a published release version. The guard compares
-for equality and never for order, so any stable per-build identifier your
-pipeline already has (a commit sha, a build number) makes the comparison
-meaningful, as long as every role in one deployment gets the same one. What it
-must not be is empty or `dev`: both are what a build says when it does not know,
-and the roles read them as "make no comparison".
+It does **not** have to be a published release version. The guard compares for equality and never
+for order. So any stable per-build identifier your pipeline already has makes the comparison
+meaningful, such as a commit sha or a build number. Every role in one deployment must get the same
+one. What it must not be is empty or `dev`. Both are what a build says when it does not know, and
+the roles read them as "make no comparison".
 
-`docker-bake.hcl` does this for the release workflow, declaring the argument once
-on the shared `role` target rather than per role, for the same reason: three
-declarations are three chances for the roles not to match. The release workflow
-refuses to publish a set stamped `dev` or nothing at all
-(`scripts/release-version-stamped.sh`), so the path that must always stamp proves
-it rather than relying on the bake file staying correct.
+`docker-bake.hcl` does this for the release workflow, declaring the argument once on the shared
+`role` target rather than per role, for the same reason. Three declarations are three chances for
+the roles not to match. The release workflow refuses to publish a set stamped `dev` or nothing at
+all (`scripts/release-version-stamped.sh`). So the path that must always stamp proves it rather than
+relying on the bake file staying correct.
 
 ## Order of operations
 
@@ -349,8 +324,8 @@ it rather than relying on the bake file staying correct.
 2. Deploy the **api**. Its entrypoint runs `migrate up` (owner) then serves.
 3. Deploy the **worker** and **web**, at the same release as the api (above). On
    a cold database the worker may restart a few times until the api has
-   migrated; this is expected. A worker that keeps restarting *after* the api is
-   serving, with a release mismatch in its log, is a torn pull rather than a
+   migrated; this is expected. Say a worker keeps restarting *after* the api is
+   serving, with a release mismatch in its log. That is a torn pull, not a
    slow start.
 
 ## Operational notes
@@ -369,7 +344,7 @@ it rather than relying on the bake file staying correct.
   a password on a member who has none, so it *can* onboard. It needs the
   owner DSN and a shell, though, so prefer the set-password link below for that.
 - **Onboarding without outbound mail:** an invited member has no password, so
-  Settings → Users & roles offers a per-member **"Get set-password link"**: a
+  Settings → Users & roles offers a per-member **"Get set-password link"**. A
   single-use link the admin delivers out of band. It
   needs `--public-base-url`, since a credential-bearing link is never derived
   from a request `Host`.
