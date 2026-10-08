@@ -133,3 +133,24 @@ func firstListPath(t *testing.T, cfg ProviderConfig, keys config.Lookup) string 
 	}
 	return paths[0]
 }
+
+func TestALaneEchoingItsProviderHostWithV1IsNotMoved(t *testing.T) {
+	next := oldClientWrite(func(tiers map[Tier]ProviderConfig) {
+		lane := tiers[TierPremium]
+		lane.BaseURL = brokerHost + "/v1"
+		tiers[TierPremium] = lane
+	})
+	if _, _, err := next.replacing(storedOnBroker()); err != nil {
+		t.Errorf("a lane host that is its provider's plus /v1 was refused: %v", err)
+	}
+}
+
+func TestAnEnvBindingIsRootedLikeAStoredOne(t *testing.T) {
+	got, err := ParseBinding("openai_compatible:openai/gpt-oss-20b", "https://api.langdock.com/openai/eu/v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.BaseURL != "https://api.langdock.com/openai/eu" {
+		t.Errorf("ParseBinding host = %q, want the root without /v1", got.BaseURL)
+	}
+}

@@ -40,6 +40,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | IMAP | The standard protocol for reading mail from a mail server. |
+| Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | macOS | Apple's desktop operating system. |

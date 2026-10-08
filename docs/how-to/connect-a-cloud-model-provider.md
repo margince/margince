@@ -118,7 +118,7 @@ name: `MODEL=openai_compatible:<slug> BASE_URL=https://openrouter.ai/api`.
 ### One gateway for three wires: Langdock
 
 Langdock serves each vendor's own wire under its own path, on one key. Each path goes to the provider
-that speaks that wire, and the sheet of each provider lists Langdock (EU) and Langdock (US) as a
+that uses that wire, and the sheet of each provider lists Langdock (EU) and Langdock (US) as a
 Service:
 
 | Provider | Host (EU; `us` for the US region) | Models it serves |
