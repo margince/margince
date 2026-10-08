@@ -75,3 +75,44 @@ export function meetingReadiness(
     return "unprepared";
   return "unknown";
 }
+
+/** How many meetings the day holds: every one ranked, else every row carried. */
+export function meetingsCounted(day: Worklist): number {
+  return (
+    day.reach?.find((entry) => entry.source === "meeting")?.considered ??
+    scheduledMeetings(day).length
+  );
+}
+
+type NextMeeting = NonNullable<Worklist["next_meeting"]>;
+
+/**
+ * What today's calendar lets the page say, read once for the readings strip
+ * and the schedule panel so one morning cannot be told two ways.
+ *
+ * `counted` keeps the figure as it stands; `unread` is a meetings lane that
+ * never answered. `not_connected` and `unreadable` are a zero that measured
+ * nothing, so neither surface may draw it as a day without meetings. `quiet`
+ * is a zero that did measure, with the next booked conversation to name.
+ */
+export type CalendarDay =
+  | Readonly<{ state: "counted" | "unread" | "not_connected" | "unreadable" }>
+  | Readonly<{ state: "quiet"; next: NextMeeting }>;
+
+export function calendarDay(day: Worklist): CalendarDay {
+  if (day.sources_unavailable.some((entry) => entry.source === "meeting")) {
+    return { state: "unread" };
+  }
+  if (meetingsCounted(day) > 0) {
+    return { state: "counted" };
+  }
+  if (day.calendar === "not_connected" || day.calendar === "unreadable") {
+    return { state: day.calendar };
+  }
+  // No `calendar` is a server that cannot say whether its zero measured
+  // anything, so the reading stays what it always was.
+  if (day.calendar === "connected" && day.next_meeting) {
+    return { state: "quiet", next: day.next_meeting };
+  }
+  return { state: "counted" };
+}

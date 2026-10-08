@@ -79,6 +79,45 @@ export const ScheduleCollapsed: Story = {
   render: panel(<SchedulePanel day={CLEAR} state="ready" />),
 };
 
+// Nothing left today, and the next booked meeting named on the day's line with
+// a date where today's rows carry a time.
+export const QuietDayNextMeeting: Story = {
+  render: panel(
+    <SchedulePanel
+      day={{
+        ...CLEAR,
+        calendar: "connected",
+        next_meeting: {
+          activity_id: "a-next",
+          starts_at: "2026-08-25T08:00:00Z",
+          subject: "Weber GmbH · kickoff",
+          linked_deal_id: "d-1",
+          participants: [{ contact_id: "c-1", full_name: "Anna Weber" }],
+        },
+      }}
+      state="ready"
+    />,
+  ),
+};
+
+// No calendar connected: the zero measured nothing, so the panel stays and
+// leads to where one connects.
+export const CalendarNotConnected: Story = {
+  render: panel(
+    <SchedulePanel
+      day={{ ...CLEAR, calendar: "not_connected" }}
+      state="ready"
+    />,
+  ),
+};
+
+// A connection that stopped syncing: the same box, and the way to reconnect.
+export const CalendarNotSyncing: Story = {
+  render: panel(
+    <SchedulePanel day={{ ...CLEAR, calendar: "unreadable" }} state="ready" />,
+  ),
+};
+
 // The worklist has not answered yet, so the panel stands and says what it is
 // waiting for. A collapse here would read as a clear day.
 export const ScheduleLoading: Story = {

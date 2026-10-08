@@ -658,6 +658,13 @@ export const de = {
   "brief.schedule.unavailable": "Der Kalender wurde nicht geladen.",
   "brief.schedule.more":
     "Lade weitere Agenda-Einträge, um die übrigen Termine zu sehen.",
+  "brief.schedule.notConnected":
+    "Kein Kalender ist verbunden, deshalb fehlen die heutigen Termine.",
+  "brief.schedule.unreadable":
+    "Dein Kalender synchronisiert nicht, deshalb fehlen die heutigen Termine.",
+  "brief.schedule.connect": "Kalender verbinden",
+  "brief.schedule.reconnect": "Kalender neu verbinden",
+  "brief.schedule.nextAt": "Nächster Termin um {time}",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
   "brief.readings.unpricedCount_one": "1 Deal ohne Preis · nicht enthalten",
   "brief.readings.unpricedCount_other":
@@ -3950,6 +3957,14 @@ export const de = {
   "brief.readings.needsPrep_other": "{count} brauchen Vorbereitung",
   "brief.readings.prepUnknown": "Vorbereitung nicht geprüft",
   "brief.readings.prepared": "Alle vorbereitet",
+  "brief.readings.calendarNotConnected": "Nicht verbunden",
+  "brief.readings.calendarNotConnectedWhy":
+    "Verbinde deinen Kalender, um Termine zu zählen",
+  "brief.readings.calendarUnreadable": "Synchronisiert nicht",
+  "brief.readings.calendarUnreadableWhy":
+    "Verbinde deinen Kalender neu, um Termine zu zählen",
+  "brief.readings.nextMeeting": "Nächster Termin: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Nächster Termin: {date}",
   "brief.readings.leads": "Akquise",
   "brief.readings.leadsBasis": "Geplante Aufgaben für Leads",
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",

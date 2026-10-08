@@ -1,7 +1,8 @@
 /** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatTimeOfDay } from "../format/format";
+import { formatDayMonth, formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -28,9 +29,23 @@ function taskRow(id: string, title: string): WorklistItem {
   };
 }
 
+// A QueryClient because the next meeting names its records through
+// `EntityRef`, which reads a name it is not handed.
 function draw(node: React.ReactNode) {
-  return render(<LocaleProvider initial="en">{node}</LocaleProvider>);
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">{node}</LocaleProvider>
+    </QueryClientProvider>,
+  );
 }
+
+const NEXT = {
+  activity_id: "a-next",
+  starts_at: "2026-09-04T09:30:00Z",
+  subject: "Weber kickoff",
+  linked_deal_id: "deal-1",
+  participants: [{ contact_id: "contact-1", full_name: "Anna Weber" }],
+};
 
 afterEach(cleanup);
 
@@ -103,7 +118,67 @@ describe("the schedule panel", () => {
 
     expect(container.innerHTML).toBe("");
     expect(scheduleIsEmpty(readingsDay({}, []), "ready")).toBe(true);
+    const measured = { ...readingsDay({}, []), calendar: "connected" as const };
+    expect(scheduleIsEmpty(measured, "ready")).toBe(true);
   });
+
+  // A quiet day with a meeting booked further out says when, on the day's own
+  // line, with a date where today's rows carry a time.
+  it("draws the next booked meeting on a day with none left", () => {
+    const zone = viewerZone();
+    const day = {
+      ...readingsDay({}, []),
+      calendar: "connected" as const,
+      next_meeting: NEXT,
+    };
+    draw(<SchedulePanel day={day} state="ready" />);
+
+    const panel = screen.getByRole("region");
+    expect(panel.querySelector(".rail-schedule-when")?.textContent).toBe(
+      formatDayMonth(NEXT.starts_at, "en", zone),
+    );
+    expect(
+      within(panel)
+        .getByRole("link", { name: "Weber kickoff" })
+        .getAttribute("href"),
+    ).toContain("deal-1");
+    expect(
+      within(panel)
+        .getByRole("link", { name: "Anna Weber" })
+        .getAttribute("href"),
+    ).toContain("contact-1");
+    expect(
+      within(panel).getByText(
+        en["brief.schedule.nextAt"].replace(
+          "{time}",
+          formatTimeOfDay(NEXT.starts_at, "en", zone),
+        ),
+      ),
+    ).toBeTruthy();
+    expect(scheduleIsEmpty(day, "ready")).toBe(false);
+  });
+
+  // A calendar that could not count keeps the panel, says why, and leads to
+  // where it is connected. Collapsing it would read as a clear morning.
+  it.each([
+    ["not_connected", "brief.schedule.notConnected", "brief.schedule.connect"],
+    ["unreadable", "brief.schedule.unreadable", "brief.schedule.reconnect"],
+  ] as const)(
+    "says a %s calendar counted nothing",
+    (calendar, sentence, verb) => {
+      const day = { ...readingsDay({}, []), calendar };
+      draw(<SchedulePanel day={day} state="ready" />);
+
+      const panel = screen.getByRole("region");
+      expect(panel.textContent).toContain(en[sentence]);
+      expect(
+        within(panel)
+          .getByRole("link", { name: en[verb] })
+          .getAttribute("href"),
+      ).toBe("#/settings/connections");
+      expect(scheduleIsEmpty(day, "ready")).toBe(false);
+    },
+  );
 
   // A read that has not landed is not a clear day. Collapsing here would send a
   // rep into a morning believing nothing was booked, so the panel keeps its box

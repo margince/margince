@@ -637,6 +637,13 @@ export const en = {
   "brief.schedule.unavailable": "Calendar did not load.",
   "brief.schedule.more":
     "Load more agenda items to see the remaining meetings.",
+  "brief.schedule.notConnected":
+    "No calendar is connected, so today’s meetings cannot be shown.",
+  "brief.schedule.unreadable":
+    "Your calendar is not syncing, so today’s meetings cannot be shown.",
+  "brief.schedule.connect": "Connect a calendar",
+  "brief.schedule.reconnect": "Reconnect your calendar",
+  "brief.schedule.nextAt": "Next meeting at {time}",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "1 deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -4036,6 +4043,14 @@ export const en = {
   "brief.readings.needsPrep_other": "{count} need prep",
   "brief.readings.prepUnknown": "Prep not checked",
   "brief.readings.prepared": "All prepared",
+  "brief.readings.calendarNotConnected": "Not connected",
+  "brief.readings.calendarNotConnectedWhy":
+    "Connect your calendar to count meetings",
+  "brief.readings.calendarUnreadable": "Not syncing",
+  "brief.readings.calendarUnreadableWhy":
+    "Reconnect your calendar to count meetings",
+  "brief.readings.nextMeeting": "Next: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Next: {date}",
   "brief.readings.leads": "Prospecting",
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",

@@ -647,6 +647,13 @@ export const vi = {
     "{won} thắng · {lost} thua · {moved} cơ hội chuyển giai đoạn · {leads} khách hàng tiềm năng được giao",
   "brief.schedule.unavailable": "Không thể kiểm tra lịch của bạn.",
   "brief.schedule.more": "Tải thêm mục để xem các cuộc họp còn lại.",
+  "brief.schedule.notConnected":
+    "Chưa có lịch nào được kết nối, nên không thể hiển thị cuộc họp hôm nay.",
+  "brief.schedule.unreadable":
+    "Lịch của bạn không đồng bộ, nên không thể hiển thị cuộc họp hôm nay.",
+  "brief.schedule.connect": "Kết nối lịch",
+  "brief.schedule.reconnect": "Kết nối lại lịch",
+  "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
   "brief.readings.riskPartial":
     "Chỉ tính giá trị đã biết; chưa kiểm tra được một số công việc về cơ hội.",
   "brief.readings.unpricedCount_one":
@@ -3908,6 +3915,14 @@ export const vi = {
   "brief.readings.needsPrep_other": "{count} chưa chuẩn bị",
   "brief.readings.prepUnknown": "không kiểm tra được hết",
   "brief.readings.prepared": "đã chuẩn bị đủ",
+  "brief.readings.calendarNotConnected": "Chưa kết nối",
+  "brief.readings.calendarNotConnectedWhy":
+    "Kết nối lịch của bạn để đếm cuộc họp",
+  "brief.readings.calendarUnreadable": "Không đồng bộ",
+  "brief.readings.calendarUnreadableWhy":
+    "Kết nối lại lịch của bạn để đếm cuộc họp",
+  "brief.readings.nextMeeting": "Tiếp theo: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Tiếp theo: {date}",
   "brief.readings.leads": "Khách hàng tiềm năng cần liên hệ",
   "brief.readings.leadsBasis": "Công việc đã lên kế hoạch cho khách tiềm năng",
   "brief.readings.leadsDue": "tiếp theo đến hạn {value}",

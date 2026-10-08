@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordZoneProvider } from "../app/recordzone";
-import { formatDateTime } from "../format/format";
+import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -227,6 +227,96 @@ describe("the brief readings strip", () => {
     expect(meetingsCard().textContent).toContain("0");
     expect(screen.getByText(en["brief.readings.meetingsBasis"])).toBeTruthy();
     expect(screen.queryByText(en["brief.readings.prepUnknown"])).toBeNull();
+  });
+
+  // A zero from a calendar nobody connected measured nothing, and drawing it
+  // tells a rep their day is clear. The door goes where a calendar connects.
+  it.each([
+    [
+      "not_connected",
+      "brief.readings.calendarNotConnected",
+      "brief.readings.calendarNotConnectedWhy",
+    ],
+    [
+      "unreadable",
+      "brief.readings.calendarUnreadable",
+      "brief.readings.calendarUnreadableWhy",
+    ],
+  ] as const)(
+    "reads a %s calendar's zero as no measurement",
+    async (calendar, value, why) => {
+      const user = userEvent.setup();
+      drawDay({ ...readingsDay({}, [], []), calendar });
+
+      expect(meetingsCard().textContent).toContain(en[value]);
+      expect(meetingsCard().textContent).toContain(en[why]);
+      expect(
+        meetingsCard().querySelector(".stat-card-value")?.textContent,
+      ).toBe(en[value]);
+      await user.click(
+        screen.getByRole("button", {
+          name: en["stat.open"],
+          description: en["brief.readings.meetings"],
+        }),
+      );
+      expect(window.location.hash).toContain("/settings/connections");
+    },
+  );
+
+  // The meetings a disconnected calendar still left on the page are counted:
+  // only its zero is no measurement.
+  it("keeps the count of meetings a disconnected calendar still carries", () => {
+    drawDay({
+      ...readingsDay({}, [meetingRow("m1", true)]),
+      calendar: "unreadable",
+    });
+
+    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
+      "1",
+    );
+    expect(meetingsCard().textContent).not.toContain(
+      en["brief.readings.calendarUnreadable"],
+    );
+  });
+
+  // A lane that never answered says so, whatever the calendar reports.
+  it("keeps the unavailable reading when the meetings lane failed", () => {
+    const day = {
+      ...readingsDay({}, [], []),
+      calendar: "not_connected" as const,
+    };
+    day.sources_unavailable = [{ source: "meeting", reason: "failed" }];
+    drawDay(day);
+
+    expect(meetingsCard().textContent).toContain(
+      en["brief.readings.unavailable"],
+    );
+    expect(meetingsCard().textContent).not.toContain(
+      en["brief.readings.calendarNotConnected"],
+    );
+  });
+
+  // A measured quiet day says when the next conversation is.
+  it("names the next meeting under a connected calendar's zero", () => {
+    const startsAt = "2026-09-04T09:30:00Z";
+    drawDay({
+      ...readingsDay({}, [], []),
+      calendar: "connected",
+      next_meeting: {
+        activity_id: "a-next",
+        starts_at: startsAt,
+        subject: "Weber kickoff",
+      },
+    });
+
+    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
+      "0",
+    );
+    expect(meetingsCard().textContent).toContain(
+      en["brief.readings.nextMeeting"]
+        .replace("{date}", formatDateAbbrev(startsAt, "en", viewerZone()))
+        .replace("{subject}", "Weber kickoff"),
+    );
   });
 
   // Two questions with no source. Drawing a zero would be a false answer, and

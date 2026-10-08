@@ -13,18 +13,8 @@ import {
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import {
-  type Locale,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../i18n";
-import {
-  meetingReadiness,
-  scheduledMeetings,
-  sourceComplete,
-} from "./brief.facts";
+import { useLocale, usePlural, useT } from "../i18n";
+import { calendarDay } from "./brief.facts";
 import {
   DECISIONS,
   decisionsBlocking,
@@ -32,6 +22,13 @@ import {
   scopeWasCut,
   TASKS,
 } from "./brief.readings.honesty";
+import {
+  calendarStandIn,
+  meetingsDetail,
+  meetingsReading,
+  nextMeetingLine,
+  type StandIn,
+} from "./brief.readings.meetings";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
 import type { Worklist, WorklistFilter } from "./worklist.queries";
 
@@ -115,6 +112,11 @@ type Reading = Readonly<{
    * has to know which of its callers' values is the special one.
    */
   spans?: boolean;
+  /**
+   * A word where the figure would stand, and a door to what would produce one:
+   * the source this slot counts is not there to read, so its zero means nothing.
+   */
+  standIn?: StandIn;
 }>;
 
 /**
@@ -140,6 +142,7 @@ function LaneReading({
   lane,
   scope,
   spans,
+  standIn,
 }: Reading) {
   const t = useT();
   const { locale } = useLocale();
@@ -164,6 +167,17 @@ function LaneReading({
   // mark most readers never read. Focus reaches it too — the card's own door is
   // inside this element, and a focus event bubbles.
   const floorTip = useTooltip<HTMLSpanElement>(t("brief.readings.floorTip"));
+  if (standIn) {
+    return (
+      <StatCard
+        label={label}
+        value={standIn.value}
+        detail={standIn.detail}
+        narrow="row"
+        onOpen={standIn.open}
+      />
+    );
+  }
 
   const figure =
     count === null
@@ -202,7 +216,8 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const { locale } = useLocale();
   const plural = usePlural();
   const readings = day.readings;
-  const meetings = meetingsReading(day);
+  const calendar = calendarDay(day);
+  const meetings = meetingsReading(day, calendar);
   const soonest = soonestLeadDeadline(day);
   const blocking = decisionsBlocking(day);
   // A lane that never ANSWERED is the case the per-category narrowing does not
@@ -259,9 +274,16 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
               (entry) => entry.source === "meeting" || !entry.category,
             )
           }
-          basis={meetingsDetail(meetings, locale, t, plural)}
+          // A quiet day says when the next conversation is, since a bare zero
+          // reads the same whether that is tomorrow or next month.
+          basis={
+            calendar.state === "quiet"
+              ? nextMeetingLine(calendar.next, locale, t)
+              : meetingsDetail(meetings, locale, t, plural)
+          }
           unavailable={t("brief.readings.unavailable.meetings")}
           lane="meetings"
+          standIn={calendarStandIn(calendar, t)}
         />
         <LaneReading
           scope={day.scope}
@@ -315,34 +337,6 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   );
 }
 
-// How many meetings, and how many of them nothing is prepared for.
-//
-// Readiness is the fact that changes what a reader does before the first one
-// starts, so a day with meetings and nothing unprepared says "all prepared"
-// rather than leaving the line blank: the absence of a warning has to be
-// readable as an answer, not as a gap.
-function meetingsDetail(
-  reading: MeetingsReading,
-  locale: Locale,
-  t: Translator,
-  plural: ReturnType<typeof usePlural>,
-): string {
-  const { meetings, unready } = reading;
-  if (unready === null) {
-    return t("brief.readings.prepUnknown");
-  }
-  if (unready > 0) {
-    return plural("brief.readings.needsPrep", unready, {
-      count: formatNumber(unready, locale),
-    });
-  }
-  // "All prepared" is a claim about meetings, and an empty day has none to make
-  // it about. The basis line says what was looked at instead.
-  return meetings === 0
-    ? t("brief.readings.meetingsBasis")
-    : t("brief.readings.prepared");
-}
-
 // The nearest deadline among the lead rows the page is SHOWING, or none.
 //
 // None in two cases that are one rule: the page cannot see the whole lane, or no
@@ -371,42 +365,6 @@ function soonestLeadDeadline(day: Worklist): string | null {
     }
   }
   return soonest;
-}
-
-type MeetingsReading = Readonly<{
-  meetings: number | null;
-  // Null when the page carries fewer meetings than it counted, so no honest
-  // readiness figure exists — NOT the same as zero unprepared.
-  unready: number | null;
-}>;
-
-// The meetings reading: how many stand behind the day, and how many of those
-// nothing is prepared for — or that the second question could not be answered.
-//
-// The two figures come from DIFFERENT populations and that is the whole care
-// here. `considered` counts every meeting read and ranked, before the fold and
-// before the page cut; the readiness figure can only be counted off the rows the
-// page actually carries. Divide one by the other and a day with ten meetings
-// considered and three on the page reads "10 · 2 need prep", telling a rep eight
-// meetings are ready when nothing checked them.
-//
-// So readiness is claimed ONLY when the page carries every meeting it counted.
-function meetingsReading(day: Worklist): MeetingsReading {
-  const meetings = scheduledMeetings(day);
-  if (day.sources_unavailable.some((entry) => entry.source === "meeting")) {
-    return { meetings: null, unready: null };
-  }
-  const reach = day.reach?.find((entry) => entry.source === "meeting");
-  const known =
-    sourceComplete(day, "meeting") &&
-    meetings.every((item) => meetingReadiness(item) !== "unknown");
-  return {
-    meetings: reach?.considered ?? meetings.length,
-    unready: known
-      ? meetings.filter((item) => meetingReadiness(item) === "unprepared")
-          .length
-      : null,
-  };
 }
 
 // This value describes the same scoped work as the rest of the brief.
