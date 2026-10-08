@@ -113,11 +113,17 @@ export const UndoRefused: Story = {
     await pressRemove(context);
     const user = userEvent.setup();
     await user.click(await undoInToast());
-    await expect(
-      await within(document.body).findByText(
-        "Key Account was applied to this record again since.",
-      ),
-    ).toBeVisible();
+    const close = await within(document.body).findByRole("button", {
+      name: "Close",
+    });
+    await waitFor(() => expect(close).toBeVisible());
+    await waitFor(() =>
+      expect(
+        within(document.body).getByText(
+          "Key Account was applied to this record again since.",
+        ),
+      ).toBeVisible(),
+    );
   },
 };
 

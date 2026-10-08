@@ -25,14 +25,16 @@ function invalidateTagged(
   entityType: TaggableType,
   entityID: string,
 ) {
-  void queryClient.invalidateQueries({
-    queryKey: ["record-tags", entityType, entityID],
-  });
-  void queryClient.invalidateQueries({
-    queryKey: [RECORD_LIST_KEY[entityType]],
-  });
-  void queryClient.invalidateQueries({ queryKey: ["tag"] });
-  void queryClient.invalidateQueries({ queryKey: ["tag-records"] });
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: ["record-tags", entityType, entityID],
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [RECORD_LIST_KEY[entityType]],
+    }),
+    queryClient.invalidateQueries({ queryKey: ["tag"] }),
+    queryClient.invalidateQueries({ queryKey: ["tag-records"] }),
+  ]);
 }
 
 /**
@@ -99,7 +101,9 @@ export function useApplyTag(entityType: TaggableType, entityID: string) {
         throwProblem(error);
       }
     },
-    onSuccess: () => invalidateTagged(queryClient, entityType, entityID),
+    onSuccess: () => {
+      void invalidateTagged(queryClient, entityType, entityID);
+    },
   });
 }
 
@@ -134,8 +138,8 @@ export function useRemoveTag(
       return data ? { tagID, undo: data } : null;
     },
     onError: outcome.onError,
-    onSuccess: (restore) => {
-      invalidateTagged(queryClient, entityType, entityID);
+    onSuccess: async (restore) => {
+      await invalidateTagged(queryClient, entityType, entityID);
       outcome.onSuccess(restore);
     },
   });
@@ -161,8 +165,8 @@ export function useRestoreTag(
       }
     },
     onError: outcome.onError,
-    onSuccess: (_, input) => {
-      invalidateTagged(queryClient, entityType, entityID);
+    onSuccess: async (_, input) => {
+      await invalidateTagged(queryClient, entityType, entityID);
       outcome.onSuccess(input);
     },
   });

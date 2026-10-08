@@ -255,6 +255,9 @@ describe("taking a tag off a record", () => {
     );
 
     await waitFor(() => expect(sent.restore).toEqual([{ audit_id: AUDIT }]));
+    expect(document.activeElement).toContainElement(
+      screen.getByRole("button", { name: en["tags.add"] }),
+    );
     expect(await screen.findByText("Key Account")).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(

@@ -557,6 +557,56 @@ describe("a caller withdrawing its own message", () => {
   });
 });
 
+describe("focus after the verb runs", () => {
+  function Opener({ onShown }: Readonly<{ onShown: (toast: Toast) => void }>) {
+    const toast = useToast();
+    return <Button onClick={() => onShown(toast)}>take off</Button>;
+  }
+
+  function mountOpener(onShown: (toast: Toast) => void, withOpener = true) {
+    const view = (opener: boolean) => (
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {opener && <Opener onShown={onShown} />}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    );
+    const rendered = render(view(true));
+    return () => rendered.rerender(view(withOpener));
+  }
+
+  it("hands focus back to where it sat when the message was shown", async () => {
+    const acting = steppedClock();
+    mountOpener((toast) => toast.show("Taken off", undo()));
+    const opener = press("take off");
+    act(() => opener.focus());
+    await acting.click(opener);
+    act(() => press("Undo").focus());
+
+    await acting.click(press("Undo"));
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(opener).toHaveFocus();
+  });
+
+  it("moves focus nowhere when that place has left the page", async () => {
+    const acting = steppedClock();
+    const removeOpener = mountOpener(
+      (toast) => toast.show("Taken off", undo()),
+      false,
+    );
+    await acting.click(press("take off"));
+    removeOpener();
+    act(() => press("Undo").focus());
+
+    await acting.click(press("Undo"));
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(document.activeElement).toBe(document.body);
+  });
+});
+
 describe("a replacement under the reader's hand", () => {
   it("keeps focus on the same control when the message is replaced", () => {
     steppedClock();

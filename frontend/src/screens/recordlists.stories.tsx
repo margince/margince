@@ -180,11 +180,17 @@ export const UndoRefused: Story = {
     await pressTakeOff(context);
     const user = userEvent.setup();
     await user.click(await undoInToast());
-    await expect(
-      await within(document.body).findByText(
-        "The record was added to this Shortlist again since.",
-      ),
-    ).toBeVisible();
+    const close = await within(document.body).findByRole("button", {
+      name: "Close",
+    });
+    await waitFor(() => expect(close).toBeVisible());
+    await waitFor(() =>
+      expect(
+        within(document.body).getByText(
+          "The record was added to this Shortlist again since.",
+        ),
+      ).toBeVisible(),
+    );
   },
 };
 

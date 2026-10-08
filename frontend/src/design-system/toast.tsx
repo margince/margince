@@ -95,6 +95,8 @@ type ToastMessage = Readonly<{
   action: ToastAction | null;
   /** It took the place of the message on screen, rather than waiting its turn. */
   replacedShown: boolean;
+  /** Where focus sat when it was shown, for its action to hand focus back to. */
+  returnFocusTo: HTMLElement | null;
 }>;
 
 export type ToastOptions = Readonly<{
@@ -177,6 +179,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
       sticky: options?.sticky ?? action?.kind === "open",
       action,
       replacedShown: false,
+      returnFocusTo: focusOutsideToasts(),
     };
     setQueue((waiting) => enqueue(waiting, arriving));
     return arriving.id;
@@ -208,6 +211,15 @@ function enqueue(
     return [replacing, ...waiting.slice(1)];
   }
   return [...waiting, arriving];
+}
+
+function focusOutsideToasts(): HTMLElement | null {
+  const active = document.activeElement;
+  return active instanceof HTMLElement &&
+    active !== document.body &&
+    active.closest(".toast-region") === null
+    ? active
+    : null;
 }
 
 /** Where focus sat in a message: one of its two controls, or its own body. */
@@ -282,7 +294,8 @@ export function useOwnToast({ leavesWithCaller = false } = {}) {
  *
  * Focus is never taken. The reader is mid-task and the toast is passive; what it
  * owes them instead is a way IN (it is last in the DOM, so Tab reaches it) and a
- * way OUT (Escape, while focus is inside it).
+ * way OUT (Escape, while focus is inside it). Pressing its action hands focus
+ * back to where it sat when the message was shown, while that is still on screen.
  */
 export function ToastRegion() {
   const t = useT();
@@ -400,9 +413,13 @@ export function ToastRegion() {
             type="button"
             className="toast-action"
             data-toast-control="act"
-            onClick={() => {
+            onClick={(event) => {
+              const holding = event.currentTarget === document.activeElement;
               act.onAct();
               dismiss(shown.id);
+              if (holding && shown.returnFocusTo?.isConnected) {
+                shown.returnFocusTo.focus();
+              }
             }}
           >
             {act.label}
