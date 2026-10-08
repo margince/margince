@@ -633,8 +633,9 @@ the network, as an E2E test against `gradion.com`. Another model must score the 
 pass. A normal read takes 10 to 25 seconds from start to end, based on how hard the origin slows the
 crawl.
 
-Without a model binding (one stored through Settings → AI, or `--ai-fake`), the runner and the
-embedding lane do not start. The relay, retention, the workflow dispatch that events start (`cg:workflows`), and the clock
+The runner and the embedding lane start only on a stored model binding, or on `--ai-fake` for the
+offline fake model. A binding is stored through Settings → AI, or on a fresh install from
+`seeds.ai_routing` in `margince.yaml`. The relay, retention, the workflow dispatch that events start (`cg:workflows`), and the clock
 time scan always run. Shutdown is clean: subscriber handlers already running end their ack before
 the process stops.
 
