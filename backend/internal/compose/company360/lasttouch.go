@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // LastTouch is when the account last wrote to us and when we last wrote to it.
@@ -27,6 +28,18 @@ import (
 type LastTouch struct {
 	InboundAt  *time.Time
 	OutboundAt *time.Time
+	// Contact is the newest exchange of any direction that counts as contact
+	// (relstrength.InteractionCountsSQL): a note is not contact, and neither is
+	// a meeting called off. Nil when there was none.
+	Contact *LastContact
+}
+
+// LastContact names the activity behind LastTouch.Contact, so a reader can
+// point at the same row the date came from.
+type LastContact struct {
+	At         time.Time
+	Kind       string
+	ActivityID ids.ActivityID
 }
 
 // LastTouchFor answers the pair that replaced the header's 0-100 score
@@ -80,10 +93,13 @@ func LastTouchFor(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT %[1]s.id,
 		       (SELECT a.occurred_at %[2]s AND a.direction = 'inbound' ORDER BY a.occurred_at DESC LIMIT 1),
-		       (SELECT a.occurred_at %[2]s AND a.direction = 'outbound' ORDER BY a.occurred_at DESC LIMIT 1)
+		       (SELECT a.occurred_at %[2]s AND a.direction = 'outbound' ORDER BY a.occurred_at DESC LIMIT 1),
+		       lc.id, lc.occurred_at, lc.kind
 		FROM company %[1]s
+		LEFT JOIN LATERAL (SELECT a.id, a.occurred_at, a.kind %[2]s AND %[5]s
+		                   ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1) lc ON true
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
-		activities.OuterCompanyAlias, reached, wantedPos, visible), args...)
+		activities.OuterCompanyAlias, reached, wantedPos, visible, relstrength.InteractionCountsSQL("a")), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +107,15 @@ func LastTouchFor(
 	for rows.Next() {
 		var companyID ids.CompanyID
 		var touch LastTouch
-		if err := rows.Scan(&companyID, &touch.InboundAt, &touch.OutboundAt); err != nil {
+		var contactID *ids.ActivityID
+		var contactAt *time.Time
+		var contactKind *string
+		if err := rows.Scan(&companyID, &touch.InboundAt, &touch.OutboundAt,
+			&contactID, &contactAt, &contactKind); err != nil {
 			return nil, err
+		}
+		if contactID != nil && contactAt != nil && contactKind != nil {
+			touch.Contact = &LastContact{At: *contactAt, Kind: *contactKind, ActivityID: *contactID}
 		}
 		out[companyID] = touch
 	}

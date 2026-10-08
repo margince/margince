@@ -42,7 +42,8 @@ import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import "./company360.css";
 import { FactList } from "../design-system/factlist";
-import { daysAgo, HealthStat, WITHHELD_READING } from "./company360health";
+import { HealthStat, WITHHELD_READING } from "./company360health";
+import { LastTouchStat } from "./company360lasttouch";
 import {
   HEALTH_DIMENSION_LABEL,
   HEALTH_RATING_LABEL,
@@ -724,60 +725,6 @@ export function StateStrip({
         t={t}
       />
     </StatStrip>
-  );
-}
-
-// The last word exchanged, as days since it fell, and who said it. Read off
-// the account's own timestamps rather than the health reading: the two dates
-// are the fact, and the reading is a judgement made from them.
-function LastTouchStat({
-  view,
-  withheld,
-  locale,
-  recordZone,
-  onOpen,
-  t,
-}: Readonly<{
-  view?: Company360;
-  // Refused, read once by the strip and shared with the relationship card.
-  withheld: boolean;
-  locale: Locale;
-  recordZone: string;
-  onOpen?: () => void;
-  t: ReturnType<typeof useT>;
-}>) {
-  const slot = { label: t("co.strip.lastTouch"), narrow: "row" } as const;
-  if (!view || withheld) {
-    return <StatCard onOpen={onOpen} {...slot} value={t(WITHHELD_READING)} />;
-  }
-  const inbound = view.last_inbound_at ?? undefined;
-  const outbound = view.last_outbound_at ?? undefined;
-  const theirs = Boolean(inbound && (!outbound || inbound > outbound));
-  const last = theirs ? inbound : outbound;
-  if (!last) {
-    return (
-      <StatCard
-        onOpen={onOpen}
-        {...slot}
-        value={t("co.strip.lastTouch.never")}
-      />
-    );
-  }
-  const days = daysAgo(last, view.as_of);
-  return (
-    <StatCard
-      onOpen={onOpen}
-      {...slot}
-      value={
-        days === undefined
-          ? t("co.strip.lastTouch.today")
-          : t("co.strip.lastTouch.ago", { count: formatNumber(days, locale) })
-      }
-      detail={join(
-        t(theirs ? "co.strip.lastTouch.theirs" : "co.strip.lastTouch.ours"),
-        formatDateAbbrev(last, locale, recordZone),
-      )}
-    />
   );
 }
 

@@ -35389,6 +35389,15 @@ components:
             When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded
             into one "last touch": which direction went last is the whole question — an account we
             mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+        last_contact:
+          description: >-
+            The newest exchange with the account in either direction, over the same walk: an
+            email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A
+            note is not contact.
+            Absent when there was none, or when the caller has no activity grant (then
+            `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the
+            timeline applies the same rule to the rows it draws.
+          allOf: [{ $ref: '#/components/schemas/Company360LastContact' }]
         state_strip:
           $ref: '#/components/schemas/Company360StateStrip'
         next_meeting:
@@ -35703,6 +35712,16 @@ components:
           format: date-time
           description: The caller's last acknowledged visit, or null if they have never acknowledged one (first visit — counts run from the contact's whole history).
         new_activities: { type: integer, minimum: 0 }
+
+    Company360LastContact:
+      type: object
+      required: [at, kind, activity_id]
+      properties:
+        at: { type: string, format: date-time }
+        kind:
+          type: string
+          enum: [email, call, meeting, message]
+        activity_id: { type: string, format: uuid }
 
     Contact360:
       type: object

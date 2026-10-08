@@ -1735,8 +1735,6 @@ export const en = {
   "co.strip.lastTouch": "Last contact",
   "co.strip.lastTouch.today": "Today",
   "co.strip.lastTouch.ago": "{count} d",
-  "co.strip.lastTouch.theirs": "Inbound",
-  "co.strip.lastTouch.ours": "Outbound",
   "co.strip.lastTouch.never": "None",
   // Named for what the card READS. "Next" over a meeting date, on a card whose
   // door opened the task list, let a company with a due task and no meeting
@@ -4286,7 +4284,6 @@ export const en = {
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Call",
   "co.spine.kind.meeting": "Meeting",
-  "co.spine.kind.note": "Note",
   "co.spine.kind.message": "Message",
   "co.spine.andOthers": "{names} and {count} others",
   "co.spine.said.to": "{what} to {who}",
