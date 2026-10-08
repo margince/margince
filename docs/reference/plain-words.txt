@@ -490,6 +490,7 @@ enqueue
 enrich
 enrichment
 entered
+enters
 entirely
 entry
 enumerate
