@@ -25,6 +25,7 @@ type qualifyReminder struct {
 	count    int
 	assignee *ids.UUID
 	open     bool
+	origin   string
 }
 
 func readQualifyReminder(t *testing.T, e *integration.Env, lead ids.UUID) qualifyReminder {
@@ -32,10 +33,11 @@ func readQualifyReminder(t *testing.T, e *integration.Env, lead ids.UUID) qualif
 	var r qualifyReminder
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT count(*), min(a.assignee_id::text)::uuid, COALESCE(bool_or(NOT a.is_done), false)
+			SELECT count(*), min(a.assignee_id::text)::uuid, COALESCE(bool_or(NOT a.is_done), false),
+			       COALESCE(min(a.origin), '')
 			FROM activity a JOIN activity_link l ON l.activity_id = a.id
-			WHERE a.kind = 'task' AND a.source_system = $1 AND a.source_id = $2 AND l.lead_id = $3`,
-			contacts.QualifyReminderSource, lead.String(), lead).Scan(&r.count, &r.assignee, &r.open)
+			WHERE a.kind = 'task' AND a.source_system = $1 AND l.lead_id = $2`,
+			contacts.QualifyReminderSource, lead).Scan(&r.count, &r.assignee, &r.open, &r.origin)
 	}); err != nil {
 		t.Fatalf("reading the reminder for lead %s: %v", lead, err)
 	}
@@ -84,6 +86,11 @@ func TestALeadWorkedFromAContactIsRemindedOnceWhenLeftUnqualified(t *testing.T) 
 	if got.count != 1 || got.assignee == nil || *got.assignee != e.AdminUser || !got.open {
 		t.Fatalf("the overdue lead carries %+v, want one open reminder for its owner", got)
 	}
+	// Work the product files about the lead, not a touch of it: the reminder
+	// must not read as the lead's latest activity.
+	if got.origin != activities.OriginSystemRemediation {
+		t.Errorf("the reminder's origin is %q, want %q", got.origin, activities.OriginSystemRemediation)
+	}
 	if typed := readQualifyReminder(t, e, ids.UUID(typed.Id)); typed.count != 0 {
 		t.Errorf("a lead not worked from a contact was reminded %d times, want none", typed.count)
 	}
@@ -94,7 +101,7 @@ func TestALeadWorkedFromAContactIsRemindedOnceWhenLeftUnqualified(t *testing.T) 
 		t.Fatalf("listing the leads still due: %v", err)
 	}
 	for _, d := range stillDue {
-		if d.LeadID.UUID == ids.UUID(worked.Id) {
+		if d.UUID == ids.UUID(worked.Id) {
 			t.Error("the scan still offers a lead it already reminded")
 		}
 	}
@@ -142,5 +149,43 @@ func TestTheTimeScanPassRemindsAnOverdueLead(t *testing.T) {
 	}
 	if got := readQualifyReminder(t, e, ids.UUID(lead.Id)); got.count != 1 {
 		t.Fatalf("the time scan pass left %d reminders on an overdue lead, want one", got.count)
+	}
+}
+
+// A lead merge carries the loser's reminder onto the survivor, and the
+// survivor then counts as reminded: it is not handed a second task.
+func TestAMergedLeadIsNotRemindedTwice(t *testing.T) {
+	e := integration.Setup(t)
+	db := InstallationDB(e.Pool)
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Dana Example", Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the contact: %v", err)
+	}
+	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	worked, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &contactID})
+	if err != nil {
+		t.Fatalf("working the contact as a lead: %v", err)
+	}
+	name, email := "Dana Example", "dana@contoso.example"
+	survivor, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
+	if err != nil {
+		t.Fatalf("creating the surviving lead: %v", err)
+	}
+	log := slog.New(slog.DiscardHandler)
+	overdue := func() time.Time { return time.Now().Add(leadQualifyReminderAge + 24*time.Hour) }
+	if err := remindUnqualifiedLeads(e.Admin(), db, overdue, log); err != nil {
+		t.Fatalf("the first reminder pass: %v", err)
+	}
+
+	if _, err := e.Contacts.MergeLead(e.Admin(),
+		ids.From[ids.LeadKind](ids.UUID(worked.Id)), ids.From[ids.LeadKind](ids.UUID(survivor.Id))); err != nil {
+		t.Fatalf("merging the leads: %v", err)
+	}
+	if err := remindUnqualifiedLeads(e.Admin(), db, overdue, log); err != nil {
+		t.Fatalf("the pass after the merge: %v", err)
+	}
+
+	if got := readQualifyReminder(t, e, ids.UUID(survivor.Id)); got.count != 1 {
+		t.Errorf("the surviving lead carries %d reminders, want the one the merge carried over", got.count)
 	}
 }

@@ -23,6 +23,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -43,12 +46,24 @@ func remindUnqualifiedLeads(ctx context.Context, db *database.DB, now func() tim
 	if err != nil {
 		return fmt.Errorf("lead qualify reminder scan: %w", err)
 	}
+	leads := contacts.NewStore(db)
 	store := activities.NewStore(db)
 	var failed error
-	for _, lead := range due {
+	for _, leadID := range due {
+		// The owner as it is now: the batch was read before the first write,
+		// and a reassignment in between would hand the task to the old owner
+		// with nothing later to move it.
+		current, err := leads.GetLead(wsCtx, leadID, storekit.LiveOnly)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			failed = errors.Join(failed, fmt.Errorf("re-reading lead %s: %w", leadID, err))
+			continue
+		}
 		subject := leadQualifyReminderSubject
 		sourceSystem := contacts.QualifyReminderSource
-		sourceID := lead.LeadID.String()
+		sourceID := leadID.String()
 		in := activities.LogActivityInput{
 			Kind:         activityKindTask,
 			Subject:      &subject,
@@ -56,14 +71,18 @@ func remindUnqualifiedLeads(ctx context.Context, db *database.DB, now func() tim
 			DueAt:        &at,
 			SourceSystem: &sourceSystem,
 			SourceID:     &sourceID,
-			Links:        []activities.ActivityLinkInput{{EntityType: entityLead, EntityID: lead.LeadID.UUID}},
+			Links:        []activities.ActivityLinkInput{{EntityType: entityLead, EntityID: leadID.UUID}},
 			Source:       systemActor,
-			AssigneeID:   lead.OwnerID,
+			Origin:       activities.OriginSystemRemediation,
+		}
+		if current.OwnerId != nil {
+			owner := ids.From[ids.UserKind](ids.UUID(*current.OwnerId))
+			in.AssigneeID = &owner
 		}
 		if err := logQualifyReminder(wsCtx, store, in); err != nil {
 			// One lead's failure does not hold back the others: each task is
 			// its own write, and the next pass retries the ones that failed.
-			failed = errors.Join(failed, fmt.Errorf("reminding about lead %s: %w", lead.LeadID, err))
+			failed = errors.Join(failed, fmt.Errorf("reminding about lead %s: %w", leadID, err))
 		}
 	}
 	if len(due) > 0 {
