@@ -1223,9 +1223,9 @@ export function TableScroll({
   const box = useRef<HTMLDivElement | null>(null);
   const region = useScrollRegion(box, label);
   const bleedClass = bleed ? "table-scroll-bleed" : "";
-  const classes = ["table-scroll", bleedClass, className ?? ""];
+  const boxClasses = ["table-scroll", bleedClass, className ?? ""];
   return (
-    <div ref={box} className={classes.filter(Boolean).join(" ")} {...region}>
+    <div ref={box} className={boxClasses.filter(Boolean).join(" ")} {...region}>
       {children}
     </div>
   );
