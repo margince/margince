@@ -12185,6 +12185,8 @@ export const en = {
   "aiProviderSettings.service.deepseek": "DeepSeek",
   "aiProviderSettings.service.langdockEu": "Langdock (EU)",
   "aiProviderSettings.service.langdockUs": "Langdock (US)",
+  "aiProviderSettings.service.langdockGemini.note":
+    "Langdock serves no Gemini embeddings. If search and retrieval use Gemini, move them to another provider first, or they stop working.",
   "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
   "aiProviderSettings.service.anthropic": "Anthropic",
   "aiProviderSettings.service.otherGemini": "Other Gemini-compatible host",

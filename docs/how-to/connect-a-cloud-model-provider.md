@@ -131,6 +131,14 @@ Each provider holds one key, so give the Langdock key to each provider you point
 provider pointed at Langdock no longer reaches the vendor: `gemini` on Langdock cannot also call
 Google AI Studio with a Google key.
 
+For the embeddings lane, Langdock has one model: `text-embedding-ada-002` on the OpenAI path, with a
+size of 1536. Gemini on Langdock serves no embeddings.
+
+```yaml
+embeddings: { provider: openai_compatible, model: text-embedding-ada-002,
+              base_url: https://api.langdock.com/openai/eu, dimensions: 1536 }
+```
+
 ## 3. Bind the embeddings lane separately
 
 The embeddings lane has its own binding, separate from the chat tiers. So search over stored data still

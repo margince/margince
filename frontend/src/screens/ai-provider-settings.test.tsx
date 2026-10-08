@@ -391,6 +391,19 @@ describe("a provider's settings on its sheet", () => {
     ).toBeDisabled();
   });
 
+  it("warns that Langdock's Gemini path serves no embeddings", async () => {
+    backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "gemini");
+    await pickService(user, sheet, "Langdock (EU)");
+    expect(
+      within(sheet).getByText(/serves no Gemini embeddings/),
+    ).toBeInTheDocument();
+    expect(within(sheet).queryByRole("link", { name: /About/ })).toBeNull();
+  });
+
   it("points Anthropic at Langdock's EU host", async () => {
     const puts = backend(routingWith({}));
     const user = userEvent.setup();

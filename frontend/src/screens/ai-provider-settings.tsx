@@ -55,17 +55,23 @@ const OTHER = "other";
 
 // Langdock serves each vendor's wire under its own path, once per region, on
 // one key; `version` is the segment the adapter expects in its host.
-function langdock(wire: string, version = ""): readonly Service[] {
+function langdock(
+  wire: string,
+  version = "",
+  note?: MessageKey,
+): readonly Service[] {
   return [
     {
       id: "langdock-eu",
       label: "aiProviderSettings.service.langdockEu",
       host: `https://api.langdock.com/${wire}/eu${version}`,
+      note,
     },
     {
       id: "langdock-us",
       label: "aiProviderSettings.service.langdockUs",
       host: `https://api.langdock.com/${wire}/us${version}`,
+      note,
     },
   ];
 }
@@ -125,7 +131,13 @@ const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
           label: "aiProviderSettings.service.googleAiStudio",
           host: "",
         },
-        ...langdock("google", "/v1beta"),
+        // Its Gemini path serves no embedder, and the embeddings lane on
+        // gemini follows this host.
+        ...langdock(
+          "google",
+          "/v1beta",
+          "aiProviderSettings.service.langdockGemini.note",
+        ),
       ],
       other: {
         label: "aiProviderSettings.service.otherGemini",
@@ -289,10 +301,15 @@ function ServiceCaption({ service }: Readonly<{ service: Service }>) {
       </p>
       {service.note && (
         <p className="t-caption">
-          {t(service.note)}{" "}
-          <a href={service.noteLink} target="_blank" rel="noreferrer">
-            {t("aiProviderSettings.service.learnMore")}
-          </a>
+          {t(service.note)}
+          {service.noteLink && (
+            <>
+              {" "}
+              <a href={service.noteLink} target="_blank" rel="noreferrer">
+                {t("aiProviderSettings.service.learnMore")}
+              </a>
+            </>
+          )}
         </p>
       )}
     </>

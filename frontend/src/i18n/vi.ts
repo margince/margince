@@ -11926,6 +11926,8 @@ export const vi = {
   "aiProviderSettings.service.deepseek": "DeepSeek",
   "aiProviderSettings.service.langdockEu": "Langdock (EU)",
   "aiProviderSettings.service.langdockUs": "Langdock (US)",
+  "aiProviderSettings.service.langdockGemini.note":
+    "Langdock không cung cấp embedding của Gemini. Nếu tìm kiếm và truy hồi đang dùng Gemini, hãy chuyển chúng sang nhà cung cấp khác trước, nếu không chúng sẽ ngừng hoạt động.",
   "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
   "aiProviderSettings.service.anthropic": "Anthropic",
   "aiProviderSettings.service.otherGemini": "Host tương thích Gemini khác",
