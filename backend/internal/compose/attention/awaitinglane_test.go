@@ -63,8 +63,8 @@ func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 	reader := &countingAwaiting{rows: []AwaitedReply{{ActivityID: ids.NewV7(), SentAt: at}}}
 	for _, scope := range []TaskScope{TasksOwnedBy, TasksUnassigned} {
 		s := &Service{awaiting: reader, taskScope: scope}
-		scoped, refusal := s.readingAwaiting(context.Background(), at)
-		if refusal != nil || len(scoped.followUps.rows) != 0 || scoped.followUps.read {
+		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		if len(refusals) != 0 || len(scoped.followUps.rows) != 0 || scoped.followUps.read {
 			t.Errorf("scope %v read %d follow-ups, want none", scope, len(scoped.followUps.rows))
 		}
 	}
@@ -73,8 +73,8 @@ func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 	}
 	for _, scope := range []TaskScope{TasksMine, TasksVisible} {
 		s := &Service{awaiting: reader, taskScope: scope, now: func() time.Time { return at }}
-		scoped, refusal := s.readingAwaiting(context.Background(), at)
-		if refusal != nil || len(scoped.followUps.rows) != 1 {
+		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		if refusals[0] != nil || refusals[1] != nil || len(scoped.followUps.rows) != 1 {
 			t.Errorf("scope %v read %d follow-ups, want the reader's one", scope, len(scoped.followUps.rows))
 		}
 	}

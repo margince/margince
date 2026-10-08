@@ -78,3 +78,22 @@ func TestAnAdminSetsTheFollowUpWindowTheWorklistApplies(t *testing.T) {
 		t.Errorf("PATCH by a seat without update = %d, want 403", code)
 	}
 }
+
+// An update grant without a read grant still gets its change confirmed: the
+// write committed, so the answer must not be a refusal.
+func TestAnUpdateOnlySeatSeesItsChangeConfirmed(t *testing.T) {
+	e := setupLoad(t)
+	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
+	h := NewHandlers(db).WithSettings(settings.New(e.pool, settings.NewRegistry(FollowUpAfterDays)))
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
+			"installation_settings": {Update: true},
+		}},
+	})
+	if code, days := followUpCall(ctx, t, h, http.MethodPatch, `{"follow_up_after_days": 4}`); code != http.StatusOK || days != 4 {
+		t.Fatalf("PATCH by an update-only seat = %d, %d days; want 200 and 4", code, days)
+	}
+}

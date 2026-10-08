@@ -38,7 +38,9 @@ func (h Handlers) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 		writeStoreErr(w, r, err)
 		return
 	}
-	h.writeFollowUpSettings(w, r)
+	// The value just written, not a fresh read: an update grant without a
+	// read grant must not commit the change and then be told 403.
+	httperr.WriteJSON(w, http.StatusOK, req)
 }
 
 func (h Handlers) writeFollowUpSettings(w http.ResponseWriter, r *http.Request) {

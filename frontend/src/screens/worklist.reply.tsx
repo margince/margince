@@ -86,7 +86,7 @@ export function WaitingReply({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   if (item.source === "meeting_follow_up") {
-    return <MeetingFollowUp item={item} to={to} />;
+    return <MeetingFollowUp item={item} />;
   }
   return (
     <ChannelReplyAction
@@ -159,16 +159,17 @@ function replyIntent(
  * A meeting is not a message, so there is nothing to thread a reply onto; the
  * composer is told what to write instead.
  */
-function MeetingFollowUp({
-  item,
-  to,
-}: Readonly<{
-  item: WorklistItem;
-  to: { type: RelinkKind; id: string };
-}>) {
+// Filed to the CONTACT, never the row's subject: a meeting on a deal names the
+// deal, a deal cannot be drafted to, and the message has to reach the contact
+// for the reminder to clear.
+function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<number | null>(null);
+  const contact = item.contact?.id;
+  if (!contact) {
+    return null;
+  }
   return (
     <>
       <Button variant="ai" onClick={() => setOpen((seq) => (seq ?? 0) + 1)}>
@@ -178,9 +179,9 @@ function MeetingFollowUp({
       {open !== null && (
         <ComposeModal
           key={open}
-          entityType={to.type}
-          entityId={to.id}
-          contactId={item.contact?.id}
+          entityType="contact"
+          entityId={contact}
+          contactId={contact}
           kind="email"
           intent={intentAbout(
             t("contact.composer.intentFollowUp"),

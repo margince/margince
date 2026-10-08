@@ -91,6 +91,9 @@ func (s *Store) queryMeetingFollowUps(
 	return out, rows.Err()
 }
 
+// meetingEndSQL is when the meeting under alias a ended.
+const meetingEndSQL = `(a.occurred_at + make_interval(secs => coalesce(a.duration_seconds, 0)))`
+
 // meetingFollowUpsSQL: every rule sits before the cap.
 //
 //  1. as of, 2. content gate on a, 3. link visibility on wl, 4. the follow-up
@@ -114,12 +117,16 @@ var meetingFollowUpsSQL = `
 	 WHERE a.kind = 'meeting'
 	   AND a.archived_at IS NULL
 	   AND %[12]s
-	   AND a.occurred_at + make_interval(secs => coalesce(a.duration_seconds, 0))
-	       <= $%[1]d::timestamptz - make_interval(days => $%[4]d::int)
-	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[4]d::int + %[5]d)
+	   -- Measured from when it ENDED: the window, the lookback and what came
+	   -- after all start there.
+	   AND ` + meetingEndSQL + ` <= $%[1]d::timestamptz - make_interval(days => $%[4]d::int)
+	   AND ` + meetingEndSQL + ` >= $%[1]d::timestamptz - make_interval(days => $%[4]d::int + %[5]d)
 	   AND %[2]s
-	   -- The reader was in it: they held it, or they are one of its attendees.
+	   -- The reader was in it: they held it, their calendar imported it, or
+	   -- they are one of its attendees. The last two are auth's
+	   -- activityMembershipArm; change them there and here.
 	   AND (a.host_user_id = $%[8]d
+	        OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $%[8]d)
 	        OR EXISTS (SELECT 1 FROM activity_participant me
 	                    WHERE me.activity_id = a.id AND me.user_id = $%[8]d))
 	   -- Nothing from our side since to anyone it was with: a message, a call
@@ -134,7 +141,7 @@ var meetingFollowUpsSQL = `
 	                      AND later.direction IS DISTINCT FROM 'inbound'
 	                      AND %[6]s
 	                      AND %[7]s
-	                      AND later.occurred_at > a.occurred_at
+	                      AND later.occurred_at >= ` + meetingEndSQL + `
 	                      AND later.occurred_at <= $%[1]d)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
 	   AND NOT EXISTS (SELECT 1 FROM activity_reader_state mine

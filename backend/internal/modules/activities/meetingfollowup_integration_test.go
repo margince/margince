@@ -77,3 +77,31 @@ func TestAMeetingFollowUpNeedsAHeldMeetingOfTheReadersWithNothingSent(t *testing
 		}
 	}
 }
+
+// A calendar sync that imported the meeting into the reader's own mailbox is
+// the reader being in it, whoever hosted it.
+func TestAMeetingTheReadersCalendarImportedIsTheirs(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	imported := e.metWith(t, e.customerAt(t, "customer"), e.other, "held", 3*24*time.Hour)
+	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, imported, e.rep)
+	if !owesMeetingFollowUp(t, s, e, imported) {
+		t.Error("a meeting the reader's calendar imported is not their follow-up")
+	}
+}
+
+// A message sent while the meeting was still on is not the follow-up after it.
+func TestAMessageSentDuringTheMeetingDoesNotSettleIt(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	contact := e.customerAt(t, "customer")
+	meeting := e.metWith(t, contact, e.rep, "held", 3*24*time.Hour)
+	during := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'outbound', 'the deck', now() - interval '3 days' + interval '10 minutes', 'seed', 'system')`, during)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), during, contact)
+	if !owesMeetingFollowUp(t, s, e, meeting) {
+		t.Error("a message sent during the meeting settled the follow-up after it")
+	}
+}

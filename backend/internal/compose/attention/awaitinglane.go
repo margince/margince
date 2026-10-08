@@ -50,10 +50,21 @@ type AwaitedReply struct {
 // followUpRead is the reader's follow-ups, read per request like planRows:
 // read says the source ran, cut that it stopped at its bound.
 type followUpRead struct {
-	rows        []ranked
-	read        bool
-	cut         bool
-	meetingsCut bool
+	rows         []ranked
+	read         bool
+	cut          bool
+	meetingsRead bool
+	meetingsCut  bool
+}
+
+// bound records each follow-up source that ran, and whether it hit its cap.
+func (f followUpRead) bound(bounded map[crmcontracts.WorklistItemSource]bool) {
+	if f.read {
+		bounded[sourceAwaitingReply] = f.cut
+	}
+	if f.meetingsRead {
+		bounded[sourceMeetingFollowUp] = f.meetingsCut
+	}
 }
 
 // WithAwaiting binds the follow-up reader. Unbound, the source is absent.
@@ -66,42 +77,50 @@ func (s *Service) WithAwaiting(a Awaiting) *Service {
 // service, the way readingPlan carries the plan rows. The rows are the
 // reader's own sends: they ride the reader's own day and the wider team and
 // all views that include it, never a colleague's queue or the unassigned one.
-func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service, *crmcontracts.WorklistSourceUnavailable) {
+// The two reads fail apart, so one stumbling keeps the other's rows.
+func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service, []*crmcontracts.WorklistSourceUnavailable) {
 	scoped := *s
 	if s.awaiting == nil || s.taskScope == TasksOwnedBy || s.taskScope == TasksUnassigned {
 		return &scoped, nil
 	}
-	var rows, meetings []AwaitedReply
-	var cut, meetingsCut bool
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
-		var err error
-		if rows, cut, err = s.awaiting.AwaitingReplies(ctx, asOf); err != nil {
-			return err
-		}
-		meetings, meetingsCut, err = s.awaiting.MeetingFollowUps(ctx, asOf)
-		return err
-	})
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return &scoped, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceAwaitingReply, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
-		}
-	case err != nil:
-		slog.ErrorContext(ctx, "the follow-up read failed", "error", err)
-		return &scoped, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceAwaitingReply, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
-		}
-	}
+	replies, cut, repliesErr := s.readFollowUps(ctx, sourceAwaitingReply, asOf, s.awaiting.AwaitingReplies)
+	meetings, meetingsCut, meetingsErr := s.readFollowUps(ctx, sourceMeetingFollowUp, asOf, s.awaiting.MeetingFollowUps)
 	scoped.followUps = followUpRead{
-		rows: make([]ranked, 0, len(rows)+len(meetings)), read: true, cut: cut, meetingsCut: meetingsCut,
+		rows: make([]ranked, 0, len(replies)+len(meetings)),
+		read: repliesErr == nil, cut: cut, meetingsRead: meetingsErr == nil, meetingsCut: meetingsCut,
 	}
-	for _, row := range rows {
+	for _, row := range replies {
 		scoped.followUps.rows = append(scoped.followUps.rows, classifyAwaiting(row, asOf))
 	}
 	for _, meeting := range meetings {
 		scoped.followUps.rows = append(scoped.followUps.rows, classifyMeetingFollowUp(meeting, asOf))
 	}
-	return &scoped, nil
+	return &scoped, []*crmcontracts.WorklistSourceUnavailable{repliesErr, meetingsErr}
+}
+
+func (s *Service) readFollowUps(
+	ctx context.Context, source string, asOf time.Time,
+	read func(context.Context, time.Time) ([]AwaitedReply, bool, error),
+) ([]AwaitedReply, bool, *crmcontracts.WorklistSourceUnavailable) {
+	var rows []AwaitedReply
+	var cut bool
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+		var err error
+		rows, cut, err = read(ctx, asOf)
+		return err
+	})
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return nil, false, &crmcontracts.WorklistSourceUnavailable{
+			Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
+		}
+	case err != nil:
+		slog.ErrorContext(ctx, "a follow-up read failed", "source", source, "error", err)
+		return nil, false, &crmcontracts.WorklistSourceUnavailable{
+			Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
+		}
+	}
+	return rows, cut, nil
 }
 
 // classifyAwaiting is one follow-up row. It is the reader's own promise to

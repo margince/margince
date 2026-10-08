@@ -162,9 +162,9 @@ func (s *Service) worklistIn(
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
-	withPins, awaitingErr := withPins.readingAwaiting(ctx, day.AsOf)
+	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	failed := append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, awaitingErr}, beside.failed...)
+	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
@@ -262,9 +262,7 @@ func (s *Service) worklistFrom(
 	if s.planCoverage != nil {
 		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
 	}
-	if s.followUps.read {
-		bounded[sourceAwaitingReply], bounded[sourceMeetingFollowUp] = s.followUps.cut, s.followUps.meetingsCut
-	}
+	s.followUps.bound(bounded)
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
 	// entirely — a rep narrowing to meetings would read "no tasks" rather than
