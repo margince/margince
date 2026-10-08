@@ -257,7 +257,6 @@ current
 cursor
 custom
 cut
-d
 dark
 dash
 data
