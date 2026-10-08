@@ -17,14 +17,17 @@ import (
 )
 
 type stubSignature struct {
-	body    string
-	err     error
-	askedID ids.UUID
+	body     string
+	template string
+	title    string
+	phone    string
+	err      error
+	askedID  ids.UUID
 }
 
-func (s *stubSignature) SignatureFor(_ context.Context, userID ids.UUID) (string, error) {
+func (s *stubSignature) SignatureFor(_ context.Context, userID ids.UUID) (SenderSignature, error) {
 	s.askedID = userID
-	return s.body, s.err
+	return SenderSignature{Body: s.body, Template: s.template, Title: s.title, Phone: s.phone}, s.err
 }
 
 func humanCtx(userID ids.UUID) context.Context {

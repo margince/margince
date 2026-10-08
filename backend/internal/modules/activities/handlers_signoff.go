@@ -33,8 +33,12 @@ func (h Handlers) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignOff{
+	out := crmcontracts.EmailSignOff{
 		Text: sign.Text,
 		Kind: crmcontracts.EmailSignOffKind(sign.Kind),
-	})
+	}
+	if sign.HTML != "" {
+		out.Html = &sign.HTML
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

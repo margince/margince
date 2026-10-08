@@ -59,7 +59,7 @@ func TestASendSignsOffTheWayTheComposerPreviewSays(t *testing.T) {
 		t.Fatalf("sent body = %q, want %q", got, want)
 	}
 
-	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(ctx, "Marek Janetzke\nGradion"); err != nil {
+	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Marek Janetzke\nGradion"}); err != nil {
 		t.Fatalf("save signature: %v", err)
 	}
 	preview = previewSignOff(ctx, t, e)
@@ -72,6 +72,44 @@ func TestASendSignsOffTheWayTheComposerPreviewSays(t *testing.T) {
 	}
 	if strings.Contains(got, "Viele Grüße") {
 		t.Fatalf("a signed send also carried the closing: %q", got)
+	}
+}
+
+// A workspace template signs every member's mail in their own values, as
+// markup in the HTML part and as lines in the text part, over their own
+// plain-text signature. A plain send gains the HTML part that carries it.
+func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
+	e := integration.Setup(t)
+	anchorID, recipient := seedTransactionalReply(t, e)
+	stager := &recordingStager{}
+	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+
+	if _, err := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(NewSettingsStore(e.Pool)).
+		SaveSignatureTemplate(e.Admin(), `<p><b>{name}</b><br>{title}<br><span style="color:#2a7">{phone}</span></p>`); err != nil {
+		t.Fatalf("save template: %v", err)
+	}
+	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{
+		Body: "my own text", Title: "Head of Sales", Phone: "+49 30 1234",
+	}); err != nil {
+		t.Fatalf("save signature: %v", err)
+	}
+	if _, err := adapter.SendEmail(ctx, anchorID, agents.SendEmailArgs{
+		To: []string{recipient}, Subject: "Angebot", Body: signOffBody, ConsentPurpose: "transactional",
+	}); err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	sent := stager.staged[len(stager.staged)-1]
+	if want := signOffBody + "\n\nRep\nHead of Sales\n+49 30 1234"; sent.Body != want {
+		t.Fatalf("text part = %q, want %q", sent.Body, want)
+	}
+	for _, want := range []string{"<b>Rep</b>", "Head of Sales", `style="color:#2a7"`} {
+		if !strings.Contains(sent.HTMLBody, want) {
+			t.Errorf("HTML part %q lacks %q", sent.HTMLBody, want)
+		}
+	}
+	if strings.Contains(sent.Body, "my own text") || strings.Contains(sent.HTMLBody, "my own text") {
+		t.Errorf("the member's own text signed alongside the template")
 	}
 }
 

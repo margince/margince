@@ -28,7 +28,7 @@ import (
 // only about the authenticated caller: a send signs with its own sender's
 // sign-off, and there is no call shape here that names anybody else.
 type SignatureReader interface {
-	SignatureFor(ctx context.Context, userID ids.UUID) (string, error)
+	SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignature, error)
 }
 
 // WithSignature wires the sign-off the send path appends. Compose calls this;
@@ -57,6 +57,9 @@ const (
 	// SignOffClosing means the sender wrote no signature, so the send closes with
 	// a plain greeting in the message's language above their name.
 	SignOffClosing SignOffKind = "closing"
+	// SignOffTemplate means the workspace's template, filled in with the
+	// sender's own values.
+	SignOffTemplate SignOffKind = "template"
 )
 
 // SignOff is the block a send appends beneath the message, and where it came
@@ -64,6 +67,8 @@ const (
 // draft is what the recipient gets.
 type SignOff struct {
 	Text string
+	// HTML is the markup the HTML part carries, set only for a template.
+	HTML string
 	Kind SignOffKind
 }
 
@@ -109,11 +114,20 @@ func (s *Store) signOffAs(ctx context.Context, body, subject, name string) (Sign
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
 		return SignOff{Kind: SignOffNone}, nil
 	}
-	sign, err := s.signature.SignatureFor(ctx, actor.UserID)
+	signature, err := s.signature.SignatureFor(ctx, actor.UserID)
 	if err != nil {
 		return SignOff{}, err
 	}
-	if sign = strings.TrimSpace(sign); sign != "" {
+	if strings.TrimSpace(signature.Template) != "" {
+		markup, text, err := renderSignatureTemplate(signature.Template, signatureValues{
+			Name: draftfloor.NameLine(name), Title: signature.Title, Phone: signature.Phone,
+		})
+		if err != nil {
+			return SignOff{}, err
+		}
+		return SignOff{Text: text, HTML: markup, Kind: SignOffTemplate}, nil
+	}
+	if sign := strings.TrimSpace(signature.Body); sign != "" {
 		return SignOff{Text: sign, Kind: SignOffSignature}, nil
 	}
 	closing := mailcopy.For(string(s.footerLanguage(ctx, body, subject))).SignOffClosing
@@ -140,7 +154,10 @@ func signedHTML(htmlBody string, sign SignOff, derived sendDeliverability) strin
 		return ""
 	}
 	out := htmlBody
-	if sign.Text != "" {
+	switch {
+	case sign.HTML != "":
+		out += "\n" + sign.HTML
+	case sign.Text != "":
 		out += "\n<p>" + htmlLines(sign.Text) + "</p>"
 	}
 	// The DISCLOSURES before the unsubscribe footer, matching the plain-text

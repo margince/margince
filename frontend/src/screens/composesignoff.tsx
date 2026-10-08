@@ -9,6 +9,7 @@ import { routeHash } from "../app/router";
 import { useT } from "../i18n";
 import { throwProblem, useMe } from "./common";
 import { settingsHref } from "./settingsrouting";
+import { SignatureHtml } from "./signaturehtml";
 
 type SignOff = components["schemas"]["EmailSignOff"];
 
@@ -49,7 +50,11 @@ export function SignOffPreview({
       aria-busy={stale}
     >
       <span className="t-caption">{t("compose.signOff")}</span>
-      <p className="compose-signoff-text">{signOff.text}</p>
+      {signOff.html ? (
+        <SignatureHtml html={signOff.html} title={t("compose.signOff")} />
+      ) : (
+        <p className="compose-signoff-text">{signOff.text}</p>
+      )}
       {signOff.kind === "closing" && (
         <p className="t-caption">
           {t("compose.signOffClosing")}{" "}
@@ -62,7 +67,7 @@ export function SignOffPreview({
   );
 }
 
-function useSignOff(
+export function useSignOff(
   body: string,
   subject: string,
 ): { signOff: SignOff | undefined; stale: boolean; failed: boolean } {

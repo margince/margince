@@ -8829,6 +8829,7 @@ const (
 	EmailSignOffKindClosing   EmailSignOffKind = "closing"
 	EmailSignOffKindNone      EmailSignOffKind = "none"
 	EmailSignOffKindSignature EmailSignOffKind = "signature"
+	EmailSignOffKindTemplate  EmailSignOffKind = "template"
 )
 
 // Valid indicates whether the value is a known member of the EmailSignOffKind enum.
@@ -8839,6 +8840,8 @@ func (e EmailSignOffKind) Valid() bool {
 	case EmailSignOffKindNone:
 		return true
 	case EmailSignOffKindSignature:
+		return true
+	case EmailSignOffKindTemplate:
 		return true
 	default:
 		return false
@@ -33591,9 +33594,14 @@ type EmailPresentationLifecycle string
 
 // EmailSignOff defines model for EmailSignOff.
 type EmailSignOff struct {
+	// Html The same block as the sanitized markup the HTML part carries. Present only when
+	// `kind` is `template`.
+	Html *string `json:"html,omitempty"`
+
 	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
-	// none, so the send closes with a plain greeting and their name when available. `none`: this
-	// send appends nothing.
+	// none, so the send closes with a plain greeting and their name when available.
+	// `template`: the workspace's template, filled in with the caller's values. `none`:
+	// this send appends nothing.
 	Kind EmailSignOffKind `json:"kind"`
 
 	// Text The block appended below the message, plain text, exactly as sent. Empty when
@@ -33602,8 +33610,9 @@ type EmailSignOff struct {
 }
 
 // EmailSignOffKind `signature`: the caller's own, from Settings. `closing`: the caller has written
-// none, so the send closes with a plain greeting and their name when available. `none`: this
-// send appends nothing.
+// none, so the send closes with a plain greeting and their name when available.
+// `template`: the workspace's template, filled in with the caller's values. `none`:
+// this send appends nothing.
 type EmailSignOffKind string
 
 // EmailSignOffRequest defines model for EmailSignOffRequest.
@@ -33620,8 +33629,27 @@ type EmailSignature struct {
 	// Body The sign-off appended below every message this member sends, plain text.
 	// Empty means none written; a send then closes with a plain greeting and
 	// the member's display name when one is on file.
-	Body      string     `json:"body"`
+	Body string `json:"body"`
+
+	// Phone The member's phone number, filled into the workspace template's `{phone}`.
+	Phone string `json:"phone"`
+
+	// TemplateActive The workspace has a signature template. Every send then signs with the template,
+	// filled in with this member's name, title and phone, instead of `body`.
+	TemplateActive bool `json:"template_active"`
+
+	// Title The member's title, filled into the workspace template's `{title}`.
+	Title     string     `json:"title"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+// EmailSignatureTemplate defines model for EmailSignatureTemplate.
+type EmailSignatureTemplate struct {
+	// Template The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`
+	// and `{phone}`. A send keeps paragraphs, line breaks, bold, italic, underline, links
+	// and spans with a colour and a pixel size, and drops everything else. Empty means
+	// none: each member signs with their own plain-text signature.
+	Template string `json:"template"`
 }
 
 // EmailSummary One retained email, reduced to what a row shows without opening it. Present on an
@@ -41994,6 +42022,12 @@ type SaveEmailSignatureRequest struct {
 	// FOR — a name, a role, a way to reach the sender — and past it a block
 	// is a document riding on every message.
 	Body string `json:"body"`
+
+	// Phone The member's phone number, for the workspace template. Omitted leaves it as it is.
+	Phone *string `json:"phone,omitempty"`
+
+	// Title The member's title, for the workspace template. Omitted leaves it as it is.
+	Title *string `json:"title,omitempty"`
 }
 
 // SaveLinkedInAccountRequest defines model for SaveLinkedInAccountRequest.
@@ -54510,6 +54544,9 @@ type CreateDealOutcomeReviewJSONRequestBody = CreateOutcomeReviewRequest
 // DisposeDedupeCandidateJSONRequestBody defines body for DisposeDedupeCandidate for application/json ContentType.
 type DisposeDedupeCandidateJSONRequestBody = DedupeDispositionRequest
 
+// SaveEmailSignatureTemplateJSONRequestBody defines body for SaveEmailSignatureTemplate for application/json ContentType.
+type SaveEmailSignatureTemplateJSONRequestBody = EmailSignatureTemplate
+
 // SendCompanyEmailJSONRequestBody defines body for SendCompanyEmail for application/json ContentType.
 type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 
@@ -66681,6 +66718,12 @@ type ServerInterface interface {
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
 	GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams)
+	// The workspace's signature template.
+	// (GET /email-signature-template)
+	GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
+	// Set the workspace's signature template (admin/ops).
+	// (PUT /email-signature-template)
+	SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams)
@@ -70266,6 +70309,18 @@ func (_ Unimplemented) UndoDedupeDisposition(w http.ResponseWriter, r *http.Requ
 // The calling user's morning digest — what capture did overnight.
 // (GET /digest)
 func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The workspace's signature template.
+// (GET /email-signature-template)
+func (_ Unimplemented) GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the workspace's signature template (admin/ops).
+// (PUT /email-signature-template)
+func (_ Unimplemented) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -90421,6 +90476,48 @@ func (siw *ServerInterfaceWrapper) GetMorningDigest(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetEmailSignatureTemplate operation middleware
+func (siw *ServerInterfaceWrapper) GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEmailSignatureTemplate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveEmailSignatureTemplate operation middleware
+func (siw *ServerInterfaceWrapper) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveEmailSignatureTemplate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SendCompanyEmail operation middleware
 func (siw *ServerInterfaceWrapper) SendCompanyEmail(w http.ResponseWriter, r *http.Request) {
 
@@ -107568,6 +107665,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/digest", wrapper.GetMorningDigest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/email-signature-template", wrapper.GetEmailSignatureTemplate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/email-signature-template", wrapper.SaveEmailSignatureTemplate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails", wrapper.SendCompanyEmail)

@@ -19,9 +19,11 @@ export function useSaveSignature(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (next: string) => {
+    mutationFn: async (
+      next: components["schemas"]["SaveEmailSignatureRequest"],
+    ) => {
       const { data, error } = await api.PUT("/me/email-signature", {
-        body: { body: next },
+        body: next,
       });
       if (error) {
         throwProblem(error);

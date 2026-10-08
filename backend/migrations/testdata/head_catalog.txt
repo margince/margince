@@ -3743,6 +3743,8 @@ public.email_signature.email_signature_pkey PRIMARY KEY (id)
 public.email_signature.email_signature_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.email_signature.id uuid NOT NULL gen=- def=uuidv7()
 public.email_signature.owner_id uuid NOT NULL gen=- def=-
+public.email_signature.phone text NOT NULL gen=- def=''::text
+public.email_signature.title text NOT NULL gen=- def=''::text
 public.email_signature.trg_email_signature_updated CREATE TRIGGER trg_email_signature_updated BEFORE UPDATE ON public.email_signature FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.email_signature.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.email_signature.version bigint NOT NULL gen=- def=1

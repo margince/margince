@@ -766,6 +766,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/contacts/{id}/nudge-dismissal":                                 {Op: "dismissRelationshipNudge", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/deal-rooms/{id}/expiry":                                        {Op: "setDealRoomExpiry", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/deals/{id}/documents/{attachmentId}/hide":                      {Op: "hideDealDocument", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/email-signature-template":                                      {Op: "saveEmailSignatureTemplate", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/installation/oauth-apps/{provider}":                            {Op: "setOauthApp", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/leads/{id}/manual-signals":                                     {Op: "setLeadManualSignal", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/mail-drafts":                                                   {Op: "saveMailDraft", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

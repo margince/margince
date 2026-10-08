@@ -22,6 +22,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -32,12 +33,46 @@ import (
 // the contact sends.
 const SignatureMaxRunes = 2000
 
+// SignatureFieldMaxRunes bounds the title and the phone a template fills in.
+const SignatureFieldMaxRunes = 120
+
+// SignatureTemplateMaxRunes bounds the workspace's signature template.
+const SignatureTemplateMaxRunes = 4000
+
+// SignatureTemplate is the workspace's signature layout, set by an admin. Empty
+// means none: each sender signs with their own plain-text signature.
+var SignatureTemplate = settings.Define[string](
+	"contacts.signature_template", "installation_settings", "update", "",
+	func(template string) error {
+		if len([]rune(template)) > SignatureTemplateMaxRunes {
+			return fmt.Errorf("the template is at most %d characters", SignatureTemplateMaxRunes)
+		}
+		return nil
+	},
+).MachineryApplied() // the send path applies it to the sender's own sign-off
+
 // EmailSignature is the caller's sign-off as the settings tab shows it.
 type EmailSignature struct {
 	// Body empty means none written; the send path then closes with a plain
 	// greeting and the member's name instead.
-	Body      string
-	UpdatedAt *time.Time
+	Body string
+	// Title and Phone fill the workspace template's placeholders.
+	Title, Phone string
+	// TemplateActive says the workspace has a template, which then replaces
+	// Body on every send.
+	TemplateActive bool
+	UpdatedAt      *time.Time
+}
+
+// SaveSignatureInput is what the caller writes about their own sign-off.
+type SaveSignatureInput struct {
+	Body, Title, Phone string
+}
+
+// SenderSignature is what a send needs to sign as the caller: their own text,
+// their template values, and the workspace's template.
+type SenderSignature struct {
+	Body, Title, Phone, Template string
 }
 
 // GetMyEmailSignature reads the caller's own signature. A member who has never
@@ -50,10 +85,15 @@ func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error)
 	}
 	var out EmailSignature
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `
-			SELECT body, updated_at FROM email_signature
+		template, err := settings.ApplyTx(ctx, tx, SignatureTemplate)
+		if err != nil {
+			return err
+		}
+		out.TemplateActive = strings.TrimSpace(template) != ""
+		err = tx.QueryRow(ctx, `
+			SELECT body, title, phone, updated_at FROM email_signature
 			 WHERE owner_id = $1 AND archived_at IS NULL`, actor.UserID).
-			Scan(&out.Body, &out.UpdatedAt)
+			Scan(&out.Body, &out.Title, &out.Phone, &out.UpdatedAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -70,14 +110,18 @@ func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error)
 // An empty body CLEARS it: a member emptying the field means "sign off with
 // the plain closing", not "leave what was there". The row survives the clearing so the
 // audit trail keeps both sides of the change.
-func (s *Store) SaveMyEmailSignature(ctx context.Context, body string) (EmailSignature, error) {
+func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput) (EmailSignature, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		return EmailSignature{}, apperrors.ErrPermissionDenied
 	}
-	trimmed := strings.TrimSpace(body)
+	trimmed := strings.TrimSpace(in.Body)
 	if len([]rune(trimmed)) > SignatureMaxRunes {
 		return EmailSignature{}, &SignatureTooLongError{Runes: len([]rune(trimmed))}
+	}
+	title, phone := strings.TrimSpace(in.Title), strings.TrimSpace(in.Phone)
+	if len([]rune(title)) > SignatureFieldMaxRunes || len([]rune(phone)) > SignatureFieldMaxRunes {
+		return EmailSignature{}, &SignatureTooLongError{Runes: max(len([]rune(title)), len([]rune(phone)))}
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := readSignatureTx(ctx, tx, actor.UserID)
@@ -85,9 +129,9 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, body string) (EmailSig
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO email_signature (owner_id, body) VALUES ($1, $2)
-			ON CONFLICT (owner_id) DO UPDATE SET body = $2, archived_at = NULL`,
-			actor.UserID, trimmed); err != nil {
+			INSERT INTO email_signature (owner_id, body, title, phone) VALUES ($1, $2, $3, $4)
+			ON CONFLICT (owner_id) DO UPDATE SET body = $2, title = $3, phone = $4, archived_at = NULL`,
+			actor.UserID, trimmed, title, phone); err != nil {
 			return err
 		}
 		// A signature goes out under the sender's name on every message they
@@ -120,23 +164,32 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, body string) (EmailSig
 // the contact SENDING. Both resolve the same row; neither lets one member read
 // another's, because the send path only ever asks about its own authenticated
 // sender.
-func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (string, error) {
+func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignature, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID != userID {
 		// A send signs with the SENDER's own sign-off. Asking for anybody
 		// else's is a bug in the caller, not a permission to widen.
-		return "", apperrors.ErrPermissionDenied
+		return SenderSignature{}, apperrors.ErrPermissionDenied
 	}
-	var body string
+	var out SenderSignature
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var readErr error
-		body, readErr = readSignatureTx(ctx, tx, userID)
-		return readErr
+		template, err := settings.ApplyTx(ctx, tx, SignatureTemplate)
+		if err != nil {
+			return err
+		}
+		out.Template = template
+		err = tx.QueryRow(ctx, `
+			SELECT body, title, phone FROM email_signature
+			 WHERE owner_id = $1 AND archived_at IS NULL`, userID).Scan(&out.Body, &out.Title, &out.Phone)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return err
 	})
 	if err != nil {
-		return "", fmt.Errorf("contacts: reading the sender's email signature: %w", err)
+		return SenderSignature{}, fmt.Errorf("contacts: reading the sender's email signature: %w", err)
 	}
-	return body, nil
+	return out, nil
 }
 
 func readSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID) (string, error) {
