@@ -104,7 +104,7 @@ When more seats are in use than the licence allows, Margince says:
 
 Nobody loses a role. Nobody is signed out. Only the *next* seat is refused.
 
-Margince checks the licence itself when it starts. It never calls out or reports back to anyone.
+Margince checks the licence itself when it starts. The licence check never calls out or reports back to anyone.
 
 ## The six roles
 
@@ -144,7 +144,7 @@ Two exceptions count for every role, Admin included:
 - **A captured contact still private to its owner.** A connection creates a
   contact from a message that nothing has judged yet. The contact belongs to the
   colleague whose mailbox made it, until Margince judges the sender or the
-  owner makes it public. An admin cannot open it either. So when you connect a mailbox with a year of history, the whole company does not see everyone the user has written to. That may include a lawyer or a doctor.
+  owner makes it public. An admin cannot open it either. So when you connect a mailbox with a year of history, the whole company does not see everyone in its mail history. That may include a lawyer or a doctor.
 
 A shared pipeline is the default. A share on one record can widen access further.
 
@@ -159,7 +159,7 @@ Everyone can read a record with **no owner**, and nobody can write to it until s
 ## Seeing and sharing records
 
 ### Why can't I see a record?
-When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail you were not part of, or the link names a record that does not exist. Margince answers all three with **not found**, so a link alone shows nothing.
+When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. Margince answers all three with **not found**, so a link alone shows nothing.
 
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.

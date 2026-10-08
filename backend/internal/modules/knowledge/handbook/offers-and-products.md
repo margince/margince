@@ -53,7 +53,7 @@ You can edit the header and the lines **only while it is a draft**. After that t
 
 ## How the money is worked out
 
-Margince works out offer totals to the smallest unit of the currency (such as the cent), with nothing lost on the way.
+Margince works out offer totals in whole units of the currency's smallest unit (such as the cent). The only rounding is the one on each line, below.
 
 For each line, in this order:
 

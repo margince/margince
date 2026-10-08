@@ -36,6 +36,7 @@ agree
 agreement
 alert
 all
+alliance
 allow
 allowance
 alone
@@ -60,7 +61,8 @@ app
 appear
 appearance
 applicable
-apply
+applied
+applies
 approval
 approve
 april
@@ -73,6 +75,7 @@ arrive
 arrow
 article
 as
+ascending
 ask
 assemble
 assign
@@ -107,7 +110,7 @@ background
 backup
 badge
 ban
-band
+bands
 bar
 base
 basis
@@ -133,7 +136,7 @@ board
 body
 book
 bookable
-booking
+bookings
 bookkeeping
 bookmark
 bot
@@ -144,6 +147,7 @@ brackets
 brand
 brief
 bring
+broader
 broken
 brought
 browser
@@ -236,6 +240,7 @@ compliant
 compose
 composer's
 computer
+condition
 confidence
 confidential
 configuration
@@ -310,6 +315,7 @@ deny
 depend
 derivation
 derive
+descending
 describe
 description
 destroy
@@ -441,10 +447,11 @@ final
 finance
 financial
 find
-finding
+findings
 finish
 fire
 first
+fiscal
 fit
 five
 fix
@@ -508,7 +515,7 @@ has
 have
 head
 header's
-heading
+headings
 health
 healthy
 held
@@ -528,6 +535,7 @@ how
 human
 i
 idea
+ids
 if
 ignore
 image
@@ -728,8 +736,8 @@ observation
 of
 off
 offboard
-offer
 offer's
+offered
 office
 offline
 often
@@ -898,7 +906,7 @@ reaction
 reactivate
 read
 reader's
-reading
+readings
 ready
 real
 reason
@@ -940,7 +948,9 @@ reorder
 rep
 repeat
 replace
-reply
+replied
+replies
+replying
 report
 request
 require
@@ -1021,7 +1031,7 @@ serve
 service
 session
 set
-setting
+settings
 settle
 setup
 several
@@ -1031,6 +1041,7 @@ sheet
 ship
 short
 shortcut
+shortened
 shortlist
 should
 show
@@ -1147,7 +1158,7 @@ then
 there
 these
 they
-thing
+things
 this
 those
 thread
@@ -1175,6 +1186,7 @@ toolbar
 top
 total
 touch
+traces
 track
 trail
 transcript
