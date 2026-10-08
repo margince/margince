@@ -27,7 +27,6 @@ admin
 administrator
 advance
 advertise
-advertiser
 advice
 advise
 advisory
@@ -74,7 +73,8 @@ api's
 app
 appear
 application
-apply
+applied
+applies
 approval
 approve
 archive
@@ -136,7 +136,7 @@ between
 beyond
 binary
 bind
-binding
+bindings
 bit
 blank
 block
@@ -166,13 +166,11 @@ build
 built
 bulk
 bundle
-bundle's
 bus
 business
 but
 button
 buy
-buyer
 by
 byte
 cache
@@ -189,7 +187,7 @@ canon
 canonical
 capability
 capture
-card
+cards
 care
 carry
 case
@@ -251,7 +249,6 @@ complete
 compliance
 component
 compose
-composer
 composite
 compute
 concrete
@@ -273,7 +270,6 @@ consultancy
 consume
 contact
 contain
-container
 content
 context
 contract
@@ -467,7 +463,7 @@ fill
 filter
 finance
 find
-finding
+findings
 finish
 fire
 first
@@ -482,7 +478,6 @@ flight
 floor
 flow
 fold
-folder
 follow
 foot
 for
@@ -517,7 +512,7 @@ give
 given
 glued
 go
-good
+goods
 got
 govern
 grader
@@ -547,7 +542,7 @@ has
 hash
 have
 head
-heading
+headings
 headline
 health
 healthy
@@ -558,8 +553,9 @@ here
 hidden
 hide
 history
-hold
 holder
+holding
+holds
 hole
 honour
 hook
@@ -587,6 +583,7 @@ import
 in
 inbound
 include
+index
 indigo
 inference
 infra
@@ -637,7 +634,8 @@ know
 known
 label
 ladder
-land
+landing
+lands
 lane
 language
 large
@@ -711,8 +709,8 @@ matter
 mature
 may
 mean
-meaning
 meaningful
+meanings
 measure
 measurement
 meet
@@ -787,7 +785,8 @@ observe
 obtain
 of
 off
-offer
+offered
+offering
 offline
 offset
 often
@@ -947,6 +946,7 @@ ready
 real
 reason
 rebound
+rebuild
 receive
 receiver's
 recipe
@@ -970,7 +970,7 @@ reliably
 relink
 reload
 relocatable
-rely
+relying
 remove
 rename
 render
@@ -982,7 +982,8 @@ repeatable
 replace
 replay
 replica
-reply
+replies
+replying
 repo
 report
 repository
@@ -1012,6 +1013,7 @@ revoke
 rewrite
 right
 risk
+river's
 role
 roll
 rollback
@@ -1038,7 +1040,6 @@ scaffold
 scan
 scenario
 schedule
-scheduler
 schema
 scheme
 scope
@@ -1061,7 +1062,7 @@ seen
 select
 self
 sell
-seller
+seller's
 semantic
 send
 senior
@@ -1076,7 +1077,7 @@ server's
 service
 session
 set
-setting
+settings
 settle
 setup
 seven
@@ -1128,7 +1129,7 @@ span
 spec
 speed
 spell
-spelling
+spellings
 spent
 split
 stable
@@ -1211,7 +1212,7 @@ there
 therefore
 these
 they
-thing
+things
 think
 third
 this
