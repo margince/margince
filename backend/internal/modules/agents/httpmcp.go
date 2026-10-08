@@ -13,6 +13,7 @@ package agents
 // discipline.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -139,6 +140,8 @@ type httpMCPHandler struct {
 	server       *Dispatcher
 	authenticate func(*http.Request) (context.Context, error)
 	challenge    func(*http.Request) string
+	// largeBodies holds one token per request over httperr.MaxBodyBytes in flight.
+	largeBodies chan struct{}
 }
 
 // NewHTTPHandler serves MCP over HTTP. authenticate runs PER REQUEST —
@@ -162,6 +165,7 @@ func NewHTTPHandler(registry *Registry, authenticate func(*http.Request) (contex
 		server:       server,
 		authenticate: authenticate,
 		challenge:    challenge,
+		largeBodies:  make(chan struct{}, maxLargeMCPBodiesInFlight),
 	}
 }
 
@@ -264,6 +268,35 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // base64, which grows it by a third, so the largest it can attach is about 6 MB.
 const MaxMCPRequestBytes = 8 << 20
 
+// maxLargeMCPBodiesInFlight bounds the requests over httperr.MaxBodyBytes one
+// process holds at once: each is resident several times over while it is decoded.
+const maxLargeMCPBodiesInFlight = 4
+
+// errLargeBodiesBusy refuses a large request while every large slot is taken.
+var errLargeBodiesBusy = errors.New("every slot for a large MCP request is taken")
+
+// readBody reads the request, taking a large slot once it grows past the
+// ordinary body bound; release gives the slot back after the call is answered.
+func (h *httpMCPHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, release func(), err error) {
+	capped := http.MaxBytesReader(w, r.Body, MaxMCPRequestBytes)
+	body, err = io.ReadAll(io.LimitReader(capped, httperr.MaxBodyBytes+1))
+	if err != nil || len(body) <= httperr.MaxBodyBytes {
+		return body, func() {}, err
+	}
+	select {
+	case h.largeBodies <- struct{}{}:
+	default:
+		return nil, nil, errLargeBodiesBusy
+	}
+	release = func() { <-h.largeBodies }
+	buf := bytes.NewBuffer(body)
+	if _, err := buf.ReadFrom(capped); err != nil {
+		release()
+		return nil, nil, err
+	}
+	return buf.Bytes(), release, nil
+}
+
 // servePost handles the one JSON-RPC exchange a POST carries: parse, decide
 // which framing the request is in, hold it to that framing's preconditions,
 // and dispatch.
@@ -273,7 +306,13 @@ const MaxMCPRequestBytes = 8 << 20
 // request, and the framing decides how a call is parsed — never what it may
 // do, which is the registry's business either way.
 func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxMCPRequestBytes))
+	body, release, err := h.readBody(w, r)
+	if errors.Is(err, errLargeBodiesBusy) {
+		w.Header().Set("Retry-After", "1")
+		httperr.ServiceUnavailable(w, r, "This server is already handling as many large MCP requests "+
+			"as it can hold. Wait a moment and send the call again.")
+		return
+	}
 	// The limit is read off the error because the chassis may have bound the
 	// body tighter than this handler does, and the refusal names the one that fired.
 	var tooLarge *http.MaxBytesError
@@ -291,6 +330,7 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	defer release()
 	var req rpcRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		// The body is what normally decides the era, and this one does not

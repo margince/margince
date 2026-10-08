@@ -4,7 +4,7 @@
 package activities
 
 // The kinds of file an upload may carry. One table for every door that files a
-// document, so a person and an agent are refused the same files.
+// document, so a contact uploading in the app and an agent are refused the same files.
 
 import (
 	"fmt"

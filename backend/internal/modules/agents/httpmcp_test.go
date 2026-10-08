@@ -17,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -581,5 +582,46 @@ func TestARequestOverTheMCPCeilingIsRefusedWithTheLimitNamed(t *testing.T) {
 		if !strings.Contains(problem.Detail, want) {
 			t.Errorf("detail %q does not mention %q", problem.Detail, want)
 		}
+	}
+}
+
+// Large requests take a slot; a full set refuses another with 503 while small
+// requests still pass, and a finished request gives its slot back.
+func TestLargeMCPRequestsAreBoundedInFlight(t *testing.T) {
+	h, ok := NewHTTPHandler(NewRegistry(nil, nil), authenticatedForTest,
+		func(*http.Request) string { return "" }, "margince-crm", "test", discardLog()).(*httpMCPHandler)
+	if !ok {
+		t.Fatal("NewHTTPHandler no longer answers the MCP handler")
+	}
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	ping := `{"jsonrpc":"2.0","id":1,"method":"ping"}`
+	post := func(size int) (int, string) {
+		resp, err := http.Post(srv.URL, "application/json", strings.NewReader(ping+strings.Repeat(" ", size-len(ping))))
+		if err != nil {
+			t.Fatalf("POST: %v", err)
+		}
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("closing response body: %v", err)
+		}
+		return resp.StatusCode, resp.Header.Get("Retry-After")
+	}
+	for range maxLargeMCPBodiesInFlight {
+		h.largeBodies <- struct{}{}
+	}
+
+	if status, retry := post(httperr.MaxBodyBytes + 1); status != http.StatusServiceUnavailable || retry == "" {
+		t.Fatalf("a large request with every slot taken answered %d (Retry-After %q), want 503 with Retry-After",
+			status, retry)
+	}
+	if status, _ := post(httperr.MaxBodyBytes); status != http.StatusOK {
+		t.Fatalf("a request at the ordinary bound answered %d, want 200: it takes no slot", status)
+	}
+	<-h.largeBodies
+	if status, _ := post(httperr.MaxBodyBytes + 1); status != http.StatusOK {
+		t.Fatalf("a large request with a slot free answered %d, want 200", status)
+	}
+	if held := len(h.largeBodies); held != maxLargeMCPBodiesInFlight-1 {
+		t.Errorf("%d slots are held after the request finished, want %d", held, maxLargeMCPBodiesInFlight-1)
 	}
 }

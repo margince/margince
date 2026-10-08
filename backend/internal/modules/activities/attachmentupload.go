@@ -65,13 +65,6 @@ func (e *EmptyUploadError) FieldFault() (field, code, message string) {
 	return "file", "empty_file", e.Error()
 }
 
-// UploadAttachment stores an object and records its metadata row. Authority
-// inherits from the parent entity: the caller must hold Update on the parent
-// object type and be able to see the parent row — both are checked BEFORE any
-// bytes are written, so an upload to a hidden or cross-tenant entity cannot
-// land an object (no storage abuse). The object is put before the row commits
-// (a committed row always has its bytes; a failed write leaves at worst an
-// orphan object, never a row promising bytes that are not there).
 // storeAttachmentBytes declares the key provisional and then stores the bytes,
 // in that order.
 //
@@ -103,6 +96,13 @@ func (s *Store) mayUpload(ctx context.Context, in AttachmentInput) error {
 	})
 }
 
+// UploadAttachment stores an object and records its metadata row. Authority
+// inherits from the parent entity: the caller must hold Update on the parent
+// object type and be able to see the parent row — both are checked BEFORE any
+// bytes are written, so an upload to a hidden or cross-tenant entity cannot
+// land an object (no storage abuse). The object is put before the row commits
+// (a committed row always has its bytes; a failed write leaves at worst an
+// orphan object, never a row promising bytes that are not there).
 func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmcontracts.Attachment, error) {
 	if err := s.mayUpload(ctx, in); err != nil {
 		return crmcontracts.Attachment{}, err

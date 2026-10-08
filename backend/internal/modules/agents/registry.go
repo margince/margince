@@ -158,6 +158,9 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 
+	if err := withinArgsBound(spec, in); err != nil {
+		return nil, 0, err
+	}
 	res, err := splitReserved(in)
 	if err != nil {
 		return nil, 0, err

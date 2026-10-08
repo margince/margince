@@ -136,6 +136,9 @@ type ToolSpec struct {
 	// keys. Held to InputSchema in both directions, and to the agent catalog, by
 	// TestEveryServedToolNamesTheKeysOfItsObjects.
 	UnkeyedArguments map[string]string
+	// MaxArgsBytes bounds this tool's encoded arguments; zero is the 1 MiB every
+	// JSON body takes, so a transport ceiling raised for one tool widens no other.
+	MaxArgsBytes int64
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's
