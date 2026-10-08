@@ -142,6 +142,7 @@ You need **AI diagnostics read** to see the figures.
 - **Recent calls** covers **24 h**, **7 d** or **30 d**, with **p50**, **p95** and **Cost**.
   Open a row to see only the calls that ended there.
 - **Model tiers**: the mark next to a tier opens its health for the last 7 days.
+  It counts only the calls of the model the tier has now.
 - **AI tasks**: **Edit** opens the task's sheet. **Recent calls** there shows "How calls got an answer", step by step.
   It also says why a step passed a call on, such as "timed out", "failed" or "not sure enough".
   Under "How long calls take, against the timeout", **p50** and **p95** sit beside the timeout that stops a call.
