@@ -110,7 +110,7 @@ func (s listSeam) ChangeLists(ctx context.Context, c agents.ListChange) (json.Ra
 	case agents.ListModeAdd:
 		return encodedListAnswer(s.store.AddMemberView(ctx, listID(*c.ListID), memberChangeOf(c)))
 	default:
-		if err := s.store.RemoveMember(ctx, listID(*c.ListID), memberChangeOf(c)); err != nil {
+		if _, err := s.store.RemoveMember(ctx, listID(*c.ListID), memberChangeOf(c)); err != nil {
 			return nil, err
 		}
 		return json.Marshal(map[string]bool{"removed": true})

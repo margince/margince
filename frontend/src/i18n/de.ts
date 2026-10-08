@@ -2852,13 +2852,11 @@ export const de = {
   "tags.more": "+{count} weitere",
   "tags.showLess": "Weniger anzeigen",
   "tags.removeTag": "{name} entfernen",
-  "tags.removeTitle": "{name} von diesem Datensatz entfernen?",
+  "tags.removed": "{name} von diesem Datensatz entfernt",
+  "tags.restored": "{name} wieder an diesem Datensatz",
   "tags.addedBy": "Hinzugefügt von {who} · {when}",
   "tags.addedByUndated": "Hinzugefügt von {who}",
   "tags.addedOn": "Hinzugefügt am {when}",
-  "tags.visibleWorkspaceWide":
-    "Tag-Namen sind im gesamten Unternehmen sichtbar.",
-  "tags.removeFromRecord": "Von diesem Datensatz entfernen",
   "tags.withheld": "Für deine Rolle ausgeblendet",
   "tags.emptyTitle": "Noch keine Tags",
   "tags.emptyBody":
@@ -10929,7 +10927,6 @@ export const de = {
   "lists.why.inDays_one": "in {count} Tag",
   "lists.why.inDays_other": "in {count} Tagen",
   "lists.remove": "Von der Shortlist entfernen",
-  "lists.removeTitle": "Diesen Datensatz von der Shortlist entfernen?",
   "lists.note": "Warum (optional)",
   "lists.noteHint":
     "Wird mit der \u00c4nderung gespeichert, damit das Team den Grund sieht.",
@@ -10939,6 +10936,8 @@ export const de = {
   "lists.record.check": "Live-Liste pr\u00fcfen",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
   "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
+  "lists.record.takenOff": "Von {name} entfernt",
+  "lists.record.putBack": "Wieder auf {name}",
   "lists.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
   "lists.add": "Hinzuf\u00fcgen",
   "lists.shortlist": "Shortlist",

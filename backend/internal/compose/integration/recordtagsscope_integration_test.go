@@ -138,7 +138,7 @@ func TestARetiredTagCanStillBeTakenOffARecord(t *testing.T) {
 			"describes the surface: %+v", carried)
 	}
 
-	if err := store.RemoveTag(ctx, tag.ID, "contact", contact); err != nil {
+	if _, err := store.RemoveTag(ctx, tag.ID, "contact", contact); err != nil {
 		t.Fatalf("taking the retired word off the record answered %v — the read hands it back "+
 			"and nothing can remove it, so the record is stuck with it", err)
 	}

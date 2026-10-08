@@ -1,17 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  type RefObject,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { undoAction, useToast } from "../design-system/toast";
@@ -158,7 +153,7 @@ function FileRow({
   const side = useRef<HTMLDivElement | null>(null);
   // A ref, not state: the dialog reads it as it closes, before a re-render.
   const deleted = useRef(false);
-  useFocusLeavesWithMenu(side, focusLanding);
+  useFocusHandoff(side, focusLanding);
   return (
     <PanelRow
       className={doc.hidden ? "deal-file deal-file-hidden" : "deal-file"}
@@ -227,22 +222,6 @@ function FileRow({
       </ConfirmModal>
     </PanelRow>
   );
-}
-
-// The menu hands focus back to its trigger, and a hide that drops the row
-// takes the trigger with it.
-function useFocusLeavesWithMenu(
-  menuSide: RefObject<HTMLElement | null>,
-  focusLanding: () => HTMLElement | null,
-) {
-  useLayoutEffect(() => {
-    const node = menuSide.current;
-    return () => {
-      if (node?.contains(document.activeElement)) {
-        focusLanding()?.focus();
-      }
-    };
-  }, [menuSide, focusLanding]);
 }
 
 // The row's verbs: a captured file can be hidden or shown again, an upload

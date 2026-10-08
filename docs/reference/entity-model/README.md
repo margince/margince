@@ -308,7 +308,7 @@ erDiagram
 | [`list_evaluation`](collections.md#list_evaluation) | collections | 6 | 0 |
 | [`list_live_member`](collections.md#list_live_member) | collections | 5 | 0 |
 | [`list_member`](collections.md#list_member) | collections | 7 | 0 |
-| [`list_member_event`](collections.md#list_member_event) | collections | 10 | 0 |
+| [`list_member_event`](collections.md#list_member_event) | collections | 11 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
 | [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
 | [`mail_draft`](activities.md#mail_draft) | activities | 15 | 0 |

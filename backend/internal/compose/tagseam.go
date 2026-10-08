@@ -169,7 +169,8 @@ func (a tagAdapter) ApplyTag(ctx context.Context, tagID ids.UUID, entityType str
 }
 
 func (a tagAdapter) RemoveTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error {
-	return a.store.RemoveTag(ctx, ids.From[ids.TagKind](tagID), entityType, entityID)
+	_, err := a.store.RemoveTag(ctx, ids.From[ids.TagKind](tagID), entityType, entityID)
+	return err
 }
 
 // --- the vocabulary verbs ---

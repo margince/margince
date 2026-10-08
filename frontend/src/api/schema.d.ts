@@ -6993,6 +6993,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/lists/{id}/members/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back a record the caller took off a Shortlist.
+         * @description Undoes one `removeListMember`, named by the `audit_id` it answered. The member comes back
+         *     as its author left it: the same `added_by`, `created_at` and note, not the restorer and
+         *     now. The gates are the removal's own.
+         *
+         *     Only the caller's own removal can be put back, and only while nothing has changed that
+         *     record's membership since: a removal by somebody else, of another list, or of a record
+         *     the caller can no longer see answers `404`.
+         *
+         *     An agent may not call this: the restore undoes the caller's own removal, made by hand.
+         */
+        post: operations["restoreListMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/lists/{id}/members/{recordId}/why": {
         parameters: {
             query?: never;
@@ -8061,8 +8092,42 @@ export interface paths {
          * @description Undo for applyTag. archiveTag retires a tag from the whole workspace, which is not the
          *     same act and not a way back from a mistaken tagging. Idempotent: removing a tagging that
          *     is not there succeeds, because the caller asked for a state that is already true.
+         *
+         *     A removal that took a tagging off answers `200` with the handle `restoreTagApplication`
+         *     takes to put it back; one that found nothing to remove answers `204`.
          */
         delete: operations["removeTag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/{id}/apply/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back a tag the caller took off a record.
+         * @description Undoes one `removeTag`, named by the `audit_id` it answered. The tagging comes back as it
+         *     was assigned: the same `assigned_by`, `assigned_by_kind` and `assigned_at`, not the
+         *     restorer and now. The gates are the removal's own.
+         *
+         *     Only the caller's own removal can be put back, and only while nothing has changed that
+         *     record's tagging since: a removal by somebody else, of another tag, or from a record the
+         *     caller can no longer see answers `404`.
+         *
+         *     An agent may not call this: the restore undoes the caller's own removal, made by hand.
+         */
+        post: operations["restoreTagApplication"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -32632,6 +32697,14 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
         };
+        /** @description The way back from taking a tag off a record or a record off a Shortlist. A removal answers it, and the matching restore route takes it back unchanged. */
+        RemovalUndo: {
+            /**
+             * Format: uuid
+             * @description The removal's own history entry, which kept who added the link and when, so the restore puts it back as it was.
+             */
+            audit_id: string;
+        };
         TagListResponse: {
             data: components["schemas"]["Tag"][];
             page: components["schemas"]["PageInfo"];
@@ -54894,7 +54967,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Removed. */
+            /** @description Removed. The body is the handle `restoreListMember` takes to put the record back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalUndo"];
+                };
+            };
+            /** @description Not sent. A removal answers `200` with its undo handle, and a record that is not on the list answers `404`. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -54904,6 +54986,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalUndo"];
+            };
+        };
+        responses: {
+            /** @description The member, back on the list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMember"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The membership cannot be put back: the record was added to or taken off this list again since, or the list is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -56880,7 +57002,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Removed (or was not applied). */
+            /** @description Removed. The body is the handle that puts the tagging back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalUndo"];
+                };
+            };
+            /** @description The record did not carry the tag; nothing was removed. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -56890,6 +57021,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreTagApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalUndo"];
+            };
+        };
+        responses: {
+            /** @description The tagging, back on the record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Taggable"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The tagging cannot be put back: the tag was applied to or removed from this record again since, or the tag is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
