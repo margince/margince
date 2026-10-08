@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
@@ -23,7 +23,11 @@ import {
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
-import { weeklyNumericStatus } from "./brief.numeric";
+import {
+  figureReading,
+  type WeeklyFigure,
+  weeklyNumericStatus,
+} from "./brief.numeric";
 import {
   useWeeklyReview,
   useWeeklyReviewIndex,
@@ -273,7 +277,10 @@ function WeeklyBody({
 
   const c = review.counts;
   const numeric = weeklyNumericStatus(review.numeric_summary);
-  const { bookingsUnavailable, meetingsUnavailable } = numeric;
+  const place = { t, locale, zone: recordZone };
+  // A figure its source did not measure trades its own reading for that fact.
+  const reading = (figure: WeeklyFigure, value: string, detail: ReactNode) =>
+    figureReading(numeric.figures[figure], { value, detail }, place);
   const prior = review.prior?.counts;
   // The delta line, or nothing. A reading with no earlier week to measure
   // against gets no line at all rather than "+0": a rep's first week did not
@@ -313,20 +320,26 @@ function WeeklyBody({
           <p className="t-sub">{t("brief.weekly.numericPartial")}</p>
         )}
         {/* On a phone the strip is a list, not ten boxes stacked. */}
-        <StatStrip testId="weekly-strip">
+        <StatStrip testId="weekly-strip" className="brief-weekly-strip">
           {c.tasks_completed !== undefined && (
             <StatCard
               narrow="row"
               label={t("brief.weekly.tasksCompleted")}
-              value={formatNumber(c.tasks_completed, locale)}
-              detail={since(c.tasks_completed, prior?.tasks_completed)}
+              {...reading(
+                "tasks",
+                formatNumber(c.tasks_completed, locale),
+                since(c.tasks_completed, prior?.tasks_completed),
+              )}
             />
           )}
           <StatCard
             narrow="row"
             label={t("brief.week.lostLabel")}
-            value={formatNumber(c.deals_lost, locale)}
-            detail={since(c.deals_lost, prior?.deals_lost)}
+            {...reading(
+              "lost",
+              formatNumber(c.deals_lost, locale),
+              since(c.deals_lost, prior?.deals_lost),
+            )}
           />
           {/* No stage-change slot: the workings list below already reports the
               deals that moved without closing, and one fact spelled on two
@@ -335,76 +348,71 @@ function WeeklyBody({
           <StatCard
             narrow="row"
             label={t("brief.weekly.planCommitmentsKept")}
-            value={
+            {...reading(
+              "commitments",
               c.commitments_due === 0
                 ? t("brief.weekly.noCommitments")
                 : t("brief.weekly.ofDue", {
                     done: formatNumber(c.commitments_kept, locale),
                     due: formatNumber(c.commitments_due, locale),
-                  })
-            }
-            detail={since(c.commitments_kept, prior?.commitments_kept)}
+                  }),
+              since(c.commitments_kept, prior?.commitments_kept),
+            )}
           />
           <StatCard
             narrow="row"
             label={t("brief.weekly.dealsWon")}
-            value={
-              bookingsUnavailable
-                ? t("reporting.unavailable")
-                : formatNumber(c.deals_won, locale)
-            }
             // Value uses the frozen close-time exchange rates.
-            detail={
-              bookingsUnavailable
-                ? review.numeric_summary?.bookings_coverage.reason
-                : (wonPace(review, locale, t, recordZone) ??
-                  since(c.deals_won, prior?.deals_won))
-            }
+            {...reading(
+              "won",
+              formatNumber(c.deals_won, locale),
+              wonPace(review, locale, t, recordZone) ??
+                since(c.deals_won, prior?.deals_won),
+            )}
           />
           <StatCard
             narrow="row"
             label={t("brief.weekly.leadsAnswered")}
-            value={
+            {...reading(
+              "leads",
               c.leads_routed === 0
                 ? t("brief.weekly.noLeads")
                 : t("brief.weekly.ofRouted", {
                     answered: formatNumber(c.leads_answered_in_target, locale),
                     routed: formatNumber(c.leads_routed, locale),
-                  })
-            }
-            detail={since(
-              c.leads_answered_in_target,
-              prior?.leads_answered_in_target,
+                  }),
+              since(
+                c.leads_answered_in_target,
+                prior?.leads_answered_in_target,
+              ),
             )}
           />
           <StatCard
             narrow="row"
             label={t("brief.weekly.meetingsHeld")}
-            value={
-              meetingsUnavailable
-                ? t("reporting.unavailable")
-                : c.meetings_held === 0
-                  ? t("brief.weekly.noMeetings")
-                  : t("brief.weekly.ofMeetings", {
-                      withStep: formatNumber(c.meetings_with_next_step, locale),
-                      held: formatNumber(c.meetings_held, locale),
-                    })
-            }
-            detail={
-              meetingsUnavailable
-                ? review.numeric_summary?.meetings_coverage.reason
-                : since(c.meetings_held, prior?.meetings_held)
-            }
+            {...reading(
+              "meetings",
+              c.meetings_held === 0
+                ? t("brief.weekly.noMeetings")
+                : t("brief.weekly.ofMeetings", {
+                    withStep: formatNumber(c.meetings_with_next_step, locale),
+                    held: formatNumber(c.meetings_held, locale),
+                  }),
+              since(c.meetings_held, prior?.meetings_held),
+            )}
           />
           <StatCard
             narrow="row"
             label={t("brief.weekly.carriedOver")}
-            value={formatNumber(c.tasks_carried_over, locale)}
-            detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}
+            {...reading(
+              "tasks",
+              formatNumber(c.tasks_carried_over, locale),
+              since(c.tasks_carried_over, prior?.tasks_carried_over),
+            )}
           />
         </StatStrip>
         <Disclosure summary={t("brief.readings.summary")}>
-          <WeeklyWorkings counts={c} />
+          <WeeklyWorkings counts={c} figures={numeric.figures} />
         </Disclosure>
       </PanelBody>
       {review.deals.length > 0 && (

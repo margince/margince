@@ -33,7 +33,7 @@ func (h Handlers) DraftLeadEmail(w http.ResponseWriter, r *http.Request, id crmc
 	if !ok {
 		return
 	}
-	draft, err := h.svc.Draft(r.Context(), ids.From[ids.LeadKind](ids.UUID(id)), req)
+	draft, _, err := h.svc.Draft(r.Context(), ids.From[ids.LeadKind](ids.UUID(id)), req)
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return

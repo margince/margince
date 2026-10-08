@@ -46,7 +46,7 @@ func TestAnAgentsDraftWaitsForItsHumanMarkedAsAnAgents(t *testing.T) {
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
 	store := draftStore(e)
 
-	saved, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeAll), anchor, agentDraft("First go"))
+	saved, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeAll), anchor, agentDraft("First go"), nil)
 	if err != nil {
 		t.Fatalf("an agent saving a draft: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestAnAgentsDraftWaitsForItsHumanMarkedAsAnAgents(t *testing.T) {
 		t.Fatalf("the human read %+v, want the agent's draft, marked, with its address canonical", got)
 	}
 
-	again, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeAll), anchor, agentDraft("Shorter"))
+	again, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeAll), anchor, agentDraft("Shorter"), nil)
 	if err != nil || again.ID != saved.ID || again.Version != 2 || again.Content.Body != "Shorter" {
 		t.Fatalf("a second agent draft = %+v (%v), want the waiting draft replaced at v2", again, err)
 	}
@@ -77,7 +77,7 @@ func TestTheHumansSaveClearsTheMarkAndAnAgentCannotWriteOverIt(t *testing.T) {
 	store := draftStore(e)
 	human := e.as(principal.RowScopeAll)
 
-	saved, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeAll), anchor, agentDraft("The agent's words"))
+	saved, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeAll), anchor, agentDraft("The agent's words"), nil)
 	if err != nil {
 		t.Fatalf("an agent saving a draft: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestTheHumansSaveClearsTheMarkAndAnAgentCannotWriteOverIt(t *testing.T) {
 	if err != nil || kept.AgentDrafted {
 		t.Fatalf("the human's save = %+v (%v), want the mark cleared", kept, err)
 	}
-	if _, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeAll), anchor, agentDraft("Overwrite")); !errors.Is(err, ErrOwnDraftWaiting) {
+	if _, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeAll), anchor, agentDraft("Overwrite"), nil); !errors.Is(err, ErrOwnDraftWaiting) {
 		t.Errorf("an agent writing over the human's draft → %v, want ErrOwnDraftWaiting", err)
 	}
 	got, err := store.GetMailDraft(human, anchor)
@@ -101,11 +101,11 @@ func TestAnAgentsDraftAnswersToItsHumansRowScopeAndOnlyAnAgentMarksOne(t *testin
 	e.linkToContactOwnedBy(t, ids.From[ids.ActivityKind](hidden.ID), e.other)
 	store := draftStore(e)
 
-	if _, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeOwn), hidden, agentDraft("x")); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := store.SaveAgentMailDraft(e.asAgentFor(t, principal.RowScopeOwn), hidden, agentDraft("x"), nil); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an agent drafting on a record its human cannot see → %v, want ErrNotFound", err)
 	}
 	visible := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
-	if _, err := store.SaveAgentMailDraft(e.as(principal.RowScopeAll), visible, agentDraft("x")); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.SaveAgentMailDraft(e.as(principal.RowScopeAll), visible, agentDraft("x"), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a human writing an agent-marked draft → %v, want ErrPermissionDenied", err)
 	}
 }

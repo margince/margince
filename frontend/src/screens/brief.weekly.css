@@ -115,6 +115,22 @@
   gap: var(--space-4);
 }
 
+/* A week's figures may be words ("Not recorded") and a basis may carry a date,
+   so the row takes as many equal cards as a word-sized figure fits, leaves no
+   last card stretched under the rest, and lets the basis run a third line.
+   The team's week wears the same class. Under 26rem the strip's own row fold
+   stands. */
+@container (width > 26rem) {
+  .brief-weekly-strip .stat-strip {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+    --stat-strip-tail: 1;
+  }
+  .brief-weekly-strip .stat-card-detail {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+}
+
 /* Two strips, one block: the lead block and the deal block are read one after
    the other and touched without this. */
 .brief-weekly-scorecard {

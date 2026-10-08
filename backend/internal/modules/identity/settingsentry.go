@@ -296,7 +296,8 @@ func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // into a 500.
 func InstallationNameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	var name string
-	err := tx.QueryRow(ctx,
+	err := tx.QueryRow(
+		ctx,
 		`SELECT coalesce((SELECT value #>> '{}' FROM setting WHERE key = $1), '')`, Name.Key(),
 	).Scan(&name)
 	return name, err
