@@ -99,16 +99,16 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
-- [connect-a-mailbox.md](how-to/connect-a-mailbox.md): connect a mailbox through Gmail, IMAP, Microsoft
-  or Google Calendar.
+- [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
+  and calendar capture need.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local Ollama model, with no
   cloud key.
 - [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): turn on the public lookup of what
   a company runs.
-- [check-a-vat-number.md](how-to/check-a-vat-number.md): check the VAT number of a company with the EU
-  register.
+- [check-a-vat-number.md](how-to/check-a-vat-number.md): turn on VAT number checks against the EU
+  register, and find why one gets no answer.
 - [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md): which mail goes out through which server.
-- [connect-telegram.md](how-to/connect-telegram.md): connect a Telegram bot to a workspace.
+- [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a

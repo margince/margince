@@ -145,6 +145,26 @@ To edit a company in Margince, open it and click the value to change in its **De
 The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain.
 Also called: rename a company, update an account.
 
+### How do I check a company's VAT number?
+To check a VAT number with the EU VAT register, type it into **Register / VAT ID** in the company's **Details** panel. Margince checks a new number on its own.
+1. Open the company, and find **Register / VAT ID** under **Registration** in **Details**.
+2. Type the number as it is written, and press Enter.
+3. Press the mark beside the number to read the answer.
+The mark shows **Valid**, **Not valid**, or "not yet checked with the register". **Check with the register** or **Check again** asks once more.
+The answer arrives a few seconds later, while the button shows "Checking with register…". A number checked in the last five minutes is not checked again.
+Also called: VIES check, check a VAT ID, tax number check.
+
+### What does the VAT check answer mean?
+The mark opens the receipt: **Register result**, **Number consulted**, **Registered to**, **Registered address**, **Consulted on** and **Consultation number**.
+**Valid** means the number is real, not that it belongs to this company. Read **Registered to**: a number copied from a website often belongs to another company.
+
+**Consultation number** is the proof a tax office accepts. It reads "None issued." until your own VAT ID is filled in on **Settings → Company profile**.
+When the number changed after a check, the receipt says "The number on this record changed after this check." Press **Check again**.
+
+A grey question mark means the answer could not be loaded; press it to try again.
+If a check says "This installation does not consult the VAT register.", an administrator has to turn it on.
+Also called: VAT ID valid, VAT receipt, Registered to.
+
 ### How do I change the owner of a contact or company?
 To change who owns a contact or company in Margince, open the record and pick a colleague in the **Owner** row of its **Details** panel. The change saves as soon as you pick.
 You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required."). To give many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
