@@ -183,6 +183,14 @@ type Copy struct {
 	WeeklyOutcomeWon   string
 	WeeklyOutcomeLost  string
 	WeeklyOutcomeMoved string
+	// What a figure says when its source had not begun recording, the panel's
+	// own words with its {date} and {value} placeholders kept as they are.
+	WeeklyNotRecorded   string
+	WeeklyRecordedFrom  string
+	WeeklyNoRecords     string
+	WeeklyPartialFrom   string
+	WeeklyPartialValue  string
+	WeeklyBeforeHistory string
 
 	// The two links the installation sends as ITSELF rather than on a rep's
 	// behalf: the confirm-details link and the double-opt-in link.
