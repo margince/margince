@@ -259,6 +259,36 @@ function useLeftFrom(): RefObject<HTMLElement | null> {
   return leftFrom;
 }
 
+// After the action's own effects commit, and only if nothing else took focus:
+// an action that navigates or focuses its result keeps what it did.
+function useHandBack(): (back: HTMLElement) => void {
+  const frame = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (frame.current !== null) {
+        cancelAnimationFrame(frame.current);
+      }
+    },
+    [],
+  );
+  return useCallback((back: HTMLElement) => {
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+    }
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      const at = document.activeElement;
+      const unclaimed =
+        at === null ||
+        at === document.body ||
+        at.closest(".toast-region") !== null;
+      if (unclaimed && back.isConnected) {
+        back.focus();
+      }
+    });
+  }, []);
+}
+
 /** What a screen calls to say something landed. */
 export function useToast(): Toast {
   return useContext(ToastControlsContext) ?? NO_REGION;
@@ -341,6 +371,7 @@ export function ToastRegion() {
     }
   }, []);
   const leftFrom = useLeftFrom();
+  const handBack = useHandBack();
   // Where focus sat in a message that is about to unmount; a replacement takes
   // it over. A ref cleanup runs before React removes the node, focus still in it.
   const refocus = useRef<ToastControl | null>(null);
@@ -431,12 +462,14 @@ export function ToastRegion() {
             className="toast-action"
             data-toast-control="act"
             onClick={(event) => {
-              const holding = event.currentTarget === document.activeElement;
+              const back =
+                event.currentTarget === document.activeElement
+                  ? leftFrom.current
+                  : null;
               act.onAct();
               dismiss(shown.id);
-              const back = leftFrom.current;
-              if (holding && back?.isConnected) {
-                back.focus();
+              if (back !== null) {
+                handBack(back);
               }
             }}
           >

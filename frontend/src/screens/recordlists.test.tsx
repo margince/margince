@@ -448,8 +448,10 @@ describe("taking a record off a Shortlist", () => {
     );
 
     await waitFor(() => expect(sent.restore).toEqual([{ audit_id: AUDIT }]));
-    expect(document.activeElement).toContainElement(
-      screen.getByRole("combobox", { name: en["lists.record.check"] }),
+    await waitFor(() =>
+      expect(document.activeElement).toContainElement(
+        screen.getByRole("combobox", { name: en["lists.record.check"] }),
+      ),
     );
     expect(
       await screen.findByRole("button", { name: shortlist.name }),

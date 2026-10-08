@@ -11,8 +11,10 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { steppedClock } from "../testing/steppedclock";
+import { useArrivalFocus } from "./arrivalfocus";
 import { Button } from "./atoms";
 import { useFocusHandoff } from "./focushandoff";
+import { Heading } from "./heading";
 import {
   type Toast,
   type ToastOptions,
@@ -618,6 +620,7 @@ describe("focus after the verb runs", () => {
     act(() => press("Undo").focus());
 
     await acting.click(press("Undo"));
+    wait(16);
 
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByTestId("block")).toHaveFocus();
@@ -636,9 +639,80 @@ describe("focus after the verb runs", () => {
     act(() => press("Undo").focus());
 
     await acting.click(press("Undo"));
+    wait(16);
 
     expect(screen.queryByRole("status")).toBeNull();
     expect(document.activeElement).toBe(document.body);
+  });
+
+  it("leaves focus alone when the verb takes that place off the page", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    const field = document.createElement("input");
+    document.body.append(field);
+    act(() => field.focus());
+    act(() => {
+      toast().show(
+        "Scheduled",
+        open(() => field.remove()),
+      );
+    });
+    act(() => press("Show all").focus());
+
+    await acting.click(press("Show all"));
+    wait(16);
+
+    expect(field.isConnected).toBe(false);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("keeps the focus a destination takes as it arrives", async () => {
+    function Destination() {
+      const title = useArrivalFocus<HTMLHeadingElement>();
+      return (
+        <Heading size="large" ref={title} tabIndex={-1}>
+          Scheduled sends
+        </Heading>
+      );
+    }
+    function Page() {
+      const toast = useToast();
+      const [arrived, setArrived] = useState(false);
+      return (
+        <>
+          <Button
+            onClick={() =>
+              toast.show(
+                "Scheduled",
+                open(() => setArrived(true)),
+              )
+            }
+          >
+            schedule
+          </Button>
+          {arrived && <Destination />}
+        </>
+      );
+    }
+    const acting = steppedClock();
+    render(
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Page />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    act(() => press("schedule").focus());
+    await acting.click(press("schedule"));
+    act(() => press("Show all").focus());
+
+    await acting.click(press("Show all"));
+    wait(16);
+
+    expect(
+      screen.getByRole("heading", { name: "Scheduled sends" }),
+    ).toHaveFocus();
   });
 });
 
