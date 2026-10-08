@@ -43,6 +43,9 @@ type stalledAnswer struct {
 	status int
 	header http.Header
 	body   []byte
+	// closes is whether the server said it closes the connection; ReadResponse
+	// moves Connection: close out of the header and into this.
+	closes bool
 }
 
 // stalledPost writes a POST's head and then only part of its body, and reads
@@ -80,41 +83,99 @@ func stalledPost(t *testing.T, srv *httptest.Server, head, sent string) stalledA
 	if err != nil {
 		t.Fatalf("reading the answer: %v", err)
 	}
-	return stalledAnswer{status: resp.StatusCode, header: resp.Header, body: body}
+	return stalledAnswer{status: resp.StatusCode, header: resp.Header, body: body, closes: resp.Close}
 }
 
-// A client that declares a large body is refused before it sends one, so it
-// reads a 503 instead of a connection reset halfway through its upload.
-func TestADeclaredLargeRequestIsRefusedBeforeItsBodyIsRead(t *testing.T) {
-	h, srv := largeBodyHandler(t, NewRegistry(nil, nil))
-	for range maxLargeMCPBodiesInFlight {
-		h.largeBodies <- struct{}{}
+// chunkedPastTheBound is a chunked body that has just outgrown the ordinary
+// bound and then stops, owing the rest.
+var chunkedPastTheBound = fmt.Sprintf("%x\r\n%s\r\n", httperr.MaxBodyBytes+1, strings.Repeat(" ", httperr.MaxBodyBytes+1))
+
+// A large request that finds every slot taken is refused at once, before its
+// body is read and without the server waiting to drain the rest of it.
+func TestABusyLargeRequestIsRefusedAtOnce(t *testing.T) {
+	for name, tc := range map[string]struct{ head, sent string }{
+		"a declared length": {head: fmt.Sprintf("Content-Length: %d\r\n", MaxMCPRequestBytes)},
+		"chunked":           {head: "Transfer-Encoding: chunked\r\n", sent: chunkedPastTheBound},
+	} {
+		t.Run(name, func(t *testing.T) {
+			h, srv := largeBodyHandler(t, NewRegistry(nil, nil))
+			for range maxLargeMCPBodiesInFlight {
+				h.largeBodies <- struct{}{}
+			}
+
+			answer := stalledPost(t, srv, tc.head, tc.sent)
+
+			if answer.status != http.StatusServiceUnavailable || answer.header.Get("Retry-After") == "" {
+				t.Fatalf("answered %d (Retry-After %q), want 503 with Retry-After", answer.status, answer.header.Get("Retry-After"))
+			}
+			if !answer.closes {
+				t.Error("the refusal does not close the connection, so the server would wait to drain the unsent body")
+			}
+			var problem struct{ Code, Detail string }
+			if err := json.Unmarshal(answer.body, &problem); err != nil || problem.Detail == "" {
+				t.Errorf("the refusal is not a readable problem (%+v): %v", problem, err)
+			}
+		})
 	}
+}
+
+// One agent holds one large slot, so a single passport cannot take every slot
+// and turn away every other workspace's file.
+func TestOneAgentHoldsOneLargeSlot(t *testing.T) {
+	h, srv := largeBodyHandler(t, NewRegistry(nil, nil))
+	h.largeBodyReadBudget = 20 * time.Millisecond
+	h.holdLargeSlotFor(t, "agent:large")
 
 	answer := stalledPost(t, srv, fmt.Sprintf("Content-Length: %d\r\n", MaxMCPRequestBytes), "")
 
-	if answer.status != http.StatusServiceUnavailable || answer.header.Get("Retry-After") == "" {
-		t.Fatalf("answered %d (Retry-After %q), want 503 with Retry-After", answer.status, answer.header.Get("Retry-After"))
+	if answer.status != http.StatusTooManyRequests || !answer.closes {
+		t.Fatalf("a second large call from one agent answered %d (closes %t), want 429 and a closed connection",
+			answer.status, answer.closes)
 	}
-	var problem struct{ Code, Detail string }
-	if err := json.Unmarshal(answer.body, &problem); err != nil || problem.Detail == "" {
-		t.Errorf("the refusal is not a readable problem (%+v): %v", problem, err)
+
+	h.releaseLargeSlotOf(t, "agent:large")
+	h.holdLargeSlotFor(t, "agent:other")
+
+	if answer := stalledPost(t, srv, fmt.Sprintf("Content-Length: %d\r\n", MaxMCPRequestBytes), "{"); answer.status != http.StatusRequestTimeout {
+		t.Errorf("another agent's large call answered %d, want it admitted and then timed out (408)", answer.status)
+	}
+	h.largeMu.Lock()
+	_, held := h.largeHolders["agent:large"]
+	h.largeMu.Unlock()
+	if held {
+		t.Error("the agent still holds a large slot after it was answered")
 	}
 }
 
-// An undeclared body that outgrows the bound while every slot is taken is
-// refused at once, not after the server waits to drain the rest of it.
-func TestAChunkedLargeRequestIsRefusedWithoutWaitingForItsBody(t *testing.T) {
+// holdLargeSlotFor and releaseLargeSlotOf stand in for a call in flight.
+func (h *httpMCPHandler) holdLargeSlotFor(t *testing.T, id string) {
+	t.Helper()
+	h.largeMu.Lock()
+	defer h.largeMu.Unlock()
+	h.largeHolders[id] = struct{}{}
+	h.largeBodies <- struct{}{}
+}
+
+func (h *httpMCPHandler) releaseLargeSlotOf(t *testing.T, id string) {
+	t.Helper()
+	h.largeMu.Lock()
+	defer h.largeMu.Unlock()
+	delete(h.largeHolders, id)
+	<-h.largeBodies
+}
+
+// A body declared over the MCP limit is refused for its size, never for want
+// of a slot it could not use.
+func TestAnOversizedDeclaredRequestIsRefusedBeforeASlot(t *testing.T) {
 	h, srv := largeBodyHandler(t, NewRegistry(nil, nil))
 	for range maxLargeMCPBodiesInFlight {
 		h.largeBodies <- struct{}{}
 	}
 
-	answer := stalledPost(t, srv, "Transfer-Encoding: chunked\r\n",
-		fmt.Sprintf("%x\r\n%s\r\n", httperr.MaxBodyBytes+1, strings.Repeat(" ", httperr.MaxBodyBytes+1)))
+	answer := stalledPost(t, srv, fmt.Sprintf("Content-Length: %d\r\n", MaxMCPRequestBytes+1), "")
 
-	if answer.status != http.StatusServiceUnavailable || answer.header.Get("Retry-After") == "" {
-		t.Fatalf("answered %d (Retry-After %q), want 503 with Retry-After", answer.status, answer.header.Get("Retry-After"))
+	if answer.status != http.StatusRequestEntityTooLarge {
+		t.Errorf("an oversized declared body answered %d, want 413: %s", answer.status, answer.body)
 	}
 }
 
@@ -125,7 +186,7 @@ func TestAStalledLargeSenderGivesItsSlotBack(t *testing.T) {
 		"a declared length": {head: fmt.Sprintf("Content-Length: %d\r\n", 2*httperr.MaxBodyBytes), sent: "{"},
 		"chunked": {
 			head: "Transfer-Encoding: chunked\r\n",
-			sent: fmt.Sprintf("%x\r\n%s\r\n", httperr.MaxBodyBytes+1, strings.Repeat(" ", httperr.MaxBodyBytes+1)),
+			sent: chunkedPastTheBound,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

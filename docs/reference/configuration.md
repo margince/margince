@@ -1294,8 +1294,10 @@ because `ToolSpec.MaxArgsBytes` starts at the JSON limit and only `attach_docume
 
 One process holds at most 4 MCP requests over 1 MiB at once (`maxLargeMCPBodiesInFlight` in
 `backend/internal/modules/agents/httpmcp.go`). Each one sits in memory many times while it is
-read. One more gets `503` with `Retry-After: 1`. When it states a `Content-Length`, it gets that
-answer before its body is read. Once a request holds a place, the rest of its body must come within
+read. Each agent may hold only one of them, and its second gets `429`. When all 4 are in use, the next gets `503` with
+`Retry-After: 1`. When it states a `Content-Length`, it gets that answer before its body is read.
+
+Once a request holds a place, the rest of its body must come within
 10 seconds (`largeBodyReadDeadline`). If it does not, the answer is `408`, and the place is free
 again.
 
