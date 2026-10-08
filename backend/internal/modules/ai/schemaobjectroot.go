@@ -47,7 +47,7 @@ func objectRooted(raw json.RawMessage) (json.RawMessage, bool) {
 		Type                 string                     `json:"type"`
 		Properties           map[string]json.RawMessage `json:"properties"`
 		Required             []string                   `json:"required"`
-		AdditionalProperties bool                       `json:"additionalProperties"`
+		AdditionalProperties bool                       `json:"additionalProperties"` //nolint:tagliatelle // JSON Schema spec keyword, must be camelCase
 	}{kwObject, map[string]json.RawMessage{objectRootKey: raw}, []string{objectRootKey}, false})
 	if err != nil {
 		return raw, false
