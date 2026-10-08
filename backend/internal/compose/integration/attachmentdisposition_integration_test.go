@@ -14,19 +14,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A downloaded attachment is SAVED, never rendered — including one whose bytes
-// are markup. The property lives on the SHARED download path. The file is
-// captured rather than uploaded, because an upload refuses HTML outright and a
-// sender's mail does not.
+// are markup. The property lives on the SHARED download path, so it holds for a
+// captured channel file and a rep's own upload alike; this exercises the upload
+// because that is the one an HTTP test can create end to end.
 //
 // An attachment's bytes are sender-controlled, its content type is sniffed from
 // those same bytes, and a text/html file served inline would execute in the
@@ -36,38 +32,28 @@ import (
 // comes from an untrusted sender rather than trip over it.
 func TestDownloadedAttachmentIsSavedNotRendered(t *testing.T) {
 	e := Setup(t)
-	blob := blobstore.NewMemory()
-	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blob)
+	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Untrusted Sender", &e.Rep1)
-	owner := OwnerConn(t)
-	email := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
-		VALUES ($1, 'email', 'Your invoice', now(), 'imap', 'connector:imap')`)
-	LinkActivity(t, owner, email, "contact", contact)
 
 	// Markup, because that is the shape that would execute: a benign PDF proves
 	// the header is set, not that the dangerous case is covered by it.
-	capture := e.ConnectorOwnerCtx(e.AdminUser, "imap")
-	store := activities.NewStore(e.DB()).WithBlobstore(blob)
-	staged, err := store.StageCapturedFiles(capture, []activities.CapturedFile{{
-		PartID: "1", Filename: "invoice.html", ContentType: "text/html",
-		Body: []byte(`<html><script>document.title="xss"</script></html>`),
-	}})
-	if err != nil {
-		t.Fatalf("staging the markup file: %v", err)
+	body, ctype := multipartAttachment(t, "contact", contact.String(), "invoice.html",
+		[]byte(`<html><script>document.title="xss"</script></html>`))
+	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
+	req.Header.Set("Content-Type", ctype)
+	rec := httptest.NewRecorder()
+	h.UploadAttachment(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("upload: status %d, body %s", rec.Code, rec.Body.String())
 	}
-	if err := database.WithWorkspaceTx(capture, e.Pool, func(tx pgx.Tx) error {
-		return store.RecordCapturedFiles(capture, tx, ids.From[ids.ActivityKind](email), activities.CapturedFileSource{
-			System: "imap", MessageID: "invoice-" + email.String(),
-			CapturedBy: "connector:imap", Category: "email_attachment",
-		}, staged)
-	}); err != nil {
-		t.Fatalf("recording the markup file: %v", err)
+	var att crmcontracts.Attachment
+	if err := json.Unmarshal(rec.Body.Bytes(), &att); err != nil {
+		t.Fatalf("decode upload response: %v", err)
 	}
-	att := ids.MustParse(e.WsScalar(t, `SELECT id::text FROM attachment WHERE entity_id = $1`, email))
 
 	dl := httptest.NewRecorder()
-	h.DownloadAttachment(dl, httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.String(), nil).WithContext(ctx), crmcontracts.Id(att))
+	h.DownloadAttachment(dl, httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String(), nil).WithContext(ctx), att.Id)
 	if dl.Code != http.StatusOK {
 		t.Fatalf("download: status %d", dl.Code)
 	}

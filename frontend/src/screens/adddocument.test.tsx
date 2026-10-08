@@ -571,7 +571,7 @@ describe("adding a document from the account", () => {
 
     const accept = screen.getByLabelText(/File/).getAttribute("accept") ?? "";
     expect(accept.split(",")).toEqual([...ACCEPTED_ATTACHMENT_EXTENSIONS]);
-    expect(accept).not.toContain(".html");
+    expect(accept).not.toContain(".svg");
   });
 
   it("refuses a read-only seat even though its RBAC grant says update", async () => {

@@ -21,8 +21,8 @@ type attachmentType struct {
 	aliases              []string
 }
 
-// HTML and SVG are left out because they carry script, archives because their
-// contents are unchecked, and executables because nobody files one as a record.
+// SVG is left out because an image viewer runs its script, and executables because
+// nobody files one as a record. HTML and zip are kept: they are only ever downloaded.
 var attachmentTypes = []attachmentType{
 	{extension: ".pdf", mediaType: "application/pdf"},
 	{extension: ".doc", mediaType: "application/msword"},
@@ -47,12 +47,15 @@ var attachmentTypes = []attachmentType{
 	{extension: ".heif", mediaType: "image/heif"},
 	{extension: ".tif", mediaType: "image/tiff"},
 	{extension: ".tiff", mediaType: "image/tiff"},
+	{extension: ".html", mediaType: "text/html"},
+	{extension: ".htm", mediaType: "text/html"},
+	{extension: ".zip", mediaType: "application/zip", aliases: []string{"application/x-zip-compressed"}},
 	{extension: ".eml", mediaType: "message/rfc822"},
 	{extension: ".msg", mediaType: "application/vnd.ms-outlook"},
 }
 
 const acceptedAttachmentKinds = "PDF, Word, Excel, PowerPoint, OpenDocument, RTF, text, CSV, Markdown, " +
-	"PNG, JPEG, GIF, WebP, HEIC, HEIF and TIFF images, and saved emails (.eml, .msg)"
+	"HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF and TIFF images, zip archives, and saved emails (.eml, .msg)"
 
 // AcceptedAttachmentExtensions lists every extension an upload may carry, in
 // table order, for the frontend mirror's gate.

@@ -43,6 +43,9 @@ export const ACCEPTED_ATTACHMENT_EXTENSIONS = [
   ".heif",
   ".tif",
   ".tiff",
+  ".html",
+  ".htm",
+  ".zip",
   ".eml",
   ".msg",
 ] as const;

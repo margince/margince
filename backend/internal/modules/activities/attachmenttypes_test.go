@@ -40,13 +40,11 @@ func TestAFileOutsideTheTableIsRefused(t *testing.T) {
 	cases := []struct {
 		name, declared, filename string
 	}{
-		{"markup runs script in a viewer", "text/html", "invoice.html"},
-		{"an svg carries script too", "image/svg+xml", "logo.svg"},
-		{"an archive hides what it holds", "application/zip", "bundle.zip"},
-		{"an accepted extension does not rescue a refused type", "text/html", "invoice.pdf"},
+		{"an svg runs script in an image viewer", "image/svg+xml", "logo.svg"},
+		{"an accepted extension does not rescue a refused type", "image/svg+xml", "logo.pdf"},
 		{"no type and an unknown extension", "", "setup.exe"},
 		{"no type and no extension", "", "README"},
-		{"octet-stream and an unknown extension", "application/octet-stream", "page.htm"},
+		{"octet-stream and an unknown extension", "application/octet-stream", "setup.exe"},
 		{"a malformed type", "application/pdf; =", "quote.pdf"},
 	}
 	for _, tc := range cases {
@@ -63,16 +61,16 @@ func TestAFileOutsideTheTableIsRefused(t *testing.T) {
 
 func TestTheRefusalNamesTheFileAndWhatIsAccepted(t *testing.T) {
 	t.Parallel()
-	_, err := resolveAttachmentType("text/html", "invoice.html", "invoice.html")
+	_, err := resolveAttachmentType("image/svg+xml", "logo.svg", "logo.svg")
 	var refusal *UnsupportedFileTypeError
 	if !errors.As(err, &refusal) {
-		t.Fatalf("an HTML upload → %v, want an UnsupportedFileTypeError", err)
+		t.Fatalf("an SVG upload → %v, want an UnsupportedFileTypeError", err)
 	}
 	field, code, message := refusal.FieldFault()
 	if field != "file" || code != "unsupported_file_type" {
 		t.Errorf("field fault = (%q, %q), want (file, unsupported_file_type)", field, code)
 	}
-	for _, named := range []string{"invoice.html", "PDF", "Word", "TIFF", "saved emails"} {
+	for _, named := range []string{"logo.svg", "PDF", "Word", "TIFF", "saved emails"} {
 		if !strings.Contains(message, named) {
 			t.Errorf("the refusal %q does not mention %q", message, named)
 		}

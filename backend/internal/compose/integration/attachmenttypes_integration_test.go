@@ -22,7 +22,7 @@ import (
 // row, and no object left in the bucket for a later sweep to find.
 //
 // The PDF beside it is the control, because a rule that refused every upload
-// would satisfy the HTML case on its own.
+// would satisfy the SVG case on its own.
 func TestAnUploadOfAnUnacceptedKindStoresNothing(t *testing.T) {
 	e := Setup(t)
 	blob := blobstore.NewMemory()
@@ -39,9 +39,9 @@ func TestAnUploadOfAnUnacceptedKindStoresNothing(t *testing.T) {
 		return rec
 	}
 
-	refused := upload("invoice.html", []byte(`<html><script>alert(1)</script></html>`))
+	refused := upload("logo.svg", []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`))
 	if refused.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("uploading an HTML file: status %d, want 422; body %s", refused.Code, refused.Body.String())
+		t.Fatalf("uploading an SVG file: status %d, want 422; body %s", refused.Code, refused.Body.String())
 	}
 	var problem struct {
 		Details struct {
@@ -54,7 +54,7 @@ func TestAnUploadOfAnUnacceptedKindStoresNothing(t *testing.T) {
 	if faults := problem.Details.Errors; len(faults) != 1 || faults[0].Field != "file" || faults[0].Code != "unsupported_file_type" {
 		t.Errorf("the refusal names %+v, want one file/unsupported_file_type field", faults)
 	}
-	if got := refused.Body.String(); !strings.Contains(got, "invoice.html") || !strings.Contains(got, "PDF") {
+	if got := refused.Body.String(); !strings.Contains(got, "logo.svg") || !strings.Contains(got, "PDF") {
 		t.Errorf("the refusal does not name the file and what is accepted: %s", got)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM attachment WHERE entity_id = $1`, contact); n != 0 {
