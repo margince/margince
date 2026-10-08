@@ -67,10 +67,15 @@ The pages used these names before they joined the plain-words bar. Move a name u
 write its meaning, and delete it here. A name new to the docs goes in the table, never here.
 
 <!-- prose:allow sentence a list of names, not a sentence -->
-`AA`, `Act`, `AirDrop`, `Apple`, `args`, `ASCII`, `AST`, `Aurora`, `Authenticode`, `axe`, `C`, `Chrome`,
-`CODEOWNERS`, `CRUD`, `CSS`, `Ctrl-C`, `DAG`, `DDL`, `DELETE`, `DSN`, `Edge`, `enum`, `Escape`, `Firefox`,
-`Fonts`, `frontend`, `FX`, `Gatekeeper`, `GB`, `Geist`, `GNU`, `HTTP`, `IANA`, `Intel`, `JSON`, `JSONPath`,
-`LLM`, `Mac`, `MB`, `ms`, `MSVC`, `notarization`, `NULL`, `OS`, `Outfit`, `Outlook`, `PATCH`, `pgvector`,
-`POST`, `PostgreSQL`, `PowerShell`, `px`, `README`, `River`, `Rosetta`, `Safari`, `SLA`, `SmartScreen`,
-`Sparkles`, `SPDX`, `SQL`, `Storybook`, `struct`, `Studio`, `TypeScript`, `UI`, `URL`, `USB`, `Valkey`,
-`Ventura`, `Visual`, `WCAG`, `Xcode`, `YAML`
+`AA`, `Act`, `AD`, `AirDrop`, `Anthropic`, `Apple`, `args`, `Art`, `ASCII`, `AST`, `Aurora`, `Authenticode`,
+`axe`, `Azure`, `BotFather`, `BYOK`, `C`, `Cc`, `CGNAT`, `Chrome`, `Claude`, `CLI`, `CODEOWNERS`, `CodeRabbit`,
+`Codex`, `config`, `cron`, `CRUD`, `CSRF`, `CSS`, `Ctrl-C`, `curl`, `DAG`, `DCR`, `DDL`, `DeepSeek`, `DELETE`,
+`dist`, `DNS`, `DPA`, `DSN`, `Edge`, `Entra`, `enum`, `Escape`, `EUR`, `European`, `Firefox`, `Flash-Lite`,
+`Fonts`, `frontend`, `FX`, `Gatekeeper`, `GB`, `Geist`, `Gemini`, `Gemma`, `GNU`, `GPT`, `GPU`, `Graph`,
+`Groq`, `HardPass`, `HTML`, `HTTP`, `IAM`, `IANA`, `IMAPS`, `Impressum`, `Inspector`, `Intel`, `IP`, `JSON`,
+`JSONL`, `JSONPath`, `KB`, `LLM`, `London`, `Mac`, `Markdown`, `MB`, `Mistral`, `MRL`, `ms`, `MSVC`, `NAT`,
+`notarization`, `NULL`, `OAuth`, `OpenAI`, `OpenAI-compatible`, `OS`, `Outfit`, `Outlook`, `PATCH`, `PDF`,
+`pgvector`, `POST`, `PostgreSQL`, `PowerShell`, `px`, `README`, `RFC`, `River`, `Rosetta`, `Safari`, `SBOMs`,
+`semver`, `SLA`, `slug`, `SmartScreen`, `Sparkles`, `SPDX`, `SQL`, `SSRF`, `stdin`, `stdout`, `Storybook`,
+`struct`, `Studio`, `TCP`, `TLS`, `TypeSafe`, `TypeScript`, `UI`, `UID`, `URI`, `URIs`, `URL`, `USB`, `Valkey`,
+`Ventura`, `Vertex`, `VIES`, `Visual`, `VS`, `WCAG`, `Xcode`, `YAML`, `Zürich`
