@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// resolveAdvanceTarget reads the target stage's semantic and win
-// probability and enforces that it belongs to the deal's own pipeline —
-// a stage from another pipeline is a 422, a missing/archived stage a 404.
+// resolveAdvanceTarget reads the target stage's semantic and win probability
+// and enforces that it belongs to the deal's own pipeline: a stage from
+// another pipeline is a 422, a missing or archived stage a 404.
 func resolveAdvanceTarget(ctx context.Context, tx pgx.Tx, toStage ids.StageID, current crmcontracts.Deal) (semantic string, winProbability int, err error) {
 	stage, err := resolveLiveStage(ctx, tx, toStage, ids.PipelineID{UUID: ids.UUID(*current.PipelineId)}, "")
 	if err != nil {
