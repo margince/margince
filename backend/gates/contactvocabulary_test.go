@@ -242,6 +242,8 @@ var retired = gatekit.Waive(map[string]string{
 	// the page above, held to it by TestTheEmbeddedHandbookMatchesTheDocs. Waiving the
 	// source without its mirror would fail the moment the two are brought into line.
 	"backend/internal/modules/knowledge/handbook/settings.md": "the embedded copy of the page above",
+	"docs/handbook/plain-words.txt": "the handbook's plain word list must admit every word its " +
+		"pages use: the seats settings group, the trust mark for a value a human typed, and a deal won in person",
 
 	// The German compliance package: a works agreement, a consent form, an
 	// employee information sheet and the processing record. "Die beschäftigte
