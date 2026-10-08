@@ -12,7 +12,8 @@ var attachDocumentCopy = toolCopy{
 		"record, and never save a file's text as a note instead.",
 	Limits: "Up to " + httperr.Megabytes(maxInlineFileBytes) + " per file, or less where the " +
 		"workspace sets a smaller upload limit. Common document, image and email formats are " +
-		"accepted; any other kind is refused, and the refusal names the accepted ones. The file is " +
+		"accepted; any other kind is refused, and the refusal names the accepted ones. Tell the user " +
+		"about a refused file; never rename, convert or zip it to get it accepted. The file is " +
 		"stored, not read, and is not filed against a contract.",
 	Instead: "Use log_activity for what was said about the file, linked to the same record.",
 	Retain:  "Keep attachment_id to name the file to the user.",

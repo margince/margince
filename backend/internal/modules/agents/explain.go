@@ -98,6 +98,10 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.Is(err, errFileCannotWait):
 		return "This call needs a contact's approval, and a file cannot wait for an approval: the approval would " +
 			"keep the file. Nothing was changed. Do not retry; tell the user to attach the file in the Margince app."
+	case errors.Is(err, errFileKindRefused):
+		return "Margince does not accept this kind of file, so nothing was attached. (" + fileKindDetail(err) +
+			") Do not retry: do not rename it, convert it, pack it into a zip or other archive, or save its " +
+			"contents as a note. Tell the user it was not attached and which kinds are accepted."
 	case errors.Is(err, apperrors.ErrRequiresApproval):
 		// An approval is required and nothing was staged to carry it — a surface
 		// with no inbox, or a tool that cannot describe its own staging target.
@@ -214,6 +218,15 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 	return "This call was refused as issued and nothing was changed; repeating it unchanged will be refused the same way. (" +
 		explained + ") Correct the arguments and call again — or, if this is a governed refusal " +
 		"rather than a mistake, do not retry: tell the user what is blocking it."
+}
+
+// fileKindDetail is the store's refusal as the classified path renders it, so
+// the agent keeps the field code and the list of accepted kinds.
+func fileKindDetail(err error) string {
+	if fault, ok := httperr.Classify(err); ok {
+		return faultExplanation(fault)
+	}
+	return echoSafe(err.Error(), MaxFaultDetail)
 }
 
 // faultExplanation renders what the agent is told inside the parentheses: the

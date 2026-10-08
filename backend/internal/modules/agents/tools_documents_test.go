@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -328,5 +329,49 @@ func TestARetriedAttachReplaysTheFirstReceipt(t *testing.T) {
 	}
 	if !bytes.Equal(first, again) || reader.reads != 1 {
 		t.Errorf("the replay answered %s after %d re-read(s), want the first receipt after one", again, reader.reads)
+	}
+}
+
+// kindRefusal stands for the store's refusal of a file's kind, as a field fault.
+type kindRefusal struct{ code string }
+
+func (e kindRefusal) Error() string {
+	return `"logo.svg" is not a kind of file that can be attached; choose one of: PDF, zip archives`
+}
+func (e kindRefusal) FieldFault() (field, code, message string) { return "file", e.code, e.Error() }
+
+// A refused kind is final: told to correct its call, a model packed an SVG
+// into a zip, so the refusal sends it to the user instead.
+func TestAttachDocumentReportsARefusedKindAsFinal(t *testing.T) {
+	docs := &fakeDocuments{attachErr: kindRefusal{code: unsupportedFileTypeCode}}
+	_, err := documentsRegistry(docs).Invoke(docsCtx(), "attach_document", attachCall(t, map[string]any{
+		"filename": "logo.svg", "content_type": "image/svg+xml",
+	}))
+	if !errors.Is(err, errFileKindRefused) {
+		t.Fatalf("err = %v, want the refused-kind sentinel", err)
+	}
+	var fault apperrors.FieldFault
+	if !errors.As(err, &fault) {
+		t.Fatalf("err = %v lost the store's field fault, which the REST door classifies", err)
+	}
+
+	got := NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))).
+		explain("attach_document", err)
+	for _, want := range []string{"choose one of: PDF, zip archives", "Do not retry", "zip or other archive", "as a note", "Tell the user"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("explain = %q, want it to say %q", got, want)
+		}
+	}
+	if strings.Contains(got, "Correct the arguments") {
+		t.Errorf("explain = %q, invites a change of arguments that works around the refusal", got)
+	}
+}
+
+func TestAttachDocumentPassesAnotherFieldFaultThrough(t *testing.T) {
+	docs := &fakeDocuments{attachErr: kindRefusal{code: "validation_error"}}
+	_, err := documentsRegistry(docs).Invoke(docsCtx(), "attach_document", attachCall(t, nil))
+	if err == nil || errors.Is(err, errFileKindRefused) {
+		t.Fatalf("err = %v, want the store's own refusal, not the refused-kind sentinel", err)
 	}
 }

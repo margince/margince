@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 84 |
 | Resources | 9 |
-| Tool catalog | 257.0 KB |
+| Tool catalog | 257.1 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66685 |
+| Approx. wire tokens | 66707 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 112.1 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 66.8 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 66.9 KB | 26% | Yes, every step |
 | Input schemas | 57.8 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
-| **Description + input schema** | **124.6 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **124.7 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -1383,10 +1383,10 @@ Put a file the user gave you on a company, contact, deal, lead or project, where
 record's Documents tab — use it whenever the user wants a file kept on a record, and never save a
 file's text as a note instead. Up to 6.2 MB per file, or less where the workspace sets a smaller
 upload limit. Common document, image and email formats are accepted; any other kind is refused, and
-the refusal names the accepted ones. The file is stored, not read, and is not filed against a
-contract. Use log_activity for what was said about the file, linked to the same record. Keep
-attachment_id to name the file to the user. (Governance: runs immediately; requires passport scope
-"write".)
+the refusal names the accepted ones. Tell the user about a refused file; never rename, convert or
+zip it to get it accepted. The file is stored, not read, and is not filed against a contract. Use
+log_activity for what was said about the file, linked to the same record. Keep attachment_id to name
+the file to the user. (Governance: runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>

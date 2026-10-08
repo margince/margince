@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -149,12 +150,29 @@ func (t attachDocument) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		RecordLink: parent, Filename: args.Filename, ContentType: args.ContentType, Content: content,
 	})
 	if err != nil {
-		return nil, err
+		return nil, refusedKind(err)
 	}
 	// A replay is a receipt of a past write: it re-proves the parent, not the file,
 	// which a human may since have removed and no replay reader resolves.
 	noteEvidence(ctx, datasource.EntityType(parent.EntityType), parent.EntityID)
 	return json.Marshal(stored)
+}
+
+// errFileKindRefused marks a file whose kind the store refuses. No argument
+// fixes it: a model told to correct its call packed the file into a zip.
+var errFileKindRefused = errors.New("this kind of file is not accepted")
+
+// unsupportedFileTypeCode is the store's field code for a refused kind.
+const unsupportedFileTypeCode = "unsupported_file_type"
+
+func refusedKind(err error) error {
+	var fault apperrors.FieldFault
+	if errors.As(err, &fault) {
+		if _, code, _ := fault.FieldFault(); code == unsupportedFileTypeCode {
+			return fmt.Errorf("%w: %w", errFileKindRefused, err)
+		}
+	}
+	return err
 }
 
 // maxBytes is the smaller of what one request can carry and what the operator allows.
