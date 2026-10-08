@@ -151,7 +151,7 @@ func (e *Engine) AssembleTeamFor(
 		if err := gatherTeamWeek(ctx, tx, &review, members); err != nil {
 			return err
 		}
-		if err := e.measureTeamNumeric(ctx, tx, &review, now); err != nil {
+		if err := e.measureTeamNumeric(ctx, tx, &review, members, now); err != nil {
 			return err
 		}
 		id, wrote, err := insertTeamReview(ctx, tx, review)

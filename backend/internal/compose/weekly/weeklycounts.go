@@ -194,11 +194,11 @@ func countWeekLeads(
 // meetingIsTheirsSQL is the one spelling of "this meeting is that rep's":
 // hosted by them, or — where no host was recorded — filed by them.
 //
-// TWO readers ask it, the headline count here and the funnel in
-// weeklyscorecard.go, and they must not disagree: a meeting credited to
-// different contacts by the two panels is one page contradicting itself about the
-// same week. The caller supplies its own placeholders because the two queries
-// number their arguments differently.
+// THREE readers ask it, the headline count here, the funnel in
+// weeklyscorecard.go and the coverage in weeklycoverage.go, and they must not
+// disagree: a meeting credited to different contacts by two panels is one page
+// contradicting itself about the same week. The caller supplies its own
+// placeholders because the queries number their arguments differently.
 //
 // The fallback is bounded to rows with NO host on purpose. A meeting naming one
 // is that contact's, and letting its recorder also claim it would count one

@@ -307,7 +307,8 @@ long as one such carrier sits deferred.
 
 RBAC: allowance read/update is its own object, `ai_budget` (`admin` and `ops`
 can update it, `management` can read it, nobody else sees it). It is separate
-from `ai_diagnostics` (waiting-work counts, unused-tier detection) and
+from `ai_diagnostics` (waiting-work counts, unused-tier detection, the
+receipt's workspace-wide count of machine actions it cannot place) and
 `ai_routing` (the provider binding itself), so a custom role can hold any subset
 of the three. Full matrix: [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 

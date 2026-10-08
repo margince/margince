@@ -116,8 +116,7 @@ const (
 // other change on contacts off the page.
 func doneSince(
 	ctx context.Context, tx pgx.Tx, since time.Time, limit int,
-) ([]entry, map[string]int, map[string]bool, error) {
-	notShown := map[string]int{}
+) ([]entry, map[string]bool, error) {
 	found := make([]entry, 0, limit)
 	// An arm that came back full was CUT: readCap is a LIMIT, so the rows it
 	// did not return are indistinguishable from rows that do not exist, and
@@ -128,7 +127,7 @@ func doneSince(
 		for entityType, table := range scopedTypes {
 			rows, err := doneForType(ctx, tx, entityType, table, since, actions)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, err
 			}
 			if len(rows) == readCap {
 				capped[armOf(entityType, bulk)] = true
@@ -137,26 +136,40 @@ func doneSince(
 		}
 		activities, err := doneForActivities(ctx, tx, since, actions)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		if len(activities) == readCap {
 			capped[armOf(typeActivity, bulk)] = true
 		}
 		found = append(found, activities...)
 	}
-	// WHAT THIS READ COULD NOT PLACE, counted rather than guessed at. `update`
-	// alone is audited against some forty entity types and this build places
-	// seven; without the count, a receipt showing four lines implies those were
-	// the only four machine actions in the window, which is the completeness
-	// claim the field exists to refuse.
+	return found, capped, nil
+}
+
+// notShownSince opens the receipt's not_shown tally with what this build could
+// not place, counted rather than guessed at. `update` alone is audited against
+// some forty entity types and this build places seven; without the count, a
+// receipt showing four lines implies those were the only four machine actions
+// in the window, which is the completeness claim the field exists to refuse.
+//
+// The count is workspace-wide, not the reader's own, so it is a diagnostic: a
+// seat without ai_diagnostics read gets no entry and the query never runs.
+func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, error) {
+	notShown := map[string]int{}
+	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return notShown, nil
+		}
+		return nil, err
+	}
 	unplaceable, err := unplaceableSince(ctx, tx, since)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 	if unplaceable > 0 {
 		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
-	return found, notShown, capped, nil
+	return notShown, nil
 }
 
 // armOf names the read an entry came from, which is what a cut is recorded
@@ -352,7 +365,8 @@ func admittedActions(bulk bool) []string {
 //
 // The count is deliberately coarse: it does not name the types, because naming
 // them would say which kinds of record exist and were touched, which is a fact
-// about the installation rather than about this reader's work.
+// about the installation rather than about this reader's work. Even coarse, it
+// is installation-wide, so notShownSince asks for ai_diagnostics read first.
 func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
 	placed := make([]string, 0, len(scopedTypes)+1)
 	for entityType := range scopedTypes {

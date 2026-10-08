@@ -47,7 +47,9 @@ func (e *Engine) measureNumeric(ctx context.Context, tx pgx.Tx, review *Review, 
 	return nil
 }
 
-func (e *Engine) measureTeamNumeric(ctx context.Context, tx pgx.Tx, review *TeamReview, now time.Time) error {
+func (e *Engine) measureTeamNumeric(
+	ctx context.Context, tx pgx.Tx, review *TeamReview, members []TeamMember, now time.Time,
+) error {
 	if e.numeric == nil {
 		return nil
 	}
@@ -56,6 +58,16 @@ func (e *Engine) measureTeamNumeric(ctx context.Context, tx pgx.Tx, review *Team
 		return err
 	}
 	numeric, err := e.numeric.Measure(ctx, tx, "team", review.TeamID, start, end, now)
+	if err != nil {
+		return err
+	}
+	owners := make([]ids.UUID, 0, len(members))
+	for _, member := range members {
+		owners = append(owners, member.UserID)
+	}
+	// The team's figures sum its members' weeks, so a family is measured from
+	// the first record any member's source holds.
+	numeric.Summary.FigureCoverage, err = figureCoverageOf(ctx, tx, owners, start, end, e.plan != nil)
 	if err != nil {
 		return err
 	}
