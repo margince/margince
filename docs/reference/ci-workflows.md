@@ -109,12 +109,12 @@ said. `edited` is a trigger so the comment is deleted as soon as the author adds
 comment is deleted, not changed into a note that says it passed, so a finding that is fixed leaves nothing
 behind.
 
-A failed metadata query exits without a comment. Treating it as an empty list
-would warn a pull request whose closing metadata is fine. Promote the check to
-blocking only if the warning is measurably ignored. Reported by
-[`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh),
-which reads its evidence from the environment so every arm is drivable from a
-fixture (`make test-closing-declaration`).
+A failed query for the pull request data stops without a comment. To read it as an empty list
+would warn a pull request whose closing data is right. The check is made blocking only if it is measured
+that users do not read the warning.
+[`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh) makes the
+report. It reads its evidence from the environment, so a fixture can drive every case
+(`make test-closing-declaration`).
 
 ## `issue-closed.yml`
 
@@ -200,21 +200,17 @@ Notes on the jobs:
 Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed
 title, because a red scheduled run tells nobody.
 
-- Each finding carries one `priority:` and one `area:` per arm, on top of its
-  provenance label, because this filer runs with no human present.
-  `docs/reference/issue-labels.md` protects the invariant that an unlabelled
-  issue is one nobody has looked at. The `area:` is a filing guess: when the
-  alarm goes off, what is known is that CI observed it, and where the fix lives
-  is not.
-- A check that comes back green closes its own issue, so the report job runs
-  whatever the lanes said. Without that, a finding outlives its fix, and each red
-  becomes its own issue instead of one standing title. A `skipped` result is
-  neither pass nor fail and closes nothing.
-- The perf budgets and the model lane each split one job result into two
-  findings: "the thing under test is wrong" and "the lane could not run". Filing
-  the first for the second sends somebody bisecting a regression that was never
-  measured. A lane that ran and measured something bad has disproved "could not
-  run", so that finding is withdrawn on the same run the other one is filed.
+- Each finding carries one `priority:` and one `area:` per case, plus its provenance label, because
+  this filer runs with no human there. `docs/reference/issue-labels.md` keeps the rule that an issue
+  with no labels is one nobody has looked at. The `area:` is a guess. When the warning goes off, the
+  known fact is that CI found it. Where the fix lives is not known.
+- A check that comes back green closes its own issue, so the report job runs no matter what the lanes
+  said. Without that, a finding stays open after its fix, and each red becomes its own issue, not
+  one standing title. A `skipped` result is not a pass or a fail, and closes nothing.
+- The PERF budgets and the model lane each turn one job result into two findings. They are "the
+  thing under test is wrong" and "the lane could not run". To file the first for the second sends someone
+  looking for a slow-down that nobody measured. A lane that ran and measured something bad has
+  proved that it could run. So that finding is closed on the same run that files the other one.
 
 The report job is the only holder of `issues: write`, and runs no build code. That is the same
 permission rule `sbom.yml` uses for signing.
