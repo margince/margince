@@ -63,7 +63,7 @@ it("sends independent pipeline, target-period and expected-close filters and ope
   );
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Open pipeline · expected close" }),
+    screen.getByRole("combobox", { name: "Expected close window" }),
     "All open deals",
   );
   await waitFor(() =>

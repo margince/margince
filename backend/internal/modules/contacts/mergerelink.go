@@ -133,12 +133,8 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := relinkStrandedSatellites(ctx, tx, sourceID, targetID); err != nil {
 		return counts, err
 	}
-	// The promotion outcome pointer follows the survivor so a
-	// re-promote 409 names a live contact.
-	if _, err := tx.Exec(ctx,
-		`UPDATE lead SET promoted_contact_id = $2 WHERE promoted_contact_id = $1`,
-		sourceID, targetID); err != nil {
-		return counts, fmt.Errorf("repoint lead promotions: %w", err)
+	if err := relinkLeadsToContact(ctx, tx, sourceID, targetID); err != nil {
+		return counts, err
 	}
 	// What the merged-away contact sent back through their own confirm link —
 	// a correction they typed, or a request to be removed. It moves onto the
@@ -191,6 +187,7 @@ func readContactMergeState(ctx context.Context, tx pgx.Tx, id ids.ContactID) (cr
 // merging returns the survivor, so the refusal must disclose no more than the
 // caller could already read. An archived target can survive nothing.
 func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.ID[K],
+	ifVersion *int64,
 	read func(context.Context, pgx.Tx, ids.ID[K]) (T, *ids.UUID, error),
 ) (source, target T, err error) {
 	var zero T
@@ -202,6 +199,10 @@ func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind str
 		if mergedInto != nil && !mergedInto.IsZero() {
 			return zero, zero, &AlreadyMergedError{Kind: kind, IntoID: *mergedInto}
 		}
+		return zero, zero, err
+	}
+
+	if err := requireSourceVersion(ctx, tx, kind, sourceID.UUID, ifVersion); err != nil {
 		return zero, zero, err
 	}
 
@@ -220,6 +221,24 @@ func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind str
 		return zero, zero, err
 	}
 	return source, target, nil
+}
+
+// requireSourceVersion refuses the merge when the source's version differs from
+// the caller's If-Match. The pair lock is already held, so the version checked
+// is the one merged. Nil means no precondition.
+func requireSourceVersion(ctx context.Context, tx pgx.Tx, kind string, sourceID ids.UUID, ifVersion *int64) error {
+	if ifVersion == nil {
+		return nil
+	}
+	var current int64
+	err := tx.QueryRow(ctx, "SELECT version FROM "+pgx.Identifier{kind}.Sanitize()+" WHERE id = $1", sourceID).Scan(&current)
+	if err != nil {
+		return err
+	}
+	if current != *ifVersion {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
 }
 
 // relinkDemotingPrimary runs a relink UPDATE whose SET clause demotes the
@@ -412,6 +431,31 @@ func relinkAcquisitionAndDuty(ctx context.Context, tx pgx.Tx, sourceID, targetID
 		UPDATE privacy_notice_case SET contact_id = $2, updated_at = now()
 		WHERE contact_id = $1`, sourceID, targetID); err != nil {
 		return fmt.Errorf("relink notice cases: %w", err)
+	}
+	return nil
+}
+
+// relinkLeadsToContact moves the leads that name the merged-away contact onto
+// the survivor.
+func relinkLeadsToContact(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	// The promotion outcome pointer follows the survivor so a
+	// re-promote 409 names a live contact.
+	if _, err := tx.Exec(ctx,
+		`UPDATE lead SET promoted_contact_id = $2 WHERE promoted_contact_id = $1`,
+		sourceID, targetID); err != nil {
+		return fmt.Errorf("repoint lead promotions: %w", err)
+	}
+	// A lead worked from the merged-away contact is worked from the survivor
+	// now. When the survivor already has a live lead, the source's keeps its
+	// link: one contact worked through two leads is a lead merge for a human,
+	// and uq_lead_from_contact_live admits one.
+	if _, err := tx.Exec(ctx,
+		`UPDATE lead SET from_contact_id = $2
+		  WHERE from_contact_id = $1
+		    AND (archived_at IS NOT NULL OR NOT EXISTS (
+		          SELECT 1 FROM lead live WHERE live.from_contact_id = $2 AND live.archived_at IS NULL))`,
+		sourceID, targetID); err != nil {
+		return fmt.Errorf("repoint leads worked from the contact: %w", err)
 	}
 	return nil
 }

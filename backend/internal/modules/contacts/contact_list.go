@@ -173,10 +173,10 @@ func contactEmployerClause(ctx context.Context, companyID *ids.CompanyID, arg fu
 		  AND rel.company_id = $%d)`, arg(*companyID)), nil
 }
 
-// ListContacts is the row-scoped contact list read: quick-find, owner, tag and
-// custom-field filters, keyset pagination under the validated sort.
-func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmcontracts.Contact, storekit.Page, error) {
-	shared := listFilters{
+// contactCommonFilters is the shared filter chain a contact list narrows by,
+// the twin of companyCommonFilters.
+func contactCommonFilters(in ListContactsInput) listFilters {
+	return listFilters{
 		IncludeArchived: in.IncludeArchived,
 		CapturedByKind:  in.CapturedByKind,
 		AiWritten:       in.AiWritten,
@@ -193,6 +193,12 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 		},
 		Membership: in.Membership,
 	}
+}
+
+// ListContacts is the row-scoped contact list read: quick-find, owner, tag and
+// custom-field filters, keyset pagination under the validated sort.
+func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmcontracts.Contact, storekit.Page, error) {
+	shared := contactCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Contact]{
 		entity:  contactEntity,
 		columns: contactColumns,

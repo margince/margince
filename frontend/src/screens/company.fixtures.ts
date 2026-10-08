@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type Mock, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 
@@ -18,12 +17,13 @@ type Company360 = components["schemas"]["Company360"];
 // file the author happened to have open.
 //
 // This module answers the WIRE and nothing else: response bodies for real
-// endpoints, and the stub that routes a request to one. It never stands in for
+// endpoints, and which one a request is answered with. It never stands in for
 // what the screen does with them — a fixture that reimplemented the page's own
 // logic would prove the fixture right rather than the page. Mounting is the
 // suite's own business, and keeping it out is what lets this file stay JSX-free:
 // `scripts/fe-uat.mjs` reads every `.tsx` under `src/` as a component and asks
 // for a story that renders it, which a set of response bodies cannot have.
+// It imports no test runner, because stories load it.
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -175,7 +175,7 @@ function neverScannedEchoing(view: unknown): typeof neverScanned {
 // answered from the fixtures unless a suite hands in its own. Named routes
 // rather than a chain in the mock, so a suite reads what the backstop
 // answers as a table.
-type BackstopOptions = Readonly<{
+export type BackstopOptions = Readonly<{
   company360?: unknown;
   scan?: unknown;
   rollup?: unknown;
@@ -186,7 +186,7 @@ type BackstopOptions = Readonly<{
   connectors?: unknown;
 }>;
 
-function backstopAnswer(
+export function backstopAnswer(
   pathname: string,
   options?: BackstopOptions,
 ): Response | undefined {
@@ -218,48 +218,13 @@ function backstopAnswer(
   return undefined;
 }
 
-/**
- * A URL-capturing fetch stub for the company surfaces: every request is
- * recorded so a test can assert the params it carried, and a caller-supplied
- * responder decides what comes back.
- *
- * The reads the page shell fires on every render are answered up front from
- * their quiet defaults, so a suite that does not care about the brief or the
- * roll-up never plumbs a branch for them. A suite that IS about one of them
- * passes its own body through `options` — or, for the roll-up, a whole
- * `Response` when what it asserts is a refusal.
- */
-export function stubFetch(
-  responder: (
-    url: string,
-    method: string,
-    request: Request,
-  ) => Promise<Response>,
-  options?: BackstopOptions,
-): {
-  fetchMock: Mock<(request: Request) => Promise<Response>>;
-  urls: string[];
-} {
-  const urls: string[] = [];
-  const fetchMock = vi.fn(async (request: Request) => {
-    urls.push(request.url);
-    const pathname = new URL(request.url).pathname;
-    const answer =
-      backstopAnswer(pathname, options) ??
-      (await responder(request.url, request.method, request));
-    return pathname.endsWith("/me") ? withSession(answer) : answer;
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return { fetchMock, urls };
-}
-
 // The session a responder that never named one gets: a full seat holding
 // the grants a rep working their own accounts holds. Every write control on
 // the page asks the grant before it draws, so a responder that answered /me
 // with the COMPANY body (the catch-all most specs end in) would otherwise
 // describe a reader every verb is withheld from. A spec about a refusal
 // answers /me itself, with a `user`, and is passed through untouched.
-async function withSession(answer: Response): Promise<Response> {
+export async function withSession(answer: Response): Promise<Response> {
   // A refusal is a session too — the 401 the boundary tells apart from an
   // unavailable server — and stays exactly as the responder answered it.
   if (!answer.ok) {

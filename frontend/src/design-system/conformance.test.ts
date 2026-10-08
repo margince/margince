@@ -963,7 +963,7 @@ describe("unsaved edits", () => {
     // through `useUnsavedGuard`, which is scope-free by design.
     const wearers = files
       .filter((file) => /\.tsx$/.test(file))
-      .filter((file) => !/\.(test|stories)\.tsx$/.test(file))
+      .filter((file) => !/\.(test|stories|testkit)\.tsx$/.test(file))
       .filter((file) => /<UnsavedGuard[\s>]/.test(readFileSync(file, "utf8")))
       .map((file) => relative(frontendRoot, file))
       .sort();
@@ -990,7 +990,7 @@ describe("the transient confirmation", () => {
     const mounts = (tag: string) =>
       files
         .filter((file) => /\.tsx$/.test(file))
-        .filter((file) => !/\.(test|stories)\.tsx$/.test(file))
+        .filter((file) => !/\.(test|stories|testkit)\.tsx$/.test(file))
         .filter((file) =>
           new RegExp(`<${tag}[\\s/>]`).test(readFileSync(file, "utf8")),
         )

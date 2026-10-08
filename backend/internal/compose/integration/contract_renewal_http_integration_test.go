@@ -29,7 +29,7 @@ func TestARenewalOverHTTPCarriesTheDealTheRequestNames(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies",
-		map[string]any{"display_name": "Acme"}, nil, &company); status != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Acme"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("creating the counterparty → %d, want 201", status)
 	}
 
@@ -65,7 +65,8 @@ func TestARenewalOverHTTPCarriesTheDealTheRequestNames(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/deals", map[string]any{
-		"name": "Acme renewal 2027", "pipeline_id": pipelines.Data[0].ID,
+		"source": "manual",
+		"name":   "Acme renewal 2027", "pipeline_id": pipelines.Data[0].ID,
 		"stage_id": openStage, "company_id": company.ID,
 	}, nil, &renewalDeal); status != http.StatusCreated {
 		t.Fatalf("creating the renewal deal → %d, want 201", status)

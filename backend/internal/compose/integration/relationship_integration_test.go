@@ -41,10 +41,10 @@ func setupRelationships(t *testing.T) *relEnv {
 	var contact, company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Edge Contact"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Edge Contact"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Edge Company"}, nil, &company); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Edge Company"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	return &relEnv{AppEnv: e, contactID: contact.ID, companyID: company.ID}
@@ -68,7 +68,7 @@ func TestRelationshipLifecycle(t *testing.T) {
 	var company2 struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Second Company"}, nil, &company2); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Second Company"}, nil, &company2); status != http.StatusCreated {
 		t.Fatalf("create company2 → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
@@ -223,7 +223,8 @@ func TestAFlooredEdgeArchiveStagesWithItsVersionPinned(t *testing.T) {
 	}
 
 	_, err := flooredArchiveInvoker(t, e.AppEnv, minted.Token)(
-		`{"record_type":"relationship","id":"` + edge.ID + `"}`)
+		`{"record_type":"relationship","id":"` + edge.ID + `"}`,
+	)
 	if !errors.Is(err, apperrors.ErrRequiresApproval) {
 		t.Fatalf("a floored edge archive answered %v, want the confirm-first refusal", err)
 	}

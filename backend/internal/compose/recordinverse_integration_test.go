@@ -255,7 +255,7 @@ func TestACreateAColleagueMergedIntoIsNotUndone(t *testing.T) {
 	survivor := ids.UUID(created.Id)
 	createID := latestAuditRowID(t, e, "contact", survivor, actionCreate)
 	duplicate := e.SeedContact(t, "Ida Imported", nil)
-	if _, err := e.Contacts.MergeContact(e.Admin(), ids.From[ids.ContactKind](duplicate), ids.From[ids.ContactKind](survivor)); err != nil {
+	if _, err := e.Contacts.MergeContact(e.Admin(), ids.From[ids.ContactKind](duplicate), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("a colleague merging the duplicate in: %v", err)
 	}
 

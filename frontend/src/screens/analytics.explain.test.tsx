@@ -48,9 +48,7 @@ type User = ReturnType<typeof userEvent.setup>;
 
 // The report cards live behind the Deals tab; Forecast is where a reader lands.
 async function openPipeline(user: User) {
-  await user.click(
-    await screen.findByRole("button", { name: "Pipeline analysis" }),
-  );
+  await user.click(await screen.findByRole("button", { name: "Pipeline" }));
 }
 
 // Every card on the Deals tab carries its own panel toggle, so the first one
@@ -280,7 +278,6 @@ describe("a row's explain drawer", () => {
     expect(
       screen.getByRole("button", { name: "Explain No company USD" }),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "More analysis" }));
     await user.click(screen.getByRole("button", { name: "Delivery" }));
     expect(
       await screen.findByRole("button", { name: "Explain Project" }),

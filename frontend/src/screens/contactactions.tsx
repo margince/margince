@@ -12,6 +12,7 @@ import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { useMe } from "./common";
+import { WorkAsLeadAction } from "./contactleadaction";
 import { ContactRecordActions } from "./contactrecordactions";
 import type { Transport } from "./contacttransports";
 import { primaryTransportAction, useTransports } from "./contacttransports";
@@ -186,6 +187,7 @@ export function ContactActions({
                 disabledReasonId={refusedReasonId}
               />
               <AddToShortlistAction entityType="contact" entityId={contactId} />
+              <WorkAsLeadAction contactId={contactId} />
               <Button onClick={() => openContactTab(contactId, "timeline")}>
                 {t("record.fullHistory")}
               </Button>

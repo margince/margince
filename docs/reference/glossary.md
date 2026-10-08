@@ -1,0 +1,106 @@
+# Glossary
+
+Each technical name a plain page may use, with what it means. A plain page uses general words from its
+area's word list and the names below. A name matches only as written here.
+
+To add a name, add a row with a meaning of at least three words. An ordinary English word does not belong
+here: put it in the area's word list instead. A name that no plain page uses must leave this table.
+
+| Term | Meaning |
+|---|---|
+| AI | Artificial intelligence: the language models Margince calls. |
+| Apache | The Apache License 2.0, which each release becomes after two years. |
+| API | The HTTP interface the server offers, defined in `backend/api/crm.yaml`. |
+| backend | The Go server code under `backend/`. |
+| BUSL | The Business Source License 1.1, the license Margince uses. |
+| changelog | The list of changes in each release, kept in `CHANGELOG.md`. |
+| CI | Continuous integration: the checks GitHub runs on every pull request. |
+| Compose | Docker Compose, which starts Postgres and Redis for local work. |
+| Conventional | Conventional Commits, a format for commit messages. |
+| Corepack | The Node tool that installs the pinned version of pnpm. |
+| CRA | The EU Cyber Resilience Act, which sets duties for software makers. |
+| CRM | Customer relationship management: software for contacts, companies and deals. |
+| CSV | Comma-separated values, a plain text format for tables. |
+| dev | The development mode of a local install, set by `MARGINCE_ENV`. |
+| Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
+| Docker | The container tool used to run the local stack and the images. |
+| English | The language the docs and the source catalog are written in. |
+| EU | The European Union, whose laws several pages refer to. |
+| GDPR | The EU General Data Protection Regulation, the law on personal data. |
+| German | The language of the German compliance pack and UI catalog. |
+| Germany | The country the German compliance pack is written for. |
+| git | The version control tool the repository uses. |
+| GitHub | The site that hosts the repository, issues and pull requests. |
+| Gmail | Google's mail service, one of the mailboxes Margince connects to. |
+| Go | The programming language of the server. |
+| Google | The company behind Gmail and the Gemini models. |
+| Gradion | The company that builds Margince and licenses it. |
+| HTTPS | HTTP over an encrypted connection. |
+| IMAP | The standard protocol for reading mail from a mail server. |
+| LICENSE | The file at the repository root that holds the license text. |
+| LinkedIn | The professional network whose contact export Margince can import. |
+| macOS | Apple's desktop operating system. |
+| Margince | The CRM this repository builds. |
+| MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
+| Microsoft | The company behind Microsoft 365 mail and calendars. |
+| Node | Node.js, the JavaScript runtime the web app's tools run on. |
+| Ollama | A tool that runs language models on your own machine. |
+| OpenRouter | A service that routes model calls to many AI providers. |
+| pnpm | The package manager for the web app. |
+| Postgres | PostgreSQL, the database Margince stores its data in. |
+| RBAC | Role-based access control: what each role may see and change. |
+| React | The JavaScript library the web app is built with. |
+| Redis | The in-memory store Margince uses as its event bus. |
+| REST | The style of HTTP API Margince offers next to MCP. |
+| SonarCloud | A code quality service that scans each pull request. |
+| Telegram | A chat app Margince can send messages through. |
+| VAT | Value added tax, and the tax number a company is registered under. |
+| Vite | The build and dev server tool for the web app. |
+| vLLM | A server that runs language models on your own machines. |
+| Windows | Microsoft's desktop operating system. |
+| Worklist | The app's list of tasks and items that need a user's action. |
+| worktree | A second git checkout of the repository with its own branch. |
+
+## Names without a meaning yet
+
+The pages used these names before they joined the plain-words bar. Move a name up into the table when you
+write its meaning, and delete it here. A name new to the docs goes in the table, never here.
+
+<!-- prose:allow sentence a list of names, not a sentence -->
+`AA`, `AAAA`, `AC`, `ack`, `Acme`, `Act`, `AD`, `AirDrop`, `allowlist`, `Android`, `Anna`, `Anthropic`, `AO`,
+`api`, `Apple`, `arch-lint`, `args`, `Art`, `ASCII`, `AST`, `Aurora`, `Austria`, `Austrian`, `auth`,
+`Authenticode`, `Auto-capture`, `auto-capture`, `axe`, `Azure`, `B`, `bash`, `Bcc`, `BDSG`, `Betriebsrat`,
+`Betriebsvereinbarung`, `BetrVG`, `BI`, `Biome`, `biome`, `BotFather`, `BSD`, `Buchungsbelege`, `BYOK`,
+`BYPASSRLS`, `C`, `CA`, `calendarView`, `CAS`, `Cc`, `cc`, `CDN`, `cert`, `CGNAT`, `ChatGPT`, `CHF`, `chi`,
+`Chrome`, `Chromium`, `chunker`, `Claude`, `claude`, `CLDR`, `CLI`, `Cloud`, `Cmd`, `CNAME`, `codegen`,
+`CODEOWNERS`, `CodeRabbit`, `Codex`, `codex`, `comms`, `compose`, `config`, `CPU`, `craft`,
+`CredentialRotator`, `CredentialSink`, `cron`, `CRUD`, `CSRF`, `CSS`, `Ctrl`, `Ctrl-C`, `curl`, `CV`, `DACL`,
+`DAG`, `DB`, `DCR`, `DDL`, `dedupe`, `DeepSeek`, `DELETE`, `depguard`, `Desktop`, `Deutsch`, `dist`, `DKIM`,
+`DLL`, `DMARC`, `DML`, `DNA`, `DNS`, `Dock`, `DocuSign`, `DOM`, `dorny`, `DPA`, `DPIA`, `DSFA`, `DSGVO`, `DSN`,
+`DSR`, `DTO`, `EAV`, `Edge`, `Einwilligung`, `embeddings`, `Empfangsbestätigung`, `Enterprise`, `Entra`,
+`entrypoint`, `enum`, `ERP`, `Esc`, `Escape`, `ETag`, `EUR`, `European`, `evaluator`, `Excel`, `Exchange`,
+`FAQ`, `Fastmail`, `favicons`, `FE`, `Firefox`, `Flash-Lite`, `Fonts`, `forbidigo`, `Forrester`, `frontend`,
+`FX`, `Garnet`, `Gartner`, `Gatekeeper`, `GB`, `GBP`, `gcal`, `GCM`, `Geist`, `Gemini`, `Gemma`, `Geocoding`,
+`GH`, `GiB`, `GIN`, `gitignored`, `gitleaks`, `glob`, `GNU`, `go-arch-lint`, `GoBD`, `golangci-lint`,
+`govulncheck`, `GPL`, `GPT`, `GPU`, `Graph`, `graphcal`, `grep`, `Groq`, `GUC`, `Haiku`, `Handelsbrief`,
+`HardPass`, `HGB`, `HMAC`, `HMAC-SHA`, `HNSW`, `HTML`, `HTTP`, `IAM`, `IANA`, `ICP`, `ICS`, `ID`, `id`,
+`idempotency`, `Idempotency-Key`, `IMAPS`, `Impressum`, `Inspector`, `Intel`, `Intelligence`, `iOS`, `IP`,
+`iPad`, `iPhone`, `ISO`, `JavaScript`, `Jev`, `JPEG`, `JSON`, `JSON-LD`, `JSONL`, `JSONPath`, `K`, `KB`, `kB`,
+`Kev`, `Keychain`, `keyvault`, `KiB`, `KV`, `Lars`, `Laya`, `lcov`, `Levenshtein`, `Linux`, `LiteLLM`, `LLM`,
+`localhost`, `lockfile`, `London`, `MAC`, `Mac`, `Mach-O`, `MAJOR`, `Makefile`, `Markdown`, `MB`, `Meet`,
+`MiB`, `micro-USD`, `middleware`, `MIME`, `MinIO`, `MINOR`, `Mistral`, `MIT`, `Mitarbeiterinformation`, `MRL`,
+`ms`, `MSVC`, `mtime`, `MX`, `NaN`, `NAT`, `NFC`, `nginx`, `nil`, `NL`, `non-match`, `nonce`,
+`NormalizedRecord`, `notarization`, `npm`, `Nr`, `NULL`, `null`, `OA`, `oapi-codegen`, `OAuth`, `Office`,
+`OIDC`, `OpenAI`, `OpenAI-compatible`, `OpenAPI`, `Ops`, `OS`, `Outfit`, `Outlook`, `PATCH`, `PDF`, `pgvector`,
+`PII`, `PIM`, `PK`, `Playwright`, `PNG`, `POSIX`, `POST`, `PostgreSQL`, `POSTs`, `PowerShell`, `PR`, `PTR`,
+`Pub`, `push-capable`, `px`, `Python`, `RAM`, `re-authenticate`, `Re-certify`, `re-certify`, `README`,
+`Renovate`, `RFC`, `River`, `RLS`, `Rosetta`, `RPC`, `RRF`, `Safari`, `SAR`, `SBOMs`, `SDR`, `semver`,
+`send-capable`, `SendGrid`, `SHA`, `Shopify`, `Shopware`, `Shortlist`, `SKU`, `SLA`, `slug`, `SmartScreen`,
+`SMTP`, `Sonnet`, `SPA`, `Sparkles`, `SPDX`, `SPF`, `SQL`, `SQLSTATE`, `SSRF`, `stderr`, `stdin`, `stdout`,
+`storekit`, `Storybook`, `Streamable`, `Stripe`, `struct`, `structs`, `Studio`, `Sub`, `Surface-B`, `Surfe`,
+`Svix`, `syft`, `SyncOnce`, `syncToken`, `T`, `TCP`, `ThreadKey`, `Tiếng`, `TLS`, `TS`, `tsc`, `TTL`, `TXT`,
+`TypeSafe`, `TypeScript`, `UA`, `UAT`, `UI`, `UID`, `und`, `Unix`, `unix`, `URI`, `URIs`, `URL`, `URL-safe`,
+`URLs`, `USB`, `USP`, `UTC`, `UUID`, `uuid`, `Valkey`, `vCard`, `Ventura`, `Verarbeitungsverzeichnis`,
+`Vertex`, `vet`, `VIES`, `Vietnam`, `Vietnamese`, `Visual`, `Vitest`, `vitest`, `Việt`, `Voice-DNA`, `VRAM`,
+`VS`, `vuln`, `Wappalyzer`, `WatchRenewer`, `WCAG`, `WebGL`, `Wettbewerbszentrale`, `worktrees`, `WSL`,
+`Xcode`, `YAML`, `Zalo`, `Zheng`, `Zoom`, `Zürich`

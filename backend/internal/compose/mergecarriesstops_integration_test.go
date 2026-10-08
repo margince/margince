@@ -77,7 +77,7 @@ func TestAMergeCarriesTheRetiringContactsObjection(t *testing.T) {
 		t.Fatalf("precondition: the survivor already holds %d objection(s)", got)
 	}
 
-	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -123,7 +123,7 @@ func TestACarriedObjectionKeepsTheSubjectsAuthority(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("recording the objection: %v", err)
 	}
-	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -160,7 +160,7 @@ func TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds(t *testing.T) {
 		}
 	}
 
-	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -187,7 +187,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost(t *testing.T) {
 	plainSrc := e.SeedContact(t, "Plain Source", nil)
 	plainDst := e.SeedContact(t, "Plain Survivor", nil)
 	if _, err := unwired.MergeContact(admin,
-		ids.From[ids.ContactKind](plainSrc), ids.From[ids.ContactKind](plainDst)); err != nil {
+		ids.From[ids.ContactKind](plainSrc), ids.From[ids.ContactKind](plainDst), nil); err != nil {
 		t.Fatalf("an ordinary merge was refused for want of a seam it did not need: %v", err)
 	}
 
@@ -203,7 +203,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost(t *testing.T) {
 	}
 
 	_, err := unwired.MergeContact(admin,
-		ids.From[ids.ContactKind](stoppedSrc), ids.From[ids.ContactKind](stoppedDst))
+		ids.From[ids.ContactKind](stoppedSrc), ids.From[ids.ContactKind](stoppedDst), nil)
 	if err == nil {
 		t.Fatal("a merge that would have dropped a recorded stop went through unnoticed")
 	}
@@ -269,7 +269,7 @@ func TestAStrongerStopCarriesOverAWeakerOneTheSurvivorHolds(t *testing.T) {
 	}
 
 	if _, err := contactsStore.MergeContact(admin,
-		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -322,7 +322,7 @@ func TestASubjectHoldingTwoStopsOfOneKindCarriesOne(t *testing.T) {
 	}
 
 	if _, err := contactsStore.MergeContact(admin,
-		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -386,7 +386,7 @@ func TestAStopRecordedDuringAMergeStillReachesTheSurvivor(t *testing.T) {
 	// first and the stop landed on a record the merge had already retired —
 	// which is the case the lock exists to make impossible.
 	if _, err := contactsStore.MergeContact(admin,
-		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 	if err := <-suppressed; err != nil {
@@ -489,7 +489,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 	}
 
 	if _, err := contactsStore.MergeContact(admin,
-		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -554,7 +554,7 @@ func TestACarryDoesNotDuplicateAnEquallyStrongOverrideTheSurvivorHolds(t *testin
 	}
 
 	if _, err := contactsStore.MergeContact(admin,
-		ids.From[ids.ContactKind](retiring), ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](retiring), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -583,7 +583,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 	}
 
 	_, err := unwired.MergeContact(admin,
-		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor))
+		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor), nil)
 	if err == nil {
 		t.Fatal("a merge that would have dropped a recorded override went through unnoticed")
 	}
@@ -634,7 +634,7 @@ func TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor(t *testing.T) 
 	}
 
 	if _, err := contactsStore.MergeContact(admin,
-		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 	if got := previewMarketing(admin, t, consentGate, address); got.Verdict != commsauthz.VerdictAllow {

@@ -38,6 +38,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { useSettledValue } from "../design-system/debouncedsearch";
 import { Heading } from "../design-system/heading";
 import {
   Panel,
@@ -119,7 +120,6 @@ import {
 import { LicenseCard } from "./license";
 import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
-import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
 import { NotificationSettingsCard } from "./notification-settings";
@@ -1870,26 +1870,6 @@ function auditLogQueryParams(
   };
 }
 
-/**
- * The filters as a QUESTION, settled — which is a different thing from the
- * filters as they are being typed.
- *
- * The row updates on every keystroke, as it must; what waits is the query. The
- * filter object is the query key, so before this every character was its own
- * `GET /audit-log`: typing `agent:runner` asked the server twelve questions,
- * eleven of them about prefixes nobody wanted an answer to, and the answers
- * could land out of order. The shared list surface settles its own search on
- * this same constant, so a filter costs the same anywhere in the product.
- */
-function useSettledAuditLogFilters(typed: AuditLogFilters): AuditLogFilters {
-  const [settled, setSettled] = useState(typed);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(typed), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
-  return settled;
-}
-
 function AuditLogFilterFields({
   filters,
   onChange,
@@ -2098,8 +2078,9 @@ export function AuditLogCard() {
   const meUserId = useMe().data?.user?.id;
   const canSee = useCan("audit_log", "read");
   const [filters, setFilters] = useState<AuditLogFilters>(UNFILTERED_AUDIT_LOG);
-  // The row reads what is being typed; the entries read what has settled.
-  const asked = useSettledAuditLogFilters(filters);
+  // The row reads what is being typed; the entries read what has settled, so
+  // typing `agent:runner` is one `GET /audit-log` rather than twelve.
+  const asked = useSettledValue(filters);
   return (
     <Panel title={t("settings.auditEntries")}>
       <PanelBody>

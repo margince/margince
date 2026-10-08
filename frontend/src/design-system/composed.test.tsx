@@ -218,6 +218,41 @@ describe("DealCard + PipelineBoard", () => {
     expect(container.querySelector(".deal-owner")).toBeNull();
   });
 
+  // The mark sits above the deal's stretched link so its name tip can open,
+  // and a press on it still opens the deal like every other part of the card.
+  it("opens the deal from a press on the owner's mark", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    render(
+      <DealCard
+        deal={{ ...deal, owner: { id: "u-1", name: "Ada Lindqvist" } }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+        onOpen={(d) => opened.push(d.id)}
+      />,
+    );
+    await user.click(screen.getByRole("img", { name: "Ada Lindqvist" }));
+    expect(opened).toEqual(["d1"]);
+  });
+
+  // A middle-click arrives as an auxclick, which a link does not follow when it
+  // is dispatched, so the mark hands the middle button on as a click instead.
+  it("hands the middle button on to the deal's link, and no other", () => {
+    const buttons: number[] = [];
+    render(
+      <DealCard
+        deal={{ ...deal, owner: { id: "u-1", name: "Ada Lindqvist" } }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+        onOpen={(_opened, event) => buttons.push(event.button)}
+      />,
+    );
+    const mark = screen.getByRole("img", { name: "Ada Lindqvist" });
+    fireEvent(mark, new MouseEvent("auxclick", { bubbles: true, button: 2 }));
+    fireEvent(mark, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+    expect(buttons).toEqual([1]);
+  });
+
   it("draws no company slot at all for a deal that names none", () => {
     const { container } = render(
       <DealCard

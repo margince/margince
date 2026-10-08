@@ -87,7 +87,8 @@ func (s *Store) PartiesOf(ctx context.Context, tx pgx.Tx, message ids.UUID) (Mes
 		  LEFT JOIN contact c ON c.id = p.contact_id
 		 WHERE p.activity_id = $%d AND p.role IN ('from', 'to', 'cc')
 		   AND (p.user_id IS NOT NULL OR (p.contact_id IS NOT NULL AND (%s)))
-		 ORDER BY p.id`, messagePos, scope), args...)
+		   AND NOT %s
+		 ORDER BY p.id`, messagePos, scope, unstatedContactSQL("p")), args...)
 	if err != nil {
 		return MessageParties{}, fmt.Errorf("activities: reading a message's parties: %w", err)
 	}

@@ -1,0 +1,122 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The Filters and views library: the toolbar, its groups and their rows.
+   Tokens only. */
+
+.library-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The group `#/filters/views` or `#/filters/lists` lands on takes focus as a
+   whole, so the ring goes round the group rather than onto its first control. */
+.library-anchor:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--space-1);
+  border-radius: var(--r-md);
+}
+
+.library-anchor:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* On a phone the verb comes first at full width with More beside it, then
+   the search and the pills on their own lines. */
+.library-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.library-toolbar-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+.library-toolbar-head > .library-new {
+  flex: 1 1 auto;
+}
+
+.library-types {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--gapActions);
+  margin-block-start: var(--space-2);
+}
+
+/* The row is one press target: the name's link is stretched over it, and
+   the cell holding ⋯ sits above that so its own press stays its own. */
+.library-table tbody tr {
+  position: relative;
+}
+
+.library-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.library-name-line,
+.library-facts,
+.library-records {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.library-records {
+  justify-content: flex-end;
+}
+
+/* Neutral ink, not the accent: every row is a link, and an accent on each
+   would paint the whole table the colour of the page's one primary verb. */
+.library-name {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightBold);
+  text-decoration: none;
+}
+
+.library-name::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.library-name:hover {
+  text-decoration: underline;
+}
+
+.library-name:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--space-1);
+  border-radius: var(--r-sm);
+}
+
+/* One line, cut with an ellipsis. A zero width with a full-width floor keeps
+   the caption from widening its column: it fills the cell it is given. */
+.library-caption {
+  display: block;
+  inline-size: 0;
+  min-inline-size: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* A clipped caption is the one that takes a tab stop, and it rises above the
+   name's overlay so a pointer reaches its tooltip; a whole one opens the row. */
+.library-caption[tabindex] {
+  position: relative;
+  z-index: 1;
+}
+
+.library-more {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+}

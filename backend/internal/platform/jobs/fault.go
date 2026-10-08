@@ -126,6 +126,10 @@ func faultFor(ctx context.Context, kind string, err error) error {
 			faultLogAttrs(ctx, kind, class.Class, err)...)
 	}
 	if known, ok := sentinelFaultFor(err); ok {
+		// The stored sentence is fixed and names neither the read nor the record
+		// nor the step, so the cause is logged here exactly as it is for the
+		// classes above and below.
+		slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(ctx, kind, "", err)...)
 		return &fault{sentence: known.sentence, cause: err}
 	}
 	// AFTER the sentinels, because a cause carrying one has already been named

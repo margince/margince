@@ -10,6 +10,7 @@ import {
   openAsk,
   openAsk as openAskDialog,
   parseParams,
+  replaceDial,
 } from "./urlstate";
 
 const dials = (entries: Record<string, string>) =>
@@ -145,5 +146,23 @@ describe("the Ask dials", () => {
     expect(dials.has(ASK_PARAM)).toBe(false);
     expect(dials.has(ASK_QUESTION_PARAM)).toBe(false);
     expect(dials.get("owner_id")).toBe("u1");
+  });
+});
+
+describe("replaceDial — one dial over the address as it stands", () => {
+  it("sets its own dial and leaves every other one standing", () => {
+    window.location.hash = "#/filters?ask=1&q=berlin";
+    replaceDial("type", "companies");
+    expect(window.location.hash).toBe(
+      "#/filters?ask=1&q=berlin&type=companies",
+    );
+  });
+
+  it("clears its dial when given nothing", () => {
+    window.location.hash = "#/filters?ask=1&q=berlin";
+    replaceDial("q", undefined);
+    expect(window.location.hash).toBe("#/filters?ask=1");
+    replaceDial("ask", "");
+    expect(window.location.hash).toBe("#/filters");
   });
 });

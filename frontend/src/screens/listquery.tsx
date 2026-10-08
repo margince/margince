@@ -913,34 +913,34 @@ export function ListTable<Row>({
     }
   }, [query.q]);
 
-  // The reader LEFT, with a word still settling.
+  // The reader LEFT with a word still settling. The effect above follows `q`,
+  // and a word typed against a list the reader then walked away from has a `q`
+  // that never moved (Back to a differently sorted view of the same list), so
+  // the word would land on a list it was not typed into.
   //
-  // The effect above follows `q`, and a word typed against a list the reader
-  // then walked away from has a `q` that never moved: type "acme", press Back
-  // to a differently sorted view of the same list, and both addresses carry no
-  // `q` at all. Nothing above fires, the timer keeps its appointment, and the
-  // word lands on a list it was not typed into.
-  //
-  // `hashchange` is the discriminator and it is exact: `replaceParams` writes
-  // with `history.replaceState`, which fires no such event and announces itself
-  // in-app instead, so every dial this surface turns is silent here. What
-  // reaches this listener is the browser's own navigation — Back, Forward, a
-  // pasted link — which is precisely the case where a pending word belongs to a
-  // list that is gone. Re-reading the address also re-arms the debounce with
-  // the value now in it, so the stale timer commits nothing.
+  // The browser's own navigation is the discriminator, and it is exact:
+  // `replaceParams` uses `history.replaceState`, which fires neither event, so
+  // every dial this surface turns is silent here. Both are heard because Back
+  // moves the address at `popstate` and announces it a task later, and a timer
+  // firing between them would write the word over the address Back restored.
   useEffect(() => {
     const abandonPendingSearch = () => {
       const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
       committed.current = live;
       setLocalSearch(live);
     };
+    globalThis.addEventListener("popstate", abandonPendingSearch);
     globalThis.addEventListener("hashchange", abandonPendingSearch);
-    return () =>
+    return () => {
+      globalThis.removeEventListener("popstate", abandonPendingSearch);
       globalThis.removeEventListener("hashchange", abandonPendingSearch);
+    };
   }, [state.paramScope]);
 
   useEffect(() => {
-    if (!searchable) {
+    // Only a word the box has not committed is pending: any other timer would
+    // write a word nobody typed over an address that moved while it waited.
+    if (!searchable || localSearch === committed.current) {
       return;
     }
     const timer = setTimeout(() => {
@@ -968,25 +968,24 @@ export function ListTable<Row>({
     </>
   ) : undefined;
 
-  // Pressing a tab pins it AND restores the list state it holds. The surface
-  // rewrites the sort and the filters itself; the archived toggle and the page
-  // size are this layer's, because they are part of the ListQuery the fetchers
-  // read and the surface knows nothing about a saved view's stored state.
-  //
-  // The toggle is rewritten unconditionally, exactly as the filters are: a view
-  // describes the WHOLE list, so an archived toggle left on from the previous
-  // tab both widens the view the reader just picked and stops that tab matching
-  // itself. Page size is the one dial a tab may make no claim about — a preset
-  // never claims one, and a saved view only where its stored blob carried one —
-  // so the reader's own choice survives a tab that carries none.
+  // Pressing a tab pins it and restores the list state it holds: the surface
+  // rewrites sort and filters, this layer the ListQuery dials the surface cannot
+  // see. Search and the archived toggle are rewritten unconditionally, because a
+  // view describes the whole list and a leftover would stop the tab matching
+  // itself. Page size is the one dial a tab may leave unclaimed, so the reader's
+  // own choice survives a tab that carries none.
   const applyViewState = (index: number) => {
     pickView(index);
     const picked = railViews[index];
     if (!picked) {
       return;
     }
+    // At once, so a word still settling cannot land on the tab just picked.
+    committed.current = picked.q;
+    setLocalSearch(picked.q);
     setQuery((prev) => ({
       ...prev,
+      q: picked.q,
       includeArchived: picked.includeArchived,
       perPage: picked.perPage ?? prev.perPage,
     }));

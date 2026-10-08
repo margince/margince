@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -30,5 +31,26 @@ func TestAFirstMessageMaySayItMetWhereTheIntentSaysSo(t *testing.T) {
 		if retried != wantRetry {
 			t.Errorf("intent %q: retried=%v, want %v", intent, retried, wantRetry)
 		}
+	}
+}
+
+// The certification case judges the draft the site would serve, greeting
+// included: a body the floor's greeting carries past its bound is refused here
+// as it is in the lane, never certified on the model's shorter text.
+func TestTheFirstMessageCaseJudgesTheGreetedDraft(t *testing.T) {
+	prepared, err := firstDraftCases{}.Prepare([]byte(`{"recipient":"Anna","intent":"ask for a short call"}`),
+		[]byte(`"`+composerAnswerWritten+`"`))
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	body := strings.Repeat("b", replyDraftBodyMaxRunes)
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"A short call","body":"` + body + `"}`}}
+	trace, err := prepared.Run(context.Background(), brain)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	outcome := prepared.Evaluate(trace)
+	if outcome.Result != aitasks.OutcomeInvalid || !strings.Contains(outcome.Detail, "exceeds the supported length") {
+		t.Errorf("outcome = %q (%s), want it refused for its length", outcome.Result, outcome.Detail)
 	}
 }

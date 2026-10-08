@@ -694,7 +694,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     };
     stubFetch(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.includes("/records/lead/")) {
+      if (/\/records\/lead\/[^/]+\/history/.test(url)) {
         return jsonResponse({
           data: [
             {
@@ -789,7 +789,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
           contact_id: "p-42",
         });
       }
-      if (url.includes("/records/lead/")) {
+      if (/\/records\/lead\/[^/]+\/history/.test(url)) {
         return jsonResponse({
           data: [],
           page: { next_cursor: null, has_more: false },
@@ -821,7 +821,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // archived_at alone told every promoted lead it had been disqualified. The
     // redirect hid that until ADR-0119 removed it.
     stubFetch(async (input: RequestInfo | URL) => {
-      if (String(input).includes("/records/lead/")) {
+      if (/\/records\/lead\/[^/]+\/history/.test(String(input))) {
         return jsonResponse({
           data: [],
           page: { next_cursor: null, has_more: false },
@@ -850,7 +850,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     const historyURLs: string[] = [];
     stubFetch(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.includes("/records/lead/")) {
+      if (/\/records\/lead\/[^/]+\/history/.test(url)) {
         historyURLs.push(url);
         return jsonResponse({
           data: [
@@ -885,7 +885,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // nobody ever sees — which is what a walk that re-armed on failure did.
     stubFetch(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.includes("/records/lead/")) {
+      if (/\/records\/lead\/[^/]+\/history/.test(url)) {
         return new Response(JSON.stringify({ title: "Server Error" }), {
           status: 500,
           headers: { "Content-Type": "application/problem+json" },
@@ -932,7 +932,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
           lead_id: "l-1",
         });
       }
-      if (url.includes("/records/lead/")) {
+      if (/\/records\/lead\/[^/]+\/history/.test(url)) {
         return jsonResponse({
           data: [],
           page: { next_cursor: null, has_more: false },
@@ -973,7 +973,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // nobody recorded — and "created" is the wrong half to guess, because it
     // tells a rep no duplicate check happened.
     stubFetch(async (input: RequestInfo | URL) => {
-      if (String(input).includes("/records/lead/")) {
+      if (/\/records\/lead\/[^/]+\/history/.test(String(input))) {
         return jsonResponse({
           data: [
             {

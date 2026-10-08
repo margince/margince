@@ -9,7 +9,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { SaveFilterListAction } from "./filterlist";
 import { ListScreen } from "./listpage";
 import {
   LIVE_ID,
@@ -22,8 +21,6 @@ import {
   teamsPage,
 } from "./lists.fixtures";
 import { ListSettingsAction } from "./listsettings";
-import { MyViews } from "./myviews";
-import { newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(() => {
@@ -218,155 +215,5 @@ describe("changing a list from its page", () => {
       await screen.findByRole("button", { name: en["lists.restore"] }),
     );
     await vi.waitFor(() => expect(restored).toBe(true));
-  });
-});
-
-describe("saving a filter as a Live List", () => {
-  const tree = newGroup("and", [newLeaf("industry", "eq", "Manufacturing")]);
-
-  function saveAction(posted: unknown[]) {
-    installFetchStub({
-      "GET /me": listsMe(true, [TEAM_ID]),
-      "GET /teams": () => jsonResponse(teamsPage),
-      "POST /lists": (body) => {
-        posted.push(body);
-        return jsonResponse({ ...liveList, id: "saved" }, 201);
-      },
-    });
-    render(
-      <StoryProviders>
-        <SaveFilterListAction resource="company" tree={tree} />
-      </StoryProviders>,
-    );
-  }
-
-  it("saves the complete tree for all of the reader's teams unless told otherwise", async () => {
-    const posted: unknown[] = [];
-    saveAction(posted);
-    const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: en["filters.saveList"] }),
-    );
-    // The audience is on screen before anything is saved.
-    expect(
-      screen.getByRole("combobox", { name: en["lists.sharingLabel"] }),
-    ).toHaveTextContent(en["lists.sharing.team"]);
-    expect(
-      screen.getByRole("combobox", { name: en["lists.teamLabel"] }),
-    ).toHaveTextContent(en["lists.team.allMine"]);
-    await user.type(
-      screen.getByRole("textbox", { name: en["lists.name"] }),
-      "Manufacturers",
-    );
-    await user.click(
-      screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
-    );
-    await vi.waitFor(() => expect(window.location.hash).toBe("#/lists/saved"));
-    expect(posted[0]).toEqual({
-      name: "Manufacturers",
-      entity_type: "company",
-      list_type: "dynamic",
-      definition: {
-        and: [{ field: "industry", op: "eq", value: "Manufacturing" }],
-      },
-      sharing: "team",
-    });
-  });
-
-  it("sends the team the reader picked", async () => {
-    const posted: unknown[] = [];
-    saveAction(posted);
-    const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: en["filters.saveList"] }),
-    );
-    await user.type(
-      screen.getByRole("textbox", { name: en["lists.name"] }),
-      "Manufacturers",
-    );
-    await user.click(
-      screen.getByRole("combobox", { name: en["lists.teamLabel"] }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: "Team Germany" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
-    );
-    await vi.waitFor(() => expect(posted).toHaveLength(1));
-    expect(posted[0]).toMatchObject({ sharing: "team", team_id: TEAM_ID });
-  });
-
-  it("sends only-me sharing with no team", async () => {
-    const posted: unknown[] = [];
-    saveAction(posted);
-    const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: en["filters.saveList"] }),
-    );
-    await user.type(
-      screen.getByRole("textbox", { name: en["lists.name"] }),
-      "Mine",
-    );
-    await user.click(
-      screen.getByRole("combobox", { name: en["lists.sharingLabel"] }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: en["lists.sharing.private"] }),
-    );
-    expect(
-      screen.queryByRole("combobox", { name: en["lists.teamLabel"] }),
-    ).toBeNull();
-    await user.click(
-      screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
-    );
-    await vi.waitFor(() => expect(posted).toHaveLength(1));
-    expect(posted[0]).toMatchObject({ sharing: "private" });
-    expect(posted[0]).not.toHaveProperty("team_id");
-  });
-});
-
-describe("my views", () => {
-  it("names the reader's saved filters per record type", async () => {
-    installFetchStub({
-      "GET /me": listsMe(true),
-      "GET /views": () =>
-        jsonResponse({
-          data: [
-            {
-              id: "v1",
-              name: "Berlin gold",
-              resource: "contacts",
-              query: { filter: { field: "city", op: "eq", value: "Berlin" } },
-              version: 1,
-            },
-          ],
-          page: { has_more: false },
-        }),
-    });
-    const user = userEvent.setup();
-    render(
-      <StoryProviders>
-        <MyViews />
-      </StoryProviders>,
-    );
-    const row = await screen.findAllByText("Berlin gold");
-    await user.click(row[0]);
-    expect(window.location.hash).toBe("#/filters/contacts/v1");
-  });
-
-  it("says how to make one when there are none", async () => {
-    installFetchStub({
-      "GET /me": listsMe(true),
-      "GET /views": () => jsonResponse(empty),
-    });
-    render(
-      <StoryProviders>
-        <MyViews />
-      </StoryProviders>,
-    );
-    expect(
-      (await screen.findAllByText(en["lists.views.empty"])).length,
-    ).toBeGreaterThan(0);
   });
 });

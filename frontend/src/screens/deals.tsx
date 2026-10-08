@@ -27,7 +27,7 @@ import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
 import { navigate, routeHash } from "../app/router";
-import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
+import { currentParams, replaceDial, useUrlParams } from "../app/urlstate";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
@@ -142,7 +142,6 @@ import {
   type OwnerNaming,
   rosterOwnerNaming,
   useEntityName,
-  useRoster,
 } from "./entityref";
 import { searchCompanies } from "./filterreference";
 import {
@@ -158,6 +157,7 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
+import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
@@ -238,17 +238,6 @@ const VIEW_PARAM = "view";
 // between this screen getting it right and the leads queue sending its drawing
 // choice to the server as a filter.
 const DEAL_SCREEN_DIALS: readonly string[] = [PIPELINE_PARAM, VIEW_PARAM];
-
-/** `params` with one dial set, or removed when the value is empty. */
-function withDialSet(params: UrlParams, key: string, value: string): UrlParams {
-  const next = new Map(params);
-  if (value) {
-    next.set(key, value);
-  } else {
-    next.delete(key);
-  }
-  return next;
-}
 
 // FORECAST_FILTER_VALUES are the four buckets a deal's own column can hold.
 // `slipped` is the report's derivation from a claimed category and a close
@@ -1604,11 +1593,10 @@ function DealBoardBody({
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
-  // Only walked when a card has an owner to name: a board of unowned deals
-  // needs no roster read to say so.
-  const roster = useRoster(
-    "user",
-    loadedDeals.some((deal) => Boolean(deal.owner_id)),
+  // Named by id, batched into one request for every card's owner at once;
+  // an unowned deal contributes no id, so a board of them asks nothing.
+  const ownerNames = useMemberNames(
+    loadedDeals.flatMap((deal) => (deal.owner_id ? [deal.owner_id] : [])),
   );
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useCompanyMarks), so no card is left
@@ -1648,7 +1636,7 @@ function DealBoardBody({
                   stageTotalsQuery.data ?? new Map(),
                   companyMarks,
                   totalsWithheld ? t(totalsWithheld) : undefined,
-                  rosterOwnerNaming(roster),
+                  rosterOwnerNaming(ownerNames),
                 )}
                 onOpen={openDeal}
                 cardDragHandlers={cardDragHandlers}
@@ -1817,8 +1805,7 @@ function useDealScreenDials({
     );
   };
   const pipelineId = params.get(PIPELINE_PARAM) ?? "";
-  const setPipelineId = (next: string) =>
-    setParams(withDialSet(currentParams(), PIPELINE_PARAM, next));
+  const setPipelineId = (next: string) => replaceDial(PIPELINE_PARAM, next);
   const effectivePipeline: Pipeline | undefined =
     pipelines?.find((p) => p.id === pipelineId) ??
     pipelines?.find((p) => p.is_default) ??
@@ -1834,9 +1821,7 @@ function useDealScreenDials({
   const view: "board" | "table" =
     params.get(VIEW_PARAM) === "table" ? "table" : "board";
   const setView = (next: "board" | "table") =>
-    setParams(
-      withDialSet(currentParams(), VIEW_PARAM, next === "table" ? next : ""),
-    );
+    replaceDial(VIEW_PARAM, next === "table" ? next : undefined);
 
   return {
     query,

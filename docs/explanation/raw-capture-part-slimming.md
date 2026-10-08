@@ -1,15 +1,17 @@
+<!-- prose:plain -->
 # raw_capture part slimming: what the stored original promises
 
 `raw_capture` holds the provider's original for every captured message. Without slimming it would
 hold every attachment twice: once as the object the attachment row points at, and once again as
-base64 inside the original. A periodic sweep removes the second copy and leaves a reference to the
-first. That **narrows a guarantee**, and the reasoning is collected here so it is argued in one place
-rather than discovered in a comment.
+`base64` inside the original. A sweep that runs from time to time removes the second copy and leaves
+a reference to the first. That **cuts back a promise**, so the reasons are kept here, in one place,
+rather than learned one at a time from a comment.
 
 ## What the column holds
 
-`raw_capture.payload` holds the provider's octet stream with each **provably durable** attachment
-part's encoded body replaced by a stanza:
+`raw_capture.payload` holds the provider's bytes. The sweep cuts out an attachment part's encoded
+body only when its stored copy **is proved safe in the object store**. That encoding must also show
+up once, and only once, in the payload. A block such as this one takes its place:
 
 ```
 Content-Type: application/pdf
@@ -24,130 +26,142 @@ X-Margince-Part-Encoded-Bytes: 31352096
 X-Margince-Part-Wrap: 76
 ```
 
-The provider's own fields keep their values **and their order**. The stanza is appended as a
-contiguous run immediately before the header block's blank line. `Content-Transfer-Encoding` is left
-alone: the substitute body is itself valid base64, so a reader that decodes the slimmed message gets
-a sentence explaining where the bytes went rather than noise.
+The provider's own fields keep their values **and their order**. The block is added as one run of
+lines right before the empty line that ends the header block. `Content-Transfer-Encoding` stays as
+it is, because the new body is itself `base64` that decodes. So a reader that decodes the slimmed
+message gets a line of text that says where the bytes are now, rather than noise.
 
-## Why the duplication exists
+## Why the copy exists
 
-Two writers, neither aware of the other. `capture/sinkraw.go`'s `storeRawCapture` writes `rec.Raw`
-(the whole RFC822 message) inside the capture transaction. `capture/sinkparts.go` then stages the
-same attachment bytes to the object store, and `activities/capturedfiles.go` puts them there before
-the row that records them (*"ORDER IS THE DESIGN"*).
+Two writers, and each one does not know about the other. `storeRawCapture` in `capture/sinkraw.go`
+writes `rec.Raw` (the whole `RFC822` message) inside the capture transaction. `capture/sinkparts.go`
+then gets the same attachment bytes ready for the object store. `activities/capturedfiles.go` puts
+them there before the row that records them (*"ORDER IS THE DESIGN"*).
 
 Measured on one staging installation, 2026-09-09:
 
-| Measurement | Value |
+| Measure | Value |
 |---|---|
-| `raw_capture` total | 6737 MB, of which 6732 MB is TOAST |
+| `raw_capture`, whole table | 6737 MB, of which 6732 MB is `TOAST` |
 | Share of the whole database | 92% |
 | Rows | 12,638 |
-| `attachment.byte_size` sum | 4343 MB across 17,705 rows |
-| Same bytes, base64-inflated | ~5.8 GB, about 86% of the table |
-| TOAST compression ratio | **1.0** |
-| Extracted `subject` + `body` vs the raw original | 0.30% to 2.78% per mailbox |
+| `attachment.byte_size`, added up | 4343 MB across 17,705 rows |
+| Same bytes, as `base64` | ~5.8 GB, about 86% of the table |
+| `TOAST` bytes against data bytes | **1.0** |
+| `subject` + `body` alone, against the whole original | 0.30% to 2.78% per mailbox |
 
-The compression ratio is the tell: base64 of an already-compressed container (PDF, zip, JPEG) does
-not compress. The duplicate cost full price on disk, in every base backup, in every `pg_dump` and in
-every vacuum. Across four mailboxes, 42 MB of text was being kept alive by 6.5 GB of MIME.
+That 1.0 tells the story. The `base64` of a file that is already compressed (PDF, ZIP, JPEG) does
+not compress again. So the copy costs full price in the database files, in every full database copy,
+in every `pg_dump` and in every `VACUUM`. Across four mailboxes, 42 MB of text kept 6.5 GB of MIME
+in the database.
 
-## Why a sweep, and not the parser
+## Why a sweep, and not a cut at parse time
 
-The obvious place to strip is `mailmap.ToRecord`, so `rec.Raw` never carries the bytes. That does not
-work: where `storeRawCapture` writes the original, `stageParts` has not yet put the attachment bytes
-in the object store. Stripping there would mean one of two bad options. One is reordering the sink so
-the stored original depends on an outbound call succeeding, on the path that exists so correspondence
-lands. The other is writing a reference to bytes that may never arrive.
+The first place you would cut the bytes is `mailmap.ToRecord`, so `rec.Raw` never carries them. That
+does not work.
 
-A later sweep can *prove* durability before removing anything, and the same code drains rows captured
-before the sweep existed. One path, no reorder, and no window in which the only copy is gone.
+At the point where `storeRawCapture` writes the original, `stageParts` has not yet put the
+attachment bytes in the object store. Cutting there leaves two ways to do it, both wrong. One is to
+change the order of steps in the capture `sink`, so the stored original needs an outbound call to
+work. That is on the path whose job is to get the mail stored. The other is to write a reference to
+bytes that may never reach the store.
 
-## Why by byte offset, and not by parsing the MIME
+A later sweep can *prove* the bytes are safe before it removes anything. The same code also works
+through rows captured before the sweep existed. One path, no change of order, and no window in which
+the only copy is removed.
 
-Walking the message with `go-message` and re-emitting it is unsound for this table, and measurably so:
+## Why match bytes, and not parse the MIME
 
-- The library **decodes on read and re-encodes on write**. Base64 comes back re-wrapped at its own
-  76-character width, header fields inside a rewritten part change order, and charsets are
-  converted to UTF-8.
-- The tree does not import `go-message/charset`, so a `windows-1252` message fails the walk
-  outright: 257 rows / 143 MB of the staging corpus.
-- Worst, for the rows it *could* walk, every part's body is re-encoded on the way out. That is the
-  defect class `sinkraw.go` already records as paid for once: *"a body in a non-UTF-8 charset, or a
-  malformed header, was stored ALTERED. The insert succeeded and the row looked fine."*
+Reading the message with `go-message` and writing it out again is not safe for this table, and we
+can measure why:
 
-So the strip never interprets the message. The caller supplies octets it has already verified
-against the attachment row; `partslim` encodes those octets and looks for that byte string in the
-payload. If it appears **once**, those bytes are spliced out and everything around them is
-copied verbatim. If it appears zero times or more than once, nothing is removed.
+- `go-message` **decodes on read and encodes again on write**. `base64` comes back with lines of its
+  own length (76). Header fields inside a part written again change order. The `charset` of the text
+  changes to `UTF-8`.
+- The tree does not import `go-message/charset`, so a `windows-1252` message fails the read: 257
+  rows / 143 MB of the staging data.
+- And for the rows it *could* read, the body of every part is encoded again on the way out.
+  `sinkraw.go` records that this kind of bug already cost us once:
+  `"a body in a non-UTF-8 charset, or a malformed header, was stored ALTERED.`
+  `The insert succeeded and the row looked fine."`
 
-The approach was validated against 40 real attachments from staging. Thirty were located at width 76
-with CRLF and restored byte for byte. Ten were refused because the same signature logo appeared two to four times
-down a quoted thread, and bytes cannot tell one copy from another. Those ten ran 760 B to 30 kB, a
-rounding error against the megabyte attachments the sweep targets. Refusing them means the sweep
-never splices a guess.
+So the cut never reads the meaning of the message. The caller gives it bytes it has already checked
+against the attachment row. `partslim` encodes those bytes and looks for the encoded bytes in the
+payload. If they show up **once**, those bytes are cut out and the rest of the payload is copied as
+it is. If they do not show up, or show up more than once, nothing is removed.
 
-## Proof before removal
+We checked this way of working against 40 real attachments from staging. Of those, 30 matched at
+line length 76 with `CRLF` and restored byte for byte. The sweep refused the other 10, because the
+same signature image showed up two to four times in the replies below the message. Bytes cannot tell
+one copy from another. Those 10 run from 760 B to 30 kB, too small to count next to the attachments
+of many MB that the sweep is for. Refusing them means the sweep never cuts bytes it cannot prove.
 
-Every part the sweep removes has cleared all of:
+## Proof before the sweep removes a part
 
-1. an `attachment` row joined on `(external_source_id, external_part_id)`, i.e.
+Every part the sweep removes has passed all of these checks:
+
+1. an `attachment` row matched on `(external_source_id, external_part_id)`, that is
    `<source_system>:<source_id>` and `part:<n>`;
-2. a non-empty `storage_key`;
-3. an object at that key whose length equals the row's `byte_size`;
-4. octets that hash to the row's `checksum`;
-5. an encoding of those octets found once, and only once, in the payload.
+2. a `storage_key` that is not empty;
+3. an object at that key whose length is the same as the row's `byte_size`;
+4. bytes whose hash matches the row's `checksum`;
+5. an encoding of those bytes that shows up once, and only once, in the payload.
 
-A part failing any of them keeps its bytes. That makes the sweep safe for a part dropped for size
-(it has an ordinal but no object) and safe on a deployment with no object store.
+A part that fails any of them keeps its bytes. That makes the sweep safe for a part dropped for
+being over the limit, which has a number but no object. It also makes the sweep safe on an
+installation with no object store.
 
-**With no object store the sweep does nothing.** It stamps nothing either. A stamp without proof
-would consume rows that a store wired later should still process. `parts_slimmed_at` may only ever
-mean *considered and found wanting*, never *nothing to prove with*.
+**With no object store the sweep does nothing.** It sets no mark either. A mark without proof would
+use up rows that a store connected later must still work on. `parts_slimmed_at` may only mean
+*checked and failed*, never *nothing to prove with*.
 
 ## What still holds
 
-- **Byte-exact reconstruction.** `partslim.RestoreStoredParts` rebuilds the provider's original octet
-  stream. The stanza records the *original encoded body's* digest, length and wrap width, so the
-  re-encoding is compared against what was removed rather than assumed to match it. A restore that
-  cannot reproduce those bytes fails and says so.
-- **The dedupe natural key.** `(source_system, source_id)` is untouched, so a replay still
-  tombstones.
-- **Forensic replay.** The three sweeps that re-read stored originals
+- **The original, byte for byte.** `partslim.RestoreStoredParts` builds the provider's original
+  bytes again. The block records the hash, length and line length of the *original encoded body*. So
+  the new encoding is checked against the removed body, rather than trusted to match it. A restore
+  that cannot make those bytes again fails and says so.
+- **The dedupe key.** `(source_system, source_id)` does not change, so a replay still meets the row
+  and is dropped.
+- **Replay for review.** The three sweeps that read stored originals again
   (`compose/participantreplay.go`, `meetingattendeerepair.go`, `participantnamerecover.go`) read
-  participants, attendees and display names, all of which live in headers. Nothing in the tree
-  parses attachment parts back out of `raw_capture`.
-- **Art. 17 erasure.** The `ILIKE` over `payload::text` never saw inside a base64 part anyway, since
-  the plaintext is not there to match, and `privacy/erasure_attachments.go` already purges the
+  participants, attendees and the names shown for them. All of those live in headers, so these
+  sweeps never read attachment parts back out of `raw_capture`. Art. 15 access and the private-thread
+  files path (`capture/privatethreadfiles.go`) do, and both build the parts again first.
+- **Art. 17 erasure.** The `ILIKE` over `payload::text` never looks inside a `base64` part, since
+  the text itself is not there to match. `privacy/erasure_attachments.go` already removes the
   objects by `storage_key`.
-- **Art. 15 access.** `compose/sarrestore.go` restores before disclosing. A missing object
-  withholds that one payload and keeps the row listed.
-- **The retention sweep.** It erases the whole payload when the activity's window closes, stanza
-  and all.
+- **Art. 15 access.** `compose/sarrestore.go` restores before it shows the data. A missing object
+  holds back that one payload and keeps the row listed.
+- **The retention sweep.** It erases the whole payload when the activity's window ends, block and
+  all.
 
-## What no longer holds
+## What does not hold any more
 
-**The column alone cannot reproduce the message.** A restore needs the object store. This trades a
-self-contained column for a two-place guarantee. The digest guards the second place: a replaced
-object cannot pass as the provider's bytes, because the stanza records their hash.
+**The column alone cannot make the message again.** A restore needs the object store. This gives up
+a column that stands alone, for a promise kept in two places. The hash covers the second place: a
+different object cannot pass as the provider's bytes, because the block records their hash.
 
-One consequence is latent rather than current. Re-canonicalisation is avoided, so a **DKIM signature
-over a slimmed message still verifies once the part is restored**, but only if the object is there.
-Nothing in the product verifies DKIM today (the `dkim` references in `compose/techenrich.go` are DNS
-selector probes for tech enrichment, not signature checks). So this costs nothing now, and is written
-down for whoever reaches for DKIM verification next.
+One more cost is not live today, but may be later. The bytes are never put into a new form. So a
+DKIM signature over a slimmed message **still checks out once the part is restored**, if the object
+is there.
 
-## What is still owed
+Nothing in the product checks DKIM today. The `dkim` references in `compose/techenrich.go` are DNS
+checks for DKIM `selector` records, run to learn whether a company has DKIM set up. They are not signature
+checks. So this costs nothing now, and it is written down for the next one who builds DKIM checks.
 
-- **Orphaned-object reclamation.** `activities/capturedfiles.go` names it as owed by both writers of
-  the `attachment` table. This sweep does not change that: it removes a copy from the database and
-  never touches an object.
-- **A retention policy bounds growth; slimming does not.** Slimming cuts the slope of `raw_capture`'s
-  growth by roughly twentyfold and does not make it bounded. The `raw_capture` retention scope does,
-  on a clock of its own rather than on the activity's. It does not reach an original with no
-  activity row (an internal-only drop), where the raw_capture row is the only tombstone against a
-  replay re-ingesting a message the pipeline already judged.
-- **The ten-in-forty miss rate.** A repeated inline logo is never slimmed. Fixing it needs an
-  identity for a part that survives duplication: an ordinal resolved against the MIME structure
-  rather than against the bytes, which is the parsing approach this design avoids. It is worth
-  revisiting only if small repeated images ever become a material share of the table.
+## What is still to do
+
+- **Taking back objects no row points at.** `activities/capturedfiles.go` names this as a job both
+  writers of the `attachment` table still leave open. This sweep does not change that: it removes a
+  copy from the database and never touches an object.
+- **A retention policy limits the table.** Slimming does not. Slimming makes `raw_capture` take on
+  new bytes about 20 times more slowly, and does not put a limit on it. The `raw_capture` retention
+  scope does, on a clock of its own rather than on the activity's. It does not reach an original
+  with no activity row (an internal-only drop). There, the `raw_capture` row is the only mark that
+  stops a replay from taking in a message again that the pipeline already handled.
+- **The 10 in 40 it misses.** An image that shows up more than once in a message is never slimmed.
+  Fixing it needs a way to name a part that stays the same across copies. That name would be a
+  number read from the MIME tree rather than from the bytes, which means parsing, and this design
+  does not parse. Look at it again only if small images that show up more than once come to make up
+  a real share of the table.

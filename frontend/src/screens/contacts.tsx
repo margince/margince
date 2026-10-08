@@ -20,8 +20,6 @@ import {
   ListTable,
   listFetchLimit,
   useListQuery,
-  useOwnerChips,
-  useTagChips,
 } from "./listquery";
 import {
   createdColumn,
@@ -30,6 +28,7 @@ import {
   ownerColumn,
   standardViews,
   tagsColumn,
+  useOwnerTagChips,
 } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { listQueryParams } from "./tagfilter";
@@ -180,8 +179,7 @@ function ContactsList() {
   // Offered only once /me has answered: a chip whose value is still "" reads
   // as "clear this filter", so a half-built owner dial narrows nothing.
   const viewerId = useViewerId();
-  const ownerChips = useOwnerChips();
-  const tagChips = useTagChips();
+  const ownerChips = useOwnerTagChips();
   const savedViews = useSavedViewTabs("contacts");
   const cf = useObjectCustomFields("contact");
   // The form that never closes gives no other feedback: without this, six
@@ -313,7 +311,7 @@ function ContactsList() {
         rowKey={(contact) => contact.id}
         rowRoute={(contact) => ({ screen: "contacts", id: contact.id })}
         selection={selection}
-        dataChips={[...ownerChips, ...tagChips]}
+        dataChips={ownerChips}
         dataViews={savedViews}
         views={[...standardViews(viewerId)]}
       />

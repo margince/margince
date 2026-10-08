@@ -124,7 +124,7 @@ func TestDemoteNeverArchivesAMergeSurvivor(t *testing.T) {
 		t.Fatalf("seed the other contact: %v", err)
 	}
 	// The created contact survives the merge; the other's history now lives on it.
-	if _, err := e.store.MergeContact(e.ctx, ids.From[ids.ContactKind](ids.UUID(other.Id)), ids.From[ids.ContactKind](ids.UUID(created.Id))); err != nil {
+	if _, err := e.store.MergeContact(e.ctx, ids.From[ids.ContactKind](ids.UUID(other.Id)), ids.From[ids.ContactKind](ids.UUID(created.Id)), nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -492,5 +492,24 @@ func TestPromoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
 		Trigger: "human_qualify", IfVersion: &at,
 	}); err != nil {
 		t.Fatalf("the current version was refused: %v", err)
+	}
+}
+
+// A promoted lead's address can be taken by a live lead while it is away, and
+// demoting it back onto the ladder is then the same duplicate-email collision
+// create and update answer.
+func TestDemoteOfALeadWhoseEmailALiveLeadNowHoldsIsADuplicate(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "promoted-then-taken@example.test")
+	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
+		t.Fatalf("promote: %v", err)
+	}
+	e.seedLead(t, "promoted-then-taken@example.test")
+
+	_, err := e.store.DemoteLead(e.ctx, lead, "promoted the wrong prospect")
+
+	var duplicate *DuplicateLeadError
+	if !errors.As(err, &duplicate) {
+		t.Fatalf("demote answered %v, want a duplicate-email conflict", err)
 	}
 }

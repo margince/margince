@@ -44,14 +44,26 @@ func (h Handlers) CreateTask(w http.ResponseWriter, r *http.Request, _ crmcontra
 // door and for a bulk change that files one task per record. The activity writer admits a blank subject (a captured mail may
 // carry none); a task is nothing but its subject, so a task refuses one.
 func TaskInputFrom(req crmcontracts.CreateTaskRequest) (LogActivityInput, error) {
-	if strings.TrimSpace(req.Subject) == "" {
-		return LogActivityInput{}, &RequiredFieldError{Field: fieldSubject}
+	subject, err := taskSubject(req.Subject)
+	if err != nil {
+		return LogActivityInput{}, err
 	}
+	req.Subject = subject
 	activityReq, err := activityOfTask(req)
 	if err != nil {
 		return LogActivityInput{}, err
 	}
 	return LogActivityInputFrom(activityReq)
+}
+
+// taskSubject is the one rule for what a task may be called, held by create and
+// by a patch of an existing task alike: the trimmed text, and never blank.
+func taskSubject(raw string) (string, error) {
+	subject := strings.TrimSpace(raw)
+	if subject == "" {
+		return "", &RequiredFieldError{Field: fieldSubject}
+	}
+	return subject, nil
 }
 
 // activityOfTask is the fold: the task request as the activity request the

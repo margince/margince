@@ -70,7 +70,7 @@ func TestProposalReplayRehydratesTheVaultWithoutStoringTheCapability(t *testing.
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Proposal Guest", "emails": []AnyMap{{"email": "guest@visitor.example", "is_primary": true}}}, nil, &contact); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Proposal Guest", "emails": []AnyMap{{"email": "guest@visitor.example", "is_primary": true}}}, nil, &contact); status != 201 {
 		t.Fatalf("contact: %d", status)
 	}
 	headers := map[string]string{"Idempotency-Key": "proposal-recovery"}

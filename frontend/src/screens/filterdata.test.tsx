@@ -89,6 +89,28 @@ describe("the vocabulary read", () => {
       seen.filter((url) => url.includes("/filters/vocabulary")),
     ).toHaveLength(1);
   });
+
+  it("asks nothing while a surface that only sometimes needs it says not now", async () => {
+    const { seen, wrapper } = harness();
+    const { result } = renderHook(
+      () => ({
+        // The enabled read beside it proves the harness answers; the disabled
+        // one must still not have asked by the time that answer is in.
+        unwanted: useFilterVocabulary("company", false),
+        wanted: useFilterPreview(
+          "contact",
+          newGroup("and", [newLeaf("full_name", "contains", "ann")]),
+        ),
+      }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.wanted.isSuccess).toBe(true));
+    expect(result.current.unwanted.status).toBe("pending");
+    expect(seen.filter((url) => url.includes("/filters/vocabulary"))).toEqual(
+      [],
+    );
+  });
 });
 
 describe("the preview read", () => {

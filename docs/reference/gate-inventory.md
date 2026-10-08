@@ -316,6 +316,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
 | `publictokencachecensus_test.go` | H3 | The no-store census covers every route the contract publishes on the two anonymous token prefixes. |
+| `quickfindindex_test.go` | H2 | Every list quick-find is proved to read its trigram index. |
 | `ratelimitnames_test.go` | H2 | A rate limiter's name is its bucket. |
 | `ratparsebound_test.go` | H2 | A decimal string is shape-checked before math/big parses it. |
 | `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
@@ -389,6 +390,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `benchfilenames_test.go` | H2 | A file behind the bench build tag says so in its name, so `git ls-files '\*\_bench\_test.go'` lists every bench in the tree. |
 | `bulktoolschema_test.go` | H1 | bulk\_update\_records advertises one schema for four modes. |
 | `capturedbytyping_test.go` | H2 | `captured\_by` records the principal, and a principal is not a user row. |
 | `cursorrefusal_test.go` | H2 | A page token a caller hands back is either one this server minted or it is not, and that question has one answer on the wire: the contract's `422 code: malformed\_cursor`, which tells the caller to re-issue the request without the token. |
@@ -414,6 +416,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `subjectlockorder_test.go` | H2 | The subject lock is the first row a transaction takes. |
 | `tableownership_test.go` | H1 | A package writes SQL only against tables it owns; the import DAG is enforced three ways, but nothing in the import graph stops a write to another module's table. |
 | `updateguard_test.go` | H2 | Every single-row-by-id UPDATE of a mutable entity carries a guard: the optimistic version (storekit.ApplyWithVersion / ApplyGuarded), a held row lock (LockRow / LockPair + ApplyLocked), an advisory lock, an in-statement FOR UPDATE, or a checked conditional write (the RowsAffected CAS shape). |
+| `updateguardcas_test.go` | H2 | What the by-id guard census counts as a compare-and-set, and the cases that only look like one. |
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |
 | `writeauthority_test.go` | H2 | A path that changes a shareable record probes for write authority rather than for visibility, because a manual record grant is asymmetric between read and write. |
 | `writeliveness_test.go` | H2 | A write that targets one standing row of a table which can be archived either refuses an archived row, declares that it reaches one by design, or is ratified with a reason. |
@@ -519,6 +522,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | employment.IsCurrentSQL calls itself "the one spelling of 'this job is still theirs'", and every statement that asks whether an employment is current goes through it. |
 | `importtargetsclaim_test.go` | H3 | What the contract says an import can receive, against what it actually can. |
+| `langcopyonecensus_test.go` | H2 | One census reads every langcopy.Phrase table, and no owner walks its own. |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and two functions in two packages each called themselves the one spelling of it while the tree held about twenty copies. |
 | `marketingquestion_test.go` | H2 | The question a grant is bound to is the question the screen asks. |
 | `meetingoverspelling_test.go` | H2 | "This meeting is over" is spelled twice, and the two must say the same thing. |

@@ -94,7 +94,7 @@ func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args s
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	_, err := invoke("enrich", `{"company_id":"`+company.ID+`"}`)
@@ -284,20 +284,20 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Relink Account"}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Relink Account"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	var project struct {
 		ID string `json:"id"`
 	}
 	if status := q.Call(t, "POST", "/v1/projects", AnyMap{
-		"name": "Relink Engagement", "company_id": company.ID,
+		"name": "Relink Engagement", "company_id": company.ID, "source": "manual",
 	}, nil, &project); status != http.StatusCreated {
 		t.Fatalf("create project → %d", status)
 	}

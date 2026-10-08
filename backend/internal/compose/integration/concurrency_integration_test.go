@@ -97,8 +97,8 @@ func TestConcurrentMergesNeverStrandChildrenOnADeadRecord(t *testing.T) {
 	var wg sync.WaitGroup
 	var errAB, errCA error
 	wg.Add(2)
-	go func() { defer wg.Done(); _, errAB = e.Contacts.MergeContact(e.Admin(), a, b) }()
-	go func() { defer wg.Done(); _, errCA = e.Contacts.MergeContact(e.Admin(), c, a) }()
+	go func() { defer wg.Done(); _, errAB = e.Contacts.MergeContact(e.Admin(), a, b, nil) }()
+	go func() { defer wg.Done(); _, errCA = e.Contacts.MergeContact(e.Admin(), c, a, nil) }()
 	wg.Wait()
 
 	// merge(A→B) always has a live source or answers the merged
@@ -146,7 +146,7 @@ func TestMergeWithdrawalCarriesAConsentProofEvent(t *testing.T) {
 	e.WsExec(t, `INSERT INTO contact_consent (id, contact_id, purpose_id, state) VALUES ($1, $2, $3, 'withdrawn')`, ids.NewV7(), srcID, purpose)
 	e.WsExec(t, `INSERT INTO contact_consent (id, contact_id, purpose_id, state) VALUES ($1, $2, $3, 'granted')`, ids.NewV7(), tgtID, purpose)
 
-	if _, err := e.Contacts.MergeContact(admin, srcID, tgtID); err != nil {
+	if _, err := e.Contacts.MergeContact(admin, srcID, tgtID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 

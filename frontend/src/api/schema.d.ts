@@ -8005,24 +8005,24 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "contact" | "company" | "deal";
+                entity_type: "contact" | "company" | "deal" | "lead";
                 entity_id: string;
             };
             cookie?: never;
         };
         /**
          * The tags on one record, and who put them there.
-         * @description ONE read for all three record types, because the panel that draws them is one
-         *     component: a per-type block on each record response would be three copies of one
+         * @description ONE read for every advertised record type, because the panel that draws them is one
+         *     component: a per-type block on each record response would be one copy per type of one
          *     shape, and they would drift.
          *
          *     Each assignment carries who applied it and when, which the record page shows beside
          *     the tag. `assigned_by` is absent for assignments made before the product recorded
          *     it — absent means unknown, never "the system".
          *
-         *     The three advertised types only. `taggable` admits lead and project, and this route
-         *     refuses them: a read that answered for a type no screen offers would be a surface
-         *     nobody meant to ship.
+         *     The advertised types only. `taggable` admits project too, and this route refuses it:
+         *     a read that answered for a type no screen offers would be a surface nobody meant to
+         *     ship.
          *
          *     Withheld is not empty. A caller who may read the record but not the tag vocabulary
          *     gets `withheld: true` and no assignments — distinguishable from a record that simply
@@ -13602,6 +13602,42 @@ export interface paths {
          *     invitation a subscriber is expected to deliver, and nothing was invited here.
          */
         post: operations["createFormerMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Name the colleagues behind a set of ids. Read-only.
+         * @description The display names behind ids the caller already holds — a record's owner, an activity's
+         *     author, an assignee on a card. Any authenticated member may ask, for the reason the
+         *     roster itself is readable by any member: a seat is not a record, `app_user` carries no
+         *     owner and no capture privacy, so a row-scope clause here would invent a rule this table
+         *     has never had.
+         *
+         *     It answers every NON-ARCHIVED seat — active, invited and deactivated alike. A record
+         *     outlives the colleague who owned it, and `POST /users/former` exists to create
+         *     deactivated seats precisely so imported history can name its author; archiving is the
+         *     act that withdraws a seat from the reads that name a timeline row, so an archived seat
+         *     is absent here.
+         *
+         *     An id this answer omits is not an error: it is archived, or this installation never held
+         *     it, and the caller renders the id it already has.
+         *
+         *     Not a page. There is no cursor, no `q` and no limit — the caller names what it wants and
+         *     gets at most that. Naming more than 100 colleagues in one request is `422`.
+         */
+        get: operations["nameSeats"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -21651,6 +21687,8 @@ export interface components {
             /** @description What the task does, in plain words. */
             summary?: string;
             execution_mode: string;
+            /** @description An interactive task that answers from the record's own facts once no model can, and says so in generated_by, rather than failing. False for a task that fails fast and for a background task, which waits. */
+            degrades_on_outage?: boolean;
             leading_tier: string;
             normal_candidates: components["schemas"]["AiRouteCandidate"][];
             effective_candidates: components["schemas"]["AiRouteCandidate"][];
@@ -30813,6 +30851,7 @@ export interface components {
         Lead: {
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
+            tags?: components["schemas"]["RowTag"][];
             /** Format: uuid */
             id: string;
             full_name?: string | null;
@@ -30859,6 +30898,11 @@ export interface components {
              * @description Set on promotion (convenience mirror).
              */
             promoted_contact_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. While this lead is live, a second create from the same contact answers 409 `duplicate_contact_lead` naming this lead.
+             */
+            readonly from_contact_id?: string | null;
             /**
              * Format: uuid
              * @description Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_contact_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `contact` and `company` already carry the same field for the same reason.
@@ -30956,6 +31000,11 @@ export interface components {
             candidate_company_key?: string | null;
             /** Format: uuid */
             project_id?: string | null;
+            /**
+             * Format: uuid
+             * @description An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise). The lead records it as `from_contact_id`, and the contact itself is not changed. A contact already worked through a live lead answers 409 `duplicate_contact_lead` with that lead's id. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+             */
+            contact_id?: string | null;
             /**
              * @description The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
              * @default new
@@ -32480,13 +32529,14 @@ export interface components {
         };
         /**
          * @description How many records of each advertised type carry this tag, counted within what the
-         *     reader may see. Lead and project taggings are storage the product does not advertise
-         *     and are not counted.
+         *     reader may see. Project taggings are storage the product does not advertise and are
+         *     not counted.
          */
         TagUsage: {
             contacts: number;
             companies: number;
             deals: number;
+            leads: number;
         };
         /**
          * @description A partial update: an omitted field is left alone.
@@ -33068,6 +33118,15 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        /** @description A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them. */
+        SeatName: {
+            /** Format: uuid */
+            id: string;
+            display_name: string;
+        };
+        SeatNameListResponse: {
+            data: components["schemas"]["SeatName"][];
         };
         /** @description A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into. */
         FormerMemberRequest: {
@@ -34980,7 +35039,7 @@ export interface components {
             snippet?: string | null;
             /** @description Relevance score. */
             score?: number | null;
-            /** @description For a `tag` hit only: how many contacts, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
+            /** @description For a `tag` hit only: how many contacts, companies, deals and leads carry this word, as THIS caller may see them — the same types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
             carried_by?: number | null;
             /** @description On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included. */
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
@@ -44231,6 +44290,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -45785,6 +45845,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -49931,6 +49992,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -52985,6 +53047,26 @@ export interface operations {
                 /** @description Triage by score. */
                 min_score?: number;
                 q?: string;
+                /**
+                 * @description Narrow to the records carrying these tags. Repeat the parameter for several.
+                 *
+                 *     By ID, not by name: a name is what a human types and an admin can rename, so a
+                 *     saved view holding one would silently start selecting a different slice the day
+                 *     somebody corrects a spelling.
+                 */
+                tag_id?: string[];
+                /**
+                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one
+                 *     of them, `all` a record carrying every one, `none` a record carrying not one.
+                 *
+                 *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+                 */
+                tag_mode?: "any" | "all" | "none";
+                /**
+                 * @description Only the leads worked from this contact (`from_contact_id` on the lead). The contact
+                 *     page asks it to find the open lead a contact is already worked through.
+                 */
+                from_contact_id?: string;
             };
             header?: never;
             path?: never;
@@ -53404,7 +53486,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Lead was never promoted, or has already been demoted. */
+            /** @description Lead was never promoted, has already been demoted, or a live lead now holds its email (`duplicate_email`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -53465,7 +53547,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The lead is not disqualified, so there is nothing to reopen. */
+            /** @description The lead is not disqualified, so there is nothing to reopen, or a live lead now holds its email (`duplicate_email`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -56624,7 +56706,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                entity_type: "contact" | "company" | "deal";
+                entity_type: "contact" | "company" | "deal" | "lead";
                 entity_id: string;
             };
             cookie?: never;
@@ -63139,8 +63221,10 @@ export interface operations {
                 /** @description Admin management view — include deactivated/suspended members. Honored only for an admin caller. */
                 include_inactive?: boolean;
                 /**
-                 * @description Also list invited seats — members who have not signed in yet. For NAMING the colleagues records
-                 *     already point at (an imported record's owner is often an invited colleague); any member may ask.
+                 * @deprecated
+                 * @description Also list invited seats — members who have not signed in yet. Naming the colleagues a record
+                 *     already points at is `GET /users/names`, which answers id and display name alone; a roster row
+                 *     carries the member's email and seat status with it.
                  *     Pickers leave it off, so nobody is offered work they cannot open.
                  */
                 include_invited?: boolean;
@@ -63341,6 +63425,32 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    nameSeats: {
+        parameters: {
+            query: {
+                /** @description The seats to name. Repeat the parameter for several, up to 100; more is `422`. */
+                id: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The names, for the ids that resolved to one. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeatNameListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     changeUserRole: {

@@ -133,6 +133,20 @@ describe("a task's details", () => {
     expect(details).toHaveTextContent("Out of credit");
   });
 
+  it("says a task that answers from its own facts still answers while every model is blocked", async () => {
+    const user = userEvent.setup({ delay: null });
+    const row = {
+      ...ladder,
+      execution_mode: "interactive",
+      degrades_on_outage: true,
+    };
+    show(row, blocked("gemini", "anthropic"));
+    const details = await openTaskDetails(user, row.display_name);
+    expect(details).toHaveTextContent("Answering from its own facts now");
+    expect(details).not.toHaveTextContent("Failing now");
+    expect(details).not.toHaveTextContent("fails at once");
+  });
+
   it("says an interactive task fails while every model it can use is blocked", async () => {
     const user = userEvent.setup({ delay: null });
     const row = { ...ladder, execution_mode: "interactive" };

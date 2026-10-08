@@ -141,7 +141,7 @@ func attachmentForm(t *testing.T, e *apptest.AppEnv, content []byte) (*bytes.Buf
 // upload is filed against is one the product itself made.
 func anCompanyID(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	return createdID(t, e, "/v1/companies", AnyMap{"display_name": "Ceiling Test GmbH"})
+	return createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Ceiling Test GmbH"})
 }
 
 func importForm(t *testing.T, size int) (*bytes.Buffer, string) {

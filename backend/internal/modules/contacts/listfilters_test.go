@@ -32,6 +32,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 	})
 	assertEveryFilterNarrows(t, "lead", leadListFilters, map[string]string{
 		"min_score": "70", "owner_id": owner, "status": "working",
+		"tag_id": ids.NewV7().String(), "tag_mode": "all", "from_contact_id": ids.NewV7().String(),
 	})
 }
 
@@ -41,8 +42,8 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 // switch arm pointing at a sibling's table hands out a vocabulary the store
 // then refuses, and comparing what ListFilters returns against the same table
 // it returns would never see it. So the expectations are written out — a
-// contact is listed by owner and by tag, a lead by owner, status and a score
-// floor.
+// contact is listed by owner and by tag, a lead by owner, status, a score
+// floor, tag and the contact it was worked from.
 func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 	p := &Provider{}
 	for _, tc := range []struct {
@@ -51,7 +52,7 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 	}{
 		{datasource.EntityContact, []string{"owner_id", "tag_id", "tag_mode"}},
 		{datasource.EntityCompany, []string{"domain", "lifecycle", "owner_id", "relationship_type", "tag_id", "tag_mode"}},
-		{datasource.EntityLead, []string{"min_score", "owner_id", "status"}},
+		{datasource.EntityLead, []string{"from_contact_id", "min_score", "owner_id", "status", "tag_id", "tag_mode"}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {
 			t.Errorf("%s is offered %v, want %v", tc.entity, got, tc.want)

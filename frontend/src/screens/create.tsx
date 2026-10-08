@@ -657,6 +657,7 @@ export function RecordFormBody({
               field.offers ? (
                 <OfferedNameControl
                   fieldKey={field.key}
+                  type={field.type === "email" ? "email" : undefined}
                   offers={field.offers}
                   control={control}
                   values={values}

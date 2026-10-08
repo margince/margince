@@ -28,7 +28,10 @@ import (
 // to do when the floor trips.
 func (d replyDrafter) completeFirstVoiced(ctx context.Context, data replyActivityData, voice draftvoice.Context) (replyDraft, error) {
 	draft, err := d.firstVoicedDraft(ctx, data, voice)
-	return data.greeted(draft), err
+	if err != nil {
+		return replyDraft{}, err
+	}
+	return data.greeted(draft)
 }
 
 // firstVoicedDraft is completeFirstVoiced before the greeting repair, so the

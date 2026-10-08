@@ -12,14 +12,14 @@ var listTagsCopy = toolCopy{
 }
 
 var getTagCopy = toolCopy{
-	Purpose: "Read one tag and how many contacts, companies and deals carry it.",
-	Limits: "The counts cover those three record types only. They say how much retiring or " +
+	Purpose: "Read one tag and how many contacts, companies, deals and leads carry it.",
+	Limits: "The counts cover those four record types only. They say how much retiring or " +
 		"merging the word would touch; the records themselves come from list_records.",
 }
 
 var getRecordTagsCopy = toolCopy{
-	Purpose: "Read the tags on one contact, company or deal, with who applied each and when.",
-	Limits: "Those three record types only. `withheld` true means the vocabulary is not visible " +
+	Purpose: "Read the tags on one contact, company, deal or lead, with who applied each and when.",
+	Limits: "Those four record types only. `withheld` true means the vocabulary is not visible " +
 		"to this caller, so the list is empty for that reason — NOT because the record carries no " +
 		"tags, and it must not be reported as none. An archived tag stays on whatever carries it.",
 }

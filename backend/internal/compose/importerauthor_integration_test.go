@@ -114,6 +114,7 @@ func TestErasingTheSubjectClearsTheAuthorTheImporterWrote(t *testing.T) {
 	address := openapi_types.Email("erased.subject@authored.example")
 
 	contactBody, err := json.Marshal(crmcontracts.CreateContactRequest{
+		Source:   "manual",
 		FullName: "Erased Subject", SourceSystem: &system, SourceAuthorName: &name,
 		Emails: &[]crmcontracts.ContactEmailInput{{Email: address}},
 	})

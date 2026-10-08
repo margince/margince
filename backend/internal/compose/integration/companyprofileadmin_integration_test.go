@@ -62,7 +62,7 @@ func TestARepStillReadsAndWritesCustomerAccounts(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		AnyMap{"display_name": "A Customer Of Ours"}, nil, &created); status != http.StatusCreated {
+		AnyMap{"source": "manual", "display_name": "A Customer Of Ours"}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("POST /v1/companies as a rep = %d, want 201 — the object still governs customer records", status)
 	}
 	if status := e.Call(t, http.MethodGet, "/v1/companies/"+created.ID, nil, nil, nil); status != http.StatusOK {
@@ -87,7 +87,7 @@ func TestARepStillReadsAGrowthFitAfterTheProfileBecameAdministered(t *testing.T)
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		AnyMap{"display_name": "A Customer Of Ours"}, nil, &customer); status != http.StatusCreated {
+		AnyMap{"source": "manual", "display_name": "A Customer Of Ours"}, nil, &customer); status != http.StatusCreated {
 		t.Fatalf("create the customer: %d", status)
 	}
 

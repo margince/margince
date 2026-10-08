@@ -415,7 +415,7 @@ func TestThePaletteFindsTheStaffOfACompanyMadeThroughTheApp(t *testing.T) {
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Straight"}, nil, &company); status != 201 {
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Straight"}, nil, &company); status != 201 {
 		t.Fatalf("create company → %d", status)
 	}
 	staff := map[string]bool{}

@@ -57,3 +57,42 @@ func TestTheOutagePageSaysADecisionTaskFallsToItsLadder(t *testing.T) {
 		t.Errorf("task foo declares no decision form, yet its outage row names one: %q", rows["foo"])
 	}
 }
+
+// An interactive task that answers from its own facts when no model can is not
+// one that fails: its row says what it does, and a task that does not declare
+// it keeps the failure sentence.
+func TestTheOutagePageSaysATaskThatDegradesDegrades(t *testing.T) {
+	declared := strings.Replace(minimalContract,
+		"execution_mode: interactive, on_budget_exhausted: degrade, status: planned",
+		"execution_mode: interactive, on_budget_exhausted: degrade, on_outage: degrades, status: shipped, sites: [ask]", 1)
+	c, err := parseContract([]byte(declared))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	page := string(emitOutageDoc(c))
+	if strings.Contains(page, "| `bar` | Test task bar | interactive | `beta` → `alpha` | fails at once") {
+		t.Errorf("a task declared to degrade still reads as failing:\n%s", page)
+	}
+	if !strings.Contains(page, "| `bar` | Test task bar | interactive | `beta` → `alpha` | answers from its own facts instead of failing |") {
+		t.Errorf("the degrading task's row does not say what it does:\n%s", page)
+	}
+}
+
+// Only a task that answers while a request is waiting has anything to degrade
+// to; a background task queues. And the value is closed.
+func TestOnlyAnInteractiveTaskMayDeclareItDegrades(t *testing.T) {
+	for name, c := range map[string]struct{ from, to, want string }{
+		"a background task":  {"execution_mode: background", "execution_mode: background, on_outage: degrades", "on_outage"},
+		"an unknown posture": {"execution_mode: background", "execution_mode: background, on_outage: degrade", "on_outage"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			contract, err := parseContract([]byte(strings.Replace(minimalContract, c.from, c.to, 1)))
+			if err == nil {
+				err = contract.validate()
+			}
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Errorf("answered %v, want a refusal naming %s", err, c.want)
+			}
+		})
+	}
+}

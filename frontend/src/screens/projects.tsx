@@ -30,7 +30,8 @@ import {
   type ProjectPhase,
 } from "./projects.form";
 import { lastActivityColumn, ownerColumn } from "./recordlist";
-import { SaveViewAction, useSavedViews, useSavedViewTabs } from "./savedviews";
+import { SaveViewAction, useSavedViewTabs } from "./savedviews";
+import { useSavedViews } from "./savedviews.queries";
 import "./projects.css";
 
 // The projects list: every body of work the reader may see, newest activity

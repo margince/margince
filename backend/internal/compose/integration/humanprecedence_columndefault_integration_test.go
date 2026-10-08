@@ -19,7 +19,7 @@ import (
 func TestAgentChangesAFieldThatStillHoldsItsColumnDefault(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Defaulted Lifecycle GmbH"})
+	companyID := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Defaulted Lifecycle GmbH"})
 	bearer := companyAgentBearer(t, e)
 
 	if lifecycle, approval := agentPatchCompany(t, e, bearer, companyID, "lifecycle", "prospect"); approval != "" || lifecycle != "prospect" {
@@ -41,6 +41,7 @@ func TestAgentStillAsksBeforeOverwritingAValueTypedAtCreate(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createdID(t, e, "/v1/companies", AnyMap{
+		"source":       "manual",
 		"display_name": "Typed Industry GmbH", "industry": "Logistics",
 	})
 	bearer := companyAgentBearer(t, e)
@@ -55,7 +56,7 @@ func TestAgentStillAsksBeforeOverwritingAValueTypedAtCreate(t *testing.T) {
 func TestAgentAsksBeforeNarrowingWhoSeesAHumanCreatedRecord(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Defaulted Visibility GmbH"})
+	companyID := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Defaulted Visibility GmbH"})
 	bearer := companyAgentBearer(t, e)
 
 	if visibility, approval := agentPatchCompany(t, e, bearer, companyID, "visibility", "owner"); approval == "" || visibility != "workspace" {

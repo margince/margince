@@ -23,8 +23,8 @@ import {
   emptyPage,
   emptySection,
   jsonResponse,
-  stubFetch,
 } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 
 // The company record's Tasks tab: tick-to-complete without leaving the
 // account, a withheld section that says so, an archived account that offers no

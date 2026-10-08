@@ -19,6 +19,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -29,6 +30,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+)
+
+// fieldValue and fieldAddress are the request fields an exclusion refusal and a
+// sender-decision refusal point at.
+const (
+	fieldValue   = "value"
+	fieldAddress = "address"
 )
 
 // The exclusion vocabulary, the Go spelling of the table's CHECKs.
@@ -227,20 +235,37 @@ func exclusionAuditImage(e Exclusion) map[string]any {
 	return image
 }
 
+// parseSingleAddress returns the lowercased address in raw, or false when raw is
+// not a single bare email address within the length the contract and the
+// address indexes allow. The stored form is the form the lookups fold to
+// (normalizeEmail), so a row that was accepted can always be found again: a
+// display name or angle brackets are refused rather than stripped.
+func parseSingleAddress(raw string) (string, bool) {
+	if utf8.RuneCountInString(raw) > maxIndexedAddressChars {
+		return "", false
+	}
+	trimmed := strings.TrimSpace(raw)
+	addr, err := mail.ParseAddress(trimmed)
+	if err != nil || addr.Name != "" || !strings.EqualFold(addr.Address, trimmed) || !strings.Contains(addr.Address, "@") {
+		return "", false
+	}
+	return strings.ToLower(addr.Address), true
+}
+
 // ValidExclusionValue vets one rule's value and returns its stored form: a
 // lowercased address, or an IDNA ASCII domain through the own-domain vetting.
 func ValidExclusionValue(kind, raw string) (string, error) {
 	switch kind {
 	case ExclusionKindAddress:
-		addr, err := mail.ParseAddress(strings.TrimSpace(raw))
-		if err != nil || addr.Address == "" || !strings.Contains(addr.Address, "@") {
-			return "", &InvalidExclusionError{Field: "value", Reason: "give one email address, for example name@example.com"}
+		address, ok := parseSingleAddress(raw)
+		if !ok {
+			return "", &InvalidExclusionError{Field: fieldValue, Reason: fmt.Sprintf("give one email address of at most %d characters, for example name@example.com", maxIndexedAddressChars)}
 		}
-		return strings.ToLower(addr.Address), nil
+		return address, nil
 	case ExclusionKindDomain:
 		domain, err := ValidOwnDomain(raw)
 		if err != nil {
-			return "", &InvalidExclusionError{Field: "value", Reason: err.Error()}
+			return "", &InvalidExclusionError{Field: fieldValue, Reason: err.Error()}
 		}
 		return domain, nil
 	case ExclusionKindContainer:
@@ -259,7 +284,7 @@ func validContainer(raw string) (string, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if !qualified || container == "" || !slices.Contains(containerProviders, provider) {
 		return "", &InvalidExclusionError{
-			Field:  "value",
+			Field:  fieldValue,
 			Reason: "name the provider and the container it belongs to, for example gmail:Private (" + strings.Join(containerProviders, ", ") + ")",
 		}
 	}

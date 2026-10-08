@@ -26,12 +26,8 @@ import {
   type WonWithoutContract,
   WonWithoutContractFact,
 } from "../dealwinreason";
-import {
-  EntityRef,
-  rosterOwnerName,
-  useRosterNames,
-  useRosterPartial,
-} from "../entityref";
+import { EntityRef, rosterOwnerName } from "../entityref";
+import { useMemberName } from "../membernames";
 import { FxLine } from "./dealcockpit";
 
 type Deal = components["schemas"]["Deal"];
@@ -121,10 +117,8 @@ export function DealIdentityFacts({
   // The installation's own reporting currency, read here rather than handed
   // down: only this cell converts, and an unnamed base is not a euro base.
   const baseCurrency = useInstallationSettings().data?.base_currency ?? null;
-  // Only asked for when there is an owner to name: an unowned deal needs no
-  // roster read to say so.
-  const roster = useRosterNames("user", Boolean(deal.owner_id));
-  const partial = useRosterPartial("user", Boolean(deal.owner_id));
+  // Named by id: an unowned deal carries no id and asks nothing.
+  const ownerName = useMemberName(deal.owner_id);
   const masked = deal.masked_fields ?? [];
   // An em dash rather than the stage id: a deal whose stage was archived out
   // from under it has no row to name, and printing a UUID where a stage name
@@ -167,13 +161,7 @@ export function DealIdentityFacts({
         <CloseReading deal={deal} locale={locale} zone={zone} />
       </Fact>
       <Fact label={t("list.owner")}>
-        {rosterOwnerName(
-          deal.owner_id,
-          roster,
-          partial,
-          t,
-          t("co.pulse.unowned"),
-        )}
+        {rosterOwnerName(deal.owner_id, ownerName, t, t("co.pulse.unowned"))}
       </Fact>
       {masked.includes("company_id") ? (
         <Fact label={t("create.relatedCompany")}>

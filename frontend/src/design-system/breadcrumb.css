@@ -32,9 +32,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  /* Ancestors keep their natural width: they are the product's own nav labels,
-     short and already chosen, and a trail that shortened them would hide the
-     way back rather than the overflow. */
+  /* Ancestors keep their natural width: the first is the product's own nav
+     label, short and already chosen, and a trail that shortened it would hide
+     the way back rather than the overflow. A middle one is capped below. */
   flex: none;
   min-width: 0;
 }
@@ -94,6 +94,22 @@
   min-width: 2ch;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* A stop between the two ends can be user data too (the list whose filter the
+   page edits), and an ancestor that never yields would push the page off the
+   row. Its label is capped and clips under the same tip; on a phone, where the
+   row holds two stops at most, it folds away and the trail keeps the way back
+   and the page. 700px is the phone width (PHONE_MAX_WIDTH, app/viewport.ts). */
+.crumbs > ol > li:not(:first-child):not(:last-child) .crumbs-label {
+  max-width: 32ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 700px) {
+  .crumbs > ol > li:not(:first-child):not(:last-child) {
+    display: none;
+  }
 }
 
 /* The colour change on hover happened in one frame. A trail is read left to

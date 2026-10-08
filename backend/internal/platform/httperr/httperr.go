@@ -361,6 +361,13 @@ func Classify(err error) (Fault, bool) {
 	for _, m := range mapping {
 		if errors.Is(err, m.sentinel) {
 			f := Fault{Status: m.status, Code: m.code, Detail: err.Error()}
+			// What an outside service said is text a remote party chose: its
+			// vendor, its account, its limits. The caller learns that it gave no
+			// usable answer; the rest stays with whoever reads the log.
+			if m.sentinel == apperrors.ErrProviderUnusable {
+				f.Detail = m.sentinel.Error()
+				f.InfraCause = err
+			}
 			// A sentinel wrapped around an infrastructure failure must not
 			// carry that failure's text to a caller. It gets the sentinel's
 			// canonical detail; the full cause goes to the surface's log.
@@ -404,6 +411,14 @@ func loggedPath(r *http.Request) string {
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	fault, ok := Classify(err)
+	if !ok && callerLeft(r, err) {
+		// Debug, not error: nothing failed on our side, and the sweep an operator
+		// reads for faults must not have to rule these out by hand.
+		slog.DebugContext(r.Context(), "client closed the request",
+			"method", r.Method, "path", loggedPath(r))
+		w.WriteHeader(statusClientClosedRequest)
+		return
+	}
 	if !ok {
 		slog.ErrorContext(r.Context(), "unhandled error", "method", r.Method, "path", loggedPath(r), "err", err)
 		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: "internal"})

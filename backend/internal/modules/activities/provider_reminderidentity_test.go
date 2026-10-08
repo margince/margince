@@ -20,7 +20,8 @@ import (
 
 func reminderCreate(system string) crmcontracts.CreateActivityRequest {
 	return crmcontracts.CreateActivityRequest{
-		Kind: "task", SourceSystem: &system, SourceId: strPtr("no_activity_reminder:company:c-1:anchor:2026-09-05T00:00:00Z"),
+		Kind: "task", Subject: strPtr("Check in — no activity since 2026-09-05"),
+		SourceSystem: &system, SourceId: strPtr("no_activity_reminder:company:c-1:anchor:2026-09-05T00:00:00Z"),
 	}
 }
 
