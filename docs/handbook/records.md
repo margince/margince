@@ -1,137 +1,126 @@
+<!-- prose:plain -->
 # Contacts, companies, leads, deals and projects
 
-Margince holds five kinds of record: contacts, companies, leads, deals and
-projects.
+Margince holds five kinds of record: contacts, companies, leads, deals and projects.
 
 ## Each record in one line
 
-**Contact**: an individual you do business with. Navigation calls this
-**Contacts**.
+**Contact**: a single human you do business with. The sidebar calls this **Contacts**.
 
-**Company**: a company you deal with. Navigation calls this **Companies**.
+**Company**: a company you work with. The sidebar calls this **Companies**.
 
-**Lead**: a prospect you have not qualified yet, kept apart from your contacts.
+**Lead**: a possible customer you have not qualified yet, kept apart from your contacts.
 
-**Deal**: a specific piece of business, moving through stages toward won or
-lost.
+**Deal**: one piece of business, moving through stages to won or lost.
 
-**Project**: the body of work a client relationship is made of. It starts while
-a deal is still open and continues after the deal closes.
+**Project**: the work that a client relationship is made of. It starts while a deal is still open and goes on after the deal closes.
 
-Around these sit **activities** (the timeline of emails, calls, meetings, notes
-and tasks) and **documents**, covered on their own pages.
+Next to these are **activities** (the timeline of emails, calls, meetings, notes and tasks) and **documents**. Each has its own page.
 
 ### What is the difference between a lead and a deal?
-A lead in Margince is someone you have not qualified yet; a deal is a specific
-piece of business with a value, moving through pipeline stages toward won or
-lost. A lead lives on **Leads** and has no company record behind it. A deal
-lives on **Deals** and may name a company, contacts and a project. Qualifying a
-lead turns it into a contact, and can open a deal in the same step.
+A lead in Margince is someone you have not qualified yet. A deal is one
+piece of business with a value, moving through pipeline stages to won or lost. A lead lives on **Leads** and has no company record behind it. A deal lives on **Deals** and may name a company, contacts and a project. Qualifying a lead turns it into a contact, and can open a deal in the same step.
 Also called: prospect versus opportunity.
 
 ### What is the difference between a contact and a company?
-A contact in Margince is an individual you do business with; a company is the
-business they work for or that you deal with. A contact is linked to a
-company through an employment relationship, and that link is optional: a
-contact with no employer is still a contact. Also called: account, client or
+A contact in Margince is a single human you do business with. A company is the
+business they work for, or that you work with. A contact is linked to a company through a job link. That link is not required: a contact with no employer is still a contact.
+Also called: account, client or
 customer for a company.
 
 ## What connects to what
 
-The links between Margince records are looser than in most CRMs.
+Margince asks for fewer links between records than most CRM products.
 
 | Link | Required? |
 |---|---|
-| Contact → Company | **Optional.** It is an employment link, with a role and dates. |
-| Lead → Company | **There is none.** A lead carries a company *name* as free text. |
+| Contact → Company | **Optional.** It is a job link, with a role and dates. |
+| Lead → Company | **There is none.** A lead holds a company *name* as free text. |
 | Deal → Pipeline and stage | **Required.** |
 | Deal → Company | **Optional.** |
-| Deal → Contact | **Optional.** Contacts sit on a deal as stakeholders. |
-| Deal → Project | Optional, at most one, and both must name the same company. |
+| Deal → Contact | **Optional.** Contacts are on a deal as stakeholders. |
+| Deal → Project | Not required, at most one, and both must name the same company. |
 | Project → Company | **Required: at least one, always.** |
-| Activity → any record | Optional. One you log with no links is shared with everyone; a captured one with no links stays held. |
+| Activity → any record | Not required. One you log with no links is shared with everyone; a captured one with no links stays held. |
 
-Two of these catch readers out.
+Many users get two of these wrong.
 
-**A deal does not need a company.** Name, pipeline, stage and source are
-required. Value, company and expected close date are optional. Value and
-currency go together: neither is accepted without the other. A deal carrying no value
-carries no currency either. Qualifying a lead creates a deal with no company
-attached at all, because a lead has no company to attach.
+**A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company at all, because a lead has no company to link.
 
-**A lead has no company record behind it.** A lead's company is plain text, not
-a link to a company record, so imported prospects do not create half-filled
-companies in your CRM.
+**A lead has no company record behind it.** A lead's company is plain text, not a link to a company record, so imported leads do not create half-filled companies in your CRM.
 
 ## Contacts
 
-A contact needs a name and a source. Everything else is optional.
+A contact needs a name and a source. Everything else is up to you.
 
 ### How do I add a new contact?
 To add a new contact in Margince, open **Contacts** in the sidebar and choose **New contact**.
 1. Enter the **Full name** (required).
-2. Optionally fill **First name**, **Last name**, **Title** and **LinkedIn**.
+2. If you like, fill **First name**, **Last name**, **Title** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
-4. Fill any custom fields, then choose **Create**. It stays disabled until the full name is filled.
-If the contact already exists, **View existing record** opens it instead.
+4. Fill any custom fields, then choose **Create**. It stays turned off until the full name is filled.
+If the contact is already in Margince, **View existing record** opens it instead.
 Also called: create a contact, add someone to the CRM, new customer contact.
 
 ### How do I add a contact quickly, or import contacts from vCards?
-To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**; to add many from a card file, choose **Import vCards**.
+To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**. To add many from a card file, choose **Import vCards**.
 - **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open.
-- The **Company** box in Quick capture lists existing companies matching what you type: pick one to attach it. A name you do not pick creates a new company.
+- The **Company** box in Quick capture lists the companies that match what you type: pick one to link it. A name you do not pick creates a new company.
 - **Import vCards** asks for a **vCard file**: choose **Select .vcf file**. Each card is reported as Added, Missing fields added, Possible duplicate or Skipped.
 Also called: import contacts, upload a .vcf.
 
 ### How do I edit a contact?
-To edit a contact in Margince, open it and click the value to change in the **Details** panel beside the record. There is no Edit button: each field changes in place.
+To edit a contact in Margince, open it and click the value to change in the **Details** panel next to the record. There is no Edit button: each field changes in place.
 1. If the panel is hidden, choose **Show details and permissions**.
-2. Click the value (an empty one says **Not set**), type and press Enter, or pick from the list. Esc cancels.
+2. Click the value (an empty one says **Not set**), type and press Enter, or pick from the list. `Esc` stops.
 3. **Email**, **Phone** and **Address** open a small form with **Type**, **Primary** and **Remove**; press **Save**.
-**Full name**, **Title**, **LinkedIn**, **Owner** and custom fields change the same way. First and last name are set only at creation.
+**Full name**, **Title**, **LinkedIn**, **Owner** and custom fields change the same way. First and last name are set only when the contact is created.
 Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
-A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes.") or when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text, with the reason on hover.
-If someone else changed the same field while you were editing, it is refused: "This record changed since it was opened. Reload and retry."
+A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text, with the reason when you point at them.
+If someone else changed the same field while you were editing, your edit is refused: "This record changed since it was opened. Reload and retry."
+
 Also called: read-only record, edit greyed out, cannot change.
 
 ### How do I link a contact to a company?
 To link a contact to a company in Margince, open the contact's page and choose **Add company** in its **Companies** panel.
-1. Under **Employer**, search for and pick the company. It must already exist; create it first under **Companies** if it does not.
-2. Optionally enter the **Role** and a **Start date** (YYYY-MM or YYYY-MM-DD).
+1. Under **Employer**, search for the company and pick it. It must already be in Margince; create it first under **Companies** if it is not.
+2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
 3. Tick **This is their current employer** if it is.
 4. Choose **Create**.
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**.
 Also called: set a contact's company, assign to an account, employer.
 
 ### How do I match a purchased job history entry to a company?
-When purchased employment history in Margince names an employer it cannot match, the contact's **Companies** section shows **Company match needed.**; choose **Match company**.
-Pick an existing company, or enter its **Confirmed company website** to create it, then choose **Save company link**. The choice applies to every unmatched role at that employer. **Dismiss evidence** drops an entry that should not become a link. A company name alone never creates a company. Also called: unresolved employer, imported job history.
+Purchased job history can name an employer Margince cannot match. Then the contact's **Companies** part shows **Company match needed.**; choose **Match company**.
+Pick a company that is already there, or enter its **Confirmed company website** to create it, then choose **Save company link**. Your choice counts for every role at that employer that has no match yet. **Dismiss evidence** drops an entry that should not become a link. A company name alone never creates a company.
 
-Emails are typed **work, personal or other**; phones **work, mobile, home or other**. One number may appear twice under two types (a switchboard that is both work and mobile), and editing the list keeps the two entries apart.
+Also called: unresolved employer, imported job history.
 
-The contact header says **who can see this contact**: private to its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
+Emails have the types **work, personal or other**; phones **work, mobile, home or other**. One number may show two times under two types, such as a main number that is both work and mobile. Editing the list keeps the two entries apart.
 
-A contact's job title appears in two places. The title on the contact record is a convenience copy; the one that counts is on the employment link with the company. A contact can have one current primary employer, or none.
+The contact header says **who can see this contact**: only its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
 
-Other things a contact carries: an owner, a consent record per purpose, a relationship strength, when they were last active, and, if they came from a lead, a link back to that lead.
+A contact's job title shows in two places. The title on the contact record is a copy, there to save you time. The one that counts is on the job link with the company. A contact can have one current main employer, or none.
+
+A contact also holds an owner, a consent record for each purpose, a relationship strength and when they were last active. If they started as a lead, it holds a link back to that lead.
 
 ### How do I merge duplicate contacts?
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.
 1. Search for the other contact and pick it under **Select record to keep**.
-2. Read the confirmation: "Merge {source} into {target}? This archives {source}."
+2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the contact you kept.
 The contact you merged away is archived, not deleted. Leads have no merge; deals have no merge either.
 Also called: combine, deduplicate, remove a duplicate.
 
 ### How do I call a contact?
-To call a contact from Margince, open the contact and click the phone number in its header or **Details** panel; it opens your phone or calling app. Margince does not dial or record calls itself.
-The **Call** button in the contact header opens the **History** tab, so you can log the call afterwards with **Log activity** → **Call**.
+To call a contact from Margince, open the contact and click the phone number in its header or **Details** panel. It opens your phone or calling app. Margince does not make or record calls itself.
+The **Call** button in the contact header opens the **History** tab, so you can log the call after with **Log activity** → **Call**.
 Also called: phone a contact, click to call, dial.
 
 ### Can I add a photo to a contact, or change a company's logo?
-No. Margince has no photo upload for a contact: its avatar is drawn from the name. A customer company's logo is read from its website and cannot be uploaded. Only your own company's logo is set, in **Settings → Company profile** under **Company logo**.
+No. Margince has no photo upload for a contact: its picture is made from the name. A customer company's logo is read from its website and cannot be uploaded. Only your own company's logo is set, in **Settings → Company profile** under **Company logo**.
 Also called: profile picture, avatar, company image.
 
 ## Companies
@@ -141,150 +130,146 @@ A company needs a display name and a source.
 ### How do I add a company?
 To add a company (a new customer, client or account) in Margince, open **Companies** in the sidebar and choose **New company**.
 1. Enter the **Company name** (required).
-2. Optionally fill **Legal name**, **Industry** and **Company size**.
-3. Choose **Add domain** for each web domain; a domain row you add must be filled.
+2. If you like, fill **Legal name**, **Industry** and **Company size**.
+3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**.
-If the company already exists, **View existing record** opens it instead. The website address is derived from the primary domain, so there is no website box.
+If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
 Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?
-To edit a company in Margince, open it and click the value to change in its **Details** panel; each field changes in place, with no Edit button.
+To edit a company in Margince, open it and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
 1. If the panel is hidden, choose **Show details**.
-2. Click a value, change it, and press Enter or pick from the list. Esc cancels.
-Fields: **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle**, **Relationship type**, **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the primary domain.
+2. Click a value, change it, and press Enter or pick from the list. `Esc` stops.
+
+
+The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain.
 Also called: rename a company, update an account.
 
 ### How do I change the owner of a contact or company?
 To change who owns a contact or company in Margince, open the record and pick a colleague in the **Owner** row of its **Details** panel. The change saves as soon as you pick.
-You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required.").
-To hand many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
+You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required."). To give many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
 Also called: reassign a contact, hand over an account, transfer ownership, account owner.
 
 ### How do I claim a company nobody owns?
-To claim an unowned company in Margince, open it and pick yourself in **Owner** among the facts under its name. The company is yours as soon as you pick.
-A company nobody owns can be read by everyone and edited by nobody, so its **Details** panel takes no changes until somebody claims it. Any role allowed to edit companies can claim one; an archived company cannot be claimed.
+To claim a company nobody owns in Margince, open it and pick yourself in **Owner**, in the facts under its name. The company is yours as soon as you pick.
+Everyone can read a company nobody owns, and nobody can edit it. So its **Details** panel takes no changes until someone claims it. Any role that may edit companies can claim one; nobody can claim an archived company.
 Also called: take an unowned account, assign a company to me, claim an account.
 
-Two separate fields describe a company, and mixing them up is a common mistake.
+Two fields describe a company, and many users mix them up.
 
-**Lifecycle**: where the account stands with you. One value only:
-**unknown, target, prospect, opportunity, customer, former customer,
-disqualified.** New companies start at unknown.
+**Lifecycle**: where the company stands with you. One value only: **unknown, target, prospect, opportunity, customer, former customer, disqualified.** New companies start at unknown.
 
-**Relationship types**: what the company *is* to you. Several at once:
-**customer, partner, supplier, investor, portfolio company, competitor, other.**
+**Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.**
 
-So a company can be a customer *and* a supplier. It cannot be both a prospect and
-a customer, because that is one question with one answer.
+So a company can be a customer *and* a supplier. It cannot be both a prospect and a customer, because that is one question with one answer.
 
 Size bands are: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5000+.
 
-A company may have a parent company, one level only: no chains, no cycles. The
-website address comes from the primary domain; you do not type it.
+A company may have a parent company, one level only: a parent has no parent of its own, and no company is its own parent. The website address comes from the main domain; you do not type it.
 
-One company in your installation is marked as the **anchor**: your own company,
-the one Margince knows things about on your behalf.
+One company in your Margince is marked as the **anchor**: your own company, the one Margince knows things about for you.
 
 ### How do I merge duplicate companies?
 To merge two duplicate companies in Margince, open the company you want to remove, choose **More actions**, then **Merge company**.
 1. Search for the other company and pick it under **Select record to keep**.
-2. Read the confirmation: "Merge {source} into {target}? This archives {source}."
+2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the company you kept.
-The merged-away company is archived, not deleted. An archived company cannot be merged.
+The company you merged away is archived, not deleted. You cannot merge an archived company.
 Also called: combine companies, deduplicate accounts.
 
 ### How do I stop a company coming back from email?
-To archive a company that is not a real company and stop mail creating it again, open it, choose **More actions**, then **Not a company**.
+To archive a company that is not a real company, and stop mail from creating it again, open it. Choose **More actions**, then **Not a company**.
 1. Enter the **Reason this is not a company**.
-2. Confirm. Margince archives the company and blocks its domain, so later messages from that domain do not create it again.
-An administrator can unblock the domain in Settings under Capture. The action is offered only where the company has a domain and your seat may do both halves.
+2. Confirm. Margince archives the company and blocks its domain, so later mail from that domain does not create it again.
+An admin can remove the block on the domain in Settings under Capture. You see the action only where the company has a domain and your seat may do both parts.
 Also called: junk company, spam domain, block a domain.
 
 ## Leads, deals and projects
 
-Creating, qualifying and reopening leads, creating deals and projects, and
-how each connects are on their own page:
-[Leads, deals and projects](leads-deals-and-projects.md).
+Leads, deals and projects have their own page. It says how to create, qualify and open again leads, how to create deals and projects, and how each connects: [Leads, deals and projects](leads-deals-and-projects.md).
 
 ## Archiving, restoring and deleting records
 
 ### How do I archive a contact, company, deal or project?
-To archive a record in Margince, open it, choose **More actions**, then the archive entry: **Archive** on a contact or company, **Archive deal** on a deal, **Archive project** on a project.
-Confirm the dialog. For contacts and companies it reads "Archive this record? You can bring it back from its history."
-Several contacts, companies or deals can be archived at once with **Archive** in the list's bulk bar. A lead is not archived; disqualify it instead.
+To archive a record in Margince, open it and choose **More actions**. Then choose the archive entry: **Archive** on a contact or company, **Archive deal** on a deal, **Archive project** on a project.
+
+Confirm the box. For contacts and companies it reads "Archive this record? You can bring it back from its history." You can archive many contacts, companies or deals at once with **Archive** in the list's bar for many records. A lead is not archived; disqualify it instead.
+
 An archived record leaves the live list; turn on **Show archived** on the list to see it again. It becomes read-only.
 Also called: remove, hide, deactivate a record.
 
 ### Can I restore or unarchive an archived record?
-Yes, for a contact, company or deal. Open the record with **Show archived** and go to its history. Find the entry that archived it and press **Undo**. The record comes back, with its email addresses, phone numbers, links, list memberships and tags where they can still come back. Anything that could not come back is named in the history. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
-Records Margince archived on its own, such as emails it judged to be noise, are listed in the **Since your last brief** panel on Home, which says what Margince did while you were away. A contact, company or deal there has its own **Undo**. An archived email or meeting cannot be brought back yet. A project cannot be brought back from the app; create it again, or ask an administrator. An archived record takes no edits or merges.
-Tags and pipelines do have a **Restore**; an archived team comes back with **Undo** on its archived notice. A disqualified lead can be reopened with **Reopen**.
+Yes, for a contact, company or deal. Open the record with **Show archived** and go to its history. Find the entry that archived it and press **Undo**. The record comes back.
+
+Its email addresses, phone numbers, links, list members and tags come back too, where they still can. Anything that could not come back is named in the history. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
+
+Margince archives some records on its own, such as emails it judged to be of no use. Those are listed in the **Since your last brief** panel on Home. That panel says what Margince has done while you were away. A contact, company or deal there has its own **Undo**.
+
+ You cannot bring back an archived email or meeting yet. You cannot bring back a project from the app; create it again, or ask an admin. An archived record takes no edits or merges.
+
+Tags and pipelines do have a **Restore**; an archived team comes back with **Undo** on its archived notice. You can open a disqualified lead again with **Reopen**.
 Also called: unarchive, undelete, bring back a record.
 
 ### Can I undo a record Margince created?
-Yes. The **Since your last brief** panel on Home groups what Margince created on its own, for example "Created contact" for the contacts it found in your mail. Open the line to see every record, and press **Undo** on one to archive it. The same **Undo** is on the "Created" entry in the record's history.
+Yes. The **Since your last brief** panel on Home groups what Margince created on its own. For example, "Created contact" holds the contacts it found in your mail. Open the line to see every record, and press **Undo** on one to archive it. The same **Undo** is on the "Created" entry in the record's history.
+
 Undo is refused once a colleague has changed the record, so their work is never archived with it. A lead cannot be undone this way; disqualify it instead.
 Also called: remove an imported contact, take back an automatic record.
 
 ### How do I delete a contact or company?
-You cannot delete a company or a contact in Margince: there is no delete button for a contact, company, lead, deal or project. To remove one, archive it (open the record, choose **More actions** → **Archive**), which keeps the record but takes it off the live lists.
-A contact's data is destroyed only by an erasure request or a retention rule; no erasure request or retention rule reaches a company. See [What is kept, what is destroyed](retention-exports-and-deletion.md).
-Files and knowledge documents do have their own **Delete**.
+You cannot delete a company or a contact in Margince: there is no delete button for a contact, company, lead, deal or project. To remove one, archive it (open the record, choose **More actions** → **Archive**). That keeps the record but takes it off the live lists.
+
+A contact's data is destroyed only by an erasure request or a retention rule. No erasure request or retention rule reaches a company. See [What is kept, what is destroyed](retention-exports-and-deletion.md). Files and knowledge documents do have their own **Delete**.
 Also called: delete a company, remove a company, delete a contact, remove permanently, erase.
 
 ## Notes and activities
 
-There is no separate "notes" feature in Margince. A note is an activity. The
-kinds of activity are **email, call, meeting, note, task, message.**
+Margince has no notes of their own: a note is an activity. The kinds of activity are **email, call, meeting, note, task, message.**
 
 ### Where can I see everything that happened with a customer?
-To see everything that happened with a contact or company in Margince, open the record's **History** tab: one timeline of emails, meetings, calls, notes, tasks, messages and field changes.
+To see everything that happened with a contact or company in Margince, open the record's **History** tab. It is one timeline of emails, meetings, calls, notes, tasks, messages and field changes.
 1. Under **Timeline filter**, pick **All**, **Threads** (email conversations), **Activities** or **Changes**.
-2. Narrow it with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
+2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
 A company's History also holds what reached it through its deals and the contacts who work there.
 Also called: timeline, activity log, customer history, interaction history.
 
 ### How do I log a note, call or meeting on a record?
 To log an activity in Margince, open the contact, company, lead or deal and choose **Log activity** in its header.
 1. Pick the **Type**: Note, Task, Call or Meeting.
-2. Set the **Date** (or **Due date** for a task), and **Assignee** or **Attendees** where offered.
-3. Enter a **Subject** (required) and the **Details**. For a meeting transcript, tick **This text is a transcript**; you can then paste it or **Or upload a file** (.txt only).
+2. Set the **Date** (or **Due date** for a task), and **Assignee** or **Attendees** where you see them.
+3. Enter a **Subject** (required) and the **Details**. If you enter a meeting transcript, tick **This text is a transcript**. You can then paste the text, or use **Or upload a file** (`.txt` only).
 4. Choose **Log**.
 Without permission you see "You do not have permission to log activities on this record."
 Also called: add a note, record a call, write a comment.
 
 ### How do I add a task on a record?
-To add a task in Margince, open the contact, company, lead or deal and choose **Add task** in its header. It opens the **Log activity** form started on the Task type.
-Enter a **Subject** (required), a **Due date** and an **Assignee** (or leave it **Unassigned**), then choose **Log**.
-Open tasks have **Done** and **Snooze 1 day**.
+To add a task in Margince, open the contact, company, lead or deal and choose **Add task** in its header. It opens the **Log activity** form set to the Task type.
+Enter a **Subject** (required), a **Due date** and an **Assignee** (or leave it **Unassigned**), then choose **Log**. Open tasks have **Done** and **Snooze 1 day**.
 Also called: create a to-do, follow-up, reminder.
 
-One activity can link to several records at once, such as a contact and a deal.
-One you log with no links is visible to everyone; a *captured* message with
-nothing to link to stays held, because nothing has judged who it belongs to.
+One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to.
 
-A meeting carries a status: **booked, held, no-show, canceled.**
+A meeting holds a status: **booked, held, no-show, canceled.**
 
-**Activities are never hard-deleted.** If something is filed against the wrong
-record, the fix is **Relink**, not delete.
+**Activities are never fully deleted.** If something is filed on the wrong record, the fix is **Relink**, not delete.
 
 ### How do I edit or delete a note, call or meeting I logged?
-You cannot edit or delete a logged activity in the Margince app: an activity on the timeline has **Relink** and, except for email, **Change visibility**, but no Edit or Delete. To correct one, log a new activity with the right details. An open task can still be moved with **Move to** (a new date), **Snooze 1 day** or **Done**.
-To move an activity to the right record, choose **Relink**, search under "Search contacts, companies, deals, leads or projects", tick **Replace existing link** to swap rather than add, and choose **Relink**.
+You cannot edit or delete a logged activity in the Margince app. An activity on the timeline has **Relink** and, except for email, **Change visibility**, but no Edit or Delete. To fix one, log a new activity with the right details. You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**.
+To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
+
 Also called: fix a note, remove an activity, change a task's due date, move an email to another deal.
 
 ### Can I mention a colleague or comment on a record?
-No. Margince has no @mentions and no comment thread on a record. To tell a colleague something about a record, log a **Note** with **Log activity**, or give them a task with **Add task** and pick them as **Assignee**. To ask a colleague to introduce you, use **Request introduction** on the contact.
+No. Margince has no @mentions and no comments on a record. To tell a colleague something about a record, log a **Note** with **Log activity**. Or give them a task with **Add task** and pick them as **Assignee**. To ask a colleague to introduce you, use **Request introduction** on the contact.
 Also called: tag a teammate, @mention, leave a comment, notify a colleague.
 
 ### Who can see a note, call or meeting I log?
-A note, call or meeting you log in Margince can be read by anyone who can open at least one record it is linked to; one with no links is readable by everyone. To narrow it, press **Change visibility** on it in the timeline, choose **Participants only** or name the colleagues and teams who may read it, and press **Save visibility**.
-Colleagues outside that audience see that it exists, not what it says, and an administrator's wider access does not override it. Captured mail works differently: see [Who can see an email](who-can-see-an-email.md).
+A note, call or meeting you log in Margince can be read by anyone who can open at least one record it is linked to. One with no links can be read by everyone. To see who may read it, press **Change visibility** on it in the timeline. Choose **Participants only** or name the colleagues and teams who may read it, and press **Save visibility**.
+Colleagues not in that group see that it is there, not what it says, and an admin's wider access does not change that. Captured mail works in another way: see [Who can see an email](who-can-see-an-email.md).
+
 Also called: private note, who sees my notes, hide a call, make a note private.
 
-A captured message's audience comes from the importing mailbox; a new mailbox
-holds its mail until a classifier judges the thread ordinary. Change it by
-sharing the thread; the message itself has no visibility setting.
+Who can see a captured message comes from the mailbox it was brought in from. A new mailbox holds its mail until Margince judges the thread to be ordinary. Change it by sharing the thread; the message itself has no visibility setting.
 
 ## Putting a change back
 
@@ -293,97 +278,81 @@ To undo a change in Margince, open the record's history and choose **Undo** on t
 1. Find the entry and choose **Undo**.
 <!-- prose:allow residue quotes the Undo this change? dialog title as the screen shows it -->
 2. If it changed more than one field, or a link between records, confirm in **Undo this change?**.
-An undone change shows **Redo**. Where **Undo** is refused, the button says why before you press it.
-Only a human can undo; an agent cannot.
+A change you have undone shows **Redo**. Where **Undo** is refused, the button says why before you press it. Only a human can undo; an agent cannot.
 Also called: revert, roll back, put a change back.
 
-Every Margince record keeps a history of what changed, who changed it and when.
-You can put back a single **entry** as a whole; you cannot roll the record back
-to a point in time. There is no per-field undo: if one change touched four
-fields, all four return together, and the confirmation lists them:
+Every Margince record keeps a history of what changed, who changed it and when. You can put back a single **entry** as a whole; you cannot take the record back to a point in time. There is no undo for a single field: if one change changed four fields, all four go back together, and the question lists them:
 <!-- prose:allow residue quotes the undo confirmation as the screen shows it -->
 "{count} fields revert to their values before this change:".
 
-Putting a change back is an ordinary edit. It follows the same rules as typing
-the old value yourself, and appears in the history as its own entry, which can
-itself be undone.
+Putting a change back is an ordinary edit. It follows the same rules as typing the old value yourself, and shows in the history as its own entry, which you can undo too.
 
-Not every entry can be put back, and the history says which and why before you
-press anything. The reasons you will meet:
+Not every entry can be put back, and the history says which and why before you press anything. The reasons you will see:
 
-- **The field changed again since.** Putting the entry back would discard
+- **The field changed again since.** Putting the entry back would lose
   whatever was written after it, so it is refused. The reason names the field,
   so you can look at what happened in between and decide.
-- **The record was archived.** A change cannot be put back onto an archived
+- **The record was archived.** A change cannot be put back on an archived
   record; bring a contact, company or deal back first with **Undo** on its archive entry.
 - **You cannot make that change by hand.** Some entries record changes no edit
-  can make, such as clearing a field that cannot be emptied. They show as
+  can make, such as clearing a field that must not be empty. They show as
   history only.
 
-If somebody else edits the record between your reading the screen and pressing
-the button, the change is refused and nothing is written. Read the reason, look
-at the record again, and decide from what is there now.
+If someone else edits the record between your reading the screen and pressing the button, the change is refused and nothing is written. Read the reason, look at the record again, and decide from what is there now.
 
 **An agent cannot put a change back.** Only a human can undo a change.
 
 ### Can two users edit the same record at the same time?
-Yes. Two users can edit one contact, company, deal or lead in Margince at once. Each save changes only the fields that user changed, so edits to different fields both land. If a colleague saved the same field first, your save is refused with "This record changed since it was opened. Reload and retry." Nothing from your form is saved; close it, reload the record, check the new value and edit again. A project or offer refuses the save after any change since you opened it. Nothing locks a record or shows who else has it open.
+Yes. Two users can edit one contact, company, deal or lead in Margince at once. Each save changes only the fields that user changed, so edits to different fields both go through. If a colleague saved the same field first, your save is refused with "This record changed since it was opened. Reload and retry."
+
+Nothing from your form is saved; close it, load the record again, check the new value and edit again. A project or offer refuses the save after any change since you opened it. Nothing locks a record or shows who else has it open.
 Also called: edit conflict, simultaneous editing, someone overwrote my change.
 
 ## Custom fields
 
-Custom fields in Margince are fields your company adds beyond the ones every
-installation has. The types are **text, number, date, currency, picklist,
-multiple choice, yes/no**, on contacts, companies, deals, leads, projects and
-contracts. A multiple-choice field holds several answers at
-once, and a filter finds the record by any one of them.
+Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice** and **yes/no**, on contacts, companies, deals, leads, projects and contracts. A field of many choices holds many answers at once, and a filter finds the record by any one of them.
 
 ### How do I add a custom field?
 To add a custom field in Margince, open Settings → **Fields**, pick the **Object**, and choose **New field**.
 1. Choose the **Object**: Deal, Company, Contact, Lead, Project or Contract.
-2. Choose **New field**, enter a **Label** and pick a **Type** (a picklist needs its options, a currency field its currency code).
+2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency.
 3. Confirm with **Add field**.
-The new field then appears in that record's create and edit forms. Without the right to change fields you see "You have read-only access to custom fields."
-More on managing fields is in [Settings](settings.md).
+The new field then shows in that record's create and edit forms. Without the right to change fields you see "You have read-only access to custom fields." More on fields is in [Settings](settings.md).
 Also called: custom property, extra column, new attribute.
 
-**Activities cannot carry a custom field.**
+**Activities cannot hold a custom field.**
 
 Renaming a field changes its label and keeps your reports working.
 
 ## Tags
 
-A tag is a shared word this company files records under. Anyone can apply one;
-**only admin and ops seats** add, rename or retire them.
+A tag is a shared word this company files records under. Anyone can put one on a record; **only admin and ops seats** add, rename or retire them.
 
-Every tag has its own page listing the records carrying it, grouped by type.
+Every tag has its own page that lists the records with it, grouped by type.
 
 ### How do I tag a record?
 To tag a contact, company or deal in Margince, open the record, find its **Tags** panel and choose **Add tag**.
-1. Type in **Search tags** and pick an existing tag. A tag the record already carries shows **Already added**.
+1. Type in **Search tags** and pick a tag. A tag the record already has shows **Already added**.
 2. To take one off, choose **Remove {name}** on the tag, then **Remove from this record**.
-Anyone can apply a tag, but only Admin and Ops users can create, rename or retire one, in **Settings → Tags**. If no tag matches, the picker says "No tag with that name. An administrator or operations user can add one."
+
+Anyone can put a tag on a record, but only Admin and Ops users can create, rename or retire one, in **Settings → Tags**. If no tag matches, the picker says "No tag with that name. An administrator or operations user can add one."
 Also called: label, add a label, categorise a record.
 
 Renaming a tag renames it everywhere, because every record shares the one tag.
 
-Two administrator actions are worth knowing:
+Two admin actions are worth knowing:
 
-- **Retire** takes a tag out of use without touching the records that carry it,
+- **Retire** takes a tag out of use without changing the records that have it,
   and **Restore** brings it back.
-- **Merge** folds one tag into another and **cannot be undone**. The warning
+- **Merge** puts one tag into another and **cannot be undone**. The warning
   reads: "Records carrying {name} will carry the other tag instead, and the name
-  is released for anyone to use again". Afterwards it reports what moved:
+  is released for anyone to use again". After that it reports what moved:
   "{moved} records moved to the surviving tag. {collapsed} already carried both,
   so their duplicate was dropped". An agent may not merge tags on its own; it
-  can only propose a merge for a human to approve.
+  can only suggest a merge for a human to approve.
 
 ## Money
 
-Margince stores every amount as a whole number of the currency's smallest unit,
-such as cents for euros, together with its currency. Most currencies have two
-decimal places; some, such as yen, won and dong, have none.
+Margince stores every amount as a whole number of the currency's smallest unit, such as cents for euros, together with its currency. Most currencies have two places after the point; some, such as yen, won and dong, have none.
 
-**Two currencies are never added together.** A column holding more than one
-currency shows no total at all; it says "several currencies, no single total".
-Margince does not guess an exchange rate to add euros to dollars.
+**Two currencies are never added together.** A column that holds more than one currency shows no total at all; it says "several currencies, no single total". Margince does not guess an exchange rate to add euros to dollars.
