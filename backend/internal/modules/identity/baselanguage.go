@@ -24,9 +24,9 @@ import (
 // record a German colleague then had to read. The installation names one
 // language for that shared writing, the way it names one currency for money.
 //
-// It does NOT govern everything a model writes. Correspondence keeps the
-// language of the correspondence — a German thread gets a German reply however
-// this is set — and a brief cached for one reader keeps that reader's language.
+// It does not govern everything a model writes. Correspondence keeps the
+// language of the correspondence (a German thread gets a German reply however
+// this is set), and a brief cached for one reader keeps that reader's language.
 // This is the language of the shared record.
 //
 // No freeze, unlike BaseCurrency. Changing it re-means nothing already stored:
@@ -54,7 +54,7 @@ var BaseLanguage = settings.Define[string](
 // three others are seeded together at bootstrap, so an absent row there means a
 // broken installation and refusing is right. Here an absent row means an older
 // one, and a brief that refuses to generate because nobody has named a language
-// is worse than one that comes out in English — which is what those
+// is worse than one that comes out in English, which is what those
 // installations get today anyway.
 func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.GetTx(ctx, tx, BaseLanguage)
@@ -64,8 +64,8 @@ func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // POOL rather than a transaction, opening the workspace transaction itself.
 //
 // It sits beside BaseLanguageOf rather than in either caller because both a
-// compose engine and the deal-status service need exactly this, and the six
-// lines are identical either way — two copies of one settings read is how one
+// compose engine and the deal-status service need this same read, and the six
+// lines are identical either way. Two copies of one settings read is how one
 // question comes to have two answers that drift.
 //
 // It never fails the caller. A prompt or a shared-record sentence is being
@@ -74,10 +74,10 @@ func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // whole feature for a formatting preference. On any error the answer is
 // English, which is what these prompts produced before the setting existed.
 //
-// The failure IS logged, and it has to be: this returns a string and nothing
+// The failure is logged, and it has to be: this returns a string and nothing
 // else, so a caller has no way to notice a degraded resolve and say so itself.
-// A missing row does NOT reach that line — BaseLanguageOf answers the
-// registered default for one — so a log here always means something actually
+// A missing row does not reach that line, because BaseLanguageOf answers the
+// registered default for one, so a log here always means something actually
 // went wrong.
 func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 	lang := string(textlang.English)
@@ -98,17 +98,17 @@ func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 }
 
 // BaseLanguageForRecord resolves the base language for a caller that holds a
-// TRANSACTION rather than a pool — BaseLanguageForPrompt's sibling for that
+// TRANSACTION rather than a pool. It is BaseLanguageForPrompt's sibling for that
 // case, for the same never-fail reason: refusing to file a real observation
 // about an account, or withhold a coverage finding, because a settings read
 // failed trades a fact for a formatting preference. On any error the answer
 // is English.
 //
-// The failure IS logged, and it has to be: this returns a language and
+// The failure is logged, and it has to be: this returns a language and
 // nothing else, so a caller has no way to notice a degraded resolve and say
 // so itself.
 //
-// BaseLanguageOf keeps its error return and its callers — a write inside the
+// BaseLanguageOf keeps its error return and its callers: a write inside the
 // same transaction that must not proceed on a bad read still wants one. This
 // is for the read whose only job is choosing a wording for shared-record
 // text: a summary, a finding, a note, stored once and read by everyone who

@@ -40,7 +40,7 @@ type phrase = langcopy.Phrase
 type spoken = langcopy.Spoken
 
 // nounFor answers a keyed noun in the resolved language, falling back to the
-// stored key — a kind or field this build has no word for says only that it
+// stored key: a kind or field this build has no word for says only that it
 // exists. A free function rather than a method, because Spoken's method set is
 // fixed at its shared definition.
 func nounFor(s spoken, table map[string]phrase, key string) (string, bool) {

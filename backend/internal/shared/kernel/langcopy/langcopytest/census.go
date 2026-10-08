@@ -24,7 +24,7 @@ import (
 )
 
 // verbs counts the format placeholders in a template. A translation that drops
-// one does not fail to compile — it renders "%!s(MISSING)" into a card — and a
+// one does not fail to compile; it renders "%!s(MISSING)" into a card. And a
 // translation that adds one consumes an argument nobody passed. Flags, width
 // and precision are read past so %02d counts as a %d.
 var verbs = regexp.MustCompile(`%(?:%|[-+# 0]*[0-9]*(?:\.[0-9]*)?([a-zA-Z]))`)
@@ -54,7 +54,7 @@ type reporter interface {
 // Census fails unless every Phrase a table holds is written in every shipped
 // language with the placeholders its English sentence was given.
 //
-// table is a struct, or a map keyed by whatever names its entries — a plain
+// table is a struct, or a map keyed by whatever names its entries; a plain
 // label table has no struct around it at all. A struct field may itself be a
 // map of phrases, for a table that answers a stored field or activity kind
 // rather than a fixed slot; walked entry by entry and reported
@@ -63,7 +63,7 @@ type reporter interface {
 //
 // It refuses a table it cannot read rather than certifying nothing: a struct
 // with no Phrase fields, or a table with no entries by either route, passes
-// every assertion below without making a claim — which is how a census comes
+// every assertion below without making a claim, which is how a census comes
 // to report PASS over a subject it never saw.
 //
 // This is the one census every langcopy.Phrase table calls. A copy table
@@ -109,7 +109,7 @@ func censusField(t reporter, name string, field reflect.Value) int {
 }
 
 // censusMap walks a map of phrases in a fixed order, sorted rather than the
-// map's own random iteration order — an unsorted walk reorders its failures
+// map's own random iteration order. An unsorted walk reorders its failures
 // between runs, and a reader comparing two runs cannot tell what changed.
 // prefix names the enclosing field, empty for a table that is itself a map.
 func censusMap(t reporter, prefix string, table reflect.Value) int {
@@ -159,7 +159,7 @@ func censusEntry(t reporter, name string, p langcopy.Phrase) {
 }
 
 // NoCount fails unless each named phrase is written without a placeholder, for
-// the sentences that speak about exactly one of something. "1 days" and
+// the sentences that speak about a lone item. "1 days" and
 // "1 Tagen" both read as a machine talking, and the second is not German.
 func NoCount(t reporter, singulars map[string]langcopy.Phrase) {
 	t.Helper()

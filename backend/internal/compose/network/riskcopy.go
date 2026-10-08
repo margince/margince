@@ -20,7 +20,7 @@ type phrase = langcopy.Phrase
 
 // riskSentences is the finding set. Every field is answered in all three
 // languages by riskWords below, which TestEveryShippedLanguageWritesEveryRisk
-// holds — a keyed literal may omit a field and Go fills it with "", so an
+// holds. A keyed literal may omit a field and Go fills it with "", so an
 // unanswered sentence goes missing rather than failing to build.
 type riskSentences struct {
 	SingleThreaded   phrase

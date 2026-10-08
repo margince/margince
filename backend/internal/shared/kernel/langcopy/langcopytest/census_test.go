@@ -5,7 +5,7 @@ package langcopytest
 
 // Census and NoCount are exercised elsewhere only through three well-formed
 // production tables, so every branch that reports a PROBLEM has never been
-// observed doing so — a census that can fail short has already failed, per
+// observed doing so. A census that can fail short has already failed, per
 // AGENTS.md, because it would read a smaller subject and report PASS with
 // nothing firing to say so. This file plants a malformed table for each
 // branch and checks what the helper actually reports, plus one well-formed
@@ -27,7 +27,7 @@ import (
 
 // spy stands in for *testing.T: it records what Census/NoCount report instead
 // of failing the test that calls them. Fatalf stops the walk the way the real
-// one does — runtime.Goexit(), run inside a goroutine of its own so the exit
+// one does: runtime.Goexit(), run inside a goroutine of its own so the exit
 // unwinds only that call, never the test recording it.
 type spy struct {
 	errors []string
@@ -169,8 +169,8 @@ func TestCensusReportsAFieldThatIsNeitherAPhraseNorAMapOfThem(t *testing.T) {
 }
 
 // censusField admits a map field by its Kind alone, not by its element type,
-// so a field typed as a map of an interface — not the map[string]langcopy.Phrase
-// every production table uses — reaches censusMap with an entry that is not
+// so a field typed as a map of an interface (not the map[string]langcopy.Phrase
+// every production table uses) reaches censusMap with an entry that is not
 // actually a Phrase. Planted here rather than deleted as dead code: Census's
 // own contract takes `any`, and censusField's admission is not narrower than
 // that, so this is a real path, not a hypothetical one.

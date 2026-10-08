@@ -23,7 +23,7 @@ import (
 var testNow = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 
 // testEnglish is the language every threshold test in this file was already
-// asserting on before the fold took a language — English, verbatim.
+// asserting on before the fold took a language: English, verbatim.
 var testEnglish = langcopy.For(string(textlang.English))
 
 func seat(engaged bool, role string) deals.DealStakeholder {
@@ -209,7 +209,7 @@ func TestADealWithNoSeatsAtAllRaisesNoCoverageGap(t *testing.T) {
 //
 // The fold is handed no clock at all, so what this asserts is the other half of
 // the same rule: the count MOVES with TouchedAsOf. Re-derive it from anything
-// else — a service clock, time.Now() — and every row below reports the same
+// else (a service clock, time.Now()) and every row below reports the same
 // number instead of three different ones.
 //
 // A whole day of skew in both directions, because a smaller one would pass on a

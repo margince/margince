@@ -244,8 +244,8 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 		})
 	}
 
-	// The finding is shared-record text — written once, read by everyone on the
-	// deal — so it follows the installation rather than whoever opened the page.
+	// The finding is shared-record text, written once and read by everyone on the
+	// deal, so it follows the installation rather than whoever opened the page.
 	lang := identity.BaseLanguageForRecord(ctx, tx)
 	out.Risks = foldRisks(out, langcopy.For(string(lang)))
 	return out, nil

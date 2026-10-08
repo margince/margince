@@ -7,7 +7,7 @@ package gates
 
 // One census reads every langcopy.Phrase table, and no owner walks its own.
 //
-// A private walk over one package's table is free to read LESS than the table
+// A private walk over one package's table is free to read less than the table
 // holds: a struct field that is a map of phrases counted as one phrase, or
 // skipped, certifies untranslated entries as translated. An under-reading
 // census reports the same word, PASS, over a smaller subject, and no assertion
@@ -17,18 +17,18 @@ package gates
 // census every langcopy.Phrase table calls. This is the test that fails when
 // that stops being true.
 //
-// WHAT THIS GATE CANNOT SEE, stated because the claim it holds is narrower
+// What this gate cannot see, stated because the claim it holds is narrower
 // than the sentence a reader might take from it:
 //
-//   - A copy table that does NOT use langcopy.Phrase is not governed here.
-//     Several remain — internal/modules/{deals,agents,capture,automation},
-//     platform/mailcopy, compose/promptlang — and they are a different shape,
+//   - A copy table that does not use langcopy.Phrase is not governed here.
+//     Several remain (internal/modules/{deals,agents,capture,automation},
+//     platform/mailcopy, compose/promptlang), and they are a different shape:
 //     a map[textlang.Lang]T keyed language-outward rather than a struct of
 //     phrases. Migrating them is real work, not a rename, and until it is done
-//     each keeps its own walk. A new table written in THAT shape passes here.
+//     each keeps its own walk. A new table written in that shape passes here.
 //   - The private-walk arm recognises a reflect walk over textlang.Shipped. A
-//     walk written some other way — a hand-listed switch over each shipped
-//     language — is invisible to it.
+//     walk written some other way, such as a hand-listed switch over each
+//     shipped language, is invisible to it.
 
 import (
 	"go/ast"
@@ -104,8 +104,8 @@ func TestNoPhraseTableOwnerWalksItsOwnTable(t *testing.T) {
 //
 // Both arms above pass by finding nothing, which is also what they do if
 // References stops resolving a qualifier or the walk reads the wrong tree. So
-// the predicates are shown the shape they are written for — a package's own
-// reflect walk over textlang.Shipped — rather than only today's tree.
+// the predicates are shown the shape they are written for, a package's own
+// reflect walk over textlang.Shipped, rather than only today's tree.
 func TestTheCensusGateRecognisesAPrivateShippedWalk(t *testing.T) {
 	t.Parallel()
 	privateCensus := `package contactbrief
@@ -149,7 +149,7 @@ func declaresPhraseTable(file *ast.File) bool {
 }
 
 // walksShippedLanguages reports whether a file reflects over the shipped
-// languages — the shape every private census had, and the one thing an owner
+// languages: the shape every private census had, and the one thing an owner
 // package has no reason to do once it calls the shared one.
 func walksShippedLanguages(file *ast.File) bool {
 	if !gatekit.References(file, textlangImport, "Shipped") {

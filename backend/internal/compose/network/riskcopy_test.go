@@ -30,7 +30,7 @@ func TestTheGoingColdWindowNeverCountsOneDay(t *testing.T) {
 	}
 }
 
-// The fold writes in the language it is handed — the whole point, and the thing
+// The fold writes in the language it is handed. That is its purpose, and what
 // a table alone does not prove.
 func TestTheFoldWritesInTheLanguageItIsGiven(t *testing.T) {
 	t.Parallel()
@@ -48,7 +48,7 @@ func TestTheFoldWritesInTheLanguageItIsGiven(t *testing.T) {
 	}
 }
 
-// singleThreadedCoverage is a deal with one engaged contact — enough to fire
+// singleThreadedCoverage is a deal with one engaged contact: enough to fire
 // RiskSingleThreadedTheirs and nothing else, so the fold's first risk is
 // always the one this test is reading.
 func singleThreadedCoverage() DealCoverage {
