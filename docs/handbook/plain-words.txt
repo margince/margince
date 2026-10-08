@@ -48,6 +48,7 @@ amount
 an
 analytics
 analyzed
+and
 anonymize
 another
 answer
@@ -289,6 +290,7 @@ customer's
 customise
 cut
 cutoff
+daily
 dark
 dashboard
 data
@@ -440,6 +442,7 @@ feature
 fee
 fetch
 few
+fewer
 field
 figure
 file
@@ -493,6 +496,7 @@ global
 go
 goal
 gone
+good
 governance
 grant
 graph
@@ -595,6 +599,7 @@ language
 large
 last
 late
+later
 law
 lawyer
 layout
@@ -636,11 +641,15 @@ lookup
 lose
 lost
 low
+lower
+lowest
 made
 mail
 mailbox
 main
 make
+maker
+makers
 manage
 management
 manager's
@@ -714,6 +723,8 @@ net
 network
 never
 new
+newer
+newest
 newsletter
 next
 night
@@ -746,11 +757,14 @@ offline
 often
 ok
 old
+older
+oldest
 omit
 on
 onboard
 once
 one
+only
 onto
 open
 operation
@@ -781,11 +795,14 @@ overview
 overwrote
 owed
 own
+owner
 owner's
+owners
 ownership
 owner’s
 package
 page
+paid
 palette
 panel
 paper
@@ -999,6 +1016,7 @@ row
 rule
 run
 s
+said
 sale
 salesperson
 same
@@ -1173,6 +1191,8 @@ through
 tick
 ticket
 tie
+tier
+tiers
 tile
 time
 timeline
@@ -1242,9 +1262,12 @@ upgrade
 upload
 urgent
 usage
+usd
 use
 useful
+user
 user's
+users
 user’s
 usual
 valid
@@ -1298,6 +1321,7 @@ whose
 why
 wide
 widen
+wider
 will
 win
 window
