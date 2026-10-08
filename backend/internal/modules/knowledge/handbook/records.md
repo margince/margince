@@ -333,9 +333,9 @@ Every tag has its own page that lists the records with it, grouped by type.
 ### How do I tag a record?
 To tag a contact, company or deal in Margince, open the record, find its **Tags** panel and choose **Add tag**.
 1. Type in **Search tags** and pick a tag. A tag the record already has shows **Already added**.
-2. To take one off, choose **Remove {name}** on the tag. It comes off at once. The toast "{name} removed from this record" offers **Undo**, which puts it back with the same name and date under **Added by**. A retired tag comes off with no **Undo**.
+2. To take one off, choose **Remove {name}** on the tag. It comes off at once. The toast "{name} removed from this record" offers **Undo**. **Undo** puts the tag back with the same name and date under **Added by**. A retired tag comes off with no **Undo**.
 
-To see who put a tag on a record and when, point at the tag or move focus to it.
+To see who put a tag on a record and when, point at the tag or move to it with the keyboard.
 
 Anyone can put a tag on a record, but only Admin and Ops users can create, rename or retire one, in **Settings → Tags**. If no tag matches, the picker says "No tag with that name. An administrator or operations user can add one."
 Also called: label, add a label, categorise a record.

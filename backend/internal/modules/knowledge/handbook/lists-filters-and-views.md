@@ -303,7 +303,7 @@ A Margince list's page shows why each member is there, in its own columns.
 - On a Shortlist, **Added by**, **Added on** and **Note** say who picked the record, when, and why.
 To see why a record is not on a Live List, open the record's page. Under **Lists**, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's value of today. A value you may not see shows as "Value hidden from you".
 
-To take one record off a Shortlist, go to **Lists** on the record's page and press **Take off the Shortlist** next to it. It comes off at once. The toast "Taken off {name}" offers **Undo**, which puts the record back with its **Added by**, **Added on** and **Note**. To take many off, tick them on the list's page and use the bar for many rows.
+To take one record off a Shortlist, go to **Lists** on the record's page and press **Take off the Shortlist** next to it. It comes off at once. The toast "Taken off {name}" offers **Undo**. **Undo** puts the record back with its **Added by**, **Added on** and **Note**. To take many off, tick them on the list's page and use the bar for many rows.
 Also called: why is this contact here, why is this record missing, list membership reason.
 
 ### How often does a Live List update?
