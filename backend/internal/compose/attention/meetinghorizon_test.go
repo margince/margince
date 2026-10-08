@@ -162,6 +162,28 @@ func TestAFailedCalendarReadIsNamedAndARefusedOneIsAbsent(t *testing.T) {
 	}
 }
 
+// A failed next-meeting read leaves the field unknown and names it under the
+// meetings reading, so an empty month is never claimed over a read that broke.
+func TestAFailedNextMeetingReadIsNamedUnderMeetings(t *testing.T) {
+	horizon := &stubHorizon{calendar: crmcontracts.WorklistCalendarConnected, nextErr: errors.New("statement timeout")}
+
+	page := readHorizonPage(t, horizonService(&stubMeetings{}, horizon), scopeMine)
+
+	if page.NextMeeting != nil {
+		t.Errorf("next_meeting = %+v after a failed read, want absent", page.NextMeeting)
+	}
+	entry, named := unavailableEntry(page, sourceNextMeeting)
+	if !named {
+		t.Fatalf("sources_unavailable = %+v, want %q named", page.SourcesUnavailable, sourceNextMeeting)
+	}
+	if entry.Reason != crmcontracts.WorklistSourceUnavailableReasonFailed {
+		t.Errorf("reason = %q, want failed", entry.Reason)
+	}
+	if entry.Category == nil || *entry.Category != "meetings" {
+		t.Errorf("category = %v, want meetings", entry.Category)
+	}
+}
+
 func unavailableEntry(page crmcontracts.Worklist, source string) (crmcontracts.WorklistSourceUnavailable, bool) {
 	for _, entry := range page.SourcesUnavailable {
 		if entry.Source == source {

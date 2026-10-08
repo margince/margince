@@ -25,13 +25,13 @@ import (
 )
 
 // meetingAttendeeCap bounds who is named. This is "who is in the room" for
-// prep, not the attendee list — past a handful the reader is scanning names
+// prep, not the attendee list. Past a handful the reader is scanning names
 // instead of noticing they are single-threaded.
 const meetingAttendeeCap = 8
 
-// MeetingAttendee is one name in the room. An ALIAS, because the contract types
+// MeetingAttendee is one name in the room. An alias, because the contract types
 // the participant list as an anonymous struct and the decode has to land in
-// exactly that shape.
+// that shape.
 //
 //nolint:staticcheck // ST1003: ContactId is the generated contract's spelling; renaming it here would not compile against the wire type
 type MeetingAttendee = struct {
@@ -63,8 +63,8 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	// DISTINCT because one contact holds several roles on one meeting — a
-	// captured invite makes its sender `from` and `attendee` — and is in the room once.
+	// DISTINCT because one contact holds several roles on one meeting (a
+	// captured invite makes its sender `from` and `attendee`) and is in the room once.
 	return fmt.Sprintf(`(SELECT dl.deal_id FROM activity_link dl
 		          JOIN deal d ON d.id = dl.deal_id AND d.archived_at IS NULL
 		         WHERE dl.activity_id = a.id AND (%s) LIMIT 1),

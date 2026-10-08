@@ -22,7 +22,7 @@ const (
 	// ReachNone means no connection exists, or every one was parked by its owner.
 	ReachNone Reach = "none"
 	// ReachBroken means a connection wants reauthorisation, is in error, or its sync
-	// is failing — what it would carry is missing without the user choosing so.
+	// is failing, so what it would carry is missing without the user choosing so.
 	ReachBroken Reach = "broken"
 )
 

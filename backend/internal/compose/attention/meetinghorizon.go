@@ -28,7 +28,7 @@ const (
 	sourceNextMeeting = "next_meeting"
 )
 
-// MeetingHorizon answers for the reader's OWN day only: a wider scope has no
+// MeetingHorizon answers for the reader's own day only: a wider scope has no
 // single calendar, and its next meeting would be somebody else's.
 type MeetingHorizon interface {
 	// Calendar is whether the reader's own calendar connections feed the lane.
@@ -69,6 +69,7 @@ func (s *Service) meetingHorizon(ctx context.Context, day crmcontracts.Attention
 	}); failed != nil {
 		out.failed = append(out.failed, failed)
 	}
+	// Any meeting left today, internal ones included, means the day is not empty.
 	if day.Meetings == nil || len(*day.Meetings) > 0 {
 		return out
 	}
@@ -85,7 +86,7 @@ func (s *Service) meetingHorizon(ctx context.Context, day crmcontracts.Attention
 }
 
 // horizonSide runs one side read through degradable. A refusal leaves its field
-// absent; a failure leaves it absent AND names it, so absent never claims a
+// absent; a failure leaves it absent and names it, so absent never claims a
 // connected calendar or an empty month that nobody read.
 func (s *Service) horizonSide(
 	ctx context.Context, source string, read func(context.Context) error,

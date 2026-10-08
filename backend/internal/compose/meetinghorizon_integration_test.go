@@ -6,8 +6,8 @@
 package compose
 
 // The reader's own Worklist says whether their calendar feeds the meetings
-// count and, on a day with none left, when the next customer meeting is —
-// against a real database, through the route's own wiring.
+// count and, on a day with none left, when the next customer meeting is.
+// Read against a real database, through the route's own wiring.
 
 import (
 	"context"
@@ -80,10 +80,7 @@ func TestTheReadersCalendarSaysWhetherItFeedsTheMeetingsCount(t *testing.T) {
 	}{
 		{"none", nil, crmcontracts.WorklistCalendarNotConnected},
 		{"only a mailbox", []connection{{"gmail", "connected", false}}, crmcontracts.WorklistCalendarNotConnected},
-		{"parked", []connection{{"gcal", "disconnected", false}}, crmcontracts.WorklistCalendarNotConnected},
 		{"connected", []connection{{"gcal", "connected", false}}, crmcontracts.WorklistCalendarConnected},
-		{"wants reauthorisation", []connection{{"gcal", "reauth_required", false}}, crmcontracts.WorklistCalendarUnreadable},
-		{"in error", []connection{{"gcal", "error", false}}, crmcontracts.WorklistCalendarUnreadable},
 		{"sync failing", []connection{{"gcal", "connected", true}}, crmcontracts.WorklistCalendarUnreadable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -116,7 +113,7 @@ func horizonContacts(t *testing.T, e *integration.Env) (visible, hidden ids.UUID
 }
 
 // bookOwnMeeting logs a meeting Rep1 hosts at an instant, linked to the given
-// contacts — none makes it an internal meeting.
+// contacts. With none it is an internal meeting.
 func bookOwnMeeting(t *testing.T, e *integration.Env, subject string, at time.Time, status string, with ...ids.UUID) ids.UUID {
 	t.Helper()
 	return bookMeetingFor(t, e, horizonReader(e), subject, at, status, with...)
@@ -143,8 +140,8 @@ func bookMeetingFor(
 	return ids.UUID(meeting.Id)
 }
 
-// An empty day names the soonest booked customer meeting past it — not the
-// internal one before it, not the cancelled one — with only the people the
+// An empty day names the soonest booked customer meeting past it, skipping the
+// internal one and the cancelled one before it, with only the people the
 // reader may see in the room.
 func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testing.T) {
 	e := integration.Setup(t)

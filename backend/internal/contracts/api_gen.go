@@ -46348,6 +46348,10 @@ type Worklist struct {
 	// A zero `meetings` count is a measurement only when this is `connected`. Under either
 	// other answer it says nothing about the day, and a client must not draw it as "no
 	// meetings".
+	//
+	// Absent under scope `mine` when the read could not answer. A read that failed is
+	// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
+	// reader is refused is absent and named nowhere.
 	Calendar *WorklistCalendar `json:"calendar,omitempty"`
 
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
@@ -46388,9 +46392,13 @@ type Worklist struct {
 	// NextMeeting The reader's next booked customer meeting — linked to a contact, lead or company the
 	// reader may see — within the next 30 days. Present only when the meetings lane
 	// answered and holds no meeting left today, so an empty day still says when the next
-	// conversation is. Absent when the lane did not answer, when a meeting remains today,
-	// or when nothing is booked in the window. `participants` names only contacts the
-	// reader may see.
+	// conversation is. Any meeting left today, internal meetings included, means the day
+	// is not empty, so this is absent. Absent too when the lane did not answer, when
+	// nothing is booked in the window, or when its read failed. `participants` names only
+	// contacts the reader may see.
+	//
+	// A read that failed is named in `sources_unavailable` as source `next_meeting`,
+	// category `meetings`; a read the reader is refused is absent and named nowhere.
 	NextMeeting *Contact360NextMeeting `json:"next_meeting,omitempty"`
 
 	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
@@ -46506,6 +46514,10 @@ type Worklist struct {
 // A zero `meetings` count is a measurement only when this is `connected`. Under either
 // other answer it says nothing about the day, and a client must not draw it as "no
 // meetings".
+//
+// Absent under scope `mine` when the read could not answer. A read that failed is
+// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
+// reader is refused is absent and named nowhere.
 type WorklistCalendar string
 
 // WorklistFilter The narrowing this read applied. The same vocabulary the query parameter takes.

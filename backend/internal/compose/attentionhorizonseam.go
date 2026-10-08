@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
@@ -36,14 +37,16 @@ func (h attentionMeetingHorizon) Calendar(ctx context.Context) (crmcontracts.Wor
 	case capture.ReachBroken:
 		return crmcontracts.WorklistCalendarUnreadable, nil
 	case capture.ReachNone:
+		return crmcontracts.WorklistCalendarNotConnected, nil
+	default:
+		return "", fmt.Errorf("compose: calendar reach %q has no Worklist answer", reach)
 	}
-	return crmcontracts.WorklistCalendarNotConnected, nil
 }
 
 // NextCustomerMeeting is the meetings lane's own read moved past today: the
 // reader's meetings by the lane's "mine" dials, readable, linked to a customer
-// record they may see, and booked — AwaitingOutcome is "no result recorded yet",
-// which for a meeting still ahead is exactly booked or unset. Soonest first, one row.
+// record they may see, and booked. AwaitingOutcome means no result recorded yet,
+// which for a meeting still ahead is booked or unset. Soonest first, one row.
 func (h attentionMeetingHorizon) NextCustomerMeeting(
 	ctx context.Context, after, before time.Time,
 ) (crmcontracts.Contact360NextMeeting, bool, error) {
@@ -62,6 +65,10 @@ func (h attentionMeetingHorizon) NextCustomerMeeting(
 		return crmcontracts.Contact360NextMeeting{}, false, err
 	}
 	row := rows[0]
+	if !meetingReadable(row) {
+		return crmcontracts.Contact360NextMeeting{}, false, nil
+	}
+	// Not found means the meeting was archived between the two reads, which leaves no next meeting to name.
 	room, found, err := h.store.MeetingRoom(ctx, ids.UUID(row.Id))
 	if err != nil || !found {
 		return crmcontracts.Contact360NextMeeting{}, false, err
