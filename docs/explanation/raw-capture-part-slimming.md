@@ -146,9 +146,7 @@ One more cost is not live today, but may be later. The bytes are never put into 
 DKIM signature over a slimmed message **still checks out once the part is restored**, if the object
 is there.
 
-Nothing in the product checks DKIM today. The `dkim` references in `compose/techenrich.go` are DNS
-checks for DKIM `selector` records, run to learn which tools a company uses. They are not signature
-checks. So this costs nothing now, and it is written down for the next one who builds DKIM checks.
+## What is still owed
 
 ## What is still to do
 

@@ -249,17 +249,17 @@ time reports it.
 | `cg:cohort-promote` | link a contact's earlier captured mail when the contact shows up or gets an address | **live** |
 | `cg:commissions` | add a partner's commission when a deal reaches `won`, and take it back if the deal opens again | **live** (worker) |
 | `cg:stage-evidence` | write the evidence a proposed stage move rests on, from captured mail, contracts and Deal Rooms | **live** |
-| `cg:stage-progression-outcome` | count how users answered each proposed stage move, including time-outs | **live** |
-| `cg:deal-room-timeline` | write what happened in a Deal Room into the deal's history | **live** (worker) |
-| `cg:ai-activity` | write every action that AI does into `ai_task_run`, the table the AI rail will read once its read moves there | **live** (worker) |
-| `cg:ai-budget-resume` | start again AI work that a budget limit put off, once the budget allows | **live** |
-| `cg:contact-auto-enrich` | fill a contact from what the site of their company already shows | **live** (worker) |
-| `cg:contact-data` | fill a contact from a data provider, which costs money | **live** (worker) |
-| `cg:capture-enrich` | queue the signature pass when mail comes in or a contact shows up | **live** |
-| `cg:vcard-ingest` | import a vCard that comes with captured mail | **live** |
-| `cg:company-auto-enrich` | queue a company's fill pass as soon as it shows up, not on the next daily pass | **live** (worker) |
-| `cg:intro-advance` | end a request to meet a contact once the contact answers it | **live** |
-| `cg:notice-case-open` | open, and later end, the case for what the installation owes a contact it learned of without asking them | **live** |
+| `cg:stage-progression-outcome` | count how each proposed stage move was received, including expiry | **live** |
+| `cg:deal-room-timeline` | write what happened in a Deal Room onto the deal's timeline | **live** (worker) |
+| `cg:ai-activity` | project every AI-backed occurrence into `ai_task_run`, the table the rail will read once the read moves onto it | **live** (worker) |
+| `cg:ai-budget-resume` | resume AI work a budget limit deferred once the allowance permits | **live** |
+| `cg:contact-auto-enrich` | fill a contact from what their employer's site already published | **live** (worker) |
+| `cg:contact-data` | fill a contact from a licensed provider, spending credits | **live** (worker) |
+| `cg:capture-enrich` | queue the signature-enrich pass when mail lands or a contact appears | **live** |
+| `cg:vcard-ingest` | import a vCard attached to captured mail | **live** |
+| `cg:company-auto-enrich` | queue a company's auto-enrich pass the moment it appears, instead of on the next daily sweep | **live** (worker) |
+| `cg:intro-advance` | close an introduction the contact answered | **live** |
+| `cg:notice-case-open` | open, and settle, what the installation owes a contact it obtained without asking them | **live** |
 | `cg:approval-notify` | on `approval.requested`, put the card in the queue of every seat that could decide it | **live** (worker) |
 | `cg:approval-notice-retract` | on a decided or timed-out card, take back the lines it put in other seats' queues | **live** |
 | `cg:overnight-agent` | on `approval.decided`, start again the waiting Surface-B run with the human's answer | **live** (worker; only when a model is set up) |
@@ -270,11 +270,14 @@ time reports it.
 | `cg:read-model` | (reserved) read models | declared, no subscriber |
 | `cg:audit-stream` | (reserved) the audit part of agent actions | declared, no subscriber |
 
-**The workflow seam** (`ports/workflow`) is how `cg:workflows` acts without a builder screen.
-A `Handler` declares a `Spec` (name + trigger + tier), a `Match` check with no side effects, and a
-`Plan`. The plan works out a **typed `Effect`** *without doing it*, so a dry run can show the
-changes. Its `Apply` then does the effect: 🟢 effects run on their own, and 🟡 effects need an
-approval token. `Apply` runs once per key, on the idempotency key of the handler.
+**The workflow seam** (`ports/workflow`) is how `cg:workflows` reacts without a visual builder.
+A `Handler` declares a `Spec` (name + trigger + tier), a pure `Match` predicate, and a `Plan` that
+computes a **typed `Effect`** *without applying it*, so dry-run/diff preview work. Its `Apply`
+executes the effect: 🟢 effects auto-execute, 🟡 effects need an approval token, idempotent on the
+handler's idempotency key. Effects are a **closed** action set (`create_record`, `update_record`,
+`assign_owner`, `advance_deal`, `send_email`, …), which guards against a general-purpose builder.
+`compose.NewWorkflowEngine` registers the shipped starter workflows plus the system ones (lead
+routing/scoring).
 
 Effects are a **closed** set of actions
 (`create_record`, `update_record`, `assign_owner`, `advance_deal`, `send_email`, …), which keeps the

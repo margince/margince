@@ -529,14 +529,14 @@ but no buttons that change data.
 | Delivery state machine + fan-out queries | `internal/modules/webhooks/deliverystore.go` |
 | Visibility map + which subjects are deferred | `internal/modules/webhooks/deliveryvisibility.go`, `approvalvisibility.go` |
 | The delivery engine (fan-out, retry sweep, replay, one attempt) | `internal/modules/webhooks/delivery.go` |
-| Internal → public envelope mapping (the dropped fields in §3.3) | `internal/modules/webhooks/wireenvelope.go` |
-| Secret sealing (`AES-256-GCM`) | `internal/modules/webhooks/cipher.go` |
-| Making secrets + HMAC signing + the wire headers | `internal/modules/webhooks/signing.go` |
-| The delivery client with the SSRF guard | `internal/modules/webhooks/client.go` |
-| HTTP transport (replaces the generated handlers) + error mapping | `internal/modules/webhooks/handlers.go`, `mapping.go` |
-| The tables + their index | `backend/migrations/core/0001_baseline.up.sql` (`webhook_subscription`, `webhook_delivery`) |
-| Compose setup (key-gate settings, the two deliverers) | `internal/compose/webhooks.go` |
-| Process-role setup (consumer + sweep) | `backend/cmd/worker/main.go`, `backend/cmd/api/main.go` |
+| Internal → public envelope mapping (the field-dropping in §3c) | `internal/modules/webhooks/wireenvelope.go` |
+| Secret sealing (AES-256-GCM) | `internal/modules/webhooks/cipher.go` |
+| Secret minting + HMAC signing + the wire headers | `internal/modules/webhooks/signing.go` |
+| The SSRF-guarded delivery client | `internal/modules/webhooks/client.go` |
+| HTTP transport (shadows the generated stubs) + error mapping | `internal/modules/webhooks/handlers.go`, `mapping.go` |
+| The tables + indexes | `backend/migrations/core/0001_baseline.up.sql` (`webhook_subscription`, `webhook_delivery`) |
+| Compose wiring (key-gate options, the two deliverers) | `internal/compose/webhooks.go` |
+| Process-role wiring (consumer + sweep) | `backend/cmd/worker/main.go`, `backend/cmd/api/main.go` |
 | The `cg:webhooks` consumer group | `internal/shared/kernel/events/catalog.go` |
 | The REST contract | `backend/api/crm.yaml` (`/webhook-subscriptions`) |
 | The public payload contract (§3) | `backend/api/public-events.yaml` |

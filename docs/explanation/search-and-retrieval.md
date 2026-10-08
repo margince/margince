@@ -50,37 +50,38 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   entries. The query builder works out the rest. `SearchedTables()` is what the GIN check on the
   table shape asks about, so a branch added without an index fails and is not missed.
 - **Three of them carry no owner**: `product`, `offer_template` and `tag`. `product` and
-  `offer_template` are the price list and the offer templates: one catalog the whole workspace
-  shares. So they declare `workspaceWide`, and the object grant is the whole of the gate. `tag` is
-  `workspaceWide` for the same reason, and `textOnly` too. A word has no record shape to plan
-  a query over, nothing next to it to walk to, and no text to embed. That is why it alone is not a
-  context anchor.
-- **`active` does not narrow what search finds.** A product the company no longer offers still stands on
-  older offers, and a user who looks one up may be holding one of them. `archived_at`, which every
-  branch carries, is the one "is it still live" question that counts when search looks for a record.
-- **The lexical arm** ranks with `ts_rank_cd` over the generated `search_tsv` column of each table.
-  It pages by a keyset cursor on `(score DESC, rtype, id)`, so the edge of a page holds still while
-  others write at the same time. Name fields parse `simple`, with accents removed (`Muller` finds
-  `Müller`). They also match the parse with apostrophes removed (`oreilly` finds `O'Reilly`). The
-  activity branch also matches German and English stems, so `Vertrag` reaches a row that holds
-  `Verträge`.
-- **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`. It is ranked by the cosine
-  operator (`<=>`), and always kept to the current embed identity (next section). There is no HNSW
-  index. The query per branch, kept to one identity, reads the table in order. An index over a
-  column that holds vectors of more than one length could not be used in any case.
-- **The merge is RRF**, `k = 60` (`rrfK`). Each lane adds `1/(k + rank)`, so an entity both lanes
-  agree on ranks above the top entry of either lane alone. Both lanes fetch `3 × limit` rows, because
-  an entity ranked right past `limit` in each lane can still merge into the top set. The `Score` of
-  each returned hit is the **merged** score, not the lane score it comes with.
-- **The vector arm drops back to lexical.** Take a nil embedder, or an embedder with a binding whose
-  `EmbedIdentity()` is `""`. Both look the same from the query side: no live embed lane to rank
-  against. The merged path then returns the lexical lane alone, and does not call `Embed()` with no
-  binding.
-
-  A query vector of all zeros is refused for a different reason. The cosine of a zero vector is
-  `0/0 = NaN`, and an `ORDER BY sim DESC` with no guard puts NaN *first*. It would then rank above
-  every real match, and no error would show it. The same check sits on the write side: a zero
-  vector is never stored.
+  `offer_template` are the price list and the offer layouts, one catalog the whole workspace sells
+  from, so they declare `workspaceWide` and the object grant is the whole of the gate. `tag` is
+  `workspaceWide` for the same reason and `textOnly` besides. A word has no record shape to plan a
+  query over, no neighbours to walk and no prose to embed, which is why it alone is not a context
+  anchor.
+- **`active` does not narrow discovery.** A discontinued product still stands on last quarter's
+  offers, and a rep looking one up is usually holding one of them. `archived_at`, which every branch
+  carries, is the liveness question that does bear on being found.
+- **The lexical arm** ranks with `ts_rank_cd` over each table's generated `search_tsv` column, and
+  pages by a keyset cursor on `(score DESC, rtype, id)` so the page boundary is stable under
+  concurrent writes. Name fields parse `simple` and unaccented (`Muller` finds `Müller`), OR-ed with
+  the apostrophe-collapsed parse (`oreilly` finds `O'Reilly`). The activity branch also ORs the
+  German and English stemmed parses, so `Vertrag` reaches a row that stemmed `Verträge`.
+- **A whole word outranks a prefix.** The word still being typed matches as a prefix, so `philip`
+  reaches both Philip and Philipp, and `ts_rank_cd` scores them alike. `scoreExpression` therefore
+  normalises the rank into `[0, 1)`. It adds 1 when the record carries that word whole, unstemmed,
+  in any field it indexes. A whole-word hit then ranks above every hit the prefix alone supports,
+  so a per-type cap of three cannot drop Philip on an id tie.
+- **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`, ranked by cosine distance
+  (`<=>`) and always filtered to the current embed identity (next section). There is no HNSW index:
+  the identity-filtered per-branch query sequential-scans, and an index over a mixed-width column
+  would not be usable anyway.
+- **Fusion is RRF**, `k = 60` (`rrfK`): each lane contributes `1/(k + rank)`, so an entity both
+  lanes agree on outranks either lane's solo favourite. Both lanes are over-fetched to `3 × limit`,
+  because an entity ranked just past `limit` in each lane can still fuse into the top set. Each
+  returned hit's `Score` is the **fused** score rather than the lane score it arrived with.
+- **The vector arm falls back to lexical.** A nil embedder and a bound embedder whose
+  `EmbedIdentity()` is `""` are the same shape from the query side: no live embed lane to rank
+  against. The fused path then returns the lexical lane alone rather than calling into an unbound
+  `Embed()`. A zero query vector is refused for a different reason. Cosine against zero is
+  `0/0 = NaN`, and a naive `ORDER BY sim DESC` sorts NaN *first*, silently outranking every real
+  match. The same guard sits on the write side: a zero vector never reaches storage.
 
 **Two entry points run different queries.** `GET /v1/search` runs the **lexical arm alone**
 (`Store.Search`). It is ranked and paged by cursor, and every result is marked
@@ -334,25 +335,10 @@ is a link, not a thing links point to. Only `contact`, `company`, `deal` and `pr
 (`anchorLinkColumn`). `lead`, `product` and `offer_template` name no `activity_link` column this walk
 follows, so their context is their profile alone.
 
-Ranking follows the retrieval ranking `0.60·similarity + 0.30·recency + 0.10·source_trust`.
-When two scores are the same, the smaller ID comes first. The recency part drops by half every 30 days.
-Source trust is keyed on `captured_by`, the signed-in principal a write stores. A human's own
-statement scores 1.0 (`T0`), and an agent write on a human's authority scores 0.7 (`T1`). Captured
-or connector content scores 0.4 (`T2`).
-
-`T2` is also the floor for a `captured_by` that is empty or that Margince does not know. Too much
-trust is the error that does harm.
-
-Margince checks for an imported row first, and it takes `T2`
-even when it carries a human `captured_by`. An import runs as the user who starts it. So every row it
-writes names that admin, and would wrongly read as their own words. Graph items carry no query
-match, because there is no query. So their rank is recency × trust, with the same numbers.
-
-A **contact** anchor also carries a `who_knows` section. It lists which users meet or write to this
-contact, the most in touch first. Each comes with its band and interaction count. So a model that gets
-the list cannot take the first name without looking. That section reads the `graph_interaction_edge`
-projection, which has its own rules for how it stays current; see
-[relationship-graph.md](relationship-graph.md).
+A **contact** anchor also carries a `who_knows` section: which colleagues actually interact with this
+contact, warmest first, each with its band and interaction count so a model handed the list cannot
+just pick the first name. That section reads the `graph_interaction_edge` projection, which has its
+own maintenance rules; see [relationship-graph.md](relationship-graph.md).
 
 ## Reference
 
@@ -409,9 +395,8 @@ projection, which has its own rules for how it stays current; see
 
 ## Where to go next
 
-- [authorization.md](authorization.md): the gate every branch calls.
-- [ai-runtime.md](ai-runtime.md): where the model for the embed lane comes from.
--
-[write-backbone.md](write-backbone.md): the outbox the indexer consumes.
-- [relationship-graph.md](relationship-graph.md).
-- [../reference/configuration.md](../reference/configuration.md).
+[authorization.md](authorization.md) (the gate every branch calls) ·
+[ai-runtime.md](ai-runtime.md) (where the embed lane's model comes from) ·
+[write-backbone.md](write-backbone.md) (the outbox the indexer consumes) ·
+[relationship-graph.md](relationship-graph.md) ·
+[../reference/configuration.md](../reference/configuration.md).

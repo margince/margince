@@ -43,7 +43,8 @@ any
 anything
 app
 append
-apply
+applied
+applies
 approval
 approve
 archive
@@ -94,7 +95,7 @@ beta
 between
 binary
 bind
-binding
+bindings
 bit
 blob
 block
@@ -261,6 +262,7 @@ destructive
 detail
 detector
 developer
+development
 dial
 dialog
 did
@@ -355,7 +357,7 @@ file
 fill
 filter
 find
-finding
+findings
 first
 fit
 fitness
@@ -391,6 +393,7 @@ general
 generate
 generation
 get
+git
 give
 go
 govern
@@ -429,8 +432,8 @@ hint
 histogram
 history
 hits
-hold
 holder
+holds
 hole
 home
 hop
@@ -441,6 +444,7 @@ human
 idempotent
 identity
 if
+ignored
 image
 import
 imprint
@@ -489,7 +493,8 @@ know
 known
 label
 ladder
-land
+landed
+lands
 lane
 language
 laptop
@@ -552,7 +557,7 @@ mean
 measure
 media
 meet
-meeting
+meetings
 member
 memory
 merge
@@ -583,6 +588,7 @@ mount
 move
 much
 multipart
+multiplies
 must
 mutation
 name
@@ -685,6 +691,7 @@ policy
 poll
 pool
 port
+positive
 posture
 preference
 prefix
@@ -775,7 +782,7 @@ repair
 replace
 replay
 replica
-reply
+replies
 report
 repository
 request
@@ -855,7 +862,7 @@ serve
 service
 session
 set
-setting
+settings
 setup
 shape
 share
@@ -877,6 +884,7 @@ size
 skip
 slow
 small
+smb
 smoke
 snapshot
 snooze
@@ -952,7 +960,7 @@ then
 there
 these
 they
-thing
+things
 think
 third
 this

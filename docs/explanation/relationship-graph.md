@@ -348,26 +348,26 @@ soon as either changed.
 
 ## Privacy: dropped in the transaction, not by a consumer
 
-The graph tables exist to hold a party who is *not a record*. That is what the address arm of a
-participant row and a LinkedIn ghost both are. A contact-keyed sweep alone leaves the subject named,
-open to reach and open to a new match. So every clause in `privacy/erasure_graph.go` reaches the
-subject by **address or handle** as well as by contact id. It does so inside the same Article 17
-transaction as the rest of the erasure:
+The graph structures exist to hold a party who *never became a record*: that is what the address arm
+of a participant row and a LinkedIn ghost both are. A contact-keyed sweep alone leaves the subject
+named, reachable and re-matchable. So every clause in `privacy/erasure_graph.go` reaches the subject
+by **identifier** as well as by contact id, inside the same Art. 17 transaction as the rest of the
+cascade:
 
-- **Participants**: delete rows whose only identity is the subject. A participant row must name
-  someone, so it cannot be left empty. Set the subject's arms to NULL on rows that also name one of
-  our users. The team member is in that conversation, and that is not the subject's data to erase.
-- **Ghosts**: delete on evidence only good enough to *point to* a match, as well as on a confirmed
-  match. Matching asks for more proof, because a wrong link puts someone else on a customer record.
-  Deleting goes the other way. To delete one ghost too many costs a new import of a file the team
-  member still has. To delete not enough ghosts leaves a named human's data behind after we said it is deleted.
-- **Edges**: `DELETE FROM graph_interaction_edge WHERE contact_id = $1`, **here**, not in the
+- **Participants**: delete rows whose only identity is the subject (a participant row must name
+  somebody, so it cannot be blanked). Null the subject's arms on rows that also name one of our
+  users, because the colleague was in that conversation and that is not the subject's data to erase.
+- **Ghosts**: delete on *suggestion-grade* evidence as well as a confirmed match. Matching errs toward
+  caution because a wrong link attaches a stranger to a customer record. Deletion errs the other way:
+  deleting one ghost too many costs a re-import of a file the colleague still has, while keeping one
+  too few leaves a named individual's data behind after we certified it destroyed.
+- **Edges**: `DELETE FROM graph_interaction_edge WHERE contact_id = $1`, **here** rather than in the
   `cg:graph-edge` consumer.
 
-Erasure deletes edges in its own transaction. An Article 17 duty carried out by an event fails, and
-nobody sees it, when the bus is behind. The table-owner gate records this as the agreement
-for `privacy` writing a table `search` owns. The projection holds who wrote to the subject, how much and
-how recently.
+Erasure deletes edges in its own transaction, because an Art. 17 obligation discharged by an event
+fails silently when the bus is behind. The ownership gate records this as the ratification for
+`privacy` writing `search`'s table. The projection holds who corresponded with the subject, how often
+and how recently.
 
 Two other rules follow the same shape:
 
