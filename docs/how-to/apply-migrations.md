@@ -50,7 +50,7 @@ value then stops. It does not run `down` or `drop-db` against any DSN the enviro
 
 ## Write a migration
 
-Follow this checklist. Tree tests check several of these rules, so a missed one fails `make check` or
+Follow this checklist. Fitness tests check several of these rules, so a missed one fails `make check` or
 `make test-integration`.
 
 1. **Create the pair.** `make migrate-create NAME=<name>` writes two files in `backend/migrations/core/`.

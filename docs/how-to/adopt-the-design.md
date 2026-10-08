@@ -72,8 +72,8 @@ The shell comes last in this group: it is the part users see most, and the safes
    400/500).
    A number lines up through `font-variant-numeric: tabular-nums` (`.t-num`), not a mono font.
 
-   Mono made money look like machine output, and was too much in a full row. `tabular-nums` numbers line up a
-   column, which is why mono was picked. Geist Mono reaches the page through one `base.css` rule on `pre`,
+   Mono made money look like machine output, and was too much in a full row. `tabular-nums` gives the column
+   line-up that mono was first picked for. Geist Mono reaches the page through one `base.css` rule on `pre`,
    `code` and `samp`, plus `.code-block`. A `<kbd>` is body type. The display font of the mock was tried in
    Step 1, and Outfit stayed by decision. A family change is four places in one pull request.
 

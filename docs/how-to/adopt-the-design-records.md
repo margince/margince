@@ -122,7 +122,7 @@ Files: `deals.tsx` (over the limit: the page moves to `screens/deal/`), `deal360
 - **Readings.** `DealStrip`, plus the stage with its days here. The strip holds money with the newest offer,
   close with provisional or waiting, contacts with the withheld mark, and momentum.
 - **The 360.** `DealStatusCardPanel` (Deal360) is the word, the sentence and each citation. The stepper
-  (`fieldset.stepper`, a group, not a menu) sits inside the pane above the spine, and the ledger is folded.
+  (`fieldset.stepper`, a group, not a `<nav>`) sits inside the pane above the spine, and the ledger is folded.
   `deal360.unreadable` shows when the story is not in the promised shape.
 - **What needs you.** The next move of Deal360 as the lead row, `DealApprovals` as staged rows (dashed), and the
   reply still to send, from `useWaitingReply`.

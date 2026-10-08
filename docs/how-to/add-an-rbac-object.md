@@ -33,8 +33,11 @@ an object that does not exist stops the package at start with a panic. A typo is
 role that covers nothing.
 
 So a role's map of changes lists the places where that role leaves its own base grant. A reviewer reads
-"where does `rep` not have the record grant", not "what does `rep` hold on every object". `managerObjects` is one
-value shared by `manager` and `management`, so the two cannot drift. Only their row scope is different.
+"where does `rep` not have the record grant", not "what does `rep` hold on every object".
+
+`manager` uses `managerObjects`. `management` uses `managementObjects`, a copy of it plus read grants on
+some admin objects, such as AI spend and seat use. It is a copy, not one shared value, so those reads reach
+`management` and never `manager`. Their row scope is also different.
 
 Choose the grant from a case that exists; do not make up a new one. The comment block above `defaults`
 records the reason for each kind of grant: record grants, pipeline settings grants, and settings owned by `admin` or
@@ -142,7 +145,6 @@ the compile:
 | `useCan(object, action)` | One request. Object RBAC only, no seat limit. |
 | `useCanWrite(object, action)` | A control that sends a request **that changes data** (the normal case): grant ∧ seat. |
 | `useCanUpsert(object)` | A control whose endpoint adds a record *or* puts a new one in its place, so the client cannot know the verb it needs. |
-| `useHoldsWriteGrant(object)` | A place to write *in* (a menu entry, a section heading). It shows when any write verb is granted. |
 | `useCanMutate()` | The seat limit from the license alone. |
 
 The answers come from the server (`GET /me` carries the merged grants it worked out). Only the word list

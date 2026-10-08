@@ -62,7 +62,7 @@ number of tasks and sites today, with no model spend.
 | Another prompt for the same work: a second pass, a grading call, a fan-out lane | a **site**: one name in the task's `sites[]`, then steps 3–9 |
 | Work that needs its own ladder, budget rule or cost line | a **task**: every step |
 
-Do not use the name of a task that exists for different work. Routes, budget limits, logs and the
+Do not use the name of a task that exists for different work. Routes, budget limits, call traces and the
 certification record are all tracked per task name. Two kinds of work that share one name have their spend
 merged in reports. Then a certification of that name proves that neither of them works.
 
@@ -113,7 +113,7 @@ one certification run can cover:
    ```
 
    - `status`: `shipped` means every name in `sites[]` must exist, be registered, own a certification case
-     and own a corpus case. `planned` allows none of the four. Declare `planned` while the site is not written yet.
+     and own a corpus scenario. `planned` allows none of the four. Declare `planned` while the site is not written yet.
      Change it to `shipped` in the commit that adds the site.
    - `company_context`: `none`, or scopes and `token_budget` (and `conditional` for "only when the caller
      asks"). You must set it: a missing rule is a build error, never a default at run time.
@@ -164,7 +164,7 @@ one certification run can cover:
    `oneShot`, `multiTurn` and `agentLoop` are the helpers; use the one that matches the kind the contract
    declares. Write the line by hand; the census is not built from the contract.
 
-6. **Write the certification case and its corpus case**:
+6. **Write the certification case and its corpus scenario**:
    `internal/compose/certcase_<site>.go`, plus one fixture or more under
    `internal/compose/aicert/corpus/<task>/`. This is most of the work:
    [write-a-certification-case.md](write-a-certification-case.md).
@@ -179,11 +179,11 @@ one certification run can cover:
    | a site registered on a `planned` task | `task X is planned but site "y" is registered` |
    | a registered site with no case | `TestTaskCensusBindsACaseToEverySite` |
    | a case that claims more than its kind allows | `…claims more than its kind's "…" — a case may only narrow` |
-   | a shipped site with no corpus case | `shipped sites with no corpus scenario: […] — each is a prompt that ships uncertified` |
-   | a `planned` task that carries a corpus case | `planned tasks carry corpus scenarios: […] — a task nobody built cannot be certified` |
+   | a shipped site with no corpus scenario | `shipped sites with no corpus scenario: […] — each is a prompt that ships uncertified` |
+   | a `planned` task that carries a corpus scenario | `planned tasks carry corpus scenarios: […] — a task nobody built cannot be certified` |
    | a `planned` task that carries a certification record | `planned tasks carry certification records: […] — the record claims a band for a prompt that does not ship` |
    | a fixture that is not the shape its site takes | `TestEveryCorpusScenarioPreparesAgainstItsSite` |
-   | a closed answer enum with a kind that no accepted corpus case names | `TestEveryClosedAnswerKindCarriesAScenario`. Each kind of the enum needs its own accepted case; one per site is not enough |
+   | a closed answer enum with a kind that no accepted corpus scenario names | `TestEveryClosedAnswerKindCarriesAScenario`. Each kind of the enum needs its own accepted scenario; one per site is not enough |
    | a task with no lane, or a lane no role wires | `TestEveryCensusedSiteRidesALaneAProcessRoleWires` |
    | a new `.go` file with no SPDX header | `TestEveryHandWrittenGoFileCarriesTheLicenseHeader` |
 
@@ -205,14 +205,14 @@ one certification run can cover:
    That last line writes [reference/ai-certification.md](../reference/ai-certification.md) again, from the
    record the run wrote. It is free, and `make check` fails until the committed page matches.
 
-   `TASK=` takes the name you declared in step 1. A name with no corpus cases behind it (a typo, or a task
+   `TASK=` takes the name you declared in step 1. A name with no corpus scenarios behind it (a typo, or a task
    with no corpus) stops the run with `task "…" has no scenarios under …`. That happens before any provider
    request, so a wrong name costs you nothing.
 
    Commit the record under `internal/compose/aicert/records/<task>/`.
 
 9. **Ship it** in one pull request.
-   Put in the contract, generated files, site, census line, case, corpus case and record.
+   Put in the contract, generated files, site, census line, case, corpus scenario and record.
    The branch and gate rules are in [CONTRIBUTING.md](../../CONTRIBUTING.md).
    You may skip step 8.
    The report then shows `absent` for your site, and the lane that costs money never blocks a merge.
@@ -285,11 +285,11 @@ Write the question to the guide for decision models. Do not copy the prompt:
 - **Renaming** a task or site starts in the specification, like any other contract change. It then lands
   here in each place the old name was used. That is the copied declaration, the census line, and the case's
   `Site()`. It is also the corpus `site:` field, the record folder, and any entry keyed by the old name.
-- **Removing a site** means you also delete its corpus cases and its record. A record left behind claims a
+- **Removing a site** means you also delete its corpus scenarios and its record. A record left behind claims a
   band for a prompt that no longer ships.
 
 ## Check that `ai-probe` sees the new site
 
 `make ai-probe ARGS=list` reads the census, so a newly registered site shows there with no change to
 `ai-probe`. If it does not show, the site was not registered. `make ai-probe ARGS='scaffold <task>/<variant>'` then
-confirms the corpus case turns into something you can run. See [debug-an-ai-task.md](debug-an-ai-task.md).
+confirms the corpus scenario turns into something you can run. See [debug-an-ai-task.md](debug-an-ai-task.md).
