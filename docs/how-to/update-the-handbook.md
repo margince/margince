@@ -14,8 +14,8 @@ last word, and each item names where the rule is.
 
 1. **The ask breaks a page into passages** of at most 800 characters. The break comes at a
    blank line first, then at `. `, then at a line break. Passages share 120 characters
-   (`backend/internal/modules/knowledge/chunk.go`). A passage does **not** hold the heading
-   above it. So a passage that starts part of the way down a section has to
+   (`backend/internal/modules/knowledge/chunk.go`). The ask does **not** carry a heading
+   into the passages below it. So a passage that starts part of the way down a section has to
    explain itself.
 2. **The question is embedded**, and the 8 closest passages are ranked. The ask drops a passage
    under the similarity floor of the corpus
@@ -108,7 +108,7 @@ last word, and each item names where the rule is.
    does not run a gate again when only its page changed.
 
    Then run
-   `go test ./internal/modules/knowledge/handbook/`, which fails when the
+   `go test -count=1 ./internal/modules/knowledge/handbook/`, which fails when the
    embedded copy and `docs/handbook/` are not the same. Commit `docs/handbook/` and
    `backend/internal/modules/knowledge/handbook/` together.
 

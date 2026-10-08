@@ -186,7 +186,7 @@ The gap between the two columns is the finding: **connections you know at this a
 contact match**. A suggested connection, or one with no match, may still be a contact on file; only a
 confirmed match counts. Rows are ranked by connection count, then name, then id, so two reads of the same network
 return the same order. A note under the table states what the view cannot show. It says
-how many accounts are past the page limit, and how many connections matched no account at all.
+how many accounts are past the page limit, and how many connections sit at no account you can read.
 
 <details><summary>Same thing via <code>curl</code></summary>
 
@@ -255,7 +255,7 @@ Rows the importer cannot use are **counted, never dropped without a count**:
   path leads to the LinkedIn account or connections of another member, for any seat, **admin too**. No
   agent passport can drive any of it.
 - A **suggested match** becomes an approval, and the normal rule of the inbox decides who may decide it.
-  That is the grants the change needs, and the right to see the **contact** the proposal is about. A
+  The user who decides needs the grants the change needs, and the right to see the **contact** the proposal is about. A
   colleague who can already read that contact can see that one proposal, with the spelling of the
   name and employer of the connection.
 - The **audit row and the outbox event** for an import name **no connection at all**, only `rows`,

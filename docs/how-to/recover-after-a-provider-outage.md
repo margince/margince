@@ -9,7 +9,7 @@ admin. This page gives the steps for the operator after that. The design is in
 
 Most work starts again by itself. You are needed for the work that used up its tries
 **before** the system marked the provider as blocked. Sender questions are in the review
-queue with no answer from the model, and company enrichments used up their tries.
+queue with no usable verdict from the model, and company enrichments used up their tries.
 
 ## 1. Read the cause
 
@@ -64,7 +64,7 @@ start of the window. The end is when the provider answered again.
 
 It opens two kinds of work again, each with its tries set back to 0, and ready to run at once:
 
-- sender questions closed as `unsure` because the model gave no answer in the window. This also
+- sender questions closed as `unsure` because the model gave no usable verdict in the window. This also
   takes back their open review offer, and it skips any that someone already decided.
 - company enrichments that used up their tries or failed in the window. It skips
   companies in the archive, and companies whose site the system has already read.

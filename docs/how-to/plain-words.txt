@@ -48,7 +48,8 @@ anyway
 apart
 app
 appear
-apply
+applied
+applies
 approval
 approve
 architecture
@@ -70,6 +71,7 @@ attack
 attribution
 audience
 audit
+automated
 automation
 available
 away
@@ -101,7 +103,7 @@ beside
 between
 binary
 bind
-binding
+bindings
 blank
 block
 board
@@ -139,6 +141,7 @@ calendar
 call
 callback
 callout
+campaigns
 can
 cancel
 candidate
@@ -338,6 +341,7 @@ edition
 effort
 either
 element
+eligibility
 else
 email
 embed
@@ -474,12 +478,13 @@ hash
 have
 head
 health
+heavy
 held
 help
 here
 hide
 history
-hold
+holds
 hole
 home
 hook
@@ -547,7 +552,9 @@ kit
 know
 label
 ladder
-land
+landed
+landing
+lands
 lane
 language
 last
@@ -567,7 +574,7 @@ legal
 length
 less
 let
-letter
+lettered
 level
 library
 license
@@ -615,7 +622,7 @@ mean
 measure
 media
 meet
-meeting
+meetings
 member
 membership
 menu
@@ -822,7 +829,7 @@ re
 reach
 read
 readiness
-reading
+readings
 ready
 real
 reason
@@ -855,7 +862,8 @@ rep
 repair
 replace
 replay
-reply
+replied
+replies
 report
 repository
 request
@@ -926,7 +934,9 @@ secret
 section
 security
 see
-seed
+seeded
+seeding
+seeds
 selection
 selector
 self
@@ -942,7 +952,7 @@ server's
 service
 session
 set
-setting
+settings
 settle
 setup
 several
@@ -1058,6 +1068,7 @@ technology
 tell
 template
 tenant
+terms
 test
 text
 than
@@ -1069,7 +1080,7 @@ then
 there
 these
 they
-thing
+things
 think
 third
 this

@@ -30,7 +30,7 @@ Also called: team forecast, my team's deals, manager view, team report.
 ### How do I see my pipeline report?
 To see your pipeline report in Margince, click **Analytics** in the sidebar and open the **Pipeline** tab.
 1. Click **Analytics**, then the **Pipeline** tab.
-2. Read the totals at the top, then **Open deals by stage** (deals, value and weighted value per stage), **Forecast categories** and **Open deals per company**.
+2. Read the totals at the top. Then read **Open deals by stage** (deals, value and weighted value per stage), **Forecast categories** and **Open deals per company**.
 3. Press **Explain this number** on any card to see the deals behind it.
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 

@@ -49,7 +49,7 @@ first. Work in this order, and you spend nothing until you already know that the
 
    When you write it first, you must answer the question the case has to answer. *What makes a right reply
    here different from one that only looks right?*
-2. **Write the empty case**: the functions below. `make check` is red until the census line and the case
+2. **Write the case**: the functions below. `make check` is red until the census line and the case
    agree; that is the state you expect.
 3. **Drive it offline with fixed replies.** Write `certcase_<site>_test.go` next to the case.
 

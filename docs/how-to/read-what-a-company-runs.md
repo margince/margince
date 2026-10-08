@@ -49,7 +49,7 @@ which kind of claim they look at.
   selectors), A and AAAA, and CNAME. It also makes a reverse `PTR` lookup for a sign of the host. It runs at one
   query each `200ms`.
 - **Certificate transparency** (`internal/platform/certlog`): one `GET https://crt.sh/?q=%25.<domain>&output=json`
-  for each company. Every public certificate must go to public logs that you can only add to. So the host names on the
+  for each company. Every publicly trusted certificate must go to public logs that you can only add to. So the host names on the
   certificates of a company are already public. To read them needs no agreement and no key, and it runs at
   **one query each 5 seconds**. The [crt.sh](https://crt.sh) service is free and runs on good will. The team that runs it
   has asked users not to send many queries at the same time.
@@ -155,7 +155,7 @@ means `not checked today`, and not `they have none`. So a reader who decides whe
 knows that the certificate log was down.
 
 When a human fixes a value, the source of the row changes to `human`, and the row stays on this card. The
-card sorts rows by **field name**, never by source. So the system never drops a fixed row from both cards,
+two cards split rows by **field name**, never by source. So the system never drops a fixed row from both cards,
 and never shows it on two.
 
 Changed signals also show on the company rail as a `technical_change` event.

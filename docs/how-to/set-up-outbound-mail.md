@@ -27,7 +27,7 @@ even when the user who clicked the button has one. This covers:
 | Weekly review and morning brief by email | the schedule of the worker, as the rep sets it in Settings → Account |
 
 The privacy notice and the confirm links carry a link that works one time, and that opens
-the contact's own record. They go through the relay so that the link never sits
+the contact's own page for that message. They go through the relay so that the link never sits
 in the Sent folder of a rep. There, the rep, or any other user with access to that
 mailbox, could open it as the contact. The keyvault seals the link, and the link goes
 into the body only at the time of sending.

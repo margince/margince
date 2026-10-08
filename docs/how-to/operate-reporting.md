@@ -5,7 +5,7 @@
 
 1. Apply the additive migrations with the normal deployment steps. Back up the
    installation before you deploy. Old rows get no made-up event owners, rates or
-   customer rights to count.
+   customer eligibility.
 2. Know that reporting is on for every installation. The API, MCP and workers use the same
    evaluator, and no deployment switch chooses another analytics engine.
 3. Review the role grants for `report_definition`, `report_edition`, `report_schedule`,
@@ -50,9 +50,9 @@ captures that match; it never uses the history of another team instead.
 ## Pause schedules or go back to old code
 
 A human admin with the right grant can call `POST /v1/admin/reporting/pause`.
-It turns off all reporting schedules for good, and steps their versions up. Check
-the changed schedules and the run history. Each schedule needs its own decision
-to start again; a new start of the API or worker does not start it.
+It turns off all reporting schedules until someone starts them again, and steps
+their versions up. Check the changed schedules and the run history. Each schedule
+needs its own decision to start again; a new start of the API or worker does not start it.
 
 Keep the additive schema and the stored editions when you go back to old code. Do not run
 migrations down to remove facts that the system stored. Down migrations work on an installation that no one used,

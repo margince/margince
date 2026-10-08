@@ -8,8 +8,8 @@ There, a user adds phones and emails, reads the **Companies** section, and uses 
 ## Install and upgrade
 
 1. Run the normal additive migrations before you start the new API and worker. The employment status
-   migration adds the `status` and `precision` columns, the resolution ledger, and a marker on retained claims.
-   Old relationships keep their old meaning.
+   migration adds the `employment_status`, `started_precision` and `ended_precision` columns, the resolution
+   ledger, and a marker on retained claims. Old relationships keep their old meaning.
 2. Start the event relay, the normal workers and the consumer that enriches companies on its own. The
    employment sweep works through new retained claims of current employment and job history. It makes no
    new call to Surfe.
@@ -72,5 +72,5 @@ others share.
 
 To go back to the old version of the app, first stop the employment work and keep the schema with its data. If you need to,
 take back only the imported data that no human changed, with the provider data tools. The
-down migration refuses old or unknown rows with no dates, because the old reader would read them
-another way. Never make that step pass by deleting customer history.
+down migration refuses a `former` or `unknown` employment row with no `ended_at`, because the old
+reader would read it another way. Never make that step pass by deleting customer history.

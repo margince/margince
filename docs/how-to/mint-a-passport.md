@@ -38,7 +38,7 @@ change runs, and the record shows the agent made it. A 🟡 change waits for an
 approval. Paths that only a human may use refuse an agent. A passport
 with `write` can also answer what is waiting (`list_approvals`,
 `read_approval` and `decide_approval`), with the rights of its own human. A passport
-made with `read` can only read the list.
+made with `read` can read the list and each approval, but cannot decide one.
 
 To connect an MCP client, you take a separate path and need nothing from this
 page. `claude mcp add`, or the connect step of any client, shows its own consent
