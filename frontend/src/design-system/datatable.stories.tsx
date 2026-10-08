@@ -3,8 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
-import { Badge, EmptyState, SectionHeader, TableScroll } from "./atoms";
-import { DataTable } from "./datatable";
+import { expect, waitFor } from "storybook/test";
+import { Badge, Button, EmptyState, SectionHeader, TableScroll } from "./atoms";
+import { DataTable, type DataTableColumn } from "./datatable";
 import { Panel, PanelBody, PanelIntro } from "./panel";
 import { Meter } from "./readings";
 
@@ -234,7 +235,7 @@ export const InAPanel: Story = {
 export const WideInAPanel: Story = {
   render: () => (
     <div style={{ maxWidth: 420 }}>
-      <Panel title="Open deals by stage">
+      <Panel title="Pipeline">
         <PanelBody>
           <PanelIntro>Scroll the table sideways for every figure.</PanelIntro>
         </PanelBody>
@@ -265,4 +266,230 @@ export const WideInAPanel: Story = {
       </Panel>
     </div>
   ),
+};
+
+type DemoMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  lastActive: string;
+  invited: boolean;
+};
+
+const DEMO_MEMBERS: DemoMember[] = [
+  {
+    id: "us_1",
+    name: "Ana Weber",
+    email: "ana.weber@globex.example",
+    role: "Admin",
+    lastActive: "Today",
+    invited: false,
+  },
+  {
+    id: "us_2",
+    name: "Marek Janetzke-Hollenstein",
+    email: "marek.janetzke-hollenstein@globex.example",
+    role: "Sales rep",
+    lastActive: "3 days ago",
+    invited: false,
+  },
+  {
+    id: "us_3",
+    name: "Linh Tran",
+    email: "linh@globex.example",
+    role: "Viewer",
+    lastActive: "",
+    invited: true,
+  },
+];
+
+const MEMBER_COLUMNS: DataTableColumn<DemoMember>[] = [
+  { key: "name", header: "Name", render: (member) => member.name },
+  { key: "email", header: "Email", render: (member) => member.email },
+  { key: "role", header: "Role", render: (member) => member.role },
+  {
+    key: "active",
+    header: "Last active",
+    render: (member) => member.lastActive,
+  },
+  {
+    key: "status",
+    header: "Status",
+    fold: "end",
+    render: (member) =>
+      member.invited ? <Badge tone="info">Invited</Badge> : null,
+  },
+  {
+    key: "verbs",
+    header: "Actions",
+    fold: "end",
+    render: (member) => (
+      <Button>{`Remove ${member.name.split(" ")[0]}`}</Button>
+    ),
+  },
+];
+
+function MembersPanel() {
+  return (
+    <Panel title="Members">
+      <PanelBody>
+        <PanelIntro>Everyone who can sign in to this workspace.</PanelIntro>
+      </PanelBody>
+      <DataTable
+        fold
+        bleed
+        label="Members"
+        columns={MEMBER_COLUMNS}
+        rows={DEMO_MEMBERS}
+        rowKey={(member) => member.id}
+      />
+    </Panel>
+  );
+}
+
+function cellBox(row: Element, selector: string) {
+  return [...row.querySelectorAll(`${selector}:not(:empty)`)].map((cell) =>
+    cell.getBoundingClientRect(),
+  );
+}
+
+// `fold` at a phone's width: the name and the trailing badge and verb share
+// line one, the rest run under them as a caption, and nothing scrolls sideways.
+// An empty cell (no status, never active) leaves no gap and no stray dot.
+export const FoldedRecordsPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <MembersPanel />,
+  play: async ({ canvasElement }) => {
+    const box = canvasElement.querySelector(".table-scroll-fold");
+    await expect(box).not.toBeNull();
+    await expect(box?.scrollWidth).toBeLessThanOrEqual(box?.clientWidth ?? 0);
+    const root = document.documentElement;
+    await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+    const head = canvasElement.querySelector("thead")?.getBoundingClientRect();
+    await expect(head?.height).toBeLessThanOrEqual(1);
+    for (const row of canvasElement.querySelectorAll("tbody tr")) {
+      const [title] = cellBox(row, '[data-fold="title"]');
+      for (const end of cellBox(row, '[data-fold="end"]')) {
+        await expect(end.top).toBeLessThan(title.bottom);
+        await expect(end.left).toBeGreaterThanOrEqual(title.right);
+      }
+      for (const rest of cellBox(row, '[data-fold="rest"]')) {
+        await expect(rest.top).toBeGreaterThanOrEqual(title.bottom);
+      }
+    }
+  },
+};
+
+// The same table with room for its columns keeps one line per row.
+export const FoldedRecordsWide: Story = {
+  render: () => <MembersPanel />,
+  play: async ({ canvasElement }) => {
+    const head = canvasElement.querySelector("thead")?.getBoundingClientRect();
+    await expect(head?.height).toBeGreaterThan(1);
+    const [row] = canvasElement.querySelectorAll("tbody tr");
+    const tops = cellBox(row, "td").map((cell) => Math.round(cell.top));
+    await expect(new Set(tops).size).toBe(1);
+  },
+};
+
+type DemoUsage = {
+  id: string;
+  task: string;
+  calls: string;
+  input: string;
+  output: string;
+  cached: string;
+  spend: string;
+};
+
+const DEMO_USAGE: DemoUsage[] = [
+  {
+    id: "u_1",
+    task: "Drafting a reply",
+    calls: "1,204",
+    input: "3.1M",
+    output: "412k",
+    cached: "1.9M",
+    spend: "€41.20",
+  },
+  {
+    id: "u_2",
+    task: "Reading a mailbox",
+    calls: "8,930",
+    input: "22.4M",
+    output: "1.2M",
+    cached: "15.0M",
+    spend: "€188.75",
+  },
+  {
+    id: "u_3",
+    task: "Meeting brief",
+    calls: "96",
+    input: "640k",
+    output: "88k",
+    cached: "210k",
+    spend: "€7.10",
+  },
+];
+
+const USAGE_FIGURES = [
+  ["calls", "Calls"],
+  ["input", "Input tokens"],
+  ["output", "Output tokens"],
+  ["cached", "Cached tokens"],
+  ["spend", "Spend"],
+] as const;
+
+const USAGE_COLUMNS: DataTableColumn<DemoUsage>[] = [
+  { key: "task", header: "Task", render: (row) => row.task },
+  ...USAGE_FIGURES.map(([key, header]) => ({
+    key,
+    header,
+    align: "end" as const,
+    render: (row: DemoUsage) => row[key],
+  })),
+];
+
+// `stickyFirst`: the play scrolls the box to its far end, and the first column
+// stays put on an opaque ground with an edge.
+export const PinnedFirstColumn: Story = {
+  render: () => (
+    <div style={{ maxWidth: 420 }}>
+      <Panel title="AI spend">
+        <PanelBody>
+          <PanelIntro>Scroll the table sideways; the task stays.</PanelIntro>
+        </PanelBody>
+        <DataTable
+          bleed
+          stickyFirst
+          label="Spend by task"
+          columns={USAGE_COLUMNS}
+          rows={DEMO_USAGE}
+          rowKey={(row) => row.id}
+        />
+      </Panel>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = canvasElement.querySelector<HTMLElement>(
+      ".table-scroll-sticky",
+    );
+    if (box === null) {
+      throw new Error("the pinned table drew no scroll box");
+    }
+    box.scrollLeft = box.scrollWidth;
+    await waitFor(() => expect(box.scrollLeft).toBeGreaterThan(0));
+    const edge = box.getBoundingClientRect().left;
+    const [row] = box.querySelectorAll("tbody tr");
+    const [first, second] = row.querySelectorAll("td");
+    await expect(Math.round(first.getBoundingClientRect().left)).toBe(
+      Math.round(edge),
+    );
+    await expect(second.getBoundingClientRect().left).toBeLessThan(
+      first.getBoundingClientRect().right,
+    );
+    await expect(getComputedStyle(first).backgroundImage).not.toBe("none");
+  },
 };

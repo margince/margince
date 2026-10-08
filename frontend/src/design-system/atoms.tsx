@@ -1212,20 +1212,23 @@ export { useScrollRegion } from "./scrollregion";
 export function TableScroll({
   label,
   bleed,
+  stickyFirst,
   className,
   children,
 }: Readonly<{
   label: string;
   bleed?: boolean;
+  stickyFirst?: boolean;
   className?: string;
   children: ReactNode;
 }>) {
   const box = useRef<HTMLDivElement | null>(null);
   const region = useScrollRegion(box, label);
   const bleedClass = bleed ? "table-scroll-bleed" : "";
-  const classes = ["table-scroll", bleedClass, className ?? ""];
+  const stickyClass = stickyFirst ? "table-scroll-sticky" : "";
+  const boxClasses = ["table-scroll", bleedClass, stickyClass, className ?? ""];
   return (
-    <div ref={box} className={classes.filter(Boolean).join(" ")} {...region}>
+    <div ref={box} className={boxClasses.filter(Boolean).join(" ")} {...region}>
       {children}
     </div>
   );

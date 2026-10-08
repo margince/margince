@@ -25,3 +25,81 @@
 .table:has(.datatable-grow) :is(th, td):not(.datatable-grow) {
   white-space: nowrap;
 }
+
+/* fold: the box is measured, not the viewport, because a settings rail or a
+   split pane narrows the column without the window moving. */
+.table-scroll-fold {
+  container: table-fold / inline-size;
+}
+@container table-fold (width < 36rem) {
+  .table-scroll-fold > .table,
+  .table-scroll-fold > .table > tbody {
+    display: block;
+  }
+  /* Out of sight, still read: each folded cell is announced by its heading,
+     and an empty cell keeps its place so the next one keeps its heading. */
+  .table-scroll-fold > .table > thead,
+  .table-scroll-fold > .table > tbody > tr > :is(:empty, [data-fold="hide"]) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-scroll-fold > .table > tbody > tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--space-2);
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--borderSubtle);
+    transition: background-color var(--dur-state) var(--ease-out);
+  }
+  .table-scroll-fold > .table > tbody > tr:last-child {
+    border-bottom: 0;
+  }
+  .table-scroll-fold > .table > tbody > tr:hover {
+    background: var(--bgHover);
+  }
+  .table-scroll-fold > .table > tbody > tr > td {
+    padding: 0;
+    border-bottom: 0;
+    inline-size: auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr {
+    padding-inline: var(--padPanel);
+  }
+  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr > td {
+    padding: 0;
+  }
+  /* Basis 0, so a long title wraps inside line one instead of pushing the
+     trailing cells onto a line of their own. */
+  .table-scroll-fold [data-fold="title"] {
+    flex: 1 1 0%;
+  }
+  .table-scroll-fold [data-fold="end"] {
+    flex: none;
+    order: 1;
+  }
+  .table-scroll-fold tr:has(> [data-fold="rest"]:not(:empty))::after {
+    content: "";
+    flex-basis: 100%;
+    block-size: var(--space-1);
+    order: 2;
+  }
+  .table-scroll-fold [data-fold="rest"] {
+    order: 3;
+    font: var(--fontBodySmall);
+    color: var(--textSecondary);
+  }
+  .table-scroll-fold
+    [data-fold="rest"]:not(:empty):has(
+      ~ [data-fold="rest"]:not(:empty)
+    )::after {
+    content: "·" / "";
+    padding-inline-start: var(--space-2);
+  }
+}

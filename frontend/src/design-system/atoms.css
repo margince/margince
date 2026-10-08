@@ -55,6 +55,30 @@
 .panel > .table-scroll-bleed > .table > * > tr > :last-child {
   padding-inline-end: var(--padPanel);
 }
+/* stickyFirst: the first column stays put while the rest scrolls under it, so
+   its ground is opaque: the page, or the pane laid over the page. Any table,
+   since a hand-drawn one may wear its own skin instead of `.table`. */
+.table-scroll-sticky {
+  container-type: scroll-state;
+}
+.table-scroll-sticky > table > * > tr > :first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--bgPage);
+}
+.panel .table-scroll-sticky > table > * > tr > :first-child {
+  background: linear-gradient(var(--pane), var(--pane)), var(--bgPage);
+}
+.table-scroll-sticky > .table > tbody > tr:hover > :first-child {
+  background: var(--bgHover);
+}
+/* The edge shows only once a column has slid under it. */
+@container scroll-state(scrollable: inline-start) {
+  .table-scroll-sticky > table > * > tr > :first-child {
+    box-shadow: inset -1px 0 var(--borderSubtle);
+  }
+}
 /* Inset, because the pane's `overflow: hidden` clips a ring drawn outside it. */
 .panel > .table-scroll-bleed:focus-visible {
   outline: var(--focus-ring);
