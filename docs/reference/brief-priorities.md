@@ -34,23 +34,7 @@ Tasks due today or past due are urgent duties, unless they are general lead sear
 recovery enters the urgent band in two cases. One is when the deal value is high next to the priced
 risk of all deals. The other is when its expected close is past due or within 14 days.
 
-Work for current customers comes before normal lead search. Real response deadlines and urgent
-duties still lead both. Within each band, deadlines, value and then the other server rules decide
-the order. Clients keep that order.
-
-A close date Margince set for now is a reason to confirm or change the forecast. It is not
-evidence of a customer promise. Cards keep the for-now flag and the forecast group, even when there
-is no forecast. The deal work reading reports the deal value it knows in the queue a user picked.
-It says plainly that the number may not be complete. It includes new deals and also recovery, and
-it is not a forecast that counts risk, or expected revenue.
-
-Only a task written by the lead SLA escalation copies a dated first response row. Other tasks
-linked to a lead stay separate tasks, with their own due date and actions. A lead with no response
-target set still shows as lead search work. It shows company, status, the admin source label and
-last activity where there is one, and no made-up deadline.
-
-Margince decides which cards may go in Focus before the 6-card limit. The risk engine applies its
-past-close rule before its limited scan, and says so when a source it scans is not complete.
+Focus eligibility is evaluated before the six-card cap. The risk engine applies its overdue-close predicate before its bounded scan, and publishes truncation when a candidate source is incomplete.
 
 ## What the daily brief can claim
 
