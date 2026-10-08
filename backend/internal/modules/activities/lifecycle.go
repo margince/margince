@@ -86,7 +86,44 @@ func updateActivityInTx(
 	if in.changesNothing(current) {
 		return current, nil
 	}
-	if err := applyActivityPatch(ctx, tx, id, in); err != nil {
+	// Every placeholder is derived from the argument slice rather than
+	// typed. Nothing checks that a hand-written $N still names the value a
+	// caller appends, and this statement's list has grown twice.
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	row := arg(id)
+	// done_at moves with is_done (the activity_done_at CHECK): completion
+	// stamps the moment and reopening clears it, so the flag is bound once and
+	// read three times.
+	done := arg(in.IsDone)
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`
+		UPDATE activity SET
+		  subject = coalesce($%[2]d, subject),
+		  body = coalesce($%[3]d, body),
+		  occurred_at = coalesce($%[4]d, occurred_at),
+		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
+		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
+		  assignee_id = CASE WHEN $%[13]d THEN NULL ELSE coalesce($%[7]d, assignee_id) END,
+		  is_done = coalesce($%[8]d, is_done),
+		  meeting_status = coalesce($%[9]d, meeting_status),
+		  duration_seconds = coalesce($%[10]d, duration_seconds),
+		  -- The language was READ from the text, so an edit to the text retires
+		  -- it. Cleared rather than recomputed: detection lives in Go, and a
+		  -- label that outlived the words it described would send a reply in
+		  -- the language the message used to be in. Cleared, the drafting
+		  -- ladder reads the new text instead, which is the honest answer.
+		  language = CASE
+		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN NULL
+		    ELSE language END,
+		  done_at = CASE
+		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
+		    WHEN $%[8]d IS FALSE THEN NULL
+		    ELSE done_at END
+		WHERE id = $%[1]d`,
+		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
+		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
+		arg(in.ClearDueAt), arg(in.ClearRemindAt), arg(in.ClearAssignee)),
+		args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	// Read back BEFORE auditing: done_at is stamped by the statement above
@@ -126,53 +163,14 @@ func updateActivityInTx(
 func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool {
 	return in.Subject == nil && in.Body == nil && in.OccurredAt == nil && in.DurationSeconds == nil &&
 		in.DueAt == nil && in.RemindAt == nil && in.AssigneeID == nil && in.IsDone == nil &&
-		in.MeetingStatus == nil &&
-		!(in.ClearDueAt && current.DueAt != nil) &&
-		!(in.ClearRemindAt && current.RemindAt != nil) &&
-		!(in.ClearAssignee && current.AssigneeId != nil)
+		in.MeetingStatus == nil && !in.clearsAValue(current)
 }
 
-// applyActivityPatch is the UPDATE of updateActivityInTx.
-func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput) error {
-	// Every placeholder is derived from the argument slice rather than
-	// typed. Nothing checks that a hand-written $N still names the value a
-	// caller appends, and this statement's list has grown twice.
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	row := arg(id)
-	// done_at moves with is_done (the activity_done_at CHECK): completion
-	// stamps the moment and reopening clears it, so the flag is bound once and
-	// read three times.
-	done := arg(in.IsDone)
-	_, err := tx.Exec(ctx, fmt.Sprintf(`
-		UPDATE activity SET
-		  subject = coalesce($%[2]d, subject),
-		  body = coalesce($%[3]d, body),
-		  occurred_at = coalesce($%[4]d, occurred_at),
-		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
-		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
-		  assignee_id = CASE WHEN $%[13]d THEN NULL ELSE coalesce($%[7]d, assignee_id) END,
-		  is_done = coalesce($%[8]d, is_done),
-		  meeting_status = coalesce($%[9]d, meeting_status),
-		  duration_seconds = coalesce($%[10]d, duration_seconds),
-		  -- The language was READ from the text, so an edit to the text retires
-		  -- it. Cleared rather than recomputed: detection lives in Go, and a
-		  -- label that outlived the words it described would send a reply in
-		  -- the language the message used to be in. Cleared, the drafting
-		  -- ladder reads the new text instead, which is the honest answer.
-		  language = CASE
-		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN NULL
-		    ELSE language END,
-		  done_at = CASE
-		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
-		    WHEN $%[8]d IS FALSE THEN NULL
-		    ELSE done_at END
-		WHERE id = $%[1]d`,
-		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
-		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
-		arg(in.ClearDueAt), arg(in.ClearRemindAt), arg(in.ClearAssignee)),
-		args...)
-	return err
+// clearsAValue is true when a null names a field that currently holds one.
+func (in UpdateActivityInput) clearsAValue(current crmcontracts.Activity) bool {
+	return (in.ClearDueAt && current.DueAt != nil) ||
+		(in.ClearRemindAt && current.RemindAt != nil) ||
+		(in.ClearAssignee && current.AssigneeId != nil)
 }
 
 // admitActivityPatch takes the write lock and answers whether this patch may
