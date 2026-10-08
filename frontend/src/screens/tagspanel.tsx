@@ -179,7 +179,7 @@ function TagsFrame({
  * One tag on one record: the word, and the cross that takes it off.
  *
  * The two are different things and the split pill says so. Clicking the word
- * goes to the tag — everything else carrying it. The cross acts on this record
+ * goes to the tag: everything else carrying it. The cross acts on this record
  * alone, which is the distinction a reader has to be able to make before they
  * remove something.
  */
