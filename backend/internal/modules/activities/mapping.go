@@ -187,6 +187,15 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 	}
 }
 
+// clearNulled marks the fields a patch sent as an explicit null. isNull is the
+// transport's own answer, because a decoded request holds a nil pointer for an
+// absent field and a null one alike.
+func (in *UpdateActivityInput) clearNulled(isNull func(field string) bool) {
+	in.ClearDueAt = isNull("due_at")
+	in.ClearRemindAt = isNull("remind_at")
+	in.ClearAssignee = isNull("assignee_id")
+}
+
 // meetingStatusArg unwraps the contract's enum into the store's plain string.
 func meetingStatusArg(status *crmcontracts.UpdateActivityRequestMeetingStatus) *string {
 	if status == nil {

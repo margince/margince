@@ -211,7 +211,10 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	if in.TTL != nil {
 		ttl = *in.TTL
 		if ttl <= 0 || ttl > maxPassportTTL {
-			return IssuedPassport{}, &InvalidScopeError{Scope: fmt.Sprintf("ttl %s (max %s)", ttl, maxPassportTTL)}
+			return IssuedPassport{}, &InvalidPassportFieldError{
+				Field: "ttl_hours", Code: "ttl_out_of_range",
+				Message: fmt.Sprintf("lifetime %s must be above zero and at most %s", ttl, maxPassportTTL),
+			}
 		}
 	}
 
