@@ -1,0 +1,48 @@
+/* FilterBar: a page's dials on one card. See filterbar.tsx for when to reach
+   for it. The surface is the Panel's own (panel.css), so the bar and the cards
+   under it read as one set of panes. */
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--padPanel);
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+  backdrop-filter: blur(12px);
+  /* A fieldset's own margin and min-content floor, which would let a long row
+     push the page sideways instead of wrapping. */
+  margin: 0;
+  min-inline-size: 0;
+}
+
+/* Fields carry their label above the control, so the row aligns on the
+   controls' bottom edge: a bare control and a labelled one then share a line. */
+.filter-bar-row,
+.filter-bar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* On the trailing edge on every line the row wraps to. */
+.filter-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+  margin-inline-start: auto;
+}
+
+/* A verb the reader may not use renders nothing; its group then gives the
+   line back rather than holding an empty slot at the row's end. */
+.filter-bar-actions:empty {
+  display: none;
+}
+
+.filter-bar-caption {
+  margin: 0;
+}

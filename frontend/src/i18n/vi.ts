@@ -4736,6 +4736,7 @@ export const vi = {
   "analytics.sectionQuestions": "Báo cáo tùy chỉnh",
   "analytics.sectionReports": "Báo cáo",
   "analytics.setup": "Thiết lập",
+  "analytics.filters": "Bộ lọc",
   "analytics.attention": "Cần bạn chú ý",
   "analytics.attentionChecks_one": "Kiểm tra dự báo cần trả lời: 1",
   "analytics.attentionChecks_other": "Kiểm tra dự báo cần trả lời: {count}",

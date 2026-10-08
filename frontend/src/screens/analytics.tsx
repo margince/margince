@@ -7,6 +7,7 @@ import { useCan } from "../app/capability";
 import { useRoute } from "../app/router";
 import { Button, EmptyState, StatCard } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { FilterBar } from "../design-system/filterbar";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
@@ -1149,8 +1150,10 @@ function isSetupSection(section: Section): section is SetupSection {
 // Custom reports open from Reports; a reader who may not read saved reports
 // still asks their own questions, so for them it is a tab of its own.
 export function analyticsTabs(available: readonly Section[]): Section[] {
-  const tabs = available.filter((candidate) =>
-    TAB_SECTIONS.includes(candidate),
+  // In the row's own order: `available` follows the address list, which is
+  // not the order a reader meets the sections in.
+  const tabs = TAB_SECTIONS.filter((candidate) =>
+    available.includes(candidate),
   );
   return tabs.includes("reports") || !available.includes("questions")
     ? tabs
@@ -1176,6 +1179,7 @@ function SectionBody({
   scopeControl: ReactNode;
   stages: readonly Stage[];
 }>) {
+  const t = useT();
   switch (section) {
     case "performance":
       return selection ? (
@@ -1193,7 +1197,7 @@ function SectionBody({
     case "questions":
       return selection && context ? (
         <>
-          <div className="analytics-toolbar">{scopeControl}</div>
+          <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
           <QuestionsView
             context={context}
             selection={selection}

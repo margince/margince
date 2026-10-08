@@ -32,18 +32,6 @@
   flex-direction: column;
 }
 
-/* A section's filters on one row, the population first, with the section's
-   own verb held at the row's end. */
-.analytics-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-.analytics-toolbar-end {
-  margin-inline-start: auto;
-}
-
 /* What to check beside what was checked. Side by side where the page is wide
    enough for both to keep their lines, one under the other below that. */
 .analytics-pair {

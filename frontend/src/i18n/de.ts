@@ -4800,6 +4800,7 @@ export const de = {
   "analytics.sectionQuestions": "Eigene Berichte",
   "analytics.sectionReports": "Berichte",
   "analytics.setup": "Einrichtung",
+  "analytics.filters": "Filter",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.attentionChecks_one": "1 Prüfung zur Einschätzung offen",
   "analytics.attentionChecks_other": "{count} Prüfungen zur Einschätzung offen",
