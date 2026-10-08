@@ -51,7 +51,8 @@ func (s *Store) RestoreMemberRemoval(ctx context.Context, listID ids.ListID, rem
 		if err := refuseMovedOn(ctx, tx, listObject, listID.UUID, removed, record); err != nil {
 			return err
 		}
-		if change.Note, err = removedMemberNote(ctx, tx, listID, removed, record); err != nil {
+		memberNote, err := removedMemberNote(ctx, tx, listID, removed, record)
+		if err != nil {
 			return err
 		}
 		actor, err := storekit.CapturedBy(ctx)
@@ -59,7 +60,7 @@ func (s *Store) RestoreMemberRemoval(ctx context.Context, listID ids.ListID, rem
 			return err
 		}
 		kept := *record.ListMembership
-		kept.ListID, kept.Note = listID.UUID, change.Note
+		kept.ListID, kept.Note = listID.UUID, memberNote
 		err = rowScanMember(tx.QueryRow(ctx, reinsertMember, reinsertMemberArgs(record.EntityType, record.EntityID, record.RowID, kept)), &out)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrRemovalMovedOn

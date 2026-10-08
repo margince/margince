@@ -237,10 +237,19 @@ func TestARemovedMemberComesBackAsItWasAdded(t *testing.T) {
 	if back := f.memberProvenance(t, list, contact); back != added {
 		t.Fatalf("the member came back as %q, want what it was added as: %q", back, added)
 	}
-	event := f.e.WsScalar(t, `SELECT concat_ws('|', action, reason, actor) FROM list_member_event
+	event := f.e.WsScalar(t, `SELECT concat_ws('|', action, reason, actor, coalesce(note, '<no note>')) FROM list_member_event
 		WHERE list_id = $1 ORDER BY occurred_at DESC, id DESC LIMIT 1`, list)
-	if want := "added|chosen|human:" + f.e.AdminUser.String(); event != want {
+	if want := "added|chosen|human:" + f.e.AdminUser.String() + "|<no note>"; event != want {
 		t.Fatalf("the restore's history entry = %q, want %q", event, want)
+	}
+	history, _, err := f.store.History(f.e.Admin(), list, 10, "")
+	if err != nil {
+		t.Fatalf("reading the list's history: %v", err)
+	}
+	for _, entry := range history {
+		if entry.Note != nil && *entry.Note == memberNote && entry.Actor != "human:"+f.e.Rep1.String() {
+			t.Fatalf("history shows Rep1's note as %s's words: %+v", entry.Actor, entry)
+		}
 	}
 	outbox := f.e.WsCount(t, `SELECT count(*) FROM event_outbox o JOIN audit_log a ON a.id = (o.envelope -> 'trace' ->> 'audit_log_id')::uuid
 		WHERE o.envelope ->> 'type' = 'list.member_added' AND a.entity_id = $1 AND a.evidence ->> $2 = $3`,
