@@ -91,9 +91,36 @@ export function RoleDetail({
   // write at a time: the next is sent with the version the last one returned.
   const busy = update.isPending || setGrant.isPending || move.isPending;
   const objects = grantObjects(directory, units);
+  const moveVerb = moveOf(role, canMove, canRestore);
 
   return (
-    <Panel title={name}>
+    <Panel
+      title={name}
+      actions={
+        moveVerb && (
+          <MoveAction
+            to={moveVerb}
+            pending={busy}
+            onMove={(to) =>
+              move.mutate(
+                { roleKey: role.key, to },
+                {
+                  onSuccess: () =>
+                    toast.show(
+                      t(
+                        to === "archive"
+                          ? "roles.archivedToast"
+                          : "roles.restoredToast",
+                        { name },
+                      ),
+                    ),
+                },
+              )
+            }
+          />
+        )
+      }
+    >
       <PanelBody>
         <PanelIntro>
           {archived ? t("roles.archivedNote") : t("roles.detailSub")}
@@ -103,44 +130,56 @@ export function RoleDetail({
             {roleRefusalOf(failure.error, t)}
           </Callout>
         )}
-        <SettingList>
-          <SettingRow
-            label={t("roles.nameLabel")}
-            value={name}
-            control={
-              editable ? (
-                <NamePrompt
-                  trigger={t("roles.rename")}
-                  title={t("roles.renameTitle")}
-                  label={t("roles.nameLabel")}
-                  confirmLabel={t("roles.renameSubmit")}
-                  pending={busy}
-                  onSave={(next, done) =>
-                    update.mutate(
-                      { roleKey: role.key, version: role.version, name: next },
-                      { onSuccess: done },
-                    )
-                  }
-                />
-              ) : null
-            }
-          />
-          <ScopeField
-            role={role}
-            editable={editable}
-            canWiden={canWiden}
-            busy={busy}
-            onPick={(scope) =>
-              update.mutate({
-                roleKey: role.key,
-                version: role.version,
-                rowScope: scope,
-              })
-            }
-          />
+      </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("roles.nameLabel")}
+          value={name}
+          control={
+            editable ? (
+              <NamePrompt
+                trigger={t("roles.rename")}
+                title={t("roles.renameTitle")}
+                label={t("roles.nameLabel")}
+                confirmLabel={t("roles.renameSubmit")}
+                pending={busy}
+                onSave={(next, done) =>
+                  update.mutate(
+                    { roleKey: role.key, version: role.version, name: next },
+                    { onSuccess: done },
+                  )
+                }
+              />
+            ) : null
+          }
+        />
+        <ScopeField
+          role={role}
+          editable={editable}
+          canWiden={canWiden}
+          busy={busy}
+          onPick={(scope) =>
+            update.mutate({
+              roleKey: role.key,
+              version: role.version,
+              rowScope: scope,
+            })
+          }
+        />
+        <GrantSection
+          title={t("roles.grantsCore")}
+          objects={objects.core}
+          role={role}
+          name={name}
+          editable={editable}
+          canWiden={canWiden}
+          busy={busy}
+          setGrant={setGrant}
+        />
+        {objects.extensions.length > 0 && (
           <GrantSection
-            title={t("roles.grantsCore")}
-            objects={objects.core}
+            title={t("roles.grantsExtensions")}
+            objects={objects.extensions}
             role={role}
             name={name}
             editable={editable}
@@ -148,85 +187,44 @@ export function RoleDetail({
             busy={busy}
             setGrant={setGrant}
           />
-          {objects.extensions.length > 0 && (
-            <GrantSection
-              title={t("roles.grantsExtensions")}
-              objects={objects.extensions}
-              role={role}
-              name={name}
-              editable={editable}
-              canWiden={canWiden}
-              busy={busy}
-              setGrant={setGrant}
-            />
-          )}
-          {!archived && (
-            <Disclosure summary={t("roles.preview")}>
-              <AccessPreviewPanel role={role.key} teamIds={[]} />
-            </Disclosure>
-          )}
-        </SettingList>
-        <MoveAction
-          role={role}
-          canMove={canMove}
-          canRestore={canRestore}
-          pending={busy}
-          onMove={(to) =>
-            move.mutate(
-              { roleKey: role.key, to },
-              {
-                onSuccess: () =>
-                  toast.show(
-                    t(
-                      to === "archive"
-                        ? "roles.archivedToast"
-                        : "roles.restoredToast",
-                      { name },
-                    ),
-                  ),
-              },
-            )
-          }
-        />
-      </PanelBody>
+        )}
+        {!archived && (
+          <Disclosure summary={t("roles.preview")}>
+            <AccessPreviewPanel role={role.key} teamIds={[]} />
+          </Disclosure>
+        )}
+      </SettingList>
     </Panel>
   );
 }
 
 // The verb that takes a role out of use or brings it back. A built-in role is
 // never archived, so it is offered nothing.
+function moveOf(
+  role: Role,
+  canMove: boolean,
+  canRestore: boolean,
+): "archive" | "restore" | null {
+  if (role.archived_at) {
+    return canRestore ? "restore" : null;
+  }
+  return role.is_system || !canMove ? null : "archive";
+}
+
 function MoveAction({
-  role,
-  canMove,
-  canRestore,
+  to,
   pending,
   onMove,
 }: Readonly<{
-  role: Role;
-  canMove: boolean;
-  canRestore: boolean;
+  to: "archive" | "restore";
   pending: boolean;
   onMove: (to: "archive" | "restore") => void;
 }>) {
   const t = useT();
-  if (role.archived_at) {
-    return canRestore ? (
-      <div className="card-actions">
-        <Button disabled={pending} onClick={() => onMove("restore")}>
-          {t("roles.restore")}
-        </Button>
-      </div>
-    ) : null;
-  }
-  if (role.is_system || !canMove) {
-    return null;
-  }
   return (
-    <div className="card-actions">
-      <Button disabled={pending} onClick={() => onMove("archive")}>
-        {t("roles.archive")}
-      </Button>
-    </div>
+    <Button disabled={pending} onClick={() => onMove(to)}>
+      {t(to === "archive" ? "roles.archive" : "roles.restore")}
+    </Button>
   );
 }
 

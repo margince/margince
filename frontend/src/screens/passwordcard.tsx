@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
@@ -277,11 +277,9 @@ export function ChangePasswordCard({
   const t = useT();
   return (
     <Panel title={t("password.title")}>
-      <PanelBody>
-        <SettingList>
-          <PasswordSettingRow onChanged={onChanged} />
-        </SettingList>
-      </PanelBody>
+      <SettingList bleed="settings">
+        <PasswordSettingRow onChanged={onChanged} />
+      </SettingList>
     </Panel>
   );
 }
