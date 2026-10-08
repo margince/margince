@@ -129,9 +129,15 @@ Kubernetes, React, Go and Terraform each stay under 1,000 words.
 
 A comment line that a change adds to Go or TypeScript has no em dashes, none
 of the banned words, no capitals for emphasis, no "X is not Y. It is Z." and no change history.
-`make comment-prose` checks the diff against `origin/main` in the pre-push hook and in CI. Comments a change
-does not touch are left alone, so the tree improves file by file. Directives such as `//go:build` and
-`//nolint` are not judged, and a line that must keep a form carries `prose:allow <rule> <reason>`. The word
+No sentence in it runs over 25 words, and it cites no section of a document a reader cannot open, such
+as `ADR-0091 §8`. A bare decision number may stay as a label.
+
+`craft static` checks these on the lines added since `origin/main`, in the pre-push hook and in CI
+(`make craft-static`). It also notes a comment block over 6 lines and a Go function with more comment
+lines than code, without blocking. Comments a change does not touch are left alone, so the tree improves
+file by file, and `make comment-stats` fails a change that makes the whole tree's numbers worse.
+Directives such as `//go:build` and `//nolint` are not judged. A line that must keep a form carries
+`//craft:ignore <check> <reason>` on the line above, and `craft words` prints the word lists. The word
 pool does not apply to comments, which are full of identifiers.
 
 ## Renaming a term

@@ -352,9 +352,8 @@ even if the test tree breaks.
 | Render UAT | `make fe-uat` → `frontend/scripts/fe-uat.mjs` | a changed component with no story beside it, a changed story the build does not register, or a render that fails when run with no screen. It is **outside** `make check`: it is the UAT lane for the frontend alone, and it writes its result to `.tmp/fe-uat/manifest.json` |
 | Screen checks | `make frontend-e2e` → `frontend/e2e/` | Playwright cases named for their AC, axe at WCAG 2.2 AA, and the `390px` `no-horizontal-scroll` sweep. The speed budget is the one in `make bench-mobile`: a `p95` over many runs, because one clock reading in a shared lane measures the machine it runs on |
 
-The `craft static` hook the backend runs before a push does **not** cover
-`frontend/`. The frontend lane is separate from the Go merge gate and needs Node
-and pnpm. Run `make check-fe` (or `make frontend-check`) before pushing a
+The `craft static` hook reads only the comments of a `frontend/` file. The
+frontend lane is separate from the Go merge gate and needs Node and pnpm. Run `make check-fe` (or `make frontend-check`) before pushing a
 frontend change.
 
 ## Where to look first
