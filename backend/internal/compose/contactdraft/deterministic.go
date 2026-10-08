@@ -58,8 +58,8 @@ func deterministicSubject(in Input) string {
 	}
 	// Only a message THEY sent us is a thread to reply to. Our own last
 	// outbound carries a subject too, and "Re:" on it replies to ourselves.
-	if len(in.Recent) > 0 && in.Recent[0].Subject != "" {
-		return draftfloor.Subject(lang, band, in.Recent[0].Subject, in.Recent[0].Inbound)
+	if mail, ok := in.threadMail(); ok {
+		return draftfloor.Subject(lang, band, mail.Subject, mail.Inbound)
 	}
 	return draftfloor.Subject(lang, band, in.Recipient.Employer, false)
 }
@@ -98,8 +98,8 @@ func deterministicOpener(in Input) string {
 	if in.Deal != nil {
 		return draftfloor.Fill(lines.Deal, dealLine(in.Deal))
 	}
-	if len(in.Recent) > 0 && in.Recent[0].Subject != "" {
-		return draftfloor.Fill(lines.Thread, in.Recent[0].Subject)
+	if mail, ok := in.threadMail(); ok {
+		return draftfloor.Fill(lines.Thread, mail.Subject)
 	}
 	return ""
 }
@@ -212,12 +212,12 @@ func deterministicReasons(in Input) []Reason {
 			EntityID:   in.Deal.ID,
 		})
 	}
-	if !hasClaim && in.Deal == nil && len(in.Recent) > 0 && in.Recent[0].Subject != "" {
+	if mail, ok := in.threadMail(); ok && !hasClaim && in.Deal == nil {
 		reasons = append(reasons, Reason{
 			Kind:       crmcontracts.AccountDraftReasonKindConversation,
-			Label:      in.Recent[0].Subject,
+			Label:      mail.Subject,
 			EntityType: citeActivity,
-			EntityID:   in.Recent[0].ID,
+			EntityID:   mail.ID,
 		})
 	}
 	return reasons

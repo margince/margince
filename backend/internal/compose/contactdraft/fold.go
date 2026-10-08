@@ -395,7 +395,20 @@ func stamp(at *time.Time) string { return contactcontext.Stamp(at) }
 // prefix. Only a message THEY sent counts: our own last outbound carries a
 // subject too, and "Re:" on it replies to ourselves.
 func (in Input) Threaded() bool {
-	return len(in.Recent) > 0 && in.Recent[0].Inbound && in.Recent[0].Subject != ""
+	mail, ok := in.threadMail()
+	return ok && mail.Inbound
+}
+
+// threadMail is the newest email with a subject. A task or a logged call is
+// not a message in the thread, and its title is internal, so one recorded
+// after their mail still leaves that mail as the thread a draft answers.
+func (in Input) threadMail() (ActIn, bool) {
+	for _, act := range in.Recent {
+		if act.Kind == string(crmcontracts.ActivityKindEmail) {
+			return act, act.Subject != ""
+		}
+	}
+	return ActIn{}, false
 }
 
 // Booked is whether this contact has a meeting on file. foldMeeting only
