@@ -14,9 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// An account draft names every record its input was folded from — the
+// An account draft names every record its input was folded from: the
 // company, the recipient, the deal, the project, the open task it leads with
-// and each exchange — so a kept draft can re-prove each one.
+// and each exchange, so a kept draft can re-prove each one.
 func TestTheGroundingNamesEveryRecordTheInputHolds(t *testing.T) {
 	company, contact, deal, project, task := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	view := viewWithActivities(t, activityWith(t, "Scope", "Can you send the scope?"))

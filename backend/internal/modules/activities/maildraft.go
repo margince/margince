@@ -89,7 +89,7 @@ func (e *InvalidMailDraftError) FieldFault() (field, code, message string) {
 }
 
 // GetMailDraft reads the caller's draft for one anchor. No draft, somebody
-// else's, and an anchor the caller can no longer see are all ErrNotFound — as
+// else's, and an anchor the caller can no longer see are all ErrNotFound, as
 // is a draft resting on a record they can no longer see, which is discarded.
 func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailDraft, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {

@@ -19,9 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// A draft names every record its input was folded from — the recipient, the
+// A draft names every record its input was folded from: the recipient, the
 // deal, the project, each exchange, the conversation each claim was read from
-// and the next meeting — so a kept draft can re-prove each one.
+// and the next meeting, so a kept draft can re-prove each one.
 func TestTheGroundingNamesEveryRecordTheInputHolds(t *testing.T) {
 	deal, project, meeting := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	exchange := activity(true, "Scope", strPtr("Can you send the scope?"))
