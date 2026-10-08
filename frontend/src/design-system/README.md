@@ -277,8 +277,8 @@ end to be seen against.
 The tones are named by role (`--orbBody`, `--orbGlow`, `--orbMid`, `--orbBright`), not by hue, so a
 new colour never makes a name wrong.
 
-The three states that are not work keep their own hues. `--orbAmber` asks a user for something,
-`--orbRed` failed, and `--orbGrey` cannot reach a source. None of them turns indigo. Provenance and
+The two states that are not work keep their own hues. `--orbAmber` asks a user for something,
+and `--orbRed` failed. Neither turns indigo. Provenance and
 outcome are different questions. An orb that turned indigo when a run failed would say who was
 working, and stop saying how it went. `--orbRed` is not `--danger`, because `--danger` is UI chrome
 and goes muddy at 34px.
@@ -310,6 +310,10 @@ appear only in `tokens.css`, and in `provider-mark.tsx`, which draws the sign-in
 companies; `check-ds-purity.sh` holds this. `interaction.stories.tsx` lists the colours the browser
 owns (caret, checkbox tick, scrollbar thumb, selection). They are set once at the root of the page,
 and belong to no component.
+The other Foundations pages show tokens and add none: `colors.stories.tsx` (each colour token by
+role, light beside dark), `elevation.stories.tsx`, `spacing.stories.tsx`, `motion.stories.tsx` and
+`iconography.stories.tsx`. Each value on them is read from the running sheet through
+`tokenspecimen.ts`, so a change in `tokens.css` moves the page, and nothing is typed twice.
 
 ### Forms and input
 
@@ -444,7 +448,7 @@ and belong to no component.
 | `OverflowMenu` | The verbs a record offers but a reader seldom wants. Items are words with no glyph; `overflowmenu-icons.test.ts` fails a glyph inside one. On a record page the order is Edit, Merge, Share, Full history, the record's own verbs, then Archive. Verbs that are only an icon stay outside, as `IconAction` | `atoms.tsx` | ✅ |
 | `Popover` | A short note on click, portalled beside its trigger, for a paragraph or a small list that may carry a link. Use it where a `Disclosure` would push the page around; use `useTruncationTooltip` for one line on hover. It closes on Escape (and gives focus back once it has closed) and on a click outside it. `disabled` refuses to open, but never closes an open panel or disables an open trigger; `reasonId` refuses the same way and names why. `open` / `onOpenChange` hand the open state to the caller. `dialog` makes the panel a non-modal dialog of controls, as the one in `ListPopover` is. No `pending` | `popover.tsx` | ✅ |
 | `ListPopover` | A pick that is the whole act (a tag, an owner, a project), as a search over a list tied to its trigger. The panel is a non-modal dialog: a `role="combobox"` search drives a listbox through `aria-activedescendant` (arrows, Home and End walk it past a disabled row, Enter picks, Escape closes and gives focus back). `options` is a list in hand, filtered by name and any `keywords`, and `undefined` while it loads. `search` asks the server once per finished search term that is not empty, and offers no row from a term since typed again. `onPick(option, done)` closes on `done`, so a refused write stays open over its `error`. A second pick is refused until `pending` falls or the panel closes. `selected` marks the current one; `empty` and `footer` carry the caller's words, and one live region that stays in place reads out searching, the result count and an empty answer. `open` / `onOpenChange` as on `Popover`. At or under the fold (720px, where `Modal` turns into a sheet), it is a `drawer` `Modal` sheet with `title` at its head. A field's value is a `Select`; a pick inside a form is a `RecordPicker` | `listpopover.tsx` | ✅ |
-| `FilePreview` / `FilePreviewProvider` / `useFilePreview` | One stored file opened over the page, which goes dark, with save, print and close. `FileChip` opens it. The bytes are fetched once into a blob, and the media type comes from the file name, checked against the allowlist of `previewMediaType` in `filechip.tsx`. So no type that can run a script (HTML, SVG) runs under our origin. A PDF goes in a frame and prints itself. An image goes in an `<img>`, and the page prints it through the `@media print` rules on `.modal-full` and `.file-preview-*`. A kind nothing can draw, or a click with a key held down, keeps the download. One provider in `main.tsx`, held by `conformance.test.ts` | `filepreview.tsx` | ✅ |
+| `FilePreviewProvider` / `useFilePreview` | One stored file opened over the page, which goes dark, with save, print and close. `FileChip` opens it. The bytes are fetched once into a blob, and the media type comes from the file name, checked against the allowlist of `previewMediaType` in `filechip.tsx`. So no type that can run a script (HTML, SVG) runs under our origin. A PDF goes in a frame and prints itself. An image goes in an `<img>`, and the page prints it through the `@media print` rules on `.modal-full` and `.file-preview-*`. A kind nothing can draw, or a click with a key held down, keeps the download. One provider in `main.tsx`, held by `conformance.test.ts` | `filepreview.tsx` | ✅ |
 | `useTooltip` | A control's own name on hover and on focus, for a control that cannot draw it. It lands in `aria-describedby`. It works the same way as `useTruncationTooltip` | `tooltip.tsx` | in `Icon action` |
 | `Menu` | The popover panel that `ListSurface` hangs its sort, filter and column sets in: a `fieldset` with a heading; `align` picks the edge it opens from | `listsurface.tsx` | in `List table` |
 | The sort menu | Every field the server can sort the list by, hidden columns included, and the server's own default order. `ListTable` builds it from its columns, and the header and the menu both read `nextSortValue` | `listsurface.tsx` | ✅ (`List table → SortedByAMenu`) |
@@ -469,7 +473,6 @@ and belong to no component.
 | `EmailText` | Full, cleaned email text with paragraphs, a sign-off in view, and quoted history that opens, shared by the email reader and the composer preview | `emailtext.tsx` | ✅ |
 | `EmailWords` | A message's words alone (the server's preview line), for a thread card that already draws the sender and time. It follows the withheld rule of `EmailEntry` | `emailentry.tsx` | in `Email entry` |
 | `EmailReference` | A short pointer to an email: subject, date and first words, with no preview and no access badge. For naming a message inside another layout (a list in time order, an evidence row of a brief, a receipt in the graph). `stacked` puts the date under the subject, for a small column | `emailreference.tsx` | ✅ |
-| `ActivityReferenceList` | The activities a number was worked out from, as rows a reader can check. Email rows draw `EmailReference` and open through `onOpenEmail`; other kinds are text. A row the reader may not read says so, and offers nothing to press. The count beside it stays the caller's | `activityreferencelist.tsx` | ✅ |
 | `CellStrip` | More than one pill in one table cell, on one line: text beside a badge is cut short first, then each badge. It never wraps. Use `RowTags` for a tag column | `listtable.tsx` | ✅ (`List table → Cell strips`) |
 | `Markdown` | A document from the knowledge corpus, read-only, with the cited part marked. `markdown-parse.ts` returns data with a closed set of shapes, and this file builds every element, so raw HTML shows as text and never runs. A link is an `<a>` only for `http`, `https` or `mailto`; any other link shows its label. Tables go in `TableScroll`, named by their header row. It supports the syntax the shipped handbook uses; anything else shows as source text. `highlight` reports through `onHighlight`: the quote found and marked (with white space joined, as `claims.CollapseSpace` does), the `line` with a band, or `"none"`. `autolink` turns a bare `http(s)` address into a link with itself as the label. It shows a link with a label as that label, followed by the real address as the link. The timeline draws a note body this way, while a mail body stays plain text | `markdown.tsx` | ✅ |
 | `InlineMarkdown` | One line of markdown, in the line: bold, italic, code and links, using the parser and element list of `Markdown`. For the answer a model wrote. `links={false}` keeps link labels and drops the link targets, for prose that nothing checks against a quote. Use `Markdown` for headings or tables | `markdown.tsx` | ✅ |
@@ -672,7 +675,7 @@ the title, so a title may describe the surface instead of the file:
 | Root | What is under it |
 |---|---|
 | `Get started/` | The introduction: what the catalog is, and how it is put in order. |
-| `Foundations/` | The rules under every component, one node per topic: `Color`, `Typography`, `Radius`, `Brand`. |
+| `Foundations/` | The rules under every component, one node per topic: `Color`, `Typography`, `Spacing`, `Radius`, `Elevation`, `Motion`, `Iconography`, `Brand`. |
 | `Components/` | One node per component in this directory, under the category below that says what it is for. |
 | `Patterns/` | Parts of a screen that are not a page: the query gate, the add, edit, merge and share actions, the composer. |
 | `Shell/` | The app frame and the Home page. |
