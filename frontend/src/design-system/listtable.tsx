@@ -1000,7 +1000,6 @@ export function ListTable<Row>({
                 // "Loaded so far" is the caveat for a number the client
                 // counted itself; an exact total needs none.
                 more={hasMore && serverTotal === undefined}
-                narrowed={narrowed}
                 sortedBy={sorted?.header}
               />
             )

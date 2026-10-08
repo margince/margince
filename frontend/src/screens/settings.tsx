@@ -1967,7 +1967,12 @@ function AuditLogRow({
           {entry.passport_id && <PassportChip id={entry.passport_id} />}
           {entry.on_behalf_of && (
             <span className="t-caption">
-              {t("settings.auditOnBehalf")} <span>{entry.on_behalf_of}</span>
+              {t("settings.auditOnBehalf")}{" "}
+              <span>
+                {entry.on_behalf_of === meUserId
+                  ? t("audit.you")
+                  : (entry.on_behalf_of_name ?? t("audit.unknownMember"))}
+              </span>
             </span>
           )}
           {entry.authorization_rule && (

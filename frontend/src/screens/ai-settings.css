@@ -306,16 +306,23 @@
   background: color-mix(in srgb, var(--textSecondary) 40%, transparent);
 }
 
-@media (max-width: 720px) {
+/* Asked of the row, not the viewport: beside the settings rail, an 800px window
+ * leaves the row too narrow for four tracks. */
+.ai-tier-row {
+  container-type: inline-size;
+}
+
+@container (max-width: 40rem) {
   .ai-tier-line {
-    grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+    grid-template-columns: 1.25rem minmax(0, 1fr);
   }
 
   .ai-tier-line-plain {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .ai-tier-binding {
+  .ai-tier-binding,
+  .ai-tier-actions {
     grid-column: 1 / -1;
   }
 }

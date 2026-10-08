@@ -48,11 +48,16 @@ export function CallDetailPanel({
       {query.data && (
         <Card as="div" inset className="aicalls-detail">
           <p>
-            {t("aicalls.detail.identity", {
-              served: query.data.served_model,
-              provider: query.data.provider,
-              configured: query.data.model_id,
-            })}
+            {query.data.model_id
+              ? t("aicalls.detail.identity", {
+                  served: query.data.served_model,
+                  provider: query.data.provider,
+                  configured: query.data.model_id,
+                })
+              : t("aicalls.detail.identityNoModel", {
+                  served: query.data.served_model,
+                  provider: query.data.provider,
+                })}
           </p>
           <p>
             {t("aicalls.detail.source", {

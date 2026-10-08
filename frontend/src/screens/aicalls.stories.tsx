@@ -99,7 +99,12 @@ const brokered = [
   },
 ];
 
-function list(data: unknown[], capture = true, allow: GrantSpec = OPERATOR) {
+function list(
+  data: unknown[],
+  capture = true,
+  allow: GrantSpec = OPERATOR,
+  trace: unknown = detail,
+) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
@@ -110,7 +115,7 @@ function list(data: unknown[], capture = true, allow: GrantSpec = OPERATOR) {
           payload_capture_enabled: capture,
           tasks: ["capture_classify"],
         }),
-      "GET /ai/calls/call-1": () => jsonResponse(detail),
+      "GET /ai/calls/call-1": () => jsonResponse(trace),
     });
     return (
       <StoryProviders>
@@ -199,6 +204,16 @@ const openAttemptTrail: NonNullable<Story["play"]> = async ({
 // The detail panel IN the table, which is the only place a reader meets it.
 export const RowExpanded: Story = {
   render: list([summary]),
+  play: openAttemptTrail,
+};
+
+// A binding that names no model, as the offline fake does: the served line
+// says what answered and leaves the configured model out.
+export const RowExpandedNoConfiguredModel: Story = {
+  render: list([{ ...summary, model_id: "" }], true, OPERATOR, {
+    ...detail,
+    model_id: "",
+  }),
   play: openAttemptTrail,
 };
 

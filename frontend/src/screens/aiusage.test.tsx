@@ -243,7 +243,7 @@ it("names every row, and puts the per-day breakdown behind one disclosure", asyn
     ],
   });
   // The month is one decision, so the row names it once and each arrow keeps
-  // its own name: a glyph announces as nothing, and "‹" is not a direction.
+  // its own name: an icon announces as nothing.
   expect(await screen.findByText("Month")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Previous month" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Next month" })).toBeTruthy();
@@ -336,6 +336,20 @@ it("opens on the READER's month and steps from it, not from UTC's", async () => 
   } finally {
     vi.useRealTimers();
     viewer.zone = "UTC";
+  }
+});
+
+it("names the month on screen beside the arrows that step it", async () => {
+  const user = steppedClock();
+  vi.setSystemTime(new Date("2026-09-15T12:00:00Z"));
+  try {
+    mount({ budget, days: [] });
+    expect(await screen.findByText("September 2026")).toBeTruthy();
+
+    await user.click(screen.getByLabelText("Previous month"));
+    expect(await screen.findByText("August 2026")).toBeTruthy();
+  } finally {
+    vi.useRealTimers();
   }
 });
 

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { status } from "./ai-admin.testkit";
@@ -270,6 +270,26 @@ export const VendorCannotBeAsked: Story = {
 export const BoundDark: Story = {
   globals: { theme: "dark" },
   render: story(BOUND),
+};
+
+// On a phone each lane stacks, and its verbs stay inside the row.
+export const BoundPhone: Story = {
+  tags: ["uat-phone"],
+  render: story(BOUND),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findAllByRole("button", { name: /^edit$/i });
+    let measured = 0;
+    for (const line of canvasElement.querySelectorAll(".ai-tier-line")) {
+      const row = line.getBoundingClientRect();
+      for (const verb of line.querySelectorAll(".ai-tier-actions > *")) {
+        const box = verb.getBoundingClientRect();
+        expect(box.left).toBeGreaterThanOrEqual(row.left);
+        expect(box.right).toBeLessThanOrEqual(row.right);
+        measured++;
+      }
+    }
+    expect(measured).toBeGreaterThan(0);
+  },
 };
 
 // One lane's editor, open: provider, model and the vendor's own list. It owns
