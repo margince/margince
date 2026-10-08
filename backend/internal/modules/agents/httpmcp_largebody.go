@@ -73,17 +73,9 @@ func (h *httpMCPHandler) readBody(w http.ResponseWriter, r *http.Request) (body 
 // of the body's read by the handler's read budget.
 func (h *httpMCPHandler) takeLargeSlot(w http.ResponseWriter, r *http.Request) (release func(), err error) {
 	actor, _ := principal.Actor(r.Context())
-	h.largeMu.Lock()
-	defer h.largeMu.Unlock()
-	if _, held := h.largeHolders[actor.ID]; held {
-		return nil, errLargeBodyHeld
+	if err := h.claimLargeSlot(actor.ID); err != nil {
+		return nil, err
 	}
-	select {
-	case h.largeBodies <- struct{}{}:
-	default:
-		return nil, errLargeBodiesBusy
-	}
-	h.largeHolders[actor.ID] = struct{}{}
 	release = func() {
 		h.largeMu.Lock()
 		delete(h.largeHolders, actor.ID)
@@ -95,6 +87,22 @@ func (h *httpMCPHandler) takeLargeSlot(w http.ResponseWriter, r *http.Request) (
 		return nil, fmt.Errorf("%w: %w", errLargeBodyUnbounded, err)
 	}
 	return release, nil
+}
+
+// claimLargeSlot takes a slot for holder unless it already has one or none is free.
+func (h *httpMCPHandler) claimLargeSlot(holder string) error {
+	h.largeMu.Lock()
+	defer h.largeMu.Unlock()
+	if _, held := h.largeHolders[holder]; held {
+		return errLargeBodyHeld
+	}
+	select {
+	case h.largeBodies <- struct{}{}:
+	default:
+		return errLargeBodiesBusy
+	}
+	h.largeHolders[holder] = struct{}{}
+	return nil
 }
 
 // writeBodyRefusal answers a request whose body readBody could not hand over.

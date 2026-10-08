@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -256,5 +257,33 @@ func TestALargeRequestHoldsItsSlotUntilItIsAnswered(t *testing.T) {
 	}
 	if held := len(h.largeBodies); held != 0 {
 		t.Errorf("%d slots are held after the large call was answered, want 0", held)
+	}
+}
+
+// A chain that cannot bound the read refuses the request and gives back the
+// slot it took, rather than hanging on the slot's own lock.
+func TestAnUnboundableLargeRequestGivesItsSlotBack(t *testing.T) {
+	h, _ := largeBodyHandler(t, NewRegistry(nil, nil))
+	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(chunkedPastTheBound))
+	r.ContentLength = MaxMCPRequestBytes
+	r = r.WithContext(principal.WithActor(r.Context(), principal.Principal{Type: principal.PrincipalAgent, ID: "agent:large"}))
+
+	refused := make(chan error, 1)
+	go func() {
+		_, _, err := h.readBody(httptest.NewRecorder(), r)
+		refused <- err
+	}()
+	select {
+	case err := <-refused:
+		if !errors.Is(err, errLargeBodyUnbounded) {
+			t.Errorf("readBody = %v, want errLargeBodyUnbounded", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("readBody never returned: the slot's release waited on the lock its taker held")
+	}
+	h.largeMu.Lock()
+	defer h.largeMu.Unlock()
+	if len(h.largeHolders) != 0 || len(h.largeBodies) != 0 {
+		t.Errorf("after the refusal %d holders and %d slots remain, want none", len(h.largeHolders), len(h.largeBodies))
 	}
 }

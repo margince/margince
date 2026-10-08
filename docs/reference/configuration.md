@@ -1302,8 +1302,9 @@ Once a request holds a place, the rest of its body must come within
 again.
 
 Every upload that adds a document, from the app or from `attach_document`, must be one of the kinds
-in `attachmentTypes` (`backend/internal/modules/activities/attachmenttypes.go`). Any other kind gets
-`422 unsupported_file_type`. HTML and archive files are accepted, because Margince only hands a
+in `attachmentTypes` (`backend/internal/modules/activities/attachmenttypes.go`). In the app, any
+other kind gets `422 unsupported_file_type`. Over MCP, `attach_document` answers with a tool error
+(`isError: true`) that names the same code, and the HTTP status stays `200`. HTML and archive files are accepted, because Margince only hands a
 stored file back as a download. `.svg` files and programs are refused.
 
 The declared type must be in the table. When the file name ends in a type from the table too, the
