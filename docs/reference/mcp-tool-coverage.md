@@ -87,12 +87,12 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 82 |
+| Tools the assistant is offered | 84 |
 | … some case requires | 50 |
 | … some case requires as one of a set | 4 |
-| … **no case requires** | 28 |
+| … **no case requires** | 30 |
 | … of those, permitted somewhere but never required | 23 |
-| Prompt tokens spent on tools no case requires | 8505 |
+| Prompt tokens spent on tools no case requires | 8978 |
 | Use cases | 31 |
 | Acceptance criteria the cases declare, each with a statement | 75 |
 
@@ -114,7 +114,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 82 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 84 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -458,7 +458,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 28 tools no use case requires, **9 are graded elsewhere** and 19 are untried by any lane.
+So of the 30 tools no use case requires, **9 are graded elsewhere** and 21 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -476,6 +476,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `describe_record_fields` | 345 | - | `case43_the_fair_leads_are_prospects` | - |
 | `search_report_evidence` | 335 | - | `case49_who_can_introduce_us` | - |
 | `forecast_input_checks` | 324 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers`, `case45_move_the_deal_on`, `case50_what_moved_my_quarter` | - |
+| `attach_document` | 308 | - | - | - |
 | `read_record` | 292 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `describe_analytics_vocabulary` | 286 | - | `case49_who_can_introduce_us`, `case7_ask_for_a_number` | - |
 | `prepare_handoff` | 267 | - | `case41_close_the_project` | - |
@@ -490,6 +491,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `read_brief` | 205 | `agent_loop` | - | `morning_brief` |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |
 | `list_pipelines` | 191 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
+| `list_documents` | 165 | - | - | - |
 | `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same` | - |
 | `read_import_run` | 67 | - | `case10_finish_the_import`, `case3_spreadsheet` | - |
 

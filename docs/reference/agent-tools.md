@@ -81,6 +81,7 @@ as a composed intent: `TestEveryDeclaredToolVerbIsRegistered` and
 | `at_risk_relationships` | 🟢 | `read` | no |
 | `annotate_brief` | 🟢 | `write` | no |
 | `apply_tag` | 🟢 | `write` | no |
+| `attach_document` | 🟢 | `write` | no |
 | `book_meeting` | 🟢 | `send` | yes |
 | `bulk_update_records` | 🟢 | `write` | no |
 | `invite_meeting` | 🟡 | `send` | yes |
@@ -111,6 +112,7 @@ as a composed intent: `TestEveryDeclaredToolVerbIsRegistered` and
 | `list_approvals` | 🟢 | `read` | no |
 | `list_channel_providers` | 🟢 | `read` | no |
 | `list_colleagues` | 🟢 | `read` | no |
+| `list_documents` | 🟢 | `read` | no |
 | `list_records` | 🟢 | `read` | no |
 | `log_activity` | 🟢 | `write` | no |
 | `merge_records` | 🟢 | `write` | no |
@@ -191,8 +193,6 @@ live RBAC and seat: never the union, and never the passport alone.
 | `write` | Creates, patches, archives, advances, merges, promotes, disqualifies, re-links: every change that stays inside the workspace. |
 | `send` | Egress verbs: they reach outside the workspace. `invite_meeting` is 🟡. The others run immediately under the granting human's own authority. |
 | `enrich` | `enrich`, the one verb that fetches from a third party. 🟡 and `Egress: true`: the cap buys the right to ask. |
-
-The live count per scope is in [mcp-info.md](mcp-info.md).
 
 The `enrich` cap governs the two company read routes on REST, `scrapeCompany`
 (`POST /v1/companies/{id}/enrich`) and `deepReadCompany` (`POST /v1/companies/{id}/deep-read`), and

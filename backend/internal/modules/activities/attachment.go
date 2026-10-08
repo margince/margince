@@ -29,11 +29,6 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 	return h
 }
 
-// ErrBlobstoreUnconfigured reports that this process role wired no object
-// store, so the attachment endpoints are not available here (the handler
-// maps it to 501). A role opts in with Store.WithBlobstore.
-var ErrBlobstoreUnconfigured = errors.New("activities: no object store configured")
-
 const attachmentColumns = `at.id, at.entity_type, at.entity_id, at.filename,
 	at.content_type, at.byte_size, at.checksum, at.source, at.captured_by, at.created_at,
 	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.company_id,
