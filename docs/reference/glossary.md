@@ -67,15 +67,20 @@ The pages used these names before they joined the plain-words bar. Move a name u
 write its meaning, and delete it here. A name new to the docs goes in the table, never here.
 
 <!-- prose:allow sentence a list of names, not a sentence -->
-`AA`, `Act`, `AD`, `AirDrop`, `Anthropic`, `Apple`, `args`, `Art`, `ASCII`, `AST`, `Aurora`, `Authenticode`,
-`axe`, `Azure`, `BotFather`, `BYOK`, `C`, `Cc`, `CGNAT`, `Chrome`, `Claude`, `CLI`, `CODEOWNERS`, `CodeRabbit`,
-`Codex`, `config`, `cron`, `CRUD`, `CSRF`, `CSS`, `Ctrl-C`, `curl`, `DAG`, `DCR`, `DDL`, `DeepSeek`, `DELETE`,
-`dist`, `DNS`, `DPA`, `DSN`, `Edge`, `Entra`, `enum`, `Escape`, `EUR`, `European`, `Firefox`, `Flash-Lite`,
-`Fonts`, `frontend`, `FX`, `Gatekeeper`, `GB`, `Geist`, `Gemini`, `Gemma`, `GNU`, `GPT`, `GPU`, `Graph`,
-`Groq`, `HardPass`, `HTML`, `HTTP`, `IAM`, `IANA`, `IMAPS`, `Impressum`, `Inspector`, `Intel`, `IP`, `JSON`,
-`JSONL`, `JSONPath`, `KB`, `LLM`, `London`, `Mac`, `Markdown`, `MB`, `Mistral`, `MRL`, `ms`, `MSVC`, `NAT`,
-`notarization`, `NULL`, `OAuth`, `OpenAI`, `OpenAI-compatible`, `OS`, `Outfit`, `Outlook`, `PATCH`, `PDF`,
-`pgvector`, `POST`, `PostgreSQL`, `PowerShell`, `px`, `README`, `RFC`, `River`, `Rosetta`, `Safari`, `SBOMs`,
-`semver`, `SLA`, `slug`, `SmartScreen`, `Sparkles`, `SPDX`, `SQL`, `SSRF`, `stdin`, `stdout`, `Storybook`,
-`struct`, `Studio`, `TCP`, `TLS`, `TypeSafe`, `TypeScript`, `UI`, `UID`, `URI`, `URIs`, `URL`, `USB`, `Valkey`,
-`Ventura`, `Vertex`, `VIES`, `Visual`, `VS`, `WCAG`, `Xcode`, `YAML`, `Zürich`
+`AA`, `AAAA`, `Act`, `AD`, `AirDrop`, `allowlist`, `Anthropic`, `Apple`, `arch-lint`, `args`, `Art`, `ASCII`,
+`AST`, `Aurora`, `Authenticode`, `axe`, `Azure`, `BI`, `BotFather`, `BYOK`, `C`, `CA`, `Cc`, `CGNAT`,
+`ChatGPT`, `Chrome`, `chunker`, `Claude`, `claude`, `CLI`, `CNAME`, `CODEOWNERS`, `CodeRabbit`, `Codex`,
+`codex`, `config`, `cron`, `CRUD`, `CSRF`, `CSS`, `Ctrl-C`, `curl`, `DAG`, `DCR`, `DDL`, `dedupe`, `DeepSeek`,
+`DELETE`, `dist`, `DKIM`, `DMARC`, `DNS`, `DPA`, `DSN`, `Edge`, `Entra`, `enum`, `ERP`, `Escape`, `EUR`,
+`European`, `evaluator`, `Firefox`, `Flash-Lite`, `Fonts`, `Forrester`, `frontend`, `FX`, `Gartner`,
+`Gatekeeper`, `GB`, `GCM`, `Geist`, `Gemini`, `Gemma`, `Geocoding`, `gitignored`, `GNU`, `GPL`, `GPT`, `GPU`,
+`Graph`, `Groq`, `Haiku`, `HardPass`, `HMAC`, `HMAC-SHA`, `HTML`, `HTTP`, `IAM`, `IANA`, `IMAPS`, `Impressum`,
+`Inspector`, `Intel`, `IP`, `JSON`, `JSONL`, `JSONPath`, `KB`, `keyvault`, `Lars`, `LLM`, `London`, `Mac`,
+`Makefile`, `Markdown`, `MB`, `Mistral`, `MRL`, `ms`, `MSVC`, `MX`, `NAT`, `notarization`, `NULL`, `OAuth`,
+`OpenAI`, `OpenAI-compatible`, `OS`, `Outfit`, `Outlook`, `PATCH`, `PDF`, `pgvector`, `PIM`, `POST`,
+`PostgreSQL`, `POSTs`, `PowerShell`, `PR`, `PTR`, `px`, `Python`, `Re-certify`, `re-certify`, `README`, `RFC`,
+`River`, `Rosetta`, `Safari`, `SAR`, `SBOMs`, `SDR`, `semver`, `Shopify`, `Shopware`, `SLA`, `slug`,
+`SmartScreen`, `SMTP`, `Sparkles`, `SPDX`, `SPF`, `SQL`, `SSRF`, `stderr`, `stdin`, `stdout`, `Storybook`,
+`Stripe`, `struct`, `Studio`, `Surfe`, `Svix`, `TCP`, `TLS`, `TTL`, `TXT`, `TypeSafe`, `TypeScript`, `UI`,
+`UID`, `unix`, `URI`, `URIs`, `URL`, `URL-safe`, `USB`, `uuid`, `Valkey`, `Ventura`, `Vertex`, `vet`, `VIES`,
+`Visual`, `VS`, `Wappalyzer`, `WCAG`, `Xcode`, `YAML`, `Zürich`
