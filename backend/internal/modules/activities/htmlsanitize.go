@@ -40,6 +40,8 @@ import (
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // allowedElements are the tags a formatted business email is made of. Anything
@@ -132,6 +134,14 @@ func writeSanitizedElement(out *strings.Builder, node *html.Node, policy sanitiz
 		return
 	}
 	styled := policy.styledSpans && node.DataAtom == atom.Span
+	if policy.styledSpans && node.DataAtom == atom.Img {
+		// The one image a signature may show is the embedded logo. Any other
+		// image, a remote one above all, is dropped with nothing to unwrap.
+		if embeddedLogo(node) {
+			out.WriteString(signatureLogoTag)
+		}
+		return
+	}
 	if !allowedElements[node.DataAtom] && !styled {
 		// Unwrap: keep what it said, drop what it was.
 		writeChildren(out, node, policy)
@@ -217,4 +227,13 @@ func safeStyle(node *html.Node) string {
 		}
 	}
 	return strings.Join(kept, ";")
+}
+
+func embeddedLogo(node *html.Node) bool {
+	for _, attr := range node.Attr {
+		if strings.EqualFold(attr.Key, "src") && attr.Val == "cid:"+connector.SignatureLogoContentID {
+			return true
+		}
+	}
+	return false
 }

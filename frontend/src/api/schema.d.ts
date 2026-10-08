@@ -26702,8 +26702,9 @@ export interface components {
         };
         EmailSignatureTemplate: {
             /**
-             * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`
-             *     and `{phone}`. A send keeps paragraphs, line breaks, bold, italic, underline, links
+             * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+             *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
+             *     mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
              *     and spans with a colour and a pixel size, and drops everything else. Empty means
              *     none: each member signs with their own plain-text signature.
              */

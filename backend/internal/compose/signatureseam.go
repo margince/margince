@@ -24,5 +24,6 @@ func (r signatureReader) SignatureFor(ctx context.Context, userID ids.UUID) (act
 	}
 	return activities.SenderSignature{
 		Body: signature.Body, Title: signature.Title, Phone: signature.Phone, Template: signature.Template,
+		HasLogo: signature.HasLogo,
 	}, nil
 }

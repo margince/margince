@@ -73,6 +73,8 @@ type SaveSignatureInput struct {
 // their template values, and the workspace's template.
 type SenderSignature struct {
 	Body, Title, Phone, Template string
+	// HasLogo says the workspace's own company has a logo to embed.
+	HasLogo bool
 }
 
 // GetMyEmailSignature reads the caller's own signature. A member who has never
@@ -178,6 +180,11 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 			return err
 		}
 		out.Template = template
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM company WHERE is_anchor AND archived_at IS NULL
+			                 AND coalesce(logo_object_key, '') <> '')`).Scan(&out.HasLogo); err != nil {
+			return err
+		}
 		err = tx.QueryRow(ctx, `
 			SELECT body, title, phone FROM email_signature
 			 WHERE owner_id = $1 AND archived_at IS NULL`, userID).Scan(&out.Body, &out.Title, &out.Phone)

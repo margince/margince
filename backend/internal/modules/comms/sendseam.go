@@ -119,6 +119,10 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 	if err != nil {
 		return sendSeam{}, err
 	}
+	inline, err := d.inlineFor(ctx, del.HTMLBody)
+	if err != nil {
+		return sendSeam{}, err
+	}
 	return sendSeam{
 		granted:          granted,
 		detectsPriorSend: true,
@@ -129,7 +133,7 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 			// from real mail.
 			return sender.SendEmail(ctx, auth, connector.EmailMessage{
 				To: del.Recipients, Cc: del.Cc, Bcc: del.Bcc,
-				Subject: del.Subject, Body: del.Body, HTMLBody: del.HTMLBody,
+				Subject: del.Subject, Body: del.Body, HTMLBody: del.HTMLBody, Inline: inline,
 				FromName:            del.FromName,
 				MessageID:           del.MessageID,
 				InReplyTo:           del.InReplyTo,

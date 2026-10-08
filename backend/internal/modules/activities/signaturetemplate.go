@@ -14,6 +14,8 @@ import (
 
 	xhtml "golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // SenderSignature is what a send knows about its sender's sign-off: their own
@@ -24,21 +26,33 @@ type SenderSignature struct {
 	Title    string
 	Phone    string
 	Template string
+	// HasLogo says the workspace has a logo for {logo} to show.
+	HasLogo bool
 }
+
+// signatureLogoTag is what {logo} becomes: the workspace logo, embedded in the
+// message and shown by content id, never fetched from a server.
+const signatureLogoTag = `<img src="cid:` + connector.SignatureLogoContentID + `" alt="" width="150">`
 
 // signatureValues fills the template's placeholders. Each value is the
 // sender's own text, so it is escaped before it lands in markup.
 type signatureValues struct {
 	Name, Title, Phone string
+	HasLogo            bool
 }
 
 // renderSignatureTemplate fills the template and returns it as sanitized
 // markup and as the plain text the text/plain part carries.
 func renderSignatureTemplate(template string, v signatureValues) (markup, text string, err error) {
+	logo := ""
+	if v.HasLogo {
+		logo = signatureLogoTag
+	}
 	filled := strings.NewReplacer(
 		"{name}", html.EscapeString(v.Name),
 		"{title}", html.EscapeString(v.Title),
 		"{phone}", html.EscapeString(v.Phone),
+		"{logo}", logo,
 	).Replace(template)
 	markup, err = sanitizeHTML(filled, signaturePolicy)
 	if err != nil {

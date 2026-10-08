@@ -121,6 +121,7 @@ func (s *Store) signOffAs(ctx context.Context, body, subject, name string) (Sign
 	if strings.TrimSpace(signature.Template) != "" {
 		markup, text, err := renderSignatureTemplate(signature.Template, signatureValues{
 			Name: draftfloor.NameLine(name), Title: signature.Title, Phone: signature.Phone,
+			HasLogo: signature.HasLogo,
 		})
 		if err != nil {
 			return SignOff{}, err

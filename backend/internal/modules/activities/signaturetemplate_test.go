@@ -62,3 +62,27 @@ func TestATemplateSignOffLandsInTheMarkupPart(t *testing.T) {
 		t.Fatalf("markup = %q, want the template's markup rather than the text escaped", got)
 	}
 }
+
+// {logo} is the workspace logo embedded by content id, and only when there is
+// one. Any other image, a remote one above all, is dropped.
+func TestTheLogoPlaceholderEmbedsTheWorkspaceLogoAndNothingRemote(t *testing.T) {
+	t.Parallel()
+	template := `<p>{logo}<img src="https://tracker.example/pixel.png">{name}</p>`
+	with, _, err := renderSignatureTemplate(template, signatureValues{Name: "Anna", HasLogo: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(with, `src="cid:signature-logo@margince"`) {
+		t.Errorf("markup %q lacks the embedded logo", with)
+	}
+	if strings.Contains(with, "tracker.example") {
+		t.Errorf("markup %q kept a remote image", with)
+	}
+	without, _, err := renderSignatureTemplate(template, signatureValues{Name: "Anna"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(without, "<img") {
+		t.Errorf("markup %q shows an image though the workspace has no logo", without)
+	}
+}

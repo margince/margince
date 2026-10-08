@@ -5129,7 +5129,7 @@ export const vi = {
   "signatureTemplate.label": "Mẫu (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Dùng {name}, {title} và {phone}. Đoạn văn, ngắt dòng, đậm, nghiêng, gạch chân, liên kết, màu và cỡ chữ theo pixel trên span được giữ lại. Để trống sẽ tắt mẫu.",
+    "Dùng {name}, {title}, {phone} và {logo}, logo công ty được nhúng vào thư. Đoạn văn, ngắt dòng, đậm, nghiêng, gạch chân, liên kết, màu và cỡ chữ theo pixel trên span được giữ lại. Để trống sẽ tắt mẫu.",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Được thêm dưới mỗi thư bạn gửi, phía trên phần hủy đăng ký.",

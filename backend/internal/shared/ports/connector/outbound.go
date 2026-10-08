@@ -113,6 +113,10 @@ type EmailMessage struct {
 	// a blank message.
 	HTMLBody string
 
+	// Inline are images HTMLBody shows by content id, sent beside the markup
+	// so a recipient's client loads nothing from a server to draw them.
+	Inline []InlineImage
+
 	// MessageID is the RFC822 message identity WITHOUT angle brackets —
 	// "abc@host", never "<abc@host>". Stored and compared in this form because
 	// that is how mail parsing yields it, so the copy the provider files back
@@ -229,3 +233,14 @@ type SendReceipt struct {
 	// is durable on the delivery, so a later pass can re-ask the provider.
 	RFC822MessageID string
 }
+
+// InlineImage is one image a message's markup shows by content id.
+type InlineImage struct {
+	ContentID   string
+	ContentType string
+	Body        []byte
+}
+
+// SignatureLogoContentID names the workspace logo a signature template
+// embeds. The markup refers to it as cid:<this>, and the send attaches it.
+const SignatureLogoContentID = "signature-logo@margince"
