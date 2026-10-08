@@ -68,6 +68,11 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	_, err := e.Activities.SetAudience(e.Admin(), held, activities.SetAudienceInput{Audience: "participants"})
 	assert423("SetAudience", err)
 
+	// A patch that sets nothing still reaches the trigger, so a held row never
+	// reads back through PATCH what GET refuses.
+	_, err = e.Activities.UpdateActivity(e.Admin(), held, activities.UpdateActivityInput{})
+	assert423("an empty UpdateActivity", err)
+
 	subject := "edited"
 	_, err = e.Activities.UpdateActivity(e.Admin(), held, activities.UpdateActivityInput{Subject: &subject})
 	assert423("UpdateActivity", err)
