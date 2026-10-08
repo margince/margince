@@ -320,7 +320,7 @@ function WeeklyBody({
           <p className="t-sub">{t("brief.weekly.numericPartial")}</p>
         )}
         {/* On a phone the strip is a list, not ten boxes stacked. */}
-        <StatStrip testId="weekly-strip">
+        <StatStrip testId="weekly-strip" className="brief-weekly-strip">
           {c.tasks_completed !== undefined && (
             <StatCard
               narrow="row"

@@ -39,6 +39,7 @@ import {
   useTeamWeeklyReview,
 } from "./teamweekly.queries";
 
+import "./brief.weekly.css";
 import "./brief.teamweekly.css";
 
 // A team's week, frozen. `/worklist/team` says what the team is carrying now;
@@ -312,7 +313,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         };
 
   return (
-    <StatStrip testId="teamweekly-strip">
+    <StatStrip testId="teamweekly-strip" className="brief-weekly-strip">
       <StatCard
         narrow="row"
         label={t("teamweekly.card.firstResponse")}
