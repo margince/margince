@@ -44605,7 +44605,7 @@ type UpdateDealRequest struct {
 	// FxRateDate Refused 422 `set_by_advance`; dated by the advance that closes the deal.
 	FxRateDate *openapi_types.Date `json:"fx_rate_date,omitempty"`
 
-	// FxRateToBase Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal (formulas §6.1).
+	// FxRateToBase Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal.
 	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
 
 	// LostReason Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.

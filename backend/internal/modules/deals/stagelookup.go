@@ -35,7 +35,7 @@ type liveStage struct {
 // resolveLiveStage is the one answer to "may a deal in this pipeline stand in
 // this stage": 404 for a stage nobody has or that is archived, 422 naming
 // field for a live stage of another pipeline. Both the advance and the create
-// door ask it, so they cannot disagree about which refusal a mistake earns.
+// door ask it, so one mistake earns one refusal.
 func resolveLiveStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID, field string) (liveStage, error) {
 	var stage liveStage
 	var stagePipeline ids.PipelineID

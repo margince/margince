@@ -27546,7 +27546,7 @@ export interface components {
             status?: "open" | "won" | "lost";
             /** @description Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage. */
             lost_reason?: string | null;
-            /** @description Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal (formulas §6.1). */
+            /** @description Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal. */
             fx_rate_to_base?: string | null;
             /**
              * Format: date

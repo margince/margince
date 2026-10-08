@@ -38626,7 +38626,7 @@ components:
         owner_id: { type: [string, 'null'], format: uuid }
         status: { type: string, enum: [open, won, lost], description: 'Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.' }
         lost_reason: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.' }
-        fx_rate_to_base: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal (formulas §6.1).' }
+        fx_rate_to_base: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal.' }
         fx_rate_date: { type: [string, 'null'], format: date, description: 'Refused 422 `set_by_advance`; dated by the advance that closes the deal.' }
         forecast_category: { type: [string, 'null'], enum: [null, commit, best_case, pipeline, omitted] }
         expected_close_date: { type: [string, 'null'], format: date, description: 'On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.' }

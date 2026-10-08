@@ -191,6 +191,7 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 func refuseClosingFields(req crmcontracts.UpdateDealRequest) error {
 	switch {
 	case req.Status != nil:
+		//nolint:goconst // a wire field name; filterStatus names a query parameter, a different vocabulary
 		return &ClosingViaPatchError{Field: "status"}
 	case req.LostReason != nil:
 		return &ClosingViaPatchError{Field: "lost_reason"}
