@@ -42,7 +42,7 @@ Also called: chase a customer, nudge, follow up, reply to a thread.
 To reply to one message in Margince, open the composer from the record and pick the conversation under **Continue thread?**. Then click that message in the **This thread** column.
 The message you picked is marked. The line above the recipients reads "Replying to “{subject}” · {when}", or "Following up on your email" for one you sent.
 
-Hold the mouse on **Preview** to see a message's text, and press **Read full email** to open all of it. Press **New email** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
+Rest the mouse on **Preview** to see a message's text, and press **Read full email** to open all of it. Press **New email** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
 
 ### How do I file an email I send under a project?
 To file an email you send under a project in Margince, choose the project under **Project** in the composer. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**.
@@ -101,7 +101,7 @@ To have AI draft an email in Margince, open the composer. Say what the email is 
 4. Press **Draft with AI** (**Draft reply with AI** for a reply). It shows **Drafting…** while it writes.
 5. Read and edit the draft, then send it as you always do.
 
-With no AI model set up, AI drafts are not there, and you write the email yourself.
+With no AI model set up, AI drafting is not available, and you write the email yourself.
 Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
@@ -157,14 +157,15 @@ The answers are:
 - Their customer relationship
 - Marketing
 
-Margince does not ask for a reason when you reply to their own message: the
-recipient wrote first, so no reason is needed.
+Margince does not ask for a reason when you reply to their own message. The
+screen says: "This replies to the recipient’s own message, so no reason is
+needed."
 
 The consent check reads the reason, and it runs *before* you send. It shows one
 of three answers: **Ready to send**, **No recorded reason to contact this
 recipient**, or **Message cannot be sent**. A check with no answer never counts
-as permission. The screen says the check did not finish, and that sending runs
-it again.
+as permission: "The send check did not complete. Sending runs the check
+again."
 
 Some purposes that Margince knows, such as a security notice, are not offered
 here. A sender who could pick one could send marketing that looks like a
@@ -250,7 +251,7 @@ Also called: send later, delayed send, timed email.
 
 ### How do I cancel or reschedule a scheduled email?
 To cancel or move a scheduled email in Margince, open **Scheduled messages** from the command palette (⌘K or Ctrl+K). Use **Reschedule** or **Withdraw** on the message.
-1. Press ⌘K (Mac) or Ctrl+K, type "Scheduled messages" and open it. The note shown after you set a send time links there too.
+1. Press ⌘K (Mac) or Ctrl+K, type "Scheduled messages" and open it. The toast shown after you set a send time links there too.
 2. To move it, press **Reschedule**, pick the new time and press **Reschedule**. Only the time can change.
 3. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
 Also called: unschedule, delete a scheduled email, change send time.
@@ -284,7 +285,7 @@ A held message also adds an approval card that never runs out. See
 Every marketing message carries a footer with two links: unsubscribe, and
 manage preferences. Both are the recipient's own private links.
 
-**The preference page** says that each purpose is separate. The recipient
+**The preference centre** says that each purpose is separate. The recipient
 cannot switch off messages they need for something they did, such as an order note. All other purposes are theirs to control.
 
 For each purpose it shows one of three states. It is on because they asked, on
@@ -360,7 +361,7 @@ that the contact agreed.
 
 Choosing **Marketing** as the reason for contact names no single list. So the
 unsubscribe link in that message stops all marketing to that recipient, as
-**Stop all marketing** on the preference page does.
+**Stop all marketing** in the preference centre does.
 
-To let a recipient leave one list and keep the rest, send it a way that names
+To let a recipient leave one list and keep the rest, send it in a way that names
 its purpose.
