@@ -8,6 +8,7 @@ accent
 accept
 access
 account
+acme
 across
 act
 action
@@ -46,6 +47,7 @@ among
 an
 analysis
 anchor
+anna
 another
 answer
 any
@@ -182,6 +184,7 @@ capture
 card
 carrier's
 carry
+cas
 case
 catalog
 catch
@@ -211,6 +214,7 @@ choice
 chokepoint
 choose
 chosen
+chromium
 citation
 cite
 claim
@@ -366,6 +370,7 @@ display
 disposition
 do
 doc
+dock
 document
 documentation
 domain
@@ -530,6 +535,8 @@ generate
 generator
 get
 ghost
+gib
+gin
 give
 given
 go
@@ -572,6 +579,7 @@ hide
 high
 history
 hit
+hnsw
 holder
 holding
 holds
@@ -585,7 +593,9 @@ hour
 how
 human
 icon
+ics
 id
+idempotency
 idempotent
 identity
 if
@@ -625,6 +635,8 @@ intro
 introduction
 invite
 invoice
+ios
+ipad
 is
 isolation
 issue
@@ -632,21 +644,26 @@ it
 item
 itself
 jar
+javascript
 jitter
 job
 join
 journey
+jpeg
 judge
 jurisdiction
 just
+kb
 keep
 kept
 key
 keyset
+kib
 kill
 kind
 know
 known
+kv
 label
 lack
 ladder
@@ -710,6 +727,7 @@ loopback
 lose
 lost
 low
+mac
 machine
 made
 mail
@@ -772,6 +790,7 @@ must
 mutation
 name
 namespace
+nan
 narrow
 near
 need
@@ -781,6 +800,7 @@ never
 new
 newsletter
 next
+nil
 no
 nobody
 node
@@ -888,11 +908,13 @@ pick
 picture
 pin
 pipeline
+pk
 place
 plain
 plan
 platform
 plus
+png
 pod
 point
 policy
@@ -958,6 +980,7 @@ quota
 quote
 rail
 raise
+ram
 random
 range
 rank
@@ -1053,6 +1076,7 @@ round
 route
 router's
 row
+rrf
 rubric
 rule
 ruleset
@@ -1342,6 +1366,7 @@ update
 upload
 upsert
 upstream
+urls
 us
 use
 user's
@@ -1364,6 +1389,7 @@ visit
 vocabulary
 voice
 volume
+vram
 wait
 waiver
 wakes
@@ -1427,5 +1453,7 @@ yield
 you
 your
 zero
+zheng
 zip
 zone
+zoom
