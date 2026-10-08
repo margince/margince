@@ -89,10 +89,11 @@ type Input struct {
 	LostCount *int     `json:"lost_count,omitempty"`
 	OpenTasks []TaskIn `json:"open_tasks,omitempty"`
 	Recent    []ActIn  `json:"recent,omitempty"`
-	// LastContactID is the Recent row the page's "Last contact" names, empty
-	// when it names none. The model reads the timeline itself; this keeps the
-	// written-out sentence on the row the tile shows.
-	LastContactID string `json:"-"`
+	// LastContact is the activity the page's "Last contact" tile names, nil
+	// when it names none. It may be older than every Recent row, because tasks
+	// and notes crowd the window, so it rides the fingerprint on its own: two
+	// readers who see different activity never share a brief that names it.
+	LastContact *ActIn `json:"last_contact,omitempty"`
 	// SectionsOmitted names what the reader could NOT see. It rides the
 	// fingerprint so two readers with different grants never share a cached
 	// brief, and it tells the writer to stay silent about those sections
@@ -373,9 +374,7 @@ func foldRecent(view crmcontracts.Company360, in *Input) {
 		}
 		in.Recent = append(in.Recent, act)
 	}
-	if view.LastContact != nil {
-		in.LastContactID = view.LastContact.ActivityId.String()
-	}
+	foldLastContact(view, in)
 }
 
 // Fingerprint identifies the assembled input, together with the prompt and

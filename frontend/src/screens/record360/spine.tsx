@@ -35,6 +35,12 @@ import {
 } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  CALLED_OFF_MEETING,
+  EXCHANGE_KINDS,
+  type ExchangeKind,
+  isExchange,
+} from "./exchangekinds";
 import "./spine.css";
 
 /**
@@ -429,33 +435,6 @@ function aheadStops(view: SpineSource, ctx: Ctx): Stop[] {
 
 function on(at: string, ctx: Ctx): string {
   return formatDateAbbrev(at, ctx.locale, ctx.zone);
-}
-
-// The kinds that are an EXCHANGE with the record, each with what a single one
-// of it is called. The timeline section is unfiltered — it carries tasks from
-// the same table — and a task is something we wrote to ourselves rather than
-// something that was said.
-//
-// A map rather than a set plus a template-literal key: `t` takes a declared
-// MessageKey, so writing the key from the kind would put the catalog beyond
-// what the compiler can check and let a new kind ship printing its own id.
-// A note is absent on purpose: it is something we wrote down, not contact,
-// and the newest stop is titled "Last contact".
-const EXCHANGE_KINDS = {
-  email: "co.spine.kind.email",
-  call: "co.spine.kind.call",
-  meeting: "co.spine.kind.meeting",
-  message: "co.spine.kind.message",
-} as const satisfies Record<string, MessageKey>;
-
-// A meeting nobody held is not contact either. The server's
-// relstrength.countingMeetingStatuses is the same rule from the other side.
-const CALLED_OFF_MEETING: ReadonlySet<string> = new Set(["canceled", "no_show"]);
-
-type ExchangeKind = keyof typeof EXCHANGE_KINDS;
-
-function isExchange(kind: string): kind is ExchangeKind {
-  return kind in EXCHANGE_KINDS;
 }
 
 // How many conversations the thread draws before the silence.

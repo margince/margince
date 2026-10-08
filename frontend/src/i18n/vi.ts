@@ -1668,8 +1668,6 @@ export const vi = {
   "co.strip.lastTouch": "Tiếp xúc gần nhất",
   "co.strip.lastTouch.today": "Hôm nay",
   "co.strip.lastTouch.ago": "{count} ngày trước",
-  "co.strip.lastTouch.theirs": "Họ viết gần nhất",
-  "co.strip.lastTouch.ours": "Bạn viết gần nhất",
   "co.strip.lastTouch.never": "Chưa có trao đổi",
   "co.strip.nextMeeting": "Cuộc họp tiếp theo",
   "co.strip.next.none": "Chưa có lịch",

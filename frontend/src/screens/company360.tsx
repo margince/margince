@@ -42,7 +42,8 @@ import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import "./company360.css";
 import { FactList } from "../design-system/factlist";
-import { daysAgo, HealthStat, WITHHELD_READING } from "./company360health";
+import { HealthStat, WITHHELD_READING } from "./company360health";
+import { LastTouchStat } from "./company360lasttouch";
 import {
   HEALTH_DIMENSION_LABEL,
   HEALTH_RATING_LABEL,
@@ -726,67 +727,6 @@ export function StateStrip({
     </StatStrip>
   );
 }
-
-// The last contact with the account, as days since it happened and what it
-// was. The server picks it (`last_contact`), so this tile and the timeline's
-// last-contact stop name the same activity.
-function LastTouchStat({
-  view,
-  withheld,
-  locale,
-  recordZone,
-  onOpen,
-  t,
-}: Readonly<{
-  view?: Company360;
-  // Refused, read once by the strip and shared with the relationship card.
-  withheld: boolean;
-  locale: Locale;
-  recordZone: string;
-  onOpen?: () => void;
-  t: ReturnType<typeof useT>;
-}>) {
-  const slot = { label: t("co.strip.lastTouch"), narrow: "row" } as const;
-  if (!view || withheld) {
-    return <StatCard onOpen={onOpen} {...slot} value={t(WITHHELD_READING)} />;
-  }
-  const last = view.last_contact;
-  if (!last) {
-    return (
-      <StatCard
-        onOpen={onOpen}
-        {...slot}
-        value={t("co.strip.lastTouch.never")}
-      />
-    );
-  }
-  const days = daysAgo(last.at, view.as_of);
-  return (
-    <StatCard
-      onOpen={onOpen}
-      {...slot}
-      value={
-        days === undefined
-          ? t("co.strip.lastTouch.today")
-          : t("co.strip.lastTouch.ago", { count: formatNumber(days, locale) })
-      }
-      detail={join(
-        t(LAST_CONTACT_KIND[last.kind]),
-        formatDateAbbrev(last.at, locale, recordZone),
-      )}
-    />
-  );
-}
-
-const LAST_CONTACT_KIND = {
-  email: "co.spine.kind.email",
-  call: "co.spine.kind.call",
-  meeting: "co.spine.kind.meeting",
-  message: "co.spine.kind.message",
-} as const satisfies Record<
-  NonNullable<Company360["last_contact"]>["kind"],
-  MessageKey
->;
 
 // What is next on the calendar with this account: the meeting's day, its
 // subject and its hour. Nothing scheduled is a fact about the account and is

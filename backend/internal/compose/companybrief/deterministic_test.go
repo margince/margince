@@ -124,18 +124,16 @@ func TestDeterministicPipelineCitesTheLeadingOpenDeal(t *testing.T) {
 // date are the facts; inventing a subject would not be.
 func TestDeterministicLastTouchSurvivesAMissingSubject(t *testing.T) {
 	withSubject := briefLines(Deterministic(briefCompanyID, Input{
-		Name:          "Acme",
-		Recent:        []ActIn{{ID: "a-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"}},
-		LastContactID: "a-1",
+		Name:        "Acme",
+		LastContact: &ActIn{ID: "a-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"},
 	}, "en"))
 	if !strings.Contains(withSubject, `"Pricing"`) {
 		t.Errorf("the subject is not quoted as theirs: %q", withSubject)
 	}
 
 	without := briefLines(Deterministic(briefCompanyID, Input{
-		Name:          "Acme",
-		Recent:        []ActIn{{ID: "a-1", Kind: "call", At: "2026-07-10T09:00:00Z"}},
-		LastContactID: "a-1",
+		Name:        "Acme",
+		LastContact: &ActIn{ID: "a-1", Kind: "call", At: "2026-07-10T09:00:00Z"},
 	}, "en"))
 	if !strings.Contains(without, "call") {
 		t.Errorf("a subjectless activity lost its kind: %q", without)
@@ -294,9 +292,8 @@ func TestDeterministicLastContactSkipsANewerNote(t *testing.T) {
 		Name: "Acme",
 		Recent: []ActIn{
 			{ID: "n-1", Kind: "note", Subject: "No reply after two chasers", At: "2026-07-12T09:00:00Z"},
-			{ID: "c-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"},
 		},
-		LastContactID: "c-1",
+		LastContact: &ActIn{ID: "c-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"},
 	}, "en"))
 	if strings.Contains(text, "chasers") {
 		t.Errorf("a note was reported as the last contact: %q", text)
@@ -311,5 +308,24 @@ func TestDeterministicLastContactSkipsANewerNote(t *testing.T) {
 	}, "en"))
 	if strings.Contains(none, "Internal") {
 		t.Errorf("an account with only a note was given a last contact: %q", none)
+	}
+}
+
+// The last contact can sit outside Recent, so a reader who may see it and one
+// who may not can hold the same Recent rows. Their briefs must not share a
+// cache entry.
+func TestFingerprintSeparatesReadersWhoSeeDifferentLastContacts(t *testing.T) {
+	seen := Input{Name: "Acme", LastContact: &ActIn{ID: "c-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"}}
+	unseen := Input{Name: "Acme"}
+	a, err := Fingerprint(seen, "r1", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := Fingerprint(unseen, "r1", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a == b {
+		t.Fatalf("a brief naming a last contact shares its fingerprint with one that cannot see it")
 	}
 }

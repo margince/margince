@@ -35394,8 +35394,8 @@ components:
             The newest exchange with the account in either direction, over the same walk: an
             email, a call, a chat message, or a meeting nobody called off. A note is not contact.
             Absent when there was none, or when the caller has no activity grant (then
-            `sections_omitted` names `last_touch`). The "Last contact" tile and the timeline's
-            last-contact stop both read this, so they cannot disagree.
+            `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the
+            timeline applies the same rule to the rows it draws.
           allOf: [{ $ref: '#/components/schemas/Company360LastContact' }]
         state_strip:
           $ref: '#/components/schemas/Company360StateStrip'

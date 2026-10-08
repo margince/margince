@@ -1697,8 +1697,6 @@ export const de = {
   "co.strip.lastTouch": "Letzter Kontakt",
   "co.strip.lastTouch.today": "Heute",
   "co.strip.lastTouch.ago": "vor {count} T",
-  "co.strip.lastTouch.theirs": "Eingehend",
-  "co.strip.lastTouch.ours": "Ausgehend",
   "co.strip.lastTouch.never": "Keiner",
   "co.strip.nextMeeting": "Nächster Termin",
   "co.strip.next.none": "Kein Termin geplant",

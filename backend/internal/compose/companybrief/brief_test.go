@@ -43,7 +43,10 @@ func inputFixture() Input {
 			ID: "22222222-2222-4222-8222-222222222222", Kind: "email",
 			Subject: "Re: proposal", At: "2026-07-10T09:00:00Z",
 		}},
-		LastContactID: "22222222-2222-4222-8222-222222222222",
+		LastContact: &ActIn{
+			ID: "22222222-2222-4222-8222-222222222222", Kind: "email",
+			Subject: "Re: proposal", At: "2026-07-10T09:00:00Z",
+		},
 	}
 }
 

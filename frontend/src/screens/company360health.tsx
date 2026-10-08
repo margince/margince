@@ -53,6 +53,7 @@ function noReply(days: number, locale: Locale, t: Translate): string {
 // span to state and nothing to warn about until a day has passed. And with the
 // outbound date refused, the row says so rather than guessing which it is.
 function silenceReading(
+  rated: boolean,
   touchWithheld: boolean,
   lastOutboundAt: string | undefined,
   asOf: string | undefined,
@@ -66,7 +67,9 @@ function silenceReading(
     return { value: t(WITHHELD_READING) };
   }
   if (!lastOutboundAt || !asOf) {
-    return { value: t("co.strip.noInboundEver") };
+    // Unrated, with no mail either way, the account may still have meetings
+    // and calls; the brief reads the same missing rating as not assessed.
+    return { value: t(rated ? "co.strip.noInboundEver" : UNASSESSED_READING) };
   }
   const days = daysAgo(lastOutboundAt, asOf);
   return days === undefined
@@ -156,16 +159,9 @@ export function HealthStat({
       />
     );
   }
-  if (days == null && !dimension && !lastOutboundAt && !touchWithheld) {
-    // Unrated, and no mail either way: the account may well have meetings and
-    // calls, so "no inbound messages" would contradict the brief beside it,
-    // which reads this same missing rating as not assessed.
-    return (
-      <StatCard onOpen={onOpen} {...slot} value={t(UNASSESSED_READING)} />
-    );
-  }
   if (days == null) {
     const silence = silenceReading(
+      Boolean(dimension),
       touchWithheld,
       lastOutboundAt,
       asOf,

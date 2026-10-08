@@ -97,7 +97,7 @@ func LastTouchFor(
 		       lc.id, lc.occurred_at, lc.kind
 		FROM company %[1]s
 		LEFT JOIN LATERAL (SELECT a.id, a.occurred_at, a.kind %[2]s AND %[5]s
-		                   ORDER BY a.occurred_at DESC LIMIT 1) lc ON true
+		                   ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1) lc ON true
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		activities.OuterCompanyAlias, reached, wantedPos, visible, relstrength.InteractionCountsSQL("a")), args...)
 	if err != nil {
