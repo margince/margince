@@ -45,11 +45,11 @@ func openaiCutOff(out openaiResponse) bool {
 	return out.Status == "incomplete" && out.IncompleteDetails.Reason == openaiMaxOutputTokens
 }
 
-// openaiTerminalStatus maps a non-completed Responses object to an error: a
-// failed call carries the API's error, an incomplete one names why generation
-// stopped (max_output_tokens, content_filter), and a missing status means the
-// body was not a terminal Responses object at all. Any of them read as a clean
-// answer would hand the caller a truncated or filtered result, so
+// openaiTerminalStatus maps a non-completed Responses object to an error. A
+// failed call carries the API's error, and an incomplete one names why
+// generation stopped (max_output_tokens, content_filter). A missing status
+// means the body was not a terminal Responses object at all. Read as a clean
+// answer, any of them would hand the caller a truncated or filtered result, so
 // "completed" is the only success.
 func openaiTerminalStatus(ctx context.Context, out openaiResponse) error {
 	switch out.Status {
@@ -73,7 +73,7 @@ func openaiTerminalStatus(ctx context.Context, out openaiResponse) error {
 }
 
 // openaiFailure is the error for a failed response's code, on the body or as a
-// stream's error event: a rate limit is the throttle a 429 is.
+// stream's error event. A rate limit is the throttle a 429 is.
 func openaiFailure(ctx context.Context, code, message string) error {
 	if openaiPolicyCodes[code] {
 		return withheldError{wire: providerOpenAI, reason: code, detail: safeProviderText(ctx, message)}
@@ -85,9 +85,9 @@ func openaiFailure(ctx context.Context, code, message string) error {
 	return err
 }
 
-// openaiPolicyCodes are the codes, on a failed response or a 400, that are a
-// policy decision about the content, so the answer is withheld rather than the
-// call failed.
+// openaiPolicyCodes are the codes, on a failed response or a 400, that mark a
+// policy decision about the content. The answer is then withheld rather than
+// the call failed.
 var openaiPolicyCodes = map[string]bool{"invalid_prompt": true, "bio_policy": true, "misalignment_policy_violation": true}
 
 // openaiMaxOutputTokens is the incomplete reason for a reply the output

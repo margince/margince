@@ -15,7 +15,7 @@ func rejectReq() model.Request {
 	return model.Request{Messages: []model.Message{{Role: "user", Content: "propose the next step"}}}
 }
 
-// An answer the caller refused is one bad roll of the model; the identical next
+// An answer the caller refused is one bad roll of the model. The identical next
 // request must reach the model rather than be served the refusal for the TTL.
 func TestARejectedAnswerReachesTheModelAgain(t *testing.T) {
 	cheap := NewFakeClient().Script("not a step", `{"final":{}}`)

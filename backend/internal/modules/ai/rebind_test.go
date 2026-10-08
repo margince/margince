@@ -172,8 +172,8 @@ func TestConcurrentReadsNeverSeeAHalfAppliedRebind(t *testing.T) {
 	wg.Wait()
 }
 
-// The health read keys a lane's calls on the model this reports, so it must
-// move with a rebind and name the embed lane beside the tiers.
+// The health read keys a lane's calls on the model this reports. It must move
+// with a rebind and name the embed lane beside the tiers.
 func TestBoundModelsFollowsARebind(t *testing.T) {
 	r, err := NewRouter(parsed(t, rebindFrom), nil, DefaultMonthlyTokens, nil, false, nil)
 	if err != nil {

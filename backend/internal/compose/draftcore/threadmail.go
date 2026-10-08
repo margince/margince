@@ -13,8 +13,8 @@ type Exchange interface {
 
 // ThreadMail is the newest email in recent, newest first, when it has a
 // subject. A task or a logged call is not a message in the thread, and its
-// title is internal, so one recorded after their mail leaves that mail as the
-// thread a draft answers.
+// title is internal. One recorded after their mail still leaves that mail as
+// the thread a draft answers.
 func ThreadMail[A Exchange](recent []A) (A, bool) {
 	for _, act := range recent {
 		if act.ActivityKind() == string(crmcontracts.ActivityKindEmail) {

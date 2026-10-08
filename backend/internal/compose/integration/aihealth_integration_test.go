@@ -248,9 +248,9 @@ func TestAiHealthReportsTheMedianLatency(t *testing.T) {
 }
 
 // A lane reads as the model its router serves now. The seeded attempts were
-// made by `test/test-model`; premium has since been bound to another model, so
-// its failure is not premium's any more, while local_large, which the binding
-// does not name, keeps the attempt it made.
+// made by `test/test-model`. Premium is now bound to another model, so its
+// failure no longer counts as premium's. local_large, which the binding does
+// not name, keeps the attempt it made.
 func TestAiHealthCountsALaneAgainstTheModelItServesNow(t *testing.T) {
 	cfg, err := ai.ParseRouting([]byte(`profile: eu_hosted
 tiers:

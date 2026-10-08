@@ -21,8 +21,8 @@ const openAIRootRefusal = `{"error":{"type":"invalid_request_error","code":"inva
 	`"message":"Invalid schema for response_format 'structured_output': schema must be a JSON Schema of 'type: \"object\"', got 'type: \"None\"'."}}`
 
 // openAIRootRuleEndpoint is a chat-completions host that applies OpenAI's root
-// rule, and otherwise answers the final step in whatever object the schema asks
-// for: bare when the root declares the step's keys, else under its one property.
+// rule. Otherwise it answers the final step as the schema asks: bare when the
+// root declares the step's keys, else under its one property.
 func openAIRootRuleEndpoint(t *testing.T) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +71,7 @@ func writeTestBody(t *testing.T, w http.ResponseWriter, body string) {
 }
 
 // The runner's step schema is a union at its root, and the OpenAI wire refuses
-// any root but an object: a run on an OpenAI model must still be sent a schema
+// any root but an object. A run on an OpenAI model must still send a schema
 // that wire takes, and must read back the step the model answered.
 func TestAnAgentLoopStepRoundTripsTheOpenAIWire(t *testing.T) {
 	srv := openAIRootRuleEndpoint(t)

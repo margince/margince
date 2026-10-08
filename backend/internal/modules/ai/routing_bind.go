@@ -170,10 +170,10 @@ func (r *Router) CurrentModelForTier(tier Tier) (ModelRef, bool) {
 }
 
 // BoundModels is the (provider, model) every lane serves under the binding
-// this Router holds now, the embed and decision lanes included, keyed by the
-// tier its calls are recorded under. Unlike CurrentModelForTier it keeps a lane
-// with no model id: the question is which calls that lane made, not what they
-// cost.
+// this Router holds now, the embed and decision lanes included. It is keyed by
+// the tier its calls are recorded under. Unlike CurrentModelForTier it keeps a
+// lane with no model id: the question is which calls that lane made, not what
+// they cost.
 func (r *Router) BoundModels() map[Tier]ModelRef {
 	meta := r.binding().routeMeta
 	out := make(map[Tier]ModelRef, len(meta))

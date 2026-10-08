@@ -47,8 +47,8 @@ func (s *Server) aiStateOrDefault() string {
 }
 
 // WithLaneHealthBindings counts each lane's /ai/health row against the model
-// router serves on it now, so a rebind does not leave the previous model's
-// failures on the lane. A role with no router keeps counting by tier alone.
+// router serves on it now. A rebind then leaves no failures of the previous
+// model on the lane. A role with no router keeps counting by tier alone.
 func WithLaneHealthBindings(router *ai.Router) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		if router == nil {

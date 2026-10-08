@@ -585,8 +585,8 @@ func TestInvalidModelOutputRetriesThenDegrades(t *testing.T) {
 }
 
 // Every reply the step validator refused is reported back, so a re-run asks
-// the model again instead of being served the refused text; an accepted step
-// is not.
+// the model again instead of being served the refused text. An accepted step
+// is not reported.
 func TestEveryRefusedStepReplyIsRejectedToTheBrain(t *testing.T) {
 	rejected := 0
 	brain := &scriptedBrain{

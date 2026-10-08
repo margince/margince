@@ -63,7 +63,7 @@ func Normalized(subject string) string {
 }
 
 // WithoutReplyPrefix is subject with its leading reply prefixes removed and its
-// case kept, so a reply to it can add its own "Re:" without doubling one.
+// case kept. A reply to it can then add its own "Re:" without doubling one.
 func WithoutReplyPrefix(subject string) string {
 	return strings.TrimSpace(replyPrefixes.ReplaceAllString(subject, ""))
 }

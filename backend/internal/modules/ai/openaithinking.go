@@ -10,10 +10,10 @@ package ai
 import "strings"
 
 // openaiEffortDefaults is each reasoning family's default effort, from the
-// vendor's model pages: 5.1, 5.2 and 5.4 default to none; gpt-5, 5.5, 5.6, 6
-// and the o-series to medium, except o1-mini and o1-preview, which answer the
+// vendor's model pages. 5.1, 5.2 and 5.4 default to none. gpt-5, 5.5, 5.6, 6
+// and the o-series default to medium, but o1-mini and o1-preview answer the
 // field with a 400. Longer prefixes come first so they win. least is the
-// shallowest level a family takes besides its default: the none-default
+// shallowest level a family takes besides its default. The none-default
 // families and GPT-6 answer minimal with a 400, and GPT-6 answers none too.
 var openaiEffortDefaults = []struct{ prefix, effort, least string }{
 	{"gpt-5-chat", "", ""},

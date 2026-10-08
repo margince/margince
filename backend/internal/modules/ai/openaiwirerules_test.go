@@ -4,7 +4,7 @@
 package ai
 
 // The Responses and embeddings wires state limits a request must keep and
-// outcomes a reply can carry; each case here is one of them, as the API
+// outcomes a reply can carry. Each case here is one of them, as the API
 // documents it.
 
 import (
@@ -67,7 +67,7 @@ func TestOpenAIEmbedSendsDimensionsOnlyToAModelThatTakesThem(t *testing.T) {
 }
 
 // GPT-6 refuses minimal with a 400 naming low as its shallowest level, so an
-// admin's minimal reaches it as low; a family that takes minimal keeps it.
+// admin's minimal reaches it as low. A family that takes minimal keeps it.
 func TestAnOpenAIThinkingLevelIsRaisedToTheFamilysShallowest(t *testing.T) {
 	for name, tc := range map[string]struct{ model, level, want string }{
 		"gpt-6.1-sol refuses minimal": {"gpt-6.1-sol", "minimal", `{"effort":"low"}`},

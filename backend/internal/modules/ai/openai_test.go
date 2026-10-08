@@ -197,7 +197,7 @@ func TestOpenAIRefusalIsAnError(t *testing.T) {
 }
 
 // A Responses reply can carry a second message after the one that answers the
-// schema; joined, the two read as one reply that is not a single document.
+// schema. Joined, the two read as one reply that is not a single document.
 func TestOpenAISchemaAnswerIsTheFirstMessageAlone(t *testing.T) {
 	const twoMessages = `{"id":"r","status":"completed","output":[` +
 		`{"type":"message","content":[{"type":"output_text","text":"{\"tool\":\"t\"}"}]},` +

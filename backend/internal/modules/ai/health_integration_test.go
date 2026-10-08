@@ -177,9 +177,9 @@ func madeBy(tier Tier, provider, modelID, sentinel string) []Call {
 	return []Call{row}
 }
 
-// A lane rebound to another model reads as that model, which has made no call:
-// the failures of the model it was bound to before are not the new one's, and
-// shown on its row they would send an admin to replace a model that works.
+// A lane rebound to another model reads as that model, which has made no call.
+// The previous model's failures are not the new one's. Shown on its row, they
+// would send an admin to replace a model that works.
 func TestRungHealthDropsTheAttemptsOfTheModelATierWasBoundToBefore(t *testing.T) {
 	bound := map[Tier]ModelRef{
 		TierPremium:   {Provider: "gemini", Model: "gemini-3.5-flash"},
@@ -196,9 +196,9 @@ func TestRungHealthDropsTheAttemptsOfTheModelATierWasBoundToBefore(t *testing.T)
 	}
 }
 
-// Only the previous model's attempts leave the row: the bound model's own keep
-// counting, a tier rebound to the model it already had keeps its history, and
-// a tier the binding does not name keeps every attempt it made.
+// Only the previous model's attempts leave the row. The bound model's own keep
+// counting, and a tier rebound to the model it already had keeps its history.
+// A tier the binding does not name keeps every attempt it made.
 func TestRungHealthKeepsTheAttemptsOfTheModelATierIsBoundToNow(t *testing.T) {
 	bound := map[Tier]ModelRef{
 		TierPremium:    {Provider: "gemini", Model: "gemini-3.5-flash"},

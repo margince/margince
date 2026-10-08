@@ -15,8 +15,8 @@ import (
 
 const unionRootSchema = `{"anyOf":[{"type":"object","properties":{"a":{"type":"string"}},"required":["a"],"additionalProperties":false}]}`
 
-// The Responses API holds the same root rule as chat completions, so a union
-// root goes out under one property and its answer comes back without it.
+// The Responses API holds the same root rule as chat completions. A union
+// root goes out under one property, and its answer comes back without it.
 func TestTheResponsesWireSendsAUnionRootAsAnObjectAndAnswersTheUnion(t *testing.T) {
 	var sent struct {
 		Text struct {
@@ -55,7 +55,7 @@ func TestTheResponsesWireSendsAUnionRootAsAnObjectAndAnswersTheUnion(t *testing.
 	}
 }
 
-// A schema already rooted in an object is sent byte for byte, and its answer is
+// A schema already rooted in an object is sent byte for byte. Its answer is
 // never unwrapped, even when its own one key is the wrapper's name.
 func TestAnObjectRootGoesOutAsWrittenAndItsAnswerUntouched(t *testing.T) {
 	const objectRoot = `{"type":"object","properties":{"value":{"type":"string"}},"required":["value"],"additionalProperties":false}`

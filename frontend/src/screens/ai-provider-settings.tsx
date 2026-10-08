@@ -42,7 +42,7 @@ type Service = Readonly<{
   noteLink?: string;
 }>;
 
-// What the Other service asks for on each provider: a chat host gets /v1
+// What the Other service asks for on each provider. A chat host gets /v1
 // appended, Gemini's carries its version, a decision endpoint is used as written.
 type OtherHost = Readonly<{ help: MessageKey; placeholder: MessageKey }>;
 

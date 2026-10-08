@@ -50,8 +50,8 @@ func TestSecondAttemptFailureAlsoEvictsItsCachedAnswer(t *testing.T) {
 	}
 }
 
-// An admin thinking level is part of the key the answer was cached under, so
-// the eviction must find it there too, or the rejected answer replays.
+// An admin thinking level is part of the key the answer was cached under. The
+// eviction must find it there too, or the rejected answer replays.
 func TestValidationFailureEvictsUnderAnAdminThinkingLevel(t *testing.T) {
 	cheap := NewFakeClient().Script("not json", "still not json", `{"ok":true}`)
 	premium := NewFakeClient().Script("also not json")

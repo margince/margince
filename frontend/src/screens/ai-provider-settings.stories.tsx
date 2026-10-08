@@ -6,9 +6,9 @@ import type { components } from "../api/schema";
 import { ProviderSettingsForm } from "./ai-provider-settings";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// One provider's own settings, under its key on the provider sheet: the host
-// for a broker, Gemini, Anthropic or a decision server, OpenRouter's host pins
-// when the host is OpenRouter, and the Vertex location.
+// One provider's own settings, under its key on the provider sheet. They are
+// the host for a broker, Gemini, Anthropic or a decision server, OpenRouter's
+// host pins when the host is OpenRouter, and the Vertex location.
 
 type Routing = components["schemas"]["AiRouting"];
 

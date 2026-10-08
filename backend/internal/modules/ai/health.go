@@ -79,11 +79,11 @@ type RungHealth struct {
 func (r RungHealth) Healthy() bool { return r.Calls > 0 && !r.LastOutcomeFailed }
 
 // RungHealthReport reads what every model tier has been doing for the last
-// hour, counting on each tier in bound only the attempts its bound model made.
+// hour. On each tier in bound it counts only the attempts its bound model made.
 //
-// A tier's row reads as "the model bound here", so after a rebind the attempts
-// of the model it was bound to before are not this tier's any more: counted,
-// they would show a healthy model as failing, or a broken one as fine once the
+// A tier's row reads as "the model bound here". After a rebind, the attempts of
+// the model it was bound to before are not this tier's any more. Counted, they
+// would show a healthy model as failing, or a broken one as fine once the
 // old failures aged out. A tier absent from bound keeps every attempt, since
 // nothing says which model it serves now.
 //
@@ -197,8 +197,8 @@ func boundColumns(bound map[Tier]ModelRef) (tiers, providers, models []string) {
 	return tiers, providers, models
 }
 
-// madeByBoundModelSQL is whether the ai_call row aliased alias was made by the
-// model its tier is bound to now, or by a tier the binding does not name. The
+// madeByBoundModelSQL tests whether the ai_call row aliased alias came from its
+// tier's current model, or from a tier the binding does not name. The
 // three columns boundColumns returns are bound from firstArg on.
 func madeByBoundModelSQL(alias string, firstArg int) string {
 	return fmt.Sprintf(`(NOT %[1]s.tier = ANY($%[2]d::text[])

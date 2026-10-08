@@ -3,7 +3,7 @@
 
 package contactdraft
 
-// Which email a reply prefix answers, and what a wrong answer costs: every
+// Which email a reply prefix answers, and what a wrong answer costs. Every
 // draft refused for its prefix is a second model call for the same click.
 
 import (

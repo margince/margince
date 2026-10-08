@@ -475,7 +475,7 @@ describe("AiProviderKeysCard", () => {
   });
 });
 
-// A key saved while the sheet is open, or set while the page sat open, changes
+// A key saved in the sheet, or set while the page sat open, changes
 // what the sheet says about the vendor without a reload.
 describe("AiProviderKeysCard after a key changes", () => {
   const ANTHROPIC_UNSET = {

@@ -55,9 +55,9 @@ func objectRooted(raw json.RawMessage) (json.RawMessage, bool) {
 	return wrapper, true
 }
 
-// unwrapObjectRoot is the answer under objectRootKey. A reply that is not
-// only that wrapper, such as one cut off or answered bare, is handed on
-// unchanged for the caller's own parser to judge.
+// unwrapObjectRoot is the answer under objectRootKey. A reply other than that
+// sole wrapper, such as one cut off or answered bare, reaches the caller's own
+// parser unchanged.
 //
 // SoleDocument, not Unfence: the agent loop executes what this returns, so an
 // ambiguous reply must reach its parser whole rather than reduced by size.
