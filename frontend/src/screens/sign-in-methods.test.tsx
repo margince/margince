@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -134,6 +140,12 @@ describe("the group role grant editor", () => {
   it("renders each stored mapping with its group and granted role", async () => {
     mount([], { engineering: "manager" });
     expect(await screen.findByDisplayValue("engineering")).toBeTruthy();
+    // Its own region, with headings that outlast whatever is typed in a row.
+    const panel = screen.getByRole("region", { name: "Group role grants" });
+    const headers = within(panel)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(headers).toEqual(["IdP group", "Granted role", "Actions"]);
     // The role reads under its product name, the same label the roster uses.
     const role = screen.getByRole("combobox", { name: /granted role/i });
     expect(role.textContent).toContain("Team lead");
@@ -172,7 +184,7 @@ describe("the group role grant editor", () => {
     const { calls } = mount([], { sales: "rep", engineering: "manager" });
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /remove the sales mapping/i }),
+      await screen.findByRole("button", { name: "Remove sales" }),
     );
     await user.click(
       screen.getByRole("button", { name: /save group grants/i }),

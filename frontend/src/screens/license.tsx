@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -6,7 +7,7 @@ import { useLicenseEntitlement } from "../app/license-posture";
 import { StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -33,9 +34,7 @@ import { LicenseHolderCard } from "./licenseholder";
 // ONE reading, because used against granted is ONE fact. It was two slots and a
 // bar beneath them, which is that fact spelled three times — a reader had to
 // work out that the second figure was the first one's denominator and that the
-// bar was both of them again. It sits in one stacked `SettingRow` for the same
-// reason: a row per figure would split the comparison this screen exists to
-// make.
+// bar was both of them again.
 //
 // Over the limit is REPORTED, never enforced. The workspace keeps working — P7's
 // warning-then-grace, not a silent mid-month lockout — so the notice says what is
@@ -135,24 +134,10 @@ export function LicenseCard() {
   );
 }
 
-// The one-line standing, which is four readings rather than three: a licence
-// that was REFUSED is not one that was never configured, and both used to print
-// "No license configured". The server keeps them apart (`state: rejected` vs
-// `absent`) and so does the chrome's own severity rule, so a card that merged
-// them told an operator with a repair to make that there was nothing to repair.
-function stateKey(
-  entitlement: LicenseEntitlement,
-  capped: boolean,
-): MessageKey {
-  if (capped) {
-    return "license.state.licensed";
-  }
-  if (entitlement.state === "valid") {
-    return "license.state.uncapped";
-  }
-  return entitlement.state === "rejected"
-    ? "license.state.refused"
-    : "license.state.unlicensed";
+// The standing of a valid license. A refused or absent one is said by its
+// callout alone, whose title would otherwise repeat this line.
+function stateKey(capped: boolean): MessageKey {
+  return capped ? "license.state.licensed" : "license.state.uncapped";
 }
 
 // What is still free, or what the count is past — the caption the seat reading
@@ -196,13 +181,12 @@ function SeatUsageReading({ seatsUsed }: Readonly<{ seatsUsed: number }>) {
       <PanelBody>
         <PanelIntro>{t("license.seats.capacityOnly")}</PanelIntro>
       </PanelBody>
-      <SettingList bleed="settings">
-        <SettingRow
+      <SeatsBody>
+        <StatCard
           label={t("license.seats.title")}
-          description={t("license.counting")}
-          control={formatNumber(seatsUsed, locale)}
+          value={formatNumber(seatsUsed, locale)}
         />
-      </SettingList>
+      </SeatsBody>
     </Panel>
   );
 }
@@ -228,10 +212,9 @@ export function LicenseReading({
     // as a different kind of object rather than as one more card.
     <Panel title={t("license.card.title")}>
       <PanelBody>
-        {/* The state is said in words rather than as a coloured pill alone: "no
-            license" and "licensed" are different facts about the installation,
-            and a reader should not have to learn a colour to tell them apart. */}
-        <PanelIntro>{t(stateKey(entitlement, capped))}</PanelIntro>
+        {entitlement.state === "valid" && (
+          <PanelIntro>{t(stateKey(capped))}</PanelIntro>
+        )}
         {/* This card is where the installation's licence gap is REPAIRED, so
             it states the gap in every posture; the shell banner (refused) and
             the agent panel's pill (absent or refused) name it and link here. The
@@ -282,46 +265,42 @@ export function LicenseReading({
           </Callout>
         )}
       </PanelBody>
-      <SettingList bleed="settings">
-        {/* Stacked: used against granted is the card's subject, too wide for
-            the answer column. */}
-        <SettingRow
+      <SeatsBody>
+        <StatCard
           label={t("license.seats.title")}
-          description={t("license.counting")}
-          layout="stack"
-          control={
-            <StatCard
-              label={t("license.seats.title")}
-              // Used AGAINST granted in one value, because that is one fact.
-              // Two slots and a bar under them said it three times: a reader
-              // comparing them had to work out that the second figure was the
-              // first one's denominator and that the bar was both of them
-              // again.
-              value={
-                capped
-                  ? t("license.seats.ofGranted", {
-                      used: formatNumber(entitlement.seats_used, locale),
-                      granted: grantedText,
-                    })
-                  : formatNumber(entitlement.seats_used, locale)
-              }
-              detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
-              // Only where the reading HAS a denominator: an uncapped
-              // installation has nothing to be a share of, and a bar drawn
-              // against an invented limit invents the limit.
-              meter={
-                capped
-                  ? { filled: entitlement.seats_used, total: granted }
-                  : undefined
-              }
-              // The slot itself is the bad news when the count is past the
-              // grant, so `alert` rather than `tone`, which would only
-              // colour the figure.
-              alert={entitlement.over_limit}
-            />
+          // Used AGAINST granted in one value, because that is one fact.
+          value={
+            capped
+              ? t("license.seats.ofGranted", {
+                  used: formatNumber(entitlement.seats_used, locale),
+                  granted: grantedText,
+                })
+              : formatNumber(entitlement.seats_used, locale)
           }
+          detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
+          // Only where the reading HAS a denominator: a bar drawn against an
+          // invented limit invents the limit.
+          meter={
+            capped
+              ? { filled: entitlement.seats_used, total: granted }
+              : undefined
+          }
+          // The slot itself is the bad news past the grant, so `alert` rather
+          // than `tone`, which would only colour the figure.
+          alert={entitlement.over_limit}
         />
-      </SettingList>
+      </SeatsBody>
     </Panel>
+  );
+}
+
+// The seat reading and what it counts, the one shape both postures draw.
+function SeatsBody({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  return (
+    <PanelBody>
+      <PanelIntro>{t("license.counting")}</PanelIntro>
+      <StatStrip>{children}</StatStrip>
+    </PanelBody>
   );
 }

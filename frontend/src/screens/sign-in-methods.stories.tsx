@@ -105,3 +105,22 @@ export const GroupsGrantRoles: Story = {
     </Served>
   ),
 };
+
+/** On a phone each grant folds: the group over its role, the remove verb at
+ * the end of the group's line. */
+export const GroupsGrantRolesPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <Served
+      providers={[{ key: "google", label: "Google", enabled: true }]}
+      groupRoleMap={{
+        "crm-admins": "admin",
+        "sales-dach-benelux-regional-field-and-channel-partner-enablement":
+          "rep",
+      }}
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+};

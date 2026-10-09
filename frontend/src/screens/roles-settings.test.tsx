@@ -18,13 +18,14 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { RolesSettings } from "./roles-settings";
+import { memberCounts, RolesSettings } from "./roles-settings";
 
 // The role editor over a stubbed transport: the list and its archived toggle,
 // a new role made by copying one, a grant flip carrying If-Match, the server's
 // refusals in the catalog's words, and the access preview of the open role.
 
 type Role = components["schemas"]["Role"];
+type User = components["schemas"]["User"];
 
 const GRANT = { read: true, create: true, update: true, delete: true };
 const NONE = { read: false, create: false, update: false, delete: false };
@@ -67,8 +68,33 @@ const OLD: Role = {
 
 type Call = { method: string; url: string; body?: unknown; ifMatch?: string };
 
+function member(email: string, roles?: string[]): User {
+  return {
+    id: `id-${email}`,
+    email,
+    display_name: email,
+    status: "active",
+    is_agent: false,
+    ...(roles ? { roles } : {}),
+  };
+}
+
+// Two admins and one member on the custom role; nobody holds the renamed rep.
+const ROSTER = [
+  member("ada@example.com", ["admin"]),
+  member("bo@example.com", ["admin"]),
+  member("cy@example.com", ["custom_field_sales"]),
+];
+
+let rosterReads = 0;
+
 const ROLE_ADMIN: GrantSpec = {
   role_admin: ["read", "create", "update", "delete"],
+};
+
+const MEMBER_ADMIN: GrantSpec = {
+  ...ROLE_ADMIN,
+  user_admin: ["read"],
 };
 
 function backend(
@@ -79,6 +105,7 @@ function backend(
     refuse?: { status: number; code: string };
     // Every directory read after the first fails, as a flaky network would.
     failRefetch?: boolean;
+    roster?: unknown[];
   } = {},
 ) {
   let directoryReads = 0;
@@ -105,6 +132,10 @@ function backend(
           ? [ADMIN, RENAMED_REP, FIELD, OLD]
           : [ADMIN, RENAMED_REP, FIELD],
       });
+    }
+    if (url.pathname.endsWith("/v1/users") && req.method === "GET") {
+      rosterReads += 1;
+      return json({ data: opts.roster ?? ROSTER, page: { has_more: false } });
     }
     if (url.pathname.endsWith("/v1/users/access-preview")) {
       return json({
@@ -160,13 +191,14 @@ async function openRole(
   user: ReturnType<typeof userEvent.setup>,
   name: string,
 ) {
-  await user.click(await screen.findByRole("button", { name: `Open ${name}` }));
+  await user.click(await screen.findByRole("button", { name }));
   return screen.findByRole("heading", { name });
 }
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  rosterReads = 0;
 });
 
 describe("RolesSettings", () => {
@@ -182,6 +214,52 @@ describe("RolesSettings", () => {
     await user.click(screen.getByRole("switch", { name: /show archived/i }));
     const old = await screen.findByTestId("role-custom_old");
     expect(within(old).getByText(en["roles.archived"])).toBeTruthy();
+  });
+
+  it("lists custom roles first, each typed, with how many members hold it", async () => {
+    vi.stubGlobal("fetch", backend([], { allow: MEMBER_ADMIN }));
+    render(<RolesSettings />);
+
+    await screen.findByText("2 members");
+    const rows = screen.getAllByTestId(/^role-/);
+    expect(rows.map((row) => row.dataset.testid)).toEqual([
+      "role-custom_field_sales",
+      "role-admin",
+      "role-rep",
+    ]);
+    const [custom, admin, rep] = rows;
+    expect(within(custom).getByText(en["roles.custom"])).toBeTruthy();
+    expect(within(custom).getByText("1 member")).toBeTruthy();
+    expect(within(admin).getByText(en["roles.system"])).toBeTruthy();
+    expect(within(admin).getByText("2 members")).toBeTruthy();
+    expect(within(rep).getByText("0 members")).toBeTruthy();
+  });
+
+  // The roster carries role keys only for a reader the member grant admits, so
+  // anyone else is never asked for it and sees no count rather than zero.
+  it("leaves the count out for a reader who may not read the member roster", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<RolesSettings />);
+
+    await screen.findByText("Field sales");
+    expect(screen.queryByText(/^\d+ members?$/)).toBeNull();
+    expect(rosterReads).toBe(0);
+  });
+
+  it("opens a role from anywhere on its row, by keyboard too", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend([]));
+    render(<RolesSettings />);
+
+    const row = await screen.findByRole("button", { name: "Field sales" });
+    expect(row.getAttribute("aria-pressed")).toBe("false");
+    row.focus();
+    await user.keyboard("{Enter}");
+
+    expect(
+      await screen.findByRole("heading", { name: "Field sales" }),
+    ).toBeTruthy();
+    expect(row.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("makes a new role as a copy of the one picked, and opens it", async () => {
@@ -497,5 +575,31 @@ describe("RolesSettings", () => {
         }),
       ),
     );
+  });
+});
+
+describe("memberCounts", () => {
+  const entries = [
+    member("ada@example.com", ["admin"]),
+    member("bo@example.com", ["admin", "custom_field_sales"]),
+  ];
+
+  it("counts every member under each role they hold", () => {
+    const counts = memberCounts({ entries, partial: false });
+    expect(counts?.get("admin")).toBe(2);
+    expect(counts?.get("custom_field_sales")).toBe(1);
+  });
+
+  it("says nothing when any member arrives without role keys", () => {
+    expect(
+      memberCounts({
+        entries: [...entries, member("cy@example.com")],
+        partial: false,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("says nothing for a walk that stopped short of the whole roster", () => {
+    expect(memberCounts({ entries, partial: true })).toBeUndefined();
   });
 });

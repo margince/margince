@@ -22,3 +22,62 @@
   display: flex;
   flex-direction: column;
 }
+
+/* The row is one press target, so the button carries the row's inset and the
+   row none: pointing anywhere in it aims at the role. Specific enough to
+   outrank the section interval a first row after a body takes. */
+.panel > .panel-row.roles-row {
+  padding: 0;
+  container-type: inline-size;
+}
+
+.roles-row-press {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  padding: var(--space-3) var(--padPanel);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.roles-row-press:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.roles-row-press[aria-pressed="true"] {
+  background: var(--accentLight);
+  box-shadow: inset 3px 0 var(--accentText);
+}
+
+.roles-row-press > .cell-stack {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.roles-row-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.roles-row-go {
+  flex: none;
+  color: var(--textSecondary);
+}
+
+/* A narrow row gives the name the width: the count stands over the badge. */
+@container (width < 30rem) {
+  .roles-row-facts {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+  }
+}

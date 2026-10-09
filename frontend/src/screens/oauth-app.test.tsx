@@ -154,6 +154,21 @@ describe("the Google app card", () => {
     expect(screen.getByText(CONNECT_URI)).toBeTruthy();
   });
 
+  // A row per address: its purpose, the address whole in its title however the
+  // cell cuts it, and a copy verb that names which address it copies.
+  it("tabulates each address under its purpose, beside its copy verb", async () => {
+    mount(stored());
+    const address = await screen.findByText(SIGN_IN_URI);
+    expect(address.getAttribute("title")).toBe(SIGN_IN_URI);
+    const row = address.closest("tr");
+    if (!row) {
+      throw new Error("the address is not in a table row");
+    }
+    expect(within(row).getByText("Sign-in")).toBeTruthy();
+    const verb = within(row).getByRole("button", { name: "Copy Sign-in URI" });
+    expect(verb.textContent).toBe("Copy");
+  });
+
   // This row used to be the one copy control in the product that said nothing
   // at all: it guarded the missing clipboard and then returned, so on a
   // plain-http deployment the operator pressed a button that did nothing and
@@ -166,8 +181,9 @@ describe("the Google app card", () => {
 
     await user.click(screen.getByRole("button", { name: /Copy Sign-in URI/i }));
 
-    expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
+    const notice = await screen.findByText(/clipboard access denied/i);
     expect(screen.getByText(/copy it manually/i)).toBeTruthy();
+    expect(notice.closest("table")).toBeNull();
   });
 
   // The clipboard holds ONE address. Two rows both reading Copied would send an
