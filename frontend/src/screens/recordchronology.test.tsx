@@ -11,20 +11,17 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { ENTITY_KINDS, type EntityKind } from "../app/entity";
 import { LocaleProvider } from "../i18n";
 import { ContactTimelineTab } from "./contacttabs";
-import { useRecordChronology } from "./recordchronology";
+import { type TimelineFilter, useRecordChronology } from "./recordchronology";
 
-// The chronology is exercised THROUGH the tab that renders it: what the
-// record page owes a reader is one list in one order, and a test that drove
-// the hook alone would prove the merge and miss the thing the merge exists
-// for. The `narrowed` describe block below is the one exception, and it says
-// why it needs the hook directly rather than the tab.
+// History is exercised through the contact tab that renders it, and through
+// the hook every record page shares where the question is about the feeds.
 //
-// The three filters are three different reads, and each has its own way of
-// being wrong: Activities can report the 360's capped page as the whole
-// ledger, Changes can read a failed fetch as "nothing was ever changed", and
-// All can drop one feed's rows on the floor while looking perfectly ordered.
+// All is the conversation and Changes is the record's edits. All can go wrong
+// by letting a field change back in among the mail. A capped page can go wrong
+// by reading as the whole ledger.
 
 type Contact360 = components["schemas"]["Contact360"];
 type SectionActivity = NonNullable<Contact360["activities"]>["data"][number];
@@ -51,8 +48,7 @@ const change: FieldChange = {
   field: "owner_id",
   old_value: null,
   new_value: "Lena Fischer",
-  // BETWEEN the two activities below, so a merge that ordered by time puts it
-  // in the middle and one that merely concatenated the feeds does not.
+  // Between the two activities below, where a time-ordered merge would put it.
   changed_at: "2026-08-10T09:00:00Z",
   actor_type: "human",
   actor_id: "u-1",
@@ -91,12 +87,11 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 /**
- * changeFeed answers the two reads this panel makes — the field-history feed
- * the chronology assembles, and the record history the Changes view now IS —
- * and nothing else. A stub that answered every URL with the same body would
- * let a test pass while the page asked for something entirely different, and
- * one that answered an endpoint with a shape it never returns would report a
- * crash the product cannot have.
+ * changeFeed answers the two change reads a record page can make and nothing
+ * else. They are the field-history feed and the record history behind the
+ * contact's Changes view. A stub answering every URL with one body would pass
+ * while the page asked for something else. A stub answering with a shape the
+ * endpoint never returns would report a crash the product cannot have.
  */
 function changeFeed(status = 200) {
   const calls: string[] = [];
@@ -140,8 +135,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("the record's chronology", () => {
-  it("opens on the whole chronology, which costs the changes read", async () => {
+describe("the record's History", () => {
+  it("opens on All, which holds the exchanges and no field change", async () => {
     const feed = changeFeed();
     vi.stubGlobal("fetch", feed.fetcher);
     withProviders(
@@ -149,11 +144,24 @@ describe("the record's chronology", () => {
     );
 
     expect(screen.getByText("Fleet renewal")).toBeTruthy();
-    // What was said and what changed are one order of events, so the record
-    // opens on both. The second read is what that costs, and it is the price
-    // of not asking a reader to know a cut exists before they can see the
-    // whole ledger.
-    await waitFor(() => expect(feed.changesRead()).toBe(true));
+    expect(screen.getByText("Depot access")).toBeTruthy();
+    expect(screen.queryByText("Owner")).toBeNull();
+    expect(feed.changesRead()).toBe(false);
+  });
+
+  it("offers All, Threads and Changes, and no Activities cut", () => {
+    withProviders(
+      <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
+    );
+
+    const cuts = screen
+      .getByRole("group", { name: "Timeline filter" })
+      .querySelectorAll("button");
+    expect([...cuts].map((cut) => cut.textContent)).toEqual([
+      "All",
+      "Threads",
+      "Changes",
+    ]);
   });
 
   it("reads the record's history only once the reader asks for the changes", async () => {
@@ -164,8 +172,6 @@ describe("the record's chronology", () => {
       <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
     );
 
-    // The Changes view IS the record's history now, so the read it must not
-    // spend before being asked is that one.
     expect(feed.historyRead()).toBe(false);
 
     await user.click(screen.getByRole("button", { name: "Changes" }));
@@ -175,67 +181,9 @@ describe("the record's chronology", () => {
     expect(screen.queryByText("Fleet renewal")).toBeNull();
   });
 
-  it("puts both feeds in one order under All, newest first", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", changeFeed().fetcher);
-    withProviders(
-      <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "All" }));
-
-    // "Owner", not the raw "owner id" the field name would fall back to —
-    // this feed is the same FieldHistoryEntry rows the Changes tab labels
-    // through historyFieldLabel, and the combined view owes it the same word.
-    await waitFor(() => expect(screen.getByText("Owner")).toBeTruthy());
-    const rows = screen.getAllByRole("listitem");
-    const text = rows.map((row) => row.textContent ?? "");
-    const mailFirst = text.findIndex((row) => row.includes("Fleet renewal"));
-    const changed = text.findIndex((row) => row.includes("Owner"));
-    const mailLast = text.findIndex((row) => row.includes("Depot access"));
-    // 11 Aug, then the 10 Aug change, then 9 Aug: interleaved by time rather
-    // than one feed appended to the other.
-    expect(mailFirst).toBeLessThan(changed);
-    expect(changed).toBeLessThan(mailLast);
-  });
-
-  it("says a failed change read failed rather than reporting nothing was ever changed", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", changeFeed(500).fetcher);
-    withProviders(
-      <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
-    );
-
-    // Under All, where the chronology still assembles both feeds.
-    await user.click(screen.getByRole("button", { name: "All" }));
-
-    await waitFor(() =>
-      expect(screen.getByText("This section did not load.")).toBeTruthy(),
-    );
-    expect(
-      screen.queryByText("No field has changed since this record was created."),
-    ).toBeNull();
-  });
-
-  it("states that a capped page is not the whole ledger, in the words of the cut", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", changeFeed().fetcher);
+  it("states that a capped page is not the whole ledger", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={viewWith(true)} />);
 
-    expect(screen.getByText("Fleet renewal")).toBeTruthy();
-    // On the combined cut the honest sentence is about BOTH feeds: the merge
-    // can only order rows it can prove are in order, so what it drops is not
-    // "older activities" but older entries of either kind.
-    await waitFor(() =>
-      expect(
-        screen.getByText(/Older entries are not shown because/),
-      ).toBeTruthy(),
-    );
-
-    await user.click(screen.getByRole("button", { name: "Activities" }));
-
-    // On the activities cut the same fact has a narrower and more useful
-    // sentence, because there is only one feed to be cut.
     expect(
       screen.getByText("Only the most recent activities are shown."),
     ).toBeTruthy();
@@ -252,13 +200,9 @@ describe("the record's chronology", () => {
   });
 });
 
-// `narrowed` is tested against the hook directly rather than through a tab: a
-// narrowed read only exists once the reader has already typed a search or
-// picked a kind, and by the time a component mount could reach that state the
-// unnarrowed render before it would already have fired the changes fetch the
-// assertion is about. The hook takes `narrowed` as a starting condition, which
-// only a direct render can hold from the first render.
-describe("useRecordChronology's narrowed reads", () => {
+// Every record page reads its History through this hook, so the rule is held
+// here once per record kind rather than once per page.
+describe("useRecordChronology", () => {
   const activities = [
     activity({
       id: "a-1",
@@ -279,21 +223,17 @@ describe("useRecordChronology's narrowed reads", () => {
     );
   }
 
-  function hook(narrowed: boolean) {
-    const feed = changeFeed();
+  function hook(kind: EntityKind, filter: TimelineFilter, status = 200) {
+    const feed = changeFeed(status);
     vi.stubGlobal("fetch", feed.fetcher);
     const rendered = renderHook(
       () =>
         useRecordChronology({
-          kind: "contact",
+          kind,
           recordId: "p-1",
-          filter: "all",
-          narrowed,
+          filter,
           activities,
           activitiesHaveMore: false,
-          // The reading context every change row needs. A contact record holds
-          // no money of its own, and the zone comes from the harness's own
-          // provider the same way a record page takes it from the workspace.
           values: { currency: null, locale: "en", zone: "UTC" },
         }),
       { wrapper },
@@ -301,49 +241,34 @@ describe("useRecordChronology's narrowed reads", () => {
     return { ...rendered, feed };
   }
 
-  it("drops the record's own field-change rows once the read is narrowed", async () => {
-    const { result } = hook(true);
+  it.each(ENTITY_KINDS)(
+    "keeps every field change out of a %s's All and never reads the change feed for it",
+    (kind) => {
+      const { result, feed } = hook(kind, "all");
 
-    // The activity is still on screen — narrowing removes the change rows, not
-    // the whole merge.
-    await waitFor(() =>
-      expect(result.current.entries.some((entry) => entry.id === "a-1")).toBe(
-        true,
-      ),
-    );
-    // A field edit is not a meeting: a narrowed search for Meetings must never
-    // surface "owner id was changed" beside them, even though the change feed
-    // above is stubbed to answer with exactly that row.
-    expect(
-      result.current.entries.some((entry) => entry.kind === "change"),
-    ).toBe(false);
-  });
+      expect(result.current.entries.map((entry) => entry.id)).toEqual(["a-1"]);
+      expect(result.current.changes.fetchStatus).toBe("idle");
+      expect(feed.changesRead()).toBe(false);
+    },
+  );
 
-  it("keeps the change rows in the merge when the read is not narrowed", async () => {
-    const { result } = hook(false);
+  it.each(ENTITY_KINDS)(
+    "lists a %s's field changes under Changes, without the exchanges",
+    async (kind) => {
+      const { result } = hook(kind, "changes");
 
-    // Same activities, same stubbed change feed, `narrowed: false` — the
-    // change row appears, which is what proves the first test's empty change
-    // list came from the narrowing and not from the feed having nothing to
-    // give.
-    await waitFor(() =>
-      expect(
-        result.current.entries.some((entry) => entry.kind === "change"),
-      ).toBe(true),
-    );
-  });
+      await waitFor(() =>
+        expect(result.current.entries.map((entry) => entry.kind)).toEqual([
+          "change",
+        ]),
+      );
+    },
+  );
 
-  it("never asks the field-history endpoint for a narrowed read", async () => {
-    const { result, feed } = hook(true);
+  it("says a failed change read failed rather than reporting nothing was ever changed", async () => {
+    const { result } = hook("contact", "changes", 500);
 
-    await waitFor(() =>
-      expect(result.current.entries.some((entry) => entry.id === "a-1")).toBe(
-        true,
-      ),
-    );
-    // A feed whose rows can never appear must not be fetched at all — the
-    // query itself stays off, not merely filtered after the fact.
-    expect(result.current.changes.fetchStatus).toBe("idle");
-    expect(feed.changesRead()).toBe(false);
+    await waitFor(() => expect(result.current.failed).toBe(true));
+    expect(result.current.entries).toEqual([]);
   });
 });

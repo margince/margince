@@ -2488,7 +2488,6 @@ export const en = {
   "co.signals.openProject": "Open project",
   "co.signals.openSource": "Read announcement",
   "chronology.label": "Timeline filter",
-  "chronology.activities": "Activities",
   "chronology.changes": "Changes",
   "filter.label": "Filter",
   "chronology.all": "All",
@@ -2498,9 +2497,6 @@ export const en = {
   "convo.waitingOnThem": "Awaiting their reply",
   "chronology.changesEmpty":
     "No field has changed since this record was created.",
-  "chronology.allEmpty": "No activity on this record yet.",
-  "chronology.truncated":
-    "Older entries are not shown because there are too many to order together. Select Activities or Changes to see further back.",
   "chronology.truncatedActivities":
     "Only the most recent activities are shown.",
   "timeline.sentTo": "Sent to {who}",

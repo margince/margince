@@ -451,11 +451,10 @@ type ChronologySlots = Readonly<{
 }>;
 
 /**
- * The chronology zone: the activities the 360 already carries (capped, with
- * `has_more` beside them), folded with the field-history feed under the same
- * Activities / Changes / All filter the company page offers. The 360's own
- * page of activities is what is drawn, so the list cannot disagree with the
- * rollup figures read in the same transaction.
+ * The chronology zone, with the same filter the company page offers. All draws
+ * the activities the 360 already carries (capped, with `has_more` beside
+ * them), and Changes the field-history feed. Drawing the 360's own page keeps
+ * the list in step with the rollup figures read in the same transaction.
  */
 function useProjectChronology(view: Project360): ChronologySlots {
   const t = useT();
@@ -482,9 +481,6 @@ function useProjectChronology(view: Project360): ChronologySlots {
     kind: "project",
     recordId: view.project.id,
     filter,
-    // A narrowed read is a question about what was said, so the record's own
-    // edits stand down: they are not meetings, and not what the reader asked.
-    narrowed: hasTimelineFilters(filters),
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -501,8 +497,7 @@ function useProjectChronology(view: Project360): ChronologySlots {
     ),
   });
   // A withheld activities section is not an empty timeline, and the change
-  // feed is a separate grant: Activities and All say withheld, Changes still
-  // reads.
+  // feed is a separate grant: All says withheld, Changes still reads.
   if (activitiesState === "withheld" && filter !== "changes") {
     return {
       timeline: [],

@@ -925,9 +925,6 @@ function useChronologySlots({
     kind: "company",
     recordId: company.id,
     filter,
-    // A narrowed read is a question about what was said, so the record's own
-    // edits stand down: they are not meetings, and not what the reader asked.
-    narrowed: hasTimelineFilters(filters),
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -985,12 +982,10 @@ function useChronologySlots({
         </>
       ),
       timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
-      // Every cut renders through the ONE chronicle: Changes draws the same
-      // change rows the All view interleaves and Conversations the same
-      // thread rows, so no cut is a second rendering of rows another cut
-      // already shows. The By-field reading and the put-back control live in
-      // the record's Full history (the header's overflow menu), the one
-      // surface that carries the restore write.
+      // Every cut renders through the one chronicle, so no cut is a second
+      // rendering of rows another cut shows. The By-field reading and the
+      // put-back control live in the record's Full history (the header's
+      // overflow menu), the one surface that carries the restore write.
       timelineNotice:
         chronologyNotice(
           filter === "conversations"

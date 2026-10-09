@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The lead's History tab: ONE chronology, the same shape the contact's
-// Timeline tab reads (contacttabs.tsx) and the account's and the project's
-// read off the same hook. What was said to the lead and what was changed
-// about it are one order of events, cut by the same All / Activities /
-// Changes row every other record offers.
+// The lead's History tab, read off the same hook as every record page. All
+// shows what was said to the lead, Changes what changed on it.
 //
-// The Changes cut swaps in the record-change audit (RecordHistoryTab) rather
-// than drawing the field edits as ordinary rows: that panel is the one
-// surface that can put a value back, and a second rendering of the same
-// changes beside it would be two answers to one question with only one of
-// them carrying the restore.
+// The Changes cut swaps in the record-change audit (RecordHistoryTab), the one
+// surface that can put a value back. A second rendering of the same changes
+// beside it would be a second answer without the restore.
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
@@ -19,7 +14,6 @@ import { useRecordZone } from "../app/recordzone";
 import { GroupedTimelineList } from "../design-system/composed";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
-  hasTimelineFilters,
   useRecordTimeline,
   useTimelineFilters,
 } from "../design-system/recordtimeline";
@@ -64,9 +58,6 @@ export function LeadHistoryTab({
     kind: "lead",
     recordId: lead.id,
     filter,
-    // A narrowed read is a question about what was said, so the record's own
-    // edits stand down: they are not meetings, and not what the reader asked.
-    narrowed: hasTimelineFilters(filters),
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
