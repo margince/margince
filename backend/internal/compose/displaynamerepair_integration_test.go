@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditverb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -52,7 +53,7 @@ func runDisplayNameRepair(t *testing.T, e *integration.Env) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:participant_backfill",
+		Type: principal.PrincipalSystem, ID: contacts.DisplayNameRepairActor,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	w := &participantBackfillWorker{pool: e.Pool, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -162,5 +163,78 @@ func TestTheRepairKeepsADisplayNameAHumanEdited(t *testing.T) {
 
 	if got := shownName(t, e, id); got != typed {
 		t.Errorf("full_name = %q, want %q: a human typed it", got, typed)
+	}
+}
+
+// An agent that renames a captured contact chose that name, although the row
+// still carries capture's captured_by.
+func TestTheRepairKeepsADisplayNameAnAgentEdited(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
+	chosen := "Bobby (VIP)"
+	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
+	if _, err := e.Contacts.UpdateContact(agent, id, contacts.UpdateContactInput{FullName: &chosen}); err != nil {
+		t.Fatalf("an agent renaming the contact: %v", err)
+	}
+	learnSplitName(t, e, id, "Björn", "Welter")
+
+	runDisplayNameRepair(t, e)
+
+	if got := shownName(t, e, id); got != chosen {
+		t.Errorf("full_name = %q, want %q: an agent chose it", got, chosen)
+	}
+}
+
+// A restore writes full_name under its own audit verb, and is as much a choice
+// as an update.
+func TestTheRepairKeepsADisplayNameAHumanRestored(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
+	restored := "Bee Dub"
+	if _, err := e.Contacts.UpdateContact(e.Admin(), id, contacts.UpdateContactInput{
+		FullName: &restored,
+		Trail:    auditverb.Trail{Verb: auditverb.Restore},
+	}); err != nil {
+		t.Fatalf("a human restoring the contact's name: %v", err)
+	}
+	learnSplitName(t, e, id, "Björn", "Welter")
+
+	runDisplayNameRepair(t, e)
+
+	if got := shownName(t, e, id); got != restored {
+		t.Errorf("full_name = %q, want %q: a human restored it", got, restored)
+	}
+}
+
+// The fill keeps a display that already names the pair it learns and says
+// more. The row is planted the way a capture stored it before the parser
+// stripped affiliations and filled the split columns.
+func TestTheFillKeepsACapturedNameThatSaysMoreThanThePair(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureCounterparty(t, e, "Robert Fischer", "bob@acme.test")
+	e.WsExec(t, `UPDATE contact SET full_name = 'Robert Fischer (Acme board)', first_name = NULL, last_name = NULL
+		WHERE id = $1`, id)
+
+	captureCounterparty(t, e, "Robert Fischer", "bob@acme.test")
+
+	if got := e.WsScalar(t, `SELECT coalesce(first_name, '') FROM contact WHERE id = $1`, id); got != "Robert" {
+		t.Fatalf("first_name = %q, want the fill to have learned it", got)
+	}
+	if got := shownName(t, e, id); got != "Robert Fischer (Acme board)" {
+		t.Errorf("full_name = %q, want the display that already names both halves", got)
+	}
+}
+
+// A blank half is no name. The repair neither reads it as contained in the
+// display nor writes a one-part name in its place.
+func TestTheRepairLeavesAContactWithABlankHalfAlone(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
+	learnSplitName(t, e, id, " ", "Welter")
+
+	runDisplayNameRepair(t, e)
+
+	if got := shownName(t, e, id); got != "Bw" {
+		t.Errorf("full_name = %q, want the label kept until both halves are known", got)
 	}
 }

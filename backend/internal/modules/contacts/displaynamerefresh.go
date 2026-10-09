@@ -50,7 +50,7 @@ func RefreshDisplayNameTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	if err != nil || !stale {
 		return false, err
 	}
-	learned := strings.TrimSpace(first + " " + last)
+	learned := strings.TrimSpace(first) + " " + strings.TrimSpace(last)
 	tag, err := tx.Exec(ctx, `
 		UPDATE contact SET full_name = $2 WHERE id = $1 AND full_name = $3`,
 		contactID, learned, previous)

@@ -99,7 +99,7 @@ func completeContactName(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	if err != nil {
 		return false, fmt.Errorf("contacts: reading the name contact %s carries: %w", contactID, err)
 	}
-	guessed, err := displayNameIsCapturesGuessTx(ctx, tx, contactID)
+	guessed, err := displayNameIsCapturesGuessTx(ctx, tx, contactID, parsed)
 	if err != nil {
 		return false, err
 	}
