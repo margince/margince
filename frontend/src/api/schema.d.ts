@@ -23263,9 +23263,13 @@ export interface components {
              *     a company, so the provider has nothing to match on; an automatic trigger declines
              *     rather than spending a call that can only answer "no match". A human pressing the
              *     button on the contact is still allowed to try.
+             *     `category_in_flight` means a live run for this contact and provider was already
+             *     buying at least one of the categories asked for. The request is refused whole
+             *     rather than narrowed, nothing was reserved, and asking again once that run has
+             *     finished is admitted.
              * @enum {string|null}
              */
-            skip_reason?: "budget_exhausted" | "low_balance" | "suppressed" | "not_eligible" | "duplicate_subject_candidate" | "rate_limited" | "already_fresh" | "no_identifiers" | null;
+            skip_reason?: "budget_exhausted" | "low_balance" | "suppressed" | "not_eligible" | "duplicate_subject_candidate" | "rate_limited" | "already_fresh" | "no_identifiers" | "category_in_flight" | null;
             /** Format: int64 */
             connection_version: number;
             configuration_snapshot: components["schemas"]["ProviderConfiguration"];
