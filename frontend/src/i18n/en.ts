@@ -10666,6 +10666,7 @@ export const en = {
   "contact.rail.channelNotDeliverable": "Not deliverable",
   "contact.drawer.close": "Close",
   "richtext.bold": "Bold",
+  "richtext.heading": "Heading",
   "richtext.italic": "Italic",
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",

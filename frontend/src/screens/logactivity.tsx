@@ -9,7 +9,6 @@ import {
   Checkbox,
   Field,
   Modal,
-  Textarea,
   TextInput,
 } from "../design-system/atoms";
 import {
@@ -33,16 +32,15 @@ import {
   activityRequestBody,
   KINDS_WITH_A_CONTACT,
 } from "./activitybody";
+import { ActivityBodyField } from "./activitybodyfield";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
 import { throwProblem, useMe } from "./common";
+import "./logactivity.css";
 
-// Log a note or task from a 360 (contact/company/deal/lead): the contract's
-// logActivity POST, linked to the record being viewed, occurred_at stamped
-// at submit, source=manual. On success every read that renders this record's
-// timeline is invalidated (see activitykeys) so the fresh entry appears
-// without a reload. Server-side validation is the truth — a 422 renders its
-// RFC 7807 detail verbatim.
+// Log an activity from a 360: the logActivity POST, linked to the record being
+// viewed, source=manual. Success invalidates every read of this record's
+// timeline (see activitykeys); a 422 renders its detail verbatim.
 
 const EMPTY_DRAFT: ActivityDraft = {
   kind: "note",
@@ -160,6 +158,9 @@ export function LogActivityForm({
   const [attendee, setAttendee] = useState<RecordPickerCandidate | null>(null);
   const needsAttendee =
     entityType === "company" && KINDS_WITH_A_CONTACT.has(draft.kind);
+  // The same test activityRequestBody sends source_system on.
+  const transcript = draft.kind === "meeting" && draft.asTranscript;
+  const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
   const log = useMutation({
     // Keyed on entityId, the record this form is open on, not the created
@@ -336,20 +337,19 @@ export function LogActivityForm({
           onChange={(event) => setField({ asTranscript: event.target.checked })}
         />
       )}
-      <Field
-        label={draft.asTranscript ? t("log.transcriptLabel") : t("log.body")}
-        hint={draft.asTranscript ? t("log.transcriptHint") : undefined}
-      >
-        {(control) => (
-          <Textarea
-            {...control}
-            rows={draft.asTranscript ? 10 : 3}
-            value={draft.body}
-            onChange={(event) => setField({ body: event.target.value })}
-          />
-        )}
-      </Field>
-      {draft.kind === "meeting" && draft.asTranscript && (
+      {/* In the drawer the body is the form's subject, so it takes the room
+          left under the fields; the standing card keeps it compact. */}
+      <ActivityBodyField
+        label={transcript ? t("log.transcriptLabel") : t("log.body")}
+        hint={transcript ? t("log.transcriptHint") : undefined}
+        transcript={transcript}
+        rows={bodyRows}
+        grow={banded}
+        className="logactivity-body-field"
+        value={draft.body}
+        onChange={(body) => setField({ body })}
+      />
+      {transcript && (
         <Field label={t("log.transcriptUpload")} hint={fileError ?? undefined}>
           {(control) => (
             <TextInput
@@ -388,7 +388,7 @@ export function LogActivityForm({
   );
   return banded ? (
     <>
-      <DrawerBody>{form(null)}</DrawerBody>
+      <DrawerBody className="logactivity-drawer-body">{form(null)}</DrawerBody>
       <DrawerFoot className="actions">{submit}</DrawerFoot>
     </>
   ) : (

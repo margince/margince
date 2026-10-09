@@ -10546,6 +10546,7 @@ export const de = {
   "contact.rail.channelNotDeliverable": "Nicht zustellbar",
   "contact.drawer.close": "Schließen",
   "richtext.bold": "Fett",
+  "richtext.heading": "Überschrift",
   "richtext.italic": "Kursiv",
   "richtext.bulletList": "Aufzählung",
   "richtext.numberList": "Nummerierte Liste",
