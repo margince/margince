@@ -772,7 +772,6 @@ export function LeadHandlingCard() {
   const update = useUpdateLeadSettings();
   return (
     <Panel title={t("leadHandling.title")}>
-      {/* Plain body, for the reason the sources card carries in full. */}
       <PanelBody>
         <PanelIntro>{t("leadHandling.sub")}</PanelIntro>
       </PanelBody>

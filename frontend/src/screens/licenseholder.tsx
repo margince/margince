@@ -50,10 +50,8 @@ export function LicenseHolderCard({
             </Callout>
           ) : (
             holder.renewal_due && (
-              // Inside the warning window. Amber: nothing has gone wrong yet,
-              // and a renewal is a thing to plan rather than to fix now. The
-              // calendar glyph rather than the tone's, because this notice is
-              // about a DATE rather than about how bad the news is.
+              // Amber, because nothing has gone wrong yet; the calendar glyph,
+              // because this notice is about a date rather than a severity.
               <Callout
                 kind="standing"
                 tone="warning"

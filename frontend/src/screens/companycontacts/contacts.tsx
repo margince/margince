@@ -91,7 +91,7 @@ export function CompanyContactsList({
    * receives the narrowing function rather than the state: a door sets a
    * filter, and nothing else about the list is any of the band's business.
    */
-  bandSlot?: (narrow: (status: string | null) => void) => ReactNode;
+  bandSlot?: (narrow: (status: string) => void) => ReactNode;
 }>) {
   const t = useT();
 
@@ -146,12 +146,8 @@ export function CompanyContactsList({
     fetchPage,
   });
 
-  const narrow = (status: string | null) => {
-    state.setQuery((prev) => ({
-      ...prev,
-      q: "",
-      filters: status ? { status } : ({} as Record<string, string>),
-    }));
+  const narrow = (status: string) => {
+    state.setQuery((prev) => ({ ...prev, q: "", filters: { status } }));
   };
 
   return (

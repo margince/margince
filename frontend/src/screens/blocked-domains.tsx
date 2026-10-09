@@ -9,8 +9,12 @@ import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
 import { CountLine } from "../design-system/listsurface";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -143,6 +147,12 @@ export function BlockedDomainsCard() {
     });
   }, []);
 
+  const hasOutcome =
+    !canManage ||
+    set.data !== undefined ||
+    reopen.data !== undefined ||
+    reopen.isError;
+
   return (
     <Panel
       title={t("blockedDomains.title")}
@@ -157,112 +167,94 @@ export function BlockedDomainsCard() {
         </Button>
       }
     >
-      {/* `form-stack` stays: the denial sentence and the stored-callout below
-          the list are non-row children, and the list owns only the intervals
-          BETWEEN its rows. */}
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("blockedDomains.sub")}</PanelIntro>
-        <SettingList>
-          {/* The decisions are the subject of this card rather than an answer
-              to a question beside them, so they take the row's full width. */}
-          <SettingRow
-            label={t("blockedDomains.listTitle")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("blockedDomains.listTitle")}
-              >
-                {(list) =>
-                  list.data.length === 0 ? (
-                    // `empty`, and only `empty`: no decision has been recorded,
-                    // which is a fact about the installation rather than a read
-                    // that failed. The states that are not this one are the
-                    // query gate's above.
-                    <EmptyState>{t("blockedDomains.none")}</EmptyState>
-                  ) : (
-                    <div className="form-stack settingrow-measure">
-                      <DataTable
-                        label={t("blockedDomains.listTitle")}
-                        columns={decisionColumns({
-                          t,
-                          locale,
-                          zone,
-                          revise,
-                          refusal,
-                          set,
-                          reopen,
-                        })}
-                        rows={list.data}
-                        rowKey={(row) => row.domain}
-                      />
-                      {/* Refusals accumulate on their own from every
-                          bulk-sender verdict, so the server pages the list and
-                          answers with how many decisions EXIST. An operator
-                          hunting a company that never appeared has to be able
-                          to tell "not refused" from "past the end of this
-                          page". */}
-                      <p className="t-caption">
-                        <CountLine
-                          unit={t("blockedDomains.unit")}
-                          first={1}
-                          last={list.data.length}
-                          total={list.total}
-                        />
-                      </p>
-                    </div>
-                  )
-                }
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {!canManage && <p id={denialId}>{t("blockedDomains.adminOnly")}</p>}
-        {/* What LANDED, named, and on the CARD rather than in the dialog: the
-            server normalizes the domain to its registrable form and the write
-            replaces any entry already on it, so without this a sub-domain
-            silently became its parent and a second decision on a domain
-            already listed looked like nothing had happened at all. The dialog
-            is gone by the time it is true. */}
-        {set.data && (
-          <Callout
-            tone="success"
-            kind="outcome"
-            // One short sentence, so it IS the heading and there is nothing
-            // left to say under it.
-            title={t("blockedDomains.stored", {
-              domain: set.data.domain,
-              admission: t(ADMISSION_LABEL[set.data.admission]),
-            })}
-          />
-        )}
-        {/* A re-ask changes nothing a reader can see in the row — the domain
-            stays undecided until a crawl answers — so without this the press
-            reads as a control that did nothing. */}
-        {reopen.data && (
-          <Callout
-            tone="success"
-            kind="outcome"
-            title={t("blockedDomains.reopened", { domain: reopen.data.domain })}
-          />
-        )}
-        {reopen.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("blockedDomains.reopenFailed")}
-          >
-            {problemMessageOf(reopen.error, t)}
-          </Callout>
-        )}
-        {editing !== null && (
-          <DecisionDialog
-            initial={editing}
-            set={set}
-            onClose={() => setEditing(null)}
-          />
-        )}
       </PanelBody>
+      <PanelGroupHead title={t("blockedDomains.listTitle")} level="h3" />
+      <QueryGate query={query} pendingLabel={t("blockedDomains.listTitle")}>
+        {(list) =>
+          list.data.length === 0 ? (
+            // `empty`, and only `empty`: no decision has been recorded, which
+            // is a fact about the installation rather than a read that failed.
+            <EmptyState>{t("blockedDomains.none")}</EmptyState>
+          ) : (
+            <>
+              <DataTable
+                bleed
+                label={t("blockedDomains.listTitle")}
+                columns={decisionColumns({
+                  t,
+                  locale,
+                  zone,
+                  revise,
+                  refusal,
+                  set,
+                  reopen,
+                })}
+                rows={list.data}
+                rowKey={(row) => row.domain}
+              />
+              {/* The server pages the list, so the count tells "not refused"
+                  from "past the end of this page". */}
+              <PanelBody>
+                <p className="t-caption">
+                  <CountLine
+                    unit={t("blockedDomains.unit")}
+                    first={1}
+                    last={list.data.length}
+                    total={list.total}
+                  />
+                </p>
+              </PanelBody>
+            </>
+          )
+        }
+      </QueryGate>
+      {hasOutcome && (
+        <PanelBody className="form-stack">
+          {!canManage && <p id={denialId}>{t("blockedDomains.adminOnly")}</p>}
+          {/* The server stores the registrable domain and replaces any entry on
+              it, so the card names what landed after the dialog has gone. */}
+          {set.data && (
+            <Callout
+              tone="success"
+              kind="outcome"
+              // One short sentence, so the heading says all of it.
+              title={t("blockedDomains.stored", {
+                domain: set.data.domain,
+                admission: t(ADMISSION_LABEL[set.data.admission]),
+              })}
+            />
+          )}
+          {/* The row stays undecided until a crawl answers, so this says the
+              press landed. */}
+          {reopen.data && (
+            <Callout
+              tone="success"
+              kind="outcome"
+              title={t("blockedDomains.reopened", {
+                domain: reopen.data.domain,
+              })}
+            />
+          )}
+          {reopen.isError && (
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("blockedDomains.reopenFailed")}
+            >
+              {problemMessageOf(reopen.error, t)}
+            </Callout>
+          )}
+        </PanelBody>
+      )}
+      {editing !== null && (
+        <DecisionDialog
+          initial={editing}
+          set={set}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </Panel>
   );
 }

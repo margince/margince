@@ -89,3 +89,59 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 		t.Fatalf("a refused stage write landed anyway: %q", after.RelationshipStage)
 	}
 }
+
+// A gate metric the column cannot hold is refused, not wrapped.
+//
+// JSON numbers decode to float64 and the columns are smallint, so a plain cast
+// wrapped. 1e30 landed as -1, which reads as a partner failing a gate it was
+// never measured against. A negative seat count stored as sent.
+//
+// The handler refuses all five of these. The column's own CHECK catches four
+// of them, for any writer that bypasses the handler.
+//
+// 2.5 is the one the column cannot see. It truncates to a 2 the column accepts.
+func TestPartnerGateMetricsRefuseWhatTheColumnCannotHold(t *testing.T) {
+	e := setupRelationships(t)
+
+	// A programme that fits: the baseline every refusal below is measured
+	// against, so a test that refuses everything cannot pass.
+	var ok partnerWire
+	if status := e.Call(t, "PUT", "/v1/companies/"+e.companyID+"/partner", AnyMap{
+		"partner_role": "consulting", "cert_status": "applied",
+		"gate_metrics": AnyMap{"certified_staff": 4, "retention_rate": 87},
+	}, nil, &ok); status != http.StatusOK {
+		t.Fatalf("a programme inside the bounds → %d, want 200", status)
+	}
+
+	for _, tc := range []struct {
+		name    string
+		metrics AnyMap
+	}{
+		{"a negative seat count", AnyMap{"certified_staff": -5}},
+		{"a seat count past the column", AnyMap{"certified_staff": 1e30}},
+		{"a fractional seat count", AnyMap{"certified_staff": 2.5}},
+		{"a retention rate above a hundred", AnyMap{"retention_rate": 150}},
+		{"a negative retention rate", AnyMap{"retention_rate": -1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var ignored map[string]any
+			status := e.Call(t, "PUT", "/v1/companies/"+e.companyID+"/partner", AnyMap{
+				"partner_role": "consulting", "cert_status": "applied",
+				"gate_metrics": tc.metrics,
+			}, nil, &ignored)
+			if status != http.StatusUnprocessableEntity {
+				t.Errorf("%v → %d, want 422", tc.metrics, status)
+			}
+		})
+	}
+
+	// The refusals left the programme that fits standing.
+	var after partnerWire
+	if status := e.Call(t, "GET", "/v1/companies/"+e.companyID+"/partner", nil, nil, &after); status != http.StatusOK {
+		t.Fatalf("read the partner back → %d, want 200", status)
+	}
+	if after.GateMetrics["certified_staff"] != 4 || after.GateMetrics["retention_rate"] != 87 {
+		t.Errorf("gate_metrics read back as %v, want the 4 / 87 the refusals should not have touched",
+			after.GateMetrics)
+	}
+}

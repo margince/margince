@@ -119,12 +119,8 @@ export function VoiceDnaCard() {
               <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
               {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
             </PanelBody>
-            {/* The first sample is what MINTS the profile, so the control
-                that adds it asks for the create grant rather than the update
-                one every later sample rides on. Withheld rather than absent:
-                an empty card with no way to start reads as a feature this
-                installation does not have, when the truth is a seat that may
-                not use it. */}
+            {/* The first sample mints the profile, so adding it takes the
+                create grant rather than the update one. */}
             {canCreate && (
               <SettingList bleed="settings">
                 <VoiceCorpusIntake

@@ -358,7 +358,7 @@ function NoticeRow({
           ? ({ id, "aria-describedby": describedBy }) => (
               <span className="notice-row-actions">
                 {mayAssign(row.state) ? (
-                  // Not a blank picker: after an assign it would name nobody beside "Claimed".
+                  // Shows the owner, so an assign names who claimed it.
                   <Select
                     id={id}
                     aria-label={t("notice.ownerOf", {

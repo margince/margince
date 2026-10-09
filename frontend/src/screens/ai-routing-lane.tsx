@@ -146,7 +146,7 @@ export function TiersTable({
         />
       ))}
       {onAddDecisions && (
-        <PanelRow className="ai-tier-row">
+        <PanelRow record className="ai-tier-row">
           <div
             data-testid="ai-routing-decisions"
             className={tierLineClass(health !== undefined)}
@@ -219,7 +219,7 @@ function TierLine({
     : [price];
   const gloss = laneGloss(lane.name, t);
   return (
-    <PanelRow className="ai-tier-row">
+    <PanelRow record className="ai-tier-row">
       <div
         data-testid={lane.testId ?? `ai-routing-tier-${lane.name}`}
         className={tierLineClass(health !== undefined)}

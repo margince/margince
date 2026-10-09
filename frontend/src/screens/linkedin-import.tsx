@@ -288,8 +288,8 @@ export function LinkedInImportCard() {
           }
         />
       </SettingList>
-      {/* Outside the list: the result reports a finished import and answers
-          no setting. */}
+      {/* Outside the list: the import's progress and outcome answer no
+          setting. */}
       {!importer.isIdle && (
         <PanelBody>
           {importer.isPending && (

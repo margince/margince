@@ -21,7 +21,6 @@
 1073 frontend/src/design-system/listsurface.tsx
 1133 frontend/src/screens/companyrail.test.tsx
 1136 frontend/src/screens/record360/spine.test.tsx
-1160 frontend/src/screens/onboarding-conversation/company-act.tsx
 1106 frontend/src/design-system/conformance.test.ts
 1178 frontend/src/screens/onboarding-conversation/company-act.test.tsx
 1015 frontend/src/screens/contactpage.tsx
@@ -58,7 +57,6 @@
 3195 frontend/src/screens/deals.tsx
 512 frontend/src/design-system/relationshipmap.tsx
 512 frontend/src/screens/documentextraction.tsx
-504 frontend/src/design-system/richtext.tsx
 504 frontend/src/screens/onboarding-backread.tsx
 517 frontend/src/screens/importflow.ts
 516 frontend/src/screens/voice-versions.tsx

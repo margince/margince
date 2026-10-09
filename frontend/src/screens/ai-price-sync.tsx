@@ -121,7 +121,7 @@ export function ModelPricesCard() {
             {state.last_run?.report.providers
               .filter((p) => !QUIET.has(p.outcome))
               .map((p) => (
-                <PanelRow key={p.provider}>
+                <PanelRow record key={p.provider}>
                   <div className="ai-price-sync-line">
                     <span>{providerName(p.provider, t)}</span>
                     <ProviderRefreshLine line={p} />

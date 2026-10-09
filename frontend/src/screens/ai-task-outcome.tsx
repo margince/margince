@@ -28,6 +28,7 @@ const GAVE_UP: Readonly<Record<string, MessageKey>> = {
   decision_below_floor: "aiOutcome.gaveUp.unsure",
   decision_off_enum: "aiOutcome.gaveUp.offEnum",
   schema_invalid: "aiOutcome.gaveUp.invalid",
+  output_rejected: "aiOutcome.gaveUp.invalid",
 };
 
 function share(part: number, total: number, locale: Locale): string {

@@ -86,6 +86,32 @@ func TestExtractRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 	}
 }
 
+// The model is shown what the validator judges: each sender's own words.
+// Otherwise a promise seen only in a reply's quoted history is cited to the
+// reply. The validator refuses it, and the whole reading climbs the ladder.
+func TestExtractRequestShowsEachMessageWithoutItsQuotedHistory(t *testing.T) {
+	promise := "we will deliver the completed security questionnaire by 25 September"
+	reply := threadMessage{
+		ID: ids.NewV7(), Direction: "inbound", Subject: "Re: Questionnaire",
+		Body: "Thanks Anna, noted.\n\nOn Mon, 1 Sep 2026 at 09:00, Anna <anna@example.com> wrote:\n> Hi Tom,\n> " +
+			promise + ".\n> Anna",
+	}
+	thread := settledThread{Messages: []threadMessage{reply}}
+
+	content := extractRequest(thread, string(textlang.English)).Messages[0].Content
+
+	if !strings.Contains(content, "Thanks Anna, noted.") {
+		t.Errorf("the sender's own words never reached the prompt:\n%s", content)
+	}
+	if strings.Contains(content, promise) {
+		t.Errorf("the prompt shows a promise the validator refuses to let this message cite:\n%s", content)
+	}
+	quoted := extractedEvent{Kind: extractKindCommitment, MessageID: reply.ID.String(), Quote: promise}
+	if validateEventEvidence(quoted, thread) == "" {
+		t.Error("the validator accepted a quote from history, so the prompt no longer needs to hide it")
+	}
+}
+
 func TestExtractPayloadFidelity(t *testing.T) {
 	first, second := ids.NewV7(), ids.NewV7()
 	thread := settledThread{Messages: []threadMessage{

@@ -6,7 +6,8 @@ for `frontend/src/i18n/de.ts`, and the sibling `en.json` for each extension's
 [ui-copy-style.md](ui-copy-style.md) binds it too. This page states only what
 German adds or changes: address, grammar, mechanics, inclusive language and one
 German word per concept. It is the page the next German author reads, and the
-one a Vietnamese translator reads to know which German choices are intended.
+one a Vietnamese translator reads to know which German choices are intended;
+Vietnamese has its own page, [ui-copy-style-vi.md](ui-copy-style-vi.md).
 
 Part of it is mechanical. `frontend/src/i18n/copy-style-de.test.ts` holds the
 mechanics, `frontend/src/i18n/address-register.test.ts` holds the address, over

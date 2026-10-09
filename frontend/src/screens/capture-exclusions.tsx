@@ -15,7 +15,12 @@ import {
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -157,64 +162,52 @@ export function CaptureExclusionsCard() {
         </Button>
       }
     >
-      {/* `form-stack` stays: the denial sentence and the failure Callout under
-          the list are non-row children, and the list owns only the intervals
-          BETWEEN its rows. */}
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("captureExclusions.sub")}</PanelIntro>
-        <SettingList>
-          {/* The rules are the subject of this card, not an answer beside a
-              question, so they take the row's full width. The irreversibility
-              note sits here rather than beside the header verb, because it
-              describes what BOTH acts on this card do — adding a rule and
-              taking one back. */}
-          <SettingRow
-            label={t("captureExclusions.current")}
-            description={t("captureExclusions.notRetroactive")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("captureExclusions.current")}
-              >
-                {(list) => (
-                  <ExclusionRows
-                    list={list.data}
-                    canManageWorkspace={canManageWorkspace}
-                    denialId={denialId}
-                    pending={remove.isPending}
-                    onRemove={(id) => remove.mutate(id)}
-                    onPurge={(id, value) => setPurging({ id, value })}
-                  />
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {refusesARow && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
-        {remove.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("captureSettings.removeFailed")}
-          >
-            {problemMessageOf(remove.error, t)}
-          </Callout>
-        )}
-        {excluding && (
-          <ExcludeDialog
-            canManageWorkspace={canManageWorkspace}
-            onClose={() => setExcluding(false)}
-          />
-        )}
-        {purging && (
-          <PurgeDialog
-            ruleId={purging.id}
-            ruleValue={purging.value}
-            onClose={() => setPurging(null)}
-          />
-        )}
       </PanelBody>
+      <PanelGroupHead title={t("captureExclusions.current")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("captureExclusions.notRetroactive")}</PanelIntro>
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("captureExclusions.current")}>
+        {(list) => (
+          <ExclusionRows
+            list={list.data}
+            canManageWorkspace={canManageWorkspace}
+            denialId={denialId}
+            pending={remove.isPending}
+            onRemove={(id) => remove.mutate(id)}
+            onPurge={(id, value) => setPurging({ id, value })}
+          />
+        )}
+      </QueryGate>
+      {(refusesARow || remove.isError) && (
+        <PanelBody className="form-stack">
+          {refusesARow && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
+          {remove.isError && (
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("captureSettings.removeFailed")}
+            >
+              {problemMessageOf(remove.error, t)}
+            </Callout>
+          )}
+        </PanelBody>
+      )}
+      {excluding && (
+        <ExcludeDialog
+          canManageWorkspace={canManageWorkspace}
+          onClose={() => setExcluding(false)}
+        />
+      )}
+      {purging && (
+        <PurgeDialog
+          ruleId={purging.id}
+          ruleValue={purging.value}
+          onClose={() => setPurging(null)}
+        />
+      )}
     </Panel>
   );
 }
@@ -251,8 +244,7 @@ function ExclusionRows({
   const words = useRuleWords();
   if (list.length === 0) {
     // `empty`, and only `empty`: nothing is excluded, which is a fact about the
-    // installation rather than a read that failed. The row caps and
-    // left-aligns it already (settingrow.css), so there is nothing to undo here.
+    // installation rather than a read that failed.
     return (
       <EmptyState>
         <p data-testid="capture-exclusions-empty">
@@ -262,7 +254,7 @@ function ExclusionRows({
     );
   }
   return (
-    <SettingList testId="capture-exclusions-list">
+    <SettingList bleed="records" testId="capture-exclusions-list">
       {list.map((rule) => (
         <SettingRow
           key={rule.id}

@@ -4,16 +4,26 @@
 import type { MessageKey } from "../i18n/en";
 import { problemFieldErrorsOf, problemMessageOf } from "./common";
 
-// The capture stores vet an address or a domain with one shared parser. Its
-// refusal is English written for a developer, so the reader gets the catalog's.
+const VALUE_FIELDS: ReadonlySet<string> = new Set(["value", "domain"]);
 const VALUE_REFUSAL_CODES: ReadonlySet<string> = new Set([
   "invalid_exclusion",
   "invalid_domain",
 ]);
 
-const VALUE_REFUSAL_COPY: Readonly<Record<string, MessageKey | undefined>> = {
-  address: "captureValue.refusedAddress",
-  domain: "captureValue.refusedDomain",
+// Only a value with no shape of its kind gets the catalog's sentence. The
+// server names every other refusal, such as a public suffix, better.
+// The patterns match the reasons `ValidExclusionValue` and `ValidOwnDomain` give.
+const SHAPE_REFUSALS: Readonly<
+  Record<string, { copy: MessageKey; reason: RegExp } | undefined>
+> = {
+  address: {
+    copy: "captureValue.refusedAddress",
+    reason: /^give one email address\b/,
+  },
+  domain: {
+    copy: "captureValue.refusedDomain",
+    reason: /^give a (bare )?domain\b| is not a domain$/,
+  },
 };
 
 /** Why an address or domain was not added, in the reader's language. */
@@ -22,9 +32,15 @@ export function captureValueMessage(
   kind: string | undefined,
   t: (key: MessageKey) => string,
 ): string {
-  const copy = kind === undefined ? undefined : VALUE_REFUSAL_COPY[kind];
-  const refused = problemFieldErrorsOf(error).some((problem) =>
-    VALUE_REFUSAL_CODES.has(problem.code),
+  const shape = kind === undefined ? undefined : SHAPE_REFUSALS[kind];
+  if (shape === undefined) {
+    return problemMessageOf(error, t);
+  }
+  const unshaped = problemFieldErrorsOf(error).some(
+    (problem) =>
+      VALUE_FIELDS.has(problem.field) &&
+      VALUE_REFUSAL_CODES.has(problem.code) &&
+      shape.reason.test(problem.message),
   );
-  return copy !== undefined && refused ? t(copy) : problemMessageOf(error, t);
+  return unshaped ? t(shape.copy) : problemMessageOf(error, t);
 }

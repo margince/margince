@@ -27,6 +27,17 @@ export type ListChip = {
   search?: (
     query: string,
   ) => Promise<readonly { value: string; label: string }[]>;
+  /**
+   * A list long enough to need a box that narrows it by name (every colleague
+   * in the workspace). Unlike `search`, every option is drawn before typing.
+   */
+  filterable?: boolean;
+  /**
+   * Query parameters another dial owns that this one cannot be combined with:
+   * picking a value here removes them. The owner and team dials name rows two
+   * ways, and the server refuses both at once.
+   */
+  excludes?: readonly string[];
 };
 
 /** A saved view: a named tab whose meaning is entirely the caller's. */

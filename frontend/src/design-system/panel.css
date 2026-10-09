@@ -168,8 +168,15 @@
  * Named by the pane's role rather than by a rung, so a skeleton reserves the
  * space at exactly the x the rows it stands in for will use. */
 .panel > .pending,
-.panel > .empty {
+.panel > .empty,
+.panel > [role="alert"] > .empty {
   padding: var(--padPanel);
+}
+/* Read as the sentence `.panel-body > .empty` is; the plate keeps its ground. */
+.panel > .empty:not(.empty-plate),
+.panel > [role="alert"] > .empty {
+  text-align: left;
+  background: none;
 }
 
 /* A DISCLOSURE standing where full-bleed rows stand is a row of the panel: its
@@ -222,8 +229,7 @@
 
 /* A hairline row whose CONTENT runs edge to edge, in the panel's own margin
  * rather than the body's — the shape every list inside a panel wants. The rule
- * between two rows is inset to that margin, so a panel of rows and a panel of
- * `SettingRow`s draw their hairlines at one x.
+ * between two rows is inset to that margin, and a `record` row's spans the pane.
  * No rule on the first row: the header above it already draws that line.
  *
  * The rule and the hover are TWO shapes, and this one is only the rule. Held

@@ -11,11 +11,11 @@ What each list offers:
 
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
-| **Contacts** | name, or exact email | Owner, Tags | All, Mine | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Companies** | name, or exact domain | Owner, Company size, Tags, Lifecycle, Relationship type | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Source, Owner | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
-| **Deals** | no search box | Stage, Company, Tags, Stalled only, My deals, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Projects** | name or project key | Phase | All, In delivery | table only | none |
+| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Source, Owner, Team, Tags | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Deals** | no search box | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
 **Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Source** and **Partner** on Deals show only when there is something to pick.
 
@@ -52,19 +52,24 @@ On the **Mine** tab, an empty list says "No contacts owned by you." with **Show 
 Also called: reset filters, show everything again, remove filter.
 
 ### How do I see only my records, or the records I own?
-To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. On **Deals**, press **Filter** → **My deals** → **My deals**.
-1. Or press **Filter** → **Owner** and pick **Owned by you**, one of your teams, or **Unassigned**.
+To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. On **Deals** and **Projects**, press **Filter** → **Owner** → **Owned by you**.
+1. The **Owner** filter lists **Owned by you**, then every active colleague by name, then **Unassigned**.
 2. **Leads** opens on **Mine** for a user who sees only their own leads. It opens on **All** for one who can see the team's or everyone's.
-**Projects** has no owner filter at all. Its only filter is **Phase**, and **Filters and views** does not cover projects.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
 
 ### How do I filter by a colleague's name?
-To filter a list by one colleague in Margince, use **Filters and views**. The owner filters on the list screens offer only you, your teams and **Unassigned**.
-1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies** or **Deals**.
-2. Press **Add condition**, then under **Select field** pick **Owner**.
-3. Keep **is** (or **is any of** for more than one colleague) and pick the colleague.
-The rows that match show under **Matching records**.
+To filter a list by one colleague in Margince, press **Filter** → **Owner** and pick the colleague. Every list with an owner has this filter: **Contacts**, **Companies**, **Leads**, **Deals** and **Projects**.
+1. Type part of a name in the box at the top of the **Owner** values to make the list shorter.
+2. For more than one colleague at once, use **Filters and views**: **New filter**, **Add condition**, **Owner**, then **is any of**.
 Also called: records owned by a teammate, another user's deals, filter by sales rep.
+
+### How do I filter by team?
+To see the records owned by anyone on a team in Margince, press **Filter** → **Team** and pick the team. It lists every team in your company, not only yours.
+1. A team owns no record. **Team** shows the records whose owner is a member of that team.
+2. **Team** and **Owner** do not combine. Picking a team takes the owner filter off, and picking an owner takes the team off.
+3. Neither filter shows you a record you could not see before. They only make the list shorter.
+4. On the **Deals** board, the stage totals cannot count by team or by **Unassigned**. While either filter is on, a column shows the total of the deals loaded so far.
+Also called: my team's deals, accounts of a sales team, records owned by a team.
 
 ### How do I filter deals by company or stage?
 To filter deals by company or stage in Margince, open **Deals**, press **Filter**, and pick **Company** or **Stage**.
@@ -112,9 +117,9 @@ The columns you can sort on each Margince list are:
 - **Contacts**: Name, Email, Company, Owner, Last activity, Created.
 - **Companies**: Company, Description, Website, Contacts, Open deals, Lifecycle, Owner, Last activity, Created.
 - **Leads**: Name, Score, Status, Next step, Last activity, Source, Owner, Created.
-- **Deals**: Name, Company, via partner, Stage, Value, Expected close, Last signal, Status.
+- **Deals**: Name, Company, via partner, Stage, Value, Expected close, Last signal, Status, Owner.
 - **Projects**: Project name, Company, Phase, Owner, Last activity.
-You cannot sort by **Tags**, **Relationship type** or **Last email**. You can still pick a hidden column under **Sort**.
+**Owner** sorts by the owner's name, with unassigned records last. You cannot sort by **Tags**, **Relationship type** or **Last email**. You can still pick a hidden column under **Sort**.
 Also called: sort options, order by column.
 
 ### How do I switch between the table and the board?

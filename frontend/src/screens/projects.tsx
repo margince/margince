@@ -21,6 +21,7 @@ import {
   listFetchLimit,
   useListQuery,
 } from "./listquery";
+import { useOwnerChips } from "./ownerdials";
 import { useProjectCreateForm } from "./projects.create";
 import {
   PHASE_LABEL,
@@ -161,6 +162,7 @@ export function ProjectsScreen() {
   const companies = useCompanyOptions();
   const views = useSavedViews("projects");
   const savedViews = useSavedViewTabs("projects");
+  const ownerChips = useOwnerChips();
   const state = useListQuery<Project>({
     key: "projects",
     initialSort: "-last_activity_at",
@@ -265,6 +267,7 @@ export function ProjectsScreen() {
         rowKey={(project) => project.id}
         rowRoute={(project) => ({ screen: "projects", id: project.id })}
         dataViews={savedViews}
+        dataChips={ownerChips}
         chips={[
           {
             key: "phase",
