@@ -32,11 +32,17 @@ var (
 
 var guideTemplates = template.Must(template.ParseFS(guides, "*.md.tmpl"))
 
-// Builder builds the ZIP for one API base URL at a time and keeps the last one.
-// An install answers one configured base, so a rebuild is rare. Keeping more
-// would let a caller grow the cache by varying the request host.
+// recentBases is how many ZIPs a Builder keeps. A few covers an install reached
+// by more than one host, and the bound stops a caller growing it by varying Host.
+const recentBases = 4
+
+// Builder builds the ZIP for an API base URL and keeps the most recent few.
 type Builder struct {
-	mu      sync.Mutex
+	mu     sync.Mutex
+	recent []builtArchive // newest last
+}
+
+type builtArchive struct {
 	base    string
 	archive []byte
 }
@@ -45,14 +51,19 @@ type Builder struct {
 func (b *Builder) Build(apiBase string) ([]byte, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if b.archive != nil && b.base == apiBase {
-		return b.archive, nil
+	for _, built := range b.recent {
+		if built.base == apiBase {
+			return built.archive, nil
+		}
 	}
 	archive, err := build(apiBase)
 	if err != nil {
 		return nil, err
 	}
-	b.base, b.archive = apiBase, archive
+	if len(b.recent) == recentBases {
+		b.recent = b.recent[1:]
+	}
+	b.recent = append(b.recent, builtArchive{base: apiBase, archive: archive})
 	return archive, nil
 }
 
