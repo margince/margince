@@ -45,3 +45,16 @@ func TestWithoutZeroWidthKeepsTheJoinersARealWordNeeds(t *testing.T) {
 		t.Fatalf("a zero-width non-joiner was dropped: %q", got)
 	}
 }
+
+func TestWithoutZeroWidthDropsAJoinerThatJoinsNothing(t *testing.T) {
+	for in, want := range map[string]string{
+		r(0x200D) + "Alpha":               "Alpha",
+		"Alpha" + r(0x200C):               "Alpha",
+		"Alpha " + r(0x200D) + " Beta":    "Alpha  Beta",
+		"A" + r(0x200D) + r(0x200D) + "B": "AB",
+	} {
+		if got := WithoutZeroWidth(in); got != want {
+			t.Errorf("WithoutZeroWidth(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

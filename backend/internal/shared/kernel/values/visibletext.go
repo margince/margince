@@ -3,10 +3,7 @@
 
 package values
 
-import (
-	"strings"
-	"unicode"
-)
+import "unicode"
 
 // fillerRunes are letters and symbols that draw nothing: the Hangul fillers and
 // the blank Braille pattern. Unicode files them as graphic, so IsGraphic admits them.
@@ -38,13 +35,29 @@ func HasVisibleText(s string) bool {
 	return false
 }
 
-// WithoutZeroWidth drops the zero-width and filler runes from s. A name carrying
-// one would otherwise sit beside the same name without it and read as free.
+// WithoutZeroWidth drops the zero-width and filler runes from s, and a joiner
+// with no letter on one side to join. A name carrying one would otherwise sit
+// beside the same name without it and read as free.
 func WithoutZeroWidth(s string) string {
-	return strings.Map(func(r rune) rune {
-		if zeroWidthRunes[r] || fillerRunes[r] {
-			return -1
+	kept := make([]rune, 0, len(s))
+	for _, r := range s {
+		if !zeroWidthRunes[r] && !fillerRunes[r] {
+			kept = append(kept, r)
 		}
-		return r
-	}, s)
+	}
+	out := kept[:0:0]
+	for i, r := range kept {
+		if isJoiner(r) && (!joinsAround(kept, i-1) || !joinsAround(kept, i+1)) {
+			continue
+		}
+		out = append(out, r)
+	}
+	return string(out)
+}
+
+func isJoiner(r rune) bool { return r == 0x200C || r == 0x200D }
+
+// joinsAround reports whether kept[i] exists and is a letter a joiner can sit beside.
+func joinsAround(kept []rune, i int) bool {
+	return i >= 0 && i < len(kept) && !unicode.IsSpace(kept[i]) && !isJoiner(kept[i])
 }
