@@ -9,9 +9,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// RecordNames answers the display names of one entity type that the READER may
-// read, through the owning module's own gated read. Compose injects the shared
-// resolver, so a name here is exactly as visible as the record it names.
+// RecordNames answers the display names of one entity type that the caller may
+// read, through the owning module's gated read, which compose injects.
 type RecordNames interface {
 	Labels(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error)
 }

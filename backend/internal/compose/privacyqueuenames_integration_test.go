@@ -5,8 +5,8 @@
 
 package compose
 
-// The privacy queues name the records they point at through the production
-// wiring, so a name is exactly as visible as the record it names.
+// The privacy queues name their records through the production wiring, so a
+// name shows only to a reader who may see the record.
 
 import (
 	"context"

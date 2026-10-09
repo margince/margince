@@ -150,7 +150,7 @@ Not every mix is allowed: there is no way to archive an AI call payload, or to a
 
 A rule can hold a **Lawful basis** if you like (the Article 6 reason for the time limit). It is recorded for whoever checks the rule later. The rules a new company starts with all say "storage limitation".
 
-Rules act **each night**, and a live one shows as "Acting nightly". Each night works on up to 200 records for each rule, so years of old records take many nights to clear.
+Enabled rules act **each night**, as the panel says: "Enabled policies act nightly." A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each night works on up to 200 records for each rule, so years of old records take many nights to clear.
 
 ### One window nobody can change
 

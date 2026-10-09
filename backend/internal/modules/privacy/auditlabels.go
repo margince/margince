@@ -31,8 +31,7 @@ func (h Handlers) WithRecordLabeler(labeler RecordLabeler) Handlers {
 // distinct ids, so the cost follows the types present and not the row count.
 //
 // A type whose read fails keeps null labels and the page still answers; the
-// failure is logged because a page that quietly lost its names reads as a log
-// of nameless records.
+// failure is logged, since the page alone cannot tell lost names from none.
 func labelAuditPage(ctx context.Context, labeler RecordLabeler, entries []AuditEntry) {
 	if labeler == nil {
 		return

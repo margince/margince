@@ -3,9 +3,8 @@
 
 package collections
 
-// Names for a set of tags or lists, one query per kind. Each carries the grant
-// and, for a list, the row scope its single get carries, so a name is exactly
-// as visible as the record and an unreadable one is absent.
+// Names for a set of tags or lists, one query per kind, under the same grant
+// and list row scope as a single get, so an unreadable record has no name.
 
 import (
 	"context"
