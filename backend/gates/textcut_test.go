@@ -13,6 +13,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -79,24 +80,36 @@ func TestEveryStringCutGoesThroughTextcut(t *testing.T) {
 	handCutWaivers.AssertAllMatched(t)
 }
 
-func TestARuneSliceNameBindsOnlyInItsOwnFunction(t *testing.T) {
-	const source = `package p
-
-func runes(s string) string {
-	buf := []rune(s)
-	return string(buf[:3])
-}
-
-func bytes(buf []byte) string {
-	return string(buf[:3])
-}
-`
-	file, err := parser.ParseFile(token.NewFileSet(), "p.go", source, 0)
-	if err != nil {
-		t.Fatalf("parsing the planted source: %v", err)
+func TestARuneSliceNameCountsWhereItIsVisible(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+		want   int
+	}{
+		{"a local binding stays in its own function", `package p
+func runes(s string) string { buf := []rune(s); return string(buf[:3]) }
+func bytes(buf []byte) string { return string(buf[:3]) }
+`, 1},
+		{"a package variable reaches every function", `package p
+var names = []rune("margince")
+func cut() string { return string(names[:3]) }
+`, 1},
+		{"a package variable assigned in one function is cut in another", `package p
+var names []rune
+func load(s string) { names = []rune(s) }
+func cut() string { return string(names[:3]) }
+`, 1},
 	}
-	if got := len(handCuts(file)); got != 1 {
-		t.Errorf("found %d cuts, want 1: only the []rune cut counts, not the byte slice that shares its name", got)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			file, err := parser.ParseFile(token.NewFileSet(), "p.go", tc.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the planted source: %v", err)
+			}
+			if got := len(handCuts(file)); got != tc.want {
+				t.Errorf("found %d cuts, want %d", got, tc.want)
+			}
+		})
 	}
 }
 
@@ -117,17 +130,20 @@ func skipNestedModule(dir string) error {
 
 // handCuts returns the position of every hand-written cut in file.
 func handCuts(file *ast.File) []token.Pos {
+	shared := packageRuneSlices(file)
 	var found []token.Pos
 	for _, decl := range file.Decls {
-		found = append(found, handCutsIn(decl)...)
+		found = append(found, handCutsIn(decl, shared)...)
 	}
 	return found
 }
 
-// handCutsIn reads rune-slice names from decl alone, so a same-named byte
-// slice in another function is not taken for one.
-func handCutsIn(decl ast.Decl) []token.Pos {
+// handCutsIn reads local rune-slice names from decl alone, so a byte slice of
+// the same name in another function does not count. Package variables in
+// shared are visible everywhere.
+func handCutsIn(decl ast.Decl, shared map[string]bool) []token.Pos {
 	runeSlices := runeSliceNames(decl)
+	maps.Copy(runeSlices, shared)
 	var found []token.Pos
 	ast.Inspect(decl, func(node ast.Node) bool {
 		switch node := node.(type) {
@@ -197,6 +213,47 @@ func runeSliceNames(decl ast.Decl) map[string]bool {
 			call, isCall := rhs.(*ast.CallExpr)
 			ident, isIdent := assign.Lhs[i].(*ast.Ident)
 			if isCall && isIdent && isRuneConversion(call) {
+				names[ident.Name] = true
+			}
+		}
+		return true
+	})
+	return names
+}
+
+// packageRuneSlices returns the package variables in file that hold a []rune
+// conversion, from their declaration or from a plain assignment anywhere.
+func packageRuneSlices(file *ast.File) map[string]bool {
+	vars := map[string]bool{}
+	names := map[string]bool{}
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.VAR {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			value, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, ident := range value.Names {
+				vars[ident.Name] = true
+				if i < len(value.Values) {
+					call, isCall := value.Values[i].(*ast.CallExpr)
+					names[ident.Name] = names[ident.Name] || (isCall && isRuneConversion(call))
+				}
+			}
+		}
+	}
+	ast.Inspect(file, func(node ast.Node) bool {
+		assign, ok := node.(*ast.AssignStmt)
+		if !ok || assign.Tok != token.ASSIGN || len(assign.Lhs) != len(assign.Rhs) {
+			return true
+		}
+		for i, rhs := range assign.Rhs {
+			call, isCall := rhs.(*ast.CallExpr)
+			ident, isIdent := assign.Lhs[i].(*ast.Ident)
+			if isCall && isIdent && vars[ident.Name] && isRuneConversion(call) {
 				names[ident.Name] = true
 			}
 		}
