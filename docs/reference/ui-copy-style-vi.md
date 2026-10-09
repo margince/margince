@@ -239,7 +239,8 @@ the reviewer in the sense its row gives.
 | Member status | đang hoạt động, đã mời, đã vô hiệu hóa (deactivated), đã tạm khóa (suspended) | tạm ngưng for a suspended member |
 | Agent credential | passport | `hộ chiếu`; token or khóa for a passport (khóa API and khóa ký name other credentials) |
 | Mail or calendar link | trình kết nối | `bộ kết nối`, `connector`; kết nối alone or tích hợp for a connector |
-| Buyer-facing deal page | Deal Room | `phòng deal`; cổng thông tin for the Deal Room |
+| Buyer-facing deal page | Deal Room; once a page has named it, Deal Room này | `phòng deal`; cổng thông tin or a bare phòng for the Deal Room |
+| A record's timeline | lịch sử, the History tab's own name, on every surface | dòng thời gian |
 | The mail thread of a record | chuỗi thư; a record spine's mixed-channel thread is chuỗi trao đổi; a Deal Room discussion thread is chủ đề | `spine` |
 | Import of mailbox history | nhập lịch sử hộp thư | `backread`; đọc ngược for the import |
 | Full read of a web page | đọc toàn trang | `đọc sâu`, `deep read` |
@@ -250,6 +251,7 @@ the reviewer in the sense its row gives.
 | Upload, download | tải lên, tải xuống | `upload`, `download` |
 | Enter a value; show | Nhập; Hiển thị | Đặt for entering a value (đặt lịch keeps it); trình bày for show (it means present) |
 | Recommended (a badge) | Khuyên dùng | nên dùng for the badge |
+| Work that runs long or stops | Quá trình only as the subject of kéo dài bất thường or bị gián đoạn; elsewhere the concrete noun or verb (Đang nhập…, đợt nhập, lần đọc) | Quá trình in a control or a second mention |
 | Stopped partway; failed | bị gián đoạn; bị lỗi, or không thành công for a result; a neutral Stopped status is Đã dừng, an adverse one Bị dừng | `dừng giữa chừng`; thất bại in a title, status or counter |
 | Email | email | `thư điện tử`, `e-mail` |
 | Message | tin nhắn; mail inside a mailbox thư; one email message email | |
@@ -257,7 +259,7 @@ the reviewer in the sense its row gives.
 | Meeting; its attendee | cuộc họp; người tham dự | `buổi họp`, `meeting`; khách for an attendee (khách is a booking guest) |
 | Task | việc cần làm where the word stands alone; việc where the task list sets the context (Tạo việc, việc quá hạn); a background job or a kind of AI work (Tác vụ AI) is tác vụ | `task`; nhiệm vụ or công việc for a task |
 | Tag | thẻ | `tag`; nhãn for a tag |
-| Shortlist; Live List | danh sách chọn; danh sách động, lowercase mid-sentence (Picklist field type = Danh sách lựa chọn) | |
+| Shortlist; Live List | danh sách rút gọn; danh sách động, lowercase mid-sentence (Picklist field type = Danh sách lựa chọn) | danh sách chọn for a Shortlist |
 | Report | báo cáo | `report` |
 | AI quota | hạn mức | `định mức` |
 | Credit | credit (enrichment units); số dư (an AI provider's prepaid balance, on an admin screen) | |
@@ -273,7 +275,8 @@ the reviewer in the sense its row gives.
 | Knowledge (settings, sources) | Tài liệu; a knowledge base is kho tài liệu | kiến thức for the settings surface |
 | Follow-up | việc tiếp theo; the verb follow up is liên hệ lại | `follow-up`; theo dõi for a follow-up (it is watch) |
 | Priced offer, quote | báo giá | `chào giá` |
-| Close date; a closed deal, won or lost; close as an outcome | ngày chốt (ngày chốt dự kiến); đã đóng; kết thúc | `ngày đóng`; chốt for a deal closed won or lost (chốt is won: Doanh số đã chốt, Sắp chốt) |
+| Close date; a closed deal, won or lost; close as an outcome | ngày chốt (ngày chốt dự kiến); đã đóng; kết thúc | `ngày đóng`; chốt for a deal closed won or lost |
+| A won deal, won value; the outcome pair; win rate | đã chốt (deal đã chốt, doanh số đã chốt); Thắng and Thua as the outcome or stage-type label; tỷ lệ thắng | đã thắng for a won deal or amount |
 | File | tệp | `file` |
 | Website | trang web | `website` |
 | Server | máy chủ | `server` |

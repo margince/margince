@@ -178,7 +178,7 @@ func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
 		"Morning brief items",
 		"Einträge im Morgenbericht",
-		"Mục Bản tin sáng")
+		"Việc trong Bản tin sáng")
 	line(func(c *Copy) *string { return &c.WeeklyActed },
 		"acted",
 		"bearbeitet",
