@@ -21,7 +21,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { EditAction } from "./edit";
 import "./common.css";
 import { EntityRef } from "./entityref";
@@ -134,13 +134,11 @@ export function RelationshipRows({
 
   const remove = useMutation({
     mutationFn: async (doomed: Relationship) => {
-      const { data, error } = await api.DELETE("/relationships/{id}", {
-        params: { path: { id: doomed.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.DELETE("/relationships/{id}", {
+          params: { path: { id: doomed.id } },
+        }),
+      );
     },
     onSuccess: (_removed, doomed) => {
       invalidateAfterEdge(queryClient, doomed.deal_id != null);
@@ -203,21 +201,19 @@ export function RelationshipRows({
             ended_at: rel.ended_at ?? "",
           }}
           update={async (values, _rows, opened) => {
-            const { data, error } = await api.PATCH("/relationships/{id}", {
-              params: {
-                path: { id: rel.id },
-                ...ifMatch(requireVersion(opened?.version)),
-              },
-              body: {
-                role: orNull(values.role),
-                started_at: orNull(values.started_at),
-                ended_at: orNull(values.ended_at),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return unwrap(
+              await api.PATCH("/relationships/{id}", {
+                params: {
+                  path: { id: rel.id },
+                  ...ifMatch(requireVersion(opened?.version)),
+                },
+                body: {
+                  role: orNull(values.role),
+                  started_at: orNull(values.started_at),
+                  ended_at: orNull(values.ended_at),
+                },
+              }),
+            );
           }}
           invalidate="relationships"
           recordKey="relationship"

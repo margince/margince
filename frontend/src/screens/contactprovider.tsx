@@ -18,7 +18,7 @@ import {
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { useBoughtSource } from "./boughtmarks";
-import { throwProblem, WriteRefused } from "./common";
+import { unwrap, WriteRefused } from "./common";
 import { useContact360 } from "./contact360";
 import { LookupRunning } from "./contactprovider.notices";
 import { categoryNames, categoryNamesTogether } from "./provider-categories";
@@ -712,14 +712,12 @@ function useEnrichRun() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ contactId, provider, categories }: EnrichRun) => {
-      const { data, error } = await api.POST("/contacts/{id}/enrichment-runs", {
-        params: { path: { id: contactId } },
-        body: categories ? { provider, categories } : { provider },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/contacts/{id}/enrichment-runs", {
+          params: { path: { id: contactId } },
+          body: categories ? { provider, categories } : { provider },
+        }),
+      );
     },
     onSuccess: (_data, { contactId }) => {
       // The run is durable and the provider has not been called yet, so the
@@ -810,13 +808,11 @@ function useRunWatch(contactId: string, profile: Profile) {
   useQuery({
     queryKey: ["provider-run", contactId, runId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/contacts/{id}/enrichment-runs/{run_id}",
-        { params: { path: { id: contactId, run_id: runId ?? "" } } },
+      const data = unwrap(
+        await api.GET("/contacts/{id}/enrichment-runs/{run_id}", {
+          params: { path: { id: contactId, run_id: runId ?? "" } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
       // Re-read on every answer that is not still moving, INCLUDING the
       // completed-but-unapplied tick. That tick is what turns the section from
       // "asking the provider" into the values themselves, and skipping it left

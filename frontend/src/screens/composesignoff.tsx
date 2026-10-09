@@ -7,7 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { routeHash } from "../app/router";
 import { useT } from "../i18n";
-import { throwProblem, useMe } from "./common";
+import { unwrap, useMe } from "./common";
 import { settingsHref } from "./settingsrouting";
 import { SignatureHtml } from "./signaturehtml";
 
@@ -94,19 +94,17 @@ export function useSignOff(
       settled.draftKey,
     ],
     queryFn: async () => {
-      const { data, error } = await api.POST("/emails:sign-off", {
-        body: {
-          body: settled.body,
-          subject: settled.subject,
-          ...(settled.draftKey === ""
-            ? {}
-            : { draft: parseDraft(settled.draftKey) }),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/emails:sign-off", {
+          body: {
+            body: settled.body,
+            subject: settled.subject,
+            ...(settled.draftKey === ""
+              ? {}
+              : { draft: parseDraft(settled.draftKey) }),
+          },
+        }),
+      );
     },
     enabled: userId !== undefined,
     // The previous answer stays while the next is asked, so the block does not

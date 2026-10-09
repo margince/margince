@@ -41,7 +41,7 @@ import {
   opLabel,
   takesValue,
 } from "./analytics.questions.vocab";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 
 // The population a query names, as one comparable string: the page's picker
@@ -51,22 +51,14 @@ function queryScopeKey(query: Pick<AnalyticsQuery, "scope_kind" | "scope_id">) {
 }
 
 async function askQuestion(query: AnalyticsQuery) {
-  const { data, error } = await api.POST("/analytics/query", { body: query });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(await api.POST("/analytics/query", { body: query }));
 }
 
 function useAnalyticsSchema() {
   return useQuery({
     queryKey: ["analytics-schema"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/schema", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/analytics/schema", {}));
     },
   });
 }
@@ -307,13 +299,11 @@ function SavedQuestion({
   const run = useQuery({
     queryKey: ["analytics-run", runId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/runs/{run_id}", {
-        params: { path: { run_id: runId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/analytics/runs/{run_id}", {
+          params: { path: { run_id: runId } },
+        }),
+      );
     },
   });
   const link = `${globalThis.location.origin}${globalThis.location.pathname}${routeHash(

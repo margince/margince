@@ -15,7 +15,7 @@ import { useT } from "../i18n";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
-import { throwProblem, useViewerId } from "./common";
+import { unwrap, useViewerId } from "./common";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
@@ -347,17 +347,16 @@ export function CompanyActionBadges({
           sourceName={company.display_name}
           searchTargets={searchCompanyTargets}
           merge={async (targetId) => {
-            const { data, error } = await api.POST("/companies/{id}/merge", {
-              params: {
-                path: { id: company.id },
-                ...ifMatch(requireVersion(company.version)),
-              },
-              body: { target_id: targetId },
-            });
-            if (error) {
-              throwProblem(error, t);
-            }
-            return data;
+            return unwrap(
+              await api.POST("/companies/{id}/merge", {
+                params: {
+                  path: { id: company.id },
+                  ...ifMatch(requireVersion(company.version)),
+                },
+                body: { target_id: targetId },
+              }),
+              t,
+            );
           }}
           invalidate="companies"
           recordKey="company"
@@ -417,16 +416,14 @@ export function CompanyActionBadges({
             name: company.display_name,
           })}
           archive={async () => {
-            const { data, error } = await api.DELETE("/companies/{id}", {
-              params: {
-                path: { id: company.id },
-                ...ifMatch(requireVersion(company.version)),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return unwrap(
+              await api.DELETE("/companies/{id}", {
+                params: {
+                  path: { id: company.id },
+                  ...ifMatch(requireVersion(company.version)),
+                },
+              }),
+            );
           }}
           invalidate="companies"
           recordKey="company"

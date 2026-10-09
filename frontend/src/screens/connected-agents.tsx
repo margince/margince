@@ -15,7 +15,7 @@ import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, unwrap } from "./common";
 import "./connected-agents.css";
 import { usePassports } from "./passports.queries";
 
@@ -433,12 +433,11 @@ export function ConnectedAgentsCard() {
 
   const disconnect = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/passports/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/passports/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: async () => {
       // The refetched list FIRST, then the dialog: closing it hands focus to the

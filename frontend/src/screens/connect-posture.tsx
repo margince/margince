@@ -6,7 +6,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCaptureSettings } from "./capture-settings";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 
 // The posture question, asked while a mailbox is being connected.
 //
@@ -55,16 +55,15 @@ function useSetConnectPosture(provider: Provider) {
       posture: MailPosture;
       applyToHistory: boolean;
     }) => {
-      const { error } = await api.PUT("/connectors/{provider}/mail-posture", {
-        params: { path: { provider } },
-        body: {
-          posture: vars.posture,
-          apply_to_history: vars.applyToHistory,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/connectors/{provider}/mail-posture", {
+          params: { path: { provider } },
+          body: {
+            posture: vars.posture,
+            apply_to_history: vars.applyToHistory,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["connectors"] });

@@ -84,6 +84,7 @@ import {
   provenanceOf,
   QueryGate,
   throwProblem,
+  unwrap,
   useMe,
   useViewerId,
 } from "./common";
@@ -202,12 +203,11 @@ function usePipeline(pipelineId?: string | null) {
   return useQuery({
     queryKey: ["pipelines", pipelineId ?? "default"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
       const pipeline =
         (pipelineId &&
           data.data.find((candidate) => candidate.id === pipelineId)) ||
@@ -311,13 +311,11 @@ function useDeals(f: DealFilters) {
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/deals", {
-        params: { query: { ...dealsQueryParams(f), cursor: pageParam } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals", {
+          params: { query: { ...dealsQueryParams(f), cursor: pageParam } },
+        }),
+      );
     },
     getNextPageParam: (last) =>
       last.page?.has_more ? (last.page.next_cursor ?? undefined) : undefined,
@@ -753,12 +751,11 @@ export function usePartnerOptions(
   const partners = useQuery({
     queryKey: ["partners", "options"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/partners", {
-        params: { query: { limit: 200 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/partners", {
+          params: { query: { limit: 200 } },
+        }),
+      );
       return data.data;
     },
     staleTime: 60_000,
@@ -779,12 +776,11 @@ export function usePartnerOptions(
       // relationship_type=partner reads the same set from the other side, so
       // the page is partner companies rather than the first N companies of
       // any kind. The cap matches /partners' own.
-      const { data, error } = await api.GET("/companies", {
-        params: { query: { relationship_type: "partner", limit: 200 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies", {
+          params: { query: { relationship_type: "partner", limit: 200 } },
+        }),
+      );
       return data.data;
     },
   });
@@ -1369,21 +1365,20 @@ function useAdvanceDeal() {
     mutationKey: ["deal-edit"],
     mutationFn: async (input: AdvanceInput) => {
       const terminal = input.toStage.semantic !== "open";
-      const { data, error } = await api.POST("/deals/{id}/advance", {
-        params: {
-          path: { id: input.dealId },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: {
-          to_stage_id: input.toStage.id,
-          ...(terminal ? { status: input.toStage.semantic } : {}),
-          ...closingFields(input),
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deals/{id}/advance", {
+          params: {
+            path: { id: input.dealId },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: {
+            to_stage_id: input.toStage.id,
+            ...(terminal ? { status: input.toStage.semantic } : {}),
+            ...closingFields(input),
+          },
+        }),
+        t,
+      );
     },
     onSuccess: (deal, input) => {
       // The advanced deal goes into the cache SYNCHRONOUSLY, before the
@@ -1892,19 +1887,18 @@ function DealCreateAction({
       values.company_id?.trim() || null,
       t,
     );
-    const { data, error } = await api.POST("/deals", {
-      body: {
-        ...mapDealCreate(
-          { ...values, project_id: projectId ?? "" },
-          pipeline.id,
-        ),
-        ...cf.toBody(values),
-      },
-    });
-    if (error) {
-      throwProblem(error, t);
-    }
-    return data;
+    return unwrap(
+      await api.POST("/deals", {
+        body: {
+          ...mapDealCreate(
+            { ...values, project_id: projectId ?? "" },
+            pipeline.id,
+          ),
+          ...cf.toBody(values),
+        },
+      }),
+      t,
+    );
   };
 
   return (
@@ -2122,13 +2116,11 @@ export function DealsScreen({
   const companiesQuery = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies", {
-        params: { query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
     },
   });
 
@@ -2812,13 +2804,11 @@ export function useDeal(id: string) {
   return useQuery({
     queryKey: ["deal", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -2861,13 +2851,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const companies = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies", {
-        params: { query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
     },
   });
   // The shared pending-approvals hook, not a second query on the same key: a
@@ -2902,25 +2890,21 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/offers", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/offers", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
   const createOffer = useMutation({
     mutationFn: async (currency: string) => {
-      const { data, error } = await api.POST("/deals/{id}/offers", {
-        params: { path: { id } },
-        body: { currency, source: "manual" },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deals/{id}/offers", {
+          params: { path: { id } },
+          body: { currency, source: "manual" },
+        }),
+      );
     },
     onSuccess: (offer: Offer) => {
       navigate({ screen: "offers", id: offer.id });
@@ -2935,12 +2919,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
         input.verdict === "approve"
           ? "/approvals/{id}/approve"
           : "/approvals/{id}/reject";
-      const { error } = await api.POST(path, {
-        params: { path: { id: input.approvalId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST(path, {
+          params: { path: { id: input.approvalId } },
+        }),
+      );
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["approvals", "pending"] }),

@@ -27,7 +27,7 @@ import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { ComposeModal, type RelinkKind } from "./compose";
 
 /**
@@ -56,20 +56,18 @@ function useWaitingReply(
   const query = useQuery({
     queryKey: ["record-waiting-reply", entityType, entityId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities", {
-        params: {
-          query: {
-            entity_type: entityType,
-            entity_id: entityId,
-            waiting_reply: true,
-            limit: 1,
+      return unwrap(
+        await api.GET("/activities", {
+          params: {
+            query: {
+              entity_type: entityType,
+              entity_id: entityId,
+              waiting_reply: true,
+              limit: 1,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     enabled,
   });

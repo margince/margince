@@ -36,7 +36,7 @@ import {
   PreviewNotice,
   videoAppOf,
 } from "./booking-guest-parts";
-import { QueryGate, type QueryLike, throwProblem } from "./common";
+import { QueryGate, type QueryLike, unwrap } from "./common";
 import "./booking-guest.css";
 
 type Availability = components["schemas"]["MeetingAvailability"];
@@ -80,22 +80,21 @@ export function BookingGuestScreen({
     }),
     queryFn: async () => {
       if (preview) {
-        const { data, error } = await api.GET("/scheduling/profile");
-        if (error) throwProblem(error);
-        return data;
+        return unwrap(await api.GET("/scheduling/profile"));
       }
       if (proposalToken) {
-        const { data, error } = await api.GET("/public/proposal/{token}", {
-          params: { path: { token: proposalToken } },
-        });
-        if (error) throwProblem(error);
+        const data = unwrap(
+          await api.GET("/public/proposal/{token}", {
+            params: { path: { token: proposalToken } },
+          }),
+        );
         return { ...data.profile, proposal: data };
       }
-      const { data, error } = await api.GET(
-        "/public/booking/{host_slug}/profile",
-        { params: { path: { host_slug: hostSlug } } },
+      const data = unwrap(
+        await api.GET("/public/booking/{host_slug}/profile", {
+          params: { path: { host_slug: hostSlug } },
+        }),
       );
-      if (error) throwProblem(error);
       return { ...data, proposal: null };
     },
   });
@@ -154,34 +153,35 @@ export function BookingGuestScreen({
       wording: string;
     }) => {
       if (proposalToken) {
-        const { data, error } = await api.POST("/public/proposal/{token}", {
+        return unwrap(
+          await api.POST("/public/proposal/{token}", {
+            params: {
+              path: { token: proposalToken },
+            },
+            body: {
+              start: input.start,
+              end: input.end,
+              consent: { ...PUBLIC_BOOKING_CONSENT, wording: input.wording },
+            },
+          }),
+        );
+      }
+      const data = unwrap(
+        await api.POST("/public/booking/{host_slug}", {
           params: {
-            path: { token: proposalToken },
+            path: { host_slug: input.slug },
+            header: { "Idempotency-Key": intent(input) },
           },
           body: {
             start: input.start,
             end: input.end,
+            booker: { name: input.name, email: input.email },
+            subject: input.topic,
+            delivery: "calendar",
             consent: { ...PUBLIC_BOOKING_CONSENT, wording: input.wording },
           },
-        });
-        if (error) throwProblem(error);
-        return data;
-      }
-      const { data, error } = await api.POST("/public/booking/{host_slug}", {
-        params: {
-          path: { host_slug: input.slug },
-          header: { "Idempotency-Key": intent(input) },
-        },
-        body: {
-          start: input.start,
-          end: input.end,
-          booker: { name: input.name, email: input.email },
-          subject: input.topic,
-          delivery: "calendar",
-          consent: { ...PUBLIC_BOOKING_CONSENT, wording: input.wording },
-        },
-      });
-      if (error) throwProblem(error);
+        }),
+      );
       if (!data.invitation) throw new Error(t("scheduling.deliveryUnknown"));
       return data.invitation;
     },

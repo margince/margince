@@ -31,7 +31,7 @@ import type { MessageKey } from "../i18n/en";
 import {
   isVersionSkewOf,
   problemMessageOf,
-  throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import { useMemberName } from "./membernames";
@@ -135,13 +135,12 @@ export function RecordAccess({
       mayLoseAccess: boolean;
     }) => {
       const path = kind === "contact" ? "/contacts/{id}" : "/companies/{id}";
-      const { error } = await api.PATCH(path, {
-        params: { path: { id }, ...ifMatch(requireVersion(version)) },
-        body: { visibility },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH(path, {
+          params: { path: { id }, ...ifMatch(requireVersion(version)) },
+          body: { visibility },
+        }),
+      );
     },
     // The toast as well as the line in the panel, because the panel may be
     // closed by the time the refusal arrives.

@@ -10,7 +10,7 @@ import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { billingOf, billingPatchOf } from "./billingclassification";
-import { throwProblem, useMe } from "./common";
+import { unwrap, useMe } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
 import {
@@ -28,21 +28,20 @@ async function fetchProductsPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Product>> {
-  const { data, error } = await api.GET("/products", {
-    params: {
-      query: {
-        q: query.q || undefined,
-        sort: query.sort || undefined,
-        include_archived: query.includeArchived || undefined,
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        ...query.filters,
+  const data = unwrap(
+    await api.GET("/products", {
+      params: {
+        query: {
+          q: query.q || undefined,
+          sort: query.sort || undefined,
+          include_archived: query.includeArchived || undefined,
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          ...query.filters,
+        },
       },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {
@@ -56,12 +55,11 @@ async function fetchProductsPage(
 export async function searchProductCandidates(
   q: string,
 ): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await api.GET("/products", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/products", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((p) => ({ id: p.id, name: p.name }));
 }
 
@@ -164,25 +162,26 @@ export function ProductsAdmin() {
   });
 
   const createProduct = async (values: Record<string, string>) => {
-    const { data, error } = await api.POST("/products", {
-      body: {
-        name: values.name.trim(),
-        sku: values.sku?.trim() || null,
-        description: values.description?.trim() || null,
-        unit: values.unit?.trim() || null,
-        unit_price_minor: toMinor(values.unit_price, values.currency || "EUR"),
-        currency: values.currency || "EUR",
-        default_tax_rate: values.default_tax_rate
-          ? Number(values.default_tax_rate)
-          : null,
-        ...billingOf(values),
-        source: "manual",
-      },
-    });
-    if (error) {
-      throwProblem(error);
-    }
-    return data;
+    return unwrap(
+      await api.POST("/products", {
+        body: {
+          name: values.name.trim(),
+          sku: values.sku?.trim() || null,
+          description: values.description?.trim() || null,
+          unit: values.unit?.trim() || null,
+          unit_price_minor: toMinor(
+            values.unit_price,
+            values.currency || "EUR",
+          ),
+          currency: values.currency || "EUR",
+          default_tax_rate: values.default_tax_rate
+            ? Number(values.default_tax_rate)
+            : null,
+          ...billingOf(values),
+          source: "manual",
+        },
+      }),
+    );
   };
 
   // `sku`/`description` are nullable contract fields, so an emptied form
@@ -192,39 +191,33 @@ export function ProductsAdmin() {
   // unchanged rather than overwrite it with an invalid empty string.
   const updateProduct =
     (product: Product) => async (values: Record<string, unknown>) => {
-      const { data, error } = await api.PATCH("/products/{id}", {
-        params: {
-          path: { id: product.id },
-          ...ifMatch(requireVersion(product.version)),
-        },
-        body: {
-          name: String(values.name).trim(),
-          sku: (values.sku as string)?.trim() || null,
-          description: (values.description as string)?.trim() || null,
-          unit: (values.unit as string)?.trim() || undefined,
-          // The currency the form carries, falling back to the product's
-          // stored one when the field was left alone — the same value the
-          // PATCH below sends, so the amount and its scale cannot disagree.
-          //
-          // Narrowed rather than asserted: this callback is handed
-          // Record<string, unknown>, and `as string` on a value that turns out
-          // to be undefined would scale the price at the two-digit default
-          // without anything failing.
-          unit_price_minor: toMinor(
-            text(values.unit_price),
-            text(values.currency) || product.currency,
-          ),
-          currency: text(values.currency) || undefined,
-          default_tax_rate: values.default_tax_rate
-            ? Number(values.default_tax_rate)
-            : undefined,
-          ...billingPatchOf(values),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/products/{id}", {
+          params: {
+            path: { id: product.id },
+            ...ifMatch(requireVersion(product.version)),
+          },
+          body: {
+            name: String(values.name).trim(),
+            sku: (values.sku as string)?.trim() || null,
+            description: (values.description as string)?.trim() || null,
+            unit: (values.unit as string)?.trim() || undefined,
+            // The form's currency, else the product's stored one: the same value the
+            // PATCH below sends, so the amount and its scale cannot disagree. Narrowed,
+            // not asserted: `as string` on an undefined value would silently scale the
+            // price at the two-digit default.
+            unit_price_minor: toMinor(
+              text(values.unit_price),
+              text(values.currency) || product.currency,
+            ),
+            currency: text(values.currency) || undefined,
+            default_tax_rate: values.default_tax_rate
+              ? Number(values.default_tax_rate)
+              : undefined,
+            ...billingPatchOf(values),
+          },
+        }),
+      );
     };
 
   // The per-row affordances, in a column that exists only while at least one of
@@ -270,12 +263,11 @@ export function ProductsAdmin() {
             recordKey="product"
             onArchived={() => list.refetch()}
             archive={async () => {
-              const { data, error } = await api.DELETE("/products/{id}", {
-                params: { path: { id: p.id } },
-              });
-              if (error) {
-                throwProblem(error);
-              }
+              const data = unwrap(
+                await api.DELETE("/products/{id}", {
+                  params: { path: { id: p.id } },
+                }),
+              );
               return data ?? p;
             }}
           />

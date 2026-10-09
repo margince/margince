@@ -28,7 +28,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { RecordCard } from "../design-system/recordcard";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
-import { LoadMoreButton, QueryGate, QueryStates, throwProblem } from "./common";
+import { LoadMoreButton, QueryGate, QueryStates, unwrap } from "./common";
 import { companyTabRoute } from "./companytab";
 import { useOpenEmail } from "./openemail";
 import "./search.css";
@@ -182,19 +182,17 @@ function GroupedResults({
   const query = useQuery({
     queryKey: ["search", q, ALL_TYPES],
     queryFn: async () => {
-      const { data, error } = await api.GET("/search", {
-        params: {
-          query: {
-            q,
-            per_type: RESULTS_PER_TYPE,
-            with_employees: WITH_EMPLOYEES,
+      return unwrap(
+        await api.GET("/search", {
+          params: {
+            query: {
+              q,
+              per_type: RESULTS_PER_TYPE,
+              with_employees: WITH_EMPLOYEES,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
   });
   return (
@@ -229,21 +227,19 @@ function NarrowedResults({
     queryKey: ["search", q, type],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/search", {
-        params: {
-          query: {
-            q,
-            types: [type],
-            limit: 50,
-            with_employees: WITH_EMPLOYEES,
-            cursor: pageParam ?? undefined,
+      return unwrap(
+        await api.GET("/search", {
+          params: {
+            query: {
+              q,
+              types: [type],
+              limit: 50,
+              with_employees: WITH_EMPLOYEES,
+              cursor: pageParam ?? undefined,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });

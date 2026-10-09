@@ -22,7 +22,7 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useLocale, useT } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
-import { QueryGate, throwProblem, useMe } from "./common";
+import { QueryGate, unwrap, useMe } from "./common";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
 import {
@@ -91,13 +91,11 @@ export function useProject360(id: string) {
     // invalidate, so a saved name reaches the page without a second key.
     queryKey: ["project", id, "360"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/projects/{id}/360", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/projects/{id}/360", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -382,23 +380,21 @@ function ProjectActions({
           ]}
           record={{ ...projectEditRecord(project), ...cf.recordSlice(project) }}
           update={async (values, _rows, opened) => {
-            const { data, error } = await api.PATCH("/projects/{id}", {
-              params: {
-                path: { id: project.id },
-                ...ifMatch(requireVersion(opened?.version)),
-              },
-              // Diffed against what the form OPENED on: no cf_ column is
-              // clearable, so a snapshot diff sends every untouched empty one
-              // as a clear and the save is refused outright.
-              body: {
-                ...mapProjectUpdate(values),
-                ...cf.toPatch(values, opened ?? {}),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return unwrap(
+              await api.PATCH("/projects/{id}", {
+                params: {
+                  path: { id: project.id },
+                  ...ifMatch(requireVersion(opened?.version)),
+                },
+                // Diffed against what the form opened on. No cf_ column is clearable, so a
+                // snapshot diff would send every untouched empty one as a clear and the
+                // save would be refused.
+                body: {
+                  ...mapProjectUpdate(values),
+                  ...cf.toPatch(values, opened ?? {}),
+                },
+              }),
+            );
           }}
           invalidate="projects"
           recordKey="project"
@@ -422,15 +418,14 @@ function ProjectActions({
           archive={async () => {
             // Archive answers 204: the archived record is the one the page
             // already holds, so its id is what the shared choreography gets.
-            const { error } = await api.DELETE("/projects/{id}", {
-              params: {
-                path: { id: project.id },
-                ...ifMatch(requireVersion(project.version)),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
+            unwrap(
+              await api.DELETE("/projects/{id}", {
+                params: {
+                  path: { id: project.id },
+                  ...ifMatch(requireVersion(project.version)),
+                },
+              }),
+            );
             return { id: project.id };
           }}
           invalidate="projects"

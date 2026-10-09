@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { RECORD_LIST_KEY } from "./recordlistkeys";
 import type { MutationOutcome } from "./undoableremoval";
 
@@ -50,14 +50,11 @@ export function useRecordTags(entityType: TaggableType, entityID: string) {
   return useQuery({
     queryKey: ["record-tags", entityType, entityID],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/records/{entity_type}/{entity_id}/tags",
-        { params: { path: { entity_type: entityType, entity_id: entityID } } },
+      return unwrap(
+        await api.GET("/records/{entity_type}/{entity_id}/tags", {
+          params: { path: { entity_type: entityType, entity_id: entityID } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     staleTime: 30_000,
   });
@@ -79,10 +76,7 @@ export function useTagVocabulary(enabled = true) {
     // list is short — without it a word beyond the cap is indistinguishable
     // from a word that does not exist, and the reader coins a near-duplicate.
     queryFn: async (): Promise<{ tags: Tag[]; truncated: boolean }> => {
-      const { data, error } = await api.GET("/tags", {});
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/tags", {}));
       return { tags: data.data, truncated: data.page.has_more };
     },
     staleTime: 5 * 60_000,
@@ -94,13 +88,12 @@ export function useApplyTag(entityType: TaggableType, entityID: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (tagID: string) => {
-      const { error } = await api.POST("/tags/{id}/apply", {
-        params: { path: { id: tagID } },
-        body: { entity_type: entityType, entity_id: entityID },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/tags/{id}/apply", {
+          params: { path: { id: tagID } },
+          body: { entity_type: entityType, entity_id: entityID },
+        }),
+      );
     },
     onSuccess: () => {
       void invalidateTagged(queryClient, entityType, entityID);
@@ -122,13 +115,12 @@ export function useRemoveTag(
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (tagID: string): Promise<TagRestore | null> => {
-      const { data, error } = await api.DELETE("/tags/{id}/apply", {
-        params: { path: { id: tagID } },
-        body: { entity_type: entityType, entity_id: entityID },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.DELETE("/tags/{id}/apply", {
+          params: { path: { id: tagID } },
+          body: { entity_type: entityType, entity_id: entityID },
+        }),
+      );
       return data ? { tagID, undo: data } : null;
     },
     onError: outcome.onError,
@@ -150,13 +142,12 @@ export function useRestoreTag(
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: TagRestore) => {
-      const { error } = await api.POST("/tags/{id}/apply/restore", {
-        params: { path: { id: input.tagID } },
-        body: input.undo,
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/tags/{id}/apply/restore", {
+          params: { path: { id: input.tagID } },
+          body: input.undo,
+        }),
+      );
     },
     onError: outcome.onError,
     onSuccess: async (_, input) => {

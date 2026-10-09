@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { throwProblem } from "../screens/common";
+import { unwrap } from "../screens/common";
 import { settingsHref } from "../screens/settingsrouting";
 import { useCan, useCanWrite } from "./capability";
 import { routeHash } from "./router";
@@ -22,8 +22,7 @@ export function EconomyBanner() {
     enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/budget");
-      if (error) throwProblem(error);
+      const data = unwrap(await api.GET("/ai/budget"));
       if (!data) throw new Error("AI allowance unavailable");
       return data;
     },

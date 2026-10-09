@@ -10,7 +10,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { factsKey } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 
@@ -67,12 +67,11 @@ export function TechnicalProfilePanel({
   const facts = useQuery({
     queryKey: factsKey(companyId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/facts", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies/{id}/facts", {
+          params: { path: { id: companyId } },
+        }),
+      );
       return data.data ?? [];
     },
   });

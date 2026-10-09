@@ -20,7 +20,7 @@ import {
   problemCodeOf,
   problemMessageOf,
   QueryStates,
-  throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import {
@@ -72,9 +72,8 @@ export function useRecordHistory(
     enabled,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET(
-        "/records/{entity_type}/{id}/history",
-        {
+      return unwrap(
+        await api.GET("/records/{entity_type}/{id}/history", {
           params: {
             path: { entity_type: kind, id },
             query: {
@@ -83,12 +82,8 @@ export function useRecordHistory(
               ...(action ? { action } : {}),
             },
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     getNextPageParam: (last) => last?.page?.next_cursor ?? null,
   });

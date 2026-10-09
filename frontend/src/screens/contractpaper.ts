@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { SectionState } from "../design-system/surfacestate";
-import { ProblemError, throwProblem } from "./common";
+import { ProblemError, unwrap } from "./common";
 
 // The paper filed against ONE agreement, read the same way by the two surfaces
 // that show it: the contract form's signed-document field and the contract row
@@ -60,15 +60,14 @@ async function paperPage(
   contractId: string | undefined,
   cursor: string | undefined,
 ): Promise<PaperPage> {
-  const { data, error } = await api.GET("/companies/{id}/documents", {
-    params: {
-      path: { id: companyId },
-      query: { contract_id: contractId, limit: PAPER_PAGE_LIMIT, cursor },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/companies/{id}/documents", {
+      params: {
+        path: { id: companyId },
+        query: { contract_id: contractId, limit: PAPER_PAGE_LIMIT, cursor },
+      },
+    }),
+  );
   return {
     documents: data?.data ?? [],
     // A body carrying no page envelope claims no continuation, which is the

@@ -11,7 +11,7 @@ import type { components } from "../api/schema";
 import { Select } from "../design-system/select";
 import { SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 type BriefDelivery = components["schemas"]["BriefDelivery"];
 
@@ -34,10 +34,7 @@ export function BriefDeliveryRows() {
   const settings = useQuery({
     queryKey: ["me", "brief-delivery"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/me/brief-delivery");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/me/brief-delivery"));
       return data ?? {};
     },
   });
@@ -46,10 +43,7 @@ export function BriefDeliveryRows() {
   // the reader had just made in another.
   const save = useMutation({
     mutationFn: async (patch: BriefDelivery) => {
-      const { error } = await api.PUT("/me/brief-delivery", { body: patch });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(await api.PUT("/me/brief-delivery", { body: patch }));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({

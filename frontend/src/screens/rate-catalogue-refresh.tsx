@@ -9,7 +9,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./rates.css";
 
 type ProviderRefresh = components["schemas"]["AiModelRateProviderRefresh"];
@@ -43,11 +43,7 @@ export function useRefreshModelPrices() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/ai-model-rates/refresh");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/ai-model-rates/refresh"));
     },
     // The sheet and the card's last run both just changed.
     onSuccess: () =>

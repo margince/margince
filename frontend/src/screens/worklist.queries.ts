@@ -7,7 +7,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 
 export type Worklist = components["schemas"]["Worklist"];
 export type WorklistItem = components["schemas"]["WorklistItem"];
@@ -73,13 +73,13 @@ export function useWorklist(
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }): Promise<Worklist> => {
       const dials = owner ? { owner, filter } : { scope, filter };
-      const { data, error } = await api.GET("/worklist", {
-        params: { query: pageParam ? { ...dials, cursor: pageParam } : dials },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/worklist", {
+          params: {
+            query: pageParam ? { ...dials, cursor: pageParam } : dials,
+          },
+        }),
+      );
     },
     // The server hands back no cursor on the final page, which is how a walk
     // ends. Returning undefined for an empty page too, so a day that empties
@@ -141,11 +141,7 @@ export function useHandledForYou() {
   return useQuery({
     queryKey: [...worklistKey, "handled"],
     queryFn: async (): Promise<HandledForYou> => {
-      const { data, error } = await api.GET("/worklist/handled", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/worklist/handled", {}));
     },
   });
 }
@@ -162,11 +158,7 @@ export function useTeamExceptions(enabled: boolean) {
     enabled,
     queryKey: [...worklistKey, "exceptions"],
     queryFn: async (): Promise<TeamExceptions> => {
-      const { data, error } = await api.GET("/worklist/exceptions", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/worklist/exceptions", {}));
     },
   });
 }
@@ -176,13 +168,11 @@ export function useTeamBoard(enabled: boolean, team?: string) {
     enabled,
     queryKey: [...worklistKey, "team", team ?? ""],
     queryFn: async (): Promise<TeamBoard> => {
-      const { data, error } = await api.GET("/worklist/team", {
-        params: { query: { team } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/worklist/team", {
+          params: { query: { team } },
+        }),
+      );
     },
   });
 }
@@ -204,16 +194,15 @@ export function useReassignTask() {
       version: number | undefined;
       assigneeId: string;
     }) => {
-      const { error } = await api.PATCH("/activities/{id}", {
-        params: {
-          path: { id: input.activityId },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: { assignee_id: input.assigneeId },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/activities/{id}", {
+          params: {
+            path: { id: input.activityId },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: { assignee_id: input.assigneeId },
+        }),
+      );
     },
     onSuccess: (_data, input) => {
       // Every scope and owner of this queue, because the task left one
@@ -287,13 +276,12 @@ export function useTakeOwnership() {
         // handover that never happened.
         throw new Error(`no owner write for subject ${input.subject.type}`);
       }
-      const { error } = await api.PATCH(write.path as "/deals/{id}", {
-        params: { path: { id: input.subject.id } },
-        body: { [write.field]: input.userId },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH(write.path as "/deals/{id}", {
+          params: { path: { id: input.subject.id } },
+          body: { [write.field]: input.userId },
+        }),
+      );
     },
     onSuccess: () => {
       // worklistKey alone, which the exceptions read is keyed UNDER
@@ -319,18 +307,17 @@ export function useCoachTeammate() {
       kind: components["schemas"]["NoticeKind"];
       note: string;
     }) => {
-      const { error } = await api.POST("/notices", {
-        body: {
-          recipient_user_id: input.recipientUserId,
-          kind: input.kind,
-          // An empty note is ABSENT rather than an empty string: the coach
-          // added none, which the kind's own headline already covers.
-          ...(input.note.trim() === "" ? {} : { note: input.note }),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/notices", {
+          body: {
+            recipient_user_id: input.recipientUserId,
+            kind: input.kind,
+            // An empty note is ABSENT rather than an empty string: the coach
+            // added none, which the kind's own headline already covers.
+            ...(input.note.trim() === "" ? {} : { note: input.note }),
+          },
+        }),
+      );
     },
   });
 }
@@ -346,13 +333,11 @@ export function useApproval(id: string, enabled: boolean) {
     enabled,
     queryKey: ["approvals", "one", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/approvals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/approvals/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -383,24 +368,22 @@ export function useNudgeDismissal() {
   };
   const dismiss = useMutation({
     mutationFn: async (input: { contactId: string }) => {
-      const { error } = await api.PUT("/contacts/{id}/nudge-dismissal", {
-        params: { path: { id: input.contactId } },
-        body: { days: DISMISSAL_DAYS },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/contacts/{id}/nudge-dismissal", {
+          params: { path: { id: input.contactId } },
+          body: { days: DISMISSAL_DAYS },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
   const restore = useMutation({
     mutationFn: async (input: { contactId: string }) => {
-      const { error } = await api.DELETE("/contacts/{id}/nudge-dismissal", {
-        params: { path: { id: input.contactId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/contacts/{id}/nudge-dismissal", {
+          params: { path: { id: input.contactId } },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -427,21 +410,22 @@ export function useSetDisposition() {
       reopenOn?: ReopenCondition;
       reopenRef?: string;
     }) => {
-      const { error } = await api.PUT("/activities/{id}/disposition", {
-        params: { path: { id: input.activityId } },
-        body: {
-          disposition: input.disposition,
-          // Only a snooze names a moment or a condition. Sending either on the
-          // others is a 422, because a hand-off that expires on a Thursday is
-          // not a hand-off.
-          ...(input.snoozedUntil ? { snoozed_until: input.snoozedUntil } : {}),
-          ...(input.reopenOn ? { reopen_on: input.reopenOn } : {}),
-          ...(input.reopenRef ? { reopen_ref: input.reopenRef } : {}),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/activities/{id}/disposition", {
+          params: { path: { id: input.activityId } },
+          body: {
+            disposition: input.disposition,
+            // Only a snooze names a moment or a condition. Sending either on the
+            // others is a 422, because a hand-off that expires on a Thursday is
+            // not a hand-off.
+            ...(input.snoozedUntil
+              ? { snoozed_until: input.snoozedUntil }
+              : {}),
+            ...(input.reopenOn ? { reopen_on: input.reopenOn } : {}),
+            ...(input.reopenRef ? { reopen_ref: input.reopenRef } : {}),
+          },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });
@@ -461,15 +445,14 @@ export function useClearDisposition() {
       activityId: string;
       scope: "mine" | "thread";
     }) => {
-      const { error } = await api.DELETE("/activities/{id}/disposition", {
-        params: {
-          path: { id: input.activityId },
-          query: { scope: input.scope },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/activities/{id}/disposition", {
+          params: {
+            path: { id: input.activityId },
+            query: { scope: input.scope },
+          },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });

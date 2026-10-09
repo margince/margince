@@ -19,7 +19,7 @@ import {
   type BookingSlot,
 } from "./booking-picker";
 import { type BookingEdit, BookingReview } from "./booking-review";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import { useWorkingHours } from "./working-hours";
 
@@ -52,11 +52,11 @@ export function BookingInviteScreen({
     queryKey: ["booking-contact", selectedId],
     enabled: !!selectedId,
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}", {
-        params: { path: { id: selectedId } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/contacts/{id}", {
+          params: { path: { id: selectedId } },
+        }),
+      );
     },
   });
   const saved = profile.data;
@@ -232,10 +232,11 @@ function bookingRecipient(contact?: Contact) {
 }
 
 async function searchBookingContacts(q: string) {
-  const { data, error } = await api.GET("/search", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) throwProblem(error);
+  const data = unwrap(
+    await api.GET("/search", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data
     .filter((hit) => hit.type === "contact")
     .map((hit) => ({ id: hit.id, name: hit.title ?? hit.id }));

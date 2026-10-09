@@ -62,7 +62,7 @@ import { QuestionsView } from "./analytics.questions";
 import { FORECAST_CATEGORIES } from "./analytics.questions.values";
 import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingLibrary } from "./reporting.library";
@@ -905,20 +905,18 @@ function ReportCard({
   const reportQuery = useQuery({
     queryKey: ["report", report],
     queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report } },
-        // An empty list and an absent one both take the report's own declared
-        // defaults (report.go branches on len==0), so the delivery reports'
-        // empty plans ask for exactly what their specs declare.
-        body: {
-          group_by: REPORT_GROUP_BY[report],
-          aggregates: REPORT_AGGREGATES[report],
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/reports/{report}", {
+          params: { path: { report } },
+          // An empty list and an absent one both take the report's declared defaults
+          // (report.go branches on len==0). So the delivery reports' empty plans ask
+          // for what their specs declare.
+          body: {
+            group_by: REPORT_GROUP_BY[report],
+            aggregates: REPORT_AGGREGATES[report],
+          },
+        }),
+      );
     },
   });
 
@@ -1013,12 +1011,11 @@ export function AnalyticsScreen() {
   const pipelineQuery = useQuery({
     queryKey: ["pipelines"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
       return data.data.find((pipeline) => pipeline.is_default) ?? data.data[0];
     },
   });

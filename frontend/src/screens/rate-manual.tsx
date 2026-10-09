@@ -26,7 +26,7 @@ import {
   useAvailableModels,
 } from "./ai-models";
 import { DECISION_PROVIDERS, PROVIDERS } from "./ai-routing-fields";
-import { problemMessageOf, throwProblem, WriteRefused } from "./common";
+import { problemMessageOf, unwrap, WriteRefused } from "./common";
 import "./rates.css";
 
 type SheetRow = components["schemas"]["AiModelRate"];
@@ -143,10 +143,7 @@ export function PriceForm({
 
   const save = useMutation({
     mutationFn: async (body: PriceWrite) => {
-      const { error: err } = await api.POST("/ai-model-rates", { body });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(await api.POST("/ai-model-rates", { body }));
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ai-model-rates"] });

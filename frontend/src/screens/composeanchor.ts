@@ -9,7 +9,7 @@ import { formatDateTime } from "../format/format";
 import { replySubject } from "../format/replysubject";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { throwProblem, useViewerId } from "./common";
+import { unwrap, useViewerId } from "./common";
 import { recordNamesIn, useCompany360 } from "./company360";
 import { keptTag } from "./composedraftcall";
 import type { RelinkKind } from "./composerelink";
@@ -39,13 +39,11 @@ export function useThreadProject(
   const query = useQuery({
     queryKey: ["activity", activityId, "filing"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/activities/{id}", {
+          params: { path: { id: activityId ?? "" } },
+        }),
+      );
     },
     enabled: enabled && Boolean(activityId),
   });

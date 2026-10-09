@@ -28,7 +28,7 @@ import type { ListColumn } from "../design-system/listtable";
 import { formatElapsed } from "../format/now";
 import { type Translator, useLocale, useT } from "../i18n";
 import { boardMail } from "./boarddeal";
-import { QueryStates, throwProblem } from "./common";
+import { QueryStates, unwrap } from "./common";
 import "./dealmailaside.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -46,20 +46,18 @@ function useDealMail(dealId: string) {
     // sent reads as a broken send.
     queryKey: ["activities", "deal", dealId, "mail-aside"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities", {
-        params: {
-          query: {
-            entity_type: "deal",
-            entity_id: dealId,
-            kind: "email",
-            limit: MAIL_ASIDE_ROWS,
+      return unwrap(
+        await api.GET("/activities", {
+          params: {
+            query: {
+              entity_type: "deal",
+              entity_id: dealId,
+              kind: "email",
+              limit: MAIL_ASIDE_ROWS,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
   });
 }

@@ -17,7 +17,7 @@ import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "./common";
 import { ExcuseModal, type ExcuseState } from "./noticeexcuse";
 
 // Every read that could still show the duty: the Home brief, the worklist the
@@ -70,13 +70,12 @@ export function NoticeDuty({
 
   const excuse = useMutation({
     mutationFn: async (vars: { state: ExcuseState; note: string }) => {
-      const { error } = await api.POST("/privacy/notice-cases/{id}/excuse", {
-        params: { path: { id: caseId } },
-        body: { state: vars.state, resolution_note: vars.note },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/privacy/notice-cases/{id}/excuse", {
+          params: { path: { id: caseId } },
+          body: { state: vars.state, resolution_note: vars.note },
+        }),
+      );
     },
     onSuccess: () => {
       setExcusing(false);

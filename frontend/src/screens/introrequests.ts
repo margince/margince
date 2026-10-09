@@ -11,7 +11,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export type IntroRequest = components["schemas"]["IntroRequest"];
 export type IntroRequestInput = components["schemas"]["IntroRequestInput"];
@@ -29,12 +29,11 @@ export function useIntroRequests(contactId: string, enabled = true) {
     queryKey: introRequestsKey(contactId),
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}/intro-requests", {
-        params: { path: { id: contactId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/contacts/{id}/intro-requests", {
+          params: { path: { id: contactId } },
+        }),
+      );
       return data?.data ?? [];
     },
   });
@@ -52,14 +51,12 @@ export function useCreateIntroRequest(contactId: string) {
   return useMutation({
     mutationKey: ["introRequest.create", contactId],
     mutationFn: async (body: IntroRequestInput) => {
-      const { data, error } = await api.POST("/contacts/{id}/intro-requests", {
-        params: { path: { id: contactId } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/contacts/{id}/intro-requests", {
+          params: { path: { id: contactId } },
+          body,
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -80,21 +77,19 @@ export function useDecideIntroRequest(contactId: string) {
   return useMutation({
     mutationKey: ["introRequest.decide", contactId],
     mutationFn: async (v: DecisionVariables) => {
-      const { data, error } = await api.POST("/intro-requests/{id}/decision", {
-        params: { path: { id: v.id } },
-        body: {
-          decision: v.decision,
-          version: v.version,
-          ...(v.reason ? { reason: v.reason } : {}),
-          ...(v.suggestedUserId
-            ? { suggested_user_id: v.suggestedUserId }
-            : {}),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/intro-requests/{id}/decision", {
+          params: { path: { id: v.id } },
+          body: {
+            decision: v.decision,
+            version: v.version,
+            ...(v.reason ? { reason: v.reason } : {}),
+            ...(v.suggestedUserId
+              ? { suggested_user_id: v.suggestedUserId }
+              : {}),
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -115,19 +110,17 @@ export function useCompleteIntroRequest(contactId: string) {
     mutationFn: async (
       v: Readonly<{ id: string; version: number; sourceActivityId?: string }>,
     ) => {
-      const { data, error } = await api.POST("/intro-requests/{id}/complete", {
-        params: { path: { id: v.id } },
-        body: {
-          version: v.version,
-          ...(v.sourceActivityId
-            ? { source_activity_id: v.sourceActivityId }
-            : {}),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/intro-requests/{id}/complete", {
+          params: { path: { id: v.id } },
+          body: {
+            version: v.version,
+            ...(v.sourceActivityId
+              ? { source_activity_id: v.sourceActivityId }
+              : {}),
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -141,14 +134,15 @@ export function useCancelIntroRequest(contactId: string) {
     mutationFn: async (
       v: Readonly<{ id: string; version: number; reason?: string }>,
     ) => {
-      const { data, error } = await api.POST("/intro-requests/{id}/cancel", {
-        params: { path: { id: v.id } },
-        body: { version: v.version, ...(v.reason ? { reason: v.reason } : {}) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/intro-requests/{id}/cancel", {
+          params: { path: { id: v.id } },
+          body: {
+            version: v.version,
+            ...(v.reason ? { reason: v.reason } : {}),
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });

@@ -42,7 +42,7 @@ import {
 } from "./attachmentupload";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import { useProviderCarriage } from "./channelproviders";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import type { RelinkKind } from "./compose";
 import "./composeattachments.css";
 
@@ -82,19 +82,17 @@ export function useRecordFiles(
   return useQuery({
     queryKey: ["attachments", entityType, entityId, "compose"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/attachments", {
-        params: {
-          query: {
-            entity_type: entityType,
-            entity_id: entityId,
-            limit: OFFERED,
+      return unwrap(
+        await api.GET("/attachments", {
+          params: {
+            query: {
+              entity_type: entityType,
+              entity_id: entityId,
+              limit: OFFERED,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     enabled,
   });

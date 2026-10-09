@@ -20,7 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { DEAL_COVERAGE_KEY } from "../activitykeys";
-import { throwProblem } from "../common";
+import { unwrap } from "../common";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
@@ -42,13 +42,11 @@ export function useDealCoverage(dealId: string) {
   const query = useQuery({
     queryKey: dealCoverageKey(dealId),
     queryFn: async (): Promise<DealCoverage> => {
-      const { data, error } = await api.GET("/deals/{id}/coverage", {
-        params: { path: { id: dealId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/coverage", {
+          params: { path: { id: dealId } },
+        }),
+      );
     },
   });
   return {

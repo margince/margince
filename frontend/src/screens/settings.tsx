@@ -93,6 +93,7 @@ import {
   QueryGate,
   resetToSignedOut,
   throwProblem,
+  unwrap,
   useLogout,
   useMe,
   WriteRefused,
@@ -748,10 +749,7 @@ function LanguageSettingRow() {
   // dropped request than letting the next sign-in re-ask the server.
   const remember = useMutation({
     mutationFn: async (next: Locale) => {
-      const { error } = await api.PUT("/me/locale", { body: { locale: next } });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(await api.PUT("/me/locale", { body: { locale: next } }), t);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["me"] });
@@ -877,12 +875,11 @@ function PassportCard() {
   // agent's credential.
   const revoke = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/passports/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/passports/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: async () => {
       // Refetch BEFORE closing, so the row focus returns to is already carrying
@@ -1217,11 +1214,7 @@ function AgentToolsCard() {
   const tools = useQuery({
     queryKey: ["agent-tools"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/agent-tools");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/agent-tools"));
     },
   });
   const passports = usePassports();
@@ -1431,13 +1424,11 @@ function ResetDataCard() {
       // clearing here means a retry's error can never leave a previous
       // success sitting on screen, and an in-flight retry shows no summary.
       setSummary(null);
-      const { data, error } = await api.POST("/admin/reset-data", {
-        body: { confirmation: typed },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/admin/reset-data", {
+          body: { confirmation: typed },
+        }),
+      );
     },
     onSuccess: (data) => {
       setOpen(false);
@@ -1837,13 +1828,11 @@ function AuditLogEntries({
     enabled: canSee,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/audit-log", {
-        params: { query: auditLogQueryParams(filters, pageParam) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/audit-log", {
+          params: { query: auditLogQueryParams(filters, pageParam) },
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });

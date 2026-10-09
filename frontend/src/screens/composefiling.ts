@@ -10,7 +10,7 @@ import {
   type PickableProject,
   useSoleProjectDefault,
 } from "../design-system/projectpicker";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { useCompany360 } from "./company360";
 import { useThreadProject } from "./composeanchor";
 import { recipientSuggestions } from "./composehead";
@@ -54,13 +54,11 @@ function useAnchorProject(
     // cannot disagree with the page behind it.
     queryKey: ["deal", entityId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}", {
-        params: { path: { id: entityId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}", {
+          params: { path: { id: entityId } },
+        }),
+      );
     },
     enabled: entityType === "deal",
     staleTime: 60_000,

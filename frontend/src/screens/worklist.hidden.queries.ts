@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { worklistKey } from "./worklist.queries";
 
 // The reads behind the hidden-backlog panel: the figures, and the messages
@@ -27,11 +27,7 @@ export function useHiddenBacklog(enabled: boolean) {
     enabled,
     queryKey: [...worklistKey, "hidden"],
     queryFn: async (): Promise<HiddenBacklog> => {
-      const { data, error } = await api.GET("/worklist/hidden", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/worklist/hidden", {}));
     },
   });
 }
@@ -43,13 +39,11 @@ export function useHiddenBacklogRows(rule: HiddenRule, enabled: boolean) {
     enabled,
     queryKey: [...worklistKey, "hidden", rule],
     queryFn: async (): Promise<HiddenBacklogRows> => {
-      const { data, error } = await api.GET("/worklist/hidden/{rule}", {
-        params: { path: { rule } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/worklist/hidden/{rule}", {
+          params: { path: { rule } },
+        }),
+      );
     },
   });
 }

@@ -25,7 +25,7 @@ import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { CLAIM_SETTLED_KEYS } from "./activitykeys";
-import { problemCodeOf, provenanceOf, throwProblem } from "./common";
+import { problemCodeOf, provenanceOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
@@ -55,16 +55,16 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: TaskPatch) => {
-      const { data, error } = await api.PATCH("/activities/{id}", {
-        params: {
-          path: { id: input.id },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: input.body,
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      const data = unwrap(
+        await api.PATCH("/activities/{id}", {
+          params: {
+            path: { id: input.id },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: input.body,
+        }),
+        t,
+      );
       // The version the write PRODUCED, answered so a follow-on press has one.
       // An undo re-sending the version the row was drawn at would be refused as
       // skew by the very write it is undoing.
@@ -462,12 +462,12 @@ export function useNoticeRead(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.POST("/notices/{id}/read", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/notices/{id}/read", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
@@ -491,13 +491,12 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await api.POST("/automations/runs/{id}/retry", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/automations/runs/{id}/retry", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
@@ -528,16 +527,16 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
       version: number | undefined;
       status: "held" | "no_show" | "canceled";
     }) => {
-      const { error } = await api.PATCH("/activities/{id}", {
-        params: {
-          path: { id: input.id },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: { meeting_status: input.status },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.PATCH("/activities/{id}", {
+          params: {
+            path: { id: input.id },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: { meeting_status: input.status },
+        }),
+        t,
+      );
     },
     onSuccess: (_data, input) => {
       for (const queryKey of invalidateKeys) {
@@ -567,13 +566,13 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       id: string;
       outcome: "done" | "dismissed";
     }) => {
-      const { error } = await api.POST("/claims/{id}/settle", {
-        params: { path: { id: input.id } },
-        body: { outcome: input.outcome },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/claims/{id}/settle", {
+          params: { path: { id: input.id } },
+          body: { outcome: input.outcome },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {

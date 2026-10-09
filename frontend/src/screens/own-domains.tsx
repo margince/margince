@@ -21,7 +21,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // The own-domain surface (CAP-WIRE-2a, ADR-0082/A127): which domains this
 // installation treats as its own, and therefore whose mail it does not store.
@@ -60,13 +60,11 @@ function useAddOwnDomain() {
   const t = useT();
   return useMutation({
     mutationFn: async (domain: string) => {
-      const { data, error } = await api.POST("/capture/email-domains", {
-        body: { domain },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/capture/email-domains", {
+          body: { domain },
+        }),
+      );
     },
     onSuccess: (_written, domain) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });
@@ -81,12 +79,11 @@ function useRemoveOwnDomain() {
   const t = useT();
   return useMutation({
     mutationFn: async (domain: string) => {
-      const { error } = await api.DELETE("/capture/email-domains/{domain}", {
-        params: { path: { domain } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/capture/email-domains/{domain}", {
+          params: { path: { domain } },
+        }),
+      );
     },
     onSuccess: (_written, domain) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });

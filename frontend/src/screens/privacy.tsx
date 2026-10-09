@@ -42,7 +42,7 @@ import {
   problemMessageOf,
   QueryGate,
   QueryStates,
-  throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import {
@@ -125,17 +125,15 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
 
   const create = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/consent-purposes", {
-        body: {
-          key: key.trim(),
-          label: label.trim(),
-          requires_double_opt_in: requiresDoi,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/consent-purposes", {
+          body: {
+            key: key.trim(),
+            label: label.trim(),
+            requires_double_opt_in: requiresDoi,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["consent-purposes"] });
@@ -232,11 +230,7 @@ export function ConsentPurposesCard() {
   const query = useQuery({
     queryKey: ["consent-purposes"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/consent-purposes");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/consent-purposes"));
     },
   });
   // No bottom margin of its own: `.settings-stack` owns the gap between cards.
@@ -328,12 +322,11 @@ const DSR_KINDS: readonly DsrKind[] = ["access", "rectify", "erasure"];
 async function searchContactCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/contacts", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((contact) => ({
     id: contact.id,
     name: contact.full_name,
@@ -370,13 +363,11 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         subject_ref: subjectRef.trim(),
         due_at: endOfDayInZone(dueAt, tz),
       };
-      const { data, error } = await api.POST("/data-subject-requests", {
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/data-subject-requests", {
+          body,
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dsrs"] });
@@ -680,14 +671,12 @@ function DsrRow({
 
   const patch = useMutation({
     mutationFn: async (body: UpdateDataSubjectRequest) => {
-      const { data, error } = await api.PATCH("/data-subject-requests/{id}", {
-        params: { path: { id: dsr.id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/data-subject-requests/{id}", {
+          params: { path: { id: dsr.id } },
+          body,
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dsrs"] });
@@ -902,14 +891,12 @@ function FulfilErasureModal({
       if (fulfilment.resolution.trim()) {
         body.resolution = fulfilment.resolution.trim();
       }
-      const { data, error } = await api.PATCH("/data-subject-requests/{id}", {
-        params: { path: { id: fulfilment.request.id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/data-subject-requests/{id}", {
+          params: { path: { id: fulfilment.request.id } },
+          body,
+        }),
+      );
     },
     onSuccess: async () => {
       // The re-read queue FIRST, then the dialog: closing it hands focus back to
@@ -1041,19 +1028,17 @@ export function PrivacyInboxCard() {
     enabled: canSee,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/data-subject-requests", {
-        params: {
-          query: {
-            limit: 20,
-            ...(facet !== "all" ? { status: facet } : {}),
-            ...(pageParam ? { cursor: pageParam } : {}),
+      return unwrap(
+        await api.GET("/data-subject-requests", {
+          params: {
+            query: {
+              limit: 20,
+              ...(facet !== "all" ? { status: facet } : {}),
+              ...(pageParam ? { cursor: pageParam } : {}),
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });

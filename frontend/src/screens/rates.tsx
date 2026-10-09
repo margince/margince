@@ -19,7 +19,7 @@ import { useT } from "../i18n";
 import {
   problemMessageOf,
   QueryGate,
-  throwProblem,
+  unwrap,
   useMe,
   WriteRefused,
 } from "./common";
@@ -100,12 +100,11 @@ export function FxRatesCard() {
     queryKey: ["fx-rates"],
     enabled: canRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/fx-rates", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/fx-rates", {
+          params: { query: {} },
+        }),
+      );
       return data.data;
     },
   });
@@ -227,16 +226,15 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
 
   const save = useMutation({
     mutationFn: async () => {
-      const { error: err } = await api.POST("/fx-rates", {
-        body: {
-          from_currency: from.trim().toUpperCase(),
-          rate: rate.trim(),
-          effective_date: effectiveDate,
-        },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(
+        await api.POST("/fx-rates", {
+          body: {
+            from_currency: from.trim().toUpperCase(),
+            rate: rate.trim(),
+            effective_date: effectiveDate,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["fx-rates"] });
@@ -326,12 +324,11 @@ export function ModelCostsCard() {
     queryKey: ["ai-model-rates"],
     enabled: canRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai-model-rates", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/ai-model-rates", {
+          params: { query: {} },
+        }),
+      );
       return data.data;
     },
   });

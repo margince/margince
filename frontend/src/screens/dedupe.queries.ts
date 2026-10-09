@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { worklistKey } from "./worklist.queries";
 
 /**
@@ -27,13 +27,12 @@ export function useDedupeDisposition() {
       disposition: "merge" | "not_a_duplicate";
       winnerId?: string;
     }) => {
-      const { error } = await api.POST("/dedupe/candidates/{id}/disposition", {
-        params: { path: { id: input.id } },
-        body: { disposition: input.disposition, winner_id: input.winnerId },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/dedupe/candidates/{id}/disposition", {
+          params: { path: { id: input.id } },
+          body: { disposition: input.disposition, winner_id: input.winnerId },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });

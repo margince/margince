@@ -9,7 +9,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // Which kinds of proposal answer themselves, for the reader and nobody else.
 //
@@ -54,11 +54,7 @@ function useUpdateAutonomy() {
     // the row that carries the switch is the row that names the kind, and a
     // handler reaching back for either could act on the previous render's.
     mutationFn: async (choice: { kind: string; auto: boolean }) => {
-      const { data, error } = await api.PATCH("/autonomy", { body: choice });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.PATCH("/autonomy", { body: choice }));
     },
     // The server answers with the whole set, so the cache takes its word rather
     // than patching one row locally: the decision counts beside the switch move

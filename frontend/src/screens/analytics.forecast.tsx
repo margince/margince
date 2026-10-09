@@ -28,7 +28,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
 import { ForecastReview } from "./analytics.forecast.review";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import {
   FORECAST_PERIODS,
   type ForecastPeriod,
@@ -364,27 +364,22 @@ function ForecastCallEditor({
         // unreachable rather than a state to design copy for.
         throw new Error("a forecast names one population");
       }
-      const { data, error } = await api.POST("/forecast/calls", {
-        body: {
-          // The forecast is published for the population AND the window the
-          // reader is LOOKING at. Hard-coded to the workspace, this recorded a
-          // company-wide belief while a manager read their own team's numbers
-          // — the assertion and the figure it was formed from disagreeing. A
-          // hard-coded quarter is the same defect one axis over: a call made
-          // while reading the week would be filed against three months.
-          period,
-          ...named,
-          amount_minor: call.amountMinor,
-          currency: readings.base_currency,
-          // An empty note is no note. Sent as "", it would claim the author
-          // wrote something blank.
-          note: call.note === "" ? undefined : call.note,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/forecast/calls", {
+          body: {
+            // The call is filed for the population and the window the reader is
+            // looking at, so the call and the figure it came from agree. A call made
+            // while reading one team's week must not land on the workspace or a quarter.
+            period,
+            ...named,
+            amount_minor: call.amountMinor,
+            currency: readings.base_currency,
+            // An empty note is no note. Sent as "", it would claim the author
+            // wrote something blank.
+            note: call.note === "" ? undefined : call.note,
+          },
+        }),
+      );
     },
     onSuccess: async () => {
       // The readings carry the standing call, so they are stale the moment one
@@ -451,11 +446,11 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   const query = useQuery({
     queryKey: ["shared-forecast", token],
     queryFn: async () => {
-      const { data, error } = await api.GET("/forecast/shared/{token}", {
-        params: { path: { token } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/forecast/shared/{token}", {
+          params: { path: { token } },
+        }),
+      );
     },
   });
   return (

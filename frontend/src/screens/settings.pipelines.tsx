@@ -23,7 +23,7 @@ import { SortableList } from "../design-system/sortablelist";
 import { StageStrip } from "../design-system/stagestrip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
@@ -231,31 +231,29 @@ function PipelineCatalog({
             // A new pipeline lands at the end of the catalog and already holds
             // the two ways out, so its ladder is open stages plus the close.
             create={async (values) => {
-              const { data, error } = await api.POST("/pipelines", {
-                body: {
-                  name: str(values.name),
-                  is_default: values.is_default === "true",
-                  position: lastPosition + 1,
-                  stages: [
-                    {
-                      name: t("stage.semWon"),
-                      semantic: "won",
-                      position: 1,
-                      win_probability: 100,
-                    },
-                    {
-                      name: t("stage.semLost"),
-                      semantic: "lost",
-                      position: 2,
-                      win_probability: 0,
-                    },
-                  ],
-                },
-              });
-              if (error) {
-                throwProblem(error);
-              }
-              return data;
+              return unwrap(
+                await api.POST("/pipelines", {
+                  body: {
+                    name: str(values.name),
+                    is_default: values.is_default === "true",
+                    position: lastPosition + 1,
+                    stages: [
+                      {
+                        name: t("stage.semWon"),
+                        semantic: "won",
+                        position: 1,
+                        win_probability: 100,
+                      },
+                      {
+                        name: t("stage.semLost"),
+                        semantic: "lost",
+                        position: 2,
+                        win_probability: 0,
+                      },
+                    ],
+                  },
+                }),
+              );
             }}
             fields={createFields(t)}
           />
@@ -320,14 +318,12 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
               record={{ id: pipeline.id, name: pipeline.name }}
               fields={RENAME_FIELDS}
               update={async (values) => {
-                const { data, error } = await api.PATCH("/pipelines/{id}", {
-                  params: { path: { id: pipeline.id } },
-                  body: { name: str(values.name) },
-                });
-                if (error) {
-                  throwProblem(error);
-                }
-                return data;
+                return unwrap(
+                  await api.PATCH("/pipelines/{id}", {
+                    params: { path: { id: pipeline.id } },
+                    body: { name: str(values.name) },
+                  }),
+                );
               }}
             />
           )}
@@ -385,12 +381,11 @@ export function PipelinesCard() {
   const query = useQuery({
     queryKey: SETTINGS_PIPELINES,
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: { include_archived: true } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: { include_archived: true } },
+        }),
+      );
       return data.data;
     },
   });

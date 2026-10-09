@@ -8,7 +8,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem, WriteRefused } from "./common";
+import { problemMessageOf, unwrap, WriteRefused } from "./common";
 import { leadWriteKeys } from "./leadkeys";
 import type { LeadWriter } from "./leads";
 
@@ -111,13 +111,12 @@ function ReopenAction({ id }: Readonly<{ id: string }>) {
   const [open, setOpen] = useState(false);
   const reopen = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/leads/{id}/reopen", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/leads/{id}/reopen", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const key of leadWriteKeys(id)) {

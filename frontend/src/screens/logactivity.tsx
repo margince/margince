@@ -35,7 +35,7 @@ import {
 import { ActivityBodyField } from "./activitybodyfield";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
-import { throwProblem, useMe } from "./common";
+import { unwrap, useMe } from "./common";
 import "./logactivity.css";
 
 // Log an activity from a 360: the logActivity POST, linked to the record being
@@ -95,12 +95,11 @@ async function searchCompanyContacts(
   companyID: string,
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/contacts", {
-    params: { query: { company_id: companyID, q, limit: 20 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: { query: { company_id: companyID, q, limit: 20 } },
+    }),
+  );
   return data.data.map((contact) => ({
     id: contact.id,
     // full_name, which the contract documents as always present. display_name
@@ -177,19 +176,18 @@ export function LogActivityForm({
       zone: string;
       attendee: RecordPickerCandidate | null;
     }) => {
-      const { data, error } = await api.POST("/activities", {
-        body: activityRequestBody(
-          input.draft,
-          entityType,
-          entityId,
-          input.zone,
-          input.attendee,
-        ),
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/activities", {
+          body: activityRequestBody(
+            input.draft,
+            entityType,
+            entityId,
+            input.zone,
+            input.attendee,
+          ),
+        }),
+        t,
+      );
     },
     onSuccess: (_data, input) => {
       const keys =

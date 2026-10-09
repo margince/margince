@@ -8,7 +8,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { type CreateField, CreateRecordModal } from "./create";
 import { EditAction } from "./edit";
 
@@ -65,12 +65,11 @@ export function StageExitCriteria({
   const query = useQuery({
     queryKey: ["stage-exit-criteria", stageId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/stages/{id}/exit-criteria", {
-        params: { path: { id: stageId }, query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/stages/{id}/exit-criteria", {
+          params: { path: { id: stageId }, query: {} },
+        }),
+      );
       return data.data;
     },
     // A terminal stage can hold none, so the read is not worth a round trip.
@@ -174,9 +173,8 @@ function CriterionRow({
             }}
             fields={criterionEditFields(t)}
             update={async (values, _rows, opened) => {
-              const { data, error } = await api.PATCH(
-                "/stages/{id}/exit-criteria/{criterion_id}",
-                {
+              return unwrap(
+                await api.PATCH("/stages/{id}/exit-criteria/{criterion_id}", {
                   params: {
                     path: { id: stageId, criterion_id: criterion.id },
                     // The version the form OPENED on, not the one the row
@@ -187,12 +185,8 @@ function CriterionRow({
                     ...ifMatch(requireVersion(opened?.version)),
                   },
                   body: criterionEditBody(values),
-                },
+                }),
               );
-              if (error) {
-                throwProblem(error);
-              }
-              return data;
             }}
           />
           <CriterionRemove criterion={criterion} stageId={stageId} />
@@ -208,20 +202,18 @@ function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (values: Record<string, string>) => {
-      const { data, error } = await api.POST("/stages/{id}/exit-criteria", {
-        params: { path: { id: stageId } },
-        body: {
-          key: values.key,
-          label: values.label,
-          kind: values.kind as CriterionKind,
-          required: values.required !== "false",
-          ...(values.hint ? { hint: values.hint } : {}),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/stages/{id}/exit-criteria", {
+          params: { path: { id: stageId } },
+          body: {
+            key: values.key,
+            label: values.label,
+            kind: values.kind as CriterionKind,
+            required: values.required !== "false",
+            ...(values.hint ? { hint: values.hint } : {}),
+          },
+        }),
+      );
     },
     onSuccess: () => {
       setOpen(false);
@@ -261,18 +253,14 @@ function CriterionRemove({
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE(
-        "/stages/{id}/exit-criteria/{criterion_id}",
-        {
+      unwrap(
+        await api.DELETE("/stages/{id}/exit-criteria/{criterion_id}", {
           params: {
             path: { id: stageId, criterion_id: criterion.id },
             ...ifMatch(requireVersion(criterion.version)),
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       setOpen(false);

@@ -10,7 +10,7 @@ import { Button, Card, Checkbox, EmptyState } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, useMe } from "./common";
+import { QueryGate, unwrap, useMe } from "./common";
 import "./oauthconsent.css";
 
 // The human hands an agent their own authority here — the one screen where
@@ -205,13 +205,11 @@ export function OAuthConsent() {
     // return before this query is ever read.
     enabled: Boolean(consent),
     queryFn: async () => {
-      const { data, error } = await api.GET("/oauth/consent-request", {
-        params: { query: { client_id: clientId, scope } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/oauth/consent-request", {
+          params: { query: { client_id: clientId, scope } },
+        }),
+      );
     },
   });
 

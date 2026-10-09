@@ -30,7 +30,7 @@ import {
   problemMessageOf,
   QueryGate,
   QueryStates,
-  throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import { useRoster } from "./entityref";
@@ -106,25 +106,23 @@ export function NoticeCasesCard() {
     enabled: canSee,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/privacy/notice-cases", {
-        params: {
-          query: {
-            limit: 50,
-            cursor: pageParam ?? undefined,
-            // The facet is a SERVER-side filter, not a client re-slice: a
-            // re-slice would hide rows the server never told us about and
-            // make the count on screen disagree with the one the queue has.
-            state:
-              facet === "owed"
-                ? [...UNRESOLVED_NOTICE_STATES]
-                : [...NOTICE_STATES],
+      return unwrap(
+        await api.GET("/privacy/notice-cases", {
+          params: {
+            query: {
+              limit: 50,
+              cursor: pageParam ?? undefined,
+              // The facet is a server-side filter, not a client re-slice. A re-slice
+              // would hide rows the server never sent, and the count on screen would
+              // disagree with the queue's.
+              state:
+                facet === "owed"
+                  ? [...UNRESOLVED_NOTICE_STATES]
+                  : [...NOTICE_STATES],
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
@@ -142,17 +140,12 @@ export function NoticeCasesCard() {
   // on the wrong case, or on none.
   const assign = useMutation({
     mutationFn: async (vars: { id: string; owner: string }) => {
-      const { data, error } = await api.POST(
-        "/privacy/notice-cases/{id}/assign",
-        {
+      return unwrap(
+        await api.POST("/privacy/notice-cases/{id}/assign", {
           params: { path: { id: vars.id } },
           body: { owner_user_id: vars.owner },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: invalidate,
   });
@@ -163,17 +156,12 @@ export function NoticeCasesCard() {
       state: ExcuseState;
       note: string;
     }) => {
-      const { data, error } = await api.POST(
-        "/privacy/notice-cases/{id}/excuse",
-        {
+      return unwrap(
+        await api.POST("/privacy/notice-cases/{id}/excuse", {
           params: { path: { id: vars.id } },
           body: { state: vars.state, resolution_note: vars.note },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: () => {
       invalidate();

@@ -15,7 +15,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import { leadManualSignalsKey, leadWriteKeys } from "./leadkeys";
 import "./leadsignals.css";
@@ -100,12 +100,11 @@ export function LeadManualSignals({
   const signals = useQuery({
     queryKey: leadManualSignalsKey(id),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}/manual-signals", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/leads/{id}/manual-signals", {
+          params: { path: { id } },
+        }),
+      );
       return data.data;
     },
   });
@@ -132,13 +131,13 @@ export function LeadManualSignals({
       // recompute and the last total written could be missing the others'
       // points.
       for (const body of writes) {
-        const { error } = await api.PUT("/leads/{id}/manual-signals", {
-          params: { path: { id } },
-          body,
-        });
-        if (error) {
-          throwProblem(error, t);
-        }
+        unwrap(
+          await api.PUT("/leads/{id}/manual-signals", {
+            params: { path: { id } },
+            body,
+          }),
+          t,
+        );
         // Retired as it lands, not once the whole batch has. A batch can stop
         // part-way through, and an answer still on the form after the server
         // took it is one the next save re-sends: that re-stamps
@@ -159,13 +158,12 @@ export function LeadManualSignals({
   });
   const clear = useMutation({
     mutationFn: async (target: SignalFactor) => {
-      const { error } = await api.DELETE(
-        "/leads/{id}/manual-signals/{factor}",
-        { params: { path: { id, factor: target } } },
+      unwrap(
+        await api.DELETE("/leads/{id}/manual-signals/{factor}", {
+          params: { path: { id, factor: target } },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onSuccess: invalidate,
   });

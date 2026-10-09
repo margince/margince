@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import { LEAD_LIST_KEY } from "./leadkeys";
 
 // The lead vocabularies and lead handling, read from the server: which
@@ -71,11 +71,7 @@ export function useUpdateLeadSettings() {
     mutationFn: async (
       body: components["schemas"]["UpdateLeadSettingsRequest"],
     ) => {
-      const { data, error } = await api.PATCH("/leads/settings", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.PATCH("/leads/settings", { body }));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: LEAD_SETTINGS_KEY });

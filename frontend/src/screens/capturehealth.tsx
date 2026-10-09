@@ -21,7 +21,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { formatWaitedFor, HealthCard } from "./healthcard";
 
 // GET /admin/capture-health — whether mailbox capture keeps up with its own
@@ -348,10 +348,7 @@ export function CaptureHealthCard() {
     queryKey: ["capture-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/admin/capture-health");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/admin/capture-health"));
       if (!isCaptureHealth(data)) {
         throw new Error("malformed capture-health response");
       }
