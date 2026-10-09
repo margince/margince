@@ -24,15 +24,30 @@ import (
 
 // waitingContactRank orders the contacts one message is filed under so the
 // waiting row names who wrote it: the sender's own contact, then a contact that
-// is no seat's record, then any other. The contact pick and the owner walk both
-// sort by it, so the owner named is the named contact's.
+// is no seat's record, then any other, and an archived contact last, since the
+// row's reply would open a record nobody can. The contact pick and the owner
+// walk both sort by it, so the owner named is the named contact's.
 func waitingContactRank(contact string) string {
-	return `CASE WHEN ` + contact + ` = sender.contact_id THEN 0
+	return `CASE WHEN EXISTS (SELECT 1 FROM contact gone
+	         WHERE gone.id = ` + contact + ` AND gone.archived_at IS NOT NULL) THEN 3
+	   WHEN ` + contact + ` = sender.contact_id THEN 0
 	   WHEN EXISTS (SELECT 1 FROM contact_email seat_mail
 	         JOIN app_user seat ON lower(seat.email) = lower(seat_mail.email)
 	        WHERE seat_mail.contact_id = ` + contact + ` AND seat_mail.archived_at IS NULL) THEN 2
 	   ELSE 1 END`
 }
+
+// filedUnderALiveContactSQL keeps a message off the queue once every contact it
+// is filed under is archived: archiving a contact says they are no longer work,
+// and a restore brings the row back with nothing to undo. One live contact keeps
+// it, and mail filed under no contact is left to the sales-link rule. No hidden
+// figure counts it, as none counts an archived message: both are retirements.
+// Ungated, like the sales-link rule, so the answer does not depend on the reader.
+const filedUnderALiveContactSQL = `(NOT EXISTS (SELECT 1 FROM activity_link filed
+	        WHERE filed.activity_id = a.id AND filed.contact_id IS NOT NULL)
+	   OR EXISTS (SELECT 1 FROM activity_link filed
+	        JOIN contact live ON live.id = filed.contact_id AND live.archived_at IS NULL
+	       WHERE filed.activity_id = a.id))`
 
 // waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
 // sales link, colleagues and the reader's set-asides. Requests survive replies and
@@ -248,6 +263,7 @@ var waitingRepliesSQL = `
 	                          WHERE d.id = sales.deal_id AND ( %[6]s OR (d.archived_at IS NULL AND (` + requestCandidateSQL + `))))
 	              OR EXISTS (SELECT 1 FROM lead ld
 	                          WHERE ld.id = sales.lead_id AND ( %[7]s OR (ld.archived_at IS NULL AND (` + requestCandidateSQL + `)))))))
+	   AND ` + filedUnderALiveContactSQL + `
 	   -- A COLLEAGUE is not a customer waiting.
 	   --
 	   -- Our own domains are read through the seam that owns them and passed in

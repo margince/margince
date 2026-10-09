@@ -123,6 +123,11 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Fixed
 
+- **An archived contact's unanswered message leaves the Worklist.** It no longer
+  shows under "Customer waiting", in the queue's count, in a record's waiting
+  filter or in the reply classifier's backlog. Restoring the contact brings it
+  back. A message filed under a second contact who is not archived stays, and
+  its row names that contact.
 - **The contacts-without-consent retention rule acts again** on older installations.
   An installation seeded before the record was renamed kept the rule under the old
   `person/no_consent_no_deal` scope. The nightly evaluator has no selector for it,
