@@ -206,6 +206,43 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     }
   });
 
+  it("states why a lost deal was lost on its head", () => {
+    show(
+      <DealIdentityFacts
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "lost",
+          lost_reason: "Budget frozen until next year",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.getByText(en["deals.lostReason"])).toBeInTheDocument();
+    expect(
+      screen.getByText("Budget frozen until next year"),
+    ).toBeInTheDocument();
+  });
+
+  it("asks nothing about a loss on a deal that is not lost", () => {
+    show(
+      <DealIdentityFacts
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "open",
+          lost_reason: "stale",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.queryByText(en["deals.lostReason"])).not.toBeInTheDocument();
+  });
+
   it("says nothing about paperwork on a won deal a contract carried", () => {
     // The ordinary case, and it needs no cell. A cell on every won deal would
     // bury the ones that need reading — the whole point of showing this at all.

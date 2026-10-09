@@ -23,6 +23,7 @@ import { type Locale, translatePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { provenanceOf, useViewerId } from "../common";
 import {
+  LostReasonFact,
   type WonWithoutContract,
   WonWithoutContractFact,
 } from "../dealwinreason";
@@ -55,6 +56,8 @@ export type DealIdentity = Partial<
     | "source"
     | "captured_by"
     | "author"
+    | "status"
+    | "lost_reason"
   >
 > &
   WonWithoutContract;
@@ -207,13 +210,30 @@ export function DealIdentityFacts({
           </Fact>
         )
       )}
-      {deal.status === "won" && deal.won_without_contract_reason && (
-        <Fact label={t("deals.winReason")}>
-          <WonWithoutContractFact deal={deal} />
-        </Fact>
-      )}
+      <ClosingFacts deal={deal} />
     </RecordFacts>
   );
+}
+
+// How a closed deal closed: a win with no contract behind it says how it was
+// won, a loss says why.
+function ClosingFacts({ deal }: Readonly<{ deal: DealIdentity }>): ReactNode {
+  const t = useT();
+  if (deal.status === "won" && deal.won_without_contract_reason) {
+    return (
+      <Fact label={t("deals.winReason")}>
+        <WonWithoutContractFact deal={deal} />
+      </Fact>
+    );
+  }
+  if (deal.status === "lost" && deal.lost_reason) {
+    return (
+      <Fact label={t("deals.lostReason")}>
+        <LostReasonFact deal={deal} />
+      </Fact>
+    );
+  }
+  return null;
 }
 
 // The value, or an em dash when the deal carries none. The masked case is the

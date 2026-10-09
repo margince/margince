@@ -75,3 +75,20 @@ export function WonWithoutContractFact({
   // exactly this.
   return <IdentityFact className="deal-win-detail">{detail}</IdentityFact>;
 }
+
+/**
+ * Why a lost deal was lost, on the head beside the `lost` badge it explains.
+ *
+ * The server requires the reason to close a deal as lost, so the head can
+ * always state it; free text wraps like the win detail does.
+ */
+export function LostReasonFact({
+  deal,
+}: Readonly<{ deal: Partial<Pick<Deal, "status" | "lost_reason">> }>) {
+  if (deal.status !== "lost" || !deal.lost_reason) {
+    return null;
+  }
+  return (
+    <IdentityFact className="deal-win-detail">{deal.lost_reason}</IdentityFact>
+  );
+}

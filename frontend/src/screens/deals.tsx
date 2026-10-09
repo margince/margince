@@ -123,6 +123,7 @@ import { DealRoomTab } from "./deal360/dealroomtab";
 import { DealWatchCard } from "./deal360/dealwatchcard";
 import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
+import { boardDealCount, stageCount } from "./dealboardcount";
 import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { DealEmailAside } from "./dealemail";
@@ -693,7 +694,7 @@ export function mapDealCreate(
     expected_arr_minor: expectedArr
       ? toMinorUnits(Number(expectedArr), currency)
       : null,
-    currency,
+    currency: amount || expectedArr ? currency : null,
     company_id: str(values.company_id) || null,
     partner_company_id: str(values.partner_company_id) || null,
     // The empty option means the caller made no claim, and null is how that
@@ -1142,10 +1143,7 @@ export function buildColumns(
         weightedMinor: stageTotals?.weightedMinor ?? null,
         currency: stageTotals?.currency ?? null,
         deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
-        // The true count, not the loaded page's — falls back to the page
-        // count while totals are still loading, so the column shows SOME
-        // number rather than a misleading 0.
-        count: stageTotals?.count ?? stageDeals.length,
+        count: stageCount(stageTotals, stageDeals.length),
         // Withheld totals hide the sum for their own reason, which is NOT the
         // mixed-currency one the column says by default.
         sumHidden:
@@ -2227,7 +2225,10 @@ export function DealsScreen({
           view === "board" &&
           dealsQuery.data &&
           t("board.count", {
-            count: formatNumber(loadedDeals.length, locale),
+            count: formatNumber(
+              boardDealCount(stages, loadedDeals, stageTotalsQuery.data),
+              locale,
+            ),
           })
         }
         // The pipeline picker is screen state, not a filter, so switching it
