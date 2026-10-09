@@ -49,7 +49,70 @@ func TestANullScoreEndsTheOverrideOverHTTP(t *testing.T) {
 				t.Errorf("score stayed at the human's %d; it must fall back to the machine value", lead.Score)
 			}
 			assertOverrideClearAudited(t, e, lead.ID)
+			assertOverrideEntriesRefuseUndo(t, e, lead.ID)
 		})
+	}
+}
+
+// A clear with nothing to clear writes nothing. A stale If-Match still answers
+// 409, because the caller decided on a version the row no longer has.
+func TestANoOpScoreClearStillChecksTheVersion(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var lead leadScoreWire
+	if status := e.Call(t, "POST", "/v1/leads", map[string]any{
+		"full_name": "Nico Noop", "email": "nico@noop.test", "source": "manual",
+	}, nil, &lead); status != http.StatusCreated {
+		t.Fatalf("create lead -> %d, want 201", status)
+	}
+	base := "/v1/leads/" + lead.ID
+	stale := strconv.FormatInt(lead.Version, 10)
+	if status := e.Call(t, "PATCH", base, map[string]any{"title": "Head of Ops"},
+		map[string]string{"If-Match": stale}, nil); status != http.StatusOK {
+		t.Fatalf("move the version on -> %d, want 200", status)
+	}
+	if status := e.Call(t, "PATCH", base, map[string]any{"score": nil},
+		map[string]string{"If-Match": stale}, nil); status != http.StatusConflict {
+		t.Errorf("no-op clear under a stale If-Match -> %d, want 409", status)
+	}
+}
+
+type historyEntryWire struct {
+	Before   map[string]any `json:"before"`
+	Undoable struct {
+		Undoable bool    `json:"undoable"`
+		Reason   *string `json:"reason"`
+	} `json:"undoable"`
+}
+
+// assertOverrideEntriesRefuseUndo checks that the entries which set and ended
+// the override say they cannot be undone. An undo would have to replay
+// score_computed, and no update request can send it.
+func assertOverrideEntriesRefuseUndo(t *testing.T, e *apptest.AppEnv, leadID string) {
+	t.Helper()
+	var history struct {
+		Data []historyEntryWire `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/records/lead/"+leadID+"/history", nil, nil, &history); status != http.StatusOK {
+		t.Fatalf("read history -> %d, want 200", status)
+	}
+	seen := 0
+	for _, entry := range history.Data {
+		if _, touched := entry.Before["score_computed"]; !touched {
+			continue
+		}
+		if _, override := entry.Before["score_override_reason"]; !override {
+			continue
+		}
+		seen++
+		if entry.Undoable.Undoable || entry.Undoable.Reason == nil ||
+			*entry.Undoable.Reason != "not_restorable_by_this_path" {
+			t.Errorf("override entry %v offers undo %+v, want refused as not_restorable_by_this_path",
+				entry.Before, entry.Undoable)
+		}
+	}
+	if seen < 2 {
+		t.Errorf("found %d override entries in the history, want the set and the clear", seen)
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -239,8 +240,20 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := ensureLeadUpdateAuthority(ctx, tx, id, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	// The lock comes before the read, so the before image is what the write
+	// replaces. A recompute landing in between would otherwise move
+	// score_computed under a clear that already captured the old value.
+	lock, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	current, err := readLead(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	// Checked here and not only by the write: a patch that turns out empty
+	// returns early, and a stale If-Match must still answer 409 then.
+	if err := ensureLeadVersion(current, in.IfVersion); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	// A client-supplied reference to a row-scoped record is a read of it.
@@ -271,7 +284,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if p.Empty() {
 		return current, nil
 	}
-	if err := p.ApplyGuarded(ctx, tx, "lead", id.UUID, in.IfVersion); err != nil {
+	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		if mapped, ok := leadUniqueViolation(err, in.Email); ok {
 			return crmcontracts.Lead{}, mapped
 		}
@@ -406,6 +419,15 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		}
 	}
 	return p, resumeRecompute, nil
+}
+
+// ensureLeadVersion refuses a write whose If-Match names a version the locked
+// row no longer has. No If-Match means the caller asked for no version check.
+func ensureLeadVersion(current crmcontracts.Lead, ifVersion *int64) error {
+	if ifVersion == nil || (current.Version != nil && *current.Version == *ifVersion) {
+		return nil
+	}
+	return apperrors.ErrVersionSkew
 }
 
 func stampStatusSetBy(ctx context.Context, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
