@@ -29,7 +29,7 @@ const company = {
 function view(overrides: Partial<Company360> = {}): Company360 {
   return {
     as_of: "2026-08-01T09:00:00Z",
-    company: company,
+    company,
     sections_omitted: [],
     deals: {
       data: [],

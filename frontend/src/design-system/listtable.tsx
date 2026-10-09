@@ -403,7 +403,7 @@ function sortState(
   return column.sort ? sortDirection(column.sort, value) : null;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: the alternate body owns one guarded paging branch while the table keeps the shared query controls
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity lint/complexity/noExcessiveLinesPerFunction: one table still owns the paging branch and the shared query controls; splitting it is #7200
 export function ListTable<Row>({
   title,
   bodyCount,
