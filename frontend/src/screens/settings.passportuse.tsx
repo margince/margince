@@ -34,7 +34,8 @@ export function passportSnippet(
   language: SnippetLanguage,
   apiBaseUrl: string,
 ): string {
-  const url = `${apiBaseUrl.replace(/\/+$/, "")}/companies?limit=5`;
+  const base = apiBaseUrl.endsWith("/") ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  const url = `${base}/companies?limit=5`;
   switch (language) {
     case "curl":
       return [
