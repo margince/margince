@@ -192,7 +192,7 @@ function WayIn({ coverage }: Readonly<{ coverage: Coverage }>) {
       />
     );
   }
-  // The card names one person, so its door is that person's page, whatever
+  // The card names one contact, so its door is that contact's page, whatever
   // their engagement: the name sits under the door's stretched target, which
   // makes it the same link.
   return (

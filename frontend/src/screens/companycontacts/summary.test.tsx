@@ -327,7 +327,7 @@ test("does not claim a complete committee when seats are hidden", async () => {
   expect(screen.queryByText("Complete")).toBeNull();
 });
 
-// The Best route card names one person, so its door opens that person's page
+// The Best route card names one contact, so its door opens that contact's page
 // whatever their engagement.
 test.each(["untried", "answered"] as const)(
   "the way-in door of an %s contact opens that contact",
