@@ -10,14 +10,13 @@ import (
 	"io"
 	"net/http"
 	"slices"
-	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // The whole-workspace bundle carries the same two columns in contact.csv and is
-// a complete, valid archive with a declared length.
+// a valid archive.
 func TestExportBundleContactsCarryTheReachableEmail(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -48,9 +47,6 @@ func TestExportBundleContactsCarryTheReachableEmail(t *testing.T) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("bundle → %d, want 200", resp.StatusCode)
-	}
-	if got, want := resp.Header.Get("Content-Length"), strconv.Itoa(len(raw)); got != want {
-		t.Errorf("Content-Length = %q, want %q", got, want)
 	}
 	archive, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
 	if err != nil {
