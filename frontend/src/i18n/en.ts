@@ -1593,6 +1593,7 @@ export const en = {
   "list.filterOwnerUnassigned": "Unassigned",
   "list.team": "Team",
   "list.filterTeamAll": "Any team",
+  "list.teamUnavailable": "Unavailable team",
   "views.save": "Save view",
   "views.saveConfirm": "Save",
   "views.saveTitle": "Save this view",

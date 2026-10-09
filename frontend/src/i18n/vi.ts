@@ -1535,6 +1535,7 @@ export const vi = {
   "list.filterOwnerUnassigned": "Chưa phân công",
   "list.team": "Nhóm",
   "list.filterTeamAll": "Mọi nhóm",
+  "list.teamUnavailable": "Nhóm không còn khả dụng",
   "views.save": "Lưu bộ lọc",
   "views.saveConfirm": "Lưu",
   "views.saveTitle": "Lưu bộ lọc này",

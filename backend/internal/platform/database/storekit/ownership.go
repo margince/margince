@@ -40,7 +40,10 @@ func OwnershipClause(owner *ids.UserID, team *ids.TeamID, unassigned *bool, arg 
 	case owner != nil:
 		return SQLf("owner_id = $%d", arg(*owner)), nil
 	case team != nil:
-		return SQLf("owner_id IN (SELECT tm.user_id FROM team_membership tm WHERE tm.team_id = $%d)",
+		// An archived team keeps its memberships and stops resolving scope,
+		// so it names nobody here either.
+		return SQLf("owner_id IN (SELECT tm.user_id FROM team_membership tm"+
+			" JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL WHERE tm.team_id = $%d)",
 			arg(*team)), nil
 	case onlyUnowned:
 		return "owner_id IS NULL", nil
@@ -49,12 +52,17 @@ func OwnershipClause(owner *ids.UserID, team *ids.TeamID, unassigned *bool, arg 
 }
 
 // OwnerNameSort orders a list by the owner's display name, which is what the
-// Owner column prints. Ordering by owner_id groups each owner's rows in an
-// order no reader can see. An unowned row has no name and sorts last.
+// Owner column prints. An unowned row, and one whose owner's seat is archived,
+// sorts last with no name. SeatNames withholds an archived seat's name, and
+// the sort key travels in the page cursor.
+//
+// The cursor records it as owner_name, because owner_id once sorted by the
+// id. A cursor minted then is refused rather than compared against names.
 // table is a compile-time literal naming the list's own table.
 func OwnerNameSort(table string) SortField {
-	return SortField{Kind: fieldcatalog.TypeText, Expr: func(_ context.Context, _ func(any) int) (string, error) {
-		return "(SELECT owner_sort.display_name FROM app_user owner_sort WHERE owner_sort.id = " +
-			table + ".owner_id)", nil
-	}}
+	return SortField{Kind: fieldcatalog.TypeText, CursorField: "owner_name",
+		Expr: func(_ context.Context, _ func(any) int) (string, error) {
+			return "(SELECT owner_sort.display_name FROM app_user owner_sort WHERE owner_sort.id = " +
+				table + ".owner_id AND owner_sort.archived_at IS NULL)", nil
+		}}
 }

@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -180,5 +181,59 @@ func TestSortingByOwnerOrdersByTheOwnersName(t *testing.T) {
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("projects sorted by owner came out %v, want %v", got, want)
+	}
+}
+
+// An archived team keeps its memberships but stops resolving scope, so the
+// team filter must name nobody through it either. Archived through the real
+// team writer.
+func TestTheTeamFilterNamesNobodyThroughAnArchivedTeam(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	e.SeedDeal(t, "Owned By Rep1", pipeline, open, &e.Rep1)
+	team := ids.From[ids.TeamKind](e.Team1)
+	if got := dealIDsOf(t, e, e.Admin(), deals.ListDealsInput{OwnerTeamID: &team}); len(got) != 1 {
+		t.Fatalf("before the archive, owner_team_id returned %d deals, want Rep1's one", len(got))
+	}
+
+	archived := true
+	admin := identity.Identity{
+		UserID:      ids.From[ids.UserKind](e.AdminUser),
+		WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
+		SeatType:    "full",
+		Roles:       []string{"admin"},
+		Permissions: AdminPerms,
+	}
+	if _, err := identity.NewServiceFor(e.DB()).UpdateTeam(e.Admin(), admin, e.Team1,
+		identity.UpdateTeamInput{Archived: &archived}); err != nil {
+		t.Fatalf("archiving Team1: %v", err)
+	}
+	if got := dealIDsOf(t, e, e.Admin(), deals.ListDealsInput{OwnerTeamID: &team}); len(got) != 0 {
+		t.Fatalf("owner_team_id=<an archived team> returned %v, want nothing", got)
+	}
+}
+
+// SeatNames withholds an archived seat's name, and the sort key travels in
+// the page cursor. So an archived owner sorts as no name at all: last.
+// No product path archives a seat, so the row is stamped directly.
+func TestAnArchivedOwnerSortsLastWithNoName(t *testing.T) {
+	e := Setup(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Aaron' WHERE id = $1`, e.Rep1)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Zoe' WHERE id = $1`, e.Rep2)
+	archived := e.SeedCompany(t, "Owned by Aaron", &e.Rep1)
+	live := e.SeedCompany(t, "Owned by Zoe", &e.Rep2)
+	e.WsExec(t, `UPDATE app_user SET archived_at = now() WHERE id = $1`, e.Rep1)
+
+	byOwner := "owner_id"
+	page, _, err := e.Contacts.ListCompanies(e.Admin(), contacts.ListCompaniesInput{Sort: &byOwner})
+	if err != nil {
+		t.Fatalf("sorting companies by owner: %v", err)
+	}
+	got := make([]ids.UUID, 0, len(page))
+	for _, c := range page {
+		got = append(got, ids.UUID(c.Id))
+	}
+	if !slices.Equal(got, []ids.UUID{live, archived}) {
+		t.Fatalf("sorted by owner: %v, want the live owner's company first and the archived owner's last", got)
 	}
 }

@@ -1564,6 +1564,7 @@ export const de = {
   "list.filterOwnerUnassigned": "Nicht zugewiesen",
   "list.team": "Team",
   "list.filterTeamAll": "Alle Teams",
+  "list.teamUnavailable": "Nicht verfügbares Team",
   "views.save": "Ansicht speichern",
   "views.saveConfirm": "Speichern",
   "views.saveTitle": "Diese Ansicht speichern",

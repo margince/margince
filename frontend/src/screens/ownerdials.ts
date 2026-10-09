@@ -119,11 +119,10 @@ function useTeamDial(t: Translate): ListChip | undefined {
 }
 
 /**
- * One option per team the roster lists. An applied team the roster has not
- * named gets one too, saying the name is loading or did not load.
- *
- * A roster walked to the end has answered about that team. `/teams` leaves
- * archived teams out, and an option labelled only by a uuid is worse than none.
+ * One option per team the roster lists, plus the applied team when the roster
+ * does not name it. That option says the name is loading, did not load, or
+ * (after a finished walk, since `/teams` leaves archived teams out) that the
+ * team is unavailable. The request stays narrowed by it, so it must show.
  */
 function teamOptions(
   roster: ReturnType<typeof useRoster>,
@@ -140,16 +139,14 @@ function teamOptions(
   if (!applied || options.some((o) => o.value === `owner_team_id:${applied}`)) {
     return options;
   }
+  const labels = {
+    pending: t("common.loading"),
+    failed: t("ref.nameLoadFailed"),
+    unnamed: t("list.teamUnavailable"),
+  };
   const reading = rosterReading(roster, partial);
-  if (reading === "unnamed") {
-    return options;
-  }
   return [
     ...options,
-    {
-      value: `owner_team_id:${applied}`,
-      label:
-        reading === "pending" ? t("common.loading") : t("ref.nameLoadFailed"),
-    },
+    { value: `owner_team_id:${applied}`, label: labels[reading] },
   ];
 }

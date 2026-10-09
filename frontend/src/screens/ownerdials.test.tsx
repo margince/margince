@@ -169,7 +169,7 @@ describe("the Team dial", () => {
     expect(labelFor("owner_team_id:tm-west")).toBe("Region West");
   });
 
-  it("drops an applied team the finished roster does not list", async () => {
+  it("keeps an applied team the finished roster does not list, as unavailable", async () => {
     globalThis.location.hash = "#/leads?owner_team_id=tm-archived";
     stub(0);
     const { result } = renderHook(() => useOwnerChips(), { wrapper });
@@ -181,10 +181,15 @@ describe("the Team dial", () => {
         ),
       ).toBe(true),
     );
-    // `/teams` leaves archived teams out, so a finished walk has answered about
-    // this one. An option whose only label is a uuid is worse than none.
-    expect(
-      dial(result.current, "owner_team")?.options.map((option) => option.value),
-    ).toEqual(["owner_team_id:tm-west"]);
+    // `/teams` leaves archived teams out, but the request is still narrowed by
+    // this one. Without its option the dial would read "Any team" over a
+    // narrowed list, with no way to clear it.
+    expect(dial(result.current, "owner_team")?.options).toEqual([
+      { value: "owner_team_id:tm-west", label: "Region West" },
+      {
+        value: "owner_team_id:tm-archived",
+        label: en["list.teamUnavailable"],
+      },
+    ]);
   });
 });
