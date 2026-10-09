@@ -332,5 +332,3 @@ func readThreadPage(
 	}
 	return out, nil
 }
-
-func ptr[T any](v T) *T { return &v }

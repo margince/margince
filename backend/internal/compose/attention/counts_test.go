@@ -36,7 +36,7 @@ func countFor(t *testing.T, out crmcontracts.Worklist, category string) crmcontr
 // showing. Without this the reader cannot tell a finished queue from a cut one.
 func TestThePageCountsEachKindOfWork(t *testing.T) {
 	tasks := []crmcontracts.AttentionItem{}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		tasks = append(tasks, item("t"+string(rune('a'+i)), "task", withDue(rankInstant)))
 	}
 	day := crmcontracts.Attention{
@@ -60,7 +60,7 @@ func TestThePageCountsEachKindOfWork(t *testing.T) {
 // would call a backlog empty.
 func TestWorkBelowTheCutIsStillCounted(t *testing.T) {
 	tasks := []crmcontracts.AttentionItem{}
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		tasks = append(tasks, item("t"+string(rune('a'+i)), "task", withDue(rankInstant)))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
@@ -104,7 +104,7 @@ func TestANarrowedPageStillCountsTheKindsItIsNotDrawing(t *testing.T) {
 // the page where it is the dominant thing.
 func TestAFoldedGroupCountsTheItemsItStandsFor(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		row := item("f"+string(rune('a'+i)), "automation_run")
 		cause := "automation_run:one-rule"
 		row.CauseRef = &cause
@@ -124,7 +124,7 @@ func TestAFoldedGroupCountsTheItemsItStandsFor(t *testing.T) {
 // the read never finished counting is the failure the flag exists to prevent.
 func TestACategoryWhoseSourceHitItsBoundSaysThereMayBeMore(t *testing.T) {
 	decisions := []crmcontracts.AttentionItem{}
-	for i := 0; i < batchScanDepth; i++ {
+	for i := range batchScanDepth {
 		decisions = append(decisions, item("d"+string(rune(i)), "approval", withKind("send_email")))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: decisions}
@@ -423,7 +423,7 @@ func TestTheSourceMapAgreesForAWaitingCustomer(t *testing.T) {
 // accounting itself.
 func TestABoundedSourceFilteredToNothingStillSaysThereMayBeMore(t *testing.T) {
 	deals := []crmcontracts.AttentionItem{}
-	for i := 0; i < quietDealBound; i++ {
+	for i := range quietDealBound {
 		row := item("d"+string(rune('a'+i%26)), "deal_at_risk", withDeal(1000))
 		row.Deal.OwnerId = uuidPtr(ids.MustParse("01a05500-0000-7000-8000-0000000000ee"))
 		deals = append(deals, row)

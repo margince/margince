@@ -92,7 +92,7 @@ func TestWorkerUsageOutputCarriesNoEnvironmentValue(t *testing.T) {
 		t.Fatal("an undefined flag was accepted")
 	}
 	if strings.Contains(usage, sentinel) {
-		for _, line := range strings.Split(usage, "\n") {
+		for line := range strings.SplitSeq(usage, "\n") {
 			if strings.Contains(line, sentinel) {
 				t.Errorf("the usage text echoes an environment value: %s", strings.TrimSpace(line))
 			}

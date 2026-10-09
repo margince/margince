@@ -95,11 +95,11 @@ func TestStaleAfterIsTheLeaseOnTopOfWhicheverInstantMadeTheAttemptCurrent(t *tes
 		// queue nobody drains display as live forever.
 		name: "queued ages from queued_at",
 		in:   crmcontracts.InternalEventAiTaskStateChanged{State: "queued", QueuedAt: queued, LeaseSeconds: &lease},
-		want: ptr(queued.Add(300 * time.Second)),
+		want: new(queued.Add(300 * time.Second)),
 	}, {
 		name: "running ages from started_at",
 		in:   crmcontracts.InternalEventAiTaskStateChanged{State: "running", QueuedAt: queued, StartedAt: &started, LeaseSeconds: &lease},
-		want: ptr(started.Add(300 * time.Second)),
+		want: new(started.Add(300 * time.Second)),
 	}, {
 		// A settled occurrence is not claiming to be working, so it has nothing
 		// to go stale. Storing one would render a finished row as stalled the
@@ -114,7 +114,7 @@ func TestStaleAfterIsTheLeaseOnTopOfWhicheverInstantMadeTheAttemptCurrent(t *tes
 		// attempt marked stale on arrival by a claim that is over.
 		name: "queued ignores a leftover started_at",
 		in:   crmcontracts.InternalEventAiTaskStateChanged{State: "queued", QueuedAt: queued, StartedAt: &started, LeaseSeconds: &lease},
-		want: ptr(queued.Add(300 * time.Second)),
+		want: new(queued.Add(300 * time.Second)),
 	}, {
 		name: "a source that declares no lease has none",
 		in:   crmcontracts.InternalEventAiTaskStateChanged{State: "running", QueuedAt: queued, StartedAt: &started},
@@ -135,5 +135,3 @@ func TestStaleAfterIsTheLeaseOnTopOfWhicheverInstantMadeTheAttemptCurrent(t *tes
 		})
 	}
 }
-
-func ptr[T any](v T) *T { return &v }

@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
@@ -243,9 +244,7 @@ func TestAReadOnlySeatIsToldItMayNotWriteAContactCompanyOrDealChange(t *testing.
 	// want of a read; the seat here reads all three and writes none.
 	readOnly := integration.ReadOnlyPerms
 	readOnly.Objects = map[string]principal.ObjectGrant{}
-	for object, grant := range integration.ReadOnlyPerms.Objects {
-		readOnly.Objects[object] = grant
-	}
+	maps.Copy(readOnly.Objects, integration.ReadOnlyPerms.Objects)
 	readOnly.Objects["company"] = principal.ObjectGrant{Read: true}
 	viewer := e.As(e.Rep3, []ids.UUID{e.Team2}, readOnly)
 	title, industry, renamed := "VP", "Software", "Renamed"

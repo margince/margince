@@ -75,7 +75,7 @@ func approvalRow(summary string, decidedAt time.Time) crmcontracts.Approval {
 func TestTheReceiptsReadAsksForTheLaneItFills(t *testing.T) {
 	decidedAt := time.Date(2026, 8, 25, 8, 0, 0, 0, time.UTC)
 	page := make([]crmcontracts.Approval, 0, doneLaneWidth)
-	for i := 0; i < doneLaneWidth; i++ {
+	for range doneLaneWidth {
 		page = append(page, approvalRow("Filed a message under Riverty", decidedAt))
 	}
 
@@ -244,7 +244,7 @@ func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
 	var edges []search.InteractionEdge
 	var changed []contacts.ContactChanges
 	// Seven lapses, all alike except for the two facts that rank them.
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		id := ids.NewV7()
 		edges = append(edges, search.InteractionEdge{ContactID: id, LastAt: spoke})
 		// DESCENDING quiet days, so the funded one below is the NEWEST

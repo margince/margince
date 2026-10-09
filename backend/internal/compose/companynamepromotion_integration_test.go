@@ -211,7 +211,7 @@ func TestCompanyNamePromotionReachesCandidatesBeyondTheFirstPage(t *testing.T) {
 
 	// Fill more than one page with companies that can never resolve: one
 	// signature each, so every pass stages an offer and moves nothing.
-	for i := 0; i < companyNamePromotionPageSize; i++ {
+	for range companyNamePromotionPageSize {
 		stuck := seedProvisionalCompany(t, e, "Stuck", "domain")
 		seedSigningEmployee(t, e, stuck, "Lone Signer", "Stuck Holdings")
 	}

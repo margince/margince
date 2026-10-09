@@ -25,6 +25,7 @@ package contacts
 // one is consulted only where two names are COMPARED.
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -93,13 +94,7 @@ func nameWordSeparators(r rune) bool {
 func stripTrailingWords(fields []string, suffixes []string) []string {
 	for len(fields) > 1 {
 		last := fields[len(fields)-1]
-		matched := false
-		for _, suffix := range suffixes {
-			if last == suffix {
-				matched = true
-				break
-			}
-		}
+		matched := slices.Contains(suffixes, last)
 		if !matched {
 			return fields
 		}

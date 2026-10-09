@@ -3,7 +3,10 @@
 
 package pipelinetrace
 
-import "sort"
+import (
+	"slices"
+	"sort"
+)
 
 // Source is where a stage's answer comes from.
 //
@@ -274,10 +277,5 @@ func CountsInFunnel(stage Stage) bool {
 }
 
 func (r Registration) has(source Source) bool {
-	for _, s := range r.Sources {
-		if s == source {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Sources, source)
 }

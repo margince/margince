@@ -174,7 +174,7 @@ func bigintColumnsAndTheirBounds(t *testing.T, root string) (columns map[string]
 		t.Fatalf("reading the head catalog: %v", err)
 	}
 	columns, bounded = map[string][]string{}, map[string]bool{}
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		line = strings.TrimSpace(line)
 		if found := bigintColumn.FindStringSubmatch(line); found != nil {
 			columns[found[2]] = append(columns[found[2]], found[1])

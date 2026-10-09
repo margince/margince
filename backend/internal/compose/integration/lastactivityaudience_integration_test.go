@@ -45,13 +45,13 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *test
 	companyID := ids.From[ids.CompanyKind](company)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
-		IsCurrentPrimary: BoolPtr(true), Source: "manual",
+		IsCurrentPrimary: new(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Held Clock Deal", AmountMinor: Int64Ptr(100), Currency: StrPtr("EUR"),
+		Name: "Held Clock Deal", AmountMinor: new(int64(100)), Currency: new("EUR"),
 		PipelineID: pipeline, StageID: open, CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
@@ -103,7 +103,7 @@ func TestLastActivityAudience_WideningTheMessageMovesTheClockForward(t *testing.
 	companyID := ids.From[ids.CompanyKind](company)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
-		IsCurrentPrimary: BoolPtr(true), Source: "manual",
+		IsCurrentPrimary: new(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
 	}

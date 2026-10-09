@@ -15,6 +15,7 @@ package aicert_test
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -133,9 +134,7 @@ func judgelessProofs() map[string]judgelessProof {
 		verdictProofs(), confidentialityProofs(), agentLoopProofs(), gradingProofs(),
 		extractionProofs(), emptyAnswerProofs(), stageClaimProofs(),
 	} {
-		for name, proof := range set {
-			proofs[name] = proof
-		}
+		maps.Copy(proofs, set)
 	}
 	return proofs
 }

@@ -13,6 +13,7 @@ package integration
 // reference the caller cannot see (auth.EnsureLinkTarget).
 
 import (
+	"maps"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -121,9 +122,7 @@ func TestADealDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 	// project from everybody.
 	withProject := AccountRepPerms
 	withProject.Objects = make(map[string]principal.ObjectGrant, len(AccountRepPerms.Objects)+1)
-	for object, grant := range AccountRepPerms.Objects {
-		withProject.Objects[object] = grant
-	}
+	maps.Copy(withProject.Objects, AccountRepPerms.Objects)
 	withProject.Objects["project"] = principal.ObjectGrant{Read: true}
 	granted, err := e.Deals.GetDeal(e.As(e.Rep1, []ids.UUID{e.Team1}, withProject), fx.hiddenProj, 0)
 	if err != nil {

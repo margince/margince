@@ -50,18 +50,18 @@ func TestPromotingALeadThatNamesNobodyIsRefused(t *testing.T) {
 	}{
 		{
 			name: "no full_name and no email",
-			in:   CreateLeadInput{Title: ptr("VP Sales"), Source: "webform", Status: "new"},
+			in:   CreateLeadInput{Title: new("VP Sales"), Source: "webform", Status: "new"},
 		},
 		{
 			// The one `FullName != nil` cannot see: a full_name is present,
 			// so a nil check calls this lead identified and the ladder then
 			// has nothing to match on.
 			name: "a present-but-empty full_name and no email",
-			in:   CreateLeadInput{FullName: ptr(""), Title: ptr("VP Sales"), Source: "webform", Status: "new"},
+			in:   CreateLeadInput{FullName: new(""), Title: new("VP Sales"), Source: "webform", Status: "new"},
 		},
 		{
 			name: "a full_name that is only padding, and no email",
-			in:   CreateLeadInput{FullName: ptr("   "), Title: ptr("VP Sales"), Source: "webform", Status: "new"},
+			in:   CreateLeadInput{FullName: new("   "), Title: new("VP Sales"), Source: "webform", Status: "new"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -74,9 +74,8 @@ func TestPromotingALeadThatNamesNobodyIsRefused(t *testing.T) {
 			// The preview is what a human reads before agreeing, so it has to
 			// answer the same way. A preview promising "create" over an act
 			// that refuses is the worse half of the two.
-			var previewNeedsIdentity *PromoteNeedsIdentityError
 			preview, perr := store.PreviewLeadPromotion(ctx, leadID)
-			if !errors.As(perr, &previewNeedsIdentity) {
+			if _, ok := errors.AsType[*PromoteNeedsIdentityError](perr); !ok {
 				t.Errorf("previewing a lead that names nobody: got outcome %q (err=%v), want a "+
 					"PromoteNeedsIdentityError — the preview and the promotion answer one "+
 					"question and a human acts on the preview's answer",
@@ -84,8 +83,7 @@ func TestPromotingALeadThatNamesNobodyIsRefused(t *testing.T) {
 			}
 
 			contact, merged, err := store.PromoteLead(ctx, leadID, PromoteLeadInput{Trigger: "human_qualify"})
-			var needsIdentity *PromoteNeedsIdentityError
-			if !errors.As(err, &needsIdentity) {
+			if _, ok := errors.AsType[*PromoteNeedsIdentityError](err); !ok {
 				t.Fatalf("promoting a lead that names nobody: got contact %q (merged=%v, err=%v), "+
 					"want a PromoteNeedsIdentityError", contact.FullName, merged, err)
 			}
@@ -112,8 +110,8 @@ func TestALeadNamedOnlyByItsEmailStillPromotes(t *testing.T) {
 	ctx, store := newPromoteIdentityEnv(t)
 
 	lead, _, err := store.CreateLead(ctx, CreateLeadInput{
-		FullName: ptr(""),
-		Email:    ptr("vera@nordwind.example"),
+		FullName: new(""),
+		Email:    new("vera@nordwind.example"),
 		Source:   "webform",
 		Status:   "new",
 	})

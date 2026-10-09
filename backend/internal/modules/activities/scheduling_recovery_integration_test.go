@@ -83,8 +83,7 @@ func TestRescheduleKeepsTheOriginalReservationUntilAcknowledged(t *testing.T) {
 		other := f.request
 		other.Start, other.End = interval.Start, interval.End
 		_, err := f.store.CreateInvitation(f.ctx, other)
-		var taken *SlotTakenError
-		if !errors.As(err, &taken) {
+		if _, ok := errors.AsType[*SlotTakenError](err); !ok {
 			t.Fatalf("lost old or proposed reservation: %v", err)
 		}
 	}
@@ -188,8 +187,7 @@ func TestProviderRescheduleStillBlocksItsActualTime(t *testing.T) {
 	request := f.request
 	request.Start, request.End = monday(14), monday(15)
 	_, err := f.store.CreateInvitation(f.ctx, request)
-	var taken *SlotTakenError
-	if !errors.As(err, &taken) {
+	if _, ok := errors.AsType[*SlotTakenError](err); !ok {
 		t.Fatalf("provider change left its second hour available: %v", err)
 	}
 }
@@ -254,8 +252,7 @@ func TestAnUncertainCancellationKeepsTheTimeReserved(t *testing.T) {
 		t.Fatal("an absent receipt was treated as proof of cancellation")
 	}
 	_, err = f.store.CreateInvitation(f.ctx, f.request)
-	var taken *SlotTakenError
-	if !errors.As(err, &taken) {
+	if _, ok := errors.AsType[*SlotTakenError](err); !ok {
 		t.Fatalf("uncertain cancellation released its reservation: %v", err)
 	}
 	if f.calendar.canceled != 0 {

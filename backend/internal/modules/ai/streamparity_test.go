@@ -13,7 +13,6 @@ package ai
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -350,7 +349,7 @@ func TestStreamWiresCoverEveryProvider(t *testing.T) {
 // after the terminal, the answer is whole and a later read error describes
 // nothing in it.
 func TestAStreamReadFailureCountsOnlyBeforeTheTerminal(t *testing.T) {
-	broken := fmt.Errorf("connection reset")
+	broken := errors.New("connection reset")
 	unfinished := streamEnd{wire: "w"}
 	if _, _, err := unfinished.outcome(broken); !errors.Is(err, broken) {
 		t.Errorf("an unfinished stream's read failure = %v, want it wrapped", err)

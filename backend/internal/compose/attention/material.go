@@ -16,7 +16,7 @@ package attention
 // customer task — the ordering a reader would call obviously wrong.
 
 import (
-	"sort"
+	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -63,7 +63,7 @@ func materialBarOf(day crmcontracts.Attention, money dayMoney) materialBar {
 	if len(amounts) == 0 {
 		return materialBar{}
 	}
-	sort.Slice(amounts, func(i, j int) bool { return amounts[i] < amounts[j] })
+	slices.Sort(amounts)
 	// The LOWER median, so that "above the median" admits the upper half rather
 	// than excluding it. With an even count the upper-middle value is itself a
 	// deal, and taking it would leave the largest deal in a two-deal pipeline

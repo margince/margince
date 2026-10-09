@@ -36,12 +36,6 @@ func decayItem(facts *crmcontracts.AttentionRelationshipFacts) crmcontracts.Atte
 	}
 }
 
-func band(b crmcontracts.AttentionRelationshipFactsStrength) *crmcontracts.AttentionRelationshipFactsStrength {
-	return &b
-}
-
-func openDeal(has bool) *bool { return &has }
-
 // The rank, across the whole band vocabulary plus the deal. This is the table
 // that decides which silences a rep sees above the routine tidying, so it is
 // written as one rather than as four tests that could each drift.
@@ -53,7 +47,7 @@ func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
 	}{
 		{
 			name:  "a strong relationship going quiet",
-			facts: &crmcontracts.AttentionRelationshipFacts{Strength: band("strong")},
+			facts: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("strong"))},
 			want:  levelAgreed,
 		},
 		{
@@ -62,12 +56,12 @@ func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
 			// and admitting only `strong` would leave the lane ranking almost
 			// nothing.
 			name:  "a moderate one, the edge of the rule",
-			facts: &crmcontracts.AttentionRelationshipFacts{Strength: band("moderate")},
+			facts: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("moderate"))},
 			want:  levelAgreed,
 		},
 		{
 			name:  "a weak one with nothing resting on it",
-			facts: &crmcontracts.AttentionRelationshipFacts{Strength: band("weak"), HasOpenDeal: openDeal(false)},
+			facts: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("weak")), HasOpenDeal: new(false)},
 			want:  levelRoutine,
 		},
 		{
@@ -75,12 +69,12 @@ func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
 			// to who still sits on an open deal is money going quiet, and it is
 			// exactly the silence nobody notices.
 			name:  "a weak one an open deal still rests on",
-			facts: &crmcontracts.AttentionRelationshipFacts{Strength: band("weak"), HasOpenDeal: openDeal(true)},
+			facts: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("weak")), HasOpenDeal: new(true)},
 			want:  levelAgreed,
 		},
 		{
 			name:  "a relationship §4 scored at nothing",
-			facts: &crmcontracts.AttentionRelationshipFacts{Strength: band("none")},
+			facts: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("none"))},
 			want:  levelRoutine,
 		},
 		{
@@ -106,7 +100,7 @@ func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
 // for is the complaint this whole campaign started from.
 func TestALapsedRelationshipWithMoneyOnItSaysSo(t *testing.T) {
 	row := classifyDecay(decayItem(&crmcontracts.AttentionRelationshipFacts{
-		Strength: band("weak"), HasOpenDeal: openDeal(true),
+		Strength: new(crmcontracts.AttentionRelationshipFactsStrength("weak")), HasOpenDeal: new(true),
 	}), rankInstant)
 
 	if !hasReason(row.item, "expected_revenue") {
@@ -120,7 +114,7 @@ func TestALapsedRelationshipWithMoneyOnItSaysSo(t *testing.T) {
 // carrying no deal is the row inventing a fact.
 func TestALapsedRelationshipWithNoDealClaimsNoRevenue(t *testing.T) {
 	row := classifyDecay(decayItem(&crmcontracts.AttentionRelationshipFacts{
-		Strength: band("strong"), HasOpenDeal: openDeal(false),
+		Strength: new(crmcontracts.AttentionRelationshipFactsStrength("strong")), HasOpenDeal: new(false),
 	}), rankInstant)
 
 	if hasReason(row.item, "expected_revenue") {
@@ -137,7 +131,7 @@ func TestALapsedRelationshipWithNoDealClaimsNoRevenue(t *testing.T) {
 // row does not explain.
 func TestAStrongLapsedRelationshipNeverClaimsTheAccountHasNoChampion(t *testing.T) {
 	row := classifyDecay(decayItem(&crmcontracts.AttentionRelationshipFacts{
-		Strength: band("strong"),
+		Strength: new(crmcontracts.AttentionRelationshipFactsStrength("strong")),
 	}), rankInstant)
 
 	if hasReason(row.item, "no_champion") {
@@ -168,7 +162,7 @@ func TestABandThisContractDoesNotDeclareReachesNoReader(t *testing.T) {
 func TestALapsedRelationshipOffersADraftReconnect(t *testing.T) {
 	row := classifyDecay(crmcontracts.AttentionItem{
 		Source:       crmcontracts.AttentionItemSourceRelationshipDecay,
-		Relationship: &crmcontracts.AttentionRelationshipFacts{Strength: band("strong")},
+		Relationship: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("strong"))},
 	}, rankInstant)
 
 	if row.item.Move == nil {

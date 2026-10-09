@@ -133,7 +133,7 @@ func TestParseFeedDropsAnItemWithNothingToFile(t *testing.T) {
 func TestParseFeedCapsHowMuchOfAnArchiveItReads(t *testing.T) {
 	var b strings.Builder
 	b.WriteString(`<rss version="2.0"><channel>`)
-	for i := 0; i < feedMaxItems*3; i++ {
+	for range feedMaxItems * 3 {
 		b.WriteString(`<item><title>Item</title><link>https://acme.example/n</link></item>`)
 	}
 	b.WriteString(`</channel></rss>`)

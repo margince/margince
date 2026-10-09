@@ -170,10 +170,7 @@ func wrapBase64(encoded string) string {
 	const width = 76
 	var out strings.Builder
 	for i := 0; i < len(encoded); i += width {
-		end := i + width
-		if end > len(encoded) {
-			end = len(encoded)
-		}
+		end := min(i+width, len(encoded))
 		out.WriteString(encoded[i:end])
 		out.WriteString("\r\n")
 	}

@@ -109,8 +109,7 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(string) bool, closed bool) error {
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 			return BodyTooLargeRefusal("request body exceeds the 1 MiB cap")
 		}
 		// A read that failed mid-body is a transport fact — timed-out sockets

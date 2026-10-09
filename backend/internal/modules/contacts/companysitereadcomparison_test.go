@@ -78,15 +78,14 @@ func TestResolveSiteReadConflictsRequiresAndAppliesExplicitDecisions(t *testing.
 	}
 	base := ConfirmCompanySiteReadInput{
 		DisplayName: "Acme",
-		Fields:      map[string]*string{fieldIndustry: stringPointer("Industrial automation")},
+		Fields:      map[string]*string{fieldIndustry: new("Industrial automation")},
 		SelectedFactKeys: []string{
 			"proof/customer_proof/",
 		},
 	}
 
 	_, err := resolveSiteReadConflicts(read, &company, base)
-	var invalid *InvalidSiteReadResolutionError
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*InvalidSiteReadResolutionError](err); !ok {
 		t.Fatalf("missing resolutions error = %v, want InvalidSiteReadResolutionError", err)
 	}
 
@@ -124,8 +123,7 @@ func TestResolveSiteReadConflictsRejectsStaleAndDuplicateKeys(t *testing.T) {
 			_, err := resolveSiteReadConflicts(read, &company, ConfirmCompanySiteReadInput{
 				DisplayName: "Acme", Fields: map[string]*string{}, Resolutions: resolutions,
 			})
-			var invalid *InvalidSiteReadResolutionError
-			if !errors.As(err, &invalid) {
+			if _, ok := errors.AsType[*InvalidSiteReadResolutionError](err); !ok {
 				t.Fatalf("error = %v, want InvalidSiteReadResolutionError", err)
 			}
 		})
@@ -160,8 +158,8 @@ func TestResolveSiteReadConflictsAppliesEveryResolutionAction(t *testing.T) {
 	resolved, err := resolveSiteReadConflicts(read, &company, ConfirmCompanySiteReadInput{
 		DisplayName: "Acme Robotics",
 		Fields: map[string]*string{
-			fieldIndustry:     stringPointer("Industrial automation"),
-			fieldOfferSummary: stringPointer("Autonomous factories"),
+			fieldIndustry:     new("Industrial automation"),
+			fieldOfferSummary: new("Autonomous factories"),
 		},
 		SelectedFactKeys: []string{"proof/customer_proof/", "market/geographies/dach"},
 		Resolutions: []SiteReadResolution{
@@ -209,8 +207,7 @@ func TestResolveSiteReadConflictsRejectsInvalidResolutionValues(t *testing.T) {
 				Fields:      map[string]*string{},
 				Resolutions: []SiteReadResolution{resolution},
 			})
-			var invalid *InvalidSiteReadResolutionError
-			if !errors.As(err, &invalid) {
+			if _, ok := errors.AsType[*InvalidSiteReadResolutionError](err); !ok {
 				t.Fatalf("error = %v, want InvalidSiteReadResolutionError", err)
 			}
 		})
@@ -294,8 +291,7 @@ func TestResolveSiteReadConflictsStillRefusesKeysItCannotResolve(t *testing.T) {
 				DisplayName: "Acme", Fields: map[string]*string{},
 				Resolutions: []SiteReadResolution{resolution},
 			})
-			var invalid *InvalidSiteReadResolutionError
-			if !errors.As(err, &invalid) {
+			if _, ok := errors.AsType[*InvalidSiteReadResolutionError](err); !ok {
 				t.Fatalf("error = %v, want InvalidSiteReadResolutionError", err)
 			}
 		})
@@ -511,5 +507,3 @@ func (tx *recordingSiteReadTx) Exec(_ context.Context, _ string, args ...any) (p
 	}
 	return pgconn.NewCommandTag("UPDATE 1"), nil
 }
-
-func stringPointer(value string) *string { return &value }

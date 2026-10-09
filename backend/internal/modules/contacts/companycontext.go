@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -55,10 +56,8 @@ var companyContextScopeOrder = []CompanyContextScope{
 // widening or narrowing the context a caller requested.
 func ParseCompanyContextScope(value string) (CompanyContextScope, bool) {
 	scope := CompanyContextScope(value)
-	for _, candidate := range companyContextScopeOrder {
-		if scope == candidate {
-			return scope, true
-		}
+	if slices.Contains(companyContextScopeOrder, scope) {
+		return scope, true
 	}
 	return "", false
 }

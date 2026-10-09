@@ -402,11 +402,11 @@ func TestAThreadlessMessageIsNotDroppedBeforeItIsJudged(t *testing.T) {
 // database on every call — reported to the reader as "this source could not be
 // read", which is indistinguishable from a permissions problem.
 func TestTheWaitingQuerySelectsWhatItScans(t *testing.T) {
-	from := strings.Index(waitingRepliesSQL, "FROM activity a")
-	if from < 0 {
+	before, _, ok := strings.Cut(waitingRepliesSQL, "FROM activity a")
+	if !ok {
 		t.Fatal("the waiting query no longer selects from activity")
 	}
-	head := waitingRepliesSQL[:from]
+	head := before
 	subject := strings.Index(head, "a.subject")
 	sender := strings.Index(head, "sender.address")
 	occurred := strings.Index(head, "a.occurred_at")

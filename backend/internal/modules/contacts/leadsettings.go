@@ -76,7 +76,7 @@ var UnassignedEscalationUserID = settings.Define[string](
 			return nil
 		}
 		if _, err := ids.Parse(raw); err != nil {
-			return fmt.Errorf("the escalation seat is a user id, or empty for nobody")
+			return errors.New("the escalation seat is a user id, or empty for nobody")
 		}
 		return nil
 	},
@@ -225,7 +225,7 @@ func (s *Store) UpdateLeadSettings(ctx context.Context, in UpdateLeadSettingsInp
 		return crmcontracts.LeadSettings{}, err
 	}
 	if s.settings == nil {
-		return crmcontracts.LeadSettings{}, fmt.Errorf("contacts: lead settings are not wired; the installation cannot change them")
+		return crmcontracts.LeadSettings{}, errors.New("contacts: lead settings are not wired; the installation cannot change them")
 	}
 	// Both land in ONE transaction: a target without its switch, or the
 	// reverse, is not a state the list should ever render.

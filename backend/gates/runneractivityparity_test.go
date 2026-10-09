@@ -74,7 +74,7 @@ func checkValues(t *testing.T, constraint string) []string {
 			continue
 		}
 		var out []string
-		for _, v := range strings.Split(m[1], ",") {
+		for v := range strings.SplitSeq(m[1], ",") {
 			out = append(out, strings.Trim(strings.TrimSpace(v), "'"))
 		}
 		slices.Sort(out)

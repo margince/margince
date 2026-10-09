@@ -408,8 +408,8 @@ type namedVerdict struct {
 }
 
 func fileOf(subject string) string {
-	if idx := strings.LastIndex(subject, ":"); idx >= 0 {
-		return subject[:idx]
+	if before, _, ok := strings.CutLast(subject, ":"); ok {
+		return before
 	}
 	return subject
 }

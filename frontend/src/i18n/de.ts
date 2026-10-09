@@ -1062,6 +1062,7 @@ export const de = {
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
   "shell.signOutErr": "Abmeldung fehlgeschlagen",
+  "shell.version": "Version {version}",
   "shell.collapse": "Seitenleiste einklappen",
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Nutzerkonto",

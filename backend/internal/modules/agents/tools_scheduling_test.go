@@ -52,8 +52,7 @@ func TestABookingThatNamesNoRecordIsRefusedAtBothDoors(t *testing.T) {
 
 			_, err := registry.Invoke(tc.ctx, "book_meeting", json.RawMessage(noLinks))
 
-			var badArgs *BadArgsError
-			if !errors.As(err, &badArgs) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("Invoke err = %v, want a BadArgsError naming `links`", err)
 			}
 			if !strings.Contains(err.Error(), "`links`") {
@@ -109,8 +108,7 @@ func TestABookingIsBoundedAndDeduplicatedBeforeItReadsAnything(t *testing.T) {
 		_, err := bookMeetingTool{comms: &recordingComms{}, p: p}.StageInfo(context.Background(),
 			json.RawMessage(fmt.Sprintf(`{%s,"links":[%s]}`, slot, strings.Join(links, ","))))
 
-		var bad *BadArgsError
-		if !errors.As(err, &bad) {
+		if _, ok := errors.AsType[*BadArgsError](err); !ok {
 			t.Fatalf("StageInfo err = %v, want a BadArgsError refusing the oversized link array", err)
 		}
 		if len(p.read) != 0 {
@@ -183,7 +181,7 @@ func (c availabilityComms) Availability(context.Context, *ids.UUID, time.Time, t
 func aWorkdayOfSlots() []FreeSlot {
 	start := time.Date(2026, time.September, 11, 7, 0, 0, 0, time.UTC)
 	slots := make([]FreeSlot, 0, 16)
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		at := start.Add(time.Duration(i) * 30 * time.Minute)
 		slots = append(slots, FreeSlot{Start: at, End: at.Add(30 * time.Minute)})
 	}

@@ -326,8 +326,7 @@ func TestABudgetDeferralPutsTheReadOffRatherThanFailingIt(t *testing.T) {
 		t.Fatalf("ensure: %v", err)
 	}
 	err := svc.Run(principal.WithCorrelationID(rep, queued[0].ScanID), queued[0].ScanID, company)
-	var deferral *ai.BudgetDeferralError
-	if !errors.As(err, &deferral) {
+	if _, ok := errors.AsType[*ai.BudgetDeferralError](err); !ok {
 		t.Fatalf("run: %v, want the deferral for the carrier to snooze on", err)
 	}
 	got, err := svc.Get(rep, company)

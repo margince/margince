@@ -116,7 +116,7 @@ func summarize(doc *ast.CommentGroup) string {
 		return ""
 	}
 	var para []string
-	for _, line := range strings.Split(doc.Text(), "\n") {
+	for line := range strings.SplitSeq(doc.Text(), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			break

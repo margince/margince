@@ -174,14 +174,18 @@ func TestMeetingBriefDoesNotReportALastTouchTheCallerCannotRead(t *testing.T) {
 	// brief must say so — reporting a last touch would disclose both when that
 	// conversation happened and that it happened at all.
 	var attendees string
+	var attendeesSb177 strings.Builder
 	for _, section := range brief.Sections {
 		if section.Kind != "attendees" {
 			continue
 		}
+		var attendeesSb181 strings.Builder
 		for _, sentence := range section.Sentences {
-			attendees += sentence.Text + "\n"
+			attendeesSb181.WriteString(sentence.Text + "\n")
 		}
+		attendeesSb177.WriteString(attendeesSb181.String())
 	}
+	attendees += attendeesSb177.String()
 	if attendees == "" {
 		t.Fatal("the brief rendered no attendees section, so this proves nothing")
 	}
@@ -294,14 +298,18 @@ func TestMeetingBriefCountsNoLastTouchFromAnotherEngagement(t *testing.T) {
 		t.Fatalf("Get: %v", err)
 	}
 	var attendees string
+	var attendeesSb299 strings.Builder
 	for _, section := range brief.Sections {
 		if section.Kind != "attendees" {
 			continue
 		}
+		var attendeesSb301 strings.Builder
 		for _, sentence := range section.Sentences {
-			attendees += sentence.Text + "\n"
+			attendeesSb301.WriteString(sentence.Text + "\n")
 		}
+		attendeesSb299.WriteString(attendeesSb301.String())
 	}
+	attendees += attendeesSb299.String()
 	if attendees == "" {
 		t.Fatal("the brief rendered no attendees section, so this proves nothing")
 	}
@@ -337,11 +345,15 @@ func TestMeetingBriefWithholdsTheEngagementFromACallerWithNoProjectGrant(t *test
 			t.Fatalf("Get: %v", err)
 		}
 		var prose string
+		var proseSb344 strings.Builder
 		for _, section := range brief.Sections {
+			var proseSb341 strings.Builder
 			for _, sentence := range section.Sentences {
-				prose += sentence.Text + "\n"
+				proseSb341.WriteString(sentence.Text + "\n")
 			}
+			proseSb344.WriteString(proseSb341.String())
 		}
+		prose += proseSb344.String()
 		return prose
 	}
 
@@ -388,14 +400,18 @@ func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
 		t.Fatalf("Get: %v", err)
 	}
 	var recalled string
+	var recalledSb397 strings.Builder
 	for _, section := range brief.Sections {
 		if section.Kind != "company_context" {
 			continue
 		}
+		var recalledSb395 strings.Builder
 		for _, sentence := range section.Sentences {
-			recalled += sentence.Text + "\n"
+			recalledSb395.WriteString(sentence.Text + "\n")
 		}
+		recalledSb397.WriteString(recalledSb395.String())
 	}
+	recalled += recalledSb397.String()
 	if !strings.Contains(recalled, "Kickoff") {
 		t.Errorf("recalled = %q, want the earlier meeting with this same room", recalled)
 	}
@@ -446,14 +462,18 @@ func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
 		t.Fatalf("Get: %v", err)
 	}
 	var recalled string
+	var recalledSb457 strings.Builder
 	for _, section := range brief.Sections {
 		if section.Kind != "company_context" {
 			continue
 		}
+		var recalledSb453 strings.Builder
 		for _, sentence := range section.Sentences {
-			recalled += sentence.Text + "\n"
+			recalledSb453.WriteString(sentence.Text + "\n")
 		}
+		recalledSb457.WriteString(recalledSb453.String())
 	}
+	recalled += recalledSb457.String()
 	// Three assertions, because the rule has three arms and an OR over two of
 	// them would let a mutation that drops either one still pass.
 	if strings.Contains(recalled, "Rack walkthrough") {
@@ -485,7 +505,7 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 	hidden, _, err := e.Activities.LogActivity(
 		e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms),
 		activities.LogActivityInput{
-			Kind: "meeting", Subject: StrPtr("Board compensation review"),
+			Kind: "meeting", Subject: new("Board compensation review"),
 			OccurredAt: &when, Source: "manual",
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ours}},
 		})
@@ -569,13 +589,17 @@ func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 		t.Fatalf("Get: %v", err)
 	}
 	var commitments string
+	var commitmentsSb582 strings.Builder
 	for _, section := range brief.Sections {
 		if section.Kind == crmcontracts.MeetingBriefSectionKindCommitments {
+			var commitmentsSb574 strings.Builder
 			for _, sentence := range section.Sentences {
-				commitments += sentence.Text + "\n"
+				commitmentsSb574.WriteString(sentence.Text + "\n")
 			}
+			commitmentsSb582.WriteString(commitmentsSb574.String())
 		}
 	}
+	commitments += commitmentsSb582.String()
 	if !strings.Contains(commitments, "cutover window") || !strings.Contains(commitments, "invoice") {
 		t.Fatalf("commitments = %q; want the promise on this engagement's mail and the one on unfiled mail", commitments)
 	}

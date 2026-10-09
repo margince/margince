@@ -78,11 +78,9 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 		return agents.TagDetail{}, err
 	}
 	out := agents.TagDetail{
-		Tag: agents.Tag{
-			TagID:    row.ID.UUID,
-			Name:     row.Name,
-			Archived: row.ArchivedAt != nil,
-		},
+		TagID:     row.ID.UUID,
+		Name:      row.Name,
+		Archived:  row.ArchivedAt != nil,
 		Contacts:  usage.Contacts,
 		Companies: usage.Companies,
 		Deals:     usage.Deals,

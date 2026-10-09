@@ -188,11 +188,11 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 	if group == "" {
 		return true
 	}
-	if strings.HasPrefix(group, "owner:") {
-		return fact.OwnerID.String() == strings.TrimPrefix(group, "owner:")
+	if after, ok := strings.CutPrefix(group, "owner:"); ok {
+		return fact.OwnerID.String() == after
 	}
-	if strings.HasPrefix(group, "stage:") {
-		return fact.StageID == strings.TrimPrefix(group, "stage:")
+	if after, ok := strings.CutPrefix(group, "stage:"); ok {
+		return fact.StageID == after
 	}
 	if strings.HasPrefix(group, "week:") && fact.Row.OccurredAt != nil {
 		zone, err := time.LoadLocation(frame.Timezone)

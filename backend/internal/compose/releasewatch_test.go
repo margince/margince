@@ -42,7 +42,7 @@ func answers(seq ...answer) (func(context.Context) (string, error), <-chan struc
 // follows is a statement about those reads rather than about elapsed time.
 func afterReads(t *testing.T, reads <-chan struct{}, n int) {
 	t.Helper()
-	for i := 0; i < n; i++ {
+	for i := range n {
 		select {
 		case <-reads:
 		case <-time.After(2 * time.Second):
@@ -74,8 +74,7 @@ func waitFor(t *testing.T, skew <-chan error, within time.Duration) (error, bool
 
 // A record that has SETTLED on another release stops the role.
 func TestASettledDifferenceStopsTheRole(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	read, _ := answers(answer{recorded: "1970.43"})
 	skew := watchRelease(ctx, quiet(), "1970.42", time.Millisecond, read)
 	err, open := waitFor(t, skew, 2*time.Second)
@@ -96,8 +95,7 @@ func TestASettledDifferenceStopsTheRole(t *testing.T) {
 // a watcher that fired on one differing read would restart every worker in the
 // fleet, repeatedly, for the duration.
 func TestAFlappingRecordDoesNotStopTheRole(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	read, reads := answers(
 		answer{recorded: "1970.43"},
 		answer{recorded: "1970.42"},
@@ -120,8 +118,7 @@ func TestAFlappingRecordDoesNotStopTheRole(t *testing.T) {
 // momentary database error is not a release change, and a guard that exited on
 // one would be an outage lever pointed at the deployment it protects.
 func TestAnUnreadableRecordDoesNotStopTheRole(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	read, reads := answers(answer{err: errors.New("connection refused")})
 	skew := watchRelease(ctx, quiet(), "1970.42", time.Millisecond, read)
 	afterReads(t, reads, 12)
@@ -136,8 +133,7 @@ func TestAnUnreadableRecordDoesNotStopTheRole(t *testing.T) {
 // about the record. So a difference interrupted by an outage still stops the
 // role once it has been seen enough times.
 func TestAReadFailureNeitherConfirmsNorClearsADifference(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	// The sequence ENDS on a read failure, and answers repeats its last entry
 	// forever — so a watcher that cleared the count on a failure can never
 	// reach three and this test discriminates. Ending on the difference
@@ -160,8 +156,7 @@ func TestAReadFailureNeitherConfirmsNorClearsADifference(t *testing.T) {
 // legitimately reach a pre-bootstrap installation, and the boot guard already
 // says so once.
 func TestAnUnrecordedInstallationIsNotADifference(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	read, reads := answers(answer{recorded: ""})
 	skew := watchRelease(ctx, quiet(), "1970.42", time.Millisecond, read)
 	afterReads(t, reads, 12)

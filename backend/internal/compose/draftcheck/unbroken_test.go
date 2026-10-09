@@ -6,6 +6,7 @@ package draftcheck_test
 // A draft written as one unbroken block.
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -38,12 +39,7 @@ func TestAProvenanceChipIsNotAskedForParagraphs(t *testing.T) {
 
 // flagsUnbrokenBlock reports whether the checks fired the unbroken-block rule.
 func flagsUnbrokenBlock(body string) bool {
-	for _, rule := range rules(body) {
-		if rule == "unbroken-block" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(rules(body), "unbroken-block")
 }
 
 // The real defect: greeting and message run together as one long line.

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -173,8 +174,7 @@ func (h Handlers) SetMyAgentGrant(w http.ResponseWriter, r *http.Request, spec c
 
 	answer, found, err := h.answerAgentGrant(r, id, string(spec), req.Granted)
 	if err != nil {
-		var badScope *InvalidScopeError
-		if errors.As(err, &badScope) {
+		if badScope, ok := errors.AsType[*InvalidScopeError](err); ok {
 			httperr.Write(w, r, httperr.Validation("scopes", "invalid_scope", badScope.Error()))
 			return
 		}
@@ -241,12 +241,7 @@ func (h Handlers) answerAgentGrant(
 
 // grantable reports whether a name is one this build actually schedules.
 func (h Handlers) grantable(spec string) bool {
-	for _, known := range h.grantableAgents {
-		if known == spec {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(h.grantableAgents, spec)
 }
 
 // renderAgentGrant renders one answer, including the one that has no row.

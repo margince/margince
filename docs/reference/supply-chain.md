@@ -314,5 +314,5 @@ missing.
 See also:
 
 - [make-targets.md](make-targets.md) for the rest of the root `Makefile`;
-- [../deployment.md](../deployment.md) for what ships;
+- [deploy-margince.md](../how-to/deploy-margince.md) for what ships;
 - [license-release-rule.md](license-release-rule.md) for the LICENSE update that a tagged release needs.

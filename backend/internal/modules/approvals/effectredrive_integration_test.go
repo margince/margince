@@ -88,8 +88,7 @@ func TestAConsumedApprovalStillRefusesASecondDecision(t *testing.T) {
 
 	_, err := e.svc.Decide(ctx, id, true, nil)
 
-	var decided *AlreadyDecidedError
-	if !errors.As(err, &decided) {
+	if _, ok := errors.AsType[*AlreadyDecidedError](err); !ok {
 		t.Fatalf("deciding a consumed approval answered %v, want already-decided — its work landed, and "+
 			"running it again would write it twice", err)
 	}
@@ -121,8 +120,7 @@ func TestARejectedApprovalIsNotRedrivenByApprovingIt(t *testing.T) {
 
 	_, err := e.svc.Decide(ctx, id, true, nil)
 
-	var decided *AlreadyDecidedError
-	if !errors.As(err, &decided) {
+	if _, ok := errors.AsType[*AlreadyDecidedError](err); !ok {
 		t.Fatalf("approving a rejected row answered %v, want already-decided", err)
 	}
 	if runs != 0 {

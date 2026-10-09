@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -286,7 +287,7 @@ const noiseSweepBatch = 500
 func (e *CounterpartyVerdictEngine) inWorkspace(ctx context.Context, fn func(context.Context, ids.UUID) error) error {
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		return fmt.Errorf("verdict: a sweep stage requires a workspace-bound context")
+		return errors.New("verdict: a sweep stage requires a workspace-bound context")
 	}
 	return fn(e.workspaceCtx(ctx), ws)
 }

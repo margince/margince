@@ -88,7 +88,7 @@ func TestSchema_amountMinorBaseHasOneWriter(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		for _, line := range strings.Split(string(body), "\n") {
+		for line := range strings.SplitSeq(string(body), "\n") {
 			// A READ is fine and there are many: every rollup sums this column.
 			// What must be unique is a WRITE, which in this tree is a storekit
 			// patch naming the column constant.

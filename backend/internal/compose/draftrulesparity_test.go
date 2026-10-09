@@ -413,11 +413,11 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 // blockOf returns one ALL-CAPS section of the rules, so a check about the
 // language rule reads the language rule rather than the whole document.
 func blockOf(rules, heading string) string {
-	start := strings.Index(rules, heading)
-	if start < 0 {
+	_, after, ok := strings.Cut(rules, heading)
+	if !ok {
 		return ""
 	}
-	rest := rules[start+len(heading):]
+	rest := after
 	// Cut at the NEAREST following heading, not the first one that happens to
 	// appear in a list: a block truncated at a later heading still contains
 	// every block between, and a check "about" one rule would read them all.
@@ -452,17 +452,15 @@ func fieldOnSurface(payload map[string]any, field string) (string, bool) {
 // string map, so one nested value refuses every draft case at Prepare.
 func TestTheReplyPayloadStaysAFlatStringMap(t *testing.T) {
 	payload, err := json.Marshal(replyActivityData{
-		Envelope: draftfloor.Envelope{
-			Language:          "de",
-			ConversationState: "months",
-			SilenceDays:       "240",
-			Now:               "2026-08-11T09:00:00Z",
-			SenderName:        "Lars Jankowfsky",
-			SenderEmail:       "lars@example.com",
-		},
-		Subject: "Angebot",
-		Body:    "Guten Tag,",
-		Intent:  "Nachfassen",
+		Language:          "de",
+		ConversationState: "months",
+		SilenceDays:       "240",
+		Now:               "2026-08-11T09:00:00Z",
+		SenderName:        "Lars Jankowfsky",
+		SenderEmail:       "lars@example.com",
+		Subject:           "Angebot",
+		Body:              "Guten Tag,",
+		Intent:            "Nachfassen",
 	})
 	if err != nil {
 		t.Fatalf("encoding the reply payload failed: %v", err)

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
@@ -259,9 +260,11 @@ const forecastCategoryExpr = `(CASE WHEN t.forecast_category IN ('commit','best_
 // drill-through, so both read the identical row set.
 func (s reportSpec) fromClause() string {
 	from := s.table + " t"
+	var fromSb262 strings.Builder
 	for _, join := range s.joins {
-		from += " " + join
+		fromSb262.WriteString(" " + join)
 	}
+	from += fromSb262.String()
 	return from
 }
 

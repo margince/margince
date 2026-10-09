@@ -20,9 +20,9 @@ func TestCoreFileTypesAreThePublishedTypes(t *testing.T) {
 		name      string
 		core, pub reflect.Type
 	}{
-		{"Part", reflect.TypeOf(connector.Part{}), reflect.TypeOf(extension.InboundFile{})},
-		{"PartDrop", reflect.TypeOf(connector.PartDrop{}), reflect.TypeOf(extension.FileDrop{})},
-		{"OutboundFile", reflect.TypeOf(connector.OutboundFile{}), reflect.TypeOf(extension.OutboundFile{})},
+		{"Part", reflect.TypeFor[connector.Part](), reflect.TypeFor[extension.InboundFile]()},
+		{"PartDrop", reflect.TypeFor[connector.PartDrop](), reflect.TypeFor[extension.FileDrop]()},
+		{"OutboundFile", reflect.TypeFor[connector.OutboundFile](), reflect.TypeFor[extension.OutboundFile]()},
 	} {
 		if c.core != c.pub {
 			t.Errorf("connector.%s is %v, not the published %v: an alias was replaced by a copy",

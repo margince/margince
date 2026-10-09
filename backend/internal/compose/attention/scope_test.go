@@ -191,10 +191,10 @@ func TestAPageOfTheReadersOwnIsNotShortenedByColleaguesRows(t *testing.T) {
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	at := []crmcontracts.AttentionItem{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		at = append(at, dealItem("theirs-"+string(rune('a'+i)), colleague))
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		at = append(at, dealItem("mine-"+string(rune('a'+i)), reader))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}

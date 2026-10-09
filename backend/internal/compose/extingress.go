@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -303,12 +304,7 @@ func counterpartyOf(cp extension.Counterparty, declared extension.IngressSource)
 
 // declaresMergeKey reports whether a source vouched for one identity key.
 func declaresMergeKey(declared extension.IngressSource, key extension.MergeKey) bool {
-	for _, got := range declared.Merges {
-		if got == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(declared.Merges, key)
 }
 
 // refuseUndeclaredMergeKey is the unit-facing half of the merge-key gate: a
@@ -469,8 +465,7 @@ func (r *callRuntime) ingressRefusal(ctx context.Context, err error) error {
 	case errors.Is(err, apperrors.ErrConflict), errors.Is(err, apperrors.ErrVersionSkew):
 		return extension.ErrConflict
 	}
-	var fault apperrors.FieldFault
-	if errors.As(err, &fault) {
+	if _, ok := errors.AsType[apperrors.FieldFault](err); ok {
 		return extension.ErrInvalid
 	}
 	slog.ErrorContext(ctx, "compose: an extension ingest failed", "err", err, "unit", r.unit)

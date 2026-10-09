@@ -14,6 +14,7 @@ package compose
 // that reorders them names the wrong thing without any error at all.
 
 import (
+	"maps"
 	"reflect"
 	"regexp"
 	"slices"
@@ -111,9 +112,7 @@ func TestTheGermanApprovalSummariesCarryNoDash(t *testing.T) {
 	german := approvalSummaryByLang[textlang.German]
 	sentences := summarySentences(german)
 	for _, words := range []map[string]string{german.acts.verbs, german.acts.recordFrames, german.acts.operations} {
-		for key, phrase := range words {
-			sentences[key] = phrase
-		}
+		maps.Copy(sentences, words)
 	}
 	for name, sentence := range sentences {
 		if strings.ContainsAny(sentence, "—–") {

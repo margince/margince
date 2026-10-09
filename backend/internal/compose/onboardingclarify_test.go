@@ -256,26 +256,26 @@ func TestOpenClarifiesSkipQuestionsTheDraftAlreadyAnswers(t *testing.T) {
 			want: []string{fieldLegalName, fieldRegisteredAddress, fieldDisplayName},
 		},
 		"an answered entity question is not re-asked": {
-			draft: identity.OnboardingCompanyDraft{LegalName: stringPtr("Acme GmbH")},
+			draft: identity.OnboardingCompanyDraft{LegalName: new("Acme GmbH")},
 			want:  []string{fieldRegisteredAddress, fieldDisplayName},
 		},
 		"a selection echo with surrounding whitespace still resolves": {
-			draft: identity.OnboardingCompanyDraft{RegisteredAddress: stringPtr("  Berlin 1  ")},
+			draft: identity.OnboardingCompanyDraft{RegisteredAddress: new("  Berlin 1  ")},
 			want:  []string{fieldLegalName, fieldDisplayName},
 		},
 		"a resolved conflict is not re-asked (either option value)": {
-			draft: identity.OnboardingCompanyDraft{DisplayName: stringPtr("Acme Software")},
+			draft: identity.OnboardingCompanyDraft{DisplayName: new("Acme Software")},
 			want:  []string{fieldLegalName, fieldRegisteredAddress},
 		},
 		// The documented boundary: only an exact option-value match is
 		// provably an answer. A hand-typed different value could equally
 		// be a read prefill, so the question stays open.
 		"a hand-typed non-option value keeps the question open": {
-			draft: identity.OnboardingCompanyDraft{LegalName: stringPtr("Acme Worldwide Ltd")},
+			draft: identity.OnboardingCompanyDraft{LegalName: new("Acme Worldwide Ltd")},
 			want:  []string{fieldLegalName, fieldRegisteredAddress, fieldDisplayName},
 		},
 		"a blank draft value keeps the question open": {
-			draft: identity.OnboardingCompanyDraft{LegalName: stringPtr("   ")},
+			draft: identity.OnboardingCompanyDraft{LegalName: new("   ")},
 			want:  []string{fieldLegalName, fieldRegisteredAddress, fieldDisplayName},
 		},
 	}

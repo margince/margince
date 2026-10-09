@@ -283,7 +283,7 @@ func withCalledHelpers(body string, pkg map[string]string) string {
 func namesBoundIn(body string) map[string]bool {
 	bound := map[string]bool{}
 	for _, m := range localBinding.FindAllStringSubmatch(codeOnly(body), -1) {
-		for _, part := range strings.Split(m[1], ",") {
+		for part := range strings.SplitSeq(m[1], ",") {
 			// The LAST word of each comma-separated part. The capture is
 			// deliberately loose enough to reach a name introduced in a control
 			// clause, which means it also takes the keyword in front of it —

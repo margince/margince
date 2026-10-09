@@ -16,6 +16,7 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -49,9 +50,7 @@ func TestASegmentSelectsAccountsByTheirDomain(t *testing.T) {
 	// contact-shaped fixture perms do not carry.
 	perms := collectionsPerms()
 	grants := map[string]principal.ObjectGrant{}
-	for object, grant := range perms.Objects {
-		grants[object] = grant
-	}
+	maps.Copy(grants, perms.Objects)
 	grants["company"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	perms.Objects = grants
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)

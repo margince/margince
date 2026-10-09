@@ -184,8 +184,7 @@ func TestStrictDecode_leavesAWholePayloadShapeFailureAlone(t *testing.T) {
 	if err == nil {
 		t.Fatal("a string payload was accepted")
 	}
-	var refusal *FieldShapeError
-	if errors.As(err, &refusal) {
+	if refusal, ok := errors.AsType[*FieldShapeError](err); ok {
 		t.Errorf("refusal = %v, want no field named — no field was at fault", refusal)
 	}
 }

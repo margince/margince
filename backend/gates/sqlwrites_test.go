@@ -44,7 +44,7 @@ func insertColumns(literal string) []string {
 		return nil
 	}
 	var cols []string
-	for _, raw := range strings.Split(m[1], ",") {
+	for raw := range strings.SplitSeq(m[1], ",") {
 		name := strings.ToLower(strings.Trim(strings.TrimSpace(raw), `"`))
 		if name != "" {
 			cols = append(cols, name)

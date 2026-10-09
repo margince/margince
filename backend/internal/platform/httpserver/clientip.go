@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"slices"
 	"strings"
 )
 
@@ -37,7 +38,7 @@ type TrustedProxies struct {
 // error and never a silent reading.
 func ParseTrustedProxies(raw string) (TrustedProxies, error) {
 	var out TrustedProxies
-	for _, field := range strings.Split(raw, ",") {
+	for field := range strings.SplitSeq(raw, ",") {
 		field = strings.TrimSpace(field)
 		if field == "" {
 			continue
@@ -154,8 +155,8 @@ func (t TrustedProxies) resolve(r *http.Request) string {
 		hops = append(hops, strings.Split(line, ",")...)
 	}
 	client := peer
-	for i := len(hops) - 1; i >= 0; i-- {
-		hop, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
+	for _, hop := range slices.Backward(hops) {
+		hop, err := netip.ParseAddr(strings.TrimSpace(hop))
 		if err != nil {
 			return peer
 		}

@@ -153,8 +153,8 @@ func (m message) record() connector.NormalizedRecord {
 }
 
 func domainOf(addr string) string {
-	if i := strings.LastIndex(addr, "@"); i >= 0 {
-		return strings.ToLower(addr[i+1:])
+	if _, after, ok := strings.CutLast(addr, "@"); ok {
+		return strings.ToLower(after)
 	}
 	return ""
 }
@@ -397,7 +397,7 @@ func hashIndex(key string, n int) int {
 	_, _ = h.Write([]byte(key)) // hash.Write never returns an error, as its own contract states
 	sum := h.Sum32()
 	bucket := 0
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		bucket = (bucket*2 + int((sum>>(31-i))&1)) % n
 	}
 	return bucket

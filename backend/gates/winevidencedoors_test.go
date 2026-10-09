@@ -28,6 +28,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"maps"
 	"strings"
 	"testing"
 
@@ -88,9 +89,7 @@ func TestEveryDealMoveCarriesTheWinEvidenceClaim(t *testing.T) {
 	// input, and the estate import already owns one outside internal/modules.
 	for _, root := range []string{"internal", "cmd"} {
 		for path, file := range parseTreeFiles(t, fset, root) {
-			for door, carries := range winEvidenceDoors(path, file) {
-				doors[door] = carries
-			}
+			maps.Copy(doors, winEvidenceDoors(path, file))
 		}
 	}
 

@@ -222,9 +222,6 @@ func ageSeconds(now time.Time, since *time.Time) *int {
 	if since == nil {
 		return nil
 	}
-	seconds := int(now.UTC().Sub(since.UTC()).Seconds())
-	if seconds < 0 {
-		seconds = 0
-	}
+	seconds := max(int(now.UTC().Sub(since.UTC()).Seconds()), 0)
 	return &seconds
 }

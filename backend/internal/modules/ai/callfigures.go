@@ -15,6 +15,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -98,14 +99,16 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", len(args)-1, len(args))
 	// A row with no tier is a call refused before any rung ran, not an attempt.
 	where := "ac.occurred_at >= $1 AND NOT ac.cache_hit AND ac.tier <> ''"
+	var whereSb101 strings.Builder
 	for _, f := range []struct{ column, value string }{
 		{"ac.provider", q.Filter.Provider}, {"ac.model_id", q.Filter.Model}, {"ac.tier", q.Filter.Tier}, {"ac.task", string(q.Filter.Task)},
 	} {
 		if f.value != "" {
 			args = append(args, f.value)
-			where += fmt.Sprintf(" AND %s = $%d", f.column, len(args))
+			fmt.Fprintf(&whereSb101, " AND %s = $%d", f.column, len(args))
 		}
 	}
+	where += whereSb101.String()
 	sql := storekit.SQLf(`
 		SELECT %[1]s AS key,
 		       count(*),

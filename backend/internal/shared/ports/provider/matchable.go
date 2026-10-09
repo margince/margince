@@ -16,6 +16,8 @@ package provider
 // Descriptor.Identifiers is the sentence a customer reads; MatchRules is the
 // same fact in a form the admission pipeline can apply.
 
+import "slices"
+
 // IdentifierField names one member of ContactIdentifiers. It exists so a
 // descriptor can state its matching rule as data rather than as prose.
 type IdentifierField string
@@ -87,12 +89,7 @@ func (r MatchRule) satisfiedBy(p ContactIdentifiers) bool {
 	if len(r.AnyOf) == 0 {
 		return len(r.AllOf) > 0
 	}
-	for _, f := range r.AnyOf {
-		if p.present(f) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(r.AnyOf, p.present)
 }
 
 // Matchable reports whether these identifiers satisfy any rule — whether the

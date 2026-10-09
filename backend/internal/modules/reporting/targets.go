@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
@@ -135,7 +137,7 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 
 func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (crmcontracts.ReportingWindow, string, error) {
 	empty := crmcontracts.ReportingWindow{}
-	if in.Value < 0 || in.Value > 9007199254740991 || strings.TrimSpace(in.Reason) == "" || len(in.Reason) > 1000 {
+	if in.Value < 0 || in.Value > 9007199254740991 || !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
 		return empty, "", invalid("enter a non-negative target and a revision reason")
 	}
 	catalog, err := s.evaluator.Catalog(ctx)

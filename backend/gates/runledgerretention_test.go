@@ -120,7 +120,7 @@ func ledgerTables(t *testing.T) []string {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
 	seen := map[string]bool{}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		m := regexp.MustCompile(`^public\.([a-z_0-9]+)\.`).FindStringSubmatch(strings.TrimSpace(line))
 		if m != nil && ledgerName.MatchString(m[1]) {
 			seen[m[1]] = true

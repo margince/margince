@@ -263,9 +263,9 @@ func blankLineEnd(raw []byte, at int) (int, error) {
 // splitField splits "Name: value" without trimming the value's own spacing
 // beyond the single separating space a field is written with.
 func splitField(line string) (name, value string, ok bool) {
-	colon := strings.IndexByte(line, ':')
-	if colon < 0 {
+	before, after, ok := strings.Cut(line, ":")
+	if !ok {
 		return "", "", false
 	}
-	return line[:colon], strings.TrimSpace(line[colon+1:]), true
+	return before, strings.TrimSpace(after), true
 }

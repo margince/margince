@@ -45,13 +45,11 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 
 	issued, err := h.svc.IssuePassport(r.Context(), id, in)
 	if err != nil {
-		var badScope *InvalidScopeError
-		if errors.As(err, &badScope) {
+		if badScope, ok := errors.AsType[*InvalidScopeError](err); ok {
 			httperr.Write(w, r, httperr.Validation("scopes", "invalid_scope", badScope.Error()))
 			return
 		}
-		var badField *InvalidPassportFieldError
-		if errors.As(err, &badField) {
+		if badField, ok := errors.AsType[*InvalidPassportFieldError](err); ok {
 			httperr.Write(w, r, httperr.Validation(badField.Field, badField.Code, badField.Message))
 			return
 		}

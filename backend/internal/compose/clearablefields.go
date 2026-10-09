@@ -15,6 +15,8 @@ package compose
 // field named here that the store does not clear is a restore that reports
 // success and changes nothing, which is the one outcome worse than refusing.
 
+import "slices"
+
 // clearableFields are the wire fields each record type's update path can set to
 // NULL. Absences are deliberate and each has a reason:
 //
@@ -56,10 +58,5 @@ var clearableFields = map[string][]string{
 // canClear reports whether this record type's update path can set the field to
 // NULL.
 func canClear(entityType, field string) bool {
-	for _, clearable := range clearableFields[entityType] {
-		if clearable == field {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(clearableFields[entityType], field)
 }

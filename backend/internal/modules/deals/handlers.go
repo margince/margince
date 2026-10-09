@@ -154,8 +154,7 @@ func writeUndoConflict(w http.ResponseWriter, r *http.Request, err error) bool {
 // 409s onto the wire; false means neither matched (writeStoreErr falls
 // through to the sentinel registry).
 func writeOfferTemplateConflict(w http.ResponseWriter, r *http.Request, err error) bool {
-	var dupTemplateName *DuplicateTemplateNameError
-	if errors.As(err, &dupTemplateName) {
+	if dupTemplateName, ok := errors.AsType[*DuplicateTemplateNameError](err); ok {
 		// Not httperr.Duplicate: its fixed detail claims a LIVE record
 		// holds the name, but offer_template_name_unique (0071) is NOT
 		// partial — an ARCHIVED template reserves its name too, so the
@@ -170,8 +169,7 @@ func writeOfferTemplateConflict(w http.ResponseWriter, r *http.Request, err erro
 		})
 		return true
 	}
-	var defaultConflict *DefaultConflictError
-	if errors.As(err, &defaultConflict) {
+	if defaultConflict, ok := errors.AsType[*DefaultConflictError](err); ok {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusConflict,
 			Code:   "offer_template_default_conflict",

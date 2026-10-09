@@ -14,6 +14,7 @@ import (
 	"net/mail"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -107,7 +109,7 @@ func validateInvitation(in crmcontracts.MeetingInvitationRequest) error {
 		return err
 	}
 	address, err := mail.ParseAddress(string(in.AttendeeEmail))
-	if err != nil || address.Address != string(in.AttendeeEmail) || len(in.Subject) > 200 || strings.TrimSpace(in.Subject) == "" || len(in.Description) > 5000 || len(in.Location) > 1000 {
+	if err != nil || address.Address != string(in.AttendeeEmail) || utf8.RuneCountInString(in.Subject) > 200 || !values.HasVisibleText(in.Subject) || utf8.RuneCountInString(in.Description) > 5000 || utf8.RuneCountInString(in.Location) > 1000 {
 		return &SchedulingArgumentError{Field: "invitation", Code: faultInvalid, Message: "Enter a valid attendee email and meeting details"}
 	}
 	return nil

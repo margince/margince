@@ -52,7 +52,7 @@ func TestOnlyATextOrEnumDefaultIsNobodysEdit(t *testing.T) {
 		t.Fatalf("creating the probe table: %v", err)
 	}
 	for column, want := range map[string]*string{
-		"a_text": ptrTo("unknown"), "a_varchar": ptrTo("it's"), "an_enum": ptrTo("calm"),
+		"a_text": new("unknown"), "a_varchar": new("it's"), "an_enum": new("calm"),
 		"a_date": nil, "a_uuid": nil, "a_jsonb": nil, "a_bool": nil,
 		"a_numeric": nil, "a_quoted_bigint": nil, "a_stamp": nil, "an_array": nil,
 	} {

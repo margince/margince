@@ -117,7 +117,7 @@ func tablesCarryingLegalHoldReachableFromActivityLink(t *testing.T) []string {
 	linkColumn := regexp.MustCompile(`^public\.activity_link\.(\w+)_id uuid`)
 	withHold := map[string]bool{}
 	linked := map[string]bool{}
-	for _, line := range strings.Split(string(catalog), "\n") {
+	for line := range strings.SplitSeq(string(catalog), "\n") {
 		if m := holdColumn.FindStringSubmatch(line); m != nil {
 			withHold[m[1]] = true
 		}

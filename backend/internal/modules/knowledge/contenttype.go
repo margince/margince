@@ -118,11 +118,11 @@ func acceptedType(contentType, filename string) (string, bool) {
 // typeByExtension names the media type a file ending implies, or "" for one
 // this route does not read.
 func typeByExtension(filename string) string {
-	dot := strings.LastIndex(filename, ".")
-	if dot < 0 {
+	_, after, ok := strings.CutLast(filename, ".")
+	if !ok {
 		return ""
 	}
-	switch strings.ToLower(filename[dot+1:]) {
+	switch strings.ToLower(after) {
 	case "md", "markdown":
 		return "text/markdown"
 	case "txt":

@@ -14,6 +14,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -66,7 +67,7 @@ func querySchema(params *yaml.Node) (json.RawMessage, error) {
 		return json.Marshal(schema)
 	}
 	if params.Kind != yaml.SequenceNode {
-		return nil, fmt.Errorf("the operation's parameters is not a list")
+		return nil, errors.New("the operation's parameters is not a list")
 	}
 	schema.Properties = make(map[string]json.RawMessage, len(params.Content))
 	for _, param := range params.Content {
@@ -86,7 +87,7 @@ func querySchema(params *yaml.Node) (json.RawMessage, error) {
 			return nil, fmt.Errorf("parameter %q is declared in %q — a bodyless extension operation takes its arguments from the query string only", decl.Name, decl.In)
 		}
 		if decl.Name == "" {
-			return nil, fmt.Errorf("the operation declares a query parameter with no name")
+			return nil, errors.New("the operation declares a query parameter with no name")
 		}
 		if _, dup := schema.Properties[decl.Name]; dup {
 			// json.Marshal would silently keep one of the two, and the published
@@ -122,11 +123,11 @@ func querySchema(params *yaml.Node) (json.RawMessage, error) {
 // model as the tool's argument shape.
 func requestSchema(body *yaml.Node) (json.RawMessage, error) {
 	if body.IsZero() {
-		return nil, fmt.Errorf("the operation declares no requestBody — a body-carrying extension operation is a tool invocation and its arguments are the body")
+		return nil, errors.New("the operation declares no requestBody — a body-carrying extension operation is a tool invocation and its arguments are the body")
 	}
 	schema := yamlChild(yamlChild(yamlChild(body, "content"), "application/json"), "schema")
 	if schema == nil {
-		return nil, fmt.Errorf("the operation's requestBody declares no application/json schema")
+		return nil, errors.New("the operation's requestBody declares no application/json schema")
 	}
 	return jsonSchema("requestBody", schema)
 }

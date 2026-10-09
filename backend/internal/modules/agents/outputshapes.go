@@ -54,7 +54,7 @@ const (
 // rawMessageType is the one self-marshalling type the walk looks THROUGH rather
 // than at: it holds an already-encoded document, so its schema is that
 // document's, which this surface cannot know.
-var rawMessageType = reflect.TypeOf(json.RawMessage(nil))
+var rawMessageType = reflect.TypeFor[json.RawMessage]()
 
 // schemaFor renders T's JSON Schema, ONCE per type for the life of the process.
 //
@@ -188,8 +188,8 @@ func textual(t reflect.Type) bool {
 }
 
 var (
-	jsonMarshaler = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
-	textMarshaler = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	jsonMarshaler = reflect.TypeFor[json.Marshaler]()
+	textMarshaler = reflect.TypeFor[encoding.TextMarshaler]()
 )
 
 // idFormat is the `format` an id-shaped string carries. Derived the same way:
@@ -299,8 +299,7 @@ func describeStruct(t reflect.Type) (*jsonSchema, error) {
 // json tag contributes its OWN fields at this level, which is what
 // UpdateWithStagedApprovalResult relies on to answer as a record plus a note.
 func eachWireField(t reflect.Type, visit func(name string, optional bool, field reflect.StructField) error) error {
-	for i := range t.NumField() {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		tag := field.Tag.Get("json")
 		if tag == "-" {
 			continue

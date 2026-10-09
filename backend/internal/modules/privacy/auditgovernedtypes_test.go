@@ -48,7 +48,7 @@ func TestTheRouteCarriesNoTypeThatIsNotGoverned(t *testing.T) {
 	for _, entityType := range auditGovernedTypes {
 		governed[entityType] = true
 	}
-	for _, line := range strings.Split(auditActivityRouteSQL, "\n") {
+	for line := range strings.SplitSeq(auditActivityRouteSQL, "\n") {
 		_, rest, found := strings.Cut(line, "WHEN '")
 		if !found {
 			continue

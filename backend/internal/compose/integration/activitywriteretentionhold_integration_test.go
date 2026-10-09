@@ -91,7 +91,7 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	// refetch-and-retry the row can never accept.
 	staleSubject := "edited again"
 	_, err = e.Activities.UpdateActivity(e.Admin(), held,
-		activities.UpdateActivityInput{Subject: &staleSubject, IfVersion: Int64Ptr(999999)})
+		activities.UpdateActivityInput{Subject: &staleSubject, IfVersion: new(int64(999999))})
 	assert423("UpdateActivity with a stale If-Version", err)
 }
 
@@ -156,8 +156,7 @@ func TestSetAudienceOnAHeldCapturedRowAnswers423NotCapturedAudienceError(t *test
 	if err == nil {
 		t.Fatal("SetAudience on a held captured row succeeded, want a refusal")
 	}
-	var captured *activities.CapturedAudienceError
-	if errors.As(err, &captured) {
+	if _, ok := errors.AsType[*activities.CapturedAudienceError](err); ok {
 		t.Fatalf("SetAudience answered CapturedAudienceError (422) for a held row — "+
 			"the retention refusal must outrank it, since asking the owner endpoint instead "+
 			"could never succeed either: %v", err)

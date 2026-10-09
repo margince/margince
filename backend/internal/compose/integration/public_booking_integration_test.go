@@ -390,7 +390,7 @@ func TestPublicBookingRateLimited(t *testing.T) {
 	slug := bookingSlug(t, e)
 
 	last := 0
-	for i := 0; i < 21; i++ {
+	for range 21 {
 		last = publicCall(t, e, "POST", "/v1/public/booking/"+slug, AnyMap{}, nil, nil)
 	}
 	if last != http.StatusTooManyRequests {

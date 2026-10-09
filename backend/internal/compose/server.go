@@ -276,12 +276,12 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		strengthHandlers: strengthHandlers{
 			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},
-		recordAccessHandlers: recordAccessHandlers{access: NewRecordAccessReads(pool)},
+		access: NewRecordAccessReads(pool),
 		// The schema-change pool is boot-optional; nil
 		// here means Create/SetOptions stay their generated 501 until the
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
-		knowledgeHandlers:    knowledgeHandlers{module: knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument)},
+		module:               knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument),
 		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
 		// the store bounds "today" at midnight in the clock's own location, and a
 		// UTC clock would name the wrong day on a non-UTC installation for the
@@ -297,13 +297,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// human was already shown (RD-AC-N-5) rather than producing one, so it
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
-		attachmentExtractionHandlers: attachmentExtractionHandlers{accept: NewExtractionAccept(pool)},
+		accept: NewExtractionAccept(pool),
 		// A review joins two modules' halves, so the seam is constructed here
 		// rather than either module owning the other.
-		outcomeReviewHandlers: outcomeReviewHandlers{
-			reviews:    NewOutcomeReviews(pool),
-			activities: activities.NewStore(InstallationDB(pool)),
-		},
+		reviews:    NewOutcomeReviews(pool),
+		activities: activities.NewStore(InstallationDB(pool)),
 		// Outbound webhooks (E10/S-E10.6): the read surface works
 		// unconditionally; create/rotate/replay need a deployment signing
 		// key, wired by WithWebhookSigningKey (the api role sources it from

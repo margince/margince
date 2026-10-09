@@ -47,7 +47,7 @@ func TestTheAdvisoryPathAnswersFromThePageFacts(t *testing.T) {
 
 	behindErasure := true
 	row := pageRow{
-		AuditRow:      AuditRow{ID: ids.MustParse("01950000-0000-7000-8000-00000000beef")},
+		ID:            ids.MustParse("01950000-0000-7000-8000-00000000beef"),
 		behindErasure: &behindErasure,
 	}
 	shared := recordFacts{archived: true, writable: false}

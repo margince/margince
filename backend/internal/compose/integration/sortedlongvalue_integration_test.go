@@ -31,7 +31,7 @@ func TestASortedListPagesPastARowWithAVeryLongSortValue(t *testing.T) {
 
 	var seen []string
 	cursor := ""
-	for page := 0; page < 8; page++ {
+	for page := range 8 {
 		query := url.Values{"q": {stamp}, "sort": {"display_name"}, "limit": {"1"}}
 		if cursor != "" {
 			query.Set("cursor", cursor)

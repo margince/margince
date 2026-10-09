@@ -1045,6 +1045,7 @@ export const vi = {
   "shell.license.refused": "Giấy phép bị từ chối",
   "shell.signOutAria": "Đăng xuất",
   "shell.signOutErr": "Đăng xuất không thành công",
+  "shell.version": "Phiên bản {version}",
   "shell.collapse": "Thu gọn thanh bên",
   "shell.expand": "Mở rộng thanh bên",
   "shell.accountAria": "Tài khoản",

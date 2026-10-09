@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -56,9 +57,7 @@ func (o *oauthEnv) renew(t *testing.T, refreshToken string, extra url.Values) (i
 		"client_id":     {o.clientID},
 		"refresh_token": {refreshToken},
 	}
-	for k, vs := range extra {
-		form[k] = vs
-	}
+	maps.Copy(form, extra)
 	return o.postToken(t, form)
 }
 

@@ -1039,6 +1039,7 @@ export const en = {
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
   "shell.signOutErr": "Sign-out failed",
+  "shell.version": "Version {version}",
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",

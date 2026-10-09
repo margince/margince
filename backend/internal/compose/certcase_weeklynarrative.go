@@ -98,7 +98,7 @@ func (weeklyNarrativeCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 		return nil, fmt.Errorf("weekly_review/narrative: the fixture is not the shape this site takes: %w", err)
 	}
 	if f.WeekStart == "" {
-		return nil, fmt.Errorf("weekly_review/narrative: the fixture names no week")
+		return nil, errors.New("weekly_review/narrative: the fixture names no week")
 	}
 	var want weeklyNarrativeExpectation
 	if err := json.Unmarshal(expected, &want); err != nil {
@@ -108,7 +108,7 @@ func (weeklyNarrativeCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	if len(want.MustMention) == 0 && len(want.MustNotMention) == 0 {
 		// A case that asserts nothing scores every reply as correct, which is
 		// worse than no case: it reports a certified site nobody measured.
-		return nil, fmt.Errorf("weekly_review/narrative: the expectation asserts nothing")
+		return nil, errors.New("weekly_review/narrative: the expectation asserts nothing")
 	}
 	return &weeklyNarrativeCase{
 		in: narrative.Input{

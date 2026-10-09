@@ -197,8 +197,8 @@ func TestTheDealsListSortsStagesByPipelineOrderAndNotByName(t *testing.T) {
 	assertIDOrder(t, dealsIn(ctx, t, e, "stage_id"), want, "stage ascending (pipeline order)")
 
 	reversed := make([]ids.UUID, 0, len(want))
-	for i := len(want) - 1; i >= 0; i-- {
-		reversed = append(reversed, want[i])
+	for _, w := range slices.Backward(want) {
+		reversed = append(reversed, w)
 	}
 	assertIDOrder(t, dealsIn(ctx, t, e, "-stage_id"), reversed, "stage descending")
 }

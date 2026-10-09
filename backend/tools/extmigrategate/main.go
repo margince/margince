@@ -42,6 +42,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -183,8 +184,8 @@ func applyUp(ctx context.Context, conn *pgx.Conn, migrations []dbmigrate.Migrati
 
 // applyDown reverts newest first, mirroring dbmigrate.Down's order.
 func applyDown(ctx context.Context, conn *pgx.Conn, migrations []dbmigrate.Migration) error {
-	for i := len(migrations) - 1; i >= 0; i-- {
-		m := migrations[i]
+	for _, m := range slices.Backward(migrations) {
+
 		if err := inTx(ctx, conn, m.DownSQL); err != nil {
 			return fmt.Errorf("reverting %s_%s.down.sql as the extension role: %w", m.Version, m.Name, err)
 		}

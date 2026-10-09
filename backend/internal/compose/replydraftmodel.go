@@ -10,6 +10,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -284,16 +285,16 @@ func replyDraftShapeValid(text string) error {
 
 func validateReplyDraft(draft replyDraft) error {
 	if strings.TrimSpace(draft.Subject) == "" {
-		return fmt.Errorf("compose: reply draft subject is empty")
+		return errors.New("compose: reply draft subject is empty")
 	}
 	if strings.ContainsAny(draft.Subject, "\r\n") {
-		return fmt.Errorf("compose: reply draft subject contains a line break")
+		return errors.New("compose: reply draft subject contains a line break")
 	}
 	if strings.TrimSpace(draft.Body) == "" {
-		return fmt.Errorf("compose: reply draft body is empty")
+		return errors.New("compose: reply draft body is empty")
 	}
 	if len([]rune(draft.Subject)) > replyDraftSubjectMaxRunes || len([]rune(draft.Body)) > replyDraftBodyMaxRunes {
-		return fmt.Errorf("compose: reply draft exceeds the supported length")
+		return errors.New("compose: reply draft exceeds the supported length")
 	}
 	return nil
 }

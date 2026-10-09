@@ -49,7 +49,7 @@ func TestOnboardingProposalServesTheDeterministicMapping(t *testing.T) {
 	engine := &onboardingProposalEngine{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{
 			ID: ids.NewV7(), SiteReadID: &readID,
-			CompanyDraft: identity.OnboardingCompanyDraft{DisplayName: stringPtr("Acme")},
+			CompanyDraft: identity.OnboardingCompanyDraft{DisplayName: new("Acme")},
 		}},
 		contacts: onboardingSiteReadReaderStub{read: read, comparisons: comparisons},
 		rollout:  companyContextRolloutOnboarding,
@@ -95,7 +95,7 @@ func TestOnboardingProposalDoesNotReAskAnsweredQuestions(t *testing.T) {
 			ID: ids.NewV7(), SiteReadID: &readID,
 			// The persisted draft carries an earlier authorized selection:
 			// exactly one option value of the legal-entity question.
-			CompanyDraft: identity.OnboardingCompanyDraft{LegalName: stringPtr("Acme GmbH")},
+			CompanyDraft: identity.OnboardingCompanyDraft{LegalName: new("Acme GmbH")},
 		}},
 		contacts: onboardingSiteReadReaderStub{read: contacts.SiteRead{ID: readID, Status: siteReadWireStatusDone, LegalEntities: []contacts.SiteReadLegalEntity{
 			{Name: "Acme GmbH", RegisteredAddress: "Berlin 1", SourceURL: "https://acme.example/legal"},

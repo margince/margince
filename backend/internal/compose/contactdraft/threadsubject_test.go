@@ -26,7 +26,7 @@ func mail(direction crmcontracts.ActivityDirection, occurred time.Time, subject 
 		Id:         openapi_types.UUID(ids.NewV7()),
 		Kind:       crmcontracts.ActivityKindEmail,
 		Direction:  &direction,
-		Subject:    strPtr(subject),
+		Subject:    new(subject),
 		OccurredAt: occurred,
 	}
 }
@@ -35,7 +35,7 @@ func task(occurred time.Time, subject string) crmcontracts.Activity {
 	return crmcontracts.Activity{
 		Id:         openapi_types.UUID(ids.NewV7()),
 		Kind:       crmcontracts.ActivityKindTask,
-		Subject:    strPtr(subject),
+		Subject:    new(subject),
 		OccurredAt: occurred,
 	}
 }

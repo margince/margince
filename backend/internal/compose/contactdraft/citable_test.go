@@ -27,7 +27,7 @@ func fullView() (crmcontracts.Contact360, ids.ProjectID) {
 	activities := []crmcontracts.Activity{{
 		Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail,
 		OccurredAt: draftedAt.Add(-48 * time.Hour), Direction: &inbound,
-		Subject: strPtr("Pricing question"), Body: strPtr("Could you send the pricing?"),
+		Subject: new("Pricing question"), Body: new("Could you send the pricing?"),
 	}}
 	claims := []crmcontracts.ConversationClaim{
 		claim(crmcontracts.ConversationClaimKindOpenQuestion, "the pricing", crmcontracts.ConversationClaimStatusOpen, nil),
@@ -40,7 +40,7 @@ func fullView() (crmcontracts.Contact360, ids.ProjectID) {
 			DealId: openapi_types.UUID(ids.NewV7()), Title: "Rollout licence",
 		}},
 		NextMeeting: &crmcontracts.Contact360NextMeeting{
-			StartsAt: draftedAt.Add(72 * time.Hour), Subject: strPtr("Review"), Participants: participants(recipientID),
+			StartsAt: draftedAt.Add(72 * time.Hour), Subject: new("Review"), Participants: participants(recipientID),
 		},
 	}
 	view.Activities = &struct {

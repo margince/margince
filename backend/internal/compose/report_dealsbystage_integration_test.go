@@ -32,10 +32,10 @@ func TestDealsByStageWeightedReconcilesToPerDealRounding(t *testing.T) {
 	// (24682×60% = 14809.2 → 14809): round(Σamount×p/100) and
 	// Σround(amount×p/100) disagree by exactly 1 for this stage.
 	const dealAmount = int64(12341)
-	e.seedOpenDeal(t, "Alpha", 60, nil, int64p(dealAmount), stringp("commit"))
-	e.seedOpenDeal(t, "Beta", 60, nil, int64p(dealAmount), stringp("commit"))
+	e.seedOpenDeal(t, "Alpha", 60, nil, new(dealAmount), new("commit"))
+	e.seedOpenDeal(t, "Beta", 60, nil, new(dealAmount), new("commit"))
 	// A different stage's deal must not fold into the group under test.
-	e.seedOpenDeal(t, "Elsewhere", 20, nil, int64p(999999), stringp("commit"))
+	e.seedOpenDeal(t, "Elsewhere", 20, nil, new(int64(999999)), new("commit"))
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
@@ -63,9 +63,9 @@ func TestDealsByStageWeightedReconcilesToPerDealRounding(t *testing.T) {
 // proves for itself in TestForecastDerivationDrillThroughReconcilesExactly.
 func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Alpha", 60, nil, int64p(12341), stringp("commit"))
-	e.seedOpenDeal(t, "Beta", 60, nil, int64p(12341), stringp("commit"))
-	e.seedOpenDeal(t, "Elsewhere", 20, nil, int64p(999999), stringp("commit"))
+	e.seedOpenDeal(t, "Alpha", 60, nil, new(int64(12341)), new("commit"))
+	e.seedOpenDeal(t, "Beta", 60, nil, new(int64(12341)), new("commit"))
+	e.seedOpenDeal(t, "Elsewhere", 20, nil, new(int64(999999)), new("commit"))
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
@@ -103,8 +103,8 @@ func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
 // A total narrowed to the reader's own work printed "1 deal" above eight cards.
 func TestDealsByStageMeasuresEveryDealTheReaderMaySee(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, int64p(10000), stringp("commit"))
-	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, int64p(20000), stringp("commit"))
+	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, new(int64(10000)), new("commit"))
+	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, new(int64(20000)), new("commit"))
 
 	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
 	result := e.runReport(rep, t, "deals-by-stage",
@@ -132,7 +132,7 @@ func TestDealsByStageMeasuresEveryDealTheReaderMaySee(t *testing.T) {
 // a rep, as on every install-wide report.
 func TestDealsByStageRefusesARepsOwnerDialOnAColleague(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, int64p(20000), stringp("commit"))
+	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, new(int64(20000)), new("commit"))
 
 	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
 	status, body := e.runReportStatus(rep, t, "deals-by-stage",
@@ -150,8 +150,8 @@ func TestDealsByStageRefusesARepsOwnerDialOnAColleague(t *testing.T) {
 // board while still sitting on their worklist one click away.
 func TestDealsByStageCountsAnUnownedDealForARep(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
-	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, int64p(5000), stringp("commit"))
+	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)), new("commit"))
+	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, new(int64(5000)), new("commit"))
 
 	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
 	result := e.runReport(rep, t, "deals-by-stage",
@@ -167,7 +167,7 @@ func TestDealsByStageCountsAnUnownedDealForARep(t *testing.T) {
 // (ScopeKindManagedTeams) population too, for the identical reason.
 func TestDealsByStageCountsAnUnownedDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
+	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)), new("commit"))
 
 	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(manager, t, "deals-by-stage",
@@ -183,7 +183,7 @@ func TestDealsByStageCountsAnUnownedDealForATeamManager(t *testing.T) {
 // manager's board, so it is in the board's totals too.
 func TestDealsByStageCountsAnUnrelatedSeatsDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, int64p(20000), stringp("commit"))
+	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, new(int64(20000)), new("commit"))
 
 	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(manager, t, "deals-by-stage",
@@ -358,7 +358,7 @@ func TestDealsByStageStalledFilterWorksUnderTheStageJoin(t *testing.T) {
 	e := setupForecast(t)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, source, captured_by, created_at)
 		VALUES ($1, 'Idle', $2, $3, 10000, 'EUR', 'manual', 'human:x', now() - interval '90 days')`, e.pipeline, e.stages[60])
-	e.seedOpenDeal(t, "Fresh", 60, nil, int64p(20000), stringp("commit"))
+	e.seedOpenDeal(t, "Fresh", 60, nil, new(int64(20000)), new("commit"))
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"stalled":true}}`)
@@ -388,10 +388,10 @@ func TestDealsByStageStalledFilterAgreesWithIsStalled(t *testing.T) {
 		lastAct *time.Time
 		wait    *time.Time
 	}{
-		{"fresh", days(-5), timep(days(-2)), nil},
-		{"idle past threshold", days(-90), timep(days(-70)), nil},
-		{"active wait suppresses", days(-90), timep(days(-80)), timep(days(10))},
-		{"expired wait un-suppresses", days(-90), timep(days(-80)), timep(days(-5))},
+		{"fresh", days(-5), new(days(-2)), nil},
+		{"idle past threshold", days(-90), new(days(-70)), nil},
+		{"active wait suppresses", days(-90), new(days(-80)), new(days(10))},
+		{"expired wait un-suppresses", days(-90), new(days(-80)), new(days(-5))},
 	}
 	for _, c := range cases {
 		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, created_at, last_activity_at, wait_until, source, captured_by)
@@ -416,8 +416,6 @@ func TestDealsByStageStalledFilterAgreesWithIsStalled(t *testing.T) {
 		t.Errorf("SQL filter matched %d deals, Go's IsStalled agrees on %d — the two spellings of §8 have drifted", got, wantStalled)
 	}
 }
-
-func timep(v time.Time) *time.Time { return &v }
 
 // dealsByStageRow picks the aggregate row for one stage out of a
 // group-by-stage_id result — the report is fetched with no stage_id

@@ -25,8 +25,8 @@ func overdueTaskPage() (*crmcontracts.Contact360, crmcontracts.Activity) {
 	filed := now.Add(-72 * time.Hour)
 	task := crmcontracts.Activity{
 		Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-		Subject:    ptr("Follow up with Anna: send demo email"),
-		OccurredAt: filed, CreatedAt: now, DueAt: ptr(now.Add(-24 * time.Hour)),
+		Subject:    new("Follow up with Anna: send demo email"),
+		OccurredAt: filed, CreatedAt: now, DueAt: new(now.Add(-24 * time.Hour)),
 	}
 	return &crmcontracts.Contact360{NextSteps: timelineOf(task)}, task
 }
@@ -115,7 +115,7 @@ func TestAnEmailAfterAPromisedCommitmentAsksAboutTheClaim(t *testing.T) {
 		Id:   openapi_types.UUID(ids.NewV7()),
 		Kind: crmcontracts.ConversationClaimKindCommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
 		Body: "Send the revised quote", SourceQuote: "Ich schicke dir das Angebot.",
-		SourceActivityId: openapi_types.UUID(ids.NewV7()), DueAt: ptr(now.Add(-24 * time.Hour)), OccurredAt: &said,
+		SourceActivityId: openapi_types.UUID(ids.NewV7()), DueAt: new(now.Add(-24 * time.Hour)), OccurredAt: &said,
 	}
 	page := &crmcontracts.Contact360{Claims: &[]crmcontracts.ConversationClaim{claim}}
 
@@ -180,14 +180,14 @@ func TestReassigningATaskRearmsItsNotYet(t *testing.T) {
 	ctx := readerCtx()
 	viewer, _ := principal.Actor(ctx)
 	page, _ := overdueTaskPage()
-	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
+	page.NextSteps.Data[0].AssigneeId = new(openapi_types.UUID(ids.NewV7()))
 	sent := sentAt(now.Add(-time.Hour))
 	ask := func() crmcontracts.ContactMoment {
 		return deriveMomentPast(ctx, now, page, neverDismissed, proposer(ctx, page, sent, time.UTC, neverDismissed))
 	}
 
 	theirs := ask()
-	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(viewer.UserID))
+	page.NextSteps.Data[0].AssigneeId = new(openapi_types.UUID(viewer.UserID))
 	ours := ask()
 	if theirs.MayBeDone == nil || ours.MayBeDone == nil {
 		t.Fatalf("this test needs the question both times: %q, %q", theirs.Headline, ours.Headline)
@@ -201,7 +201,7 @@ func TestReassigningATaskRearmsItsNotYet(t *testing.T) {
 // A promise whose subject ends in a full stop is not followed by a second one.
 func TestTheQuestionDoesNotDoubleThePromisesFullStop(t *testing.T) {
 	page, _ := overdueTaskPage()
-	page.NextSteps.Data[0].Subject = ptr("Send the deck.")
+	page.NextSteps.Data[0].Subject = new("Send the deck.")
 	got := askedWith(page, sentAt(now.Add(-time.Hour)), neverDismissed)
 	if !strings.HasPrefix(got.WhyNow, "You owe them: Send the deck. ") || strings.Contains(got.WhyNow, "..") {
 		t.Errorf("why_now = %q, want one full stop after the promise", got.WhyNow)

@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -66,8 +67,7 @@ func TestTheRecordProviderServesExactlyTheSeamVocabulary(t *testing.T) {
 		// the type, and a miss says routed-and-absent as clearly as a hit says
 		// routed-and-present.
 		_, err := native.Read(as, datasource.EntityRef{Type: entity, ID: ids.NewV7()})
-		var unsupported *datasource.UnsupportedEntityError
-		if errors.As(err, &unsupported) {
+		if _, ok := errors.AsType[*datasource.UnsupportedEntityError](err); ok {
 			t.Errorf("the provider does not serve %q, which the seam's own vocabulary declares — every "+
 				"governed archive of one faults at staging, and agents.servedByTheRecordSeam cannot see it "+
 				"from the other side of the DAG", entity)
@@ -81,8 +81,7 @@ func TestTheRecordProviderServesExactlyTheSeamVocabulary(t *testing.T) {
 		}
 		outside++
 		_, err := native.Read(as, datasource.EntityRef{Type: datasource.EntityType(recordType), ID: ids.NewV7()})
-		var unsupported *datasource.UnsupportedEntityError
-		if !errors.As(err, &unsupported) {
+		if _, ok := errors.AsType[*datasource.UnsupportedEntityError](err); !ok {
 			t.Errorf("the provider serves %q, which is outside the seam's vocabulary — the resolver stands "+
 				"its guards down for that type, so a record the seam CAN reach would be staged unguarded",
 				recordType)
@@ -188,9 +187,7 @@ func TestAnArchiveOfARowOutsideTheAgentsScopeStagesNothing(t *testing.T) {
 var archiveRepPerms = func() principal.Permissions {
 	perms := integration.RepPerms
 	objects := make(map[string]principal.ObjectGrant, len(perms.Objects))
-	for object, grant := range perms.Objects {
-		objects[object] = grant
-	}
+	maps.Copy(objects, perms.Objects)
 	contact := objects["contact"]
 	contact.Delete = true
 	objects["contact"] = contact

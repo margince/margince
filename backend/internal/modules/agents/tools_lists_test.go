@@ -48,8 +48,7 @@ func TestAListCallMissingWhatItsModeNeedsNeverReachesTheSeam(t *testing.T) {
 				t.Fatalf("%s is not registered", tc.tool)
 			}
 			_, err := tool.Handle(context.Background(), json.RawMessage(tc.args))
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("answered %v, want a BadArgsError", err)
 			}
 			if seam.read != nil || seam.change != nil {

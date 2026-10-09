@@ -112,10 +112,14 @@ func writeCoverageJobs(p *strings.Builder, r mcpToolCoverage) {
 		"yet, and a dash means not tried yet. What a good answer must do is in the second column.\n\n")
 	header := "| Job | What a good answer does |"
 	rule := "|---|---|"
+	var headerSb115 strings.Builder
+	var ruleSb115 strings.Builder
 	for _, m := range r.Models {
-		header += fmt.Sprintf(" `%s`<br>%s |", modelName(m.Model), m.Route)
-		rule += ":---:|"
+		fmt.Fprintf(&headerSb115, " `%s`<br>%s |", modelName(m.Model), m.Route)
+		ruleSb115.WriteString(":---:|")
 	}
+	header += headerSb115.String()
+	rule += ruleSb115.String()
 	p.WriteString(header + "\n" + rule + "\n")
 	for _, c := range byCaseNumber(r.Cases) {
 		fmt.Fprintf(p, "| %s | %s |", c.Title, plainCriteria(c.Name, c.Criteria, r.Criteria))

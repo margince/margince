@@ -18,8 +18,8 @@ import (
 
 func TestStageAgeCountsEveryReadableDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
-	e.seedOpenDeal(t, "Team2's", 60, &e.Rep3, int64p(10000), stringp("commit"))
+	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)), new("commit"))
+	e.seedOpenDeal(t, "Team2's", 60, &e.Rep3, new(int64(10000)), new("commit"))
 
 	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(manager, t, "stage-age",

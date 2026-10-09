@@ -363,7 +363,7 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 	if a.Enabled {
 		status = crmcontracts.AutomationStatus("enabled")
 	}
-	params := map[string]interface{}{}
+	params := map[string]any{}
 	if len(a.Params) > 0 {
 		if err := json.Unmarshal(a.Params, &params); err != nil {
 			return crmcontracts.Automation{}, err
