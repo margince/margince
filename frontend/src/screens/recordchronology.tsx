@@ -111,6 +111,9 @@ export type RecordChronology = {
   // flags would draw a skeleton under All that never becomes a timeline.
   loading: boolean;
   failed: boolean;
+  // Whether this hook reads and pages the change feed, so its footer offers
+  // the next page. False where the page draws Changes with its own panel.
+  readsChanges: boolean;
   // The activity feed's own next page, when the caller can fetch one.
   activities?: RecordTimeline;
 };
@@ -125,6 +128,7 @@ export function useRecordChronology({
   kind,
   recordId,
   filter,
+  changesInPanel = false,
   activities,
   activitiesHaveMore,
   loadMore,
@@ -135,6 +139,9 @@ export function useRecordChronology({
   kind: EntityKind;
   recordId: string;
   filter: TimelineFilter;
+  // True where the page draws Changes with RecordHistoryTab, which reads and
+  // pages its own feed. A second read here would fetch rows nobody sees.
+  changesInPanel?: boolean;
   /**
    * Opens one message in the record's drawer. Handed in rather than mounted
    * here, because the drawer belongs to the page — one over the record, with
@@ -162,7 +169,7 @@ export function useRecordChronology({
   const viewerId = useViewerId();
   // Only the Changes cut reads the change feed. The kind, word and date dials
   // narrow the exchanges, so they never hide a change.
-  const wantsChanges = !readsExchangesOnly(filter);
+  const wantsChanges = !readsExchangesOnly(filter) && !changesInPanel;
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
   // `page.data ?? []`: a 200 with no body is a shape the contract permits, and
   // flattening it would hand the mapper below an `undefined` row.
@@ -210,6 +217,7 @@ export function useRecordChronology({
       changes,
       loading: false,
       failed: false,
+      readsChanges: false,
       activities: loadMore,
     };
   }
@@ -219,6 +227,7 @@ export function useRecordChronology({
     changes,
     loading: wantsChanges && changes.isPending,
     failed: wantsChanges && changes.isError,
+    readsChanges: wantsChanges,
     activities: undefined,
   };
 }
@@ -234,7 +243,7 @@ export function hasChronologyFooter(
 ): boolean {
   return (
     chronology.truncated ||
-    filter === "changes" ||
+    chronology.readsChanges ||
     activitiesCanGrow(filter, chronology)
   );
 }
@@ -254,7 +263,7 @@ export function ChronologyFooter({
       {chronology.truncated && (
         <p className="t-caption">{t("chronology.truncatedActivities")}</p>
       )}
-      {filter === "changes" && <LoadMoreButton query={chronology.changes} />}
+      {chronology.readsChanges && <LoadMoreButton query={chronology.changes} />}
       {activitiesCanGrow(filter, chronology) && chronology.activities && (
         <LoadMoreButton query={chronology.activities} />
       )}
@@ -295,18 +304,25 @@ export const CHRONOLOGY_EMPTY_KEYS: Readonly<
  * activity feed the reader is not looking at. `activitiesEmptyKey` is the
  * caller's own word for the All view, for the same reason
  * CHRONOLOGY_EMPTY_KEYS leaves that one out.
+ *
+ * `exchanges` is the state of the activity read, and only the exchange cuts
+ * are judged by it. Changes is judged by the change feed alone, so withheld
+ * or failed activities never hide field changes that loaded.
  */
 export function chronologyNotice(
   activitiesEmptyKey: MessageKey,
-  timeline: {
-    loading: boolean;
-    failed: boolean;
-    assembled: boolean;
-    filter: TimelineFilter;
-  },
-  count: number,
+  filter: TimelineFilter,
+  chronology: RecordChronology,
+  exchanges: { loading: boolean; failed: boolean; assembled: boolean },
   t: ReturnType<typeof useT>,
 ): ReactNode {
+  const timeline = readsExchangesOnly(filter)
+    ? exchanges
+    : {
+        loading: chronology.loading,
+        failed: chronology.failed,
+        assembled: true,
+      };
   if (timeline.loading) {
     // What is being waited for, not a mute bar: the reader is waiting on one
     // named feed, and the placeholder can say which.
@@ -315,7 +331,7 @@ export function chronologyNotice(
   if (timeline.failed || !timeline.assembled) {
     return <EmptyState>{t("co.section.unavailable")}</EmptyState>;
   }
-  if (count > 0) {
+  if (chronology.entries.length > 0) {
     return undefined;
   }
   // An empty All is an empty record, and the caller's own sentence says what
@@ -323,7 +339,7 @@ export function chronologyNotice(
   return (
     <EmptyState>
       {t(
-        timeline.filter === "changes"
+        filter === "changes"
           ? CHRONOLOGY_EMPTY_KEYS.changes
           : activitiesEmptyKey,
       )}

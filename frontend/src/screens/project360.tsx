@@ -537,20 +537,17 @@ function useProjectChronology(view: Project360): ChronologySlots {
     ),
     timelineNotice: chronologyNotice(
       "project.timeline.empty",
+      filter,
+      history,
       {
-        // The 360 is already on screen here, so for the unfiltered read only
-        // the change feed can still be loading or failed; a narrowed read is
-        // the list's own and has its own wait.
-        loading: history.loading || timeline.isPending,
-        failed: history.failed || timeline.isError,
-        assembled:
-          filter === "changes" ||
-          (hasTimelineFilters(filters)
-            ? timeline.isSuccess
-            : Boolean(activities)),
-        filter,
+        // A narrowed read is the list's own and has its own wait; the
+        // unfiltered one is the 360's section, already on screen.
+        loading: timeline.isPending,
+        failed: timeline.isError,
+        assembled: hasTimelineFilters(filters)
+          ? timeline.isSuccess
+          : Boolean(activities),
       },
-      history.entries.length,
       t,
     ),
   };

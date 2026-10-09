@@ -56,6 +56,8 @@ export function DealHistoryTab({
     kind: "deal",
     recordId: deal.id,
     filter,
+    // RecordHistoryTab draws Changes here and pages its own feed.
+    changesInPanel: true,
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -104,13 +106,13 @@ export function DealHistoryTab({
           <div className="timeline-card">
             {chronologyNotice(
               "deal.timeline.empty",
+              filter,
+              chronology,
               {
-                loading: chronology.loading || timeline.isPending,
-                failed: chronology.failed || timeline.isError,
+                loading: timeline.isPending,
+                failed: timeline.isError,
                 assembled: timeline.isSuccess,
-                filter,
               },
-              chronology.entries.length,
               t,
             ) ?? (
               <GroupedTimelineList

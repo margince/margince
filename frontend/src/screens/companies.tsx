@@ -991,18 +991,17 @@ function useChronologySlots({
           filter === "conversations"
             ? "chronology.conversationsEmpty"
             : "co.timeline.empty",
+          filter,
+          history,
           {
-            // The two feeds are read together rather than per filter.
-            loading: loading || history.loading || timeline.isPending,
-            failed: failed || history.failed || timeline.isError,
+            loading: loading || timeline.isPending,
+            failed: failed || timeline.isError,
             // A narrowed read is the list's own and is assembled once it
             // answers; the unfiltered one is the 360's section.
             assembled: hasTimelineFilters(filters)
               ? timeline.isSuccess
               : Boolean(view?.activities),
-            filter,
           },
-          history.entries.length,
           t,
         ) ??
         // The Conversations cut narrows the chronicle to the exchanges

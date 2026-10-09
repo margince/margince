@@ -58,6 +58,8 @@ export function LeadHistoryTab({
     kind: "lead",
     recordId: lead.id,
     filter,
+    // RecordHistoryTab draws Changes here and pages its own feed.
+    changesInPanel: true,
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -107,13 +109,13 @@ export function LeadHistoryTab({
           <div className="timeline-card">
             {chronologyNotice(
               "lead.timeline.empty",
+              filter,
+              chronology,
               {
-                loading: chronology.loading || timeline.isPending,
-                failed: chronology.failed || timeline.isError,
+                loading: timeline.isPending,
+                failed: timeline.isError,
                 assembled: timeline.isSuccess,
-                filter,
               },
-              chronology.entries.length,
               t,
             ) ?? (
               <GroupedTimelineList

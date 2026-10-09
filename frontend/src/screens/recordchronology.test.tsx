@@ -12,9 +12,15 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { ENTITY_KINDS, type EntityKind } from "../app/entity";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, useT } from "../i18n";
 import { ContactTimelineTab } from "./contacttabs";
-import { type TimelineFilter, useRecordChronology } from "./recordchronology";
+import {
+  chronologyNotice,
+  hasChronologyFooter,
+  type RecordChronology,
+  type TimelineFilter,
+  useRecordChronology,
+} from "./recordchronology";
 
 // History is exercised through the contact tab that renders it, and through
 // the hook every record page shares where the question is about the feeds.
@@ -223,7 +229,12 @@ describe("useRecordChronology", () => {
     );
   }
 
-  function hook(kind: EntityKind, filter: TimelineFilter, status = 200) {
+  function hook(
+    kind: EntityKind,
+    filter: TimelineFilter,
+    status = 200,
+    changesInPanel = false,
+  ) {
     const feed = changeFeed(status);
     vi.stubGlobal("fetch", feed.fetcher);
     const rendered = renderHook(
@@ -232,6 +243,7 @@ describe("useRecordChronology", () => {
           kind,
           recordId: "p-1",
           filter,
+          changesInPanel,
           activities,
           activitiesHaveMore: false,
           values: { currency: null, locale: "en", zone: "UTC" },
@@ -270,5 +282,65 @@ describe("useRecordChronology", () => {
 
     await waitFor(() => expect(result.current.failed).toBe(true));
     expect(result.current.entries).toEqual([]);
+  });
+
+  it("leaves Changes to the page's own panel: no read, and no Load more", async () => {
+    const { result, feed } = hook("deal", "changes", 200, true);
+
+    expect(result.current.changes.fetchStatus).toBe("idle");
+    expect(feed.changesRead()).toBe(false);
+    expect(hasChronologyFooter("changes", result.current)).toBe(false);
+  });
+
+  it("offers the next page of changes where it draws them itself", async () => {
+    const { result } = hook("company", "changes");
+
+    await waitFor(() => expect(result.current.entries).toHaveLength(1));
+    expect(hasChronologyFooter("changes", result.current)).toBe(true);
+  });
+
+  // Changes is judged by the change feed alone. The activity read failing, or
+  // the 360 withholding activities, must not hide changes that loaded.
+  const BROKEN_EXCHANGES = { loading: true, failed: true, assembled: false };
+
+  function NoticeOf({
+    filter,
+    chronology,
+  }: Readonly<{ filter: TimelineFilter; chronology: RecordChronology }>) {
+    const t = useT();
+    return (
+      <>
+        {chronologyNotice(
+          "contact.timeline.empty",
+          filter,
+          chronology,
+          BROKEN_EXCHANGES,
+          t,
+        ) ?? "rows drawn"}
+      </>
+    );
+  }
+
+  it("shows loaded changes whatever the activity read did", async () => {
+    const { result } = hook("company", "changes");
+    await waitFor(() => expect(result.current.entries).toHaveLength(1));
+
+    withProviders(<NoticeOf filter="changes" chronology={result.current} />);
+    expect(screen.getByText("rows drawn")).toBeTruthy();
+  });
+
+  it("still holds the exchange cuts to the activity read", () => {
+    const { result } = hook("company", "all");
+
+    withProviders(<NoticeOf filter="all" chronology={result.current} />);
+    expect(screen.queryByText("rows drawn")).toBeNull();
+  });
+
+  it("reports the change feed's own failure under Changes", async () => {
+    const { result } = hook("company", "changes", 500);
+    await waitFor(() => expect(result.current.failed).toBe(true));
+
+    withProviders(<NoticeOf filter="changes" chronology={result.current} />);
+    expect(screen.getByText(/Some data did not load/)).toBeTruthy();
   });
 });

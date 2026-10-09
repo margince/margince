@@ -83,6 +83,8 @@ export function ContactTimelineTab({
     kind: "contact",
     recordId: contactId,
     filter,
+    // RecordHistoryTab draws Changes here and pages its own feed.
+    changesInPanel: true,
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
