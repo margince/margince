@@ -29,7 +29,7 @@ export type LocaleEntry = readonly [
 
 function readJsonCatalog(path: string): Catalog {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
-  if (typeof parsed !== "object" || parsed === null) {
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error(`${path} is not a JSON object of message keys`);
   }
   const catalog: Record<string, string> = {};
