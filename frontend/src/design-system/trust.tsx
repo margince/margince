@@ -369,7 +369,7 @@ export function PassportChip({ name }: Readonly<{ name?: string }>) {
   const t = useT();
   return (
     <span title={t("history.passport")}>
-      <Badge tone="ai">{name ?? t("history.passportUnnamed")}</Badge>
+      <Badge tone="ai">{name?.trim() || t("history.passportUnnamed")}</Badge>
     </span>
   );
 }

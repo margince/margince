@@ -112,8 +112,8 @@ Where Margince can say who put a value there, it does. The trust marks are:
   makes up for lost time. It has a different name from an agent, so you know whether a model
   decided something or Margince did routine work.
 - "Via {connector}": it came from a connected mailbox
-- On a field change an agent made, a chip with the name of your own agent
-  passport, or "An agent" when the passport is a colleague's
+- On a field change an agent made, the name of your own agent passport. A
+  colleague's passport reads "An agent".
 - "Source not recorded": when nobody knows where it came from
 
 ## Seeing work in progress

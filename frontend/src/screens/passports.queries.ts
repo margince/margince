@@ -24,10 +24,20 @@ export function usePassports() {
   });
 }
 
-// A connection is named by the client the human approved, a minted passport by
-// the label its human typed.
-export function passportName(passport: PassportSummary): string {
-  return passport.connection?.client_name ?? passport.label;
+/**
+ * passportName is what a reader can recognise a passport by, or undefined. A
+ * connection is named by the client the human approved. The server answers its
+ * raw client id when that registration is gone, and a connection's label
+ * carries the client id too, so neither stands in. A minted passport is named
+ * by the label its human typed, unless it is blank.
+ */
+export function passportName(passport: PassportSummary): string | undefined {
+  const { connection } = passport;
+  if (connection) {
+    const name = connection.client_name.trim();
+    return name && name !== connection.client_id ? name : undefined;
+  }
+  return passport.label.trim() || undefined;
 }
 
 /**
@@ -39,5 +49,5 @@ export function usePassportName(passportId: string): string | undefined {
   const passport = usePassports().data?.data.find(
     (row) => row.id === passportId,
   );
-  return passport && passportName(passport);
+  return passport ? passportName(passport) : undefined;
 }

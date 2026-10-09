@@ -116,11 +116,11 @@ export function provenanceLabel(
 }
 
 /**
- * systemJobLabel names a job by its words in the catalogue, never by its key.
- * Every kind backend/api/jobs.yaml declares has a `systemJob.<kind>` message,
- * held there by backend/gates/frontendjoblabels_test.go. A principal spelled
- * with hyphens (`system:time-scan`) is read as the kind it spells. A name that
- * is no declared kind has no label, and the tag says only "System task".
+ * systemJobLabel names a system pass by its words in the catalogue, never by
+ * its key. Every system principal the backend binds has a `systemJob.<name>`
+ * message, held there by backend/gates/frontendjoblabels_test.go. Hyphens read
+ * as underscores (`system:lead-sla-scan`). A name with no message gets no
+ * label, and the tag says only "System task".
  */
 function systemJobLabel(job: string, t: Translator): string | undefined {
   const key = `systemJob.${job.replaceAll("-", "_")}`;

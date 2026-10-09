@@ -113,11 +113,27 @@ describe("ProvenanceTag", () => {
     expect(claimsAModel("System task: Mail participant fill-in")).toBe(false);
   });
 
-  // Principals spell a kind with hyphens as often as with underscores, and
-  // both name the same job.
-  it("names a job whose principal spells its kind with hyphens", () => {
-    render(<ProvenanceTag provenance={{ kind: "system", job: "time-scan" }} />);
-    expect(screen.getByText("System task: Time tracking scan")).toBeTruthy();
+  // Principals are spelled with hyphens as often as with underscores.
+  it("names a pass whose principal is spelled with hyphens", () => {
+    render(
+      <ProvenanceTag provenance={{ kind: "system", job: "lead-sla-scan" }} />,
+    );
+    expect(
+      screen.getByText("System task: Lead response time check"),
+    ).toBeTruthy();
+  });
+
+  // The label is keyed by the principal the row carries, which is not always
+  // the job kind: employment_import_sweep acts as employment_import_worker.
+  it("names a job by the principal it acts as, not by its kind", () => {
+    render(
+      <ProvenanceTag
+        provenance={{ kind: "system", job: "employment_import_worker" }}
+      />,
+    );
+    expect(
+      screen.getByText("System task: Employment history import"),
+    ).toBeTruthy();
   });
 
   it("never prints the key of a job the catalogue does not name", () => {
@@ -212,6 +228,11 @@ describe("PassportChip", () => {
   it("names the passport it is handed, in the agent tone", () => {
     render(<PassportChip name="Marcus's Claude" />);
     expect(claimsAModel("Marcus's Claude")).toBe(true);
+  });
+
+  it("reads a blank name as no name", () => {
+    render(<PassportChip name="   " />);
+    expect(claimsAModel("An agent")).toBe(true);
   });
 
   it("says an agent acted when it has no name, and never shows an id", () => {
