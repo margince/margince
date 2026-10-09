@@ -220,8 +220,8 @@ describe("AutonomySettingsCard", () => {
     expect(screen.queryByText(/No reviews yet/i)).toBeNull();
   });
 
-  // A failed refetch keeps the stale rows in the cache, and the gate then shows
-  // its error arm: a note read off those rows would sit above the failure.
+  // A failed refetch keeps stale rows cached behind the error arm. A note read
+  // off them would sit above the failure.
   it("says nothing of the sort once a refetch has failed", async () => {
     const backend = backendFor([row("close_date_correction", "manual")]);
     let refusing = false;

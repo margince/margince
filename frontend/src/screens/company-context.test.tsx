@@ -708,8 +708,8 @@ describe("CompanyContextCard confirmed count", () => {
   );
 });
 
-// A failed refetch keeps the stale profile in the cache while the gate shows
-// its error arm, so nothing read off that profile may stand above the failure.
+// A failed refetch keeps the stale profile cached behind the error arm. Nothing
+// read off it may stand above the failure.
 describe("CompanyContextCard after a failed refetch", () => {
   it(
     "takes the logo down with the facts",
