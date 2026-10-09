@@ -278,7 +278,7 @@ export const ErasureSearchEnter: Story = {
     const search = await screen.findByRole("searchbox", { name: "Contact" });
     await user.type(search, "anna");
     await user.click(await screen.findByRole("button", { name: "Anna Weber" }));
-    fireEvent.change(screen.getByLabelText("Due"), {
+    fireEvent.change(screen.getByLabelText(/^Due/), {
       target: { value: "2026-08-01" },
     });
     await user.type(search, "ben");

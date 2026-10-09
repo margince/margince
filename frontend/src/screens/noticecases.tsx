@@ -175,7 +175,7 @@ export function NoticeCasesCard() {
         error={excuse.isError ? problemMessageOf(excuse.error, t) : null}
       />
       <SendNoticeModal
-        key={sending?.id ?? "none"}
+        key={`send-${sending?.id ?? "none"}`}
         duty={sending}
         onClose={() => setSending(null)}
         onSent={invalidate}
