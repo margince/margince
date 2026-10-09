@@ -1022,6 +1022,8 @@ migrate <up|down> --dsn <owner-dsn> [--steps n]
 migrate reset-password --dsn <owner-dsn> --email <user-email>
 migrate <recreate-db|drop-db|db-exists> --dsn <owner-maintenance-dsn> --name <db> [--template <db>]
 migrate workspace-exists --dsn <owner-dsn>
+migrate drill-start --dsn <owner-dsn> --by <name> --restored-to <time> [--note <text>]
+migrate drill-finish --dsn <owner-dsn> --drill <id> --outcome <passed|failed> [--note <text>]
 ```
 
 `workspace-exists` prints `true` or `false`: whether this installation already holds a live
@@ -1045,6 +1047,11 @@ longer written. Use `migrate reset-password` to change the password of a user wh
 | `--email` | (none) | (none) | user email (`reset-password` only): the way in for the operator when all else fails. It sets the password of that user right in the database, and reads the new password from **stdin** (never argv). It is the way back in when the admin is locked out and no outbound email is set up. It covers a locked-out admin, and recovery the operator leads. Normal onboarding happens in Settings → Users & roles. There, an installation with no outbound email offers a "Get set-password link" per member, to hand over by another route |
 | `--name` | (none) | (none) | database name (`recreate-db`, `drop-db`, `db-exists` only): the admin step of the integration lane that copies a database per package. Drop if it exists and create, drop if it exists, or print `true`/`false`. The drops are `WITH (FORCE)`, so a session that is still open is ended, and does not make the clean-up fail some of the time. It runs on the same owner DSN the migrations and tests use. So the lane needs no host psql, and a changed `MARGINCE_TEST_DSN` points at one cluster the whole way. A name (or template) over the name limit of the server (63 bytes by default) is refused, never cut short into the name of another database |
 | `--template` | (none) | (none) | template database to copy (`recreate-db` only): `CREATE DATABASE … TEMPLATE`, a fast file copy |
+| `--by` | (none) | (none) | who runs the restore test (`drill-start` only), kept as the `operator` of the `restore_drill` row |
+| `--restored-to` | (none) | (none) | the point in time the backup restores to, as RFC 3339 (`drill-start` only). A time in the future is refused |
+| `--drill` | (none) | (none) | the id `drill-start` printed (`drill-finish` only) |
+| `--outcome` | (none) | (none) | `passed` or `failed` (`drill-finish` only). A test closes once; a second `drill-finish` on it fails |
+| `--note` | (none) | (none) | what the test checked, or why it failed (`drill-start`, `drill-finish`) |
 
 ## What the image entrypoint reads (api and worker)
 

@@ -14122,6 +14122,27 @@ func (e ResolveInputCheckOutcome) Valid() bool {
 	}
 }
 
+// Defines values for RestoreDrillOutcome.
+const (
+	RestoreDrillOutcomeFailed  RestoreDrillOutcome = "failed"
+	RestoreDrillOutcomePassed  RestoreDrillOutcome = "passed"
+	RestoreDrillOutcomeRunning RestoreDrillOutcome = "running"
+)
+
+// Valid indicates whether the value is a known member of the RestoreDrillOutcome enum.
+func (e RestoreDrillOutcome) Valid() bool {
+	switch e {
+	case RestoreDrillOutcomeFailed:
+		return true
+	case RestoreDrillOutcomePassed:
+		return true
+	case RestoreDrillOutcomeRunning:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RestoreLeftBehindKind.
 const (
 	RestoreLeftBehindKindCompanyDomain           RestoreLeftBehindKind = "company_domain"
@@ -40816,6 +40837,20 @@ type RecoveryCodes struct {
 	RecoveryCodes []string `json:"recovery_codes"`
 }
 
+// RecoveryHealth The installation's restore-drill evidence, read against the published recovery
+// targets. Margince does not observe backups; this report carries none.
+type RecoveryHealth struct {
+	// DataLossTargetSeconds The published data-loss target, in seconds.
+	DataLossTargetSeconds int       `json:"data_loss_target_seconds"`
+	GeneratedAt           time.Time `json:"generated_at"`
+
+	// LastDrill The most recent drill, or null when none was ever recorded.
+	LastDrill *RestoreDrill `json:"last_drill"`
+
+	// RecoveryTargetSeconds The published recovery target, in seconds.
+	RecoveryTargetSeconds int `json:"recovery_target_seconds"`
+}
+
 // RefreshAccepted An async refresh was enqueued; proposals will appear in the approvals inbox.
 type RefreshAccepted struct {
 	Status RefreshAcceptedStatus `json:"status"`
@@ -41869,6 +41904,32 @@ type ResponseMetrics struct {
 	// To The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
 	To time.Time `json:"to"`
 }
+
+// RestoreDrill One rehearsal of the restore procedure, as the drill ledger holds it.
+type RestoreDrill struct {
+	// DataLossSeconds Started minus the restore point. The restore point is what the operator gave to drill-start, so this figure is only as true as that input.
+	DataLossSeconds int `json:"data_loss_seconds"`
+
+	// FinishedAt Null while the drill runs, and on a drill nobody closed.
+	FinishedAt *time.Time `json:"finished_at"`
+
+	// Notes What the drill checked, or why it failed.
+	Notes *string `json:"notes"`
+
+	// Operator Who ran the drill, as the operator named themselves on the command line.
+	Operator string              `json:"operator"`
+	Outcome  RestoreDrillOutcome `json:"outcome"`
+
+	// RecoverySeconds Finished minus started. Null until the drill finishes.
+	RecoverySeconds *int `json:"recovery_seconds"`
+
+	// RestoredTo The point in time the backup was restored to.
+	RestoredTo time.Time `json:"restored_to"`
+	StartedAt  time.Time `json:"started_at"`
+}
+
+// RestoreDrillOutcome defines model for RestoreDrill.Outcome.
+type RestoreDrillOutcome string
 
 // RestoreLeftBehind One thing a restore of an archive could not bring back with the record.
 type RestoreLeftBehind struct {
@@ -65774,6 +65835,9 @@ type ServerInterface interface {
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
+	// When the restore procedure was last rehearsed, and what it measured.
+	// (GET /admin/recovery-health)
+	GetRecoveryHealth(w http.ResponseWriter, r *http.Request)
 	// Durably pause every report schedule before rollout rollback.
 	// (POST /admin/reporting/pause)
 	PauseReportingSchedules(w http.ResponseWriter, r *http.Request)
@@ -68264,6 +68328,12 @@ func (_ Unimplemented) GetExtensionIngestHealth(w http.ResponseWriter, r *http.R
 // What the background system is holding, and whose work failed.
 // (GET /admin/job-health)
 func (_ Unimplemented) GetJobHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// When the restore procedure was last rehearsed, and what it measured.
+// (GET /admin/recovery-health)
+func (_ Unimplemented) GetRecoveryHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -74445,6 +74515,26 @@ func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetJobHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRecoveryHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetRecoveryHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecoveryHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -106923,6 +107013,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/recovery-health", wrapper.GetRecoveryHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/reporting/pause", wrapper.PauseReportingSchedules)

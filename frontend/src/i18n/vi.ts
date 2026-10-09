@@ -889,6 +889,7 @@ export const vi = {
   "systemJob.release_version": "Kiểm tra bản phát hành",
   "systemJob.report_schedule": "Báo cáo theo lịch",
   "systemJob.request_settlement": "Hoàn tất yêu cầu",
+  "systemJob.restore_drill": "Bản ghi diễn tập khôi phục",
   "systemJob.risk_verdict": "Kiểm tra rủi ro deal",
   "systemJob.routing_seed": "Thiết lập phân bổ",
   "systemJob.schedule_read": "Đọc lịch",
@@ -5726,6 +5727,36 @@ export const vi = {
   "extIngest.noDetail":
     "Chỉ hiển thị số lượng và bước kiểm tra đã từ chối, không bao giờ hiển thị chính mục đó, vì trường bị từ chối có thể trích dẫn nội dung của bên gửi. Nhật ký trình kết nối có lý do đầy đủ cho từng trường hợp.",
   "extIngest.generatedAt": "Tính đến {time}",
+  "settings.recoveryHealth": "Diễn tập khôi phục",
+  "settings.recoveryHealthSub":
+    "Lần gần nhất diễn tập khôi phục từ bản sao lưu và thời gian thực hiện.",
+  "recoveryHealth.adminOnly":
+    "Diễn tập khôi phục áp dụng cho toàn bộ hệ thống và cần quyền mà vai trò của bạn không có.",
+  "recoveryHealth.lastDrill": "Lần diễn tập khôi phục gần nhất",
+  "recoveryHealth.lastDrillHint":
+    "Thời gian lấy từ chính bản ghi diễn tập. Buổi diễn tập được ghi lại bằng dòng lệnh.",
+  "recoveryHealth.never":
+    "Chưa có buổi diễn tập khôi phục nào được ghi lại. Cho đến khi có, không có gì cho thấy việc khôi phục đạt mục tiêu.",
+  "recoveryHealth.outcome": "Kết quả",
+  "recoveryHealth.outcome.passed": "Đạt",
+  "recoveryHealth.outcome.failed": "Không đạt",
+  "recoveryHealth.outcome.running": "Đang chạy",
+  "recoveryHealth.startedAt": "bắt đầu {when}",
+  "recoveryHealth.recovery": "Thời gian khôi phục",
+  "recoveryHealth.notFinished": "Chưa xong",
+  "recoveryHealth.dataLoss": "Dữ liệu bị mất",
+  "recoveryHealth.restoredTo": "Khôi phục về thời điểm",
+  "recoveryHealth.operator": "Thực hiện bởi",
+  "recoveryHealth.notes": "Ghi chú",
+  "recoveryHealth.window": "{hours} giờ {minutes} phút",
+  "recoveryHealth.windowHours": "{hours} giờ",
+  "recoveryHealth.withinTarget": "trong mục tiêu {target}",
+  "recoveryHealth.overTarget": "vượt mục tiêu {target}",
+  "recoveryHealth.lastBackup": "Bản sao lưu gần nhất",
+  "recoveryHealth.lastBackupHint":
+    "Sao lưu chạy bên ngoài Margince, vì vậy hãy kiểm tra trong công cụ sao lưu của bạn.",
+  "recoveryHealth.backupNotObserved": "Margince không theo dõi",
+  "recoveryHealth.generatedAt": "Đọc lúc {time}",
   "settings.captureHealth": "Kiểm tra thu thập thư",
   "settings.captureHealthSub":
     "Thu thập thư có theo kịp các câu hỏi cần trả lời hay không.",
