@@ -69,7 +69,7 @@ Every release image carries the release it was built from, derived from one buil
 
 | Where | How to read it | Who reads it |
 |---|---|---|
-| OCI label `company.opencontainers.image.version` | `docker inspect` / `crane config`, no pull needed | an operator diffing a set |
+| OCI label `org.opencontainers.image.version` | `docker inspect` / `crane config`, no pull needed | an operator diffing a set |
 | `/etc/margince/release-version` | `docker run --rm <image> cat /etc/margince/release-version`, or `kubectl exec` into a running one | an operator inspecting a role that is running or crash-looping. It is the only place the **web** image's release can be read from the outside, because nginx runs none of our code. It is not what the web tier itself compares against |
 | the Go binary's link-time stamp, and the SPA bundle's compiled-in copy | the guard below. This is the value each role compares; the label and the file are for humans | the software itself |
 

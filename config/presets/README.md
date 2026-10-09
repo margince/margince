@@ -72,8 +72,8 @@ for the reason given above for `openrouter_cloud.yaml`.
 the candidate to that profile. The judge is exempt: it is the lane's own grader, and it gets only the
 corpus and the candidate's answer. So either preset may be certified with the default cloud judge.
 
-The committed Gemma records used a local judge (`JUDGE=ollama:gpt-oss:20b`), so their latency
-includes both models sharing the memory of one Ollama. The Gemma weights are 12b on every tier,
+The committed Gemma records were graded by the default cloud judge: each one names `claude_cli`
+as its `judge_provider`. The Gemma weights are 12b on every tier,
 because that is what a 24GB machine serves wholly on the GPU. The header of the file has the numbers.
 
 On the `routing:` block of the OpenRouter preset, and the measurements behind its defaults:
