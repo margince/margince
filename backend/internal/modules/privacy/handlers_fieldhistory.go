@@ -86,6 +86,7 @@ func fieldHistoryEntryToWire(e FieldHistoryEntry) crmcontracts.FieldHistoryEntry
 		// instead of one that is absent.
 		ActorName:      e.ActorName,
 		OnBehalfOfName: e.OnBehalfOfName,
+		AgentClient:    e.AgentClient,
 	}
 	if e.PassportID != nil {
 		id := openapi_types.UUID(*e.PassportID)
