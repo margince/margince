@@ -363,7 +363,7 @@ function cellBox(row: Element, selector: string) {
   );
 }
 
-// `fold` at a phone's width: the name and the trailing badge and verb share
+// `fold` at a phone's width. The name, the trailing badge and the verb share
 // line one, the rest run under them as a caption, and nothing scrolls sideways.
 // An empty cell (no status, never active) leaves no gap, and a caption cell
 // that wraps starts its line where the caption does.

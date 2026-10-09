@@ -6,8 +6,9 @@ import { Panel } from "../design-system/panel";
 import { RedirectUriGroup, RedirectUris } from "./oauth-redirects";
 import { StoryProviders } from "./story-utils";
 
-// The callback addresses on their own: as a section of a vendor's panel, where
-// the table runs edge to edge, and bare, as the first-run step draws them.
+// The callback addresses on their own, two ways. In a section of a vendor's
+// panel the table runs edge to edge. Bare, they render as the first-run step
+// draws them.
 
 const SUB =
   "Register every URI below on the OAuth client in the Google console.";

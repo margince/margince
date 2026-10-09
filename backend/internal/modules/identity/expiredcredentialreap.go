@@ -69,8 +69,8 @@ func reapDeadCredentials(ctx context.Context, tx pgx.Tx, table string) error {
 }
 
 // keepingLastActivity moves the latest request each member's reaped sessions
-// made onto app_user in the statement that deletes them, so the roster's last
-// activity outlives the rows.
+// made onto app_user, in the statement that deletes them. The roster's last
+// activity then outlives the rows.
 func keepingLastActivity(sessionReap string) string {
 	return `WITH reaped AS (` + sessionReap + ` RETURNING user_id, last_seen_at)
 	UPDATE app_user SET last_active_at = r.last_seen_at

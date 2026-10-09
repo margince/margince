@@ -224,8 +224,8 @@ func TestWireTeam(t *testing.T) {
 	}
 }
 
-// Last-active follows ListUserSessions' reach: a non-admin delegate sees it on a
-// member they outrank and never on an admin, and a request with no human caller
+// Last-active follows ListUserSessions' reach. A non-admin delegate sees it on
+// a member they outrank, never on an admin. A request with no human caller
 // sees it on nobody.
 func TestLastActiveIsWithheldWhereTheCallerCouldNotListTheSessions(t *testing.T) {
 	seen := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)

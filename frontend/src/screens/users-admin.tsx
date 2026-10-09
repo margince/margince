@@ -304,8 +304,8 @@ function MemberActivity({
   );
 }
 
-// Null means never signed in or withheld from this reader (a delegated admin
-// sees none for a member they do not outrank); the cell claims neither.
+// Null means never signed in, or withheld from this reader: a delegated admin
+// sees none for a member they do not outrank. The cell claims neither.
 function LastActive({ at }: Readonly<{ at: string | null | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -336,7 +336,7 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
   const formTitleId = useId();
   const [open, setOpen] = useState(false);
   // With no email channel the invite alone leaves a member who cannot sign in,
-  // so the link is minted at once; the member's menu keeps the verb.
+  // so the link is minted at once. The member's menu keeps the verb.
   const [invited, setInvited] = useState<{ id: string; name: string } | null>(
     null,
   );

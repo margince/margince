@@ -142,9 +142,9 @@ describe("UsersAdminCard", () => {
   });
 
   it("offers on a member only the verbs the server lists for them", async () => {
-    // The reader holds every user_admin verb, and Ada is the only admin: the
-    // server lists nothing on her, so her row draws no menu and her picker is
-    // the same control, refused with the reason beside it.
+    // The reader holds every user_admin verb, and Ada is the only admin. The
+    // server lists nothing on her, so her row draws no menu. Her picker is the
+    // same control, refused with the reason beside it.
     const routed = backend([]);
     vi.stubGlobal(
       "fetch",

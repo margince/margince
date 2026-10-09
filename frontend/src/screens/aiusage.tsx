@@ -221,9 +221,8 @@ function AiUsageBody({
         label={t("aiusage.monthLabel")}
         value={monthAndYear(new Date(`${month.from}T00:00`), locale)}
         control={
-          // The two arrows keep their own names: an icon announces as nothing,
-          // and the row's label says which decision this is, not which way each
-          // button moves it.
+          // The two arrows keep their own names. An icon announces as nothing,
+          // and the row's label names the decision, not which way each moves.
           <>
             <Button
               iconOnly

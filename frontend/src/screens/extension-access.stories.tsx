@@ -12,13 +12,11 @@ import {
 } from "./story-utils";
 
 // The role × CRUD matrix: what each composed unit brought into the installation
-// and which roles may reach it. Until somebody grants one, an enabled unit
-// renders "you do not hold access" for every seat, which is why this surface
-// exists and why its withheld state is worth looking at.
+// and which roles may reach it. Until a grant, an enabled unit tells every seat
+// "you do not hold access", which is why this surface exists.
 //
-// Each registered object is a group in the unit's pane, its matrix standing
-// straight in the pane with the role column pinned; what the unit brought
-// reads last, behind a closed disclosure.
+// Each object is a group in its unit's pane, its matrix with the role column
+// pinned. What the unit brought reads last, behind a closed disclosure.
 const YOGI = {
   name: "yogi",
   version: "0.4.1",
@@ -138,18 +136,18 @@ export const ReadSeat: Story = {
   render: story([YOGI], ["admin"], { ext_yogi_briefing: READ }, "read"),
 };
 
-// The inventory and the matrix in dark, where a step of one token off the
-// pane either survives or collapses: the soft badges, the row hairlines, the
+// The inventory and the matrix in dark, where a one-token step off the pane
+// survives or collapses. That covers the soft badges, the row hairlines, the
 // pinned column's opaque ground and the off and on switch tracks.
 export const UnitsWithGrantsDark: Story = {
   globals: { theme: "dark" },
   render: story([YOGI, DE], ["admin"], { ext_yogi_briefing: READ }),
 };
 
-// The matrix at 390px: a role column plus four CRUD columns, wider than the
-// phone, so it scrolls inside its `TableScroll` while the card keeps its width.
-// The link to the unit's own page renders from the SPA's generated screen
-// registry, which is empty in every story, so no story can show it truncate.
+// At 390px a role column plus four CRUD columns is wider than the phone. The
+// matrix scrolls inside its `TableScroll` while the card keeps its width.
+// The unit's page link renders from the SPA's generated screen registry. That
+// registry is empty in every story, so no story can show the link truncate.
 export const UnitsWithGrantsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

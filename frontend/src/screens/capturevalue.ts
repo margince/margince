@@ -4,8 +4,8 @@
 import type { MessageKey } from "../i18n/en";
 import { problemFieldErrorsOf, problemMessageOf } from "./common";
 
-// The capture stores vet an address or a domain with one shared parser, and its
-// refusal is written for a developer, in English; the reader gets the catalog's.
+// The capture stores vet an address or a domain with one shared parser. Its
+// refusal is English written for a developer, so the reader gets the catalog's.
 const VALUE_REFUSAL_CODES: ReadonlySet<string> = new Set([
   "invalid_exclusion",
   "invalid_domain",

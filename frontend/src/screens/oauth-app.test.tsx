@@ -154,8 +154,8 @@ describe("the Google app card", () => {
     expect(screen.getByText(CONNECT_URI)).toBeTruthy();
   });
 
-  // A row per address: its purpose, the address whole in its title however the
-  // cell cuts it, and a copy verb that names which address it copies.
+  // A row per address: its purpose, the address and a copy verb naming it. The
+  // address cell's title keeps it whole however the cell cuts it.
   it("tabulates each address under its purpose, beside its copy verb", async () => {
     mount(stored());
     const address = await screen.findByText(SIGN_IN_URI);

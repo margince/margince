@@ -237,8 +237,8 @@ describe("RolesSettings", () => {
     expect(within(rep).getByText("0 members")).toBeTruthy();
   });
 
-  // The roster carries role keys only for a reader the member grant admits, so
-  // anyone else is never asked for it and sees no count rather than zero.
+  // The roster carries role keys only for a reader the member grant admits.
+  // Anyone else is never asked for it and sees no count rather than zero.
   it("leaves the count out for a reader who may not read the member roster", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<RolesSettings />);

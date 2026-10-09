@@ -902,8 +902,8 @@ export function CountLine({
     count: formatNumber(total, locale),
     unit,
   };
-  // An empty list says why in its body (none yet, none matching, a failed
-  // read), so a zero here would only repeat that sentence or contradict it.
+  // An empty list says why in its body: none yet, none matching, a failed read.
+  // A zero here would only repeat that sentence or contradict it.
   const counted =
     total === 0
       ? ""

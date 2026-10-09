@@ -61,8 +61,8 @@ export function TeamMembersModal({
   const qc = useQueryClient();
   const titleId = useId();
   const list = useRef<HTMLUListElement | null>(null);
-  // Where focus goes once the list changes under it: the row now at a removed
-  // row's place, or the title (-1) when the control it was on is gone.
+  // Where focus goes once the list changes under it: the row now in a removed
+  // row's place. It is the title (-1) when the control it was on is gone.
   const refocusAt = useRef<number | null>(null);
   const [draft, setDraft] = useState("");
   const setMember = useMutation({

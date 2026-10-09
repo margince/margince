@@ -361,8 +361,8 @@ export function objectLabel(unit: string, object: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-// Built-in and custom roles told apart only where both kinds stand in the grid,
-// and only on the fewer of the two, so the mark says what differs.
+// Built-in and custom roles are told apart only where both kinds stand in the
+// grid. The mark goes on the fewer of the two, so it says what differs.
 function roleBadges(
   roles: readonly ExtensionRole[],
   t: ReturnType<typeof useT>,
