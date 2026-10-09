@@ -21,12 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -118,19 +120,13 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	}); err != nil {
 		return PurgeOutcome{}, err
 	}
-	// Seat-scoped, and deliberately not run for a workspace rule.
-	// SelectPurgeableContactsTx answers "which contacts did THIS seat's capture
-	// mint, that nothing else holds" — a question with no workspace-wide
-	// analogue, because a contact every seat can see is by definition held by
-	// more than the mail one rule matched. Anonymising workspace-wide is the
-	// erasure lane's job and takes a subject request, not an exclusion rule.
-	var contacts []ids.UUID
+	// Seat-scoped, and not run for a workspace rule: a contact every seat can
+	// see is held by more than the mail one rule matched.
+	// Anonymising workspace-wide is the erasure lane's job and takes a subject
+	// request, not an exclusion rule.
+	var minted []ids.UUID
 	if !workspaceScoped {
-		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-			var err error
-			contacts, err = capture.SelectPurgeableContactsTx(ctx, tx, actor.UserID, rule.Kind, rule.Value)
-			return err
-		}); err != nil {
+		if minted, err = p.purgeableContacts(ctx, actor.UserID, rule); err != nil {
 			return PurgeOutcome{}, err
 		}
 	}
@@ -138,13 +134,13 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		Destroyed:  len(subject.SoleImports),
 		Released:   len(subject.SharedImports),
 		Skipped:    len(subject.Restricted),
-		Anonymised: len(contacts),
+		Anonymised: len(minted),
 		Preview:    preview,
 		Kept:       keptBreakdown(subject),
 	}
 	// After the selection, because the contact grant depends on whether it found
 	// contacts to anonymise.
-	if err := p.retention.CheckPurgeAuthority(ctx, len(contacts) > 0); err != nil {
+	if err := p.retention.CheckPurgeAuthority(ctx, len(minted) > 0); err != nil {
 		return PurgeOutcome{}, err
 	}
 	if preview {
@@ -154,9 +150,11 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if workspaceScoped {
 		reason = privacy.PurgeWorkspaceRule
 	}
-	if err := p.carryOut(ctx, subject, contacts, actor.UserID, reason); err != nil {
+	anonymised, err := p.carryOut(ctx, subject, minted, p.stillPurgeable(actor.UserID, rule), actor.UserID, reason)
+	if err != nil {
 		return PurgeOutcome{}, err
 	}
+	outcome.Anonymised = anonymised // the recheck inside the cascade can skip some
 	// AFTER the cascade, deliberately. Written first it would certify a plan
 	// rather than an act: carryOut commits per item, so a run that failed
 	// halfway would leave a receipt claiming everything went. Written here it
@@ -175,6 +173,36 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	return outcome, nil
 }
 
+// purgeableContacts is what a seat's rule purge anonymises. Only this seat's
+// mail explains them, capture made them for this seat, and nobody worked on
+// them since. A contact somebody typed in is not this mailbox's to erase.
+func (p *CapturePurger) purgeableContacts(ctx context.Context, seat ids.UUID, rule capture.Exclusion) ([]ids.UUID, error) {
+	var minted []ids.UUID
+	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		var err error
+		minted, err = purgeableContactsTx(ctx, tx, seat, rule)
+		return err
+	})
+	return minted, err
+}
+
+func purgeableContactsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, rule capture.Exclusion) ([]ids.UUID, error) {
+	mailboxOnly, err := capture.SelectPurgeableContactsTx(ctx, tx, seat, rule.Kind, rule.Value, statutoryFloor())
+	if err != nil {
+		return nil, err
+	}
+	return contacts.CaptureMintedForSeatTx(ctx, tx, seat, mailboxOnly)
+}
+
+// stillPurgeable asks the same question again for one contact, inside the
+// transaction that anonymises it.
+func (p *CapturePurger) stillPurgeable(seat ids.UUID, rule capture.Exclusion) privacy.ContactStillPurgeable {
+	return func(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
+		minted, err := purgeableContactsTx(ctx, tx, seat, rule)
+		return slices.Contains(minted, id), err
+	}
+}
+
 // carryOut performs what a selected purge decided, in the one order that is
 // survivable, and is the ONLY place that order is written.
 //
@@ -190,9 +218,10 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 // paths, so a third path written three packages away is refused the day it is
 // written — which is the only day the claim matters.
 func (p *CapturePurger) carryOut(
-	ctx context.Context, subject capture.PurgeSubject, contacts []ids.UUID,
+	ctx context.Context, subject capture.PurgeSubject,
+	minted []ids.UUID, stillPurgeable privacy.ContactStillPurgeable,
 	seat ids.UUID, reason privacy.PurgeReason,
-) error {
+) (int, error) {
 	// The CONTACTS first, while their mail still exists to identify them by.
 	// SelectPurgeableContactsTx matches a contact through the activities this seat
 	// imported, so destroying the mail first would leave nothing to select them
@@ -204,9 +233,11 @@ func (p *CapturePurger) carryOut(
 	// its argument, and the personal sweep runs under a system principal that
 	// passes that check by BYPASSING it. A caller with no contacts to anonymise
 	// should not be asking for the grant at all.
-	if len(contacts) > 0 {
-		if _, err := p.retention.AnonymiseContacts(ctx, contacts, reason); err != nil {
-			return err
+	anonymised := 0
+	if len(minted) > 0 {
+		var err error
+		if anonymised, err = p.retention.AnonymiseContacts(ctx, minted, reason, stillPurgeable); err != nil {
+			return anonymised, err
 		}
 	}
 	// Destruction FIRST, release second. A crash between them leaves messages
@@ -214,7 +245,7 @@ func (p *CapturePurger) carryOut(
 	// finishes; the other order would release a claim and then fail to destroy,
 	// leaving mail the owner believes is gone with nobody's name on it.
 	if _, err := p.retention.PurgeActivities(ctx, subject.SoleImports, reason); err != nil {
-		return err
+		return anonymised, err
 	}
 	// Every claim on a DESTROYED message goes with it. PurgeActivities empties
 	// the activity and leaves capture_import and activity_participant pointing
@@ -228,7 +259,7 @@ func (p *CapturePurger) carryOut(
 			if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 				return capture.ReleaseEveryImportTx(ctx, tx, id)
 			}); err != nil {
-				return err
+				return anonymised, err
 			}
 		}
 	}
@@ -259,10 +290,10 @@ func (p *CapturePurger) carryOut(
 			// reason has just left.
 			return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](id))
 		}); err != nil {
-			return err
+			return anonymised, err
 		}
 	}
-	return nil
+	return anonymised, nil
 }
 
 // personalSweepBatch bounds one pass, matching noiseSweepBatch: the backlog is a
@@ -311,7 +342,7 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 		// and passing a selector that looked for one would either find a contact
 		// somebody made for another reason or find nothing while implying it had
 		// looked.
-		if err := p.carryOut(ctx, subject, nil, seat, privacy.PurgePersonalVerdict); err != nil {
+		if _, err := p.carryOut(ctx, subject, nil, nil, seat, privacy.PurgePersonalVerdict); err != nil {
 			return destroyed, fmt.Errorf("verdict: destroying personal mail: %w", err)
 		}
 		destroyed += len(subject.SoleImports)
@@ -460,7 +491,7 @@ func (p *CapturePurger) PurgeRemoved(ctx context.Context, seat ids.UUID, sourceS
 	// counterparty for no other reason — the owner's exclusion rule is where
 	// that question belongs, because a rule speaks about a correspondent and a
 	// deletion speaks about a single mail.
-	if err := p.carryOut(ctx, subject, nil, seat, privacy.PurgeMailboxDeletion); err != nil {
+	if _, err := p.carryOut(ctx, subject, nil, nil, seat, privacy.PurgeMailboxDeletion); err != nil {
 		return fmt.Errorf("capture: destroying a message the owner deleted at the provider: %w", err)
 	}
 	return nil
