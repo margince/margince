@@ -42,17 +42,17 @@ type scoutTally struct {
 // scoutWorker runs one scout's pass in every workspace. Each scout's own
 // worker type embeds it and names its job args.
 type scoutWorker struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
-	log  *slog.Logger
-	// actor is the scout's system principal, so every suggestion reads as the
-	// scout's claim rather than a colleague's.
-	actor, logLine string
-	run            func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error)
+	pool    *pgxpool.Pool
+	now     func() time.Time
+	log     *slog.Logger
+	logLine string
+	run     func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error)
 }
 
-func (w *scoutWorker) scoutWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), w.actor)
+// scoutWorkspace runs w's pass as actor, the scout's own system principal, so
+// every suggestion reads as the scout's claim rather than a colleague's.
+func scoutWorkspace(ctx context.Context, w *scoutWorker, actor string, workspace ids.UUID) error {
+	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), actor)
 	var pass scoutTally
 	if err := database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 		var err error
@@ -71,14 +71,16 @@ func (w *scoutWorker) scoutWorkspace(ctx context.Context, workspace ids.UUID) er
 type dealScoutWorker struct{ scoutWorker }
 
 func (w *dealScoutWorker) Work(ctx context.Context, _ *river.Job[DealScoutArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scoutWorkspace))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+		return scoutWorkspace(ctx, &w.scoutWorker, "agent:deal-scout", workspace)
+	}))
 }
 
 // addDealScoutJobs registers the pass and hands back its schedule, whose
 // cadence is api/jobs.yaml's.
 func addDealScoutJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	addDeclaredWorker[DealScoutArgs](reg, &dealScoutWorker{scoutWorker{
-		pool: pool, now: time.Now, log: log, actor: "agent:deal-scout", logLine: "deal scout pass",
+		pool: pool, now: time.Now, log: log, logLine: "deal scout pass",
 		run: func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error) {
 			pass, err := RunDealScout(ctx, tx, now)
 			return scoutTally(pass), err

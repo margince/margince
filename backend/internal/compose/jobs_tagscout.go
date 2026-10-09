@@ -13,6 +13,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // TagScoutArgs runs one fleet-wide tag scout pass.
@@ -28,14 +29,16 @@ func (TagScoutArgs) FleetWide() {}
 type tagScoutWorker struct{ scoutWorker }
 
 func (w *tagScoutWorker) Work(ctx context.Context, _ *river.Job[TagScoutArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scoutWorkspace))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+		return scoutWorkspace(ctx, &w.scoutWorker, "agent:tag-scout", workspace)
+	}))
 }
 
 // addTagScoutJobs registers the pass and hands back its schedule, whose
 // cadence is api/jobs.yaml's.
 func addTagScoutJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	addDeclaredWorker[TagScoutArgs](reg, &tagScoutWorker{scoutWorker{
-		pool: pool, now: time.Now, log: log, actor: "agent:tag-scout", logLine: "tag scout pass",
+		pool: pool, now: time.Now, log: log, logLine: "tag scout pass",
 		run: func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error) {
 			pass, err := RunTagScout(ctx, tx, now)
 			return scoutTally(pass), err
