@@ -460,7 +460,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "coverage.risk.coverage_gap",
     "deal.ownerKeep",
     "deal360.buyer",
-    "deals.filterOwnerAll",
     "deals.totalsOwnerNotMeasurable",
     "email.detail.bccWithheld",
     "extAccess.versionSkew",

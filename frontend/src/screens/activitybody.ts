@@ -60,6 +60,14 @@ export function occurredInstant(
   return middayInstant(input.day, recordZone);
 }
 
+// The body as it goes on the wire, for every form that writes one. Empty is
+// null. A transcript is sent untrimmed, because the server's normalizer
+// (transcriptnorm.go) numbers its lines. A leading blank line stripped here
+// would shift the line numbers a citation points at.
+export function outgoingBody(body: string, transcript: boolean): string | null {
+  return (transcript ? body : body.trim()) || null;
+}
+
 // The wire body one drafted entry becomes.
 export function activityRequestBody(
   input: ActivityDraft,
@@ -78,18 +86,10 @@ export function activityRequestBody(
   // alone, or ordinary meeting notes would carry a marker meaning
   // something else and sweep on a different retention schedule.
   const isTranscript = input.kind === "meeting" && input.asTranscript;
-  // A transcript is sent RAW, not trimmed: the server's normalizer
-  // (transcriptnorm.go) is the one place line-1-indexing gets decided,
-  // and it only trims trailing whitespace per line — a leading blank
-  // line or leading indentation the client stripped first would make a
-  // transcript pasted here normalize to different stored text (and
-  // different line numbers) than the identical paste sent by an agent
-  // or another client straight to the API.
-  const outgoingBody = isTranscript ? input.body : input.body.trim();
   return {
     kind: input.kind,
     subject: input.subject.trim(),
-    body: outgoingBody || null,
+    body: outgoingBody(input.body, isTranscript),
     occurred_at: occurredInstant(input, recordZone),
     // A due date becomes the instant that day ENDS on the RECORD's clock
     // (format/calendarday), which is the same zone the worklist buckets

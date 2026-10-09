@@ -1680,6 +1680,9 @@ export const en = {
   "list.filterOwnerMe": "Owned by you",
   "list.filterOwnerAll": "Any owner",
   "list.filterOwnerUnassigned": "Unassigned",
+  "list.team": "Team",
+  "list.filterTeamAll": "Any team",
+  "list.teamUnavailable": "Unavailable team",
   "views.save": "Save view",
   "views.saveConfirm": "Save",
   "views.saveTitle": "Save this view",
@@ -3621,7 +3624,6 @@ export const en = {
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
-  "deals.filterOwnerMe": "My deals",
   // Both reasons say "loaded only" rather than naming the sum alone: with no
   // server aggregate the column's figure is the cards LOADED, and the board
   // pages on demand, so that number grows as the reader presses Load more.
@@ -3632,6 +3634,8 @@ export const en = {
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":
     "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
+  "deals.totalsNoTeamFilter":
+    "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterMotion": "Motion",
@@ -3646,7 +3650,6 @@ export const en = {
   "deals.filterStageAll": "All stages",
   "deals.filterCompanyAll": "All companies",
   "deals.filterStalledAll": "All deals",
-  "deals.filterOwnerAll": "All owners",
   "deals.filterPartnerAll": "All sources",
   "deals.unit": "deals",
   "deals.bulkStage": "Move to stage",
@@ -10666,6 +10669,7 @@ export const en = {
   "contact.rail.channelNotDeliverable": "Not deliverable",
   "contact.drawer.close": "Close",
   "richtext.bold": "Bold",
+  "richtext.heading": "Heading",
   "richtext.italic": "Italic",
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",

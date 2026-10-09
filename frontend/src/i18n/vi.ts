@@ -1610,6 +1610,9 @@ export const vi = {
   "list.filterOwnerMe": "Bạn phụ trách",
   "list.filterOwnerAll": "Bất kỳ ai phụ trách",
   "list.filterOwnerUnassigned": "Chưa giao",
+  "list.team": "Nhóm",
+  "list.filterTeamAll": "Mọi nhóm",
+  "list.teamUnavailable": "Nhóm không khả dụng",
   "views.save": "Lưu chế độ xem",
   "views.saveConfirm": "Lưu",
   "views.saveTitle": "Lưu chế độ xem này",
@@ -3502,13 +3505,14 @@ export const vi = {
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
-  "deals.filterOwnerMe": "Deal của tôi",
   "deals.totalsOwnerNotMeasurable":
     "Chỉ hiển thị deal đã tải. Tổng của người phụ trách này nằm ngoài phạm vi số liệu bạn được xem.",
   "deals.totalsNoTagFilter":
     "Chỉ hiển thị deal đã tải. Không hiển thị tổng khi đang dùng bộ lọc thẻ.",
   "deals.totalsNoSearch":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể áp dụng tìm kiếm nên không hiển thị.",
+  "deals.totalsNoTeamFilter":
+    "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo nhóm hay theo deal chưa giao nên không hiển thị.",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
   "deals.filterMotion": "Hình thức bán hàng",
@@ -3523,7 +3527,6 @@ export const vi = {
   "deals.filterStageAll": "Mọi giai đoạn",
   "deals.filterCompanyAll": "Mọi công ty",
   "deals.filterStalledAll": "Mọi deal",
-  "deals.filterOwnerAll": "Mọi người phụ trách",
   "deals.filterPartnerAll": "Mọi nguồn",
   "deals.unit": "deal",
   "deals.bulkStage": "Chuyển sang giai đoạn",
@@ -10308,6 +10311,7 @@ export const vi = {
   "contact.rail.channelNotDeliverable": "Không thể gửi đến",
   "contact.drawer.close": "Đóng",
   "richtext.bold": "Đậm",
+  "richtext.heading": "Tiêu đề",
   "richtext.italic": "Nghiêng",
   "richtext.bulletList": "Danh sách dấu đầu dòng",
   "richtext.numberList": "Danh sách đánh số",

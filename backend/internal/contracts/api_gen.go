@@ -22225,7 +22225,7 @@ type AiCall struct {
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
 	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
@@ -22375,7 +22375,7 @@ type AiCallSummary struct {
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
 	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
@@ -22555,7 +22555,7 @@ type AiFieldError struct {
 
 // AiFlowStep defines model for AiFlowStep.
 type AiFlowStep struct {
-	// Answered Logical calls this step answered.
+	// Answered Logical calls this step answered and served to the caller.
 	Answered int64 `json:"answered"`
 	Attempts int64 `json:"attempts"`
 	Decision bool  `json:"decision"`
@@ -23118,7 +23118,7 @@ type AiRungHealth struct {
 	// rebound to another model drops the attempts of the one before it.
 	Calls int `json:"calls"`
 
-	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached.
+	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`), the provider's refusal of a malformed request (`request_rejected`), and the model outcomes `output_withheld` and `output_rejected` are not failures.
 	Failures int `json:"failures"`
 
 	// Healthy The tier's latest attempt in the window answered. The latest, not a ratio: a tier
@@ -23164,7 +23164,7 @@ type AiTaskFlow struct {
 	// Total Logical calls in the window, cache hits excluded.
 	Total int64 `json:"total"`
 
-	// Unanswered Logical calls whose last attempt failed.
+	// Unanswered Logical calls whose last attempt served the caller nothing: it failed, or its answer was withheld or refused.
 	Unanswered int64  `json:"unanswered"`
 	Window     string `json:"window"`
 }
@@ -50955,9 +50955,21 @@ type ListDealsParams struct {
 	PipelineId      *openapi_types.UUID `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
 
 	// StageId Read one Kanban column.
-	StageId   *openapi_types.UUID `form:"stage_id,omitempty" json:"stage_id,omitempty"`
-	OwnerId   *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
-	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+	StageId *openapi_types.UUID `form:"stage_id,omitempty" json:"stage_id,omitempty"`
+	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+
+	// OwnerTeamId Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+	// a team the caller cannot see returns their own visible rows filtered to nothing, not a
+	// wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+	// and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+	// (DM-VOCAB-OWN-1).
+	OwnerTeamId *openapi_types.UUID `form:"owner_team_id,omitempty" json:"owner_team_id,omitempty"`
+
+	// Unassigned `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+	// (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+	Unassigned *bool               `form:"unassigned,omitempty" json:"unassigned,omitempty"`
+	CompanyId  *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
 
 	// Q Full-text query over the deal's name and description, plus a substring match on the name.
 	Q      *string                `form:"q,omitempty" json:"q,omitempty"`
@@ -52410,6 +52422,18 @@ type ListProjectsParams struct {
 	// CompanyId The anchor company. A project has exactly one.
 	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
 	OwnerId   *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+
+	// OwnerTeamId Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+	// a team the caller cannot see returns their own visible rows filtered to nothing, not a
+	// wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+	// and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+	// (DM-VOCAB-OWN-1).
+	OwnerTeamId *openapi_types.UUID `form:"owner_team_id,omitempty" json:"owner_team_id,omitempty"`
+
+	// Unassigned `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+	// (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
 	// Phase Omit for all phases; `phase != closed` is the open-projects slice the link ladder probes.
 	Phase *ListProjectsParamsPhase `form:"phase,omitempty" json:"phase,omitempty"`
@@ -89208,6 +89232,32 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "owner_team_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_team_id", r.URL.Query(), &params.OwnerTeamId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_team_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_team_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "unassigned" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "unassigned", r.URL.Query(), &params.Unassigned, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "unassigned"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unassigned", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "company_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -97487,6 +97537,32 @@ func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "owner_team_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_team_id", r.URL.Query(), &params.OwnerTeamId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_team_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_team_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "unassigned" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "unassigned", r.URL.Query(), &params.Unassigned, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "unassigned"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unassigned", Err: err})
 		}
 		return
 	}

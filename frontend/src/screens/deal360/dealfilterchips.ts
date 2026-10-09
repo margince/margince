@@ -2,25 +2,25 @@ import {
   type AcquisitionSource,
   acquisitionFilterOptions,
 } from "../acquisitionsources.queries";
-import type { useMe } from "../common";
 import type { FilterSpec } from "../listquery";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
 
 // The surface's own narrowing chips, beside the stage and company ones
 // dealFilterChips builds.
 //
-// A function because two of the four are CONDITIONAL, and the condition is
-// the interesting part of each: a chip offered before its options are known
-// reads as "clear this filter" to the table, and a chip withdrawn while its
-// filter is applied leaves the list narrowed with no dial to clear it.
+// The owner and team dials are shared by every owner-scoped list, in
+// ownerdials.ts.
+//
+// A function because two of these are conditional. A chip offered before its
+// options are known reads as "clear this filter" to the table. A chip
+// withdrawn while its filter is applied leaves the list narrowed with no dial
+// to clear it.
 export function dealSurfaceChips({
-  me,
   partnerOptions,
   partnerApplied,
   acquisitionSources,
   retiredSuffix,
 }: Readonly<{
-  me?: ReturnType<typeof useMe>["data"];
   partnerOptions: { value: string; label: string }[];
   partnerApplied?: string;
   acquisitionSources?: AcquisitionSource[];
@@ -35,24 +35,6 @@ export function dealSurfaceChips({
       allLabel: "deals.filterStalledAll",
       options: [{ value: "true", label: "deals.filterStalled" }],
     },
-    // Offered only once the viewer's own id is known. An option whose
-    // value is still "" reads as "clear this filter" to the table, so
-    // picking "Only mine" mid-load would quietly narrow nothing.
-    ...(me
-      ? [
-          {
-            key: "owner_id",
-            label: "deals.filterOwnerMe" as const,
-            allLabel: "deals.filterOwnerAll" as const,
-            options: [
-              {
-                value: me.user.id,
-                label: "deals.filterOwnerMe" as const,
-              },
-            ],
-          },
-        ]
-      : []),
     {
       key: "partner_sourced",
       label: "deals.filterPartnerSourced",
@@ -64,7 +46,7 @@ export function dealSurfaceChips({
     // close date, so there is no column to filter on and a chip offering it
     // would narrow to nothing.
     //
-    // Unconditional, unlike the two above: the vocabulary is the schema's, so
+    // Unconditional: the vocabulary is the schema's, so
     // there is no moment when the options are not yet known.
     {
       key: "forecast_category",
@@ -95,8 +77,7 @@ export function dealSurfaceChips({
         label: o.label,
       })),
     },
-    // The administered channels, offered only once the catalog is loaded —
-    // the same rule the owner chip follows, and for the same reason: an
+    // The administered channels, offered only once the catalog is loaded: an
     // option whose value is still "" reads as "clear this filter".
     //
     // RETIRED entries are offered here though the form refuses them. Deals

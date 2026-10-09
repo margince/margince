@@ -43,7 +43,7 @@ const (
 	counterpartyTargetType = "activity"
 	// counterpartyExecutorActor is the principal the accept executes as, in the
 	// contract's declared grammar for captured_by.
-	counterpartyExecutorActor = "agent:" + counterpartyProposalKind
+	counterpartyExecutorActor = contacts.CaptureAcceptActor
 )
 
 // stageCounterpartyReview offers one unresolvable sender to a human. Returns the

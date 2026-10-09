@@ -396,9 +396,9 @@ type ListLeadsInput struct {
 	Cursor *string
 	Limit  *int
 	Status *string
-	// OwnerID, OwnerTeamID and Unassigned are the ONE ownership dial every
-	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through the shared
-	// listFilters.ownershipClause exactly as contact and company bind it.
+	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
+	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through
+	// storekit.OwnershipClause as contact and company bind them.
 	OwnerID         *ids.UserID
 	OwnerTeamID     *ids.TeamID
 	Unassigned      *bool
