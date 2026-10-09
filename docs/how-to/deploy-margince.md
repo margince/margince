@@ -220,8 +220,7 @@ On a cold database the worker may restart a few times until the api has migrated
 Say a worker keeps restarting *after* the api is serving, with a release mismatch in its log. That is
 a torn pull, not a slow start.
 
-Do not leave api replicas from two releases running. The recorded release is last writer wins, so an
-old replica that restarts puts the record back, and every new worker then refuses to start
+Do not leave api replicas from two releases running. The recorded release is last writer wins. So an old replica that restarts puts the record back, and every new worker then refuses to start
 ([why](../explanation/self-hosting.md#every-role-runs-at-one-release)). If that happened, restart the
 api at the intended release to restore the record.
 

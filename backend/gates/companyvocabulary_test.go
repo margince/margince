@@ -85,6 +85,11 @@ var notThisRecordType = regexp.MustCompile(
 // never `_` and never a longer label — `opts.orgs.map` is a field and a call,
 // not a domain. The word predicate no longer treats a preceding dot as a
 // boundary it can ignore.
+// standardKey is a reverse-DNS key a third-party standard owns: the OCI image
+// annotations under `org.opencontainers.`. Renaming one breaks every tool that
+// reads it, which the record-type rename once did to the image version label.
+var standardKey = regexp.MustCompile(`org\.opencontainers\.`)
+
 var hostname = regexp.MustCompile(
 	"(?:^|[\\s\"'`(<,=|/@\\[])(?:[a-z0-9][a-z0-9.\\\\-]*)?\\\\?\\.orgs?(?:\\.[a-z]{2}(?:[^A-Za-z0-9_]|$)|\\.(?:\\s|$)|[^A-Za-z0-9_.]|$)")
 
@@ -241,6 +246,7 @@ func TestTheWordIsSeenAfterADot(t *testing.T) {
 		`	return sprintf("SELECT DISTINCT l.activity_id, o.org_id AS company_id")`,
 		`  "contact.enriched.field.org_name": "Company",`,
 		`  const options = opts.orgs.map((company) => ({`,
+		`    "org.name" = VERSION`,
 	} {
 		if !namesTheOtherWord(line) {
 			t.Errorf("the census reads past the old word in:\n\t%s", line)
@@ -258,6 +264,7 @@ func TestTheWordIsSeenAfterADot(t *testing.T) {
 		`// endpoint could produce the state. Every reorganisation of a sales process`,
 		`// client and this suite would reach api.telegram.org.`,
 		`mail.org.uk`,
+		`    "org.opencontainers.image.version" = VERSION`,
 		`2ch.orgs.hk`,
 	} {
 		if namesTheOtherWord(host) {
@@ -335,6 +342,7 @@ func namesTheOtherWord(line string) bool {
 	if !strings.Contains(strings.ToLower(line), "org") {
 		return false
 	}
+	line = standardKey.ReplaceAllString(line, "")
 	line = hostname.ReplaceAllString(line, "")
 	line = notThisRecordType.ReplaceAllString(line, "")
 	return theOtherWord.MatchString(line)

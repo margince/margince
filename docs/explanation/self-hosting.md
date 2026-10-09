@@ -131,8 +131,7 @@ The guard compares for equality and never for order, so any stable per-build ide
 and `dev` are both what a build says when it does not know, and the roles read them as "make no
 comparison". `docker-bake.hcl` declares the argument once on the shared `role` target rather than per
 role. Three declarations are three chances for the roles not to match. The release workflow checks the
-stamp itself (`scripts/release-version-stamped.sh`), so the path that must always stamp proves it
-rather than relying on the bake file staying correct.
+stamp itself (`scripts/release-version-stamped.sh`). So the path that must always stamp proves it, instead of trusting the bake file to stay correct.
 
 ## MCP App views read at boot
 
