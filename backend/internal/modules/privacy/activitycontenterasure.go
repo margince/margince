@@ -117,7 +117,10 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := redactApprovalsCitingActivities(ctx, tx, []ids.UUID{id}, act.approvalWithdrawal); err != nil {
 		return err
 	}
-	if err := e.eraseAttachments(ctx, tx, act.attachmentReason, act.cause, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
+	if err := redactEvidenceQuoting(ctx, tx, []ids.UUID{id}, act.collateralReason, act.cause); err != nil {
+		return err
+	}
+	if err := e.eraseAttachments(ctx, tx, act.collateralReason, act.cause, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
 		return err
 	}
 	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject, e.payloads)
@@ -126,6 +129,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 // erasureAct is what one arm records on everything it destroys collaterally:
 // the reason a pending proposal was withdrawn, the reason an attachment was
 // destroyed, and the cause stamped on the audit evidence.
+// The attachment's reason also goes on each stage-evidence quotation it clears.
 //
 // The two acts are declared here rather than passed as three loose strings so
 // that a third arm has to say which of them it is, and so that a reader
@@ -136,7 +140,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 // the reason it went, and a reader of a mailbox is owed the first.
 type erasureAct struct {
 	approvalWithdrawal string
-	attachmentReason   string
+	collateralReason   string
 	cause              string
 }
 
@@ -145,7 +149,7 @@ var (
 	// expiring. Both are the same act by the same actor: time.
 	theClockRanOut = erasureAct{
 		approvalWithdrawal: AgedOutSourceWithdrawal,
-		attachmentReason:   "retention: the record's content was erased",
+		collateralReason:   "retention: the record's content was erased",
 		cause:              causeRetention,
 	}
 	// aControllerDecided is a restriction released by hand. It completes the
@@ -154,7 +158,7 @@ var (
 	// because the collateral rows and the decision row describe one act.
 	aControllerDecided = erasureAct{
 		approvalWithdrawal: ReleasedSourceWithdrawal,
-		attachmentReason:   "controller release: the record's content was erased",
+		collateralReason:   "controller release: the record's content was erased",
 		cause:              causeControllerRelease,
 	}
 )

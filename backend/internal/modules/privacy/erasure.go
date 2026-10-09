@@ -162,7 +162,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		// this first would take that row out of `pending` under it, so the
 		// withdrawal would stop reaching the run and it would wait forever
 		// holding the payload this cascade exists to destroy.
-		if err := redactApprovalsCitingActivities(ctx, tx, append(activitiesRedacted, activitiesHeld...), ErasedSourceWithdrawal); err != nil {
+		if err := redactQuotationsOf(ctx, tx, append(activitiesRedacted, activitiesHeld...), reason); err != nil {
 			return err
 		}
 		// What the subject's name is left standing in inside somebody else's

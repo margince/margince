@@ -72,5 +72,16 @@ func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 			// array where the selectors want the contact.
 			[]any{contactID, emails},
 		},
+		// What a deal's stage ledger read out of the subject's messages. The
+		// criterion is named by its label, because a bare id tells the subject
+		// nothing about what the claim was for. A refuted claim travels too: a
+		// conclusion withdrawn later was still held about them.
+		{&pkg.StageEvidence, `SELECT ev.snippet, ev.commitment, ev.met, ev.confidence,
+		          ev.author_side, ev.extracted_by, ev.observed_at, ev.refuted_at,
+		          ev.source_id AS activity_id, c.label AS criterion
+		   FROM deal_stage_evidence ev
+		   JOIN stage_exit_criterion c ON c.id = ev.criterion_id
+		   WHERE ev.source_type = 'activity' AND ev.source_id IN (
+		         SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`, nil},
 	}
 }

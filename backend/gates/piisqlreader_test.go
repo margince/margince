@@ -161,6 +161,9 @@ var erasureCascadeFiles = []string{
 	// here so conversation_claim cannot look uncovered the moment its purge
 	// moves file.
 	"internal/modules/privacy/erasure_claims.go",
+	// The quotations a deal's stage evidence holds of the messages emptied
+	// above. Same transaction, its own file for the same both-engines reason.
+	"internal/modules/privacy/erasure_stageevidence.go",
 	"internal/modules/privacy/deliveries.go",
 	// The subject's RESTRICTION record and the deal-room seats their address
 	// holds. Both are executed by EraseContact's own transaction and both write

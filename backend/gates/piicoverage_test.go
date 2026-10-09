@@ -293,6 +293,13 @@ var piiTables = map[string]piiHandling{
 	// over this table passes this gate silently, which is the cost of leaving
 	// it open and is named here so the next reader is not surprised by it.
 	"conversation_claim": {erasureWrite: true},
+	// A stage-evidence snippet quotes the message a claim about a deal was read
+	// from, so it goes when the message's text goes. The row stays.
+	//
+	// Art. 15 hands it back on the reply verdicts' ground. Whether the words
+	// agreed or proposed, and how sure the writer was, is a conclusion drawn
+	// from what the subject wrote.
+	"deal_stage_evidence": {erasureWrite: true, sarRead: true},
 	// A handoff names the subject it was about, and its note is what one seat
 	// wrote about them to another. The judgement — accepted, or refused for this
 	// reason — is a decision contacts made about that contact, the same holding
