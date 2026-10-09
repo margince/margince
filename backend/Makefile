@@ -256,7 +256,12 @@ test-uncached: composition
 	# deleting the config schema's provider restriction left the ai gate
 	# reporting `ok (cached)`. CI is cold and never saw it; the engineer who
 	# broke it locally would not either.
-	$(GOWORK_COMPOSED) $(GO) test -count=1 $(UNCACHED_TEST_PKGS)
+	# -timeout, because the default is ten minutes and nobody chose it. The
+	# gates package reached that cold on CI and tipped over intermittently,
+	# which fails a pull request for the lane's own size rather than for
+	# anything in the diff. The perf lanes below name theirs for the same
+	# reason.
+	$(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this
