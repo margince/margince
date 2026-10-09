@@ -124,6 +124,21 @@ type InternalEventReportingChanged struct {
 	Object string `json:"object"`
 }
 
+// InternalEventTagSuggestionAccepted A user accepted a tag suggestion. The tagging itself is audited on the tag; this records the decision.
+type InternalEventTagSuggestionAccepted struct{}
+
+// InternalEventTagSuggestionCreated The tag scout suggested a tag on a contact or company. Entity-less and without the tag or the record, which keeps it off the subscribable set: a suggestion built from mail only its owner may read is visible only to that owner, and no webhook consumer can be held to that.
+type InternalEventTagSuggestionCreated struct {
+	// EvidenceCount How many activities the suggestion cites.
+	EvidenceCount int `json:"evidence_count"`
+}
+
+// InternalEventTagSuggestionDismissed A user dismissed a tag suggestion for the whole workspace. The tag is suggested on that record again only on evidence newer than the dismissal.
+type InternalEventTagSuggestionDismissed struct{}
+
+// InternalEventTagSuggestionSuperseded A tag suggestion stopped standing without anybody deciding it: its tag was retired or made unsuggestible, its record was archived or tagged, or a cited activity went away.
+type InternalEventTagSuggestionSuperseded struct{}
+
 func (InternalEventAiBudgetUpdated) EventType() string { return "ai_budget.updated" }
 
 func (InternalEventAiBudgetUpdated) EntityType() string { return "ai_budget" }
@@ -167,3 +182,19 @@ func (InternalEventMeetingProposalUpdated) EntityType() string { return "activit
 func (InternalEventReportingChanged) EventType() string { return "reporting.changed" }
 
 func (InternalEventReportingChanged) EntityType() string { return "dynamic" }
+
+func (InternalEventTagSuggestionAccepted) EventType() string { return "tag_suggestion.accepted" }
+
+func (InternalEventTagSuggestionAccepted) EntityType() string { return "" }
+
+func (InternalEventTagSuggestionCreated) EventType() string { return "tag_suggestion.created" }
+
+func (InternalEventTagSuggestionCreated) EntityType() string { return "" }
+
+func (InternalEventTagSuggestionDismissed) EventType() string { return "tag_suggestion.dismissed" }
+
+func (InternalEventTagSuggestionDismissed) EntityType() string { return "" }
+
+func (InternalEventTagSuggestionSuperseded) EventType() string { return "tag_suggestion.superseded" }
+
+func (InternalEventTagSuggestionSuperseded) EntityType() string { return "" }

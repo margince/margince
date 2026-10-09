@@ -109,6 +109,19 @@ function undoOf(
   };
 }
 
+// A tag verb changes each record's tags panel and the tag's own page, the same
+// reads a single apply refreshes (useApplyTag).
+function tagKeys(request: BulkChangeRequest): QueryKey[] {
+  if (request.verb !== "add_tag" && request.verb !== "remove_tag") {
+    return [];
+  }
+  return [
+    ...request.rows.map((row) => ["record-tags", request.recordType, row.id]),
+    ["tag"],
+    ["tag-records"],
+  ];
+}
+
 function recordKeysOf(kind: RecordKind, id: string) {
   return kind.record === "deal"
     ? dealRecordKeys(id)
@@ -261,6 +274,7 @@ export function BulkChangeDialog({
       [LISTS_KEY],
       ["tasks"],
       ["activities"],
+      ...tagKeys(request),
     ];
     await Promise.all(
       [...lists, ...(kind.stale ?? [])].map((queryKey) =>

@@ -92,6 +92,7 @@ import {
   useProjectRecord,
   withSubjectTag,
 } from "./projectrecord";
+import { useRichTextLabels } from "./richtextlabels";
 import { SCHEDULED_SCREEN } from "./scheduledsends";
 import { SendMark, SendPermission } from "./sendpermission";
 import { SendRefusal } from "./sendrefusal";
@@ -1384,6 +1385,7 @@ export function ComposeModal({
   // A shut composer asks for nothing it does not share with the page behind it.
   const voiceProfile = useVoiceProfile(open);
   const bodyId = useId();
+  const richTextLabels = useRichTextLabels();
   // WHICH WAY THIS IS GOING: each opening starts on the caller's choice, never on
   // the last opening's dial; an empty one resolves to the record's lead.
   const [dial, setDial] = useState({ open, id: initialTransportId ?? "" });
@@ -2546,14 +2548,7 @@ export function ComposeModal({
               onChange={editBody}
               label={t("compose.body")}
               placeholder={t("compose.bodyPlaceholder")}
-              labels={{
-                bold: t("richtext.bold"),
-                italic: t("richtext.italic"),
-                bulletList: t("richtext.bulletList"),
-                numberList: t("richtext.numberList"),
-                link: t("richtext.link"),
-                linkPrompt: t("richtext.linkPrompt"),
-              }}
+              labels={richTextLabels}
               hint={t("compose.bodyHint")}
               actions={
                 <AttachAction

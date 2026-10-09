@@ -84,6 +84,21 @@ describe("the door always says Open", () => {
     expect(door.getAttribute("aria-label")).toBeNull();
   });
 
+  it("draws a door given an href as a link with the same word and description", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatCard label="Best route" value="Ada" href="#/contacts/c-1" />
+      </LocaleProvider>,
+    );
+
+    const door = screen.getByRole("link", {
+      name: en["stat.open"],
+      description: "Best route",
+    });
+    expect(door.getAttribute("href")).toBe("#/contacts/c-1");
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
   it("pins the English word, which is what every door in the product reads", () => {
     expect(en["stat.open"]).toBe("Open");
   });

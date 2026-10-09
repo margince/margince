@@ -91,7 +91,7 @@ func restoreTagRemovalTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, remova
 		return out, fmt.Errorf("put the tagging back: %w", err)
 	}
 	_, err = auditTagLink(storekit.WithReversal(ctx, "tag", tagID.UUID, removalID), tx, tagID, tagApplied,
-		linkImage{EntityType: record.EntityType, EntityID: record.EntityID})
+		linkImage{EntityType: record.EntityType, EntityID: record.EntityID}, nil)
 	return out, err
 }
 

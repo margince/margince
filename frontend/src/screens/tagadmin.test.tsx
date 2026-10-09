@@ -20,6 +20,7 @@ import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "./story-utils";
 import { TagVocabularyCard } from "./tagadmin";
@@ -47,7 +48,7 @@ const ADMIN = { tag: ["read", "create", "update", "delete"] };
 function mount(
   words: readonly unknown[],
   grants: Record<string, string[]> = ADMIN,
-  extra: Record<string, () => Response> = {},
+  extra: RouteMap = {},
 ) {
   installFetchStub({
     "GET /me": meRoute(grants as never),
@@ -207,6 +208,43 @@ describe("the tag vocabulary card", () => {
     expect(
       screen.getByRole("button", { name: en["tagAdmin.save"] }),
     ).toBeDisabled();
+  });
+
+  // A suggested word needs a description to match mail against, so the
+  // dialog holds Save until one is there, then sends both.
+  it("sends a suggestible word only with a description of what interest looks like", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    mount([KEY_ACCOUNT], ADMIN, {
+      "PATCH /tags/t-1": (body) => {
+        sent.push(body);
+        return jsonResponse(KEY_ACCOUNT);
+      },
+    });
+    await user.click(
+      await screen.findByRole("button", { name: en["tagAdmin.edit"] }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(
+      dialog.getByRole("checkbox", { name: en["tagAdmin.suggestibleLabel"] }),
+    );
+    const save = dialog.getByRole("button", { name: en["tagAdmin.save"] });
+    expect(save).toBeDisabled();
+
+    await user.type(
+      dialog.getByRole("textbox", { name: en["tagAdmin.descriptionLabel"] }),
+      "Product X demo, pricing",
+    );
+    await user.click(save);
+
+    await waitFor(() =>
+      expect(sent).toEqual([
+        expect.objectContaining({
+          description: "Product X demo, pricing",
+          suggestible: true,
+        }),
+      ]),
+    );
   });
 
   // The settings entry unions five data-model reads, so this card is mounted
