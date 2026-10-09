@@ -24,8 +24,6 @@ func at(day int) time.Time {
 	return time.Date(2026, time.August, day, 9, 0, 0, 0, time.UTC)
 }
 
-func ptr[T any](v T) *T { return &v }
-
 // fullInput is a meeting with everything a brief could be written from, so a
 // test that asserts one section's absence is asserting that section's own rule
 // rather than an empty fixture.
@@ -40,7 +38,7 @@ func fullInput() Input {
 		LastTouchAt: &touched,
 		Deal: &DealIn{
 			ID: dealID, Name: "Northwind platform", Stage: "Proposal",
-			AmountMinor: 9500000, Currency: "EUR", CloseDate: ptr(at(30)),
+			AmountMinor: 9500000, Currency: "EUR", CloseDate: new(at(30)),
 		},
 		Attendees: []AttendeeIn{
 			{ContactID: contactID, FullName: "Ana Roth", Title: "CFO", DealRole: "economic_buyer", LastTouch: &touched},
@@ -48,7 +46,7 @@ func fullInput() Input {
 		Commitments: []ClaimIn{{
 			ContactName: "Ana Roth", Kind: kindCommitmentOurs, Body: "send the security pack",
 			Status:   statusOpen,
-			SourceID: activityID, SourceLabel: "Re: security review", DueAt: ptr(at(8)),
+			SourceID: activityID, SourceLabel: "Re: security review", DueAt: new(at(8)),
 		}},
 		Recent: []ActIn{{ID: activityID, Kind: "email", Subject: "Re: security review", Direction: "inbound", At: touched}},
 	}
@@ -114,7 +112,7 @@ func TestRisksIsAbsentWhenNothingInTheRecordIsWrong(t *testing.T) {
 	in := fullInput()
 	// The one commitment is not yet due, so nothing is overdue and nothing was
 	// objected to.
-	in.Commitments[0].DueAt = ptr(at(20))
+	in.Commitments[0].DueAt = new(at(20))
 	for _, section := range wireSections(Deterministic(in)) {
 		if section.Kind == crmcontracts.MeetingBriefSectionKindRisks {
 			t.Fatalf("risks was rendered with %d sentences when the record holds no watch-out", len(section.Sentences))
@@ -129,7 +127,7 @@ func TestAnOverduePromiseIsTheGoalOnceAndTheNextOneIsARisk(t *testing.T) {
 	in := fullInput()
 	in.Commitments = append(in.Commitments, ClaimIn{
 		ContactName: "Ana Roth", Kind: kindCommitmentOurs, Body: "share the reference call",
-		Status: statusOpen, SourceID: activityID, DueAt: ptr(at(9)),
+		Status: statusOpen, SourceID: activityID, DueAt: new(at(9)),
 	})
 	sections := Deterministic(in)
 	goal := sectionOf(t, sections, crmcontracts.MeetingBriefSectionKindGoal)
@@ -183,7 +181,7 @@ func TestAFirstTimeAttendeeIsFlaggedInTheProse(t *testing.T) {
 // external-context filler the spec's first hard rule forbids.
 func TestTheGoalIsTheOpenQuestionWhenNothingOfOursIsOverdue(t *testing.T) {
 	in := fullInput()
-	in.Commitments[0].DueAt = ptr(at(18))
+	in.Commitments[0].DueAt = new(at(18))
 	in.Commitments = append(in.Commitments, ClaimIn{
 		ContactName: "Ana Roth", Kind: kindOpenQuestion, Body: "who signs the DPA",
 		Status: statusOpen, SourceID: activityID,
@@ -257,7 +255,7 @@ func deliveryInput() Input {
 	in.Commitments = nil
 	in.Project = &ProjectIn{
 		ID: projectID, Name: "ERP rollout", Key: "ERP-27",
-		Phase: "delivering", TargetEndDate: ptr(at(28)),
+		Phase: "delivering", TargetEndDate: new(at(28)),
 	}
 	return in
 }
@@ -390,14 +388,18 @@ func TestAnAttendeeWithNoRecordedContactReadsAsAFirstMeeting(t *testing.T) {
 		}},
 	}
 	var line string
+	var lineSb394 strings.Builder
 	for _, section := range Deterministic(in) {
 		if section.Kind != crmcontracts.MeetingBriefSectionKindAttendees {
 			continue
 		}
+		var lineSb397 strings.Builder
 		for _, sentence := range section.Sentences {
-			line += sentence.Text
+			lineSb397.WriteString(sentence.Text)
 		}
+		lineSb394.WriteString(lineSb397.String())
 	}
+	line += lineSb394.String()
 	if !strings.Contains(line, "Rainer Vogt") {
 		t.Fatalf("the attendees section never named the attendee: %q", line)
 	}
@@ -419,7 +421,7 @@ func TestTheAssemblerDerivesFirstTimeFromTheDate(t *testing.T) {
 		want bool
 	}{
 		{name: "no recorded contact is a first meeting", last: nil, want: true},
-		{name: "a recorded contact is not", last: ptrTime(time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)), want: false},
+		{name: "a recorded contact is not", last: new(time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)), want: false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -429,5 +431,3 @@ func TestTheAssemblerDerivesFirstTimeFromTheDate(t *testing.T) {
 		})
 	}
 }
-
-func ptrTime(t time.Time) *time.Time { return &t }

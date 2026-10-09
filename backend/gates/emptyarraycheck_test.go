@@ -72,7 +72,7 @@ func TestNoCheckBoundsAnArrayLengthThatCanBeNull(t *testing.T) {
 // one statement, which is how the scan below reads it.
 func catalogEntries(raw string) []string {
 	var entries []string
-	for _, line := range strings.Split(raw, "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		if len(entries) == 0 || catalogEntryStart.MatchString(line) {
 			entries = append(entries, line)
 			continue

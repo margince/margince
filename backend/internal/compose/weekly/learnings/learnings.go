@@ -22,6 +22,7 @@ package learnings
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -249,7 +250,7 @@ func Parse(reply string, in Input) ([]Learning, error) {
 		return nil, fmt.Errorf("weekly learnings: the reply is not the object asked for: %w", err)
 	}
 	if out.Learnings == nil {
-		return nil, fmt.Errorf("weekly learnings: the reply carries no learnings field")
+		return nil, errors.New("weekly learnings: the reply carries no learnings field")
 	}
 	if len(*out.Learnings) > MaxLearnings {
 		return nil, fmt.Errorf("weekly learnings: %d learnings, over the %d asked for",

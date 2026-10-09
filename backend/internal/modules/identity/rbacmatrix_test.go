@@ -80,10 +80,12 @@ func writeRoleTable(page *strings.Builder, documents map[string]roleDocument) {
 func writeGrantTable(page *strings.Builder, documents map[string]roleDocument) {
 	page.WriteString("## What each role may do to each kind of record\n\n| Object |")
 	divider := "|---|"
+	var dividerSb83 strings.Builder
 	for _, role := range systemRoles {
 		page.WriteString(" `" + role.key + "` |")
-		divider += "---|"
+		dividerSb83.WriteString("---|")
 	}
+	divider += dividerSb83.String()
 	page.WriteString("\n" + divider + "\n")
 	for _, object := range matrixObjects(documents) {
 		page.WriteString("| `" + object + "` |")

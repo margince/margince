@@ -123,8 +123,7 @@ func scalarShape(kind reflect.Kind) string {
 // and two spellings of one shape read as two different shapes.
 func objectSketch(t reflect.Type) string {
 	var parts []string
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		tag := field.Tag.Get("json")
 		wire, opts, _ := strings.Cut(tag, ",")
 		if wire == "" || wire == "-" {

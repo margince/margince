@@ -6,6 +6,7 @@ package provider
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 )
 
@@ -110,7 +111,7 @@ func PoolsInLockOrder(cost map[Pool]int) []Pool {
 	for p := range cost {
 		pools = append(pools, p)
 	}
-	sort.Slice(pools, func(i, j int) bool { return pools[i] < pools[j] })
+	slices.Sort(pools)
 	return pools
 }
 

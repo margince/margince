@@ -275,10 +275,10 @@ func childIsGrammar(frame *jsonFrame) bool {
 var canonicalMembers = sync.OnceValue(func() []string {
 	var names []string
 	for _, t := range []reflect.Type{
-		reflect.TypeOf(Plan{}), reflect.TypeOf(Predicate{}), reflect.TypeOf(Traversal{}),
+		reflect.TypeFor[Plan](), reflect.TypeFor[Predicate](), reflect.TypeFor[Traversal](),
 	} {
-		for i := range t.NumField() {
-			name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ",")
+		for field := range t.Fields() {
+			name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 			if name != "" && name != "-" && !slices.Contains(names, name) {
 				names = append(names, name)
 			}

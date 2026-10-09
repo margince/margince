@@ -103,6 +103,17 @@ describe("StatStrip stretches its last slot over the rest of the row", () => {
     expect(strip.style.getPropertyValue("--stat-strip-tail-6")).toBe("1");
   });
 
+  it("draws a seven-slot strip six across and stretches the seventh", () => {
+    render(<Strip count={7} />);
+    const strip = screen.getByTestId("strip");
+    // The grid and the span must agree on the columns. Seven columns with a
+    // tail told to span six wrap the last slot onto a row of its own.
+    expect(strip.style.getPropertyValue("--stat-strip-slots")).toBe("6");
+    expect(strip.style.getPropertyValue("--stat-strip-tail-6")).toBe("6");
+    expect(strip.style.getPropertyValue("--stat-strip-slots-3")).toBe("3");
+    expect(strip.style.getPropertyValue("--stat-strip-tail-3")).toBe("3");
+  });
+
   it("survives a strip whose slots all fell away", () => {
     render(<Strip count={0} />);
     const strip = screen.getByTestId("strip");
@@ -110,5 +121,35 @@ describe("StatStrip stretches its last slot over the rest of the row", () => {
     // `span 0` or a `span NaN` is an invalid grid line and takes the whole
     // template down with it.
     expect(strip.style.getPropertyValue("--stat-strip-tail-3")).toBe("1");
+  });
+});
+
+// A compact strip sits above the content a reader came for. It holds one row
+// through the width where the regular strip folds to three, and its cards take
+// the smaller rung of the tile's own scale.
+describe("a compact strip", () => {
+  it("marks the row so the tile's sheet can draw the compact card", () => {
+    render(
+      <StatStrip testId="strip" density="compact">
+        <span>one</span>
+      </StatStrip>,
+    );
+    expect(screen.getByTestId("strip").dataset.density).toBe("compact");
+  });
+
+  it("keeps one row where the regular strip folds to three", () => {
+    const rule =
+      /@container \(min-width: 40rem\) and \(max-width: 66rem\)\s*\{\s*\.stat-strip\[data-density="compact"\]\s*\{([^}]*)\}/.exec(
+        stripCss(),
+      );
+    expect(rule?.[1]).toContain("repeat(var(--stat-strip-slots, 6), 1fr)");
+  });
+
+  it("sets the compact figure one rung down the tile's scale, in the tile's sheet", () => {
+    const atoms = readFileSync(join(here, "atoms.css"), "utf8");
+    const value =
+      /\[data-density="compact"\] \.stat-card-value\s*\{([^}]*)\}/.exec(atoms);
+    expect(value?.[1]).toContain("var(--fontHeadingSmall)");
+    expect(stripCss()).not.toMatch(/font:/);
   });
 });

@@ -332,15 +332,15 @@ func importedPath(file *ast.File, qualifier ast.Expr) (string, bool) {
 }
 
 func (tree *summaryTree) hasSummaryField(key string) bool {
-	dot := strings.LastIndex(key, ".")
-	if dot < 0 {
+	before, after, ok := strings.CutLast(key, ".")
+	if !ok {
 		return false
 	}
-	pkg := tree.pkgs[key[:dot]]
-	if pkg == nil || pkg.structs[key[dot+1:]] == nil {
+	pkg := tree.pkgs[before]
+	if pkg == nil || pkg.structs[after] == nil {
 		return false
 	}
-	for _, field := range pkg.structs[key[dot+1:]].Fields.List {
+	for _, field := range pkg.structs[after].Fields.List {
 		for _, name := range field.Names {
 			if name.Name == "Summary" {
 				return true
@@ -973,7 +973,7 @@ var proseFormatVerb = regexp.MustCompile(`%[-+# 0]*(\[\d+\])?(\d+|\*)?(\.(\d+|\*
 func isEnglishProse(text string) bool {
 	bare := proseFormatVerb.ReplaceAllString(text, "")
 	var words []string
-	for _, token := range strings.Fields(bare) {
+	for token := range strings.FieldsSeq(bare) {
 		if strings.ContainsAny(token, "_:=/") || !strings.ContainsFunc(token, unicode.IsLetter) {
 			continue
 		}

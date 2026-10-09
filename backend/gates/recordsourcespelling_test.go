@@ -215,11 +215,8 @@ func hasRecordSourceKey(file *ast.File) bool {
 		case *ast.KeyValueExpr:
 			found = keyIsRecordSource(node.Key)
 		case *ast.AssignStmt:
-			for _, lhs := range node.Lhs {
-				if keyIsRecordSource(lhs) {
-					found = true
-					break
-				}
+			if slices.ContainsFunc(node.Lhs, keyIsRecordSource) {
+				found = true
 			}
 		case *ast.BinaryExpr:
 			found = keyIsRecordSource(node.X) || keyIsRecordSource(node.Y)

@@ -139,10 +139,7 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	}
 	// Only the addresses this contact does not already hold are inserted: a held
 	// address would collide with its own live row on the unique index.
-	if err := insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh); err != nil {
-		return err
-	}
-	return nil
+	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh)
 }
 
 // liveContactEmails answers the addresses a contact currently holds, lowercased

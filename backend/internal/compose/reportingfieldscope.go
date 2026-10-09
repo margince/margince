@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -30,16 +31,18 @@ func reportingDealFields(metric crmcontracts.ReportingMetricID) []string {
 func reportingFieldScope(ctx context.Context, object, alias string, fields []string, b *reportingBindings) (string, bool, error) {
 	clause := sqlUnnarrowed
 	withheld := false
+	var clauseSb33 strings.Builder
 	for _, field := range fields {
 		predicate, masked, err := auth.MaskExcludedClause(ctx, object, field, alias, b.arg)
 		if err != nil {
 			return "", false, err
 		}
 		if masked && predicate != "" {
-			clause += " AND " + predicate
+			clauseSb33.WriteString(" AND " + predicate)
 			withheld = true
 		}
 	}
+	clause += clauseSb33.String()
 	return clause, withheld, nil
 }
 

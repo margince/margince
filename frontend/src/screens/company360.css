@@ -609,7 +609,7 @@
   gap: var(--space-2);
   padding: var(--space-3);
   margin-bottom: var(--space-4);
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-sm);
 }
 .co-facts-add > :nth-child(4) {
@@ -674,7 +674,7 @@
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* The brief under the questions it answers. Label and prose sit side by side

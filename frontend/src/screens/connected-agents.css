@@ -1,4 +1,4 @@
-/* Connected agents (Settings → Your agents): the MCP clients holding a
+/* Connected MCP clients (Settings → Your agents): the MCP clients holding a
    credential of their own, and the commands that make another one.
 
    Every row is a SettingRow now, so the two columns, the hairline between them

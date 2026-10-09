@@ -55,12 +55,10 @@ func IsDeferral(err error) bool {
 
 // DeferredUntil is the moment a deferred item may be tried again.
 func DeferredUntil(err error) (time.Time, bool) {
-	var budget *BudgetDeferralError
-	if errors.As(err, &budget) {
+	if budget, ok := errors.AsType[*BudgetDeferralError](err); ok {
 		return budget.NextAttemptAt, true
 	}
-	var down *ProviderDownError
-	if errors.As(err, &down) {
+	if down, ok := errors.AsType[*ProviderDownError](err); ok {
 		return down.RetryAfter, true
 	}
 	return time.Time{}, false

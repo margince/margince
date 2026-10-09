@@ -91,7 +91,7 @@ func versionedTables(t *testing.T) map[string]bool {
 				return err
 			}
 			current := ""
-			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
+			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					current = m[1]
 					continue
@@ -160,7 +160,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/integrations:markSkipped":            "a run skipped before it ran, under the lock the selector took to decide that",
 	"internal/modules/privacy:Update":                      "the retention policy is read FOR UPDATE by the caller that edits it",
 	"internal/modules/integrations:bumpClaimAttempt":       "attempt_count = attempt_count + 1 is the read and the write in one statement, so the database orders two bumps and no count is read into Go to be written back; the backoff that follows is computed from the returned value",
-	"internal/modules/activities:ArchiveAttachment":        "archived_at = now() with no state derived from a pre-read, and an attachment archived twice is archived",
 	"internal/modules/capture:stamp":                       "parts_slimmed_at = now() records that the sweep considered the row and changes nothing else, so two sweeps stamping it write the same fact",
 	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
 	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",

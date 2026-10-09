@@ -75,8 +75,7 @@ func TestATaskCannotBeReassignedToAnAgentSeat(t *testing.T) {
 
 	_, err = e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(task.Id)),
 		activities.UpdateActivityInput{AssigneeID: &seat})
-	var refusal *activities.AgentAssigneeError
-	if !errors.As(err, &refusal) {
+	if _, ok := errors.AsType[*activities.AgentAssigneeError](err); !ok {
 		t.Fatalf("moving a task onto an agent seat got %v, want the field refusal", err)
 	}
 }

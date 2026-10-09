@@ -193,7 +193,7 @@
    a status rather than an alert. */
 .ob-gate-alert.is-resumed {
   border-color: var(--borderStrong);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* Which model is about to read the site, stated before the address is handed
@@ -263,7 +263,7 @@
   padding: var(--padPanel);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* Fixed height so the crossfade cannot move the picture beneath it. */
@@ -447,7 +447,8 @@
   align-items: baseline;
   min-width: 0;
   gap: var(--space-1) var(--space-3);
-  animation: ob-scan-ticker-in 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: ob-scan-ticker-in var(--dur-enter) cubic-bezier(0.16, 1, 0.3, 1)
+    both;
 }
 
 /* Sized to its own text rather than claiming the row: with `flex: 1` the path

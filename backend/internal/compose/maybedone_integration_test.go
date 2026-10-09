@@ -34,7 +34,7 @@ func TestAnEmailAfterTheTaskProposesItDoneAndNotYetHoldsUntilTheNext(t *testing.
 	other := seedLinkedContact(t, e, bert)
 	contactID := ids.From[ids.ContactKind](contact)
 
-	task := logTaskFor(t, e, contact, "Send demo email", at(time.Now().Add(-48*time.Hour)))
+	task := logTaskFor(t, e, contact, "Send demo email", new(time.Now().Add(-48*time.Hour)))
 	filed := readTask(t, e, task).OccurredAt
 	after := filed.Add(time.Hour)
 	svc := pageAsOf(e, filed.Add(3*time.Hour))
@@ -91,7 +91,7 @@ func TestOnlyAReaderWhoMayOpenTheEmailIsAskedAboutIt(t *testing.T) {
 	contact := seedLinkedContact(t, e, carla)
 	contactID := ids.From[ids.ContactKind](contact)
 
-	task := logTaskFor(t, e, contact, "Send the pricing sheet", at(time.Now().Add(-48*time.Hour)))
+	task := logTaskFor(t, e, contact, "Send the pricing sheet", new(time.Now().Add(-48*time.Hour)))
 	filed := readTask(t, e, task).OccurredAt
 	sent := logEmailFor(author, t, e, contact, carla, "outbound", true, filed.Add(time.Hour))
 	if _, err := e.Activities.SetAudience(author, ids.From[ids.ActivityKind](sent),

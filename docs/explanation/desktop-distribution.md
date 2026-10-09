@@ -10,7 +10,7 @@ Visual C++ runtime for `x64`, which this build does not ship.
 
 It exists for a single kind of user: one user, one machine, their own CRM.
 That user is the reason it exists. Anyone who can run `docker compose up` gets
-more from [deployment.md](../deployment.md). For them, this build would cost
+more from [deploy-margince.md](../how-to/deploy-margince.md). For them, this build would cost
 more to maintain than it gives.
 
 Both macOS on Apple silicon and Windows on `x64` are built. They are one

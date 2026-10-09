@@ -221,7 +221,7 @@ func (h harnessClient) clientsFor(cfg RoutingConfig) (map[Tier]model.Client, mod
 		}
 	}
 	if cfg.Embeddings.Provider == h.provider {
-		buildable.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}}
+		buildable.Embeddings = EmbeddingsConfig{Provider: ProviderFake}
 	}
 	clients, embedder, err := buildable.buildClients()
 	if err != nil {

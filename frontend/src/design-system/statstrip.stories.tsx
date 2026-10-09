@@ -39,6 +39,22 @@ export const SixSlots: Story = {
   ),
 };
 
+// Seven slots is more than a full row holds. The row stays six across and the
+// seventh takes the whole row under it, as a fold's last slot does.
+export const MoreThanAFullRow: Story = {
+  render: () => (
+    <StatStrip>
+      <StatCard label="Leads in" value="14" />
+      <StatCard label="Answered" value="11" />
+      <StatCard label="Meetings" value="6" />
+      <StatCard label="Deals opened" value="3" />
+      <StatCard label="Won" value="€42k" tone="success" />
+      <StatCard label="Lost" value="€8k" />
+      <StatCard label="Held" value="Not recorded" />
+    </StatStrip>
+  ),
+};
+
 // Four slots, because this record has four readings — not six with two blank.
 // The plate ends where the row ends rather than reserving grey cells.
 export const FewerSlots: Story = {
@@ -270,6 +286,46 @@ export const RowSlotsInANarrowRail: Story = {
           label="Deal value needing attention"
           value="No flagged deals"
           detail="Expected deal value; excludes unpriced deals"
+        />
+      </StatStrip>
+    </div>
+  ),
+};
+
+// The compact row a record page puts above its brief: five readings on one
+// line at a work column's width, a long value cut with its full text on the
+// tooltip.
+export const Compact: Story = {
+  render: () => (
+    <div style={{ maxWidth: "52rem" }}>
+      <StatStrip density="compact">
+        <StatCard
+          label="Open deals"
+          value="€240k"
+          detail="1 open"
+          onOpen={() => {}}
+        />
+        <StatCard
+          label="Revenue · 12 mo"
+          value="Not invoiced"
+          detail="Not assessed"
+          onOpen={() => {}}
+        />
+        <StatCard
+          label="Relationship"
+          value="No inbound messages since the last meeting"
+          onOpen={() => {}}
+        />
+        <StatCard
+          label="Last contact"
+          value="6 d"
+          detail="Call · 2 Oct"
+          onOpen={() => {}}
+        />
+        <StatCard
+          label="Next meeting"
+          value="None scheduled"
+          onOpen={() => {}}
         />
       </StatStrip>
     </div>

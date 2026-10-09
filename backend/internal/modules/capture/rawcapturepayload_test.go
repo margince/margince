@@ -10,6 +10,7 @@ package capture
 import (
 	"encoding/base64"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -115,10 +116,8 @@ func carriesNUL(v any) bool {
 			}
 		}
 	case []any:
-		for _, e := range t {
-			if carriesNUL(e) {
-				return true
-			}
+		if slices.ContainsFunc(t, carriesNUL) {
+			return true
 		}
 	}
 	return false

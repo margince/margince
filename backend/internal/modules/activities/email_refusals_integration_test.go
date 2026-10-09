@@ -313,8 +313,7 @@ func TestSendEmailAnswersTheMailboxRefusalBeforeTheConsentGate(t *testing.T) {
 	store := e.store(stubUnsubscribeLinker{}).WithSendAuthority(&stubSendAuthority{capable: false})
 
 	_, err := store.SendEmail(e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("transactional"), gate, stager)
-	var refusal *MailboxNotSendCapableError
-	if !errors.As(err, &refusal) {
+	if _, ok := errors.AsType[*MailboxNotSendCapableError](err); !ok {
 		t.Fatalf("send with no send grant → %v, want a MailboxNotSendCapableError", err)
 	}
 	if gate.consulted {

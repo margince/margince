@@ -292,8 +292,8 @@ func (m *Meter) Read(ctx context.Context, c Counter) Reading {
 		// drain the pod for human traffic over a fault no human request meets.
 		// Answerable() feeds margince_agent_volume_answerable on /metrics, and
 		// the alert on it carries the sentence that matters: agent reads are
-		// refusing, human traffic is unaffected. docs/deployment.md says so
-		// under "Alert on the agent bound, do not drain on it".
+		// refusing, human traffic is unaffected. docs/how-to/deploy-margince.md
+		// says so under "Alert on the agent bound, do not drain on it".
 		return Reading{Counter: c, Limit: m.limits.of(c), Allowance: m.limits.of(c), Exceeded: true, Bucket: bucket}
 	}
 	observed, released, err := m.observe(ctx, ws, agent, c, bucket)

@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import {
   createContext,
   type ReactNode,
+  type RefObject,
   useCallback,
   useContext,
   useEffect,
@@ -231,6 +232,63 @@ function refocusTarget(region: HTMLElement, control: ToastControl) {
   return same ?? region.querySelector<HTMLElement>("a[href], button");
 }
 
+// The last place focus sat outside every toast. Read at the press, not at
+// `show`: a write's own row may hand focus on after the message is shown.
+function useLeftFrom(): RefObject<HTMLElement | null> {
+  const leftFrom = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const outside = (node: EventTarget | null) =>
+      node instanceof HTMLElement && node.closest(".toast-region") === null;
+    const entered = (event: FocusEvent) => {
+      if (outside(event.target) && event.target instanceof HTMLElement) {
+        leftFrom.current = event.target;
+      }
+    };
+    const dropped = (event: FocusEvent) => {
+      if (outside(event.target) && event.relatedTarget === null) {
+        leftFrom.current = null;
+      }
+    };
+    document.addEventListener("focusin", entered);
+    document.addEventListener("focusout", dropped);
+    return () => {
+      document.removeEventListener("focusin", entered);
+      document.removeEventListener("focusout", dropped);
+    };
+  }, []);
+  return leftFrom;
+}
+
+// After the action's own effects commit, and only if nothing else took focus:
+// an action that navigates or focuses its result keeps what it did.
+function useHandBack(): (back: HTMLElement) => void {
+  const frame = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (frame.current !== null) {
+        cancelAnimationFrame(frame.current);
+      }
+    },
+    [],
+  );
+  return useCallback((back: HTMLElement) => {
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+    }
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      const at = document.activeElement;
+      const unclaimed =
+        at === null ||
+        at === document.body ||
+        at.closest(".toast-region") !== null;
+      if (unclaimed && back.isConnected) {
+        back.focus();
+      }
+    });
+  }, []);
+}
+
 /** What a screen calls to say something landed. */
 export function useToast(): Toast {
   return useContext(ToastControlsContext) ?? NO_REGION;
@@ -282,7 +340,8 @@ export function useOwnToast({ leavesWithCaller = false } = {}) {
  *
  * Focus is never taken. The reader is mid-task and the toast is passive; what it
  * owes them instead is a way IN (it is last in the DOM, so Tab reaches it) and a
- * way OUT (Escape, while focus is inside it).
+ * way OUT (Escape, while focus is inside it). Pressing its action hands focus
+ * back to where it was before it entered the toast, while that is still on screen.
  */
 export function ToastRegion() {
   const t = useT();
@@ -311,6 +370,8 @@ export function ToastRegion() {
       setFocusInside(false);
     }
   }, []);
+  const leftFrom = useLeftFrom();
+  const handBack = useHandBack();
   // Where focus sat in a message that is about to unmount; a replacement takes
   // it over. A ref cleanup runs before React removes the node, focus still in it.
   const refocus = useRef<ToastControl | null>(null);
@@ -400,9 +461,16 @@ export function ToastRegion() {
             type="button"
             className="toast-action"
             data-toast-control="act"
-            onClick={() => {
+            onClick={(event) => {
+              const back =
+                event.currentTarget === document.activeElement
+                  ? leftFrom.current
+                  : null;
               act.onAct();
               dismiss(shown.id);
+              if (back !== null) {
+                handBack(back);
+              }
             }}
           >
             {act.label}

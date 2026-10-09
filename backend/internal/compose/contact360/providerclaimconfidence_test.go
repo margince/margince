@@ -39,12 +39,12 @@ func TestAConfidenceTheContractCannotCarryIsNotServed(t *testing.T) {
 		score *float64
 		want  *float32
 	}{
-		{"a proportion is carried", providerPtr(0.87), providerPtr(float32(0.87))},
-		{"zero is a real confidence, not an absent one", providerPtr(0.0), providerPtr(float32(0))},
-		{"one is in range", providerPtr(1.0), providerPtr(float32(1))},
-		{"a vendor scoring out of 100 states nothing here", providerPtr(87.0), nil},
-		{"just over the bound is still over it", providerPtr(1.0000001), nil},
-		{"a negative score is not a confidence", providerPtr(-0.5), nil},
+		{"a proportion is carried", new(0.87), new(float32(0.87))},
+		{"zero is a real confidence, not an absent one", new(0.0), new(float32(0))},
+		{"one is in range", new(1.0), new(float32(1))},
+		{"a vendor scoring out of 100 states nothing here", new(87.0), nil},
+		{"just over the bound is still over it", new(1.0000001), nil},
+		{"a negative score is not a confidence", new(-0.5), nil},
 		{"no score at all", nil, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -81,12 +81,12 @@ func TestTheColumnFallbackPassesThroughTheSameGuard(t *testing.T) {
 		column float64
 		want   *float32
 	}{
-		{"a bounded column is used when the entry has no score", 0.42, providerPtr(float32(0.42))},
+		{"a bounded column is used when the entry has no score", 0.42, new(float32(0.42))},
 		{"an out-of-range column states nothing either", 42, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			claim := phoneClaim(t, nil)
-			claim.confidence = providerPtr(tc.column)
+			claim.confidence = new(tc.column)
 			var out crmcontracts.ContactProviderProfile
 			if err := foldPhones(claim, &out); err != nil {
 				t.Fatalf("folding: %v", err)
@@ -107,7 +107,7 @@ func TestTheColumnFallbackPassesThroughTheSameGuard(t *testing.T) {
 // confidence and nothing else.
 func TestAnUnstatableScoreNeverCostsTheNumber(t *testing.T) {
 	var out crmcontracts.ContactProviderProfile
-	if err := foldPhones(phoneClaim(t, providerPtr(87.0)), &out); err != nil {
+	if err := foldPhones(phoneClaim(t, new(87.0)), &out); err != nil {
 		t.Fatalf("folding: %v", err)
 	}
 	if len(out.MobilePhones) != 1 || out.MobilePhones[0].Value != "+49 151 2345678" {

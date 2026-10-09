@@ -302,7 +302,7 @@
   margin: 0;
   padding: var(--space-3) var(--padPanel);
   border-radius: 0;
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* The lead panel — the one card on a page asking for a move rather than

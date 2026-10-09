@@ -13,6 +13,7 @@ package analyticsquery
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -266,13 +267,11 @@ func validateAliases(q Query) error {
 	}
 	for _, m := range q.Measures {
 		name := measureAlias(m)
-		for _, reserved := range ReservedColumns {
-			if name == reserved {
-				return &RefusalError{
-					Kind:    RefusalInvalid,
-					Message: fmt.Sprintf("%s is the engine's own column", httperr.QuoteCaller(name)),
-					Suggest: "name the result something else",
-				}
+		if slices.Contains(ReservedColumns, name) {
+			return &RefusalError{
+				Kind:    RefusalInvalid,
+				Message: fmt.Sprintf("%s is the engine's own column", httperr.QuoteCaller(name)),
+				Suggest: "name the result something else",
 			}
 		}
 		if seen[name] {

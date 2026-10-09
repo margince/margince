@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"maps"
 	"strings"
 	"sync"
 	"testing"
@@ -75,9 +76,7 @@ func (f *fakeHealthStore) Load(context.Context) (map[string]model.ProviderHealth
 		return nil, f.loadErr
 	}
 	out := map[string]model.ProviderHealthStatus{}
-	for k, v := range f.rows {
-		out[k] = v
-	}
+	maps.Copy(out, f.rows)
 	return out, nil
 }
 

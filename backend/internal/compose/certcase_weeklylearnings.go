@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -76,7 +77,7 @@ func (weeklyLearningsCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 		return nil, fmt.Errorf("weekly_learnings/learn: the fixture is not the shape this site takes: %w", err)
 	}
 	if f.WeekStart == "" {
-		return nil, fmt.Errorf("weekly_learnings/learn: the fixture names no week")
+		return nil, errors.New("weekly_learnings/learn: the fixture names no week")
 	}
 	var want weeklyLearningsExpectation
 	if err := json.Unmarshal(expected, &want); err != nil {
@@ -86,7 +87,7 @@ func (weeklyLearningsCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	if !want.MustAbstain && len(want.MustCite) == 0 && len(want.MustNotMention) == 0 {
 		// A case that asserts nothing scores every reply as correct, which is
 		// worse than no case: it reports a certified site nobody measured.
-		return nil, fmt.Errorf("weekly_learnings/learn: the expectation asserts nothing")
+		return nil, errors.New("weekly_learnings/learn: the expectation asserts nothing")
 	}
 	in := learnings.NewInput(f.WeekStart, f.Counts, f.Deals)
 	// A fixture below the floor would never reach the model in production, so a

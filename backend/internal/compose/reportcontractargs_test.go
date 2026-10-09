@@ -50,7 +50,7 @@ func TestTheContractOffersExactlyWhatTheEngineServes(t *testing.T) {
 				"subject, which is a census reading a smaller tree and reporting PASS")
 		}
 		var published []string
-		for _, fn := range strings.Split(m[1], ",") {
+		for fn := range strings.SplitSeq(m[1], ",") {
 			published = append(published, strings.TrimSpace(fn))
 		}
 		// The constants themselves, not a second list beside them. Written out
@@ -93,12 +93,12 @@ func TestTheContractOffersExactlyWhatTheEngineServes(t *testing.T) {
 func runReportRequestSchema(t *testing.T, doc string) string {
 	t.Helper()
 	const head = "\n    RunReportRequest:\n"
-	start := strings.Index(doc, head)
-	if start < 0 {
+	_, after, ok := strings.Cut(doc, head)
+	if !ok {
 		t.Fatal("RunReportRequest not found in crm.yaml — this test is guarding a " +
 			"schema that has been renamed")
 	}
-	rest := doc[start+len(head):]
+	rest := after
 	// The next schema at the same indentation ends this one.
 	if end := regexp.MustCompile(`\n    [A-Z]\w*:\n`).FindStringIndex(rest); end != nil {
 		return rest[:end[0]]

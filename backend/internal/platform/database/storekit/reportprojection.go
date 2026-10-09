@@ -5,7 +5,7 @@ package storekit
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -18,7 +18,7 @@ func FenceReportProjection(ctx context.Context, tx pgx.Tx) error {
 		return err
 	}
 	if result.RowsAffected() != 1 {
-		return fmt.Errorf("report projection fence is unavailable")
+		return errors.New("report projection fence is unavailable")
 	}
 	return nil
 }

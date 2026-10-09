@@ -28,6 +28,7 @@ Settings in Margince, by page:
 - How do I change my password, display name, language or theme? → [Your own settings](your-own-settings.md)
 - How do I add an email signature or set up my writing voice? → [Your own settings](your-own-settings.md)
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
+- How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
 - How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
@@ -46,10 +47,12 @@ Records, deals and mail in Margince, by page:
 - How do I set up a partner, or credit and pay a partner's commission? → [Partners and commission](partners.md)
 - What is on a project page, and how do I start delivery? → [Leads, deals and projects](leads-deals-and-projects.md)
 - How do I send or schedule an email? → [Writing and sending mail](sending-mail.md)
-- Where is my Worklist, and how do I snooze or pin? → [Your day and your week](your-day-and-your-week.md)
-- How do I see all my tasks? → [Your day and your week](your-day-and-your-week.md)
+- Where is my Worklist, and how do I snooze or pin? → [Your day](your-day.md)
+- How do I see all my tasks? → [Your day](your-day.md)
+- How do I see my weekly review or plan my week? → [Your week](your-week.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
+- What does the import preview show, and how do I correct companies with a spreadsheet? → [Settings](settings.md)
 
 ## The pages
 
@@ -90,9 +93,11 @@ Records, deals and mail in Margince, by page:
   to a message step by step. The rules that file it against the right contact,
   deal and project. What happens when nothing matches, and what capture refuses
   to store.
-- [Your day and your week](your-day-and-your-week.md): the bands of the
-  Worklist and why a row appears there. Pinning, snoozing and what each action
-  reaches. The frozen weekly review, planning a week, and what a team lead sees.
+- [Your day](your-day.md): **Morning**, the bands of the Worklist and why a row
+  appears there. Pinning, snoozing and what each action reaches, and what a team
+  lead sees.
+- [Your week](your-week.md): the frozen weekly review, what it counts and will
+  not claim, and planning a week.
 - [Performance and saved reports](sales-reporting.md): graphs, targets, scheduled editions, comparisons and exports.
 - [Analytics and forecasting](analytics.md): the report sections, what each
   number covers, and how to open the deals behind it. Forecast calls and the
@@ -146,12 +151,17 @@ Records, deals and mail in Margince, by page:
   who here already knows somebody, and how that is measured. Asking a colleague
   for a warm introduction, and the four answers they can give. What a website
   read will and will not do.
+- [Meetings and booking](meetings-and-booking.md): sending a meeting
+  invitation, offering times and sharing personal links. What the invitation
+  states mean, and moving, cancelling or retrying a meeting. Reminders, what
+  counts as busy, and what a guest sees.
 - [Your own settings](your-own-settings.md): changing your password, display
   name, language and theme. Your email signature, the hours others can book,
   and your writing voice. Your agent passports and your mailbox connections.
   What the last 24 hours of your mail turned into.
 - [Settings](settings.md): how to open Settings, every settings page and which
-  one you need. Whose state each changes, and which permission opens it.
+  one you need. Whose state each changes, and which permission opens it. The
+  import preview, running a file again, and correcting companies by their ID.
 
 ## How this handbook is written
 

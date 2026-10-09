@@ -24,6 +24,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -244,12 +246,7 @@ const noticeCaseListMax = 200
 // vocabulary, derived from noticeStates rather than listed again — a ninth
 // state reaches this by existing.
 func knownNoticeState(state NoticeState) bool {
-	for _, s := range noticeStates {
-		if s == state {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(noticeStates, state)
 }
 
 // AssignNoticeCase gives a case an owner, so the queue shows who is working a
@@ -433,9 +430,7 @@ func auditNoticeCase(
 	ctx context.Context, tx pgx.Tx, before, after NoticeCase, extra map[string]any,
 ) error {
 	now := map[string]any{fieldState: string(after.State), fieldRule: string(after.Rule)}
-	for k, v := range extra {
-		now[k] = v
-	}
+	maps.Copy(now, extra)
 	// The before-image carries the OWNER as well as the state, because a
 	// reassignment moves the owner while the state stays `assigned` — an image
 	// of the state alone would record "assigned to assigned" and lose which

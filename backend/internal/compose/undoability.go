@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -183,12 +184,7 @@ func replayableVerb(action string) bool {
 }
 
 func servesRecordType(entityType string) bool {
-	for _, served := range undoableRecordTypes {
-		if served == entityType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(undoableRecordTypes, entityType)
 }
 
 // Evaluator answers undoability for one audit row. Its dependencies are the

@@ -144,8 +144,7 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID, filed
 		return "", err
 	}
 	address, err := h.store.ReplyAddressFor(ctx, anchor, covers)
-	var none *NoReplyAddressError
-	if errors.As(err, &none) {
+	if none, ok := errors.AsType[*NoReplyAddressError](err); ok {
 		if none.Colleague || filed == "" || (covers != nil && covers(filed)) {
 			return "", nil
 		}

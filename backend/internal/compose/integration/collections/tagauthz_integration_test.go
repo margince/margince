@@ -58,7 +58,7 @@ func TestATagWriteOnAForeignOwnedRecordIsRefused(t *testing.T) {
 	if _, err := tags.ApplyTag(rep, tagID, "contact", own); err != nil {
 		t.Errorf("applying a tag to this seat's own contact: %v, want success", err)
 	}
-	if err := tags.RemoveTag(rep, tagID, "contact", own); err != nil {
+	if _, err := tags.RemoveTag(rep, tagID, "contact", own); err != nil {
 		t.Errorf("removing a tag from this seat's own contact: %v, want success", err)
 	}
 
@@ -71,7 +71,7 @@ func TestATagWriteOnAForeignOwnedRecordIsRefused(t *testing.T) {
 	if _, err := tags.ApplyTag(e.Admin(), tagID, "contact", foreign); err != nil {
 		t.Fatalf("admin applying the tag: %v", err)
 	}
-	if err := tags.RemoveTag(rep, tagID, "contact", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := tags.RemoveTag(rep, tagID, "contact", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("removing a tag from a record this seat may only read → %v, want ErrPermissionDenied", err)
 	}
 
@@ -119,7 +119,7 @@ func TestATagWriteOnAnArchivedRecordIsRefused(t *testing.T) {
 	// Removal must refuse the same way, not treat "already gone" as the
 	// idempotent no-tagging-here case: the record is frozen, and that is a
 	// different fact than the tagging never having existed.
-	if err := tags.RemoveTag(e.Admin(), tagID, "contact", own); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := tags.RemoveTag(e.Admin(), tagID, "contact", own); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("removing from an archived record → %v, want ErrNotFound", err)
 	}
 }
@@ -159,14 +159,14 @@ func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
 	if _, err := tags.ApplyTag(e.Admin(), tagID, "contact", unowned); err != nil {
 		t.Fatalf("an unbounded actor applying a tag to an unowned record: %v, want success", err)
 	}
-	if err := tags.RemoveTag(rep, tagID, "contact", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := tags.RemoveTag(rep, tagID, "contact", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a bounded seat removing a tag from an unowned record → %v, want ErrPermissionDenied", err)
 	}
 
 	// The allow arm: an unbounded actor (RowScopeAll) still may, so this is a
 	// row-scope narrowing and not the table having quietly become untaggable
 	// for everyone.
-	if err := tags.RemoveTag(e.Admin(), tagID, "contact", unowned); err != nil {
+	if _, err := tags.RemoveTag(e.Admin(), tagID, "contact", unowned); err != nil {
 		t.Errorf("an unbounded actor removing a tag from an unowned record: %v, want success", err)
 	}
 }

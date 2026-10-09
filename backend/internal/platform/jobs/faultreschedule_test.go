@@ -108,8 +108,7 @@ func TestAPostponementIsRefusedForAClassThisInstallationNeverDeclared(t *testing
 			returned := FaultForKind(t.Context(), tc.kind,
 				extension.Reschedule(tc.class, time.Minute, errors.New("upstream said no")))
 
-			var snooze *river.JobSnoozeError
-			if errors.As(returned, &snooze) {
+			if _, ok := errors.AsType[*river.JobSnoozeError](returned); ok {
 				t.Fatalf("postponed on %s — an unverified class must not choose its own disposition", tc.name)
 			}
 			if returned.Error() != unrecognised {
@@ -189,8 +188,7 @@ func TestAPostponementLogsAtWarnWithItsCauseAndItsDelay(t *testing.T) {
 	returned := FaultForKind(t.Context(), unitKind, extension.Reschedule(transientClass, 120*time.Second,
 		errors.New("dial tcp: lookup openapi.example: no such host")))
 
-	var snooze *river.JobSnoozeError
-	if !errors.As(returned, &snooze) {
+	if _, ok := errors.AsType[*river.JobSnoozeError](returned); !ok {
 		t.Fatalf("returned %v, want a postponement — the log line below is only the postponed path's", returned)
 	}
 	line := logged.String()
@@ -218,8 +216,7 @@ func TestAPostponementIsNotAvailableToTheCoreVocabulary(t *testing.T) {
 
 	returned := FaultForKind(t.Context(), unitKind, apperrors.ErrConflict)
 
-	var snooze *river.JobSnoozeError
-	if errors.As(returned, &snooze) {
+	if _, ok := errors.AsType[*river.JobSnoozeError](returned); ok {
 		t.Fatalf("a core sentinel postponed itself — only a declared composed class may choose that disposition")
 	}
 }
@@ -235,8 +232,7 @@ func TestAnOrdinaryClassifiedFailureStillFails(t *testing.T) {
 	returned := FaultForKind(t.Context(), unitKind,
 		extension.Failure(transientClass, errors.New("provider unreachable")))
 
-	var snooze *river.JobSnoozeError
-	if errors.As(returned, &snooze) {
+	if _, ok := errors.AsType[*river.JobSnoozeError](returned); ok {
 		t.Fatalf("a plain classified failure postponed itself — the disposition must come from the unit's own return, not from its class")
 	}
 	if returned.Error() != transientClass.Sentence {

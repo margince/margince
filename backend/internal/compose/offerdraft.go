@@ -42,6 +42,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -222,7 +223,7 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 
 	decider, ok := principal.Actor(ctx)
 	if !ok {
-		return DraftResult{}, fmt.Errorf("compose: offer draft without a deciding principal")
+		return DraftResult{}, errors.New("compose: offer draft without a deciding principal")
 	}
 	execCtx := principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalSystem,
@@ -242,7 +243,7 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 	added, removed, changed := diffOfferLines(linesOf(before), linesOf(after))
 	disclosure := draftfloor.AIProvenanceNotice(textlang.Lang(identity.BaseLanguageForPrompt(ctx, d.pool)))
 	diff := buildOfferDiff(added, removed, changed)
-	after.AiGenerated = boolPtr(true)
+	after.AiGenerated = new(true)
 	after.AiDisclosure = &disclosure
 	after.DiffFromPrevious = diff
 

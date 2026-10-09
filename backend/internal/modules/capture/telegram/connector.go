@@ -14,6 +14,7 @@ package telegram
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -40,7 +41,7 @@ const CapturedByTelegram = "connector:telegram"
 // round-trip through a narrower struct.
 func BuildRawEnvelope(botID string, update []byte) (connector.RawRecord, error) {
 	if botID == "" {
-		return nil, fmt.Errorf("telegram: building the normalize envelope: no bot id")
+		return nil, errors.New("telegram: building the normalize envelope: no bot id")
 	}
 	raw, err := json.Marshal(ingestEnvelope{BotID: botID, Update: update})
 	if err != nil {

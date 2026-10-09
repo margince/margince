@@ -54,7 +54,7 @@ func publicPreferences(store *consent.Store, limits publicPreferenceLimiters) fu
 			// Cache-Control: no-store is NOT set here — see the same note
 			// on the confirm edge. One writer, above everything that can
 			// answer on these prefixes.
-			token := strings.SplitN(strings.TrimPrefix(r.URL.Path, publicPreferencesPrefix), "/", 2)[0]
+			token, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, publicPreferencesPrefix), "/")
 			if token == "" {
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return

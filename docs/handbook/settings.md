@@ -41,7 +41,7 @@ Things for the whole company in Margince each have one settings page.
 - Create a team or change who is in it: **Teams**.
 - Create, rename, narrow or archive a role: **Roles and permissions**.
 - See how many seats are in use: **Seats and license**.
-- Change the company name, time zone, base currency or exchange rates: **Company profile**.
+- Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
 - Set up single sign-on or the Google and Microsoft apps: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
 - Set up webhooks or a provider of contact data: **Integrations**.
@@ -103,6 +103,8 @@ The rest of Margince settings is six groups after **You**. Which pages you see, 
 The Company profile page in Settings (group **Company**) holds your own company's name, currency and business facts. It is an administrator's page: Admin and Ops reach it, and a sales seat does not. Sign-in and the Google and Microsoft apps have their own **Sign-in and apps** page in the same group.
 
 **Installation** and **Currency** hold the company's name, time zone and base currency, which Admin and Ops change.
+
+**Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
 **Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate starts today or later, and a past rate never changes. So a new rate never changes the numbers of past months. Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
 
@@ -250,6 +252,37 @@ System health and Reset data sit in the **Governance** group, and Data import in
   It deletes every record and setting, but keeps the company and its users, so
   everyone can still sign in. It appears only where whoever runs the
   installation has turned it on.
+
+## Data import
+
+The Data import page in Settings (group **Data**) brings in a CSV of prospects, companies or contacts. Only an admin or ops user can import. Starting an import and undoing one are in [What is kept, what is destroyed](retention-exports-and-deletion.md).
+
+### What does the import preview tell me?
+The Margince **Import preview** counts what the import will do with each row: **Create**, **Update**, **Unchanged** and **Skipped**. The four add up to the rows in the file, and "{rows} rows read, identified by {column}." names the column that tells rows apart. Rows that cannot be imported are listed with their line number. Fix them in the file and choose **Preview import** again. Nothing is written until you choose **Import {rows} rows**.
+Also called: test run, check an import, import report.
+
+### What happens if I import the same file again?
+Importing the same file again in Margince updates the records that file made the first time, and does not copy them. The screen names the column that tells rows apart: the company name for companies, the email for contacts and prospects. A row whose values did not change counts as **Unchanged**, so a file you already imported reports no work.
+Also called: re-import, upload again, update from a spreadsheet.
+
+### What happens to a company I already have?
+A company that Margince already holds, and that no import made, is not matched by its name. The import creates a second company and files the two for review as a possible duplicate. To change companies you already have, correct them by their ID instead. A company you cannot see is not counted or named in the preview.
+Also called: duplicates on import, import made copies.
+
+### How do I correct companies with a spreadsheet?
+To correct companies in Margince from a CSV, give each row the company's ID and map that column to **id**.
+1. Use **Export CSV** from **Filters and views**; its **id** column holds each ID.
+2. Edit the file, then choose **Start import** in **Settings → Data import**, with **Row type** **Companies**.
+3. In **Column mapping**, map **id** to **id**, and the name column to **display_name**.
+4. Choose **Preview import**.
+An empty ID creates a company. An ID that matches no company is skipped and named.
+Also called: bulk edit companies, update companies from Excel, fix company data.
+
+Undo never puts back the old values of a company an import corrected. It only archives the companies that import created.
+
+### What if an import stops partway?
+When a Margince import stops partway, the result says **Import stopped partway** and how many rows it read. Choose **Resume import** to go on from that row, not from the start. **Tag for this import** puts every record the import creates under one tag, so you can find them later. Records it only updates keep their own tags.
+Also called: import failed, import stopped, continue an import.
 
 ---
 

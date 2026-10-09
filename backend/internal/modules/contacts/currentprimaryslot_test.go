@@ -58,7 +58,7 @@ func TestTheCurrentPrimarySlotPredicateMirrorsItsIndex(t *testing.T) {
 		t.Fatalf("reading %s: %v", headCatalog, err)
 	}
 	var predicate string
-	for _, line := range strings.Split(string(catalog), "\n") {
+	for line := range strings.SplitSeq(string(catalog), "\n") {
 		if !strings.Contains(line, slotIndex) || !strings.Contains(line, "CREATE UNIQUE INDEX") {
 			continue
 		}
@@ -115,7 +115,7 @@ func TestTheLiveEmploymentSlotPredicateMirrorsItsIndex(t *testing.T) {
 		t.Fatalf("reading %s: %v", headCatalog, err)
 	}
 	var predicate string
-	for _, line := range strings.Split(string(catalog), "\n") {
+	for line := range strings.SplitSeq(string(catalog), "\n") {
 		if !strings.Contains(line, liveEmploymentIndex) || !strings.Contains(line, "CREATE UNIQUE INDEX") {
 			continue
 		}

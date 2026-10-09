@@ -13,7 +13,7 @@ import { FileDropzoneControl } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { uploadAttachment } from "./attachmentupload";
+import { ACCEPTED_ATTACHMENT_ATTR, uploadAttachment } from "./attachmentupload";
 import { ContractCustomFields } from "./contractcustomfields";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";
@@ -450,6 +450,7 @@ export function SignedFileField({
             control={props}
             file={file}
             onPick={onPick}
+            accept={ACCEPTED_ATTACHMENT_ATTR}
             emptyLabel={t(
               state !== "empty"
                 ? "contracts.form.fileAdd"

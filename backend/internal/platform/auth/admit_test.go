@@ -111,7 +111,7 @@ func TestDynamicTierIsResolvedPerCall(t *testing.T) {
 	// auto-executed dynamic call that names none is raised rather than run —
 	// see TestADynamicTierThatNamesNoRecordVersionIsRaisedRatherThanRun.
 	open := func() (mcp.TierResolverInput, error) {
-		return mcp.TierResolverInput{TargetStageSemantic: "open", ObservedVersion: version(1)}, nil
+		return mcp.TierResolverInput{TargetStageSemantic: "open", ObservedVersion: new(int64(1))}, nil
 	}
 	if _, err := fullSeatGate().Admit(agentCtx(principal.ScopeWrite), spec, open); err != nil {
 		t.Fatalf("open→open resolves 🟢: %v", err)

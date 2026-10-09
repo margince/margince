@@ -214,6 +214,24 @@ reader that fails) is a harness stop. The outcome goes at the end of the
 transcript as an `end_state` event. Only `company` can be read by name today;
 another type is one line in `endstate.py`.
 
+Two names in that place read the record's files, and not a field:
+
+```yaml
+must_end_with:
+  - company "Aachener Metallwerke GmbH" document=<sha256> *.md
+  - company "Aachener Metallwerke GmbH" documents=1
+```
+
+`document` holds when one file on the Documents tab, and only one, has that checksum,
+under a name that the glob matches. `documents` holds when the tab has that
+many files. A count catches a refused file that comes back inside an archive, which has
+new bytes and a new name. Both read every page of `list_documents`.
+
+A note that copies a file's text never shows in the answer. So
+`must_not_call_with` reads each call itself. Each entry is `tool~regex`,
+and it fails the run when that regex matches the arguments of a call to that
+tool, as one JSON text.
+
 ## 6. Find the cause of a failure from the transcript
 
 The verdict says which scenario failed; only the transcript says what the model

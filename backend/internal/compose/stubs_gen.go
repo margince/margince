@@ -43,6 +43,14 @@ func (stubs) LogActivity(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 	httperr.NotImplemented(w, r, "LogActivity")
 }
 
+func (stubs) GetFollowUpSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetFollowUpSettings")
+}
+
+func (stubs) UpdateFollowUpSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateFollowUpSettings")
+}
+
 func (stubs) RelinkActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.RelinkActivitiesParams) {
 	httperr.NotImplemented(w, r, "RelinkActivities")
 }
@@ -161,6 +169,10 @@ func (stubs) PauseReportingSchedules(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) ResetData(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ResetData")
+}
+
+func (stubs) DownloadAgentSkillBundle(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DownloadAgentSkillBundle")
 }
 
 func (stubs) ListAgentTools(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -1639,6 +1651,14 @@ func (stubs) GetMorningDigest(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "GetMorningDigest")
 }
 
+func (stubs) GetEmailSignatureTemplate(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetEmailSignatureTemplate")
+}
+
+func (stubs) SaveEmailSignatureTemplate(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveEmailSignatureTemplate")
+}
+
 func (stubs) SendCompanyEmail(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SendCompanyEmailParams) {
 	httperr.NotImplemented(w, r, "SendCompanyEmail")
 }
@@ -2017,6 +2037,10 @@ func (stubs) AddListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 
 func (stubs) RemoveListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RemoveListMember")
+}
+
+func (stubs) RestoreListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreListMember")
 }
 
 func (stubs) ExplainListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, recordId openapi_types.UUID) {
@@ -2857,6 +2881,10 @@ func (stubs) RemoveTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontr
 
 func (stubs) ApplyTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ApplyTag")
+}
+
+func (stubs) RestoreTagApplication(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreTagApplication")
 }
 
 func (stubs) MergeTags(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

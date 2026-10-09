@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 
@@ -89,7 +90,7 @@ func createdUnder(r *http.Request) string {
 	// chi appends params in the order the pattern declares them, so the last
 	// one is the deepest.
 	keys := rctx.URLParams.Keys
-	for i := len(keys) - 1; i >= 0; i-- {
+	for i := range slices.Backward(keys) {
 		if value := rctx.URLParams.Values[i]; value != "" {
 			return value
 		}

@@ -18,17 +18,15 @@
    * a monogram fill, another company's logo — reads as itself, and so that the
    * two themes are one room with the lights up or down rather than two tints.
    *
-   * A ladder, darkest first, from the recessed chrome up to the surface a card
+   * A ladder, darkest first, from a well inside a card up to the surface a card
    * floats on. Each rung is one visible step off its neighbours, and the ORDER
    * is the part that carries meaning — tokens.test.ts asserts the ordering in
-   * both themes rather than trusting six plausible values to stay in sequence:
+   * both themes rather than trusting four plausible values to stay in sequence:
    *
-   *   --bgSidebarHover #dde1de  a pointer resting on a rail row
-   *   --bgSidebar      #e6eae7  the application's left edge, BELOW the page
-   *   --bgCard         #eaedeb  a well inside a card: an inset row, a plate
+   *   --bgInset         #eaedeb  a well inside a card: an inset row, a plate
    *   --bgHover        #edf0ee  a pointer resting on a row on the page
    *   --bgPage         #f1f5f2  the reading ground
-   *   --bgElevated     #fbfcfb  a card, a panel, a menu, and the ACTIVE rail row
+   *   --bgElevated     #fbfcfb  a card, a panel, a menu
    *
    * The dark theme is NOT this list mirrored. On a dark ground every surface
    * lifts toward the light, so the ladder runs the other way and only the
@@ -43,17 +41,17 @@
   /* 1.19:1 against --bgElevated, which it usually sits on, and 1.12:1 against
    * --bgPage: one step off BOTH its hosts. The old value was one step off white
    * only, which is invisible once the page stops being white. */
-  --bgCard: #eaedeb;
+  --bgInset: #eaedeb;
   /* A small inline fill drawn ON one of these rungs — a badge, a key-cap, a
    * segmented strip, the trough of a meter. TRANSLUCENT rather than a rung of
    * its own, because a chip has to read one step deeper than whatever it lands
-   * on, and an opaque value can only be a step off ONE ground: --bgCard on a
-   * --bgCard plate is the same colour, which is a chip nobody can see. The same
+   * on, and an opaque value can only be a step off ONE ground: --bgInset on a
+   * --bgInset plate is the same colour, which is a chip nobody can see. The same
    * ink and nearly the same alpha as --paneEdge, which stays a BORDER token —
    * an edge and a fill are two different jobs, and one name for both would hide
    * it.
    *
-   * 0.07 and not deeper: --accentText on this fill over --bgCard — the worst of
+   * 0.07 and not deeper: --accentText on this fill over --bgInset — the worst of
    * the four grounds tokens.test.ts measures a chip over — is 4.57:1, and 0.08
    * would take it to 4.49:1, under the floor. The ceiling is what the ink on the
    * chip can pay for, so the fill is chosen last. */
@@ -61,27 +59,9 @@
   --bgHover: #edf0ee;
   /* A RECESS in an elevated surface — the well a board's stage is drawn as.
    * One hair under --bgElevated (1.03:1), which is what lets the panes inside
-   * it be the lifted thing: --bgCard is a card's own ground, and five of them
+   * it be the lifted thing: --bgInset is a card's own ground, and five of them
    * side by side read as five cards with cards inside them. */
   --bgWell: #f6f8f7;
-  /* The sidebar's own ground, DARKER than the page rather than lighter: the
-   * application's left edge is visible without a second border, and chrome that
-   * recedes is chrome that stops competing with what it frames. A token rather
-   * than `--bgCard` because the sidebar is not a card and must not follow one
-   * when card grounds are re-tuned. The rail's own hover is --bgSidebarHover
-   * below, because --bgHover is LIGHTER than this ground and a hover that
-   * brightens the row it is on collides with the active row's plate. */
-  --bgSidebar: #e6eae7;
-  /* A pointer resting on a rail row: one step DOWN from --bgSidebar (1.10:1),
-   * the same direction --bgHover moves off --bgPage. The active row moves the
-   * other way — up to --bgElevated — so the two states cannot be confused. */
-  --bgSidebarHover: #dde1de;
-  /* The top strip, which the content scrolls UNDER: the page's own ground,
-   * translucent, with an 8px blur behind it (app/topbar.css). Stated as an
-   * alpha colour rather than a solid because the blur is only visible where the
-   * ground is see-through, and the alpha is what makes the strip show the
-   * content sliding past it. */
-  --bgTopbar: rgba(244, 248, 246, 0.9);
   /* One translucent pane per zone (DESIGN.md §5): white over the lit ground
    * with a blur behind it, and a hairline for its edge. The two glows are the
    * chrome — an emerald light at the top-left corner behind the sidebar and an
@@ -117,7 +97,7 @@
    * --accentLight, 15px) measured 4.36:1 once the page stopped being white.
    * The fill cannot move either way — #0b7a53 is the brand emerald — so the text
    * does: 5.14:1 on that chip now, and clear of 4.5:1 on every ground in the
-   * ladder. Same shape as --tealText and the --mono*Text pairs. */
+   * ladder. Same shape as --tealText. */
   --accentText: #0a6f4b;
   --accentLight: rgba(11, 122, 83, 0.09);
   --accentMed: rgba(11, 122, 83, 0.17);
@@ -190,34 +170,27 @@
   /* §2b rail + brand chip + scrim — the rail is deliberately unthemed
    * (white-alpha icons on the dark green field in BOTH themes), and the
    * workspace chip stays brand emerald even when the dark accent lightens. */
-  --railTop: #183028;
-  --railBottom: #0e1b16;
   --overlayScrim: rgba(19, 35, 29, 0.4);
   --accentBrand: #0b7a53;
-  --wsChipTop: #0f8c5f;
-  --wsChipBottom: #0a6042;
-  --railIcon: rgba(255, 255, 255, 0.45);
-  --railIconHover: rgba(255, 255, 255, 0.85);
   --railIconActive: #fff;
-  --railHover: rgba(255, 255, 255, 0.1);
-  --railActive: rgba(255, 255, 255, 0.16);
+  /* The onboarding dialog's dark glass, unthemed like the rail it sits beside:
+   * the hero is dark in both themes, so its fill, quiet ink and shadow tint are
+   * fixed. */
+  --obDialogGlass: rgba(255, 255, 255, 0.16);
+  --obDialogInkQuiet: rgba(255, 255, 255, 0.85);
+  --obDialogShadow: #0e1b16;
   /* The one hue that means a MACHINE did this — wrote the draft, read the
    * record, found the thing, or holds the evidence behind a claim. It marks
    * authorship and reasoning, never status: nothing good, bad or urgent is
    * indigo, which is what lets a reader tell "Margince did this" apart from
    * "this needs you" at a glance.
    *
-   * Five steps, because the mark has to work as a band, a chip, a rule, a
-   * fill and an underline without any of them being mixed by hand at a call
-   * site. --aiChip is the filled chip and the hover of an indigo control;
-   * --aiRule is the underline under text that opens its own evidence, strong
-   * enough to read as an affordance and weak enough not to become a second
-   * body colour. */
+   * Five steps, because the mark has to work as a band, a chip, a fill and
+   * text without any of them being mixed by hand at a call site. --aiChip is the filled chip and the hover of an indigo control. */
   --ai: #5b61d6;
   --aiLight: rgba(91, 97, 214, 0.08);
   --aiChip: rgba(91, 97, 214, 0.14);
   --aiMed: rgba(91, 97, 214, 0.3);
-  --aiRule: rgba(91, 97, 214, 0.55);
   --aiText: #3f45b0;
 
   /* The Core's palette: the states of the agent orb, and nothing else in the
@@ -240,9 +213,9 @@
    * Jade holding an indigo is a name that lies to the next reader; a role name
    * survives the next repaint.
    *
-   * The three tones that are NOT work keep their own hues, because those are
+   * The two tones that are NOT work keep their own hues, because those are
    * status and status is a different question from provenance: amber asks a
-   * contact for something, red failed, grey cannot reach a source. An orb that
+   * contact for something, red failed. An orb that
    * went indigo when it failed would say who was working and stop saying how it
    * went.
    *
@@ -256,7 +229,6 @@
   --orbBright: #8a80ff;
   --orbAmber: #d9971f;
   --orbRed: #d93b2b;
-  --orbGrey: #a5aba9;
   --orbInk: #2e3168;
   --orbDeep: #1a1c40;
 
@@ -350,7 +322,7 @@
    * tag in the workspace.
    *
    * Chosen to stay apart from each other at 7px — the dot is the whole cue —
-   * and to clear 3:1 against both --bgCard and the dark theme's ground, so one
+   * and to clear 3:1 against both --bgInset and the dark theme's ground, so one
    * set serves both themes and a tag does not change identity with the toggle. */
   --tagTeal: #0f766e;
   --tagAmber: #b45309;
@@ -534,7 +506,7 @@
    * can, and it answers once for the whole tree rather than at each call site.
    * Each aliases the rung the house already used, so a name here SAYS what was
    * already true instead of changing how anything looks:
-   *   --gapCards    between sibling card surfaces (.card-stack, .page-zones)
+   *   --gapCards    between sibling card surfaces (.page-zones)
    *   --padCard     inside a bare card (.card)
    *   --padPanel    inside a panel — its header band, rows, footer and the
    *                 hairlines between them all sit on this one inset, a rung
@@ -777,29 +749,12 @@
 [data-theme="dark"] {
   --bgPage: #0c1311;
   --bgElevated: #161d1a;
-  --bgCard: #1a211e;
+  --bgInset: #1a211e;
   --bgChip: rgba(255, 255, 255, 0.09);
   --bgHover: #1f2623;
   /* Under --bgElevated, the way the light well sits under its surface: a
      recess goes away from the lifted ground in both themes. */
   --bgWell: #111815;
-  /* The same RELATION the light theme states, mirrored rather than copied: the
-     sidebar is one step off the page in the direction away from the elevated
-     surface, so the chrome recedes in both themes. Dark is where that means
-     DARKER than the page: near-black under a page that is itself one hair
-     above the design's #0a100e, which is what leaves room for the hover step
-     between them. */
-  --bgSidebar: #030504;
-  /* Up off the sidebar, not down: on a dark ground the room only has one
-     direction to go, so hover lifts off the sidebar (1.06:1) and the active
-     row lifts further, all the way to --bgElevated (1.12:1 off hover). What
-     has to hold is the GAP between hover and that plate — they are the pair a
-     reader decodes — and tokens.test.ts holds both steps as floors. */
-  --bgSidebarHover: #0a100e;
-  /* The page's own ground, translucent — the light theme's rule, in this
-     theme's page colour. It used to be the ELEVATED ground, which made the
-     strip read as a card laid over the top of the window. */
-  --bgTopbar: rgba(14, 27, 22, 0.9);
   --pane: rgba(255, 255, 255, 0.045);
   --paneEdge: rgba(255, 255, 255, 0.09);
   --glowA: rgba(24, 190, 120, 0.1);
@@ -953,15 +908,12 @@
   :root:not([data-theme="light"]) {
     --bgPage: #0c1311;
     --bgElevated: #161d1a;
-    --bgCard: #1a211e;
+    --bgInset: #1a211e;
     --bgChip: rgba(255, 255, 255, 0.09);
     --bgHover: #1f2623;
     /* Under --bgElevated, the way the light well sits under its surface: a
        recess goes away from the lifted ground in both themes. */
     --bgWell: #111815;
-    --bgSidebar: #030504;
-    --bgSidebarHover: #0a100e;
-    --bgTopbar: rgba(14, 27, 22, 0.9);
     --pane: rgba(255, 255, 255, 0.045);
     --paneEdge: rgba(255, 255, 255, 0.09);
     --glowA: rgba(24, 190, 120, 0.1);

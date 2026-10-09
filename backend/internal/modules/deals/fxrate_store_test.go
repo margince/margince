@@ -43,8 +43,7 @@ func TestNormalizeFxCurrencyRate(t *testing.T) {
 	for name, in := range cases {
 		t.Run("rejects "+name, func(t *testing.T) {
 			_, err := normalizeFxCurrencyRate(in)
-			var v *FxRateValidationError
-			if !errors.As(err, &v) {
+			if _, ok := errors.AsType[*FxRateValidationError](err); !ok {
 				t.Fatalf("expected FxRateValidationError, got %v", err)
 			}
 		})

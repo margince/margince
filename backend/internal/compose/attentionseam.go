@@ -248,6 +248,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		deals: deals.NewStore(db, DealsInstallation()),
 		now:   now,
 	}).
+		// The mirror: the reader's own sends nobody has answered, once the
+		// workspace's follow-up window has passed.
+		WithAwaiting(attentionAwaiting{
+			store: activities.NewStore(db).WithOwnDomains(
+				ownDomainReader{store: capture.NewOwnDomainStore(db)}),
+		}).
 		// The reader's own override. The ranking has carried a pin level since
 		// it was written and nothing could set it, so the one control that says
 		// "I know, and I want this first anyway" did not exist.

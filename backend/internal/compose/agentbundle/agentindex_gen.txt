@@ -1,0 +1,304 @@
+# Margince operations
+
+Every call a passport can make, grouped by area. Find the operationId in openapi.yaml for its parameters and answers.
+
+## Webhooks
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `POST /webhook-subscriptions` | createWebhookSubscription | Register an outbound webhook subscription (returns the signing secret once). | Change records | waits for approval |
+| `PATCH /webhook-subscriptions/{id}` | updateWebhookSubscription | Pause/resume a subscription or re-target its event set. | Change records | waits for approval |
+
+## Contacts
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /contacts/{id}/employment-import` | previewContactEmploymentImport | Read retained provider roles and their company-link outcomes without buying another lookup. | any | at once |
+| `GET /contacts` | listContacts | List contacts (live by default; cursor-paginated). | any | at once |
+| `POST /contacts` | createContact | Create a contact. | Change records | at once |
+| `GET /contacts/{id}` | getContact | Get a contact by id (the 360 record). | any | at once |
+| `PATCH /contacts/{id}` | updateContact | Update a contact (partial). | Change records | at once |
+| `DELETE /contacts/{id}` | archiveContact | Archive (soft-delete) a contact. | Change records | at once |
+| `POST /contacts/{id}/merge` | mergeContact | Merge this contact into a target (non-lossy). | Change records | at once |
+| `GET /contacts/{id}/consent/guard` | getContactConsentGuard | May we write to this contact right now — per purpose and channel, with the reason. | any | at once |
+| `GET /contacts/{id}/access` | getContactAccess | Who can open this contact and who can change it, and why. | any | at once |
+| `GET /contacts/{id}/strength` | getContactStrength | Relationship strength for a contact (deterministic recency × frequency × reciprocity). | any | at once |
+| `GET /email-signature-template` | getEmailSignatureTemplate | The workspace's signature template. | any | at once |
+| `POST /dedupe/candidates/{id}/disposition` | disposeDedupeCandidate | Decide one pair — merge through the owner's verb, or dismiss forever. | Change records | at once |
+| `POST /dedupe/candidates/{id}/undo` | undoDedupeDisposition | Re-open a disposed pair. | Change records | at once |
+| `GET /contacts/{id}/network` | getContactNetwork | Who on our team knows this contact, and how well. | any | at once |
+
+## Companies
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /companies` | listCompanies | List companies (live by default; cursor-paginated). | any | at once |
+| `POST /companies` | createCompany | Create a company. | Change records | at once |
+| `GET /companies/{id}` | getCompany | Get a company by id (the 360 record). | any | at once |
+| `PATCH /companies/{id}` | updateCompany | Update a company (partial). | Change records | at once |
+| `DELETE /companies/{id}` | archiveCompany | Archive (soft-delete) a company. | Change records | at once |
+| `POST /companies/{id}/merge` | mergeCompany | Merge this company into a target (non-lossy). | Change records | at once |
+| `GET /companies/{id}/hierarchy-rollup` | getCompanyHierarchyRollup | Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count. | any | at once |
+| `GET /companies/{id}/360` | getCompany360 | The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps. | any | at once |
+| `GET /companies/{id}/graph` | getCompanyGraph | The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner companies. | any | at once |
+| `GET /companies/{id}/coverage` | getCompanyCoverage | How well this account is covered — who answers, who is missing from the buying team, and the warmest way in. | any | at once |
+| `GET /companies/{id}/contacts` | listCompanyContacts | The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account. | any | at once |
+| `GET /companies/{id}/partner` | getPartner | Read the partner extension on a company (404 if the company is not a partner). | any | at once |
+| `POST /companies/{id}/enrich` | scrapeCompany | Enrich this company from its website (evidence-or-omit) — a staged proposal. | Buy contact data | waits for approval |
+| `POST /companies/{id}/deep-read` | deepReadCompany | Read the company's WHOLE site in the background — a crawl that ends in staged proposals. | Buy contact data | waits for approval |
+| `POST /companies/{id}/technical-enrich` | technicalEnrichCompany | Read what the company publicly runs — mail system, website stack, operated services, hosting. | Buy contact data | waits for approval |
+| `GET /companies/{id}/technical-enrich/latest` | getLatestTechnicalEnrich | What the last technical lookup did, per source, so a run that ended after the rep left is still visible. | any | at once |
+| `GET /companies/{id}/vat-check` | getCompanyVatCheck | What the EU VAT register answered about this company's VAT ID, and the receipt for having asked. | any | at once |
+| `GET /companies/{id}/site-reads/latest` | getLatestSiteRead | The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible. | any | at once |
+| `GET /companies/{id}/site-reads/{readId}` | getSiteRead | One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged. | any | at once |
+| `GET /companies/{id}/access` | getCompanyAccess | Who can open this company and who can change it, and why. | any | at once |
+| `GET /companies/{id}/strength` | getCompanyStrength | Relationship strength for a company (max over current employees). | any | at once |
+| `GET /companies/{id}/finance-summary` | getCompanyFinanceSummary | Does this customer actually pay us, and on time? | any | at once |
+| `GET /companies/{id}/facts` | listCompanyFacts | The company's confirmed facts, grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it. | any | at once |
+| `POST /companies/{id}/facts` | createCompanyFact | State a fact about this company by hand. | Change records | at once |
+| `GET /companies/{id}/profile-fields` | listCompanyProfileFields | The company's confirmed profile fields. A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it. | any | at once |
+| `PATCH /companies/{id}/profile-fields/{field}` | updateCompanyProfileField | State or correct a profile field — the canonical value changes, the machine's proposal survives. | Change records | at once |
+| `POST /companies/{id}/profile-fields/{field}/confirm` | confirmCompanyProfileField | Confirm a profile field without changing its value. | Change records | at once |
+| `PATCH /companies/{id}/facts/{factKey}` | updateCompanyFact | Correct an extracted fact. | Change records | at once |
+| `DELETE /companies/{id}/facts/{factKey}` | deleteCompanyFact | Remove a fact this company does not state. | Change records | at once |
+| `POST /companies/{id}/facts/{factKey}/confirm` | confirmCompanyFact | Confirm an extracted fact without changing its value. | Change records | at once |
+
+## Relationships
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /relationships` | listRelationships | List relationships (employment, deal_stakeholder, or partner edges). | any | at once |
+| `POST /relationships` | createRelationship | Create a relationship edge (employment or deal stakeholder). | Change records | at once |
+| `PATCH /relationships/{id}` | updateRelationship | Update a relationship (role, primary flag, dates). | Change records | at once |
+| `DELETE /relationships/{id}` | archiveRelationship | Archive (soft-delete) a relationship. | Change records | at once |
+
+## Deals
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /deals` | listDeals | List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads. | any | at once |
+| `POST /deals` | createDeal | Create a deal. | Change records | at once |
+| `GET /deals/{id}` | getDeal | Get a deal by id (the 360 record). | any | at once |
+| `PATCH /deals/{id}` | updateDeal | Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. | Change records | at once |
+| `DELETE /deals/{id}` | archiveDeal | Archive (soft-delete) a deal. | Change records | at once |
+| `POST /deals/{id}/advance` | advanceDeal | Advance a deal to a new stage (audit-logged with prior + next stage). | Change records | may wait for approval |
+| `GET /deals/{id}/stakeholders` | listDealStakeholders | List a deal's stakeholders (deal↔contact relationships). | any | at once |
+| `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | any | at once |
+| `GET /acquisition-sources` | listAcquisitionSources | List deal acquisition sources, active and retired, in display order. | any | at once |
+| `GET /deal-rooms` | listDealRooms | List Deal Rooms (live by default; cursor-paginated). | any | at once |
+| `POST /deal-rooms` | createDealRoom | Open a Deal Room on a deal. | Change records | at once |
+| `GET /deal-rooms/{id}` | getDealRoom | Get a Deal Room by id. | any | at once |
+| `GET /deal-rooms/{id}/participants` | listDealRoomParticipants | List the contacts admitted to a room. | any | at once |
+| `GET /deal-rooms/{id}/documents` | listDealRoomDocuments | List the documents a room puts in front of its buyer. | any | at once |
+| `GET /deal-rooms/{id}/threads` | listDealRoomThreads | The room's conversation — every thread with its comments. | any | at once |
+| `POST /deal-rooms/{id}/threads` | openDealRoomThread | Open a thread as the seller's side — a question on a document, or a room-level update. | Change records | at once |
+| `POST /deal-rooms/{id}/threads/{threadId}/comments` | replyDealRoomThread | Reply in a thread as the seller's side. | Change records | at once |
+| `GET /deals/{id}/outcome-reviews` | listDealOutcomeReviews | The reviews written about this deal's closings. | any | at once |
+| `GET /deals/{id}/status` | getDealStatus | Where the deal stands, what could lose it, and the one thing to do next. | any | at once |
+| `GET /deals/{id}/coverage` | getDealCoverage | Who covers this deal, and what is wrong with how it is covered. | any | at once |
+| `GET /deals/{id}/commitments` | getDealCommitments | What the customer committed to that this deal waits on. | any | at once |
+
+## Pipelines
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /pipelines` | listPipelines | List pipelines. | any | at once |
+| `GET /pipelines/{id}` | getPipeline | Get a pipeline (with its ordered stages). | any | at once |
+| `GET /stages` | listStages | List stages (optionally filtered by pipeline). | any | at once |
+| `GET /stages/{id}` | getStage | Get a stage by id. | any | at once |
+| `GET /stage-automation/report` | getStageAutomationReport | What each stage transition has earned. | any | at once |
+| `GET /stage-automation/policies/{id}` | listTransitionPolicies | What each transition in this pipeline is allowed to do. | any | at once |
+| `GET /stages/{id}/exit-criteria` | listStageExitCriteria | What a deal must satisfy before it leaves this stage. | any | at once |
+
+## Projects
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /projects` | listProjects | List projects (live by default; cursor-paginated). | any | at once |
+| `POST /projects` | createProject | Create a project on a company. | Change records | at once |
+| `GET /projects/{id}` | getProject | Get a project by id. | any | at once |
+| `PATCH /projects/{id}` | updateProject | Update a project. | Change records | at once |
+| `DELETE /projects/{id}` | archiveProject | Archive a project (soft delete; archive is the delete). | Change records | at once |
+| `POST /projects/{id}/advance` | advanceProjectPhase | Move a project along the phase ladder (audit-logged with prior + next phase). | Change records | at once |
+| `GET /projects/{id}/360` | getProject360 | The whole project page in one round trip — the project, its company, its phase history, its deals, stakeholders, contracts, documents, commitments, timeline and filing coverage. | any | at once |
+| `GET /projects/{id}/health-assessments` | listProjectHealthAssessments | How this project has been going, newest judgement first. | any | at once |
+| `GET /projects/{id}/stakeholders` | listProjectStakeholders | List a project's stakeholders (project↔contact relationships). | any | at once |
+| `PUT /projects/{id}/stakeholders` | setProjectStakeholder | Attach a contact to a project with a role (idempotent per contact). | Change records | at once |
+| `DELETE /projects/{id}/stakeholders/{contact_id}` | removeProjectStakeholder | Detach a contact from a project (archives the edge). | Change records | at once |
+| `PUT /projects/{id}/companies` | setProjectCompany | Put a company on a project with a role (idempotent per company). | Change records | at once |
+| `DELETE /projects/{id}/companies/{company_id}` | removeProjectCompany | Take a company off a project (archives the edge). | Change records | at once |
+
+## Activities
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /channel-providers` | listChannelProviders | Which messaging transports THIS installation has registered. | any | at once |
+| `POST /tasks` | createTask | Create a task — a commitment with an owner, on the records it is about. | Change records | at once |
+| `GET /activities` | listActivities | List activities (the timeline; cursor-paginated, filterable by type/entity). | any | at once |
+| `POST /activities` | logActivity | Log an activity (the `log_activity` MCP verb). | Change records | at once |
+| `GET /activities/{id}` | getActivity | Get an activity by id (includes its links and raw capture payload). | any | at once |
+| `PATCH /activities/{id}` | updateActivity | Update an activity (e.g. complete a task). | Change records | at once |
+| `DELETE /activities/{id}` | archiveActivity | Archive (soft-delete) an activity. | Change records | at once |
+| `GET /activities/{id}/email-presentation` | getEmailPresentation | Everything one email needs to be read and acted on, in one read. | any | at once |
+| `GET /activities/{id}/meeting-brief` | getMeetingBrief | The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands. | any | at once |
+| `POST /activities/{id}/relink` | relinkActivity | Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving). | Change records | may wait for approval |
+| `POST /activities/relink-thread` | relinkThread | Re-associate every activity of one conversation thread to a chosen record, in one transaction. | Change records | may wait for approval |
+| `POST /activities/relink-bulk` | relinkActivities | Re-associate a named set of activities to a chosen record, in one transaction. | Change records | may wait for approval |
+| `GET /activities/{id}/transcript-proposals/latest` | getLatestTranscriptRead | The newest reading of this transcript, so one that ended after the rep navigated away is still visible. | any | at once |
+| `GET /activities/{id}/transcript-proposals/{readId}` | getTranscriptRead | One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing. | any | at once |
+| `POST /activities/{id}/draft-email` | draftEmail | Draft a reply/follow-up email for context (the `draft_email` MCP verb). | Draft messages | at once |
+| `GET /activities/{id}/reply-recipient` | getReplyRecipient | Who a reply to this message would be addressed to. | any | at once |
+| `POST /activities/{id}/send-email` | sendEmail | Send a (possibly edited) email draft — runs directly, consent-gated. | Send messages | at once |
+| `POST /emails` | sendCompanyEmail | Start a new email conversation from a record — runs directly, consent-gated. | Send messages | at once |
+| `POST /activities/{id}/send-message` | sendMessage | Reply on a captured messaging-channel conversation — runs directly, consent-gated. | Send messages | at once |
+| `GET /scheduling/profile` | getSchedulingProfile | Read the caller's reusable booking page and scheduling policy. | any | at once |
+| `POST /scheduling/invitations` | createMeetingInvitation | Reserve a meeting and request a calendar-native invitation. | Send messages | waits for approval |
+| `GET /scheduling/invitations/{id}` | getMeetingInvitation | Read invitation delivery and calendar state. | any | at once |
+| `GET /availability` | getAvailability | Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb). | any | at once |
+| `POST /bookings` | bookMeeting | Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb). | Send messages | at once |
+| `GET /activities/follow-up-settings` | getFollowUpSettings | How long a sent message may go unanswered before the worklist reminds its sender. | any | at once |
+| `GET /activity-review-templates` | listActivityReviewTemplates | The question sets an outcome review can ask. | any | at once |
+
+## Leads
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /leads` | listLeads | List leads (their OWN list, distinct from contacts; cursor-paginated). | any | at once |
+| `POST /leads` | createLead | Create a lead. | Change records | at once |
+| `GET /leads/settings` | getLeadSettings | How this installation handles leads. | any | at once |
+| `GET /leads/{id}` | getLead | Get a lead by id. | any | at once |
+| `PATCH /leads/{id}` | updateLead | Update a lead (partial). | Change records | at once |
+| `DELETE /leads/{id}` | disqualifyLead | Disqualify (soft-archive) a lead, with a reason. | Change records | at once |
+| `POST /leads/{id}/promote` | promoteLead | Promote a lead to a contact on genuine engagement (non-lossy merge). | Change records | at once |
+| `POST /leads/{id}/demote` | demoteLead | The documented reverse of POST /leads/{id}/promote, deterministic and conservative: it **blocks rather than orphans**. | Change records | at once |
+| `GET /lead-sources` | listLeadSources | List lead sources, active and inactive, in display order. | any | at once |
+| `GET /lead-disqualify-reasons` | listLeadDisqualifyReasons | List disqualification reasons, active and inactive, in display order. | any | at once |
+
+## Lists
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /lists` | listLists | Find the lists this caller may see, by name. | any | at once |
+| `POST /lists` | createList | Make a Live List (a saved filter) or a Shortlist (chosen records). | Change records | at once |
+| `GET /lists/{id}` | getList | Read one list, with the count of its members this caller may see. | any | at once |
+| `PATCH /lists/{id}` | updateList | Change a list's name, purpose, filter, sharing, team or steward. | Change records | at once |
+| `DELETE /lists/{id}` | archiveList | Archive a list. Its members and history stay, read-only. | Change records | at once |
+| `POST /lists/{id}/restore` | restoreList | Bring an archived list back. | Change records | at once |
+| `GET /lists/{id}/members` | listListMembers | Page through the members of a list this caller may see. | any | at once |
+| `POST /lists/{id}/members` | addListMember | Add one record to a Shortlist, with an optional note on why. | Change records | at once |
+| `POST /lists/{id}/members/remove` | removeListMember | Take one record off a Shortlist, with an optional note on why. | Change records | at once |
+| `GET /lists/{id}/members/{recordId}/why` | explainListMember | Say why a record is, or is not, on a list. | any | at once |
+| `GET /records/{entity_type}/{entity_id}/lists` | getRecordLists | The lists one record is on that this caller may find. | any | at once |
+| `GET /lists/{id}/history` | listListHistory | Read what changed on a list, newest first. | any | at once |
+
+## Tags
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /tags` | listTags | List tags. | any | at once |
+| `POST /tags` | createTag | Create a tag. | Change records | at once |
+| `GET /tags/{id}` | getTag | Read one tag, with how much of the workspace carries it. | any | at once |
+| `PATCH /tags/{id}` | updateTag | Rename, recolour or describe a tag. | Change records | at once |
+| `DELETE /tags/{id}` | archiveTag | Archive a tag. | Change records | at once |
+| `POST /tags/{id}/merge` | mergeTags | Fold this tag into another, moving every record that carries it. | Change records | waits for approval |
+| `GET /records/{entity_type}/{entity_id}/tags` | getRecordTags | The tags on one record, and who put them there. | any | at once |
+| `POST /tags/{id}/apply` | applyTag | Apply a tag to an entity (contact/company/deal/lead/project). | Change records | at once |
+| `DELETE /tags/{id}/apply` | removeTag | Take one tag off one entity, leaving the tag itself in place. | Change records | at once |
+
+## Views
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /filters/vocabulary` | getFilterVocabulary | Read what a new filter clause may name on one record type. | any | at once |
+| `GET /views` | listSavedViews | List the caller's saved views (per-user; optionally scoped to one resource). | any | at once |
+| `POST /views` | createSavedView | Save a per-user view (columns, sort, filter state) for a resource. | Change records | at once |
+| `GET /views/{id}` | getSavedView | Get one of the caller's saved views by id. | any | at once |
+| `PATCH /views/{id}` | updateSavedView | Update a saved view's name or query state. | Change records | at once |
+| `DELETE /views/{id}` | archiveSavedView | Archive a saved view. | Change records | at once |
+
+## CustomFields
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /custom-fields` | listCustomFields | List custom fields for an object (admin read; includes retired by default). | any | at once |
+| `POST /custom-fields` | createCustomField | Define a new custom field on an existing core object (a schema change). | Change records | waits for approval |
+| `PATCH /custom-fields/{id}` | renameCustomField | Rename a custom field's display label (not a schema change). | Change records | at once |
+| `GET /custom-fields/{id}/lists` | listCustomFieldLiveLists | The Live Lists whose filter names this custom field. | any | at once |
+| `POST /custom-fields/{id}/retire` | retireCustomField | Retire (soft-retire) a custom field — irreversible-feeling, confirm-first. | Change records | waits for approval |
+| `PATCH /custom-fields/{id}/options` | updateCustomFieldOptions | Edit a picklist custom field's allowed options (regenerates the column's CHECK). | Change records | waits for approval |
+
+## Reports
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /analytics/metrics` | getReportingMetrics | Get reporting metrics | any | at once |
+| `GET /analytics/evaluate.csv` | exportReportingEvaluation | Evaluate reporting | any | at once |
+| `GET /analytics/editions/{id}/export.csv` | exportReportingEdition | Export this edition's permitted frozen metrics and chart readings. | any | at once |
+| `GET /analytics/evaluate` | evaluateReporting | Evaluate reporting | any | at once |
+| `GET /analytics/evidence` | getReportingEvidence | Get reporting evidence | any | at once |
+| `GET /analytics/reports` | listReportingReports | List reporting reports | any | at once |
+| `GET /analytics/reports/{id}` | getReportingReport | Get reporting report | any | at once |
+| `GET /analytics/reports/{id}/evaluation` | evaluateReportingReport | Evaluate reporting report | any | at once |
+| `GET /analytics/targets` | listReportingTargets | List reporting targets | any | at once |
+| `GET /analytics/targets/{id}` | getReportingTarget | Get reporting target | any | at once |
+| `GET /analytics/framework` | getReportingFramework | Get reporting framework | any | at once |
+| `GET /analytics/reports/{id}/schedules` | listReportingSchedules | List reporting schedules | any | at once |
+| `GET /analytics/reports/{id}/editions` | listReportingEditions | List reporting editions | any | at once |
+| `GET /analytics/editions/{id}` | getReportingEdition | Get reporting edition | any | at once |
+| `GET /analytics/editions/{id}/evidence` | getReportingEditionEvidence | Get reporting edition evidence | any | at once |
+| `GET /analytics/editions/compare` | compareReportingEditions | Compare reporting editions | any | at once |
+| `GET /analytics/reports/{id}/executions` | listReportingExecutions | List reporting executions | any | at once |
+| `GET /analytics/executions/{id}` | getReportingExecution | Get reporting execution | any | at once |
+| `POST /reports/{report}` | runReport | Run a report (the `run_report` MCP verb) and return aggregate rows. | Read records | at once |
+| `GET /reports/{report}/derivation` | explainReport | "Explain This Number" — resolve a derivation handle to its definition + source rows. | any | at once |
+| `GET /forecast` | getForecast | What a period is expected to close, and what the figure does not cover. | any | at once |
+| `GET /forecast/assurance` | getForecastAssurance | What last night's input check found, and how much of the pipeline it reached. | any | at once |
+| `GET /analytics/coverage` | getDataCoverage | How current the sources behind the numbers are. | any | at once |
+| `GET /forecast/assurance/exceptions` | listInputChecks | The open findings this caller can see. | any | at once |
+| `GET /forecast/movement` | getForecastMovement | What moved the forecast between two snapshots, and which deals moved it. | any | at once |
+| `GET /forecast/calls` | listForecastCalls | What this period's forecast has been called, newest first. | any | at once |
+| `POST /analytics/query` | runAnalyticsQuery | Answer a question nobody wrote a report for. | Read records | at once |
+| `POST /analytics/reports/render` | renderAnalyticsReport | Resolve a report document's figures for this reader. | Read records | at once |
+
+## Search
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /search` | search | Cross-object search (contacts, companies, deals, activities, leads). | any | at once |
+
+## Approvals
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /approvals` | listApprovals | The approval inbox — list staged actions awaiting human decision. | any | at once |
+| `GET /approvals/{id}` | getApproval | Get a single approval item (full proposed diff + evidence). | any | at once |
+| `POST /approvals/{id}/approve` | approveApproval | Approve a staged action (commits it; mints the approval token). | Change records | at once |
+| `POST /approvals/{id}/reject` | rejectApproval | Reject a staged action (discards it; nothing commits). | Change records | at once |
+| `POST /approval-bundles/{bundle_id}/approve` | approveApprovalBundle | Approve every still-pending member of one bundle. | Change records | at once |
+| `POST /approval-bundles/{bundle_id}/reject` | rejectApprovalBundle | Reject every still-pending member of one bundle; no records change. | Change records | at once |
+
+## Identity
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /installation/settings` | getInstallationSettings | The installation's own settings. | any | at once |
+| `GET /users` | listUsers | List workspace members (roster) — cursor-paginated. Read-only. | any | at once |
+| `GET /users/names` | nameSeats | Name the colleagues behind a set of ids. Read-only. | any | at once |
+| `GET /teams` | listTeams | List workspace teams — cursor-paginated. Read-only. | any | at once |
+
+## Assignments
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /record-roles` | listRecordRoles | List responsibility roles, active and retired, in display order. | any | at once |
+| `GET /records/{record_type}/{record_id}/assignments` | listRecordAssignments | Who is responsible for this record, by role. | any | at once |
+
+## Bulk
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `POST /bulk/preview` | previewBulkChange | Say what one change over a selection of records would do, without doing it. | Change records | at once |
+| `POST /bulk/execute` | executeBulkChange | Apply one change to a selection of records, record by record. | Change records | at once |
+| `GET /bulk/{id}` | getBulkChange | Read what one bulk change did, and whether it was undone. | any | at once |
+| `POST /bulk/{id}/undo/preview` | previewBulkUndo | Say what undoing one bulk change would do, without doing it. | Change records | at once |
+| `POST /bulk/{id}/undo` | undoBulkChange | Put back what one bulk change did, record by record. | Change records | at once |

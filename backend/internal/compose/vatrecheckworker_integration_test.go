@@ -359,8 +359,7 @@ func TestAThrottledRegisterReschedulesRatherThanAskingAgain(t *testing.T) {
 		Args: CheckCompanyVatArgs{Workspace: v.WS, CompanyID: v.companyID.UUID, Requested: true},
 	})
 
-	var snooze *river.JobSnoozeError
-	if !errors.As(err, &snooze) {
+	if _, ok := errors.AsType[*river.JobSnoozeError](err); !ok {
 		t.Fatalf("a throttled register answered %v, want a snooze — the service named when to "+
 			"come back, and anything else either drops the consultation or returns sooner "+
 			"than it allowed", err)

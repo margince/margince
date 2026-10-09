@@ -5,7 +5,9 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,7 +25,7 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 		if result, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE activity SET audience = 'selected' WHERE id = $%d AND archived_at IS NULL AND restricted_at IS NULL`, len(args)), args...); err != nil {
 			return err
 		} else if result.RowsAffected() != 1 {
-			return fmt.Errorf("activities: initial audience row unavailable")
+			return errors.New("activities: initial audience row unavailable")
 		}
 		if err := replaceAudienceMembers(ctx, tx, id, in.audienceMembers); err != nil {
 			return err
@@ -32,9 +34,7 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 		if err != nil {
 			return err
 		}
-		for column, value := range audience {
-			after[column] = value
-		}
+		maps.Copy(after, audience)
 		after["source_system"], after["source_activity_id"], after["assignee_id"] = in.SourceSystem, in.SourceActivityID, in.AssigneeID
 	}
 	auditID, err := storekit.Audit(ctx, tx, "create", "activity", id.UUID, nil, after)

@@ -192,7 +192,7 @@ func walk(from *node, path string, all schemas) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, segment := range strings.Split(path, ".") {
+	for segment := range strings.SplitSeq(path, ".") {
 		if segment == "items" {
 			if current.Items == nil {
 				return nil, fmt.Errorf("no items under %q", segment)

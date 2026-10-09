@@ -64,8 +64,7 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 		_, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
 			PartnerCompanyID: &plainCompany,
 		})
-		var notPartner *contacts.NotAPartnerError
-		if !errors.As(err, &notPartner) {
+		if _, ok := errors.AsType[*contacts.NotAPartnerError](err); !ok {
 			t.Fatalf("UpdateDeal naming a non-partner → %v, want NotAPartnerError", err)
 		}
 	})

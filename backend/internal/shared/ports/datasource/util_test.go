@@ -40,8 +40,7 @@ func TestStrictDecodeRefusesCaseVariantFieldKeys(t *testing.T) {
 		if err == nil {
 			t.Fatalf("case-variant key %s was accepted; the store would write it while the probe cleared it", variant)
 		}
-		var decErr *FieldDecodeError
-		if !errors.As(err, &decErr) {
+		if _, ok := errors.AsType[*FieldDecodeError](err); !ok {
 			t.Fatalf("case-variant key %s: want FieldDecodeError (maps to 422), got %T: %v", variant, err, err)
 		}
 	}
@@ -54,8 +53,8 @@ func TestStrictDecodeRefusesCaseVariantFieldKeys(t *testing.T) {
 // ignored field (a common Go idiom) must NOT disable the backstop.
 func TestStrictDecodeDefersOnlyToMapCatchAll(t *testing.T) {
 	type withMapCatchAll struct {
-		FullName             *string                `json:"full_name,omitempty"`
-		AdditionalProperties map[string]interface{} `json:"-"`
+		FullName             *string        `json:"full_name,omitempty"`
+		AdditionalProperties map[string]any `json:"-"`
 	}
 	var lax withMapCatchAll
 	if err := RejectNonCanonicalKeys(json.RawMessage(`{"anything":1}`), &lax); err != nil {

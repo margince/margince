@@ -60,8 +60,8 @@ func fakeEmbedderNamed(t *testing.T, fake *ai.FakeClient, modelName string) sear
 	t.Helper()
 	cfg := ai.FakeRoutingConfig()
 	cfg.Embeddings = ai.EmbeddingsConfig{
-		ProviderConfig: ai.ProviderConfig{Provider: ai.ProviderFake, Model: modelName},
-		Dimensions:     fakeEmbedDims,
+		Provider: ai.ProviderFake, Model: modelName,
+		Dimensions: fakeEmbedDims,
 	}
 	modelPath, err := compose.NewLocalModelPath(cfg, ai.WithFakeClient(fake), ai.WithoutResultCache())
 	if err != nil {

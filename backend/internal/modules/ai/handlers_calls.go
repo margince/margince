@@ -108,8 +108,8 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 	}
 	if detail.Payload != nil {
 		out.Payload = &struct {
-			Request  interface{} `json:"request"`
-			Response interface{} `json:"response"`
+			Request  any `json:"request"`
+			Response any `json:"response"`
 		}{Request: detail.Payload.Request, Response: detail.Payload.Response}
 	}
 	return out

@@ -80,8 +80,7 @@ func TestLogActivityInputRefusesATransportOnAKindThatTravelledOnNothing(t *testi
 			ChannelProvider: &provider,
 			Source:          "human",
 		})
-		var fault *MessageProviderError
-		if !errors.As(err, &fault) {
+		if _, ok := errors.AsType[*MessageProviderError](err); !ok {
 			t.Errorf("kind %s accepted a transport (err = %v), want a MessageProviderError — only a message travels on one", kind, err)
 		}
 	}

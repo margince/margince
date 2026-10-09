@@ -17,6 +17,7 @@ import (
 	"io"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -65,13 +66,6 @@ func (e *EmptyUploadError) FieldFault() (field, code, message string) {
 	return "file", "empty_file", e.Error()
 }
 
-// UploadAttachment stores an object and records its metadata row. Authority
-// inherits from the parent entity: the caller must hold Update on the parent
-// object type and be able to see the parent row — both are checked BEFORE any
-// bytes are written, so an upload to a hidden or cross-tenant entity cannot
-// land an object (no storage abuse). The object is put before the row commits
-// (a committed row always has its bytes; a failed write leaves at worst an
-// orphan object, never a row promising bytes that are not there).
 // storeAttachmentBytes declares the key provisional and then stores the bytes,
 // in that order.
 //
@@ -87,19 +81,31 @@ func (s *Store) storeAttachmentBytes(ctx context.Context, key string, in Attachm
 	return s.blob.Put(ctx, key, in.Content, size, in.ContentType)
 }
 
-func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmcontracts.Attachment, error) {
+// mayUpload is the authority UploadAttachment checks before any bytes exist.
+func (s *Store) mayUpload(ctx context.Context, in AttachmentInput) error {
 	if s.blob == nil {
-		return crmcontracts.Attachment{}, ErrBlobstoreUnconfigured
+		return ErrBlobstoreUnconfigured
 	}
 	if err := auth.Require(ctx, in.EntityType, principal.ActionUpdate); err != nil {
-		return crmcontracts.Attachment{}, err
+		return err
 	}
-	if err := s.tx(ctx, func(tx pgx.Tx) error {
+	return s.tx(ctx, func(tx pgx.Tx) error {
 		if err := ensureAttachmentParentWritableLive(ctx, tx, in.EntityType, in.EntityID); err != nil {
 			return err
 		}
 		return ensureContractFileable(ctx, tx, in.ContractID)
-	}); err != nil {
+	})
+}
+
+// UploadAttachment stores an object and records its metadata row. Authority
+// inherits from the parent entity: the caller must hold Update on the parent
+// object type and be able to see the parent row; both are checked before any
+// bytes are written, so an upload to a hidden or cross-tenant entity cannot
+// land an object (no storage abuse). The object is put before the row commits
+// (a committed row always has its bytes; a failed write leaves at worst an
+// orphan object, never a row promising bytes that are not there).
+func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmcontracts.Attachment, error) {
+	if err := s.mayUpload(ctx, in); err != nil {
 		return crmcontracts.Attachment{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -109,18 +115,11 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 
 	id := ids.NewV7()
 	key := blobstore.WorkspaceKey(workspaceID(ctx), string(storedobjects.KindAttachment), id.String())
-	// The name a stranger or a rep TYPED, made safe before it reaches the column
-	// — the same function the capture path runs every sender-supplied name
-	// through, for the same reasons: a name is presentational only (nothing opens
-	// a file by it), it is read back in a log line, a CSV export and a park
-	// reason, and it renders in a list. A path separator, a line break, or a
-	// bidirectional override in it rewrites whichever of those quotes it.
-	//
-	// It runs HERE rather than at the transport, so every producer of an
-	// attachment row is covered by one call rather than by each transport
-	// remembering: an uploaded file and a captured one land in the same column
-	// and are shown by the same list.
-	in.Filename = extension.SafeFilename(in.Filename, 0)
+	// Before the digest, so a refused file is never stored.
+	in, err = acceptUploadedFile(in)
+	if err != nil {
+		return crmcontracts.Attachment{}, err
+	}
 
 	checksum, size, err := blobstore.Digest(in.Content)
 	if err != nil {
@@ -174,12 +173,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 			account, in.ContractID); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "create", "attachment", id, nil, map[string]any{
-			fieldEntityType: in.EntityType,
-			fieldEntityID:   in.EntityID.String(),
-			"filename":      in.Filename,
-			"byte_size":     size,
-		}); err != nil {
+		if err := announceUploadedAttachment(ctx, tx, id, in, size); err != nil {
 			return err
 		}
 		// The key stops being provisional in the SAME transaction that gave it
@@ -197,4 +191,59 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		return nil
 	})
 	return out, err
+}
+
+// acceptUploadedFile makes the typed name safe and settles the stored type.
+//
+// The name a stranger or a rep typed is made safe before it reaches the column,
+// by the same function the capture path runs every sender-supplied name
+// through, for the same reasons: a name is presentational only (nothing opens
+// a file by it), it is read back in a log line, a CSV export and a park
+// reason, and it renders in a list. A path separator, a line break, or a
+// bidirectional override in it rewrites whichever of those quotes it.
+//
+// It runs in the store rather than at the transport, so every producer of an
+// attachment row is covered by one call rather than by each transport
+// remembering: an uploaded file and a captured one land in the same column
+// and are shown by the same list.
+//
+// The type is resolved from the typed name, because sanitizing truncates a
+// long one and can cut its extension off.
+func acceptUploadedFile(in AttachmentInput) (AttachmentInput, error) {
+	typed := in.Filename
+	in.Filename = extension.SafeFilename(in.Filename, 0)
+	mediaType, err := resolveAttachmentType(in.ContentType, typed, in.Filename)
+	if err != nil {
+		return in, err
+	}
+	in.ContentType = mediaType
+	return in, nil
+}
+
+// announceUploadedAttachment writes the audit row and the outbox row that say a
+// file arrived, in the transaction that wrote the file's own row. That is the
+// write shape every other mutation keeps, and without the outbox row no
+// subscriber learns of an upload except by polling the list.
+//
+// The filename is in the audit row and not in the event. The audit row answers
+// to an auditor inside the workspace; the event travels to whoever subscribed,
+// and a name a rep typed can be the sensitive part by itself.
+func announceUploadedAttachment(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, in AttachmentInput, size int64,
+) error {
+	auditID, err := storekit.Audit(ctx, tx, "create", "attachment", id, nil, map[string]any{
+		fieldEntityType: in.EntityType,
+		fieldEntityID:   in.EntityID.String(),
+		"filename":      in.Filename,
+		"byte_size":     size,
+	})
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventAttachmentCreated{
+		ParentType:  in.EntityType,
+		ParentId:    openapi_types.UUID(in.EntityID),
+		ContentType: nullIfEmpty(in.ContentType),
+		ByteSize:    &size,
+	})
 }

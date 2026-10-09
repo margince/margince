@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -325,9 +326,7 @@ func UnpinnedKinds() map[string]string {
 
 func copyRationales(declared map[string]string) map[string]string {
 	out := make(map[string]string, len(declared))
-	for kind, why := range declared {
-		out[kind] = why
-	}
+	maps.Copy(out, declared)
 	return out
 }
 

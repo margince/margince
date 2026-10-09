@@ -420,8 +420,7 @@ func TestAMemberBoundChatsAudienceIsNoLongerAPerMessageAnswer(t *testing.T) {
 
 	_, err := store.SetAudience(writer, ids.From[ids.ActivityKind](mine),
 		audienceNaming(e.member))
-	var captured *activities.CapturedAudienceError
-	if !errors.As(err, &captured) {
+	if _, ok := errors.AsType[*activities.CapturedAudienceError](err); !ok {
 		t.Fatalf("setting a member-bound chat's audience answered %v, want the captured-audience refusal — "+
 			"a row its importer's posture decides must not also be settable by hand, or the two writers disagree on the next sync", err)
 	}

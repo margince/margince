@@ -234,7 +234,7 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 	case providerGeminiVertex:
 		return selectVertex(cfg, keys, httpc)
 	case "":
-		return nil, fmt.Errorf("ai: binding has no provider")
+		return nil, errors.New("ai: binding has no provider")
 	default:
 		return nil, fmt.Errorf("ai: unknown provider %q (have: %s)", cfg.Provider, strings.Join(knownProviders, ", "))
 	}
@@ -346,10 +346,11 @@ func ConfigItems() []config.Item {
 // baseURL is carried rather than inferred. openai_compatible fails closed
 // without one — the endpoint belongs to the vendor, not the model — so a broker
 // run supplies it and a native vendor leaves it empty for the provider default.
+// It is rooted here because these lanes never pass through the provider lift.
 func ParseBinding(spec, baseURL string) (ProviderConfig, error) {
 	provider, modelName, found := strings.Cut(spec, ":")
 	if !found || provider == "" || modelName == "" {
 		return ProviderConfig{}, fmt.Errorf("ai: a model binding wants provider:model, got %q", spec)
 	}
-	return ProviderConfig{Provider: provider, Model: modelName, BaseURL: baseURL}, nil
+	return ProviderConfig{Provider: provider, Model: modelName, BaseURL: hostRoot(provider, baseURL)}, nil
 }

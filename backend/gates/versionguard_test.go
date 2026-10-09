@@ -205,7 +205,7 @@ func versionBumpingTables(t *testing.T) map[string]bool {
 // TRIGGER removes the record. A re-attachment therefore heals a drop, and a drop
 // of one trigger leaves every other trigger on the same table standing.
 func applyTriggerStatements(text string, live map[attachedTrigger]triggerBody) {
-	for _, stmt := range strings.Split(text, ";") {
+	for stmt := range strings.SplitSeq(text, ";") {
 		if m := triggerDrop.FindStringSubmatch(stmt); m != nil {
 			delete(live, attachedTrigger{name: m[1], table: m[2]})
 			continue

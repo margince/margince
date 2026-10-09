@@ -216,8 +216,7 @@ func TestAWalkThatCannotBeResumedIsRefusedRatherThanRestarted(t *testing.T) {
 		t.Error("a refused walk still reported itself as one to page, so the projection " +
 			"would resume into a snapshot the store declined to hand over")
 	}
-	var mismatch *storekit.CursorSortMismatchError
-	if !errors.As(err, &mismatch) {
+	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); !ok {
 		t.Errorf("a refused walk answered %T, want the refusal a stale cursor earns so the "+
 			"client re-issues without it", err)
 	}
@@ -286,7 +285,7 @@ func decodedCursor(t *testing.T, token string) worklistCursor {
 // the difference it exists to prove.
 func aDayReordered(n int) crmcontracts.Attention {
 	tasks := make([]crmcontracts.AttentionItem, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		tasks = append(tasks, item(
 			"task-"+string(rune('0'+i)), "task",
 			withDue(rankInstant.Add(time.Duration(n-i)*time.Hour))))
@@ -298,7 +297,7 @@ func aDayReordered(n int) crmcontracts.Attention {
 // something to order by and the sequence is stable across reads.
 func aDayOfTasks(n int) crmcontracts.Attention {
 	tasks := make([]crmcontracts.AttentionItem, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		tasks = append(tasks, item(
 			"task-"+string(rune('0'+i)), "task",
 			withDue(rankInstant.Add(time.Duration(i)*time.Hour))))
@@ -455,7 +454,7 @@ func TestAFoldedGroupLosingOneMemberDoesNotLoseTheOthers(t *testing.T) {
 // once they reach the floor.
 func aDayOfAlikeDecisions(n int) crmcontracts.Attention {
 	pairs := make([]crmcontracts.AttentionItem, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		pairs = append(pairs, item(fmt.Sprintf("pair-%d", i), "dedupe_candidate"))
 	}
 	return crmcontracts.Attention{AsOf: rankInstant, NeedsYou: pairs}

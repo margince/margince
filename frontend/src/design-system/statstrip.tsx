@@ -10,6 +10,11 @@ import "./statstrip.css";
 // than cast away.
 type StripVars = CSSProperties & Record<`--${string}`, string | number>;
 
+// The widest row the sheet draws: past six slots a figure and its clause stop
+// fitting a slot (statstrip.css, 66rem). The grid and the tail span both read
+// this one number, so the span is always taken against the columns drawn.
+const fullRow = 6;
+
 // StatStrip is the record page's readings row: ONE comparison of equal slots,
 // each a reading pane, with air between them and no plate around them. The
 // row is read across as a single comparison, which is what the equal slots
@@ -29,6 +34,7 @@ export function StatStrip({
   testId,
   label,
   floor,
+  density,
 }: Readonly<{
   children: ReactNode;
   // How the strip SITS in the layout around it — it lands on the strip's
@@ -47,6 +53,10 @@ export function StatStrip({
   // row is read across as one statement, and a caveat attached to one figure
   // invites the reading where the others are exact.
   floor?: ReactNode;
+  // Compact keeps every slot on one line at a work column's width and sets
+  // each card smaller, for a row that sits above the content a reader came
+  // for rather than being that content.
+  density?: "compact";
 }>) {
   // The column count follows the slots the caller actually drew. A fixed
   // template reserves cells nobody fills, and an empty cell on a plate reads
@@ -57,12 +67,13 @@ export function StatStrip({
   // The fold breakpoints cap at the same count rather than at the sheet's own
   // 3-then-2 ladder: `repeat()` needs an integer, so the cap can only come
   // from here, where the slot count is already known. A two-slot strip folds
-  // to two columns at every width instead of inventing a third, empty one.
+  // to two columns at every width instead of inventing a third, empty one. A
+  // seven-slot strip draws six and stretches the seventh over the row below.
   const vars: StripVars = {
-    "--stat-strip-slots": slots,
+    "--stat-strip-slots": Math.min(slots, fullRow),
     "--stat-strip-slots-3": Math.min(slots, 3),
     "--stat-strip-slots-2": Math.min(slots, 2),
-    "--stat-strip-tail-6": tailSpan(slots, 6),
+    "--stat-strip-tail-6": tailSpan(slots, fullRow),
     "--stat-strip-tail-3": tailSpan(slots, 3),
     "--stat-strip-tail-2": tailSpan(slots, 2),
   };
@@ -72,6 +83,7 @@ export function StatStrip({
       style={vars}
       aria-label={label}
       data-testid={testId}
+      data-density={density}
     >
       {children}
     </section>

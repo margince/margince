@@ -100,7 +100,7 @@
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
   border-inline-start: 2px solid var(--borderSubtle);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .mb-arc-row {

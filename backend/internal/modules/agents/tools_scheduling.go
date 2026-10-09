@@ -15,7 +15,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -63,7 +63,7 @@ func (t checkAvailability) Handle(ctx context.Context, in json.RawMessage) (json
 	if args.Reliable {
 		scheduling, ok := t.comms.(ReliableScheduling)
 		if !ok {
-			return nil, fmt.Errorf("calendar-backed availability is unavailable")
+			return nil, errors.New("calendar-backed availability is unavailable")
 		}
 		free, err = scheduling.ReliableAvailability(ctx, args.HostUserID, args.From, args.To, args.DurationMinutes)
 	} else {

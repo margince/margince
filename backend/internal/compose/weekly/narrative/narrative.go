@@ -18,6 +18,7 @@ package narrative
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -218,7 +219,7 @@ func Parse(reply string, in Input) (string, error) {
 		return "", fmt.Errorf("weekly narrative: the reply is not the object asked for: %w", err)
 	}
 	if out.Narrative == nil {
-		return "", fmt.Errorf("weekly narrative: the reply carries no narrative field")
+		return "", errors.New("weekly narrative: the reply carries no narrative field")
 	}
 	sentence := strings.TrimSpace(*out.Narrative)
 	if sentence == "" {

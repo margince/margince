@@ -451,8 +451,8 @@ func blockFor(t *testing.T, prompt, mine, theirs string) string {
 		t.Fatalf("contact %s never reached the prompt", mine)
 	}
 	rest := prompt[start:]
-	if end := strings.Index(rest, theirs); end >= 0 {
-		return rest[:end]
+	if before, _, ok := strings.Cut(rest, theirs); ok {
+		return before
 	}
 	return rest
 }

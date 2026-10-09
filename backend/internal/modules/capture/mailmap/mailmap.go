@@ -14,6 +14,7 @@ package mailmap
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -323,8 +324,8 @@ func replyIDs(references, inReplyTo, messageID string) []string {
 	refs := strings.Fields(references)
 	candidates := make([]string, 0, len(refs)+1)
 	candidates = append(candidates, strings.Fields(inReplyTo)...)
-	for i := len(refs) - 1; i >= 0; i-- {
-		candidates = append(candidates, refs[i])
+	for _, ref := range slices.Backward(refs) {
+		candidates = append(candidates, ref)
 	}
 	seen := make(map[string]bool, len(candidates))
 	out := make([]string, 0, len(candidates))

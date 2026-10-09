@@ -139,7 +139,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## list_member_event
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -150,6 +150,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 | `entity_id` | `uuid` | yes |  |
 | `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
+| `member_note` | `text` |  |  |
 | `note` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `reason` | `text` | yes | One of `chosen`, `bulk`, `record_archived`, `record_restored`, `evaluated`, `filter_changed` and 1 more. |

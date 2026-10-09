@@ -8,10 +8,24 @@ package integration
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
+	"testing"
 )
+
+// deliveredEvent is the event body the gcal adapter last sent for one invitation.
+// A new event takes its invitation's id as its own.
+func (b *bookingProviderTransport) deliveredEvent(t *testing.T, invitationID string) json.RawMessage {
+	t.Helper()
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	event, found := b.events[strings.ReplaceAll(invitationID, "-", "")]
+	if !found {
+		t.Fatalf("Google holds no event for invitation %s", invitationID)
+	}
+	return event
+}
 
 func (b *bookingProviderTransport) event(r *http.Request) (*http.Response, error) {
 	b.mu.Lock()
@@ -48,7 +62,7 @@ func (b *bookingProviderTransport) event(r *http.Request) (*http.Response, error
 
 func (b *bookingProviderTransport) saveEvent(r *http.Request, id string) (*http.Response, error) {
 	if r.URL.Query().Get("sendUpdates") != "all" {
-		return nil, fmt.Errorf("calendar write omitted attendee notification")
+		return nil, errors.New("calendar write omitted attendee notification")
 	}
 	var event map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {

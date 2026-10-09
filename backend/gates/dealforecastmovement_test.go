@@ -472,7 +472,7 @@ func rowLockParams(fn *ast.FuncDecl) map[int]string {
 	for _, field := range fn.Type.Params.List {
 		selector, isSelector := field.Type.(*ast.SelectorExpr)
 		names := max(len(field.Names), 1)
-		for i := 0; i < names; i++ {
+		for i := range names {
 			if isSelector && selector.Sel.Name == "RowLock" && i < len(field.Names) {
 				out[position] = field.Names[i].Name
 			}
@@ -699,7 +699,7 @@ func statementsIn(file *ast.File) []string {
 		// UPDATE deal SET amount_minor = $1` would resolve to `offer` and report
 		// nothing. That is the one outcome this census must not produce, so each
 		// statement is placed on its own.
-		for _, statement := range strings.Split(stripSQLComments(literal), ";") {
+		for statement := range strings.SplitSeq(stripSQLComments(literal), ";") {
 			if collapsed := collapsedSQL(statement); collapsed != "" {
 				out = append(out, collapsed)
 			}
@@ -712,7 +712,7 @@ func statementsIn(file *ast.File) []string {
 // read as an assignment.
 func stripSQLComments(sql string) string {
 	var kept []string
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if at := strings.Index(line, "--"); at >= 0 {
 			line = line[:at]
 		}

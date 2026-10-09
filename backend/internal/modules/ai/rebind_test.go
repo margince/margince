@@ -135,9 +135,7 @@ func TestConcurrentReadsNeverSeeAHalfAppliedRebind(t *testing.T) {
 	var wg sync.WaitGroup
 	stop := make(chan struct{})
 	for range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for {
 				select {
 				case <-stop:
@@ -156,7 +154,7 @@ func TestConcurrentReadsNeverSeeAHalfAppliedRebind(t *testing.T) {
 					return
 				}
 			}
-		}()
+		})
 	}
 	for i := range 200 {
 		cfg := second
@@ -170,4 +168,26 @@ func TestConcurrentReadsNeverSeeAHalfAppliedRebind(t *testing.T) {
 	}
 	close(stop)
 	wg.Wait()
+}
+
+// The health read keys a lane's calls on the model this reports. It must move
+// with a rebind and name the embed lane beside the tiers.
+func TestBoundModelsFollowsARebind(t *testing.T) {
+	r, err := NewRouter(parsed(t, rebindFrom), nil, DefaultMonthlyTokens, nil, false, nil)
+	if err != nil {
+		t.Fatalf("NewRouter: %v", err)
+	}
+	if err := r.Rebind(parsed(t, strings.ReplaceAll(rebindFrom, "first-", "second-"))); err != nil {
+		t.Fatalf("Rebind: %v", err)
+	}
+	bound := r.BoundModels()
+	want := map[Tier]ModelRef{
+		TierPremium:   {Provider: "fake", Model: "second-large"},
+		TierEmbedLane: {Provider: "fake", Model: "second-embed"},
+	}
+	for tier, ref := range want {
+		if bound[tier] != ref {
+			t.Errorf("BoundModels()[%s] = %+v, want %+v", tier, bound[tier], ref)
+		}
+	}
 }

@@ -18,6 +18,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -91,7 +92,7 @@ func NewCapturePurger(pool *pgxpool.Pool, retention *privacy.RetentionService) *
 func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview bool) (PurgeOutcome, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
-		return PurgeOutcome{}, fmt.Errorf("capture purge: destroying mail is a contact's own act")
+		return PurgeOutcome{}, errors.New("capture purge: destroying mail is a contact's own act")
 	}
 	// A read seat is licensed to look, not to destroy. The object grants inside
 	// privacy answer what this caller may do to an activity or a contact; the

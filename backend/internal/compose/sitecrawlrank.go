@@ -54,7 +54,7 @@ func pathDepth(rawURL string) int {
 		return 1
 	}
 	depth := 0
-	for _, segment := range strings.Split(parsed.Path, "/") {
+	for segment := range strings.SplitSeq(parsed.Path, "/") {
 		if segment != "" {
 			depth++
 		}
@@ -148,7 +148,7 @@ func legalNoticeSegment(last string) bool {
 
 func pathSegments(path string) []string {
 	var out []string
-	for _, segment := range strings.Split(strings.ToLower(path), "/") {
+	for segment := range strings.SplitSeq(strings.ToLower(path), "/") {
 		if segment != "" {
 			out = append(out, segment)
 		}
@@ -206,7 +206,7 @@ func boilerplatePath(rawURL string) bool {
 		}
 	}
 	// A bare year segment (/2024/…) is the date-archive shape.
-	for _, segment := range strings.Split(path, "/") {
+	for segment := range strings.SplitSeq(path, "/") {
 		if len(segment) == 4 && (strings.HasPrefix(segment, "19") || strings.HasPrefix(segment, "20")) {
 			if _, err := strconv.Atoi(segment); err == nil {
 				return true

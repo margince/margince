@@ -23,14 +23,14 @@
 # behaviour is unchanged, because the build stamps the source revision it came
 # from; never carry a digest forward.
 
-CRAFT_VERSION="v1.0.0"
+CRAFT_VERSION="v1.1.0"
 
 # sha256 of each released binary, from
 # https://github.com/margince/craft-dist/releases/download/${CRAFT_VERSION}/checksums.txt
-CRAFT_SHA256_darwin_arm64="f0caaf099cafa837311dfcde376229b10ed710e7b3751a4774b4e6c8564044f9"
-CRAFT_SHA256_darwin_amd64="e5c35e551f9470b39d8270446af3bc46e9a587a4ec882dcc616813a444625503"
-CRAFT_SHA256_linux_arm64="7b7abda53a7db9ffc0ed451905455fe1f541146b76ebec02ee626f31846c4344"
-CRAFT_SHA256_linux_amd64="9dba08e7c058c83b8ec226adf5d61e8578cac011fe4d2da78dfbbae488cd5754"
+CRAFT_SHA256_darwin_arm64="21bf194b4ce3aadbffd916c74dad57847520e2d53d9fd2b28d5ae9fec1013694"
+CRAFT_SHA256_darwin_amd64="514cdae3abe183fdcf8caed30a027466b0ebd6948c0e9c47780e05c678e0c601"
+CRAFT_SHA256_linux_arm64="2d182cb99d8f34438a63dcbebe0c549bf2da57f0410bc6cae9af5d5c6fa9a4db"
+CRAFT_SHA256_linux_amd64="24bbc10a42e04d4312885554fc41cb4e3ffed7298feafe0dfd2cc698bef09292"
 
 # craft_platform — the release's name for this host, e.g. darwin_arm64.
 craft_platform() {

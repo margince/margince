@@ -133,8 +133,7 @@ func sharedReferences(t reflect.Type, path string) []string {
 		return []string{path}
 	case reflect.Struct:
 		var found []string
-		for i := range t.NumField() {
-			field := t.Field(i)
+		for field := range t.Fields() {
 			within := field.Name
 			if path != "" {
 				within = path + "." + field.Name

@@ -21,9 +21,6 @@ import (
 // rated. Absence is a fact about the reading; a rating is a claim about the
 // account, and the two must not render alike.
 
-func ptrInt(v int) *int    { return &v }
-func ptrBool(v bool) *bool { return &v }
-
 // commercialStrip builds the state strip's commercial half — the only part
 // these ratings read. Built by assigning fields rather than by a composite
 // literal: the generated type is an anonymous struct, so restating its shape
@@ -46,7 +43,7 @@ func commercialStrip(open, stalled int) *crmcontracts.Company360StateStrip {
 }
 
 func TestRelationshipIsAbsentOnAnAccountNobodyHasReached(t *testing.T) {
-	health := crmcontracts.Company360Health{ActiveContacts: ptrInt(0)}
+	health := crmcontracts.Company360Health{ActiveContacts: new(0)}
 	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(nil, nil, nil, healthNow))
 
 	// Not "at risk": an unstarted relationship is not a failing one, and rating
@@ -132,8 +129,8 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			health := crmcontracts.Company360Health{
-				ActiveContacts: ptrInt(tc.activeContacts),
-				SingleThreaded: ptrBool(tc.singleThreaded),
+				ActiveContacts: new(tc.activeContacts),
+				SingleThreaded: new(tc.singleThreaded),
 			}
 			touch := relstrength.ReadInTouch(tc.lastInbound, tc.lastMeeting, tc.nextMeeting, healthNow)
 			rateHealthDimensions(&health, nil, touch)
@@ -160,7 +157,7 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 // The values a translated reason renders travel with the code, or the
 // translation has nothing to say.
 func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
-	health := crmcontracts.Company360Health{ActiveContacts: ptrInt(2), SingleThreaded: ptrBool(false)}
+	health := crmcontracts.Company360Health{ActiveContacts: new(2), SingleThreaded: new(false)}
 	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(healthDaysAgo(77), nil, healthDaysAgo(-2), healthNow))
 
 	params := health.Relationship.ReasonParams
@@ -170,7 +167,7 @@ func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
 }
 
 func TestCommercialIsAbsentWhenTheReaderHasNoDealGrant(t *testing.T) {
-	health := crmcontracts.Company360Health{ActiveContacts: ptrInt(2)}
+	health := crmcontracts.Company360Health{ActiveContacts: new(2)}
 	// A nil commercial half is the strip saying the READER cannot see deals.
 	rateHealthDimensions(&health, &crmcontracts.Company360StateStrip{}, relstrength.InTouch{})
 

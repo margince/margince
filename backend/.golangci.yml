@@ -33,7 +33,30 @@ linters:
     - gosec
     - misspell
     - revive
+    # Newer standard-library and language forms, such as min/max, range over
+    # an int, strings.Cut and errors.AsType. Each rewrite keeps behaviour, and
+    # --fix applies it.
+    - modernize
+    - perfsprint
   settings:
+    modernize:
+      disable:
+        # omitzero changes what encoding/json writes for a struct field: it
+        # drops the zero struct that omitempty keeps, so it changes the API.
+        - omitzero
+    perfsprint:
+      # Only fmt.Errorf with no verb, which is errors.New. The other checks
+      # trade a readable Sprintf for a faster call nobody measured.
+      integer-format: false
+      int-conversion: false
+      error-format: true
+      err-error: false
+      errorf: true
+      string-format: false
+      sprintf1: false
+      strconcat: false
+      bool-format: false
+      hex-format: false
     # forbidigo is enabled HERE AND NOWHERE ELSE, and that is the whole
     # point rather than an accident of where the rules were written.
     # .golangci.strict.yml used to enable it too, with a different `forbid:`
@@ -149,8 +172,17 @@ linters:
       # instead of rotting silently.
       rules:
         - name: package-comments
+        - name: if-return
   exclusions:
     rules:
+      # gradingrule_test.go hashes the grading code. A rewrite that keeps
+      # behaviour still changes the hash, which would mark every committed AI
+      # certification stale and its runs due to be paid for again.
+      - path: 'internal/compose/aicert/judge\.go$'
+        linters: [perfsprint]
+      - path: 'internal/compose/aicert/run\.go$'
+        linters: [modernize]
+        text: 'embedlit'
       # Test files are exempt from gosec's hardcoded-credential heuristic
       # (G101): fitness-test maps key on function names like RotateSecret and
       # unit tests carry obvious fixture secrets — neither is a real

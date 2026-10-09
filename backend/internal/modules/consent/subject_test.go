@@ -34,8 +34,7 @@ func TestConsentSubjectIsExactlyOne(t *testing.T) {
 		if _, err := consentSubject(in); err == nil {
 			t.Errorf("%s: accepted; want a ValidationError", name)
 		} else {
-			var invalid *ValidationError
-			if !errors.As(err, &invalid) {
+			if _, ok := errors.AsType[*ValidationError](err); !ok {
 				t.Errorf("%s: got %v, want a ValidationError", name, err)
 			}
 		}

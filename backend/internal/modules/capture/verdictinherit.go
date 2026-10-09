@@ -18,6 +18,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -164,12 +165,7 @@ func addressWasSeen(address string, seen []string) bool {
 	if from == "" {
 		return false
 	}
-	for _, s := range seen {
-		if s == from {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(seen, from)
 }
 
 // reopenClearedThreadTx returns a settled thread to pending, so the classifier

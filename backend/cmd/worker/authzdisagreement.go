@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -45,7 +46,7 @@ func runAuthzDisagreement(ctx context.Context, pool *pgxpool.Pool, args []string
 		return err
 	}
 	if *workspace == "" {
-		return fmt.Errorf("authz-disagreement: --workspace is required")
+		return errors.New("authz-disagreement: --workspace is required")
 	}
 	wsID, err := ids.Parse(*workspace)
 	if err != nil {

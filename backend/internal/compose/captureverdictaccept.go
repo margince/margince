@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -108,7 +109,7 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 		}
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: counterparty accept without a deciding principal")
+			return errors.New("compose: counterparty accept without a deciding principal")
 		}
 		// The records are created by the accept executor on behalf of the human
 		// who released it: their approval is on the decision's own audit row,

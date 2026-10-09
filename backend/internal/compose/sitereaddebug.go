@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -116,7 +117,7 @@ func RunSiteReadDebug(ctx context.Context, opts SiteReadDebugOptions) (SiteReadD
 // asserting about the model lanes does.
 func siteReadDebugRun(ctx context.Context, opts SiteReadDebugOptions, crawler *siteCrawler, pageFetch PageFetcher, logoFetch assetFetcher) (SiteReadDebugReport, error) {
 	if opts.Brain == nil {
-		return SiteReadDebugReport{}, fmt.Errorf("siteread debug: no brain configured")
+		return SiteReadDebugReport{}, errors.New("siteread debug: no brain configured")
 	}
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		// The router meters per workspace; a DB-less run has none, so it
@@ -332,7 +333,7 @@ func pageOfRequest(req model.Request) string {
 //nolint:ireturn // the completer seam is the point: three providers (routed, override, fake) behind the one interface every consumer takes.
 func SiteReadDebugBrain(modelOverride string, fake bool) (profile, facts, triage completer, banner string, err error) {
 	if modelOverride != "" == fake {
-		return nil, nil, nil, "", fmt.Errorf("pick exactly one of --model, --ai-fake")
+		return nil, nil, nil, "", errors.New("pick exactly one of --model, --ai-fake")
 	}
 	switch {
 	case fake:
@@ -403,7 +404,7 @@ func TaskProbeBrain(modelSpec string, fake bool, task ai.Task) (TaskProbeComplet
 		}
 	}
 	if selected != 1 {
-		return nil, "", fmt.Errorf("pick exactly one of --model, --ai-fake")
+		return nil, "", errors.New("pick exactly one of --model, --ai-fake")
 	}
 
 	if fake {

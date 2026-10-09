@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -117,11 +119,30 @@ func (h Handlers) RemoveTag(w http.ResponseWriter, r *http.Request, id crmcontra
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.RemoveTag(r.Context(), pathID[ids.TagKind](id), string(req.EntityType), ids.UUID(req.EntityId)); err != nil {
+	removal, err := h.store.RemoveTag(r.Context(), pathID[ids.TagKind](id), string(req.EntityType), ids.UUID(req.EntityId))
+	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	if removal == ids.Nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RemovalUndo{AuditId: openapi_types.UUID(removal)})
+}
+
+// RestoreTagApplication puts back a tagging the caller's own removal took off.
+func (h Handlers) RestoreTagApplication(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.RemovalUndo
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	restored, err := h.store.RestoreTagRemoval(r.Context(), pathID[ids.TagKind](id), ids.UUID(req.AuditId))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireTaggable(restored))
 }
 
 // GetFilterVocabulary answers what a filter may say about one record type.// GetFilterVocabulary answers what a filter may say about one record type.
@@ -249,8 +270,7 @@ func (h Handlers) ArchiveSavedView(w http.ResponseWriter, r *http.Request, id cr
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	// A rejected dynamic-segment / saved-view filter surfaces the offending
 	// field and machine-readable code (data-model §13.5 → 422).
-	var pred *storekit.PredicateError
-	if errors.As(err, &pred) {
+	if pred, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		httperr.Write(w, r, httperr.Validation(pred.Field, pred.Code, pred.Message))
 		return
 	}

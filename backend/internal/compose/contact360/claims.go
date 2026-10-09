@@ -41,7 +41,7 @@ func (s *Service) claimsSection(ctx context.Context, tx pgx.Tx, contactID ids.Co
 	if err != nil {
 		return err
 	}
-	out.Claims = ptr(withOpenCommitments(claims, owed))
+	out.Claims = new(withOpenCommitments(claims, owed))
 	return nil
 }
 

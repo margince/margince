@@ -147,7 +147,7 @@ function confirmNoticeKey(
     : "ob.conv.review.confirmVersionSkew";
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: the act driver is one machine-shaped surface; splitting it further would scatter the event wiring
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity lint/complexity/noExcessiveLinesPerFunction: the act driver is one machine-shaped surface; splitting it is #7199
 export function CompanyAct({
   state,
   dispatch,

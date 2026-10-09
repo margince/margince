@@ -40,8 +40,8 @@ func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
 	// 1 JPY = 0.006 EUR is €30,000, which is 3,000,000 EUR minor units.
 	// An unscaled multiply answers 30,000: €300.
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Tokyo renewal", AmountMinor: Int64Ptr(5_000_000), Currency: StrPtr("JPY"),
-		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		Name: "Tokyo renewal", AmountMinor: new(int64(5_000_000)), Currency: new("JPY"),
+		PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(companyID)), Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding the yen deal: %v", err)
 	}

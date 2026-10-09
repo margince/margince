@@ -316,7 +316,7 @@ func (c *requestSettleCase) faults(payload settlePayload) []string {
 // Held by: TestRemainingMayBeNamedInSeveralRenderings (internal/compose/certcase_requestsettle_test.go)
 func remainingNamesIt(remaining, accepted string) bool {
 	lowered := strings.ToLower(remaining)
-	for _, rendering := range strings.Split(accepted, "|") {
+	for rendering := range strings.SplitSeq(accepted, "|") {
 		rendering = strings.TrimSpace(rendering)
 		if rendering != "" && strings.Contains(lowered, strings.ToLower(rendering)) {
 			return true

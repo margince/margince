@@ -26,6 +26,7 @@ package gates
 import (
 	"go/ast"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -286,12 +287,7 @@ func TestNeitherFilterCompilerDropsAnUnsetRowFromNeq(t *testing.T) {
 
 func symmetricDifference(left, right []string) []string {
 	in := func(list []string, want string) bool {
-		for _, item := range list {
-			if item == want {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(list, want)
 	}
 	var only []string
 	for _, op := range left {

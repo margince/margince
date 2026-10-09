@@ -7,13 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -119,9 +120,7 @@ func (r evidenceRow) auditImage() map[string]any {
 	// exactly as every other before-image in this tree does. Load-bearing on a
 	// REMOVAL: once the row is gone the audit entry's entity_id points at
 	// nothing, and without this the trail cannot say what was taken away.
-	for key, value := range r.Identity {
-		image[key] = value
-	}
+	maps.Copy(image, r.Identity)
 	return image
 }
 

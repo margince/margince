@@ -335,8 +335,7 @@ func TestApprovalListRefusesAMalformedCursor(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, siteReadPerms)
 
 	_, _, err := svc.List(rep, approvals.ListInput{Cursor: "not-a-page-token!!"})
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 		t.Fatalf("list with a malformed cursor → %v, want storekit's malformed-cursor fault", err)
 	}
 }

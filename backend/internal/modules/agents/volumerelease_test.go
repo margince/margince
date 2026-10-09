@@ -68,8 +68,7 @@ func TestACrossedReadThresholdPutsTheQuestionToTheConnectingHuman(t *testing.T) 
 
 	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
 
-	var staged *StepUpStagedError
-	if !errors.As(err, &staged) {
+	if _, ok := errors.AsType[*StepUpStagedError](err); !ok {
 		t.Fatalf("a read past its threshold → %v, want a staged step-up", err)
 	}
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
@@ -100,8 +99,7 @@ func TestACrossedWriteThresholdAsksTheSameQuestion(t *testing.T) {
 
 	_, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`))
 
-	var staged *StepUpStagedError
-	if !errors.As(err, &staged) {
+	if _, ok := errors.AsType[*StepUpStagedError](err); !ok {
 		t.Fatalf("a write past its threshold → %v, want a staged step-up", err)
 	}
 	if len(staging.steppedUp) != 1 || staging.steppedUp[0].Proposal.Counter != agentvolume.Writes {
@@ -123,12 +121,10 @@ func TestAHardStopNeverReachesAHumansInbox(t *testing.T) {
 
 	_, err := r.Invoke(ctx, "send_email", json.RawMessage(`{}`))
 
-	var overQuota *auth.VolumeExceededError
-	if !errors.As(err, &overQuota) {
+	if _, ok := errors.AsType[*auth.VolumeExceededError](err); !ok {
 		t.Fatalf("a send past its ceiling → %v, want a plain quota refusal", err)
 	}
-	var staged *StepUpStagedError
-	if errors.As(err, &staged) {
+	if _, ok := errors.AsType[*StepUpStagedError](err); ok {
 		t.Error("a hard stop was staged as a question a human could answer")
 	}
 	if len(staging.steppedUp) != 0 {
@@ -165,8 +161,7 @@ func TestAQuestionAlreadyRefusedIsNotAskedAgain(t *testing.T) {
 
 	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
 
-	var staged *StepUpStagedError
-	if errors.As(err, &staged) {
+	if _, ok := errors.AsType[*StepUpStagedError](err); ok {
 		t.Fatal("the agent was told a human is looking at a question that was never staged")
 	}
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {

@@ -264,10 +264,7 @@ func jaro(a, b string) float64 {
 		return 0
 	}
 
-	window := max(len(ra), len(rb))/2 - 1
-	if window < 0 {
-		window = 0
-	}
+	window := max(max(len(ra), len(rb))/2-1, 0)
 
 	matchedA := make([]bool, len(ra))
 	matchedB := make([]bool, len(rb))

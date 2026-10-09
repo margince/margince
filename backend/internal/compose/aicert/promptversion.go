@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -104,7 +105,7 @@ func FoldScenarioStamps(stamps map[string]string) string {
 // disagree about what a scenario's stamp is.
 func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.Registry) (map[string]string, error) {
 	if census == nil {
-		return nil, fmt.Errorf("aicert: stamp: no census supplied — a stamp covers the request each site's own code builds, and only the census says which case builds it")
+		return nil, errors.New("aicert: stamp: no census supplied — a stamp covers the request each site's own code builds, and only the census says which case builds it")
 	}
 	stamps := make(map[string]string, len(scenarios))
 	for _, sc := range scenarios {

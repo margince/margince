@@ -72,8 +72,7 @@ func TestAStagedBatchRelinkBindsToItsProjectAndMovesOnlyTheApprovedIDs(t *testin
 	// caller to the named-set form instead.
 	_, err := registry.Invoke(agent, "relink_thread",
 		json.RawMessage(`{"thread_key":"`+f.key+`","entity_type":"project","entity_id":"`+f.project.String()+`"}`))
-	var bad *agents.BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*agents.BadArgsError](err); !ok {
 		t.Fatalf("relink_thread onto a project → %v, want a refusal naming relink_activities", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval`); n != 0 {

@@ -33,9 +33,9 @@ func TestTheOldestPromiseLeadsEvenPastTheSectionCap(t *testing.T) {
 	// Filed FIRST and due SOONEST, then buried under thirty newer tasks. In
 	// the timeline's order (newest first) this row sits past the section's
 	// 25-row cap, so a page that carried the newest 25 could not name it.
-	oldest := logTaskFor(t, e, contact, "Send the signed contract", at(now.Add(24*time.Hour)))
+	oldest := logTaskFor(t, e, contact, "Send the signed contract", new(now.Add(24*time.Hour)))
 	for i := range 30 {
-		logTaskFor(t, e, contact, "Later chore "+string(rune('a'+i%26)), at(now.Add(time.Duration(200+i)*time.Hour)))
+		logTaskFor(t, e, contact, "Later chore "+string(rune('a'+i%26)), new(now.Add(time.Duration(200+i)*time.Hour)))
 	}
 
 	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
@@ -66,10 +66,6 @@ func TestTheOldestPromiseLeadsEvenPastTheSectionCap(t *testing.T) {
 		t.Errorf("headline = %q, want the soonest-due promise", page.Moment.Headline)
 	}
 }
-
-// at is a due date as the writer wants it. The package's own ptr helper takes
-// an int.
-func at(t time.Time) *time.Time { return &t }
 
 // The card says whose promise it is, and it can only do that if the assignee
 // survives the section's own projection. It did not: the query selected

@@ -424,7 +424,7 @@ func TestCompleteEmitsSlog(t *testing.T) {
 	}
 
 	// Find the "ai.call" message
-	var logEntry map[string]interface{}
+	var logEntry map[string]any
 	for _, line := range lines {
 		if err := json.Unmarshal([]byte(line), &logEntry); err != nil {
 			continue

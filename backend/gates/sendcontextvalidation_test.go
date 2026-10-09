@@ -25,6 +25,7 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -333,9 +334,7 @@ func TestEverySendDoorValidatesTheClaimedContext(t *testing.T) {
 	// the chokepoint — cmd/ included, which already owns an outbound mail lane.
 	files := map[string]*ast.File{}
 	for _, root := range []string{"internal", "cmd"} {
-		for path, file := range parseTreeFiles(t, fset, root) {
-			files[path] = file
-		}
+		maps.Copy(files, parseTreeFiles(t, fset, root))
 	}
 
 	bindings := collectStoreBindings(files)

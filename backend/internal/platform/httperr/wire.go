@@ -109,12 +109,8 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(string) bool, closed bool) error {
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			return &DetailedError{
-				Status: http.StatusRequestEntityTooLarge,
-				Code:   codeBodyTooLarge, Detail: "request body exceeds the 1 MiB cap",
-			}
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			return BodyTooLargeRefusal("request body exceeds the 1 MiB cap")
 		}
 		// A read that failed mid-body is a transport fact — timed-out sockets
 		// carry host and port — so the caller is told what to do about it and
@@ -159,6 +155,12 @@ func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(
 func BodyTooLarge(err error) bool {
 	var detailed *DetailedError
 	return errors.As(err, &detailed) && detailed.Code == codeBodyTooLarge
+}
+
+// BodyTooLargeRefusal is the 413 for a body over its ceiling. The detail should
+// name the limit, the one fact the sender can act on.
+func BodyTooLargeRefusal(detail string) *DetailedError {
+	return &DetailedError{Status: http.StatusRequestEntityTooLarge, Code: codeBodyTooLarge, Detail: detail}
 }
 
 // presentFieldsKey carries the decoded body's top-level keys, so a handler can

@@ -22,7 +22,7 @@ func TestCreateLeadWithoutOwnerStaysUnassigned(t *testing.T) {
 	e := setupPromoteConsent(t)
 
 	created, wasCreated, err := e.store.CreateLead(e.ctx, CreateLeadInput{
-		FullName: strPtr("Queue Lead"), Source: "manual",
+		FullName: new("Queue Lead"), Source: "manual",
 	})
 	if err != nil || !wasCreated {
 		t.Fatalf("create lead: created=%v err=%v", wasCreated, err)
@@ -33,7 +33,7 @@ func TestCreateLeadWithoutOwnerStaysUnassigned(t *testing.T) {
 
 	ownerID := ids.From[ids.UserKind](e.user)
 	owned, wasCreated, err := e.store.CreateLead(e.ctx, CreateLeadInput{
-		FullName: strPtr("Chosen Lead"), Source: "manual", OwnerID: &ownerID,
+		FullName: new("Chosen Lead"), Source: "manual", OwnerID: &ownerID,
 	})
 	if err != nil || !wasCreated {
 		t.Fatalf("create owned lead: created=%v err=%v", wasCreated, err)
@@ -59,7 +59,7 @@ func TestAgentCreateLeadKeepsTheOnBehalfOwner(t *testing.T) {
 		},
 	})
 	created, wasCreated, err := e.store.CreateLead(agentCtx, CreateLeadInput{
-		FullName: strPtr("Agent Filed"), Source: "manual",
+		FullName: new("Agent Filed"), Source: "manual",
 	})
 	if err != nil || !wasCreated {
 		t.Fatalf("agent create lead: created=%v err=%v", wasCreated, err)

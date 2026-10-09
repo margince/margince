@@ -10,8 +10,8 @@ package deals
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,7 +20,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -61,7 +60,12 @@ type AdvanceDealInput struct {
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
 // belongs to another pipeline.
-type StagePipelineMismatchError struct{ StageID ids.StageID }
+type StagePipelineMismatchError struct {
+	StageID ids.StageID
+	// Field is the request field that named the stage; empty means the advance
+	// route's to_stage_id.
+	Field string
+}
 
 func (e *StagePipelineMismatchError) Error() string {
 	return "stage " + e.StageID.String() + " does not belong to the deal's pipeline"
@@ -69,6 +73,9 @@ func (e *StagePipelineMismatchError) Error() string {
 
 // FieldFault refuses a target stage that belongs to another pipeline.
 func (e *StagePipelineMismatchError) FieldFault() (field, code, message string) {
+	if e.Field != "" {
+		return e.Field, "stage_not_in_pipeline", e.Error()
+	}
 	return "to_stage_id", "stage_not_in_pipeline", e.Error()
 }
 
@@ -161,6 +168,13 @@ func (s *Store) advanceOnTx(
 			return fmt.Errorf("advance deal %s: deal has no native pipeline/stage", id)
 		}
 
+		// Moving to the stage the deal already holds changes nothing. Answering
+		// with the deal as it stands makes a retried call safe, where running the
+		// move again would close a closed deal a second time and move its day.
+		if ids.UUID(*current.StageId) == in.ToStageID.UUID {
+			out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+			return err
+		}
 		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
 		if err != nil {
 			return err
@@ -346,27 +360,6 @@ func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
 	return &frozen
 }
 
-// resolveAdvanceTarget reads the target stage's semantic and win
-// probability and enforces that it belongs to the deal's own pipeline —
-// a stage from another pipeline is a 422, a missing/archived stage a 404.
-func resolveAdvanceTarget(ctx context.Context, tx pgx.Tx, toStage ids.StageID, current crmcontracts.Deal) (semantic string, winProbability int, err error) {
-	var stagePipeline ids.PipelineID
-	err = tx.QueryRow(ctx,
-		`SELECT semantic, pipeline_id, win_probability FROM stage WHERE id = $1 AND archived_at IS NULL`+
-			lockLiveStageTarget,
-		toStage).Scan(&semantic, &stagePipeline, &winProbability)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", 0, apperrors.ErrNotFound
-	}
-	if err != nil {
-		return "", 0, fmt.Errorf("resolve target stage: %w", err)
-	}
-	if stagePipeline.UUID != ids.UUID(*current.PipelineId) {
-		return "", 0, &StagePipelineMismatchError{StageID: toStage}
-	}
-	return semantic, winProbability, nil
-}
-
 // stageTransitionPatch derives the row changes one stage move implies
 // and the resulting status: terminal fields (closed_at, lost_reason,
 // frozen FX) are set when the target semantic closes the deal and
@@ -376,12 +369,16 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 ) (*storekit.Patch, string, error) {
 	status := string(DealOpen)
 	var closedAt *time.Time
+	var lostReason string
 	switch semantic {
 	case "won", "lost":
 		status = semantic
 		now := s.clock().UTC()
 		closedAt = &now
-		if StageSemantic(semantic) == SemanticLost && (in.LostReason == nil || *in.LostReason == "") {
+		if in.LostReason != nil {
+			lostReason = strings.TrimSpace(*in.LostReason)
+		}
+		if StageSemantic(semantic) == SemanticLost && lostReason == "" {
 			return nil, "", &LostReasonRequiredError{}
 		}
 	}
@@ -402,8 +399,8 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// an assignment unconditionally, so clearing a column that is already NULL
 	// would put lost_reason into the UPDATE and the audit diff of every
 	// ordinary open-to-open advance.
-	if DealStatus(status) == DealLost && in.LostReason != nil {
-		p.Set("lost_reason", current.LostReason, *in.LostReason)
+	if DealStatus(status) == DealLost {
+		p.Set("lost_reason", current.LostReason, lostReason)
 	} else if DealStatus(status) != DealLost && current.LostReason != nil {
 		p.Set("lost_reason", current.LostReason, nil)
 	}

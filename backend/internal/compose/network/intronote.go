@@ -20,8 +20,10 @@ package network
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -29,6 +31,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -177,6 +180,15 @@ func (h Reads) noteFactsFor(
 			return err
 		}
 		facts = factsFromRoute(&graph, route, requester, body)
+		// The CORRESPONDENCE decides the language, not the names: "Brandt GmbH"
+		// detects as nothing, so a German customer was being written to in
+		// English. Read here, where the transaction is, and detected by the one
+		// detector the sibling intro uses (company360/introdraft.go).
+		said, err := contactCorrespondence(ctx, tx, contactID, h.now().UTC())
+		if err != nil {
+			return err
+		}
+		facts.lang = textlang.Detect(said)
 		return nil
 	})
 	if err != nil {
@@ -236,7 +248,8 @@ func factsFromRoute(
 		contact:   anchorLabel(graph),
 		requester: requester,
 		lastAt:    route.Evidence.LastAt,
-		// The language the writer defaults, rather than a guess made here.
+		// The language is detected by the caller, which has the transaction to
+		// read the correspondence with; this assembler stays pure.
 		lang: textlang.Unknown,
 	}
 	if route.ThroughDisplayName != nil {
@@ -249,6 +262,81 @@ func factsFromRoute(
 		facts.value = *body.ValueForTarget
 	}
 	return facts
+}
+
+// How far back and how much to read before detecting the language. Matched to
+// the sibling's window (company360's proposalWindowDays / proposalMessages),
+// because both ask what this contact has written lately, and two answers to that
+// would make one surface write in German where the other writes in English.
+const (
+	noteLangWindowDays = 365
+	noteLangMessages   = 6
+)
+
+// contactCorrespondence is the recent inbound mail from this contact that the
+// calling rep may read, as one block of text for language detection.
+//
+// Bounded at both ends. A future-dated inbound row, from a provider stamp nobody
+// validated or a clock askew, sorts first and would spend the sample on mail
+// that has not arrived, detecting the language of whatever that row holds.
+//
+// Gated by auth.ActivityContentClause, the same predicate every other mail read
+// goes through, and not softened when it denies. A rep who may read none of this
+// contact's mail gets an empty string, which detects as Unknown and is reported
+// as "could not determine" rather than answered in English without saying so.
+// The two causes have different fixes, one a permission and one a contact who
+// has written nothing.
+func contactCorrespondence(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time,
+) (string, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		// Not an error to the caller: the note is still writable, in the
+		// default language, and the response says the language was not
+		// determined. Refusing the whole draft over a language hint would be a
+		// worse answer than writing it in English.
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return "", nil
+		}
+		return "", err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	contactPos := arg(contactID)
+	sincePos := arg(now.AddDate(0, 0, -noteLangWindowDays))
+	untilPos := arg(now)
+	capPos := arg(noteLangMessages)
+	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		scope = "TRUE"
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT coalesce(a.subject, ''), coalesce(a.body, '')
+		  FROM activity a
+		  JOIN activity_participant ap
+		    ON ap.activity_id = a.id AND ap.role = 'from' AND ap.contact_id = $%d
+		 WHERE a.direction = 'inbound' AND a.archived_at IS NULL
+		   AND a.occurred_at >= $%d AND a.occurred_at <= $%d AND (%s)
+		 ORDER BY a.occurred_at DESC, a.id DESC
+		 LIMIT $%d`, contactPos, sincePos, untilPos, scope, capPos), args...)
+	if err != nil {
+		return "", fmt.Errorf("network: reading what the contact wrote: %w", err)
+	}
+	defer rows.Close()
+	var text strings.Builder
+	for rows.Next() {
+		var subject, body string
+		if err := rows.Scan(&subject, &body); err != nil {
+			return "", err
+		}
+		text.WriteString(subject + "\n" + body + "\n\n")
+	}
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("network: reading what the contact wrote: %w", err)
+	}
+	return text.String(), nil
 }
 
 // anchorLabel is the contact this graph is about.

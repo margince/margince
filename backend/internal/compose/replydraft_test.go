@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -358,9 +357,9 @@ func TestAnEnglishThreadIsDraftedInEnglishUnderAGermanVoice(t *testing.T) {
 	}
 
 	if _, err := drafter.complete(context.Background(), replyActivityData{
-		Envelope: draftfloor.Envelope{Language: "en", ConversationState: "fresh"},
-		Subject:  "Outstanding invoice",
-		Body:     "Hello, I am writing about the invoice outstanding since December.",
+		Language: "en", ConversationState: "fresh",
+		Subject: "Outstanding invoice",
+		Body:    "Hello, I am writing about the invoice outstanding since December.",
 	}, germanVoice); err != nil {
 		t.Fatalf("complete: %v", err)
 	}
@@ -465,7 +464,7 @@ func TestAnUngreetedReplyIsServedWithTheFloorGreeting(t *testing.T) {
 	brain := &sequencedBrainStub{responses: []model.Response{ungreeted, ungreeted}}
 	drafter := replyDrafter{brain: brain}
 	data := replyActivityData{
-		Envelope:  draftfloor.Envelope{Language: "de", ConversationState: "weeks", SilenceDays: "10"},
+		Language: "de", ConversationState: "weeks", SilenceDays: "10",
 		Recipient: "Dietmar", Subject: "Termin", Thread: "inbound_mail",
 	}
 
