@@ -102,8 +102,8 @@ const BLOCK_TAGS = new Set([
 ]);
 
 // Children of one container as markdown blocks. Loose inline content between
-// blocks — what a browser leaves when the first line is typed into an empty
-// editor — is a paragraph of its own.
+// blocks is a paragraph of its own. A browser leaves it when the first line is
+// typed into an empty editor.
 function blocksOf(parent: Node): string[] {
   const blocks: string[] = [];
   let loose: Node[] = [];
@@ -148,8 +148,8 @@ function blockOf(element: HTMLElement): string {
     return `${fence}\n${body.replace(/\n$/, "")}\n${fence}`;
   }
   if (tag === "HR") return "---";
-  // A browser wraps each typed line in its own div, and a pasted document
-  // nests its paragraphs in one; either way the blocks inside are what count.
+  // A browser wraps each typed line in a div, and a pasted document nests its
+  // paragraphs in one. Either way the blocks inside are what count.
   if (
     Array.from(element.children).some((child) => BLOCK_TAGS.has(child.tagName))
   ) {
@@ -160,8 +160,8 @@ function blockOf(element: HTMLElement): string {
   return lineStarts(inlineOf(Array.from(element.childNodes)));
 }
 
-// A nested list has no level the reader parses, so its items are written as
-// items of the list around them, indented to keep their place.
+// The reader parses no nested level. A nested list's items are written as
+// indented items of the list around them.
 function listOf(list: HTMLElement, indent: string): string {
   const ordered = list.tagName === "OL";
   const lines: string[] = [];
@@ -234,9 +234,8 @@ function inlineNode(node: Node): string {
   }
 }
 
-// Italic is `_` and bold `**`, and italic around bold is written as bold
-// around italic: the reader cannot open an emphasis on a star or an
-// underscore, so `_**x**_` and `***x***` would both come back as stars.
+// Italic is `_` and bold `**`. Italic around bold is written as bold around
+// italic, because the reader cannot read `_**x**_` or `***x***`.
 function emphasis(node: HTMLElement, inner: () => string): string {
   const only = node.childNodes.length === 1 ? node.firstChild : null;
   if (
@@ -293,10 +292,10 @@ function lineStarts(text: string): string {
 /**
  * What a paste becomes in markdown mode: formatted either way.
  *
- * Markup from a document or a mail keeps its formatting when it has any to
- * keep. Otherwise the plain text is read as markdown, because that is what a
- * notes tool or an assistant puts on the clipboard, and an editor's own HTML
- * copy of markdown source is styled spans with the asterisks still in them.
+ * Markup from a document or a mail keeps its formatting when it has some.
+ * Otherwise the plain text is read as markdown. A notes tool or an assistant
+ * puts markdown on the clipboard. A code editor's HTML copy of markdown source
+ * is styled spans with the asterisks still in them.
  */
 export function pastedMarkup(html: string, text: string): string {
   if (html.trim() !== "") {

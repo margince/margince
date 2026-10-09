@@ -696,7 +696,7 @@ const WRITTEN_KINDS = new Set(["note", "call", "meeting", "task"]);
 
 /**
  * TimelineText is the message itself, three lines by default and the whole of
- * it on request: a timeline where every row is a full email is a mailbox.
+ * it on request. A timeline of full emails would be a mailbox.
  *
  * On a mail row the sign-off and quoted history fold into a second control,
  * because the split is a heuristic and may take too much. Only a mail is split,
@@ -732,7 +732,7 @@ function TimelineText({
     : text.trim();
   const tail = parts?.trimmed ?? "";
   // A row is keyed by activity id, so this stays mounted when its entry is
-  // replaced; the next mail's signature must not open on the last one's click.
+  // replaced. The next mail's signature stays closed.
   const [shownFor, setShownFor] = useState(text);
   if (shownFor !== text) {
     setShownFor(text);

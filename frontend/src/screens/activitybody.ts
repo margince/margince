@@ -60,11 +60,10 @@ export function occurredInstant(
   return middayInstant(input.day, recordZone);
 }
 
-// The body as it goes on the wire, for every form that writes one; empty is
-// null. A transcript is sent RAW, not trimmed: the server's normalizer
-// (transcriptnorm.go) is the one place line-1-indexing gets decided, and a
-// leading blank line or indentation stripped here would shift the line
-// numbers a citation points at, against the same paste sent straight to the API.
+// The body as it goes on the wire, for every form that writes one. Empty is
+// null. A transcript is sent untrimmed, because the server's normalizer
+// (transcriptnorm.go) numbers its lines. A leading blank line stripped here
+// would shift the line numbers a citation points at.
 export function outgoingBody(body: string, transcript: boolean): string | null {
   return (transcript ? body : body.trim()) || null;
 }

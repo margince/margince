@@ -829,9 +829,9 @@ describe("log activity from a 360", () => {
   });
 });
 
-// The drawer is opened to write a recap, so Details is the rich editor and takes
-// the drawer's height; the card in a record's rail keeps its three lines. A
-// transcript is never formatted: its lines are what a citation points at.
+// In the drawer Details is the rich editor and takes the drawer's height. The
+// card in a record's rail keeps three lines. A transcript is never formatted,
+// because a citation points at its lines.
 describe("the Details field", () => {
   it("is a growing rich editor in the drawer, not the three-row box", () => {
     stubApi({});

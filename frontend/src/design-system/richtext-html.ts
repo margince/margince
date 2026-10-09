@@ -6,16 +6,14 @@ import { escapeHtml } from "../format/html";
 /**
  * The plain-text rendering of what the editor holds.
  *
- * Not `textContent`: that runs every block together, so three paragraphs arrive
- * as one sentence with no space between them. Block boundaries become newlines
- * and a list item keeps its marker, because the plain part is a real
- * alternative somebody reads rather than a fallback nobody checks.
+ * Not `textContent`, which runs every block together with no space between.
+ * Block boundaries become newlines and a list item keeps its marker. The plain
+ * part goes on the wire, and a text client shows it.
  */
 export function plainTextOf(node: HTMLElement): string {
   const lines: string[] = [];
-  // The line being built. Inline formatting must NOT break it: "The <b>deadline
-  // </b> is Friday" is one sentence, and a renderer that emitted a line per
-  // element would hand the plain reader a column of words.
+  // The line being built. Inline formatting does not break it, so
+  // "The <b>deadline</b> is Friday" stays one sentence.
   let current = "";
   const flush = () => {
     if (current.trim() !== "") {
@@ -33,8 +31,7 @@ export function plainTextOf(node: HTMLElement): string {
     flush();
   };
   const walkLink = (element: HTMLElement, prefix: string) => {
-    // The destination is the point of a link, and a text client shows no href —
-    // so the URL rides beside the label rather than being lost.
+    // A text client shows no href, so the URL follows the label.
     walk(element, prefix);
     const href = element.getAttribute("href") ?? "";
     if (href !== "" && !current.includes(href)) {
@@ -80,16 +77,12 @@ export function plainTextOf(node: HTMLElement): string {
 /**
  * The subset of markup this editor will render.
  *
- * `value` is not always something a rep typed: an AI draft arrives here, and a
- * model's output is untrusted input however friendly its source. The server
- * filters what LEAVES for a recipient; this filters what ENTERS our own
- * document, and the two protect different contacts.
+ * `value` may be an AI draft, which is untrusted input. The server filters what
+ * leaves for a recipient; this filters what enters our own page.
  *
- * It mirrors the server's allowlist deliberately — the same elements, the same
- * three link schemes — so a rep never sees formatting in the composer that the
- * outbound filter would strip on the way out. Built with the DOM parser rather
- * than a regex: the browser is the thing that decides what markup means, so it
- * is the thing that should parse it.
+ * It mirrors the server's allowlist: the same elements and the same three link
+ * schemes. So the composer never shows formatting the outbound filter strips.
+ * It parses with the DOM parser, because the browser decides what markup means.
  */
 export function safeEditorHTML(
   markup: string,
@@ -203,8 +196,7 @@ export function cleanMarkup(
       return "";
     }
     if (!allowed.has(tag)) {
-      // Unwrap, exactly as the server does: a sender whose <div> vanished still
-      // meant the sentence inside it.
+      // Unwrap as the server does, keeping the words inside.
       return unwrap(element);
     }
     const lower = tag.toLowerCase();
@@ -229,8 +221,7 @@ export function cleanMarkup(
   return clean(root);
 }
 
-// Which item this is within its own list, counting only siblings — so a nested
-// list restarts rather than continuing its parent's numbering.
+// The item's position among its own siblings, so a nested list restarts.
 function itemNumber(item: HTMLElement): number {
   let n = 1;
   for (
@@ -266,21 +257,14 @@ export function safeHref(href: string | null): string {
 }
 
 /**
- * Plain text as the markup this editor round-trips — the inverse of
- * {@link plainTextOf}, and the way a machine-written draft arrives in a field a
- * human formats from.
+ * Plain text as editor markup: the inverse of {@link plainTextOf}.
  *
- * The drafting endpoints answer in PLAIN text by contract. Handed to the editor
- * unchanged, a three-paragraph mail renders as one run-on block that the rep
- * then has to break up by hand before they can read what was written for them;
- * handed through here it arrives shaped the way the model wrote it. Nothing is
- * INVENTED on the rep's behalf — a blank line is a paragraph and a single
- * newline is a line break, which is what those two characters already mean in
- * the text being converted.
+ * The drafting endpoints answer in plain text. Without this, a three-paragraph
+ * draft shows as one block. A blank line becomes a paragraph and a single
+ * newline a line break.
  *
- * It escapes before it wraps. A draft is model output and can carry the three
- * characters that would otherwise close a tag; escaping after wrapping would
- * escape our own markup instead of the words inside it.
+ * It escapes before it wraps, because a draft is model output and may hold
+ * characters that close a tag.
  */
 export function paragraphsFrom(text: string): string {
   return text

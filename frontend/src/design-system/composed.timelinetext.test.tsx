@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { RecordView } from "./recordview";
 
-// How TimelineText draws a body by kind: what a rep writes (a note, call,
-// meeting or task) as markdown whose links show their real address; a mail and
-// a transcript as plain text with bare addresses linked.
+// How TimelineText draws a body by kind. A note, call, meeting or task is
+// markdown whose links show their real address. A mail or a transcript is plain
+// text with bare addresses linked.
 
 afterEach(cleanup);
 

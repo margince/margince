@@ -6,12 +6,11 @@ import { RichText } from "../design-system/richtext";
 import { useRichTextLabels } from "./richtextlabels";
 
 /**
- * An activity's body as a field: markdown edited as formatted text, which is
- * what the timeline renders it as.
+ * An activity's body as a field: markdown edited as formatted text, as the
+ * timeline renders it.
  *
- * A transcript stays a plain textarea and its text is kept byte for byte,
- * because the server's normalizer numbers its lines and a citation points at
- * those numbers.
+ * A transcript stays a plain textarea and is kept byte for byte. The server's
+ * normalizer numbers its lines, and a citation points at those numbers.
  */
 export function ActivityBodyField({
   label,

@@ -68,9 +68,9 @@ export function RichText({
   disabled = false,
 }: Readonly<{
   /**
-   * The markup to show, or the markdown in markdown mode. Read on mount and when it changes from OUTSIDE — an
-   * AI draft arriving, a form reset — never on every keystroke, which would
-   * fight the caret.
+   * The markup to show, or the markdown in markdown mode. Read on mount and
+   * when it changes from outside (an AI draft, a form reset). Never on every
+   * keystroke, which would fight the caret.
    */
   value: string;
   onChange: (next: { html: string; text: string; markdown: string }) => void;
@@ -111,9 +111,8 @@ export function RichText({
   actions?: React.ReactNode;
   rows?: number;
   /**
-   * `rows` is the floor rather than the height, and the surface grows with its
-   * text and with the room its host gives it: for a host whose body is the
-   * field, the Log activity drawer's.
+   * `rows` is the floor rather than the height. The surface grows with its text
+   * and with the room its host gives it, as in the Log activity drawer.
    */
   grow?: boolean;
   format?: "html" | "markdown";
