@@ -45,6 +45,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		return invited, false, counterpartyDecision{}, err
 	}
 	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
+	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
 	// Whose credential carried this record, asked ONCE and carried to both the
 	// birth decision and this seat's import row — the two readers of it, and the
 	// same argument the birth decision makes for itself below.
@@ -425,8 +426,10 @@ func (s *Sink) upsertActivity(
 // defaultOccurredAt fills a provider payload that carried no timestamp:
 // capture time is the honest fallback — better a coarse "when we saw
 // it" than a zero time sorting the record to the beginning of history.
+// A stamp outside the storable range is no timestamp either: no zone can
+// render it.
 func defaultOccurredAt(occurredAt time.Time) time.Time {
-	if occurredAt.IsZero() {
+	if occurredAt.IsZero() || !datasource.InstantInRange(occurredAt) {
 		return time.Now().UTC()
 	}
 	return occurredAt

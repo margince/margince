@@ -257,3 +257,15 @@ func assertChannels(t *testing.T, what string, got, want []VCardChannel) {
 		}
 	}
 }
+
+// A REV outside the storable range reads as no REV. The card then falls back
+// to the import's clock, and no statement time is stored that no zone can render.
+func TestParseVCardsDropsARevisionNoZoneCanRender(t *testing.T) {
+	got, err := ParseVCards(strings.NewReader("BEGIN:VCARD\nFN:Old Card\nREV:00000101T000000Z\nEND:VCARD\n"))
+	if err != nil || len(got) != 1 {
+		t.Fatalf("ParseVCards = %+v, %v; want one card", got, err)
+	}
+	if got[0].Revised != nil {
+		t.Errorf("Revised = %v, want none for a REV in the year 0", got[0].Revised)
+	}
+}

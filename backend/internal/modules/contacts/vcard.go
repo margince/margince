@@ -26,6 +26,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // VCardEntry is one card, reduced to what a contact record holds. Every field is
@@ -284,7 +286,8 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 }
 
 // parseVCardRevision reads REV, the card's own statement of when it was last
-// revised, and nil when it states none or states one this reader cannot parse.
+// revised. It is nil when the card states none, or one this reader cannot
+// parse or store.
 //
 // It matters because a card carries no other date, and the import needs one:
 // dating a card from the moment the request ran makes a re-upload of the same
@@ -310,7 +313,7 @@ func parseVCardRevision(value string) *time.Time {
 		time.RFC3339, "2006-01-02T15:04:05Z07", "2006-01-02T15:04:05Z0700",
 	} {
 		if at, err := time.Parse(layout, v); err == nil {
-			return &at
+			return storableRevision(at)
 		}
 	}
 	// Zoneless forms are read as UTC, which is a GUESS — the card states a wall
@@ -323,10 +326,17 @@ func parseVCardRevision(value string) *time.Time {
 		"20060102T150405", "2006-01-02T15:04:05", "20060102", "2006-01-02",
 	} {
 		if at, err := time.Parse(layout, v); err == nil {
-			return &at
+			return storableRevision(at)
 		}
 	}
 	return nil
+}
+
+func storableRevision(at time.Time) *time.Time {
+	if !datasource.InstantInRange(at) {
+		return nil
+	}
+	return &at
 }
 
 // decodeVCardValue undoes the two encodings a real-world card carries: the

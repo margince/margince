@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // severityInfo is what a company's own announcement is: news about the
@@ -133,14 +134,20 @@ func stale(item NewsroomItem, now time.Time) bool {
 	return now.Sub(item.Published) > newsroomMaxAge
 }
 
+// newsroomClockSkew is how far ahead of the read a feed's date may be and still
+// be believed. A day covers a feed that labels its local time with the wrong zone.
+const newsroomClockSkew = 24 * time.Hour
+
 // detectedAt dates the signal by the item's own publication, falling back to
-// the read. A signal is triaged by when it happened, and the fallback is only
-// for a feed that stated nothing.
+// the read. A signal is triaged by when it happened. The fallback is for a feed
+// that stated nothing, or a date the read cannot believe. That is one past the
+// skew, or one no zone can render.
 func detectedAt(item NewsroomItem, now time.Time) time.Time {
-	if item.Published.IsZero() {
+	published := item.Published
+	if published.IsZero() || !datasource.InstantInRange(published) || published.After(now.Add(newsroomClockSkew)) {
 		return now
 	}
-	return item.Published
+	return published
 }
 
 // publishedForAudit renders the item's date for the audit row, or nil when the

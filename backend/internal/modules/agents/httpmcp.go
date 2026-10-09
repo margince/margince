@@ -240,10 +240,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// authorization server. DELETE authenticates exactly like POST —
 		// there is no unauthenticated teardown path.
 		w.Header().Set("WWW-Authenticate", h.challenge(r))
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		//craft:ignore swallowed-errors a failed write of the 401 body means the client hung up — there is no channel left to report on
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid_token"})
+		httperr.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_token"})
 		return
 	}
 
