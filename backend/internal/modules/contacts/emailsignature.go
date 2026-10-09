@@ -122,11 +122,16 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 	}
 	trimmed := strings.TrimSpace(in.Body)
 	if len([]rune(trimmed)) > SignatureMaxRunes {
-		return EmailSignature{}, &SignatureTooLongError{Runes: len([]rune(trimmed))}
+		return EmailSignature{}, &SignatureTooLongError{Field: "body", Max: SignatureMaxRunes, Runes: len([]rune(trimmed))}
 	}
 	title, phone := trimmedField(in.Title), trimmedField(in.Phone)
-	if longest := max(fieldRunes(title), fieldRunes(phone)); longest > SignatureFieldMaxRunes {
-		return EmailSignature{}, &SignatureTooLongError{Runes: longest}
+	for _, field := range []struct {
+		name  string
+		value *string
+	}{{"title", title}, {"phone", phone}} {
+		if runes := fieldRunes(field.value); runes > SignatureFieldMaxRunes {
+			return EmailSignature{}, &SignatureTooLongError{Field: field.name, Max: SignatureFieldMaxRunes, Runes: runes}
+		}
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := readSignatureTx(ctx, tx, actor.UserID)
@@ -219,11 +224,14 @@ func readSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID) (string, e
 
 // SignatureTooLongError names the field and the bar, because a refusal that
 // only says "too long" leaves the member counting characters by hand.
-type SignatureTooLongError struct{ Runes int }
+type SignatureTooLongError struct {
+	Field      string
+	Max, Runes int
+}
 
 func (e *SignatureTooLongError) Error() string {
-	return fmt.Sprintf("contacts: a signature is at most %d characters, this one is %d",
-		SignatureMaxRunes, e.Runes)
+	return fmt.Sprintf("contacts: a signature's %s is at most %d characters, this one is %d",
+		e.Field, e.Max, e.Runes)
 }
 
 // FieldFault names the offending input for EVERY surface, not just this
@@ -232,7 +240,7 @@ func (e *SignatureTooLongError) Error() string {
 // as a transport branch would reach an agent as an internal fault it was told
 // to retry — retrying a signature that is too long forever.
 func (e *SignatureTooLongError) FieldFault() (field, code, message string) {
-	return "body", "too_long", e.Error()
+	return e.Field, "too_long", e.Error()
 }
 
 // trimmedField trims a field the caller sent and keeps an omitted one nil.

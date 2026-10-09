@@ -33639,8 +33639,9 @@ type EmailSignature struct {
 	// Phone The member's phone number, filled into the workspace template's `{phone}`.
 	Phone string `json:"phone"`
 
-	// TemplateActive The workspace has a signature template. Every send then signs with the template,
-	// filled in with this member's name, title and phone, instead of `body`.
+	// TemplateActive The workspace has a signature template. Every send this member makes then signs
+	// with the template, filled in with their name, title and phone, instead of `body`.
+	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
 	// Title The member's title, filled into the workspace template's `{title}`.

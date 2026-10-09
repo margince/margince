@@ -33,7 +33,7 @@ type SenderSignature struct {
 
 // signatureLogoTag is what {logo} becomes: the workspace logo, embedded in the
 // message and shown by content id, never fetched from a server.
-const signatureLogoTag = `<img src="` + signatureLogoSrc + `" alt="" width="150">`
+const signatureLogoTag = connector.SignatureLogoTag
 
 const signatureLogoSrc = "cid:" + connector.SignatureLogoContentID
 

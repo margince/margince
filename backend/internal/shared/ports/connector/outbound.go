@@ -244,3 +244,7 @@ type InlineImage struct {
 // SignatureLogoContentID names the workspace logo a signature template
 // embeds. The markup refers to it as cid:<this>, and the send attaches it.
 const SignatureLogoContentID = "signature-logo@margince"
+
+// SignatureLogoTag is the one form the logo takes in sanitized markup. The
+// sanitizer writes it and the send removes it when the image is gone.
+const SignatureLogoTag = `<img src="cid:` + SignatureLogoContentID + `" alt="" width="150">`

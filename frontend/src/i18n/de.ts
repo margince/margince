@@ -5195,11 +5195,11 @@ export const de = {
   "settings.signaturePreview": "Signaturvorschau",
   "signatureTemplate.title": "E-Mail-Signaturvorlage",
   "signatureTemplate.sub":
-    "Ein Signaturlayout für alle. Jede Mail setzt Namen, Position und Telefonnummer des Absenders ein.",
+    "Ein Signaturlayout für alle. Jede E-Mail setzt Namen, Position und Telefonnummer des Absenders ein.",
   "signatureTemplate.label": "Vorlage (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Nutze {name}, {title}, {phone} und {logo}, das in die Mail eingebettete Unternehmenslogo. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links sowie Farbe und Pixelgröße auf einem span bleiben erhalten. Leer schaltet die Vorlage ab.",
+    "Nutze {name}, {title}, {phone} und {logo}, das in die E-Mail eingebettete Unternehmenslogo. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links sowie Farbe und Pixelgröße auf einem span bleiben erhalten. Ein leeres Feld deaktiviert die Vorlage.",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",

@@ -45,3 +45,16 @@ func TestADeletedStagedLogoSendsWithoutTheImage(t *testing.T) {
 		t.Fatalf("a deleted logo gave %d image(s), err %v", len(images), err)
 	}
 }
+
+// The markup drops the logo tag only when its staged image is gone.
+func TestTheMarkupDropsTheLogoTagOnlyWhenTheImageIsGone(t *testing.T) {
+	t.Parallel()
+	del := Delivery{HTMLBody: "<p>" + connector.SignatureLogoTag + "Anna</p>", InlineLogoKey: "logos/a"}
+	logo := []connector.InlineImage{{ContentID: connector.SignatureLogoContentID}}
+	if got := markupFor(del, logo); got != del.HTMLBody {
+		t.Fatalf("markup with its logo = %q, want it unchanged", got)
+	}
+	if got := markupFor(del, nil); got != "<p>Anna</p>" {
+		t.Fatalf("markup whose logo is gone = %q, want the tag removed", got)
+	}
+}

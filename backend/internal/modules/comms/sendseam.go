@@ -133,7 +133,7 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 			// from real mail.
 			return sender.SendEmail(ctx, auth, connector.EmailMessage{
 				To: del.Recipients, Cc: del.Cc, Bcc: del.Bcc,
-				Subject: del.Subject, Body: del.Body, HTMLBody: del.HTMLBody, Inline: inline,
+				Subject: del.Subject, Body: del.Body, HTMLBody: markupFor(del, inline), Inline: inline,
 				FromName:            del.FromName,
 				MessageID:           del.MessageID,
 				InReplyTo:           del.InReplyTo,

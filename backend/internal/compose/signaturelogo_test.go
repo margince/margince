@@ -73,3 +73,36 @@ func TestTheSizedLogoCacheIsBounded(t *testing.T) {
 		t.Fatalf("the cache holds %d logos, want at most %d", len(logo.sized), signatureLogoCacheSize)
 	}
 }
+
+// A logo too heavy for mail at 300px is refitted smaller until it fits the cap.
+func TestAHeavyLogoIsRefittedUnderTheByteCap(t *testing.T) {
+	t.Parallel()
+	blob := blobstore.NewMemory()
+	noise := image.NewRGBA(image.Rect(0, 0, 1200, 400))
+	seed := uint32(1)
+	for i := range noise.Pix {
+		seed = seed*1664525 + 1013904223
+		noise.Pix[i] = byte(seed >> 24)
+	}
+	var encoded bytes.Buffer
+	if err := png.Encode(&encoded, noise); err != nil {
+		t.Fatal(err)
+	}
+	if err := blob.Put(context.Background(), "logos/noise.png", bytes.NewReader(encoded.Bytes()), int64(encoded.Len()), "image/png"); err != nil {
+		t.Fatal(err)
+	}
+	got, ok, err := newSignatureLogo(blob).SignatureLogo(context.Background(), "logos/noise.png")
+	if err != nil || !ok {
+		t.Fatalf("reading the logo: ok=%v err=%v", ok, err)
+	}
+	if len(got.Body) > signatureLogoMaxBytes {
+		t.Fatalf("the embedded logo is %d bytes, want at most %d", len(got.Body), signatureLogoMaxBytes)
+	}
+	sized, err := png.Decode(bytes.NewReader(got.Body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sized.Bounds().Dx() >= signatureLogoEdge {
+		t.Fatalf("the heavy logo kept its %dpx edge", sized.Bounds().Dx())
+	}
+}

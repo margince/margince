@@ -19,6 +19,14 @@ import (
 // twice the 150px the logo is shown at, so it stays sharp on a dense screen.
 const signatureLogoEdge = 300
 
+// signatureLogoMaxBytes is the most a signature logo adds to every message. A
+// photo-like logo can pass it at 300px, so it is refitted smaller until it fits.
+const signatureLogoMaxBytes = 48 << 10
+
+// signatureLogoEdges are the edges tried in turn; the last one is sent even
+// when it is still over the cap, since a smaller logo is no longer legible.
+var signatureLogoEdges = []int{signatureLogoEdge, 200, 150}
+
 // signatureLogoReadLimit bounds the stored logo read before resizing.
 const signatureLogoReadLimit = 16 << 20
 
@@ -66,9 +74,14 @@ func (l signatureLogo) SignatureLogo(ctx context.Context, key string) (connector
 	if err != nil {
 		return connector.InlineImage{}, false, fmt.Errorf("compose: decoding the workspace logo: %w", err)
 	}
-	png, err := imagenorm.FitPNG(decoded, signatureLogoEdge)
-	if err != nil {
-		return connector.InlineImage{}, false, fmt.Errorf("compose: sizing the workspace logo for mail: %w", err)
+	var png []byte
+	for _, edge := range signatureLogoEdges {
+		if png, err = imagenorm.FitPNG(decoded, edge); err != nil {
+			return connector.InlineImage{}, false, fmt.Errorf("compose: sizing the workspace logo for mail: %w", err)
+		}
+		if len(png) <= signatureLogoMaxBytes {
+			break
+		}
 	}
 	image := connector.InlineImage{ContentID: connector.SignatureLogoContentID, ContentType: "image/png", Body: png}
 	l.mu.Lock()

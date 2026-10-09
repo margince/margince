@@ -26693,8 +26693,9 @@ export interface components {
             /** @description The member's phone number, filled into the workspace template's `{phone}`. */
             phone: string;
             /**
-             * @description The workspace has a signature template. Every send then signs with the template,
-             *     filled in with this member's name, title and phone, instead of `body`.
+             * @description The workspace has a signature template. Every send this member makes then signs
+             *     with the template, filled in with their name, title and phone, instead of `body`.
+             *     An agent's send carries no sign-off.
              */
             template_active: boolean;
             /** Format: date-time */
