@@ -66,7 +66,7 @@ func (e *ScoreOverrideReasonRequiredError) Error() string {
 
 // FieldFault refuses a score override with no stated reason.
 func (e *ScoreOverrideReasonRequiredError) FieldFault() (field, code, message string) {
-	return "score_override_reason", codeRequired, e.Error()
+	return leadScoreOverrideReasonField, codeRequired, e.Error()
 }
 
 // leadScoreField names the lead's own score input. Its own constant, not the
@@ -74,6 +74,10 @@ func (e *ScoreOverrideReasonRequiredError) FieldFault() (field, code, message st
 // reasons, and borrowing one for the other ties this wire contract to a change
 // made for a different feature.
 const leadScoreField = "score"
+
+// leadScoreOverrideReasonField names the written reason that goes with a score
+// override on the wire.
+const leadScoreOverrideReasonField = "score_override_reason"
 
 // ScoreOverrideWithoutScoreError is the mirror of
 // ScoreOverrideReasonRequiredError: a reason arrived with no score to attach it
@@ -103,7 +107,7 @@ func (e *ScoreOverrideReasonEmptyError) Error() string {
 
 // FieldFault refuses a score-override reason that is present but blank.
 func (e *ScoreOverrideReasonEmptyError) FieldFault() (field, code, message string) {
-	return "score_override_reason", "min_length", e.Error()
+	return leadScoreOverrideReasonField, "min_length", e.Error()
 }
 
 // ScoreOverrideClearConflictError rejects a null score arriving together
@@ -330,7 +334,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 // resumes recompute.
 func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Patch, bool, error) {
 	p := storekit.NewPatch()
-	if err := storekit.ApplyClears(p, in.Clear, clearableLeadColumns(current)); err != nil {
+	clears, scoreNamed := withoutScoreOverrideClears(in.Clear)
+	in.ClearScoreOverride = in.ClearScoreOverride || scoreNamed
+	if err := storekit.ApplyClears(p, clears, clearableLeadColumns(current)); err != nil {
 		return nil, false, err
 	}
 	if in.FullName != nil {
@@ -400,6 +406,23 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		}
 	}
 	return p, resumeRecompute, nil
+}
+
+// withoutScoreOverrideClears takes the score pair out of the named clears and
+// reports whether either was there. A null on either field is the gesture that
+// ends an override, and ending one restores the machine score instead of
+// writing NULL to a column, so applyScoreOverride owns it, not ApplyClears.
+func withoutScoreOverrideClears(fields []string) ([]string, bool) {
+	kept := make([]string, 0, len(fields))
+	named := false
+	for _, field := range fields {
+		if field == leadScoreField || field == leadScoreOverrideReasonField {
+			named = true
+			continue
+		}
+		kept = append(kept, field)
+	}
+	return kept, named
 }
 
 // applyScoreOverride folds the §3.1 sticky-override rules into the patch

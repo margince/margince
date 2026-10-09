@@ -170,3 +170,38 @@ func TestLeadUpdateRequestKeepsNullDistinctFromAbsent(t *testing.T) {
 		t.Fatalf("wrapper dropped embedded fields: %+v", in)
 	}
 }
+
+// The HTTP and MCP doors both list a null field in Clear as well as setting
+// ClearScoreOverride, so the patch builder must route the score pair to the
+// override rule instead of refusing it as a column it cannot clear.
+func TestANamedNullOnTheScorePairEndsTheOverride(t *testing.T) {
+	for name, clear := range map[string][]string{
+		"score":        {leadScoreField},
+		"reason":       {leadScoreOverrideReasonField},
+		"both":         {leadScoreField, leadScoreOverrideReasonField},
+		"beside title": {leadScoreField, "title"},
+	} {
+		p, resume, err := buildLeadPatch(leadWithOverride(), UpdateLeadInput{Clear: clear})
+		if err != nil {
+			t.Fatalf("%s: clearing the override was refused: %v", name, err)
+		}
+		if !resume {
+			t.Errorf("%s: the cleared override must resume recompute", name)
+		}
+		after := p.After()
+		if after["score_override_reason"] != nil || after["score"] != 23 {
+			t.Errorf("%s: override not ended: %v", name, after)
+		}
+	}
+}
+
+func TestANamedNullOnTheScoreKeepsOtherClears(t *testing.T) {
+	p, _, err := buildLeadPatch(crmcontracts.Lead{Score: 23, Title: new("CTO")},
+		UpdateLeadInput{Clear: []string{leadScoreField, "title"}})
+	if err != nil {
+		t.Fatalf("clear refused: %v", err)
+	}
+	if v, ok := p.After()["title"]; !ok || v != nil {
+		t.Errorf("title was not cleared beside the score: %v", p.After())
+	}
+}
