@@ -57,8 +57,11 @@ type FieldHistoryEntry struct {
 	// rows, and an honest identifier beats an invented name.
 	ActorName      *string
 	OnBehalfOfName *string
-	PassportID     *ids.UUID
-	Evidence       map[string]any
+	// AgentClient is the tool a delegated change was typed through, read
+	// from this row's own passport rather than from the reader's current ones.
+	AgentClient *string
+	PassportID  *ids.UUID
+	Evidence    map[string]any
 	// UndidAuditLogID is the entry this one REVERSES — the same link the record
 	// spine carries, because this projection is interleaved into the same
 	// chronology and a reversal reads as a fresh change on either of them.
@@ -372,11 +375,18 @@ func queryFieldHistoryBatch(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter
 	// timeline resolve attribution through. Two rails on one screen answering
 	// "who did this" differently is how a reader comes to trust one and doubt
 	// the other, and this was the rail that named nobody.
+	//
+	// agentClientNameJoin for the same reason one hop further. It reads the tool
+	// from the passport the row recorded, so a token rotated since the change
+	// still names its client.
+	//
+	// Resolving through the passport list instead would name only the newest
+	// token of each connection.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.action, a.actor_type, a.actor_id, a.passport_id, a.evidence,
 		       a.occurred_at, a.before, a.after,
-		       `+auditActorNameColumn+`, obo.display_name
-		FROM audit_log a`+auditActorNameJoins+`
+		       `+auditActorNameColumn+`, obo.display_name, oc.client_name
+		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
 		WHERE %s
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT $%d`, strings.Join(conds, " AND "), len(args)), args...)
@@ -391,7 +401,7 @@ func queryFieldHistoryBatch(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter
 		var evidenceJSON, beforeJSON, afterJSON []byte
 		if err := rows.Scan(&r.id, &r.action, &r.actorType, &r.actorID, &r.passportID,
 			&evidenceJSON, &r.occurredAt, &beforeJSON, &afterJSON,
-			&r.actorName, &r.onBehalfOfName); err != nil {
+			&r.actorName, &r.onBehalfOfName, &r.agentClientName); err != nil {
 			return nil, 0, err
 		}
 		r.entityType, r.entityID = f.EntityType, f.EntityID

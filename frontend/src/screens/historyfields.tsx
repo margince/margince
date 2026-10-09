@@ -121,7 +121,10 @@ function ChangeGrounding({ change }: Readonly<{ change: FieldHistoryEntry }>) {
   return (
     <>
       {change.passport_id && (
-        <ResolvedPassportChip passportId={change.passport_id} />
+        <ResolvedPassportChip
+          passportId={change.passport_id}
+          agentClient={change.agent_client}
+        />
       )}
       {evidence && <EvidenceChip evidence={evidence} />}
     </>

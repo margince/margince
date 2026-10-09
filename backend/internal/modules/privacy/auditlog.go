@@ -60,8 +60,11 @@ type AuditEntry struct {
 	// and a display name is looked up when somebody reads it. Both are nil
 	// when no app_user resolves — a machine actor, or a member whose account
 	// is gone while their audit rows remain.
-	ActorName         *string
-	OnBehalfOfName    *string
+	ActorName      *string
+	OnBehalfOfName *string
+	// AgentClient is the tool a delegated write was typed through, read from
+	// this row's own passport rather than from the reader's current ones.
+	AgentClient       *string
 	PassportID        *ids.PassportID
 	OnBehalfOf        *ids.UserID
 	Action            string
@@ -163,7 +166,8 @@ func scanAuditEntry(rows pgx.Rows) (AuditEntry, error) {
 	if err := rows.Scan(&e.ID, &e.ActorType, &e.ActorID,
 		&passportID, &onBehalfOf, &e.Action, &e.EntityType, &e.EntityID,
 		&e.Before, &e.After, &e.AuthorizationRule, &e.Evidence, &e.OccurredAt, &e.BatchID,
-		&e.ActorName, &e.OnBehalfOfName, &contentReadable, &imagesReadable); err != nil {
+		&e.ActorName, &e.OnBehalfOfName, &e.AgentClient,
+		&contentReadable, &imagesReadable); err != nil {
 		return AuditEntry{}, err
 	}
 	if !contentReadable || !imagesReadable {
@@ -333,11 +337,11 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			`SELECT a.id, a.actor_type, a.actor_id, a.passport_id, a.on_behalf_of,
 			        a.action, a.entity_type, a.entity_id, a.before, a.after, a.authorization_rule,
 			        a.evidence, a.occurred_at, a.batch_id,
-			        `+auditActorNameColumn+`, obo.display_name,
+			        `+auditActorNameColumn+`, obo.display_name, oc.client_name,
 			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND coalesce(aud_route.governed, true))
 			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
 			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
-			 FROM audit_log a`+auditActorNameJoins+auditActivityJoin+`
+			 FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+auditActivityJoin+`
 			 WHERE `+where+`
 			 ORDER BY a.occurred_at DESC, a.id DESC
 			 LIMIT `+arg(limit+1), args...)

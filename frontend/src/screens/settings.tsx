@@ -154,7 +154,7 @@ import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
 import { ProvidersStat } from "./ai-settings";
-import { ResolvedPassportChip } from "./passportchip";
+import { AuditPassportChip } from "./passportchip";
 import { usePassports } from "./passports.queries";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
@@ -1780,9 +1780,7 @@ function AuditLogRow({
                 />
               </div>
             ))}
-            {entry.passport_id && (
-              <ResolvedPassportChip passportId={entry.passport_id} />
-            )}
+            {entry.passport_id && <AuditPassportChip entry={entry} />}
             {entry.on_behalf_of && (
               <span className="t-caption">
                 {t("settings.auditOnBehalf")}{" "}

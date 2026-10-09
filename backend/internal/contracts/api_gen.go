@@ -24944,6 +24944,13 @@ type AuditLogEntry struct {
 	// After The record image after the change, redacted on the same terms as `before`.
 	After *map[string]interface{} `json:"after,omitempty"`
 
+	// AgentClient The tool a delegated change was typed through, as AuditHistoryEntry
+	// carries it and with the same nulls. Read from the passport the row
+	// itself recorded, so a token rotated or revoked since the change
+	// still names its client; resolving through the passport list would
+	// name only the newest token of each connection.
+	AgentClient *string `json:"agent_client,omitempty"`
+
 	// AuthorizationRule Which RBAC/scope rule allowed it.
 	AuthorizationRule *string `json:"authorization_rule,omitempty"`
 
@@ -34099,11 +34106,18 @@ type FieldHistoryEntry struct {
 	// a machine, and their human authority is `on_behalf_of_name`. Null
 	// when no user row resolves — a deactivated or deleted member still has
 	// audit rows, and an honest identifier is better than an invented name.
-	ActorName  *string                     `json:"actor_name,omitempty"`
-	ActorType  FieldHistoryEntryActorType  `json:"actor_type"`
-	ChangedAt  time.Time                   `json:"changed_at"`
-	EntityId   openapi_types.UUID          `json:"entity_id"`
-	EntityType FieldHistoryEntryEntityType `json:"entity_type"`
+	ActorName *string                    `json:"actor_name,omitempty"`
+	ActorType FieldHistoryEntryActorType `json:"actor_type"`
+
+	// AgentClient The tool a delegated change was typed through, as AuditHistoryEntry
+	// carries it and with the same nulls. Read from the passport the row
+	// itself recorded, so a token rotated or revoked since the change
+	// still names its client; resolving through the passport list would
+	// name only the newest token of each connection.
+	AgentClient *string                     `json:"agent_client,omitempty"`
+	ChangedAt   time.Time                   `json:"changed_at"`
+	EntityId    openapi_types.UUID          `json:"entity_id"`
+	EntityType  FieldHistoryEntryEntityType `json:"entity_type"`
 
 	// Evidence Grounding evidence for an agent-authored change; present for agent actors only.
 	Evidence *map[string]interface{} `json:"evidence,omitempty"`
