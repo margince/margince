@@ -260,6 +260,14 @@ func specialNode(t reflect.Type) (object, bool) {
 		// variable is worse than no example at all.
 		out.set("examples", []string{"${env:VARIABLE_NAME}", "${file:/run/secrets/name}"})
 		return out, true
+	case reflect.TypeFor[deployconfig.RemovableSecret]():
+		// A Secret that may also be declared removed; the pattern and the
+		// sentinel come from the loader for the same reason.
+		var out object
+		out.set("type", "string")
+		out.set("pattern", deployconfig.RemovableSecretPattern)
+		out.set("examples", []string{"${env:VARIABLE_NAME}", "${file:/run/secrets/name}", deployconfig.SecretRemoved})
+		return out, true
 	case reflect.TypeFor[yaml.Node]():
 		// The one free-form subtree: seeds.ai_routing is decoded later, by the
 		// ai package, against the shape under $defs.

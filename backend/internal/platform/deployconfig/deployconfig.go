@@ -256,8 +256,9 @@ type SMTP struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	Username string `yaml:"username"`
-	// Password is the reference form: ${file:...} or ${env:...}.
-	Password Secret `yaml:"password"`
+	// Password is the reference form: ${file:...} or ${env:...}, or ${none}
+	// for a relay that takes no credential.
+	Password RemovableSecret `yaml:"password"`
 	// PasswordFile is the original spelling, still honoured so an existing
 	// deployment boots unchanged. Prefer `password`.
 	PasswordFile string `yaml:"password_file"`
@@ -267,6 +268,8 @@ type SMTP struct {
 // which is an unauthenticated relay rather than a mistake.
 func (e Email) SMTPPassword(lookup config.Lookup) (string, error) {
 	switch {
+	case e.SMTP.Password.Removed():
+		return "", nil
 	case e.SMTP.Password.Configured():
 		return e.SMTP.Password.withField("email.smtp.password").Resolve(lookup)
 	case e.SMTP.PasswordFile != "":
@@ -275,6 +278,11 @@ func (e Email) SMTPPassword(lookup config.Lookup) (string, error) {
 		return "", nil
 	}
 }
+
+// SMTPPasswordRemoved reports whether the deployment declared the relay
+// password absent (`password: ${none}`), which removes any sealed
+// copy and sends mail without authenticating.
+func (e Email) SMTPPasswordRemoved() bool { return e.SMTP.Password.Removed() }
 
 // AIConfig carries operator-posture switches for the AI runtime. It names
 // no providers or models (that is `seeds.ai_routing`, and the stored binding
@@ -392,6 +400,9 @@ func (e Email) validate() error {
 	}
 	if _, err := values.ParseEmail(e.FromAddress); err != nil {
 		return fmt.Errorf("deployconfig: email.from_address: %w", err)
+	}
+	if e.SMTP.Password.Removed() && e.SMTP.PasswordFile != "" {
+		return errors.New("deployconfig: email.smtp.password declares the relay password absent while email.smtp.password_file names one — keep one of the two")
 	}
 	return nil
 }

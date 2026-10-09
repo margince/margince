@@ -211,6 +211,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/commissions/decide.go:voidOne":                                    "a void is spelled as its own verb and carries the patch images for the row it retired",
 	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                       "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
 	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                  "each room transition names its own verb and carries the patch images the move built",
+	"internal/platform/settings/delete.go:DeleteRawTx":                                  "each setting declares its own verb; the before image is the stored row it removes, and the after image is the registered default the key reads as once the row is gone",
 	"internal/platform/settings/store.go:SetRawTxReceipt":                               "each setting declares its own verb, and the value on either side is rendered by the same declaration",
 
 	// The one site no static reading could ever judge, and the reason the
