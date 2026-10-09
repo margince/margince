@@ -167,8 +167,8 @@ func ClampLimit(limit *int) int {
 // ("oreilly" finds "Tim O'Reilly"; f_unaccent maps the typographic ’
 // to ' first, so every spelling collapses the same way). nameExpr must
 // mirror the expression of the entity's *_name_trgm index so the LIKE
-// stays indexed; the query text is a bind parameter (LIKE
-// metacharacters at worst widen the caller's own match).
+// stays indexed. The query is a bind parameter with its LIKE
+// metacharacters escaped: `%` and `_` search for themselves.
 func QuickFindClause(pos int, nameExpr string) string {
 	return QuickFindClauseWith(pos, nameExpr, Identifier{})
 }
@@ -205,7 +205,7 @@ type Identifier struct {
 // whole search into a scan of the record table.
 func QuickFindClauseWith(pos int, nameExpr string, id Identifier) string {
 	clause := fmt.Sprintf(`search_tsv @@ websearch_to_tsquery('simple', f_unaccent($%[1]d))
-	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || f_fold_apostrophes(lower($%[1]d)) || '%%'`, pos, nameExpr)
+	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || replace(replace(replace(f_fold_apostrophes(lower($%[1]d)), '\', '\\'), '%%', '\%%'), '_', '\_') || '%%'`, pos, nameExpr)
 	if id.Table != "" {
 		clause += fmt.Sprintf(`
 	   OR id = ANY (ARRAY(SELECT %[2]s FROM %[3]s
