@@ -55,3 +55,46 @@ func assertNamesField(t *testing.T, err error, field string) {
 		t.Fatalf("error %q does not name %q", got, field)
 	}
 }
+
+// The kind the caller sent is checked before the role is read, so a kind the
+// contract does not declare names its own field.
+//
+// The role's check answers whether a declared kind may hold that role.
+//
+// An absent or misspelled kind fell through to it and blamed `role_id`.
+//
+// A caller who forgot the kind was told the role cannot be held by a blank.
+func TestAnUndeclaredSubjectKindNamesItsOwnField(t *testing.T) {
+	t.Parallel()
+	for name, kind := range map[string]crmcontracts.AssignmentSubjectKind{
+		"absent":     "",
+		"unknown":    "group",
+		"wrong case": "USER",
+		"a record":   "company",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := admitSubjectKind(kind)
+			if err == nil {
+				t.Fatalf("kind %q was accepted, and the contract declares user and team", kind)
+			}
+			assertNamesField(t, err, "subject_kind")
+			if strings.Contains(err.Error(), "role_id") {
+				t.Errorf("error %q blames the role for a kind fault", err)
+			}
+		})
+	}
+}
+
+// Both declared kinds pass, so the guard refuses the undeclared value rather
+// than the field.
+func TestBothDeclaredSubjectKindsAreAdmitted(t *testing.T) {
+	t.Parallel()
+	for _, kind := range []crmcontracts.AssignmentSubjectKind{
+		crmcontracts.AssignmentSubjectKindUser, crmcontracts.AssignmentSubjectKindTeam,
+	} {
+		if err := admitSubjectKind(kind); err != nil {
+			t.Errorf("kind %q refused with %v, and the contract declares it", kind, err)
+		}
+	}
+}
