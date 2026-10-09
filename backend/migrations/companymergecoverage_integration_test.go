@@ -44,6 +44,7 @@ var mergePathFiles = []string{
 	"internal/modules/contacts/merge_company.go",
 	"internal/modules/contacts/merge.go",
 	"internal/modules/contacts/mergecompanyedges.go",
+	"internal/modules/contacts/mergekindid.go",
 	"internal/modules/contacts/company_relationship_types.go",
 }
 

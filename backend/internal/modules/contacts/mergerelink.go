@@ -96,6 +96,9 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if counts.ActivityLinks, err = relinkLinkRows(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink activity/list/tag rows: %w", err)
 	}
+	if err := moveKindIDRows(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
+		return counts, err
+	}
 	if err := relinkParticipantRows(ctx, tx, sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("relink activity participants: %w", err)
 	}

@@ -181,6 +181,13 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 	fillString(p, fieldLegalName, tgt.LegalName, src.LegalName)
 	fillString(p, "description", tgt.Description, src.Description)
 	fillString(p, "industry", tgt.Industry, src.Industry)
+	if tgt.LinkedinUrl == nil && src.LinkedinUrl != nil {
+		// Unique among live companies: freed before the survivor takes it, while the source is still live.
+		if _, err := tx.Exec(ctx, `UPDATE company SET linkedin_url = NULL WHERE id = $1 AND archived_at IS NULL`, ids.UUID(src.Id)); err != nil {
+			return nil, fmt.Errorf("free the retired company's LinkedIn address: %w", err)
+		}
+		p.Set("linkedin_url", nil, *src.LinkedinUrl)
+	}
 	// The postal address moves as ONE block, on the same rule as the contact
 	// merge (buildSurvivorshipPatch): a survivor with no address at all takes
 	// the retired record's whole address, and a survivor that has one keeps
