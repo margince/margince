@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
-import { AuditLogCard, SettingsScreen, settingsAddress } from "./settings";
+import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import {
   installFetchStub,
@@ -514,74 +514,4 @@ export const PipelinesAdminPhone: Story = {
 export const PipelinesAdminDark: Story = {
   globals: { theme: "dark" },
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
-};
-
-// AuditLogCard (AO-3/AO-4): one entry carrying a full before/after diff plus
-// the agent attribution trail (passport, on-behalf-of human, authorization
-// rule, grounding evidence), collapsed by default — the expand toggle is
-// what a reviewer exercises to confirm the panel renders honestly.
-const auditLogPage = {
-  data: [
-    {
-      id: "al-1",
-      actor_type: "agent",
-      actor_id: "agent:sdr",
-      passport_id: "pp-9",
-      on_behalf_of: "u-1",
-      on_behalf_of_name: "Me",
-      action: "update",
-      entity_type: "contact",
-      entity_id: "p-1",
-      before: { stage: "new" },
-      after: { stage: "qualified" },
-      authorization_rule: "role:admin",
-      evidence: { snippet: "Reply confirmed budget", source: "email:msg-1" },
-      occurred_at: "2026-07-10T09:00:00Z",
-    },
-  ],
-  page: { next_cursor: null, has_more: false },
-};
-
-// The grants the card asks for, not a bare identity: `useCan("audit_log",
-// "read")` is what draws the filter disclosure, and a hand-rolled /me carrying
-// no `authorization` fails every grant closed — so the trail rendered with no
-// dials above it and the play() below had no "Filters" to press. The id stays
-// `u-1`, which is the actor the fixture's `on_behalf_of` names, so the entry
-// still reads as the viewer's own.
-const auditLogMe = () =>
-  jsonResponse({
-    ...meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
-    user: { ...meFixture().user, id: "u-1", display_name: "Me" },
-  });
-
-function auditLogCard() {
-  return () => {
-    globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
-    installFetchStub({
-      "GET /me": auditLogMe,
-      "GET /audit-log": () => jsonResponse(auditLogPage),
-      "GET /contacts/p-1": () =>
-        jsonResponse({ id: "p-1", full_name: "Priya Shah" }),
-    });
-    return (
-      <StoryProviders>
-        <AuditLogCard />
-      </StoryProviders>
-    );
-  };
-}
-
-export const AuditLog: Story = { render: auditLogCard() };
-
-// The dials, which the card no longer spends six input boxes on before the
-// trail: they sit in a disclosure that is closed on arrival, and this is what
-// opening it looks like — six rows in the same language as every other settings
-// answer, above the log they narrow.
-export const AuditLogFilters: Story = {
-  name: "Audit log — filters open",
-  render: auditLogCard(),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("Filters"));
-  },
 };

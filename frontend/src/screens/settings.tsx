@@ -1,10 +1,4 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
   useCallback,
@@ -13,12 +7,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { api, FIRST_PAGE } from "../api/client";
+import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
 import { THEME_LABEL_KEYS } from "../app/account";
 import { dotTier } from "../app/autonomy";
-import { useCan, useCanWrite } from "../app/capability";
-import { isEntityKind } from "../app/entity";
+import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigateReplacing, type Route } from "../app/router";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
@@ -29,18 +22,14 @@ import {
   Button,
   Checkbox,
   Disclosure,
-  EmptyState,
   Field,
   Modal,
-  Skeleton,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { useSettledValue } from "../design-system/debouncedsearch";
 import { Heading } from "../design-system/heading";
-import { IconAction } from "../design-system/iconaction";
 import {
   Panel,
   PanelBody,
@@ -56,15 +45,8 @@ import { FieldGuard, RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type Toast, useToast } from "../design-system/toast";
-import {
-  AutonomyDot,
-  EvidenceChip,
-  FieldDiff,
-  PassportChip,
-  toEvidence,
-} from "../design-system/trust";
-import { stable } from "../format/collate";
-import { formatDate, formatDateTime, formatNumber } from "../format/format";
+import { AutonomyDot } from "../design-system/trust";
+import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -77,7 +59,6 @@ import { AiRoutingCard } from "./ai-routing";
 import { AiTasksCard } from "./ai-tasks";
 import { AiCallsCard } from "./aicalls";
 import { AiUsageCard } from "./aiusage";
-import { ActorTag } from "./audit";
 import { AutomationsAdmin } from "./automations";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
@@ -91,7 +72,6 @@ import {
   WebsiteReadingCard,
 } from "./capture-settings";
 import {
-  LoadMoreButton,
   problemMessageOf,
   QueryGate,
   resetToSignedOut,
@@ -105,7 +85,6 @@ import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
-import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
 import { HeldThreadsCard } from "./held-threads";
@@ -138,6 +117,7 @@ import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SystemHealthPage } from "./settings.systemhealth";
+import { AuditLogCard } from "./settings-audit";
 import {
   DisplayNameSettingRow,
   GreetingNameSettingRow,
@@ -1732,368 +1712,6 @@ function AutonomyCard() {
           }
         />
       </SettingList>
-    </Panel>
-  );
-}
-
-type AuditLogEntry = components["schemas"]["AuditLogEntry"];
-
-// The union of before/after keys for one row's diff — a key present on
-// neither side is never shown, so the panel only ever displays fields the
-// mutation actually touched.
-function diffKeys(
-  before: AuditLogEntry["before"],
-  after: AuditLogEntry["after"],
-): string[] {
-  const keys = new Set<string>();
-  for (const key of Object.keys(before ?? {})) {
-    keys.add(key);
-  }
-  for (const key of Object.keys(after ?? {})) {
-    keys.add(key);
-  }
-  // `stable`, because these are the record's OWN column names, rendered
-  // untranslated a few lines below: the reader's UI language has no claim on
-  // their order, and one audit row must not read in two orders on two machines
-  // showing the same page.
-  return [...keys].sort(stable);
-}
-
-// A key absent from an object (withheld/never set) reads the same as an
-// explicit null through FieldDiff's honest empty marker (created/cleared) —
-// this never fabricates a value for a key the side genuinely lacks.
-function diffValue(
-  rec: AuditLogEntry["before"] | AuditLogEntry["after"],
-  key: string,
-): string | null {
-  const value = rec?.[key];
-  if (value === null || value === undefined) {
-    return null;
-  }
-  // Object/array field values (custom-field JSON, links, ...) need JSON
-  // rendering — the bare String() coercion collapses them to "[object
-  // Object]", which is neither readable nor honest about what changed.
-  return typeof value === "object" ? JSON.stringify(value) : String(value);
-}
-
-// yyyy-mm-dd from a date input, read as a UTC instant: start-of-day for
-// `from`, end-of-day for `to`, so the range is inclusive of the whole `to`
-// day rather than silently truncating it at midnight.
-function fromDateParam(date: string): string {
-  return new Date(`${date}T00:00:00.000Z`).toISOString();
-}
-function toDateParam(date: string): string {
-  return new Date(`${date}T23:59:59.999Z`).toISOString();
-}
-
-type AuditLogFilters = Readonly<{
-  actor: string;
-  entityType: string;
-  entityId: string;
-  action: string;
-  from: string;
-  to: string;
-}>;
-
-// The unfiltered question the view opens on. One object rather than six
-// useState strings, so the filter row can be its own component that hands back
-// a whole answer instead of taking six setters — and so the query key is that
-// same answer, which cannot drift from what the request carries.
-const UNFILTERED_AUDIT_LOG: AuditLogFilters = {
-  actor: "",
-  entityType: "",
-  entityId: "",
-  action: "",
-  from: "",
-  to: "",
-};
-
-// The six filters, declared once, so the accessible wiring is identical across
-// the row. Each is a `Field` — a real <label> with `htmlFor`, so clicking the
-// words focuses the control. It used to be a `t-label` span pointed at by
-// aria-labelledby, on the reasoning that a real label would wrap every field
-// onto its own line; that is not what happens. `.field` IS a flex column, and
-// the grid around it decides the layout either way, so the span bought nothing
-// and cost the click target.
-const AUDIT_LOG_FILTER_FIELDS: readonly Readonly<{
-  key: keyof AuditLogFilters;
-  labelKey: MessageKey;
-  // A calendar picker rather than free text — the two ends of the range.
-  date?: boolean;
-}>[] = [
-  { key: "actor", labelKey: "settings.auditActor" },
-  { key: "entityType", labelKey: "settings.auditEntity" },
-  { key: "entityId", labelKey: "settings.auditEntityId" },
-  { key: "action", labelKey: "settings.auditAction" },
-  { key: "from", labelKey: "settings.auditFrom", date: true },
-  { key: "to", labelKey: "settings.auditTo", date: true },
-];
-
-// Every filter is optional-if-blank, so this stays a flat spread rather than
-// a chain of conditionals in the queryFn itself (kept the query builder under
-// the cognitive-complexity gate).
-function auditLogQueryParams(
-  filters: AuditLogFilters,
-  pageParam: string | null,
-) {
-  const { actor, entityType, entityId, action, from, to } = filters;
-  return {
-    limit: 20,
-    ...(pageParam ? { cursor: pageParam } : {}),
-    ...(actor.trim() ? { actor: actor.trim() } : {}),
-    ...(entityType.trim() ? { entity_type: entityType.trim() } : {}),
-    ...(entityId.trim() ? { entity_id: entityId.trim() } : {}),
-    ...(action.trim() ? { action: action.trim() } : {}),
-    ...(from ? { from: fromDateParam(from) } : {}),
-    ...(to ? { to: toDateParam(to) } : {}),
-  };
-}
-
-function AuditLogFilterFields({
-  filters,
-  onChange,
-}: Readonly<{
-  filters: AuditLogFilters;
-  onChange: (next: AuditLogFilters) => void;
-}>) {
-  const t = useT();
-  return (
-    // Six dials, each one a row of the page's own language: what it narrows on
-    // the left, the box that narrows it on the right, at the x every other
-    // answer on this page sits at. They were a grid of labelled cells before —
-    // legible on its own, and a second layout for the same question in the one
-    // card that has both.
-    //
-    // Each one applies on its own (debounced), so this is a list of rows and NOT
-    // a form: there is nothing to submit, which is exactly why the six do not
-    // belong in a dialog.
-    <SettingList>
-      {AUDIT_LOG_FILTER_FIELDS.map((field) => (
-        <SettingRow
-          key={field.key}
-          label={t(field.labelKey)}
-          control={(control) => (
-            <TextInput
-              {...control}
-              className="settingrow-measure"
-              type={field.date ? "date" : undefined}
-              value={filters[field.key]}
-              onChange={(event) =>
-                onChange({ ...filters, [field.key]: event.target.value })
-              }
-            />
-          )}
-        />
-      ))}
-    </SettingList>
-  );
-}
-
-function AuditLogRow({
-  entry,
-  meUserId,
-}: Readonly<{ entry: AuditLogEntry; meUserId?: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const [expanded, setExpanded] = useState(false);
-  const diffId = useId();
-  const keys = diffKeys(entry.before, entry.after);
-  const evidence = toEvidence(entry.evidence);
-
-  return (
-    // A log entry is not a settings decision, so it is not a SettingRow: it is
-    // one line of a record, and the rows of the log rule between themselves
-    // inside the one stacked row that holds the whole trail.
-    <div className="audit-row">
-      <div className="audit-row-head">
-        {/* The company's clock, the same one the record change history
-            reads on: an audit entry is a fact in the shared book, and on the
-            viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin
-            and 22 August to one in Ho Chi Minh City — two operators quoting the
-            same line quote different days. */}
-        <span className="t-caption">
-          {formatDateTime(entry.occurred_at, locale, recordZone)}
-        </span>
-        <ActorTag entry={entry} meUserId={meUserId} />
-        <Badge tone="accent">{entry.action}</Badge>
-        {entry.entity_id && isEntityKind(entry.entity_type) ? (
-          <EntityRef kind={entry.entity_type} id={entry.entity_id} />
-        ) : (
-          <span className="t-caption">
-            {entry.entity_type}
-            {entry.entity_id ? ` ${entry.entity_id}` : ""}
-          </span>
-        )}
-        <IconAction
-          label={t("settings.auditExpand")}
-          icon={<ChevronDown aria-hidden className="expander-chevron" />}
-          disclosure={{ expanded, controls: diffId }}
-          onClick={() => setExpanded((value) => !value)}
-        />
-      </div>
-      {expanded && (
-        <div className="audit-row-diff" id={diffId}>
-          {keys.map((key) => (
-            <div key={key} className="audit-diff-line">
-              <span className="t-label">{key}</span>
-              <FieldDiff
-                oldValue={diffValue(entry.before, key)}
-                newValue={diffValue(entry.after, key)}
-              />
-            </div>
-          ))}
-          {entry.passport_id && <PassportChip id={entry.passport_id} />}
-          {entry.on_behalf_of && (
-            <span className="t-caption">
-              {t("settings.auditOnBehalf")}{" "}
-              <span>
-                {entry.on_behalf_of === meUserId
-                  ? t("audit.you")
-                  : (entry.on_behalf_of_name ?? t("audit.unknownMember"))}
-              </span>
-            </span>
-          )}
-          {entry.authorization_rule && (
-            <span className="t-caption">
-              {t("settings.auditRule")}: {entry.authorization_rule}
-            </span>
-          )}
-          {evidence && <EvidenceChip evidence={evidence} />}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// The result half of the audit view: the answer to whatever the filter row
-// currently asks. Keyset "load more" via the page cursor, and a filter change
-// is a new question — the filters ARE the query key, so changing one restarts
-// the cursor chain instead of appending to a stale one.
-
-function AuditLogEntries({
-  filters,
-  meUserId,
-}: Readonly<{ filters: AuditLogFilters; meUserId?: string }>): ReactNode {
-  const t = useT();
-  // `audit_log:read`, which is what privacy.ListAuditLog asks for.
-  //
-  // It was the literal admin role (AAD-ROLE-4/A91) until the trail got an
-  // object of its own. Gated here rather than merely rendered, and the fetch is
-  // disabled for anyone without it: a reader must not issue a call that can
-  // only 403, nor be handed a red failure with a Retry that cannot succeed.
-  const canSee = useCan("audit_log", "read");
-  const query = useInfiniteQuery({
-    queryKey: ["audit-log", filters],
-    enabled: canSee,
-    initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/audit-log", {
-        params: { query: auditLogQueryParams(filters, pageParam) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    getNextPageParam: (last) => last.page.next_cursor ?? null,
-  });
-
-  const entries = query.data?.pages.flatMap((page) => page.data) ?? [];
-
-  // Honest state matrix (§3a): withheld, loading, error, empty, then the rows —
-  // kept as sequential branches rather than a nested ternary in the JSX below.
-  // The whole trail is the control of ONE stacked row now, so no branch wraps
-  // itself in a `PanelBody`: the row it sits in already owns the inset.
-  if (!canSee) {
-    // Withheld rather than absent, and the card keeps its place: an absent trail
-    // on a page that opens for ops would read as "nothing has happened here",
-    // which is a different claim from "this is not yours to read". The same
-    // choice the subject-request queue above it makes, for the same reason.
-    return <EmptyState>{t("settings.auditAdminOnly")}</EmptyState>;
-  }
-  if (query.isPending) {
-    return (
-      <div className="audit-loading">
-        <Skeleton width="60%" />
-        <Skeleton width="90%" />
-      </div>
-    );
-  }
-  if (query.isError) {
-    return (
-      <EmptyState>
-        <p>{t("common.error")}</p>
-        {/* ds:ignore the cause under an EmptyState's headline */}
-        <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
-        <Button onClick={() => query.refetch()}>{t("common.retry")}</Button>
-      </EmptyState>
-    );
-  }
-  if (entries.length === 0) {
-    return <EmptyState>{t("common.empty")}</EmptyState>;
-  }
-  return (
-    <div className="audit-entries settingrow-measure">
-      {entries.map((entry) => (
-        <AuditLogRow key={entry.id} entry={entry} meUserId={meUserId} />
-      ))}
-      <LoadMoreButton query={query} />
-    </div>
-  );
-}
-
-// AC-settings-16: the attributable audit view — live filters over actor /
-// entity_type / entity_id / action / from / to, keyset "load more" via the
-// page cursor. ONE card, because every other filtered list in this product puts
-// its dials inside the list's own surface: a card of its own titled "Filters"
-// made six inputs a subject in the page outline, level with the trail they
-// narrow, and left a reader scanning two cards to answer one question. Inside
-// that one card the dials are the secondary half — a reader arrives to read what
-// happened — so they sit in a disclosure rather than above the trail.
-// Each entry expands into the before/after diff plus the agent attribution trail
-// (passport, on-behalf-of human, authorization rule, grounding evidence) —
-// collapsed by default so the flat scan stays fast.
-export function AuditLogCard() {
-  const t = useT();
-  // The current user's id is what lets ActorTag read "You" rather than naming
-  // the viewer back to themselves. It is the BARE user id; the wire spells a
-  // human actor "human:<uuid>", and ActorTag owns that difference.
-  const meUserId = useMe().data?.user?.id;
-  const canSee = useCan("audit_log", "read");
-  const [filters, setFilters] = useState<AuditLogFilters>(UNFILTERED_AUDIT_LOG);
-  // The row reads what is being typed; the entries read what has settled, so
-  // typing `agent:runner` is one `GET /audit-log` rather than twelve.
-  const asked = useSettledValue(filters);
-  return (
-    <Panel title={t("settings.auditEntries")}>
-      <PanelBody>
-        <PanelIntro>{t("settings.auditSub")}</PanelIntro>
-        <SettingList>
-          {/* The dials are the card's SECONDARY half — a reader arrives to read
-              what happened, and narrows it second — so they sit in a
-              disclosure, closed, rather than costing every visit six input
-              boxes above the trail. Not a dialog: each filter applies on its
-              own, and a dialog with nothing to submit would leave a narrowed
-              list behind a closed door.
-              Absent, not withheld, for a reader who may not read the trail: six
-              inputs that narrow a list they cannot see are a control with
-              nothing behind it. The TRAIL below stays and says why — absence
-              there would claim nothing had happened. */}
-          {canSee && (
-            <Disclosure summary={t("settings.auditFilters")}>
-              <AuditLogFilterFields filters={filters} onChange={setFilters} />
-            </Disclosure>
-          )}
-          {/* The trail is the subject of this card rather than an answer beside
-              a question, so it takes the row's whole width. */}
-          <SettingRow
-            label={t("settings.auditTrailLabel")}
-            layout="stack"
-            control={<AuditLogEntries filters={asked} meUserId={meUserId} />}
-          />
-        </SettingList>
-      </PanelBody>
     </Panel>
   );
 }

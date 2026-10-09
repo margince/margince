@@ -179,6 +179,25 @@ describe("ActorTag", () => {
     expect(screen.queryByText("System")).toBeNull();
   });
 
+  it("names a recorded but unresolved human authority as an unknown member, not a gap", () => {
+    wrap(
+      <ActorTag
+        entry={entry({
+          actor_type: "agent",
+          actor_id: "agent:p1",
+          passport_id: "01a01740-c9c2-736d-a0b6-d3e3dcb13999",
+          on_behalf_of: "u-gone",
+          on_behalf_of_name: null,
+        })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.getByText("Unknown member")).toBeTruthy();
+    expect(screen.getByText("via an agent")).toBeTruthy();
+    expect(screen.queryByText("No human authority recorded")).toBeNull();
+    expect(screen.queryByText(/u-gone/)).toBeNull();
+  });
+
   it("does not call a background agent a gap — no grant was presented", () => {
     wrap(
       <ActorTag
