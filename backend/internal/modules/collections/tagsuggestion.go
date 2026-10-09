@@ -16,8 +16,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -144,11 +146,18 @@ func RecordTagSuggestionTx(ctx context.Context, tx pgx.Tx, d TagSuggestionDraft)
 			return false, fmt.Errorf("collections: recording tag suggestion evidence: %w", err)
 		}
 	}
-	if _, err := storekit.AuditEvent(ctx, tx, "create", tagSuggestionEntity, id, map[string]any{
-		"tag_id": d.TagID, entityTypeField: d.EntityType, entityIDField: d.EntityID,
-		"evidence_count": len(d.Evidence),
-	}); err != nil {
+	// The image names neither the tag nor the record. The compliance log crosses
+	// activity audiences, and the pair would tell its reader what owner-only
+	// mail said about somebody.
+	auditID, err := storekit.AuditEvent(ctx, tx, "create", tagSuggestionEntity, id,
+		map[string]any{"evidence_count": len(d.Evidence)})
+	if err != nil {
 		return false, fmt.Errorf("collections: auditing a tag suggestion: %w", err)
+	}
+	if err := storekit.EmitPipelinePayload(ctx, tx, auditID, crmcontracts.InternalEventTagSuggestionCreated{
+		EvidenceCount: len(d.Evidence),
+	}); err != nil {
+		return false, fmt.Errorf("collections: emitting tag_suggestion.created: %w", err)
 	}
 	return true, nil
 }
@@ -173,10 +182,8 @@ func SupersedeStaleTagSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error)
 		return 0, fmt.Errorf("collections: reading superseded tag suggestions: %w", err)
 	}
 	for _, id := range retired {
-		if _, err := storekit.Audit(ctx, tx, "update", tagSuggestionEntity, id,
-			map[string]any{columnState: TagSuggestionOpen},
-			map[string]any{columnState: TagSuggestionSuperseded}); err != nil {
-			return 0, fmt.Errorf("collections: auditing a superseded tag suggestion: %w", err)
+		if err := recordTagSuggestionState(ctx, tx, id, TagSuggestionSuperseded); err != nil {
+			return 0, err
 		}
 	}
 	return len(retired), nil
@@ -184,6 +191,27 @@ func SupersedeStaleTagSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error)
 
 // columnState is the audited name of the lifecycle column.
 const columnState = "state"
+
+// tagSuggestionEvents are the internal events a move out of open emits.
+var tagSuggestionEvents = map[string]events.Payload{
+	TagSuggestionAccepted:   crmcontracts.InternalEventTagSuggestionAccepted{},
+	TagSuggestionDismissed:  crmcontracts.InternalEventTagSuggestionDismissed{},
+	TagSuggestionSuperseded: crmcontracts.InternalEventTagSuggestionSuperseded{},
+}
+
+// recordTagSuggestionState writes the audit row and the event for one
+// suggestion leaving open, in the caller's transaction.
+func recordTagSuggestionState(ctx context.Context, tx pgx.Tx, id ids.UUID, state string) error {
+	auditID, err := storekit.Audit(ctx, tx, "update", tagSuggestionEntity, id,
+		map[string]any{columnState: TagSuggestionOpen}, map[string]any{columnState: state})
+	if err != nil {
+		return fmt.Errorf("collections: auditing a %s tag suggestion: %w", state, err)
+	}
+	if err := storekit.EmitPipelinePayload(ctx, tx, auditID, tagSuggestionEvents[state]); err != nil {
+		return fmt.Errorf("collections: emitting tag_suggestion.%s: %w", state, err)
+	}
+	return nil
+}
 
 // tagSuggestionStandsClause is a suggestion that still means something for
 // every reader. Its tag is live and suggestible. Its record is live and does
@@ -201,6 +229,6 @@ func tagSuggestionStandsClause(alias string) string {
 	            AND NOT EXISTS (SELECT 1 FROM taggable tg WHERE tg.tag_id = %[1]s.tag_id
 	                  AND tg.entity_type = 'company' AND tg.entity_id = tco.id)))
 	  AND (SELECT count(*) FROM tag_suggestion_evidence te
-	        JOIN activity ta ON ta.id = te.activity_id AND ta.archived_at IS NULL
-	       WHERE te.suggestion_id = %[1]s.id) = %[1]s.evidence_count)`, alias)
+	        JOIN activity ta ON ta.id = te.activity_id AND ta.archived_at IS NULL AND %[2]s
+	       WHERE te.suggestion_id = %[1]s.id) = %[1]s.evidence_count)`, alias, auth.ActivityAvailableClause("ta"))
 }

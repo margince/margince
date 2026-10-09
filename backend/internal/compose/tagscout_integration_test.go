@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -201,5 +203,96 @@ func TestATagSuggestionFromOwnerOnlyMailIsShownOnlyToItsOwner(t *testing.T) {
 	}
 	if _, err := e.tags.DismissTagSuggestion(rep3, mine[0].ID); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a colleague dismissing it = %v, want not found", err)
+	}
+}
+
+func TestATagSuggestionsAuditRowAndEventNameNeitherTheTagNorTheRecord(t *testing.T) {
+	e := setupTagScout(t)
+	productX := e.tag(t, "Product X", "product x demo", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	rep1 := e.rep(e.Rep1, e.Team1)
+	mail := e.note(rep1, t, "email", "Could we get a Product X demo?", dana, time.Now().Add(-time.Hour))
+	if _, err := e.Activities.SetAudience(rep1, ids.From[ids.ActivityKind](mail),
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("limiting the mail to its owner: %v", err)
+	}
+	e.pass(t, time.Now())
+
+	// The admin reads the compliance log and is outside the mail's audience.
+	entityType := "tag_suggestion"
+	page, err := privacy.ListAuditLog(e.Admin(), e.DB(), privacy.AuditFilter{EntityType: &entityType})
+	if err != nil || len(page.Entries) != 1 {
+		t.Fatalf("the audit log holds %d tag suggestion rows (err %v), want 1", len(page.Entries), err)
+	}
+	for _, leak := range []string{productX.String(), dana.String()} {
+		if strings.Contains(string(page.Entries[0].After), leak) {
+			t.Fatalf("the audit image %s names %s", page.Entries[0].After, leak)
+		}
+	}
+	envelope := e.WsScalar(t, `SELECT envelope::text FROM event_outbox WHERE envelope->>'type' = 'tag_suggestion.created'`)
+	if strings.Contains(envelope, dana.String()) || strings.Contains(envelope, productX.String()) {
+		t.Fatalf("the created event %s names the tag or the record", envelope)
+	}
+}
+
+func TestADecidedTagSuggestionIsGoneFromReadsAndConflictsOnlyForAWriter(t *testing.T) {
+	e := setupTagScout(t)
+	e.tag(t, "Product X", "product x pricing", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	e.note(e.Admin(), t, "note", "Asked about Product X pricing.", dana, time.Now().Add(-time.Hour))
+	e.pass(t, time.Now())
+	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)
+	open, err := e.tags.OpenTagSuggestions(rep1, 10)
+	if err != nil || len(open) != 1 {
+		t.Fatalf("open = %d (err %v), want 1", len(open), err)
+	}
+	id := open[0].ID
+	if _, err := e.tags.AcceptTagSuggestion(rep1, id); err != nil {
+		t.Fatalf("accepting: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'tag_suggestion.accepted'`); n != 1 {
+		t.Fatalf("%d accepted events, want 1", n)
+	}
+
+	if _, err := e.tags.GetTagSuggestion(rep1, id); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("reading a decided suggestion = %v, want not found", err)
+	}
+	var decided *collections.TagSuggestionDecidedError
+	if _, err := e.tags.DismissTagSuggestion(rep1, id); !errors.As(err, &decided) {
+		t.Fatalf("the record's writer dismissing it again = %v, want suggestion_decided", err)
+	}
+	if _, err := e.tags.DismissTagSuggestion(rep3, id); err == nil || errors.As(err, &decided) {
+		t.Fatalf("a colleague who may not write the record = %v, want a refusal that is not a conflict", err)
+	}
+	if _, err := e.Contacts.ArchiveContact(e.Admin(), ids.From[ids.ContactKind](dana), nil); err != nil {
+		t.Fatalf("archiving the contact: %v", err)
+	}
+	if _, err := e.tags.DismissTagSuggestion(rep1, id); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("deciding on an archived record = %v, want not found", err)
+	}
+}
+
+func TestATagSuggestionCitingRestrictedMailIsRetiredAndFreesTheRecord(t *testing.T) {
+	e := setupTagScout(t)
+	e.tag(t, "Product X", "product x pricing", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	held := e.note(e.Admin(), t, "note", "Asked about Product X pricing.", dana, time.Now().Add(-time.Hour))
+	e.pass(t, time.Now())
+	// The whole shape a restriction takes; the database refuses a partial one.
+	e.WsExec(t, `INSERT INTO activity_retention_evidence
+		       (activity_id, basis, qualified_at, decided_by_name, reason)
+		VALUES ($1, 'controller_pin', now(), 'Datenschutz', 'litigation hold')`, held)
+	e.WsExec(t, `UPDATE activity
+		   SET restricted_at = now(), archived_at = now(), restricted_reason = 'litigation hold',
+		       restricted_until = now() + interval '1 year',
+		       retention_class = 'commercial_correspondence', retention_class_at = now()
+		 WHERE id = $1`, held)
+
+	if pass := e.pass(t, time.Now()); pass.Superseded != 1 {
+		t.Fatalf("the pass retired %d suggestions, want the one citing restricted mail", pass.Superseded)
+	}
+	e.note(e.Admin(), t, "meeting", "Wants Product X pricing for 40 seats.", dana, time.Now())
+	if pass := e.pass(t, time.Now().Add(time.Minute)); pass.Raised != 1 {
+		t.Fatalf("new evidence raised %d suggestions, want 1", pass.Raised)
 	}
 }

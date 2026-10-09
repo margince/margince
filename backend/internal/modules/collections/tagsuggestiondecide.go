@@ -73,21 +73,23 @@ func (s *Store) DismissTagSuggestion(ctx context.Context, id ids.UUID) (TagSugge
 
 // openTagSuggestionForDecision locks the suggestion under the caller's
 // visibility and holds the caller to what applying the tag would ask: write
-// authority over the record. Deciding either way settles the tag on the
-// record for everybody, so a reader who could not tag it may not decide.
+// authority over the live record. Deciding either way settles the tag on the
+// record for everybody, so a reader who could not tag it may not decide. Only
+// then does a decided suggestion answer 409, so the conflict confirms nothing
+// to a caller the checks above refuse.
 func openTagSuggestionForDecision(ctx context.Context, tx pgx.Tx, id ids.UUID) (TagSuggestion, error) {
-	current, err := readVisibleTagSuggestionTx(ctx, tx, id, true)
+	current, err := readVisibleTagSuggestionTx(ctx, tx, id, tagSuggestionRead{evidence: true}, true)
 	if err != nil {
 		return TagSuggestion{}, err
-	}
-	if current.State != TagSuggestionOpen {
-		return TagSuggestion{}, &TagSuggestionDecidedError{State: current.State}
 	}
 	if err := auth.Require(ctx, current.EntityType, principal.ActionUpdate); err != nil {
 		return TagSuggestion{}, err
 	}
 	if err := auth.EnsureWritableLive(ctx, tx, current.EntityType, current.EntityID); err != nil {
 		return TagSuggestion{}, err
+	}
+	if current.State != TagSuggestionOpen {
+		return TagSuggestion{}, &TagSuggestionDecidedError{State: current.State}
 	}
 	return current, nil
 }
@@ -109,9 +111,5 @@ func recordTagSuggestionDecision(ctx context.Context, tx pgx.Tx, id ids.UUID, st
 	if tag.RowsAffected() == 0 {
 		return &TagSuggestionDecidedError{State: "decided"}
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", tagSuggestionEntity, id,
-		map[string]any{columnState: TagSuggestionOpen}, map[string]any{columnState: state}); err != nil {
-		return fmt.Errorf("collections: auditing the tag suggestion decision: %w", err)
-	}
-	return nil
+	return recordTagSuggestionState(ctx, tx, id, state)
 }
