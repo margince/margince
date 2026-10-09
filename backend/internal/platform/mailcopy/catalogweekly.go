@@ -7,17 +7,17 @@ package mailcopy
 // part of the catalog that grows with the weekly panel.
 
 // weeklyLines is the Monday retrospective: what the week did, and then what a
-// reader does next with it. It is split where the mail itself changes subject
-// (the counted figures, then the movement and the two links), because the list
-// is one call per line and grows every time the mail says something new.
+// reader does next with it. It is split where the mail changes subject: the
+// counted figures, then the movement and the two links. The list is one call
+// per line and grows every time the mail says something new.
 func weeklyLines(line writeLine) {
 	weeklyFigureLines(line)
 	weeklyMovementLines(line)
 	weeklyCoverageLines(line)
 }
 
-// weeklyCoverageLines are what a figure says in place of a count its source
-// never measured, and the line a week before every source began opens with.
+// weeklyCoverageLines are what a figure says in place of a count nobody
+// measured. They include the line a week before every source opens with.
 func weeklyCoverageLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyNotRecorded },
 		"Not recorded",
@@ -91,8 +91,8 @@ func weeklyFigureLines(line writeLine) {
 // with their queue, and how each thing turned out.
 //
 // The seam is the one the mail itself has. The top of the message reports the
-// week's numbers and from here down it reports the reader's own decisions, so
-// the two are edited for different reasons and read as two blocks on the page.
+// week's numbers. From here down it reports the reader's own decisions. The two
+// are edited for different reasons and read as two blocks on the page.
 func weeklyDecisionLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyYes },
 		"yes",
@@ -140,9 +140,9 @@ func weeklyMovementLines(line writeLine) {
 		"… và %d mục nữa, trên Home")
 }
 
-// weeklyClosingLines is what the retrospective asks for once it has reported:
-// next week's plan, the archive behind it, and the outcome words the movement
-// list is written in.
+// weeklyClosingLines is what the retrospective asks for once it has reported.
+// That is next week's plan and the archive behind it. The outcome words the
+// movement list is written in close it.
 func weeklyClosingLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
 		"This week’s commitments",

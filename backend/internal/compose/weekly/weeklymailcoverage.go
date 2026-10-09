@@ -6,10 +6,10 @@ package weekly
 // What the weekly message says about a figure its source never measured, or
 // could not read.
 //
-// The review freezes each figure family's coverage and the bookings coverage
-// behind Won, and the Home panel reads both in brief.numeric.ts. The two cannot
-// share code across the wire, so this file mirrors figureState for the figures
-// the mail prints; the labels are the panel's, held by the mailcopy gate.
+// The review freezes each family's coverage and the bookings coverage behind
+// Won. The Home panel reads both in brief.numeric.ts. Code cannot cross the
+// wire, so this file mirrors figureState for the figures the mail prints. The
+// labels are the panel's, held by the mailcopy gate.
 
 import (
 	"slices"
@@ -41,17 +41,17 @@ func figuresOf(review Review, words mailcopy.Copy) mailFigures {
 		out.set = review.NumericSummary.FigureCoverage
 	}
 	out.bookings = &review.NumericSummary.BookingsCoverage
-	// The zone was valid when the engine froze it; a build without that zone's
-	// data writes the date in UTC and says so rather than shifting it silently.
+	// The zone was valid when the engine froze it. A build without that zone's
+	// data writes the date in UTC and says so, rather than shifting it.
 	if zone, err := time.LoadLocation(review.NumericSummary.Timezone); err == nil {
 		out.zone = zone
 	}
 	return out
 }
 
-// value prints one figure as the panel does: its count where measured, the
-// count qualified where the week was measured in part, and no count at all
-// where the source had not begun, because that zero is not a measurement.
+// value prints one figure as the panel does. A measured figure keeps its count
+// and a partial one qualifies it. A figure whose source had not begun prints no
+// count, because that zero is not a measurement.
 func (f mailFigures) value(coverage *crmcontracts.WeeklyFigureCoverage, count string) string {
 	if coverage == nil {
 		return count

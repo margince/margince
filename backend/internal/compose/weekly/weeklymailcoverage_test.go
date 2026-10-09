@@ -76,8 +76,8 @@ func TestAWeekBeforeEverySourceSaysSoAndPrintsNoZero(t *testing.T) {
 	}
 }
 
-// A family the review states nothing about counts as measured, the panel's own
-// rule, so a seat without lead read is never told its week predates the records.
+// A family the review states nothing about counts as measured, as on the panel.
+// A seat without lead read is never told its week predates the records.
 func TestAWeekWithAnUnstatedFamilyIsNotCalledBeforeHistory(t *testing.T) {
 	set := everyFamilyNotRecorded(firstRecord)
 	set.Leads = nil
@@ -159,8 +159,8 @@ func TestAPartialBookingsReadMarksWonAlone(t *testing.T) {
 	}
 }
 
-// A deals family that has not begun outranks the bookings read, as on the panel:
-// the week predating the source is why nothing could be read.
+// A deals family that has not begun outranks the bookings read, as on the
+// panel. The week predating the source is why nothing could be read.
 func TestNotRecordedOutranksUnavailable(t *testing.T) {
 	review := coveredFixture(everyFamilyNotRecorded(firstRecord))
 	review.NumericSummary.BookingsCoverage = crmcontracts.ReportingCoverage{Status: crmcontracts.ReportingStatusUnavailable}
