@@ -5,8 +5,8 @@
 
 package integration
 
-// A taken, blank or invisible name is refused with a 4xx on every write path.
-// The answer is never a 500.
+// A taken, blank or invisible pipeline, stage or team name is refused with a
+// 4xx. The answer is never a 500.
 
 import (
 	"net/http"
@@ -14,6 +14,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
+
+// zeroWidth is a zero-width space, named by code point so the source stays legible.
+var zeroWidth = string(rune(0x200B))
 
 func TestPipelineAndStageNamesAreRefusedWhenTakenOrBlank(t *testing.T) {
 	e := apptest.SetupApp(t)
@@ -26,6 +29,9 @@ func TestPipelineAndStageNamesAreRefusedWhenTakenOrBlank(t *testing.T) {
 	mustCall(t, e, "POST", "/v1/pipelines", AnyMap{"name": "Beta", "stages": []AnyMap{{"name": "Scout", "position": 1}}}, http.StatusCreated, &second)
 
 	mustCall(t, e, "PATCH", "/v1/pipelines/"+second.ID, AnyMap{"name": "Alpha"}, http.StatusConflict, nil)
+	// A zero-width rune must not make a taken name look free.
+	mustCall(t, e, "PATCH", "/v1/pipelines/"+second.ID, AnyMap{"name": zeroWidth + "Alpha"}, http.StatusConflict, nil)
+	mustCall(t, e, "POST", "/v1/pipelines", AnyMap{"name": "Alpha" + zeroWidth}, http.StatusConflict, nil)
 	for _, blank := range []string{"", "   ", "\u200b", " \u200b\u00a0"} {
 		mustCall(t, e, "POST", "/v1/pipelines", AnyMap{"name": blank}, http.StatusUnprocessableEntity, nil)
 		mustCall(t, e, "PATCH", "/v1/pipelines/"+first.ID, AnyMap{"name": blank}, http.StatusUnprocessableEntity, nil)
@@ -60,6 +66,14 @@ func TestTeamNamesAreRefusedWhenTakenOrInvisible(t *testing.T) {
 	mustCall(t, e, "POST", "/v1/teams", AnyMap{"name": "Support"}, http.StatusCreated, nil)
 
 	mustCall(t, e, "PATCH", "/v1/teams/"+old.ID, AnyMap{"archived": false}, http.StatusConflict, nil)
+
+	var other struct {
+		ID string `json:"id"`
+	}
+	mustCall(t, e, "POST", "/v1/teams", AnyMap{"name": "Sales"}, http.StatusCreated, &other)
+	mustCall(t, e, "PATCH", "/v1/teams/"+other.ID, AnyMap{"name": "Support"}, http.StatusConflict, nil)
+	mustCall(t, e, "PATCH", "/v1/teams/"+other.ID, AnyMap{"name": zeroWidth + "Support"}, http.StatusConflict, nil)
+	mustCall(t, e, "POST", "/v1/teams", AnyMap{"name": "Support" + zeroWidth}, http.StatusConflict, nil)
 
 	for _, invisible := range []string{"\u200b", "\u200b\u200b", " \u2060 "} {
 		mustCall(t, e, "POST", "/v1/teams", AnyMap{"name": invisible}, http.StatusUnprocessableEntity, nil)

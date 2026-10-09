@@ -36,7 +36,7 @@ func (h Handlers) CreatePipeline(w http.ResponseWriter, r *http.Request, _ crmco
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	name, err := httperr.RequireNonBlank("name", req.Name)
+	name, err := cleanLadderName("name", req.Name)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -51,7 +51,7 @@ func (h Handlers) CreatePipeline(w http.ResponseWriter, r *http.Request, _ crmco
 	}
 	if req.Stages != nil {
 		for i, st := range *req.Stages {
-			stageName, err := httperr.RequireNonBlank("stages", st.Name)
+			stageName, err := cleanLadderName("stages", st.Name)
 			if err != nil {
 				httperr.Write(w, r, err)
 				return

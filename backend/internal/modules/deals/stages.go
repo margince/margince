@@ -26,6 +26,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// cleanLadderName is the one rule for a pipeline's or stage's name. Zero-width
+// runes are dropped before the name is judged, so "\u200bAlpha" cannot sit beside
+// "Alpha" and read as a free name.
+func cleanLadderName(field, raw string) (string, error) {
+	return httperr.RequireNonBlank(field, values.WithoutZeroWidth(raw))
+}
+
 type UpdatePipelineInput struct {
 	Name      *string
 	IsDefault *bool
@@ -38,7 +45,7 @@ func (s *Store) UpdatePipeline(ctx context.Context, id ids.PipelineID, in Update
 		return crmcontracts.Pipeline{}, err
 	}
 	if in.Name != nil {
-		name, err := httperr.RequireNonBlank("name", *in.Name)
+		name, err := cleanLadderName("name", *in.Name)
 		if err != nil {
 			return crmcontracts.Pipeline{}, err
 		}
@@ -133,7 +140,7 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 	if err := checkStagePosition(in.Position); err != nil {
 		return crmcontracts.Stage{}, err
 	}
-	name, err := httperr.RequireNonBlank("name", in.Name)
+	name, err := cleanLadderName("name", in.Name)
 	if err != nil {
 		return crmcontracts.Stage{}, err
 	}
@@ -274,7 +281,7 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		}
 	}
 	if in.Name != nil {
-		name, err := httperr.RequireNonBlank("name", *in.Name)
+		name, err := cleanLadderName("name", *in.Name)
 		if err != nil {
 			return crmcontracts.Stage{}, err
 		}

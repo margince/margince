@@ -13,31 +13,59 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The contract bounds these texts in characters, so accented text that fits
-// is accepted and text a character over is refused.
+// The contract bounds these texts in characters. Each field is probed alone, so
+// reverting any one of them to a byte count fails here.
 func TestSchedulingTextLimitsCountCharactersNotBytes(t *testing.T) {
-	profile := defaultSchedulingProfile()
-	profile.Title = strings.Repeat("é", 200)
-	profile.Location = strings.Repeat("é", 1000)
-	if err := validateSchedulingLimits(profile); err != nil {
-		t.Fatalf("profile text at the limit refused: %v", err)
+	zeroWidthSpace := string(rune(0x200B))
+	profile := func(change func(*crmcontracts.SchedulingProfile)) error {
+		p := defaultSchedulingProfile()
+		change(&p)
+		return validateSchedulingLimits(p)
 	}
-	profile.Title = strings.Repeat("é", 201)
-	if err := validateSchedulingLimits(profile); err == nil {
-		t.Fatal("a 201-character title was accepted")
+	invite := func(change func(*crmcontracts.MeetingInvitationRequest)) error {
+		in := crmcontracts.MeetingInvitationRequest{
+			ContactId: openapi_types.UUID(ids.NewV7()), AttendeeEmail: "guest@example.test", Subject: "Discovery",
+		}
+		change(&in)
+		return validateInvitation(in)
+	}
+	fits := func(n int) string { return strings.Repeat("é", n) }
+
+	if err := profile(func(p *crmcontracts.SchedulingProfile) { p.Title = fits(200) }); err != nil {
+		t.Errorf("profile title at its limit refused: %v", err)
+	}
+	if err := profile(func(p *crmcontracts.SchedulingProfile) { p.Location = fits(1000) }); err != nil {
+		t.Errorf("profile location at its limit refused: %v", err)
+	}
+	if err := profile(func(p *crmcontracts.SchedulingProfile) { p.Title = fits(201) }); err == nil {
+		t.Error("a 201-character profile title was accepted")
+	}
+	if err := profile(func(p *crmcontracts.SchedulingProfile) { p.Location = fits(1001) }); err == nil {
+		t.Error("a 1001-character profile location was accepted")
+	}
+	if err := profile(func(p *crmcontracts.SchedulingProfile) { p.Title = zeroWidthSpace }); err == nil {
+		t.Error("an invisible profile title was accepted")
 	}
 
-	invite := crmcontracts.MeetingInvitationRequest{
-		ContactId: openapi_types.UUID(ids.NewV7()), AttendeeEmail: "guest@example.test",
-		Subject:     strings.Repeat("é", 200),
-		Description: strings.Repeat("é", 5000),
-		Location:    strings.Repeat("é", 1000),
+	if err := invite(func(in *crmcontracts.MeetingInvitationRequest) { in.Subject = fits(200) }); err != nil {
+		t.Errorf("invitation subject at its limit refused: %v", err)
 	}
-	if err := validateInvitation(invite); err != nil {
-		t.Fatalf("invitation text at the limit refused: %v", err)
+	if err := invite(func(in *crmcontracts.MeetingInvitationRequest) { in.Description = fits(5000) }); err != nil {
+		t.Errorf("invitation description at its limit refused: %v", err)
 	}
-	invite.Subject = strings.Repeat("é", 201)
-	if err := validateInvitation(invite); err == nil {
-		t.Fatal("a 201-character subject was accepted")
+	if err := invite(func(in *crmcontracts.MeetingInvitationRequest) { in.Location = fits(1000) }); err != nil {
+		t.Errorf("invitation location at its limit refused: %v", err)
+	}
+	if err := invite(func(in *crmcontracts.MeetingInvitationRequest) { in.Subject = fits(201) }); err == nil {
+		t.Error("a 201-character invitation subject was accepted")
+	}
+	if err := invite(func(in *crmcontracts.MeetingInvitationRequest) { in.Description = fits(5001) }); err == nil {
+		t.Error("a 5001-character invitation description was accepted")
+	}
+	if err := invite(func(in *crmcontracts.MeetingInvitationRequest) { in.Location = fits(1001) }); err == nil {
+		t.Error("a 1001-character invitation location was accepted")
+	}
+	if err := invite(func(in *crmcontracts.MeetingInvitationRequest) { in.Subject = zeroWidthSpace }); err == nil {
+		t.Error("an invisible invitation subject was accepted")
 	}
 }

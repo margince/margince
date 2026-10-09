@@ -314,7 +314,7 @@ func (s *Service) CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool,
 
 // validTeamName trims and bounds a team name.
 func validTeamName(raw string) (string, error) {
-	name := strings.TrimSpace(raw)
+	name := strings.TrimSpace(values.WithoutZeroWidth(raw))
 	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > maxTeamName {
 		return "", &values.ParseError{
 			Field: "name", Code: "invalid_team_name",
