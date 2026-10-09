@@ -182,8 +182,8 @@ func backendFilterPatterns(t *testing.T) []string {
 	return patterns
 }
 
-// The matcher has to read each pattern the way paths-filter does, or a path the
-// filter covers is reported uncovered and the fix is a duplicate filter line.
+// The matcher has to read each pattern the way paths-filter does. Otherwise a
+// covered path is reported uncovered, and the fix is a duplicate filter line.
 func TestCoveredByReadsEachFilterShape(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
