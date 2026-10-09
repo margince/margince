@@ -104,7 +104,7 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 	if firstErr == nil {
 		return resp, info, nil
 	}
-	r.Reject(info)
+	r.refused(ctx, lc, task, info, firstErr)
 
 	retry := feedbackFor(req, resp, firstErr)
 	resp, info, err = r.serveAttempt(ctx, lc, task, ladder, retry, attemptReasonSchemaInvalid)
@@ -115,7 +115,7 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 	if secondErr == nil {
 		return resp, info, nil
 	}
-	r.Reject(info)
+	r.refused(ctx, lc, task, info, secondErr)
 
 	escalated := feedbackFor(req, resp, secondErr)
 	resp, info, err = r.completeEscalated(ctx, lc, task, escalated)
@@ -123,10 +123,29 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 		return model.Response{}, info, err
 	}
 	if finalErr := validate(resp.Text); finalErr != nil {
-		r.Reject(info)
+		r.refused(ctx, lc, task, info, finalErr)
+		lc.markTerminal(sentinelOutputRejected)
 		return model.Response{}, info, rejected(task, info, finalErr, truncated(resp))
 	}
 	return resp, info, nil
+}
+
+// maxLoggedRefusal bounds the validator's message in the log. Sites echo model
+// output into it, and the model read a correspondent's text.
+const maxLoggedRefusal = 200
+
+// refused records that the validator refused the attempt info describes: the
+// cache forgets the answer, and the log says which rule refused it. ai_call has
+// no column for the rule, so this line is what groups refusals by cause.
+func (r *Router) refused(ctx context.Context, lc *logicalCall, task Task, info RouteInfo, cause error) {
+	r.Reject(info)
+	reason := []rune(cause.Error())
+	if len(reason) > maxLoggedRefusal {
+		reason = append(reason[:maxLoggedRefusal], '…')
+	}
+	r.log.InfoContext(ctx, "ai: the validator refused an answer",
+		"task", string(task), "logical_call_id", lc.id.String(), "attempt", len(lc.attempts),
+		"tier", string(info.Tier), "model", info.ModelID, "reason", string(reason))
 }
 
 // rejected names what refused the text. The offline fake cannot produce a

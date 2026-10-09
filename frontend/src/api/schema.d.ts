@@ -21859,7 +21859,7 @@ export interface components {
              *     rebound to another model drops the attempts of the one before it.
              */
             calls: number;
-            /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached. */
+            /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the outcomes `output_withheld`, `request_rejected` and `output_rejected` are not failures, since the model was reached. */
             failures: number;
             /**
              * @description The most recent error this tier reported, absent when it reported none. It is the
@@ -22022,7 +22022,7 @@ export interface components {
             total: number;
             /**
              * Format: int64
-             * @description Logical calls whose last attempt failed.
+             * @description Logical calls whose last attempt served the caller nothing: it failed, or its answer was withheld or refused.
              */
             unanswered: number;
             /** @description The decision model first, then each tier in ladder order. */
@@ -22037,7 +22037,7 @@ export interface components {
             attempts: number;
             /**
              * Format: int64
-             * @description Logical calls this step answered.
+             * @description Logical calls this step answered and served to the caller.
              */
             answered: number;
             /** Format: int64 */
@@ -22186,7 +22186,7 @@ export interface components {
             /**
              * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
              *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-             *     Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+             *     Three codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing.
              *     `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
              *     `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
              */

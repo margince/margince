@@ -61,7 +61,7 @@ func TestClassifyError(t *testing.T) {
 // renamed on one side alone would count every withheld answer as an outage,
 // or hide a real failure from the health read.
 func TestTheAnsweredErrorsClassifyToExactlyTheAnsweredSentinels(t *testing.T) {
-	answered := []error{model.ErrOutputWithheld, model.ErrRequestRejected, errMeteringFailed}
+	answered := []error{model.ErrOutputWithheld, model.ErrRequestRejected, errMeteringFailed, ErrOutputRejected}
 	classified := make([]string, 0, len(answered))
 	for _, err := range answered {
 		classified = append(classified, classifyError(fmt.Errorf("wrap: %w", err)))

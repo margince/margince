@@ -155,3 +155,29 @@ func TestStructuredLeavesARealModelsBadAnswerUnmarked(t *testing.T) {
 		t.Fatalf("a bound vendor that answered badly is not an unconfigured installation: %v", err)
 	}
 }
+
+// A call whose every answer the validator refused served its caller nothing.
+// So the terminal attempt carries output_rejected, and the attempts before it
+// carry none, because the ladder went on past them.
+func TestStructuredExhaustionMarksTheTerminalAttemptRejected(t *testing.T) {
+	calls := &fakeCallStore{}
+	r := newTracingRouter(t, stubClient{resp: model.Response{Text: "not json"}}, calls)
+
+	_, _, err := r.CompleteStructured(wsCtx(), TaskColdStart, structuredReq(), jsonObjectValidator)
+	if !errors.Is(err, ErrOutputRejected) {
+		t.Fatalf("three refused answers → %v, want ErrOutputRejected", err)
+	}
+	if len(calls.recorded) != 3 {
+		t.Fatalf("recorded %d attempts, want the whole ladder of 3", len(calls.recorded))
+	}
+	for _, attempt := range calls.recorded {
+		want := ""
+		if attempt.IsTerminal {
+			want = sentinelOutputRejected
+		}
+		if attempt.ErrorSentinel != want {
+			t.Errorf("attempt %d (terminal %v) carries sentinel %q, want %q",
+				attempt.Attempt, attempt.IsTerminal, attempt.ErrorSentinel, want)
+		}
+	}
+}
