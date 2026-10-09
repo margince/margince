@@ -297,3 +297,39 @@ func TestASkipNamesTheLineTheRowCameFrom(t *testing.T) {
 		t.Fatalf("skipped = %+v, want the row's own line 4", report.Skipped)
 	}
 }
+
+// An email is one identity however it is cased, so two rows that differ only
+// in case are one claim; the preview must not promise a second create.
+func TestCSVSourceTreatsEmailsDifferingInCaseAsOneIdentity(t *testing.T) {
+	body := "Email,First Name\nAda@X.test,Ada\nada@x.test,Again\nbob@x.test,Bob\n"
+	mapping, sourceKey := leadMapping()
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectContact, mapping, sourceKey)
+
+	rows, err := src.Rows(context.Background(), ObjectContact, 0, 10)
+	if err != nil {
+		t.Fatalf("Rows: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("delivered %d rows, want 2 (the second Ada is a duplicate)", len(rows))
+	}
+	skipped := src.Skipped()
+	if len(skipped) != 1 || skipped[0].Line != 3 {
+		t.Fatalf("skipped = %+v, want line 3 only", skipped)
+	}
+}
+
+// A key that is not an email keeps its exact spelling: "AB1" and "ab1" can be
+// two records in the system they came from.
+func TestCSVSourceKeepsTheCaseOfAKeyThatIsNotAnEmail(t *testing.T) {
+	body := "Ref,Email\nAB1,a@x.test\nab1,b@x.test\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectContact,
+		map[string]string{"Ref": "external_ref", "Email": "email"}, "Ref")
+
+	rows, err := src.Rows(context.Background(), ObjectContact, 0, 10)
+	if err != nil {
+		t.Fatalf("Rows: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("delivered %d rows, want 2", len(rows))
+	}
+}

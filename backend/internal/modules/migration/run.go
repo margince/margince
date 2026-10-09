@@ -246,6 +246,22 @@ func (s *RunStore) RecordIdentityTx(ctx context.Context, tx pgx.Tx, runID RunID,
 	return recordIdentityInTx(ctx, tx, runID, sourceSystem, object, externalID, nativeID)
 }
 
+// ReleaseIdentityTx drops a binding whose record is archived, in the caller's
+// transaction, so the key can be bound to the record that replaces it. The run
+// that made the old binding keeps its report; only the live map entry goes.
+func (s *RunStore) ReleaseIdentityTx(ctx context.Context, tx pgx.Tx, sourceSystem, object, externalID string) error {
+	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM import_record_map
+		 WHERE source_system = $1 AND object = $2 AND external_id = $3`,
+		sourceSystem, object, externalID); err != nil {
+		return fmt.Errorf("migration: releasing the %s %s identity: %w", object, externalID, err)
+	}
+	return nil
+}
+
 // recordIdentityInTx is the statement both entry points run.
 func recordIdentityInTx(ctx context.Context, tx pgx.Tx, runID RunID, sourceSystem, object, externalID string, nativeID ids.UUID) error {
 	// The run is resolved BY the statement rather than trusted from the

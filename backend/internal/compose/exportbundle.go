@@ -139,9 +139,22 @@ func jsonValue(v any) any {
 		// jsonb columns arrive as raw bytes; embed them as JSON so the
 		// dump nests the object instead of base64-encoding it.
 		return json.RawMessage(t)
+	case time.Time:
+		return jsonTime(t)
 	default:
 		return v
 	}
+}
+
+// jsonTime keeps an instant outside years 0-9999, which encoding/json refuses
+// to marshal, as text so one stored value cannot fail the whole bundle.
+//
+//craft:ignore naked-any returns either the instant itself or its text, and both marshal as JSON
+func jsonTime(t time.Time) any {
+	if y := t.Year(); y < 0 || y > 9999 {
+		return t.UTC().Format(time.RFC3339Nano)
+	}
+	return t
 }
 
 // csvCell renders a driver value as a single CSV field. Free-text cells pass

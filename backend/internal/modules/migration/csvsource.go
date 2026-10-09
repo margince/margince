@@ -138,14 +138,15 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 		// row's record; the report deduplicated by the same key, so two refusals
 		// arrived as one skip and a phantom `unchanged`, and the four counts
 		// stopped summing to rows_read.
-		if first, seen := claimed[row.ExternalID]; seen {
+		identity := s.identityOf(row.ExternalID)
+		if first, seen := claimed[identity]; seen {
 			s.skip(line, fmt.Sprintf(
 				"the %q value %q is already used by line %d; each row needs its own, because it is "+
 					"what a re-import matches on and what an undo finds this row by",
 				s.sourceKey, row.ExternalID, first))
 			return nil
 		}
-		claimed[row.ExternalID] = line
+		claimed[identity] = line
 		position := delivered
 		delivered++
 		if position < offset {
@@ -161,6 +162,16 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 		return nil, err
 	}
 	return out, nil
+}
+
+// identityOf is the spelling two rows are compared by. An email is one identity
+// however it is cased, which is how the contact store keys it; any other key is
+// compared exactly.
+func (s *CSVSource) identityOf(external string) string {
+	if s.mapping[s.sourceKey] == "email" {
+		return strings.ToLower(external)
+	}
+	return external
 }
 
 // rowFrom builds one Row from one record, or reports why it cannot. A row with

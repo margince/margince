@@ -58,6 +58,9 @@ type csvWriters struct {
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
 	// identity map.
 	nativeIDs map[string]ids.UUID
+	// archivedBindings marks external keys whose bound record is archived, so
+	// the create that replaces it also releases the old binding.
+	archivedBindings map[string]bool
 	// employers caches one answer per folded company name the FILE names, so a
 	// file naming one employer on every row asks the database once. Nil until
 	// the first row needs it; bounded by the file, never by the estate.
@@ -107,6 +110,8 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		contextTag: parseContextTag(settled.ContextTag),
 		nativeIDs:  map[string]ids.UUID{},
 		authors:    authorSeats{},
+
+		archivedBindings: map[string]bool{},
 	}
 }
 
@@ -170,10 +175,39 @@ func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids
 	if err != nil {
 		return ids.UUID{}, false, err
 	}
-	if found {
-		w.nativeIDs[externalID] = id
+	if !found {
+		return id, false, nil
 	}
-	return id, found, nil
+	// A binding to an archived record (an undone import, or a record archived by
+	// hand) names nothing a re-import can update, so the key counts as unlanded.
+	archived, err := w.isArchived(ctx, id)
+	if err != nil {
+		return ids.UUID{}, false, err
+	}
+	if archived {
+		w.archivedBindings[externalID] = true
+		return ids.UUID{}, false, nil
+	}
+	w.nativeIDs[externalID] = id
+	return id, true, nil
+}
+
+// isArchived reads the bound record with archived rows included, so a row-scope
+// miss still answers not-found rather than reading as archived.
+func (w *csvWriters) isArchived(ctx context.Context, id ids.UUID) (bool, error) {
+	switch w.object {
+	case migration.ObjectLead:
+		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.IncludeArchived)
+		return err == nil && lead.ArchivedAt != nil, err
+	case migration.ObjectCompany:
+		company, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.IncludeArchived)
+		return err == nil && company.ArchivedAt != nil, err
+	case migration.ObjectContact:
+		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.IncludeArchived)
+		return err == nil && contact.ArchivedAt != nil, err
+	default:
+		return false, fmt.Errorf("import: %q is not an importable object", w.object)
+	}
 }
 
 // Ensure lands one row: created the first time, updated when the file has
@@ -483,6 +517,11 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 		if id, err = create(tx); err != nil {
 			return err
 		}
+		if w.archivedBindings[externalID] {
+			if err := w.identities.ReleaseIdentityTx(ctx, tx, csvSourceSystem(), w.object, externalID); err != nil {
+				return err
+			}
+		}
 		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, csvSourceSystem(), w.object, externalID, id); err != nil {
 			return err
 		}
@@ -491,5 +530,6 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 		return err
 	}
 	w.nativeIDs[externalID] = id
+	delete(w.archivedBindings, externalID)
 	return nil
 }
