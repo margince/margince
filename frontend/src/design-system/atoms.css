@@ -55,9 +55,8 @@
 .panel > .table-scroll-bleed > .table > * > tr > :last-child {
   padding-inline-end: var(--padPanel);
 }
-/* stickyFirst: the first column stays put while the rest scrolls under it, so
-   its ground is opaque: the page, or the pane laid over the page. Any table,
-   since a hand-drawn one may wear its own skin instead of `.table`. */
+/* The pinned first column is opaque because the rest scrolls under it. Any
+   table, since a hand-drawn one may skip `.table`. */
 .table-scroll-sticky {
   container-type: scroll-state;
 }

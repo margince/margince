@@ -209,7 +209,7 @@ describe("the group role grant editor", () => {
     const { calls } = mount([], { sales: "rep", engineering: "manager" });
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Remove sales" }),
+      await screen.findByRole("button", { name: "Remove the sales mapping" }),
     );
     await user.click(
       screen.getByRole("button", { name: /save group grants/i }),

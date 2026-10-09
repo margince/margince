@@ -156,8 +156,8 @@ export function TeamsCard() {
   const users = useRoster("user", canSeeMembership);
   const usersPartial = useRosterPartial("user", canSeeMembership);
   const [openTeamId, setOpenTeamId] = useState<string | null>(null);
-  // It takes the name as well as the id. The archive invalidated ["teams"], so
-  // by the time Undo is pressed the row may be gone and a lookup would miss.
+  // The archive invalidated ["teams"], so by the time Undo is pressed the row
+  // may be gone and a lookup of its name would miss.
   const restore = useMutation({
     mutationFn: async ({ id }: { id: string; name: string }) => {
       const { error } = await api.PATCH("/teams/{id}", {

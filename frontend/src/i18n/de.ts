@@ -8920,7 +8920,7 @@ export const de = {
   "extAccess.versionSkew":
     "Jemand anderes hat diese Rolle geändert, während du sie angesehen hast, daher wurde deine Änderung nicht übernommen. Die Berechtigungen oben sind aktuell. Nimm die Änderung bei Bedarf erneut vor.",
   "extAccess.systemRole": "Vorgegebene Rolle",
-  "extAccess.customRole": "Eigene Rolle",
+  "extAccess.customRole": "Angepasste Rolle",
   "extAccess.readOnlyTitle": "Nur Lesezugriff für deine Rolle",
   "extAccess.nobodyReadsTitle": "Keine Rolle kann diese Erweiterung lesen",
   "extAccess.grantFailed": "Berechtigung nicht geändert",
@@ -9406,7 +9406,7 @@ export const de = {
   "groupRoles.role": "Vergebene Rolle",
   "groupRoles.add": "Gruppe hinzufügen",
   "groupRoles.remove": "Diese Gruppenzuordnung entfernen",
-  "groupRoles.removeNamed": "{group} entfernen",
+  "groupRoles.removeNamed": "Zuordnung für {group} entfernen",
   "groupRoles.save": "Gruppenzuordnungen speichern",
   "groupRoles.empty":
     "Keine Gruppen zugeordnet. Die Unternehmensanmeldung vergibt nichts über das hinaus, was ein Mitglied bereits hält.",

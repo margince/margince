@@ -9536,7 +9536,7 @@ export const en = {
   "groupRoles.role": "Granted role",
   "groupRoles.add": "Add group",
   "groupRoles.remove": "Remove this group mapping",
-  "groupRoles.removeNamed": "Remove {group}",
+  "groupRoles.removeNamed": "Remove the {group} mapping",
   "groupRoles.save": "Save group grants",
   "groupRoles.empty":
     "No groups are mapped. Corporate sign-in grants nothing beyond what each member already holds.",

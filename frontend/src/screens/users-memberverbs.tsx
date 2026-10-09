@@ -33,9 +33,9 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
 
   const reactivate = useMutation({
     mutationKey: memberMutationKey(member.id, "reactivate"),
-    mutationFn: async () => {
+    mutationFn: async (id: string) => {
       const { error } = await api.POST("/users/{id}/reactivate", {
-        params: { path: { id: member.id } },
+        params: { path: { id } },
       });
       if (error) {
         throwProblem(error);
@@ -53,9 +53,9 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
 
   const deactivate = useMutation({
     mutationKey: memberMutationKey(member.id, "deactivate"),
-    mutationFn: async () => {
+    mutationFn: async (id: string) => {
       const { error } = await api.POST("/users/{id}/deactivate", {
-        params: { path: { id: member.id } },
+        params: { path: { id } },
       });
       if (error) {
         throwProblem(error);
@@ -67,7 +67,9 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
       await refresh();
       setConfirmOff(false);
       toast.show(t("users.deactivated", { name: member.email }), {
-        action: undoAction(t("common.undo"), () => reactivate.mutate()),
+        action: undoAction(t("common.undo"), () =>
+          reactivate.mutate(member.id),
+        ),
       });
     },
   });
@@ -96,7 +98,10 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
           </Button>
         )}
         {canReactivate && (
-          <Button disabled={pending} onClick={() => reactivate.mutate()}>
+          <Button
+            disabled={pending}
+            onClick={() => reactivate.mutate(member.id)}
+          >
             {t("users.reactivate")}
           </Button>
         )}
@@ -109,7 +114,7 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
         confirmVariant="danger"
         pending={deactivate.isPending}
         error={deactivate.error ? problemMessageOf(deactivate.error, t) : null}
-        onConfirm={() => deactivate.mutate()}
+        onConfirm={() => deactivate.mutate(member.id)}
         // The Deactivate item is gone once it worked; the member's own cell stays.
         returnFocusTo={() => document.getElementById(memberAnchorId(member.id))}
       >

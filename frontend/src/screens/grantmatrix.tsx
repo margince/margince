@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { Badge, TableScroll } from "../design-system/atoms";
+import type { ScrollRegionName } from "../design-system/scrollregion";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import type { ObjectGrant, Role } from "./roles.queries";
@@ -75,8 +76,7 @@ export function GrantMatrix({
   readOnlyReason,
   turnOnReason,
   busy = false,
-  labelledBy,
-  scrollLabel,
+  name,
   bleed,
 }: Readonly<{
   /** The first column's header: what the rows are. */
@@ -88,20 +88,18 @@ export function GrantMatrix({
   turnOnReason?: string;
   /** Whether another write on the same subject is in flight. */
   busy?: boolean;
-  /** The id of the label naming the grid; without one `scrollLabel` names it. */
-  labelledBy?: string;
-  /** The name the scroll region announces once the grid overflows. */
-  scrollLabel: string;
+  /** Names the table and its scroll region: a phrase, or the heading over it. */
+  name: ScrollRegionName;
   /** `TableScroll`'s `bleed`, for a grid standing straight in a `Panel`. */
   bleed?: boolean;
 }>) {
   const t = useT();
   return (
-    <TableScroll label={scrollLabel} bleed={bleed} stickyFirst>
+    <TableScroll label={name} bleed={bleed} stickyFirst>
       <table
         className="table grant-matrix"
-        aria-labelledby={labelledBy}
-        aria-label={labelledBy ? undefined : scrollLabel}
+        aria-labelledby={typeof name === "string" ? undefined : name.labelledBy}
+        aria-label={typeof name === "string" ? name : undefined}
       >
         <thead>
           <tr>

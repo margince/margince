@@ -117,6 +117,10 @@ export function TeamMembersModal({
       setDraft(value);
       return;
     }
+    // The field stays enabled to keep focus, so this holds one write at a time.
+    if (setMember.isPending) {
+      return;
+    }
     setDraft("");
     // The last one picked takes the field away with it.
     refocusAt.current = candidates.length === 1 ? -1 : null;
@@ -162,7 +166,12 @@ export function TeamMembersModal({
                       setMember.isPending &&
                       setMember.variables?.userId === member.id
                     }
-                    disabled={setMember.isPending}
+                    // The pressed verb stays enabled so it keeps focus and shows
+                    // its wait; only the other rows' verbs hold.
+                    disabled={
+                      setMember.isPending &&
+                      setMember.variables?.userId !== member.id
+                    }
                     onClick={() => {
                       refocusAt.current = index;
                       setMember.mutate({
@@ -188,7 +197,6 @@ export function TeamMembersModal({
                   value={draft}
                   onChange={pick}
                   placeholder={t("users.teamAddPlaceholder")}
-                  disabled={setMember.isPending}
                   suggestions={candidates.map((user) => ({
                     value: user.id,
                     label: user.display_name,

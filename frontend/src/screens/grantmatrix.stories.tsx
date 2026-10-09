@@ -42,13 +42,13 @@ function story(canManage: boolean) {
   return () => (
     <StoryProviders>
       <Panel title="openchannel">
-        <PanelGroupHead title="Endpoint" level="h3" />
+        <PanelGroupHead title="Endpoint" level="h3" id="grants-endpoint" />
         <GrantMatrix
           rowHeader="Role"
           rows={ROWS}
           canManage={canManage}
           readOnlyReason="Your role can read this page. Changing a grant requires a full seat."
-          scrollLabel="Endpoint"
+          name={{ labelledBy: "grants-endpoint" }}
           bleed
         />
       </Panel>

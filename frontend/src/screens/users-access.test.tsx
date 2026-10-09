@@ -85,9 +85,17 @@ function backend(
      * change it, which one admin check could not express.
      */
     allow?: Record<string, Record<string, boolean>>;
+    /** Held open until it settles, so a case can look at a write in flight. */
+    holdWrites?: Promise<void>;
   }>,
 ) {
   const calls: Call[] = [];
+  // Copied, so a membership write lands on this case's roster and the refetch
+  // after it reads the team the way the server would.
+  const users = (opts.users ?? []).map((user) => ({
+    ...user,
+    team_ids: user.team_ids && [...user.team_ids],
+  }));
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       // Built as a Request rather than read off `init`: openapi-fetch may pass a
@@ -147,12 +155,16 @@ function backend(
           { headers: { "Content-Type": "application/json" } },
         );
       }
+      if (request.method !== "GET") {
+        await opts.holdWrites;
+      }
       if (opts.refuse?.(calls[calls.length - 1])) {
         return new Response(JSON.stringify({ detail: "the team was merged" }), {
           status: 409,
           headers: { "Content-Type": "application/problem+json" },
         });
       }
+      applyMembership(users, request.method, path);
       // The teams list answers as the contract answers: a page, with the
       // cursor of the next one. Without `page` the roster walk has nothing to
       // read the end of the list from.
@@ -162,9 +174,7 @@ function backend(
       const body = path.endsWith("/users/access-preview")
         ? (opts.preview ?? { row_scope: "own" })
         : {
-            data: path.endsWith("/users")
-              ? (opts.users ?? [])
-              : (opts.teams ?? []),
+            data: path.endsWith("/users") ? users : (opts.teams ?? []),
             page: { next_cursor: null, has_more: false },
           };
       return new Response(JSON.stringify(body), {
@@ -173,6 +183,17 @@ function backend(
     },
   );
   return { fetchMock, calls };
+}
+
+function applyMembership(users: RosterUser[], method: string, path: string) {
+  const [, teamId, userId] =
+    /\/teams\/([^/]+)\/members\/([^/]+)$/.exec(path) ?? [];
+  const user = users.find((each) => each.id === userId);
+  if (!(teamId && user && (method === "PUT" || method === "DELETE"))) {
+    return;
+  }
+  const others = (user.team_ids ?? []).filter((id) => id !== teamId);
+  user.team_ids = method === "PUT" ? [...others, teamId] : others;
 }
 
 function Providers({ children }: { children: ReactNode }) {
@@ -539,6 +560,13 @@ describe("TeamsCard membership", () => {
     return { user, dialog: await screen.findByRole("dialog") };
   }
 
+  const removeVerb = (dialog: HTMLElement, name: string) =>
+    within(dialog).getByRole("button", {
+      name: en["users.teamRemoveMember"]
+        .replace("{name}", name)
+        .replace("{team}", "Nord"),
+    });
+
   function mount(opts: Parameters<typeof backend>[0]) {
     const { fetchMock, calls } = backend(opts);
     vi.stubGlobal("fetch", fetchMock);
@@ -638,6 +666,95 @@ describe("TeamsCard membership", () => {
     expect(within(dialog).getByText(en["users.teamNotChanged"])).toBeTruthy();
     expect(screen.getByRole("dialog")).toBe(dialog);
     expect(within(dialog).getByText("Ada Inside")).toBeTruthy();
+    expect(document.activeElement).toBe(removeVerb(dialog, "Ada Inside"));
+  });
+
+  describe("focus across a membership write", () => {
+    const TEAM_OF_TWO: RosterUser[] = [
+      ...ROSTER,
+      {
+        id: "u-in-2",
+        email: "ben@acme.test",
+        display_name: "Ben Inside",
+        status: "active",
+        is_agent: false,
+        team_ids: ["t-1"],
+      },
+      {
+        id: "u-out-2",
+        email: "di@acme.test",
+        display_name: "Di Outside",
+        status: "active",
+        is_agent: false,
+        team_ids: [],
+      },
+    ];
+
+    function heldWrites() {
+      let release = () => {};
+      const holdWrites = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return { holdWrites, release };
+    }
+
+    async function pickColleague(
+      user: ReturnType<typeof userEvent.setup>,
+      field: HTMLElement,
+      name: string,
+    ) {
+      await user.clear(field);
+      await user.type(field, name.slice(0, 2));
+      await user.click(
+        within(screen.getByRole("listbox")).getByRole("option", {
+          name: new RegExp(name),
+        }),
+      );
+    }
+
+    it("keeps the add field enabled and focused, and takes one pick at a time", async () => {
+      const { holdWrites, release } = heldWrites();
+      const calls = mount({ teams: NORD, users: TEAM_OF_TWO, holdWrites });
+      const { user, dialog } = await openTeam();
+      const field = within(dialog).getByRole("combobox", {
+        name: en["users.teamAddMember"],
+      });
+
+      await pickColleague(user, field, "Bo Outside");
+      await waitFor(() =>
+        expect(calls.filter((call) => call.method === "PUT")).toHaveLength(1),
+      );
+      expect(field).toBeEnabled();
+      expect(document.activeElement).toBe(field);
+      await pickColleague(user, field, "Di Outside");
+      release();
+
+      const list = within(dialog).getByRole("list", {
+        name: en["users.teamMembersLabel"],
+      });
+      expect(await within(list).findByText("Bo Outside")).toBeTruthy();
+      expect(calls.filter((call) => call.method === "PUT")).toHaveLength(1);
+      expect(document.activeElement).toBe(field);
+    });
+
+    it("keeps the pressed remove verb focused while it writes, then lands on the row in its place", async () => {
+      const { holdWrites, release } = heldWrites();
+      mount({ teams: NORD, users: TEAM_OF_TWO, holdWrites });
+      const { user, dialog } = await openTeam();
+      const pressed = removeVerb(dialog, "Ada Inside");
+
+      await user.click(pressed);
+      await waitFor(() => expect(pressed).toHaveAttribute("aria-busy", "true"));
+      expect(pressed).toBeEnabled();
+      expect(document.activeElement).toBe(pressed);
+      expect(removeVerb(dialog, "Ben Inside")).toBeDisabled();
+      release();
+
+      await waitFor(() =>
+        expect(within(dialog).queryByText("Ada Inside")).toBeNull(),
+      );
+      expect(document.activeElement).toBe(removeVerb(dialog, "Ben Inside"));
+    });
   });
 
   it("closes on Escape and gives focus back to the name that opened it", async () => {

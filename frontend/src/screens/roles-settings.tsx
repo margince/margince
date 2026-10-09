@@ -143,7 +143,6 @@ export function memberCounts(
 }
 
 // Custom roles first: they are the ones an admin made and comes back to edit.
-// The type badge on every row already names the split a group head would.
 function customFirst(roles: readonly Role[]): Role[] {
   return [...roles].sort((a, b) => Number(a.is_system) - Number(b.is_system));
 }
@@ -203,7 +202,7 @@ function RoleRow({
         type="button"
         className="roles-row-press"
         data-testid={`role-${role.key}`}
-        aria-pressed={open}
+        aria-current={open ? "true" : undefined}
         aria-labelledby={`${id}-name`}
         aria-describedby={`${id}-scope ${id}-facts`}
         onClick={onOpen}

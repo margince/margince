@@ -142,6 +142,17 @@ describe("roleRefusal", () => {
     });
   });
 
+  it("names the reader's own row even when its role is one they may not hand out", () => {
+    const self = member({
+      id: "me",
+      roles: ["role_not_assignable"],
+      allowed_actions: [],
+    });
+    expect(roleRefusal(self, context([self], "me"))).toEqual({
+      text: "users.role.own",
+    });
+  });
+
   it("points at the card's sentence when the reader holds no role change", () => {
     const ada = member({ allowed_actions: ["change_role"] });
     expect(

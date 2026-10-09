@@ -9206,7 +9206,7 @@ export const vi = {
   "groupRoles.role": "Vai trò được cấp",
   "groupRoles.add": "Thêm nhóm",
   "groupRoles.remove": "Gỡ ánh xạ nhóm này",
-  "groupRoles.removeNamed": "Gỡ {group}",
+  "groupRoles.removeNamed": "Gỡ ánh xạ {group}",
   "groupRoles.save": "Lưu cấp vai trò theo nhóm",
   "groupRoles.empty":
     "Chưa ánh xạ nhóm nào. Đăng nhập doanh nghiệp không cấp thêm gì ngoài quyền mỗi thành viên đang có.",

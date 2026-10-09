@@ -65,20 +65,25 @@ export function roleRefusal(
   if (!context.canChangeRole) {
     return { id: context.cardReasonId };
   }
+  const offered = offers(member, "change_role");
+  // A delegate's own role is often one they may not hand out, and "outside your
+  // access" would misname why their own row is refused.
+  if (!offered && member.id === context.meId) {
+    return soleActiveAdmin(member, roster)
+      ? { text: t("users.role.lastAdmin") }
+      : { text: t("users.role.own") };
+  }
   const held = member.roles ?? [];
   const heldAssignable =
     held.length !== 1 || roles.some((role) => role.key === held[0]);
   if (!heldAssignable) {
     return { text: t("users.role.outside") };
   }
-  if (offers(member, "change_role")) {
+  if (offered) {
     return null;
   }
   if (soleActiveAdmin(member, roster)) {
     return { text: t("users.role.lastAdmin") };
-  }
-  if (member.id === context.meId) {
-    return { text: t("users.role.own") };
   }
   return { text: t("users.role.outside") };
 }
@@ -92,9 +97,6 @@ function soleActiveAdmin(member: User, roster: readonly User[]): boolean {
   );
 }
 
-// The role column. The agent seat holds no role, so it reads a sentence. Every
-// other member gets the one picker, refused in place when this reader may not
-// use it.
 export function MemberRole({
   member,
   roles,
@@ -112,9 +114,9 @@ export function MemberRole({
   const errorId = useId();
   const setRole = useMutation({
     mutationKey: memberMutationKey(member.id, "role"),
-    mutationFn: async (role: Role) => {
+    mutationFn: async ({ id, role }: Readonly<{ id: string; role: Role }>) => {
       const { error } = await api.PATCH("/users/{id}/role", {
-        params: { path: { id: member.id } },
+        params: { path: { id } },
         body: { role },
       });
       if (error) {
@@ -123,7 +125,6 @@ export function MemberRole({
     },
     onSuccess: async () => {
       await refresh();
-      // No Undo: the prior role is gone from the roster by the time Undo could run.
       toast.show(t("users.roleSaved", { name: member.email }));
     },
   });
@@ -146,8 +147,8 @@ export function MemberRole({
         describedBy={described || undefined}
         // A failed change falls back to the held role, so re-picking the same
         // target still fires onChange.
-        inFlight={setRole.isPending ? setRole.variables : undefined}
-        onPick={(role) => setRole.mutate(role)}
+        inFlight={setRole.isPending ? setRole.variables.role : undefined}
+        onPick={(role) => setRole.mutate({ id: member.id, role })}
       />
       {refusal && "text" in refusal && (
         <span id={reasonId} className="t-caption">

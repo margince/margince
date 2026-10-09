@@ -30,7 +30,7 @@ import {
 } from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
-import { useScrollRegion } from "./scrollregion";
+import { type ScrollRegionName, useScrollRegion } from "./scrollregion";
 import { useWaited } from "./waited";
 import "./badge.css";
 import "./avatar.css";
@@ -1187,8 +1187,8 @@ export { useScrollRegion } from "./scrollregion";
  * Reachability is `useScrollRegion`'s (scrollregion.ts): the tab stop and the
  * name arrive only while the box holds something past its right edge.
  *
- * `label` names the region in the caller's language; it has no default, since
- * a region announced as "region" says nothing about which table it is.
+ * `label` names the region: a phrase, or `{ labelledBy }` for a heading already
+ * on the page. It has no default, since "region" names no table.
  */
 export function TableScroll({
   label,
@@ -1197,7 +1197,7 @@ export function TableScroll({
   className,
   children,
 }: Readonly<{
-  label: string;
+  label: ScrollRegionName;
   bleed?: boolean;
   stickyFirst?: boolean;
   className?: string;
