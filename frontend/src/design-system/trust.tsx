@@ -79,8 +79,8 @@ export function toEvidence(raw: unknown): Evidence | null {
 }
 
 /**
- * `withLabel` prints the tier's word beside the dot, for a place where the dot
- * is the whole answer: a colour alone tells nobody who cannot see it apart.
+ * `withLabel` prints the tier's word beside the dot where the dot is the whole
+ * answer. A colour alone tells nothing to a reader who cannot see it apart.
  */
 export function AutonomyDot({
   tier,

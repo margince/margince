@@ -268,7 +268,7 @@ export function LicenseReading({
       <SeatsBody>
         <StatCard
           label={t("license.seats.title")}
-          // Used AGAINST granted in one value, because that is one fact.
+          // Used against granted in one value, because that is one fact.
           value={
             capped
               ? t("license.seats.ofGranted", {
@@ -278,7 +278,7 @@ export function LicenseReading({
               : formatNumber(entitlement.seats_used, locale)
           }
           detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
-          // Only where the reading HAS a denominator: a bar drawn against an
+          // Only where the reading has a denominator: a bar drawn against an
           // invented limit invents the limit.
           meter={
             capped

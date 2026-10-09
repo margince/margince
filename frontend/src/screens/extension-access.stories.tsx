@@ -146,10 +146,10 @@ export const UnitsWithGrantsDark: Story = {
   render: story([YOGI, DE], ["admin"], { ext_yogi_briefing: READ }),
 };
 
-// The matrix at 390px: a role column plus four CRUD columns, wider than the
-// phone, so it scrolls inside its `TableScroll` while the card keeps its width.
-// The link to the unit's own page renders from the SPA's generated screen
-// registry, which is empty in every story, so no story can show it truncate.
+// At 390px a role column plus four CRUD columns is wider than the phone. The
+// matrix scrolls inside its `TableScroll` while the card keeps its width.
+// The unit's page link renders from the SPA's generated screen registry. That
+// registry is empty in every story, so no story can show the link truncate.
 export const UnitsWithGrantsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

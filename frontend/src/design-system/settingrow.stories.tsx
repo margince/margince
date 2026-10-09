@@ -256,7 +256,7 @@ function RolesList() {
 
 export const BleedRecords: Story = { render: () => <RolesList /> };
 
-// The phone gate's browser runs at 390px only under `uat-phone`; the frame is
+// The phone gate's browser runs at 390px only under `uat-phone`. The frame is
 // the page's own gutter, so the pane meets it the way a settings page does.
 export const BleedAtPhoneWidth: Story = {
   render: () => (
