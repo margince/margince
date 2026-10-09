@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  dsrKindTone,
   endOfDayInZone,
+  isIllegalTransition,
+  isLegalHold,
   isOverdue,
   isTerminal,
   nextStatuses,
@@ -51,11 +52,25 @@ describe("overdue", () => {
   });
 });
 
-describe("kind tone", () => {
-  it("reads erasure as danger and rectify as warning", () => {
-    expect(dsrKindTone("erasure")).toBe("danger");
-    expect(dsrKindTone("rectify")).toBe("warning");
-    expect(dsrKindTone("access")).toBeUndefined();
+describe("reading a refused write", () => {
+  const refusal = (field: string) => ({
+    code: "validation_error",
+    details: { errors: [{ field, code: "invalid", message: "refused" }] },
+  });
+
+  it("reads a refused status as the request having moved on", () => {
+    expect(isIllegalTransition(refusal("status"))).toBe(true);
+  });
+
+  it("reads a refusal on any other field as a mistake, not a race", () => {
+    expect(isIllegalTransition(refusal("resolution"))).toBe(false);
+    expect(isIllegalTransition({ code: "permission_denied" })).toBe(false);
+  });
+
+  it("reads only a conflict as a legal hold", () => {
+    expect(isLegalHold({ code: "conflict" })).toBe(true);
+    expect(isLegalHold({ code: "validation_error" })).toBe(false);
+    expect(isLegalHold(null)).toBe(false);
   });
 });
 

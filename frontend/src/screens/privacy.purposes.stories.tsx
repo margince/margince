@@ -4,17 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { GrantSpec } from "../app/mefixture";
-import { ConsentPurposesCard } from "./privacy";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
+import { ConsentPurposesCard } from "./privacy.purposes";
+import {
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+  stubWithSession,
+} from "./story-utils";
 
-// The consent registry (the Privacy & retention tab's ConsentPurposesCard). Its own
-// file rather than a second component in privacy.stories.tsx, so each surface
-// keeps one story title: `fe-uat` keys on the co-located name, and a card with
-// no story of its own is a card nobody looks at in either theme.
-//
-// The two states worth reading are the two the card actually has: a seat that
-// may append to the registry, and one that may only read it — where the create
-// verb is ABSENT from the header and the registry row's own description says so.
+// The consent registry: a seat that may append to it, and one that may only
+// read it, where the create verb is absent and the card says why.
 
 const PURPOSES = {
   data: [
@@ -48,10 +47,14 @@ const PURPOSES = {
 // whose whole subject is the verb.
 const MAY_APPEND_PURPOSE: GrantSpec = { consent_config: ["create"] };
 
-function purposes(allow: GrantSpec, purposeList: unknown = PURPOSES) {
+function purposes(
+  allow: GrantSpec,
+  purposeList: unknown = PURPOSES,
+  routes: RouteMap = {},
+) {
   return () => {
     stubWithSession(
-      { "GET /consent-purposes": () => jsonResponse(purposeList) },
+      { "GET /consent-purposes": () => jsonResponse(purposeList), ...routes },
       allow,
     );
     return (
@@ -75,21 +78,17 @@ type Story = StoryObj<typeof ConsentPurposesCard>;
 export const Registry: Story = { render: purposes(MAY_APPEND_PURPOSE) };
 
 // A seat without the grant: the same registry, no verb, and the read-only
-// posture as the registry row's own description — the sentence sits at the
-// label's x rather than as a loose paragraph between the card's line and the
-// badges.
+// posture under the card's description.
 export const ReadOnly: Story = { render: purposes({}) };
 
-// Dark, because the registry is a run of badges and one of them carries `warning`
-// for a double-opt-in purpose: a tinted badge against `--bgElevated` is the pair
+// Dark, because a tinted double opt-in badge against `--bgElevated` is the pair
 // most likely to collapse when the ground goes dark.
 export const RegistryDark: Story = {
   globals: { theme: "dark" },
   render: purposes(MAY_APPEND_PURPOSE),
 };
 
-// Nothing registered yet — the honest empty answer to the row's question, which
-// takes a row's interval rather than a page-sized plate.
+// Nothing registered yet.
 export const Empty: Story = {
   render: purposes(MAY_APPEND_PURPOSE, { data: [] }),
 };
@@ -104,4 +103,47 @@ export const AddPurpose: Story = {
       await canvas.findByRole("button", { name: /add purpose/i }),
     );
   },
+};
+
+export const RegistryPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: purposes(MAY_APPEND_PURPOSE),
+};
+
+// The longest a purpose runs: a label that wraps and a key with no break in it.
+export const LongPurpose: Story = {
+  render: purposes(MAY_APPEND_PURPOSE, {
+    data: [
+      {
+        id: "p9",
+        key: "partner_programme_quarterly_newsletter_and_event_invitations",
+        label: "Quarterly partner programme newsletter and event invitations",
+        requires_double_opt_in: true,
+      },
+      ...PURPOSES.data,
+    ],
+  }),
+};
+
+export const LongPurposePhone: Story = {
+  ...LongPurpose,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const Loading: Story = {
+  render: purposes(MAY_APPEND_PURPOSE, PURPOSES, {
+    "GET /consent-purposes": () => new Promise(() => {}),
+  }),
+};
+
+export const ReadFailed: Story = {
+  render: purposes(MAY_APPEND_PURPOSE, PURPOSES, {
+    "GET /consent-purposes": () =>
+      jsonResponse(
+        { title: "Internal Server Error", status: 500, code: "internal" },
+        500,
+      ),
+  }),
 };

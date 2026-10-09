@@ -17,7 +17,8 @@ import { meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
+import { PrivacyInboxCard } from "./privacy";
+import { ConsentPurposesCard } from "./privacy.purposes";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -144,8 +145,10 @@ describe("ConsentPurposesCard", () => {
   it("lists purposes and marks the ones needing double opt-in", async () => {
     stubRoutes();
     render(<ConsentPurposesCard />);
-    expect(await screen.findByText(/Marketing/)).toBeInTheDocument();
-    expect(screen.getByText(/DOI/)).toBeInTheDocument();
+    const marketing = await screen.findByRole("row", { name: /Marketing/ });
+    expect(within(marketing).getByText("Double opt-in")).toBeInTheDocument();
+    const transactional = screen.getByRole("row", { name: /Deal messages/ });
+    expect(within(transactional).queryByText("Double opt-in")).toBeNull();
   });
 
   // G-3
@@ -244,14 +247,12 @@ describe("ConsentPurposesCard", () => {
     const posture = await screen.findByText(
       /adding a purpose needs a permission/i,
     );
-    // On the registry ROW rather than as a paragraph of its own between the
-    // card's description and the list: the posture is about the registry, and a
-    // row's description is where the row language puts a sentence about a row.
-    const registry = screen
-      .getByText(/registered purposes/i)
-      .closest(".settingrow");
-    expect(registry).not.toBeNull();
-    expect(registry?.contains(posture)).toBe(true);
+    // In the card that holds the registry, so the posture reads as its own.
+    const card = posture.closest(".panel");
+    expect(card).not.toBeNull();
+    expect(
+      within(card as HTMLElement).getByRole("row", { name: /Marketing/ }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /add purpose/i }),
     ).not.toBeInTheDocument();
@@ -307,20 +308,14 @@ const DSRS = {
   page: { next_cursor: null, has_more: false },
 };
 
-// The facet bar stays visible for the whole queue (it is never hidden while
-// a row is open), and its option labels are the very same status words a
-// row's own transition buttons use ("in progress", "fulfilled" ⊇ "fulfil",
-// "rejected" ⊇ "reject") — a bare getByRole/queryByRole for one of those
-// words matches both the facet button and the row's own button. Scope to
-// the row under test instead, same idiom as consent.test.tsx's
-// findConsentRow.
+// The facet bar's status words are the transition verbs' words too, so a
+// query scopes to the request: its open drawer, or else its table row.
 async function findDsrRow(subjectRef: string) {
-  // An expanded row repeats its own subject_ref (the collapsed toggle's
-  // summary, then again inside the expanded detail panel) — both hits share
-  // the same ancestor row, so take the first rather than assume there's
-  // only one match.
-  const [match] = await screen.findAllByText(subjectRef);
-  const row = match.closest(".dsr-row");
+  const drawer = screen.queryByRole("dialog", { name: subjectRef });
+  if (drawer) {
+    return drawer;
+  }
+  const row = (await screen.findByText(subjectRef)).closest("tr");
   if (!(row instanceof HTMLElement)) {
     throw new Error(`dsr row for "${subjectRef}" not found`);
   }
@@ -433,17 +428,17 @@ describe("PrivacyInboxCard", () => {
     ).toBeGreaterThan(1);
   });
 
-  // The approved design is a queue: one row expands in place while its
-  // siblings and the facet bar stay on screen, so an officer working a case
-  // never loses sight of what else is waiting. Pins the invariant directly —
-  // without it, filtering the row list down to just the expanded one (or
-  // hiding the facet bar) would pass every other test in this file silently.
-  it("keeps sibling rows and the facet bar visible while one row is expanded", async () => {
+  // A request opens beside the queue: its siblings and the facet bar stay
+  // loaded behind the drawer, so closing it returns the officer to their place.
+  it("opens a request beside the queue rather than in place of it", async () => {
     stubRoutes();
     render(<PrivacyInboxCard />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
+    expect(
+      screen.getByRole("dialog", { name: "8f3a-contact-uuid" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/anna@acme.test/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^open$/i })).toBeInTheDocument();
   });
@@ -672,12 +667,14 @@ describe("PrivacyInboxCard", () => {
     expect(patches[0]?.body).toEqual({ assignee_id: "u1" });
   });
 
-  // The unassigned entry is a state, not an action: the server's update
-  // coalesces an omitted assignee onto the stored one, so nothing an empty
-  // selection sent could unassign anybody. It stays in the list, disabled, so
-  // the state is legible without being offered.
-  it("shows the unassigned entry but does not offer it as a choice", async () => {
+  // An explicit null hands the request back to the unassigned pool.
+  it("hands an assigned request back to nobody with an explicit null", async () => {
     const sent = stubRoutes({
+      "GET /data-subject-requests": () =>
+        jsonResponse({
+          ...DSRS,
+          data: [{ ...DSRS.data[0], assignee_id: "u1" }, DSRS.data[1]],
+        }),
       "GET /users": () =>
         jsonResponse({
           data: [
@@ -696,15 +693,12 @@ describe("PrivacyInboxCard", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    await userEvent.click(await screen.findByLabelText(/assignee/i));
-    const unassigned = within(screen.getByRole("listbox")).getByRole("option", {
-      name: "—",
-    });
-    expect(unassigned).toHaveAttribute("aria-disabled", "true");
-    await userEvent.click(unassigned);
-    expect(
-      sent.filter((s) => s.key === "PATCH /data-subject-requests/d1"),
-    ).toHaveLength(0);
+    await choose(await screen.findByLabelText(/assignee/i), "Unassigned");
+    await waitFor(() =>
+      expect(
+        sent.find((s) => s.key === "PATCH /data-subject-requests/d1")?.body,
+      ).toEqual({ assignee_id: null }),
+    );
   });
 
   // The assignee select and the row's own status-transition buttons share
@@ -789,7 +783,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "erasure");
+    await choose(screen.getByLabelText(/kind/i), "Erasure");
     expect(screen.getByLabelText(/contact/i)).toBeInTheDocument();
     expect(
       screen.queryByLabelText(/subject reference/i),
@@ -802,7 +796,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "access");
+    await choose(screen.getByLabelText(/kind/i), "Access");
     expect(screen.getByLabelText(/subject reference/i)).toBeInTheDocument();
   });
 
@@ -812,7 +806,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "access");
+    await choose(screen.getByLabelText(/kind/i), "Access");
     expect(screen.getByText(/fulfilled manually/i)).toBeInTheDocument();
   });
 
@@ -822,7 +816,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "access");
+    await choose(screen.getByLabelText(/kind/i), "Access");
     await userEvent.type(
       screen.getByLabelText(/subject reference/i),
       "anna@acme.test",
@@ -872,7 +866,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "erasure");
+    await choose(screen.getByLabelText(/kind/i), "Erasure");
     await userEvent.type(screen.getByLabelText(/contact/i), "anna");
     await userEvent.click(await screen.findByText("Anna Weber"));
     // type="date" only accepts a programmatic value change in jsdom (same
@@ -926,7 +920,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "access");
+    await choose(screen.getByLabelText(/kind/i), "Access");
     await userEvent.type(
       screen.getByLabelText(/subject reference/i),
       "anna@acme.test",
@@ -978,7 +972,7 @@ describe("opening a DSR (G-2)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
-    await choose(screen.getByLabelText(/kind/i), "access");
+    await choose(screen.getByLabelText(/kind/i), "Access");
     await userEvent.type(
       screen.getByLabelText(/subject reference/i),
       "anna@acme.test",
@@ -1154,11 +1148,9 @@ describe("fulfilling an erasure", () => {
     });
   });
 
-  // A fulfilled request is terminal, so the whole actions branch the confirm was
-  // opened from — the resolution field and every transition button — is gone once
-  // it succeeds. Handing focus back to the button that staged it is a silent
-  // no-op that leaves the officer on <body>, one Tab from the top of the page.
-  it("returns focus to the row's summary after the fulfil, never to the document", async () => {
+  // A fulfilled request is terminal, so the verb the confirm was opened from is
+  // gone once it succeeds; focus lands on the drawer's title instead of <body>.
+  it("returns focus to the request's title after the fulfil, never to the document", async () => {
     let fulfilled = false;
     const closed = { status: "fulfilled", resolution: "verified" };
     stubRoutes({
@@ -1191,10 +1183,13 @@ describe("fulfilling an erasure", () => {
       screen.getByRole("button", { name: /erase and suppress/i }),
     );
 
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(opener.isConnected).toBe(false);
-    // The row's own summary, which now reads back the status the erasure left.
-    expect(document.activeElement).toBe(summary);
-    expect(summary.textContent).toMatch(/fulfilled/i);
+    await waitFor(() => expect(opener.isConnected).toBe(false));
+    const drawer = screen.getByRole("dialog", { name: "8f3a-contact-uuid" });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(drawer).getByRole("heading", { name: "8f3a-contact-uuid" }),
+      ),
+    );
+    expect(within(drawer).getByText("Fulfilled")).toBeInTheDocument();
   });
 });
