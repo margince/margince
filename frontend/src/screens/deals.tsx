@@ -1890,6 +1890,7 @@ function DealCreateAction({
       values,
       values.company_id?.trim() || null,
       t,
+      idempotencyKey,
     );
     return unwrap(
       await api.POST("/deals", {
