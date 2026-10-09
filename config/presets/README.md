@@ -77,4 +77,4 @@ includes both models sharing the memory of one Ollama. The Gemma weights are 12b
 because that is what a 24GB machine serves wholly on the GPU. The header of the file has the numbers.
 
 On the `routing:` block of the OpenRouter preset, and the measurements behind its defaults:
-[docs/reference/openrouter.md](../../docs/reference/openrouter.md).
+[docs/explanation/openrouter-upstream-choice.md](../../docs/explanation/openrouter-upstream-choice.md).

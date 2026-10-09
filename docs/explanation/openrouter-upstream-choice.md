@@ -1,16 +1,19 @@
 <!-- prose:plain -->
 # OpenRouter: choosing the upstream
 
-**Tested 2026-09-02** against `openai/gpt-oss-120b` and
-`mistralai/mistral-large-2512` through the certification lane of this tree, on
-commit `b63dc2c60`. Every number below is a measure from that day. Measure again
-before you trust the numbers: the list of OpenRouter hosts, their prices and their
-speeds all change.
+**A dated measurement, from 2026-09-02.** It records how OpenRouter chose hosts
+for `openai/gpt-oss-120b` and `mistralai/mistral-large-2512`, through the
+certification lane of this tree, on commit `b63dc2c60`. Every number below is a
+measure from that day. Measure again before you trust the numbers: the list of
+OpenRouter hosts, their prices and their speeds all change.
 
-See also: [configuration.md](configuration.md) for the process settings,
-[connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md)
-for credentials, and [config/presets/](../../config/presets/README.md) for a
-binding that is ready to use.
+The current facts live elsewhere:
+
+- [openrouter-routing-fields.md](../reference/openrouter-routing-fields.md): every routing
+  field, the default this product ships, region pins and what a call records;
+- [configuration.md](../reference/configuration.md): the process settings;
+- [connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md): credentials;
+- [config/presets/](../../config/presets/README.md): a binding that is ready to use.
 
 ## 1. What the broker does, and why it needs config
 
@@ -138,7 +141,7 @@ of its provider sheet). They reach every lane on it; the embeddings lane may sta
 its own. The serving keys stay on the `routing:` of each tier, because two models
 behind one broker need different answers.
 
-[openrouter-routing-fields.md](openrouter-routing-fields.md) lists every field.
+[openrouter-routing-fields.md](../reference/openrouter-routing-fields.md) lists every field.
 The EU address of OpenRouter, `https://eu.openrouter.ai/api` (Business or
 Enterprise plan), keeps every request in the EU and needs no pin. On the default
 address, pin `only` to a slug for an EU region on the connection.
@@ -366,4 +369,4 @@ comments whose lane endpoint is moved to the provider:
 `JEV_COMPATIBLE_API_KEY` carries the OpenRouter key (the
 `OPENAI_COMPATIBLE_API_KEY` value). It takes no `routing:` preferences. A bound
 lane answers only the sites certified for it; the rest go to the tier order of the task
-([ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane)).
+([ai-runtime.md](ai-runtime.md#the-decision-lane)).

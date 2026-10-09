@@ -1072,7 +1072,7 @@ resolve their other flags from the `MARGINCE_*` values above. The steps that use
 - Margince refuses preferences on a binding that is not a broker on an OpenRouter host, and refuses
   keys it does not know. A key with a typing error would be dropped. The run would then report the
   default numbers under the name of a run with its own preferences.
-- The field set, and the measures behind the default, are in [openrouter.md](openrouter.md).
+- The field set, and the measures behind the default, are in [openrouter-upstream-choice.md](../explanation/openrouter-upstream-choice.md).
 ### `POST /v1/admin/reset-data`: the armed data reset
 
 `operations.allow_data_reset` in `margince.yaml` gates it, and its compiled default is **false in

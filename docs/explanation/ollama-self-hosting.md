@@ -1,22 +1,22 @@
 <!-- prose:plain -->
 # Self-hosting models with Ollama: what we measured
 
-**Tested 2026-09-23 to 2026-09-24** on one machine (below), with Ollama 0.34.3,
-through the certification lane of this tree. Every number comes from these two
-days, except the verdicts in section 4, which were run again on 2026-09-28/29. Models,
-Ollama and this product all change: measure again before you trust a number here
-to decide what to buy.
+**A dated measurement, from 2026-09-23 to 2026-09-24.** It records what one
+machine (below) did with Ollama 0.34.3, through the certification lane of this
+tree. Every number comes from these two days, except the verdicts in section 4,
+which were run again on 2026-09-28/29. Models, Ollama and this product all
+change: measure again before you trust a number here to decide what to buy.
 
-See also:
+The current facts live elsewhere:
 
-- [certify-an-ai-model.md](../how-to/certify-an-ai-model.md) for how to run the lane;
-- [enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md) for pointing a stack at Ollama;
-- [ai-certification.md](ai-certification.md) for the committed report on what is ready;
-- [`config/presets/gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml)
-  for the binding this page asks you to use.
+- [ai-certification.md](../reference/ai-certification.md): the committed report on what is ready today;
+- [enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md): the steps to run Ollama and bind a stack to it;
+- [certify-an-ai-model.md](../how-to/certify-an-ai-model.md): how to run the lane;
+- [`config/presets/gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml):
+  the binding this page asks you to use.
 
- The same machine serving models through vLLM
-is [vllm-self-hosting.md](vllm-self-hosting.md).
+The same machine serving models through vLLM is
+[vllm-self-hosting.md](vllm-self-hosting.md).
 
 ## The short answer
 
@@ -256,7 +256,7 @@ try again.
 can only switch thinking on or off. With `think: true`, one turn used about 4,300
 tokens and 7 minutes thinking, against 110 tokens and 15 seconds with it off. Every
 `cold_start` run ran out of time before the answer. So a floor leaves such a model
-off ([ai-thinking.md](ai-thinking.md)).
+off ([ai-thinking.md](../reference/ai-thinking.md)).
 
 **A local judge is slower and less safe.** The `sovereign` profile binds the
 candidate only, so the default cloud judge is allowed (see
@@ -312,8 +312,10 @@ catches it after the fact; do not count on the format rule to hold it.
 
 ## 8. Run it again
 
+Pull `gemma4:12b`, and `gpt-oss:20b` for a local judge, as step 1 of
+[enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md) shows. Then:
+
 ```bash
-ollama pull gemma4:12b && ollama pull gpt-oss:20b
 # The committed records used the default cloud judge; a local judge works too:
 make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
   JUDGE=ollama:gpt-oss:20b TASK=capture_classify

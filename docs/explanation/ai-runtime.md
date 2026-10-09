@@ -289,7 +289,7 @@ That is because floors are set from real cases of falling back, `no_payload` tas
 
 Two providers speak the one wire, with `base_url` being the full endpoint. `jev` is the own API of TypeSafe,
 and `jev_compatible` is any server that speaks the Jev wire. That is OpenRouter
-([openrouter.md](../reference/openrouter.md#11-the-decisions-endpoint)), or a Kev, Laya or LiteLLM that you
+([openrouter-routing-fields.md](../reference/openrouter-routing-fields.md#the-decisions-endpoint)), or a Kev, Laya or LiteLLM that you
 host on your own machine. `sovereign` refuses `jev`, and holds `jev_compatible` to its endpoint rule. See
 [configuration.md](../reference/configuration.md).
 

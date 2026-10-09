@@ -1,11 +1,12 @@
 <!-- prose:plain -->
-# Enrich a company with a local LLM (Ollama)
+# Enrich a company with a local LLM (Ollama or vLLM)
 
 Run the AI lanes (company **enrich**, and the read for a new company) against an
 [Ollama](https://ollama.com) on your machine, or on a server you host. You use it in place of a cloud
 model, with no Anthropic key. To get the data is the job of the app. It fetches the page behind an SSRF guard, then
 asks the model only to *pull out* facts that the page backs up. The `enrich` task goes to the
-`local_small` tier first, so a local model serves it.
+`local_small` tier first, so a local model serves it. To serve the model with vLLM, follow
+[Serve the model with vLLM instead](#serve-the-model-with-vllm-instead) in place of step 1.
 
 See [explanation/agent-surface.md](../explanation/agent-surface.md) for the model runtime, and
 [reference/configuration.md](../reference/configuration.md) for the flags and environment values below.
@@ -24,7 +25,7 @@ ollama pull bge-m3           # only if you exercise search/retrieval (embeddings
 For Gemma 4, pull `gemma4:12b`, and bind it with
 [`config/presets/gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml). What we
 measured, and what not to pull in its place, is in
-[ollama-self-hosting.md](../reference/ollama-self-hosting.md).
+[ollama-self-hosting.md](../explanation/ollama-self-hosting.md).
 
 Gemma 4 reasons before it answers, and Ollama turns that on by default. The client asks Ollama once per
 model what it accepts (`/api/show`). It sends `think: false` to a model that can turn thinking off. It
@@ -122,6 +123,98 @@ The model must return the JSON shape of the facts as it writes (the `format` of 
 returns JSON of the right shape, and does not break the JSON reader. The model still decides how good the
 evidence is. The evidence gate drops any field whose `evidence_snippet` is not a word-for-word copy of
 text on the page. That check is the guard against facts that are not on the page.
+
+## Serve the model with vLLM instead
+
+vLLM is the server most GPU installations run. Serve the model with it, then bind
+the tiers to the `vllm` provider where step 2 binds `ollama`.
+[`config/presets/qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml)
+binds every tier this way. What we measured, and which models to serve, is in
+[vllm-self-hosting.md](../explanation/vllm-self-hosting.md).
+
+### On a Mac, install vllm-metal
+
+vLLM runs on Apple chips through the
+[vllm-metal](https://github.com/vllm-project/vllm-metal) plugin, which serves MLX
+model files on the GPU:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vllm-project/vllm-metal/main/install.sh | bash
+source ~/.venv-vllm-metal/bin/activate
+```
+
+It installs vLLM next to the plugin, in its own Python `venv` (Python 3.12,
+`arm64`). Serve MLX builds (`mlx-community/...-4bit`): a GGUF file from Ollama
+does not load.
+
+### Start the server
+
+The `vllm` binding sends a plain request in the OpenAI wire format: no key, no
+switches for one model. All that depends on which model you serve is the job of
+the server, and belongs on its command line:
+
+```bash
+vllm serve <model> \
+  --max-model-len 40960 \
+  --default-chat-template-kwargs '{"enable_thinking": false}' \
+  --reasoning-parser <parser> \
+  --enable-prompt-tokens-details
+```
+
+| flag | why |
+|---|---|
+| `--max-model-len 40960` | The agent loop plans its prompt against a window of 32,768 tokens and asks for output on top. A server started with less refuses those calls with a 400 (`max_tokens=… cannot be greater than max_model_len`). 40,960 is what the Ollama adapter asks for, so the two serve the same prompts. |
+| `--default-chat-template-kwargs '{"enable_thinking": false}'` | Qwen3 and Gemma 4 think by default. Measured on `Qwen3-14B` with a budget of 300 tokens and a JSON schema: 299 tokens of thinking, 29 seconds, and no answer (`content: null`, `finish_reason: length`). With this flag: the answer in 22 tokens and 2.4 seconds. A template that has no such value (`gpt-oss`, Mistral, Gemma 3) does not use it. |
+| `--reasoning-parser <parser>` | `qwen3`, `gemma4`, `openai_gptoss`, … Moves any thinking out of the answer into its own field. Without it, the thinking stays in the text that the product parses as JSON. Leave it out for a model that does not think. |
+| `--enable-prompt-tokens-details` | Reports cached prompt tokens, which the product records per call. Without it the count is always 0. |
+
+The binding in the routing config then needs only the model id and, if it is not
+`http://localhost:8000`, the host root (no `/v1`). The id is the name the server
+answers to: what `vllm serve` was given, unless `--served-model-name` renames it.
+A server on another host carries every prompt and answer over the network. Start
+it with `--ssl-certfile` and `--ssl-keyfile` (or put it behind a TLS proxy), and
+bind it by `https`:
+
+```yaml
+providers:
+  vllm: { base_url: https://gpu-box.internal:8000 }
+tiers:
+  local_small: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit" }
+```
+
+Two more things the server decides, and the product cannot see:
+
+- **Sampling.** The product sends no `temperature`, so every call gets the
+  defaults of the server. The server takes them from the
+  `generation_config.json` of the model when the repository has one. It then logs `Default vLLM sampling parameters have been overridden`. Else it samples at `temperature` 1.0 with no
+  `top_k`. Many MLX builds ship with no such file.
+  - Of the ones we served, `mlx-community/Qwen3-14B-4bit`,
+    `Mistral-Nemo-Instruct-2407-4bit` and `Ministral-8B-Instruct-2410-4bit` have
+    none. The Gemma 3 file has no sampling values in it.
+  - Qwen3 then gives far more random output than its model card asks for. Set
+    the values of the card with
+    `--override-generation-config '{"temperature": 0.7, "top_p": 0.8, "top_k": 20}'`
+    (Qwen3 with no thinking). Section 4 of
+    [vllm-self-hosting.md](../explanation/vllm-self-hosting.md) shows what it changes.
+- **Memory.** vLLM takes `--gpu-memory-utilization` (0.92 by default) of the
+  machine at start. It fills what the model files leave with the `KV` cache.
+  Nothing else that needs the GPU fits next to it (a second model, an embedding
+  server, a local judge) unless you lower that number.
+
+**You cannot set `gpt-oss` thinking on the server.** A `reasoning_effort` level
+sets its thinking. vLLM takes that only per request, and has no server default
+for it; `enable_thinking` does not reach it. Served as above, it thinks at
+`medium`: 188 tokens and 14 seconds on the request above, against 96 tokens and 3
+seconds at `low`. The answers were correct both ways. `reasoning_effort: "none"`
+is refused with a 400.
+
+**Never publish the port.** The `vllm` binding sends no key, so only the hosts of
+the product may reach the server: the local machine or a private network. The
+`sovereign` profile checks only that `base_url` names such a host. It does not
+stop other hosts from reaching the server, so the network around it must do
+that. The own `--api-key` of
+vLLM guards only the `/v1`, `/v2`, `/inference` and `/cohere` routes; `/metrics`
+and `/health` stay open.
 
 ## When it does not work
 

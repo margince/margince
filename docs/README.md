@@ -101,8 +101,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
-- [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local Ollama model, with no
-  cloud key.
+- [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
+  vLLM, with no cloud key.
 - [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): turn on the public lookup of what
   a company runs.
 - [check-a-vat-number.md](how-to/check-a-vat-number.md): turn on VAT number checks against the EU
@@ -167,19 +167,14 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [configuration.md](reference/configuration.md): every setting of each program.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
-- [ollama-self-hosting.md](reference/ollama-self-hosting.md): local models in Ollama, measured on one
-  small machine.
-- [vllm-self-hosting.md](reference/vllm-self-hosting.md): the same machine with vLLM.
 - [ai-thinking.md](reference/ai-thinking.md): how much a model thinks before it answers, and where you
   set it.
 - [ai-request-settings.md](reference/ai-request-settings.md): the time and thinking limits of each
   task, and the call counts.
 - [ai-runtime-fields.md](reference/ai-runtime-fields.md): each field of the AI task contract, and of the
   files that test a model.
-- [openrouter.md](reference/openrouter.md): how OpenRouter chooses a host, and the setting
-  we ship.
 - [openrouter-routing-fields.md](reference/openrouter-routing-fields.md): each field of a `routing:`
-  setting.
+  setting, the default we ship, and region pins.
 - [make-targets.md](reference/make-targets.md): every `make` command.
 - [system-requirements.md](reference/system-requirements.md): what an installation needs, on one
   machine or on many.
@@ -248,6 +243,12 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 - [ai-runtime.md](explanation/ai-runtime.md): how an AI task chooses and calls its model.
 - [ai-provider-health.md](explanation/ai-provider-health.md): how we know a model provider is down.
+- [ollama-self-hosting.md](explanation/ollama-self-hosting.md): local models in Ollama, measured on one
+  small machine in September 2026.
+- [vllm-self-hosting.md](explanation/vllm-self-hosting.md): the same machine with vLLM, measured the
+  same month.
+- [openrouter-upstream-choice.md](explanation/openrouter-upstream-choice.md): how OpenRouter chose a
+  host when we measured it, and why the default we ship is what it is.
 - [agent-surface.md](explanation/agent-surface.md): how an agent works.
 - [ai-provenance-notice.md](explanation/ai-provenance-notice.md): the line on a draft from a model, and
   the EU AI Act rule it does not meet.
