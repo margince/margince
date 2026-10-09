@@ -184,6 +184,24 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     );
   });
 
+  // A group head renders as a `.panel-body`, so the body under it matches the
+  // body-after-body seam at equal specificity and only sheet order decides.
+  it("draws no seam between a group head and the body it names", () => {
+    const rules = cssRules(panelCss());
+    const lastContent = (selector: string) =>
+      rules.findLastIndex(
+        (rule) =>
+          rule.selector === selector &&
+          declaredValue(rule.block, "content") !== undefined,
+      );
+    const reset = lastContent(".panel-grouphead + .panel-body::before");
+    expect(reset).toBeGreaterThanOrEqual(0);
+    expect(declaredValue(rules[reset]?.block ?? "", "content")).toBe("none");
+    expect(reset).toBeGreaterThan(
+      lastContent(".panel-body + .panel-body::before"),
+    );
+  });
+
   it("leaves the bare row its hairline and nothing that suggests a press", () => {
     const bare = /(?:^|\n)\.panel-row\s*\{([^}]*)\}/.exec(panelCss());
     expect(bare).not.toBeNull();

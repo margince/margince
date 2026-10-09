@@ -109,11 +109,6 @@
   padding-top: var(--space-4);
   padding-bottom: var(--space-2);
 }
-/* No seam between a group's head and the body under it: the head names that
-   body, and a rule between the two cut a label from what it labels. */
-.panel-grouphead + .panel-body::before {
-  content: none;
-}
 
 /* THE SEAM RULE: a rule between content is inset to the pane's padding, except
  * beside a list that bleeds. A pseudo-element, as a border cannot be inset. */
@@ -131,6 +126,12 @@
 .panel > .settinglist-bleed + .panel-body::before,
 .panel > .table-scroll-bleed + .panel-body::before {
   inset: 0 0 auto;
+}
+/* No seam between a group's head and the body under it: the head names that
+   body, and a rule between the two cut a label from what it labels. The head is
+   itself a `.panel-body`, so this is declared after the seam rule it must beat. */
+.panel-grouphead + .panel-body::before {
+  content: none;
 }
 
 /* An empty state inside a card is a SENTENCE, not a stage.
