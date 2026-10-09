@@ -5927,7 +5927,8 @@ export const de = {
   "settings.auditAction": "Aktion",
   "settings.auditFrom": "Von",
   "settings.auditTo": "Bis",
-  "settings.auditExpand": "Änderungsdetails anzeigen",
+  "settings.auditExpandEntry":
+    "Änderungsdetails anzeigen: {action} an {entity}",
   "settings.auditRule": "Berechtigungsregel",
   "settings.auditOnBehalf": "im Auftrag von",
   "settings.privacy": "Datenschutzanfragen",

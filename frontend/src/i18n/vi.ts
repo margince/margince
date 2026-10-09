@@ -5854,7 +5854,7 @@ export const vi = {
   "settings.auditAction": "Hành động",
   "settings.auditFrom": "Từ",
   "settings.auditTo": "Đến",
-  "settings.auditExpand": "Xem chi tiết thay đổi",
+  "settings.auditExpandEntry": "Xem chi tiết thay đổi: {action} trên {entity}",
   "settings.auditRule": "Quy tắc phân quyền",
   "settings.auditOnBehalf": "thay mặt",
   "settings.privacy": "Hộp yêu cầu quyền riêng tư",

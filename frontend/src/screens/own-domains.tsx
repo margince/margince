@@ -11,7 +11,12 @@ import { Button, EmptyState, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -106,10 +111,8 @@ export function OwnDomainsCard() {
   // permission.
   const denialId = useId();
   const refusal = canManage ? undefined : denialId;
-  // The anchor list rides on the same query the curated row gates on — one
-  // request feeds both. It stays out of the gate because a row whose whole
-  // content is a list nobody may edit has nothing to say while the read is in
-  // flight, and no row at all when the company claims no domain.
+  // One request feeds both groups. The anchors stay out of the gate: a list
+  // nobody may edit has nothing to say while the read is in flight.
   const anchors = query.data?.anchor_domains ?? [];
 
   // Panel rather than Card, and no per-card bottom margin: the settings page
@@ -129,80 +132,56 @@ export function OwnDomainsCard() {
         </Button>
       }
     >
-      {/* `form-stack` stays: the denial sentence and the failure Callout under
-          the rows are non-row children, and the list owns only the intervals
-          BETWEEN its rows. */}
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("ownDomains.sub")}</PanelIntro>
-        <SettingList>
-          {anchors.length > 0 && (
-            <SettingRow
-              testId="own-domains-company-row"
-              label={t("ownDomains.companyTitle")}
-              // Copy that sends the reader somewhere has to take them there.
-              // The line says these are changed on the company profile, which
-              // is a different settings entry — so without the link the
-              // instruction was a destination the reader had to go and find,
-              // on a row whose whole point is that it cannot be edited here.
-              description={
-                <>
-                  {t("ownDomains.fromCompany")}{" "}
-                  <a href="#/settings/company">{t("ownDomains.openCompany")}</a>
-                </>
-              }
-              layout="stack"
-              // One row per domain, in the same row language as the curated
-              // half below — it was a bulleted `<ul>` with an inline margin and
-              // an inline left padding, a third layout on a card that already
-              // had two. `control={null}` because there is nothing to press: a
-              // domain the company profile claims is changed there, and the
-              // link in the description is what takes the reader.
-              control={
-                <SettingList testId="own-domains-from-company">
-                  {anchors.map((domain) => (
-                    <SettingRow key={domain} label={domain} control={null} />
-                  ))}
-                </SettingList>
-              }
-            />
-          )}
-          {/* The irreversibility note lives on THIS row rather than beside the
-              company list, because it describes what adding and removing do —
-              the acts only this half offers. */}
-          <SettingRow
-            testId="own-domains-curated-row"
-            label={t("ownDomains.curatedTitle")}
-            description={t("ownDomains.irreversible")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("ownDomains.curatedTitle")}
-              >
-                {(list) => (
-                  <CuratedDomains
-                    list={list.data}
-                    refusal={refusal}
-                    pending={remove.isPending}
-                    onRemove={(domain) => remove.mutate(domain)}
-                  />
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {!canManage && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
-        {remove.isError && (
-          <Callout
-            kind="outcome"
-            tone="danger"
-            title={t("ownDomains.removeFailed")}
-          >
-            {problemMessageOf(remove.error, t)}
-          </Callout>
-        )}
-        {adding && <AddOwnDomainDialog onClose={() => setAdding(false)} />}
       </PanelBody>
+      {anchors.length > 0 && (
+        <>
+          <PanelGroupHead title={t("ownDomains.companyTitle")} level="h3" />
+          <PanelBody>
+            {/* Copy that sends the reader somewhere has to take them there:
+                these rows cannot be edited here, only on the company profile. */}
+            <PanelIntro>
+              {t("ownDomains.fromCompany")}{" "}
+              <a href="#/settings/company">{t("ownDomains.openCompany")}</a>
+            </PanelIntro>
+          </PanelBody>
+          <SettingList bleed="records" testId="own-domains-from-company">
+            {anchors.map((domain) => (
+              <SettingRow key={domain} label={domain} control={null} />
+            ))}
+          </SettingList>
+        </>
+      )}
+      <PanelGroupHead title={t("ownDomains.curatedTitle")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("ownDomains.irreversible")}</PanelIntro>
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("ownDomains.curatedTitle")}>
+        {(list) => (
+          <CuratedDomains
+            list={list.data}
+            refusal={refusal}
+            pending={remove.isPending}
+            onRemove={(domain) => remove.mutate(domain)}
+          />
+        )}
+      </QueryGate>
+      {(!canManage || remove.isError) && (
+        <PanelBody className="form-stack">
+          {!canManage && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
+          {remove.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("ownDomains.removeFailed")}
+            >
+              {problemMessageOf(remove.error, t)}
+            </Callout>
+          )}
+        </PanelBody>
+      )}
+      {adding && <AddOwnDomainDialog onClose={() => setAdding(false)} />}
     </Panel>
   );
 }
@@ -231,8 +210,7 @@ function CuratedDomains({
   const t = useT();
   if (list.length === 0) {
     // `empty`, and only `empty`: no further domain is registered, which is a
-    // fact about the installation rather than a read that failed. The row caps
-    // and left-aligns it already (settingrow.css).
+    // fact about the installation rather than a read that failed.
     return (
       <EmptyState>
         <p data-testid="own-domains-empty">{t("ownDomains.empty")}</p>
@@ -240,7 +218,7 @@ function CuratedDomains({
     );
   }
   return (
-    <SettingList testId="own-domains-list">
+    <SettingList bleed="records" testId="own-domains-list">
       {list.map((domain) => (
         <SettingRow
           key={domain.domain}

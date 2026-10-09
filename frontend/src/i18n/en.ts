@@ -6084,7 +6084,7 @@ export const en = {
   "settings.auditAction": "Action",
   "settings.auditFrom": "From",
   "settings.auditTo": "To",
-  "settings.auditExpand": "Show change detail",
+  "settings.auditExpandEntry": "Show change detail: {action} on {entity}",
   "settings.auditRule": "Authorization rule",
   "settings.auditOnBehalf": "on behalf of",
   "settings.privacy": "Privacy requests",

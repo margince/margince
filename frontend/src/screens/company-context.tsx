@@ -674,7 +674,7 @@ function CompanyFactsCard({
         {readOnly && <p>{t("settings.companyReadOnly")}</p>}
         {/* The company's FACE, above the statements about it: the one thing
             here a reader recognises at a glance, and the sidebar's too. */}
-        {company.data && form && (
+        {company.data && !company.isError && form && (
           <CompanyMark profile={company.data} canEdit={canEdit} />
         )}
       </PanelBody>
@@ -697,12 +697,8 @@ function CompanyFactsCard({
                     onEdit={() => onEdit(field)}
                   />
                 ))}
-                {/* The elaborations, closed. Thirteen optional statements
-                    against the three the save DEMANDS, and open by default
-                    they buried the three that decide whether this profile is
-                    usable at all. A Disclosure inside the list is the
-                    settings page's own answer for a card's secondary half:
-                    its summary sits on the same beat as the labels above. */}
+                {/* Closed, so thirteen optional facts do not bury the three
+                    the save requires. */}
                 {ELABORATIONS.map((group) => (
                   <Disclosure key={group.title} summary={t(group.title)}>
                     <SettingList>
@@ -720,13 +716,13 @@ function CompanyFactsCard({
                   </Disclosure>
                 ))}
               </SettingList>
-              {/* The save landed and the dialog it landed in is gone, so the
-                  confirmation is left on the card that now shows the new
-                  values. A refusal stays in the dialog, beside the fields it
-                  refused. */}
+              {/* The dialog closes on save, so the confirmation lands here; a
+                  refusal stays in the dialog beside the fields it refused. */}
               {saved && (
                 <PanelBody>
-                  <SavedNotice />
+                  <div className="settings-panel-commit">
+                    <SavedNotice />
+                  </div>
                 </PanelBody>
               )}
             </>
@@ -813,10 +809,12 @@ function CompanySourceCard({
       </SettingList>
       {failure !== null && (
         <PanelBody>
-          <WriteRefused
-            titleKey="settings.companyRefreshFailed"
-            message={failure}
-          />
+          <div className="settings-panel-commit">
+            <WriteRefused
+              titleKey="settings.companyRefreshFailed"
+              message={failure}
+            />
+          </div>
         </PanelBody>
       )}
     </Panel>

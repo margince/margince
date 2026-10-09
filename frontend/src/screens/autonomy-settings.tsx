@@ -175,7 +175,7 @@ function kindHelp(kind: string, t: Translator): string {
 export function AutonomySettingsCard() {
   const t = useT();
   const query = useAutonomy();
-  const rows = query.data?.data ?? [];
+  const rows = query.isSuccess ? query.data.data : [];
 
   return (
     <Panel title={t("autonomy.title")}>
@@ -191,11 +191,8 @@ export function AutonomySettingsCard() {
           </Callout>
         )}
       </PanelBody>
-      {/* An empty list is its own answer, and it is not a blank card: this
-          installation routes this seat nothing of any kind, so there is no
-          switch to offer and no track record to be behind on. Saying so here
-          is also what keeps noneDecidedYet from having to speak for a set
-          that does not exist. */}
+      {/* An empty list means this seat is routed no kind at all, which is an
+          answer rather than a blank card. */}
       <QueryGate
         pendingLabel={t("autonomy.title")}
         query={query}

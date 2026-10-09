@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -73,10 +74,14 @@ function backendFor(rows: Row[]) {
   return { fetchMock, patches: () => patches };
 }
 
-const render = (ui: ReactNode, locale: Locale = "en") => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+const testClient = () =>
+  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+const render = (
+  ui: ReactNode,
+  locale: Locale = "en",
+  client: QueryClient = testClient(),
+) => {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>{ui}</LocaleProvider>
@@ -212,6 +217,35 @@ describe("AutonomySettingsCard", () => {
     // would read the absence below off a card that had not loaded yet — an
     // assertion no implementation could fail.
     expect(await screen.findByText(/nothing here yet/i)).not.toBeNull();
+    expect(screen.queryByText(/No reviews yet/i)).toBeNull();
+  });
+
+  // A failed refetch keeps the stale rows in the cache, and the gate then shows
+  // its error arm: a note read off those rows would sit above the failure.
+  it("says nothing of the sort once a refetch has failed", async () => {
+    const backend = backendFor([row("close_date_correction", "manual")]);
+    let refusing = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
+        refusing &&
+        String(input instanceof Request ? input.url : input).includes(
+          "/autonomy",
+        )
+          ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
+          : backend.fetchMock(input, init),
+      ),
+    );
+    const client = testClient();
+    render(<AutonomySettingsCard />, "en", client);
+    expect(await screen.findByText(/No reviews yet/i)).not.toBeNull();
+
+    refusing = true;
+    await act(() => client.refetchQueries({ queryKey: ["autonomy"] }));
+
+    expect(
+      await screen.findByText("Could not load this view. Reload the page."),
+    ).not.toBeNull();
     expect(screen.queryByText(/No reviews yet/i)).toBeNull();
   });
 

@@ -672,10 +672,6 @@ function AccountCard() {
         </QueryGate>
       </PanelBody>
       <SettingList bleed="settings">
-        {/* The credential first, because it is the one row that decides
-            whether the other two are reachable at all. The row and its
-            three-field form live in passwordcard.tsx, exported as a ROW
-            precisely so this page can place it among its own. */}
         <DisplayNameSettingRow toast={toast} />
         <GreetingNameSettingRow toast={toast} />
         <PasswordSettingRow />
@@ -1549,13 +1545,13 @@ function AutonomyCard() {
       <PanelBody>
         <PanelIntro>{t("settings.autonomySub")}</PanelIntro>
       </PanelBody>
-      {/* Sending is green: a contact's grant of the `send` scope is the
-          approval, so a funded send does not stage a second. */}
       <SettingList bleed="settings">
         <SettingRow
           label={t("settings.tierRead")}
           control={<AutonomyDot tier="auto" withLabel />}
         />
+        {/* Sending is green: a contact's grant of the `send` scope is the
+            approval, so a funded send does not stage a second. */}
         <SettingRow
           label={t("settings.tierSend")}
           control={<AutonomyDot tier="auto" withLabel />}
@@ -1770,44 +1766,51 @@ function AuditLogRow({
           </span>
         )}
         <IconAction
-          label={t("settings.auditExpand")}
+          label={t("settings.auditExpandEntry", {
+            action: entry.action,
+            entity: entry.entity_type,
+          })}
           icon={<ChevronDown aria-hidden className="expander-chevron" />}
           disclosure={{ expanded, controls: diffId }}
           onClick={() => setExpanded((value) => !value)}
         />
       </div>
-      {expanded && (
-        <div className="audit-row-diff" id={diffId}>
-          {keys.map((key) => (
-            <div key={key} className="audit-diff-line">
-              <span className="t-label">{key}</span>
-              <FieldDiff
-                oldValue={diffValue(entry.before, key)}
-                newValue={diffValue(entry.after, key)}
-              />
-            </div>
-          ))}
-          {entry.passport_id && (
-            <ResolvedPassportChip passportId={entry.passport_id} />
-          )}
-          {entry.on_behalf_of && (
-            <span className="t-caption">
-              {t("settings.auditOnBehalf")}{" "}
-              <span>
-                {entry.on_behalf_of === meUserId
-                  ? t("audit.you")
-                  : (entry.on_behalf_of_name ?? t("audit.unknownMember"))}
+      {/* Mounted while closed so the toggle's aria-controls always resolves;
+          the detail itself renders only when open. */}
+      <div id={diffId} hidden={!expanded}>
+        {expanded && (
+          <div className="audit-row-diff">
+            {keys.map((key) => (
+              <div key={key} className="audit-diff-line">
+                <span className="t-label">{key}</span>
+                <FieldDiff
+                  oldValue={diffValue(entry.before, key)}
+                  newValue={diffValue(entry.after, key)}
+                />
+              </div>
+            ))}
+            {entry.passport_id && (
+              <ResolvedPassportChip passportId={entry.passport_id} />
+            )}
+            {entry.on_behalf_of && (
+              <span className="t-caption">
+                {t("settings.auditOnBehalf")}{" "}
+                <span>
+                  {entry.on_behalf_of === meUserId
+                    ? t("audit.you")
+                    : (entry.on_behalf_of_name ?? t("audit.unknownMember"))}
+                </span>
               </span>
-            </span>
-          )}
-          {entry.authorization_rule && (
-            <span className="t-caption">
-              {t("settings.auditRule")}: {entry.authorization_rule}
-            </span>
-          )}
-          {evidence && <EvidenceChip evidence={evidence} />}
-        </div>
-      )}
+            )}
+            {entry.authorization_rule && (
+              <span className="t-caption">
+                {t("settings.auditRule")}: {entry.authorization_rule}
+              </span>
+            )}
+            {evidence && <EvidenceChip evidence={evidence} />}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

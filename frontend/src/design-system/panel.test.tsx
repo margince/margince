@@ -695,6 +695,7 @@ describe("the pane insets the state arm it has no body to wrap", () => {
     expect([...inset.map((rule) => rule.selector)].sort()).toEqual([
       ".panel > .empty",
       ".panel > .pending",
+      '.panel > [role="alert"] > .empty',
     ]);
     // WHICH inset, read off the body rather than restated here: the arm stands
     // in for the rows that will replace it, so a pane retuned to a different
@@ -705,6 +706,27 @@ describe("the pane insets the state arm it has no body to wrap", () => {
     expect(pane).toBeDefined();
     for (const rule of inset) {
       expect(declaredValue(rule.block, "padding")).toBe(pane);
+    }
+  });
+
+  it("reads the arm's sentence as a body's: no ground, from the left", () => {
+    const rules = cssRules(panelCss());
+    const declared = (selector: string, property: string) =>
+      rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => declaredValue(rule.block, property))
+        .filter((value) => value !== undefined)
+        .at(-1);
+    for (const arm of [
+      ".panel > .empty:not(.empty-plate)",
+      '.panel > [role="alert"] > .empty',
+    ]) {
+      for (const property of ["background", "text-align"]) {
+        expect(declared(arm, property)).toBeDefined();
+        expect(declared(arm, property)).toBe(
+          declared(".panel-body > .empty", property),
+        );
+      }
     }
   });
 

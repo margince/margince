@@ -326,7 +326,7 @@ export function SignInMethodsCard() {
     <Panel title={t("signInMethods.title")}>
       <PanelBody>
         <p className="t-body">{t("signInMethods.sub")}</p>
-        {save.error && (
+        {settings.isSuccess && save.error && (
           <Callout
             tone="danger"
             kind="outcome"

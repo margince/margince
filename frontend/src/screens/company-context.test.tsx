@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -704,5 +705,61 @@ describe("CompanyContextCard confirmed count", () => {
       ).toBeTruthy();
     },
     POSTURE_TEST_MS,
+  );
+});
+
+// A failed refetch keeps the stale profile in the cache while the gate shows
+// its error arm, so nothing read off that profile may stand above the failure.
+describe("CompanyContextCard after a failed refetch", () => {
+  it(
+    "takes the logo down with the facts",
+    async () => {
+      let refusing = false;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = new URL(
+            String(input instanceof Request ? input.url : input),
+          );
+          if (refusing && url.pathname === "/v1/company") {
+            return new Response(
+              JSON.stringify({ title: "Unavailable", status: 503 }),
+              { status: 503, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          return new Response(JSON.stringify(routeBody(url.pathname)), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }),
+      );
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">
+            <CompanyContextCard />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      expect(
+        await screen.findByText("Company logo", undefined, {
+          timeout: SETTLE_MS,
+        }),
+      ).toBeTruthy();
+
+      refusing = true;
+      await act(() => client.refetchQueries({ queryKey: ["company"] }));
+
+      expect(
+        await screen.findByText(
+          "Could not load this view. Reload the page.",
+          undefined,
+          { timeout: SETTLE_MS },
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText("Company logo")).toBeNull();
+    },
+    SETTLE_MS * 2,
   );
 });

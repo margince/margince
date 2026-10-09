@@ -304,17 +304,15 @@ export function LicenseReading({
                   : formatNumber(entitlement.seats_used, locale)
               }
               detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
-              // Only where the reading has a denominator. An uncapped
-              // installation has nothing to be a share of, and a bar drawn
+              // An uncapped installation has no denominator, and a bar
               // against an invented limit invents the limit.
               meter={
                 capped
                   ? { filled: entitlement.seats_used, total: granted }
                   : undefined
               }
-              // The slot itself is the bad news when the count is past the
-              // grant, so `alert` rather than `tone`, which would only
-              // colour the figure.
+              // Past the grant the slot itself is the bad news; `tone`
+              // would only colour the figure.
               alert={entitlement.over_limit}
             />
           }
