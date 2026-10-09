@@ -410,7 +410,7 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	if !ok {
 		slog.ErrorContext(r.Context(), "unhandled error", "method", r.Method, "path", loggedPath(r), "err", err)
-		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: "internal"})
+		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: codeInternal})
 		return
 	}
 	if fault.InfraCause != nil {

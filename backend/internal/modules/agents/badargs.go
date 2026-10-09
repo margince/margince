@@ -83,6 +83,9 @@ func decodeArgs[T any](in json.RawMessage, into *T) error {
 			Guidance: "send exactly one JSON object carrying this tool's arguments",
 		}
 	}
+	if outOfRange := datasource.RejectOutOfRangeTimes(into); outOfRange != nil {
+		return &BadArgsError{Cause: outOfRange, Field: outOfRange.Field}
+	}
 	return nil
 }
 
