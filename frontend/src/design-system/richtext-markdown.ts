@@ -36,9 +36,10 @@ function blockHTML(block: Block): string {
     case "rule":
       return "<hr>";
     case "list": {
-      const tag = block.ordered ? "ol" : "ul";
       const items = block.items.map((item) => `<li>${runHTML(item)}</li>`);
-      return `<${tag}>${items.join("")}</${tag}>`;
+      if (!block.ordered) return `<ul>${items.join("")}</ul>`;
+      const start = block.start === 1 ? "" : ` start="${block.start}"`;
+      return `<ol${start}>${items.join("")}</ol>`;
     }
     case "quote":
       return `<blockquote>${block.blocks.map(blockHTML).join("")}</blockquote>`;
@@ -164,7 +165,8 @@ function blockOf(element: HTMLElement): string {
 function listOf(list: HTMLElement, indent: string): string {
   const ordered = list.tagName === "OL";
   const lines: string[] = [];
-  let n = 0;
+  const start = Number.parseInt(list.getAttribute("start") ?? "", 10);
+  let n = ordered && Number.isFinite(start) ? start - 1 : 0;
   for (const item of Array.from(list.children)) {
     if (!(item instanceof HTMLElement)) continue;
     if (isList(item)) {
@@ -302,10 +304,10 @@ export function pastedMarkup(html: string, text: string): string {
     markStyledRuns(body);
     if (
       body.querySelector(
-        "b, strong, i, em, ul, ol, h1, h2, h3, h4, h5, h6, a[href]",
+        "b, strong, i, em, ul, ol, h1, h2, h3, h4, h5, h6, a[href], pre, code, blockquote, hr",
       )
     ) {
-      return cleanMarkup(body, DOCUMENT_TAGS);
+      return cleanMarkup(body, DOCUMENT_TAGS, { blockBreaks: true });
     }
   }
   return editorHTMLFromMarkdown(text);

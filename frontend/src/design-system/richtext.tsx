@@ -145,6 +145,10 @@ export function RichText({
   // while Send still carried the invisible text.
   const [ours, setOurs] = useState("");
   const markdown = format === "markdown";
+  // The markup the surface held when we last wrote or reported it. A blur with
+  // no edit since then reports nothing, so opening and leaving an unedited
+  // body never rewrites it in the editor's own spelling.
+  const reported = useRef("");
 
   useEffect(() => {
     const node = editor.current;
@@ -160,6 +164,7 @@ export function RichText({
     node.innerHTML = markdown
       ? editorHTMLFromMarkdown(value)
       : safeEditorHTML(value);
+    reported.current = node.innerHTML;
     setOurs(markdown ? value : node.innerHTML);
   }, [value, ours, markdown]);
 
@@ -169,6 +174,10 @@ export function RichText({
       return;
     }
     const html = node.innerHTML;
+    if (html === reported.current) {
+      return;
+    }
+    reported.current = html;
     const source = markdownOf(node);
     setOurs(markdown ? source : html);
     onChange({ html, text: plainTextOf(node), markdown: source });

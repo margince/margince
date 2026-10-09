@@ -90,6 +90,15 @@ describe("a markdown body in the editor", () => {
     expect(editorOf(markdown).textContent).toContain("# not a heading");
   });
 
+  it("keeps the number an ordered list starts from", () => {
+    const steps = "5. Fifth\n6. Sixth";
+
+    expect(editorOf(steps).querySelector("ol")?.getAttribute("start")).toBe(
+      "5",
+    );
+    expect(markdownOf(editorOf(steps))).toBe(steps);
+  });
+
   it("writes italic around bold so the reader reads it back", () => {
     const node = document.createElement("div");
     node.innerHTML = "<p><em><strong>both</strong></em></p>";
@@ -130,6 +139,29 @@ describe("a paste into the markdown editor", () => {
 
     expect(surface().querySelector("script")).toBeNull();
     expect(stored()).toBe("## Summary\n\n**Budget** approved\n\n- first");
+  });
+
+  it("keeps the break between pasted lines a document wrapped in containers", () => {
+    render(<Body />);
+
+    paste({
+      "text/html": "<div><strong>First</strong></div><div>Second</div>",
+      "text/plain": "First\nSecond",
+    });
+
+    expect(stored()).toBe("**First**\n\nSecond");
+  });
+
+  it("keeps pasted code literal rather than reading it as markdown", () => {
+    render(<Body />);
+
+    paste({
+      "text/html": "<pre><code># literal</code></pre>",
+      "text/plain": "# literal",
+    });
+
+    expect(surface().querySelector("h1")).toBeNull();
+    expect(stored()).toBe("```\n# literal\n```");
   });
 
   it("reads the plain text as markdown when the markup carries no formatting", () => {

@@ -155,8 +155,48 @@ const DROPPED = new Set([
   "IMG",
 ]);
 
-/** The children of `root` as markup holding only `allowed` elements. */
-export function cleanMarkup(root: Node, allowed: ReadonlySet<string>): string {
+// Containers a document wraps its lines in. Unwrapped with `blockBreaks`,
+// each stays a paragraph, so two pasted lines do not run together.
+const BLOCKS =
+  "p, div, section, article, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, blockquote, hr, table, tr";
+
+const CONTAINERS = new Set([
+  "DIV",
+  "SECTION",
+  "ARTICLE",
+  "HEADER",
+  "FOOTER",
+  "MAIN",
+  "ASIDE",
+  "FIGURE",
+  "ADDRESS",
+  "TR",
+  "DT",
+  "DD",
+]);
+
+/**
+ * The children of `root` as markup holding only `allowed` elements.
+ *
+ * `blockBreaks` is for a markdown body, where a lost line break merges two
+ * paragraphs into one sentence. The email path keeps the server's plain unwrap.
+ */
+export function cleanMarkup(
+  root: Node,
+  allowed: ReadonlySet<string>,
+  { blockBreaks = false }: Readonly<{ blockBreaks?: boolean }> = {},
+): string {
+  const unwrap = (element: Element): string => {
+    const inner = clean(element);
+    if (!blockBreaks || !CONTAINERS.has(element.tagName)) {
+      return inner;
+    }
+    if (element.querySelector(BLOCKS)) {
+      // Its own blocks already break; loose text beside them gets a paragraph.
+      return inner;
+    }
+    return inner.trim() === "" ? "" : `<p>${inner}</p>`;
+  };
   const cleanElement = (element: Element): string => {
     const tag = element.tagName;
     if (DROPPED.has(tag)) {
@@ -165,7 +205,7 @@ export function cleanMarkup(root: Node, allowed: ReadonlySet<string>): string {
     if (!allowed.has(tag)) {
       // Unwrap, exactly as the server does: a sender whose <div> vanished still
       // meant the sentence inside it.
-      return clean(element);
+      return unwrap(element);
     }
     const lower = tag.toLowerCase();
     if (lower === "br" || lower === "hr") {

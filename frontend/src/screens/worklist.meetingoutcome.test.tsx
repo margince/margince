@@ -17,10 +17,20 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { messageText, writeMessage } from "../design-system/richtext-testing";
+import {
+  messageBox,
+  messageText,
+  writeMessage,
+} from "../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { WorklistScreen } from "./worklist";
@@ -73,7 +83,11 @@ const CAPTURED_MEETING = {
 
 // Serves the worklist read, the meeting read behind the dialog, and records
 // every PATCH body so a test can assert what the server was actually told.
-function stubWithMeetingRead(sent: unknown[], patchStatus = 200) {
+function stubWithMeetingRead(
+  sent: unknown[],
+  patchStatus = 200,
+  meeting: Record<string, unknown> = CAPTURED_MEETING,
+) {
   stub(aDayWithOne());
   const passthrough = globalThis.fetch;
   vi.stubGlobal(
@@ -99,12 +113,12 @@ function stubWithMeetingRead(sent: unknown[], patchStatus = 200) {
               headers: { "content-type": "application/problem+json" },
             });
           }
-          return new Response(
-            JSON.stringify({ ...CAPTURED_MEETING, version: 4 }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ ...meeting, version: 4 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
         }
-        return new Response(JSON.stringify(CAPTURED_MEETING), {
+        return new Response(JSON.stringify(meeting), {
           status: 200,
           headers: { "content-type": "application/json" },
         });
@@ -183,6 +197,46 @@ describe("a meeting that owes an answer", () => {
       subject: "Discovery call with Turbinenbau",
       body: "They want a pilot in Q1.",
     });
+  });
+
+  // A transcript's lines are what a citation points at, so the save sends it
+  // byte for byte, leading blank line and indentation included.
+  it("sends a transcript's text untrimmed", async () => {
+    const sent: unknown[] = [];
+    const transcript = "\n  Anna: hello\nBen: hi";
+    stubWithMeetingRead(sent, 200, {
+      ...CAPTURED_MEETING,
+      source_system: "transcript",
+      body: transcript,
+    });
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(await screen.findByRole("button", { name: /update/i }));
+    expect(
+      (await screen.findByLabelText<HTMLTextAreaElement>("Details")).value,
+    ).toBe(transcript);
+    await user.click(screen.getByRole("button", { name: /^log$/i }));
+
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    expect(sent[0]).toMatchObject({ body: transcript });
+  });
+
+  it("saves a body nobody edited exactly as it was read", async () => {
+    const sent: unknown[] = [];
+    const body = "Notes on snake_case naming\n\n5. Fifth\n6. Sixth";
+    stubWithMeetingRead(sent, 200, { ...CAPTURED_MEETING, body });
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await waitFor(() => expect(messageText("Details")).toContain("Fifth"));
+    fireEvent.focus(messageBox("Details"));
+    fireEvent.blur(messageBox("Details"));
+    await user.click(screen.getByRole("button", { name: /^log$/i }));
+
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    expect(sent[0]).toMatchObject({ body });
   });
 
   it("says so when the write is refused, rather than falling silent", async () => {
