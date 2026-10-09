@@ -3,8 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
-import { Badge, EmptyState, SectionHeader } from "./atoms";
+import { Badge, EmptyState, SectionHeader, TableScroll } from "./atoms";
 import { DataTable } from "./datatable";
+import { Panel, PanelBody, PanelIntro } from "./panel";
 import { Meter } from "./readings";
 
 // A generic component takes no `component` here: Storybook would have to infer
@@ -204,4 +205,64 @@ export const FiguresAndABar: Story = {
       />
     );
   },
+};
+
+// `bleed`: the table stands straight in the Panel, between two bodies. Its rules
+// reach the pane's edges and the first column keeps the intro's x.
+export const InAPanel: Story = {
+  render: () => (
+    <Panel title="Deals">
+      <PanelBody>
+        <PanelIntro>Every open deal in this pipeline.</PanelIntro>
+      </PanelBody>
+      <DataTable
+        bleed
+        label="Deals"
+        columns={DEAL_COLUMNS}
+        rows={DEMO_DEALS}
+        rowKey={(deal) => deal.id}
+      />
+      <PanelBody>
+        <PanelIntro>Weighted by each stage's win rate.</PanelIntro>
+      </PanelBody>
+    </Panel>
+  ),
+};
+
+// A hand-drawn table bleeds through `TableScroll` the same way, and one too wide
+// for its pane scrolls sideways inside it.
+export const WideInAPanel: Story = {
+  render: () => (
+    <div style={{ maxWidth: 420 }}>
+      <Panel title="Open deals by stage">
+        <PanelBody>
+          <PanelIntro>Scroll the table sideways for every figure.</PanelIntro>
+        </PanelBody>
+        <TableScroll bleed label="Open deals by stage">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Stage</th>
+                <th>Owner</th>
+                <th>Open value</th>
+                <th>Weighted</th>
+                <th>Oldest</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DEMO_STAGES.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.stage}</td>
+                  <td>{"Marek Janetzke"}</td>
+                  <td>{row.openText}</td>
+                  <td>{row.weightedText}</td>
+                  <td>{"12 March 2026"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
+      </Panel>
+    </div>
+  ),
 };

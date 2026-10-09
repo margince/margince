@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -80,4 +81,59 @@ it("tells a provider-attested address from a discovered one", async () => {
   expect(
     screen.queryByText(en["ownerIdentities.learned.deliveredTo"]),
   ).toBeNull();
+});
+
+// Every row's verb is the same glyph, so its name says which address it takes back.
+it("names the remove verb after the address it withdraws", async () => {
+  showing([identity({})]);
+
+  expect(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  ).toBeTruthy();
+});
+
+// The server's refusal is a developer's English; the reader gets the catalog's.
+it("says what an address must look like when the server refuses it", async () => {
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /capture/owner-identities": () => jsonResponse({ data: [] }),
+    "POST /capture/owner-identities": () =>
+      jsonResponse(
+        {
+          code: "validation_error",
+          status: 422,
+          detail: "give one email address of at most 320 characters",
+          details: {
+            errors: [
+              {
+                field: "value",
+                code: "invalid_exclusion",
+                message: "give one email address of at most 320 characters",
+              },
+            ],
+          },
+        },
+        422,
+      ),
+  });
+  render(<OwnerIdentitiesCard />);
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole("button", { name: en["ownerIdentities.add"] }),
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: en["ownerIdentities.valueLabel"] }),
+    "not an address",
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.confirm"] }),
+  );
+
+  expect(
+    await screen.findByText(en["captureValue.refusedAddress"]),
+  ).toBeTruthy();
+  expect(screen.queryByText(/give one email address/)).toBeNull();
 });

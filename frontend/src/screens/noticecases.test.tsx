@@ -166,6 +166,17 @@ describe("the disclosure-duty queue", () => {
     expect(within(row).getByText(en["notice.unclaimed"])).toBeInTheDocument();
   });
 
+  it("names the owner picker after the duty it assigns", async () => {
+    stubRoutes();
+    render(<NoticeCasesCard />);
+
+    const row = await screen.findByTestId("notice-case-case-1");
+    const picker = within(row).getByRole("combobox", {
+      name: "Owner of art14",
+    });
+    expect(picker).toHaveAccessibleDescription(/^Due /);
+  });
+
   it("offers no actions on a duty that has already ended", async () => {
     // The server refuses both, so offering them would be a button that fails.
     stubRoutes({

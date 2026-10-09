@@ -78,14 +78,30 @@ export function toEvidence(raw: unknown): Evidence | null {
   return null;
 }
 
-export function AutonomyDot({ tier }: Readonly<{ tier: "auto" | "confirm" }>) {
+/**
+ * `withLabel` prints the tier's word beside the dot where the dot is the whole
+ * answer. A colour alone tells nothing to a reader who cannot see it apart.
+ */
+export function AutonomyDot({
+  tier,
+  withLabel = false,
+}: Readonly<{ tier: "auto" | "confirm"; withLabel?: boolean }>) {
   const t = useT();
+  const word = tier === "auto" ? t("autonomy.auto") : t("autonomy.confirm");
+  if (withLabel) {
+    return (
+      <span className="autonomy">
+        <span className={`dot dot-${tier}`} aria-hidden="true" />
+        {word}
+      </span>
+    );
+  }
   return (
     <span
       className={`dot dot-${tier}`}
       // NOSONAR: CSS-drawn status glyph (no bitmap); <img> would need a src the design has none of, and .dot styling targets the span
       role="img"
-      aria-label={tier === "auto" ? t("autonomy.auto") : t("autonomy.confirm")}
+      aria-label={word}
     />
   );
 }

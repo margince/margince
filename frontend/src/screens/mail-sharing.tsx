@@ -32,6 +32,16 @@ function useMailSharing() {
   });
 }
 
+type BandState = Readonly<{
+  notice: ReactNode;
+  error: unknown;
+  dirty: boolean;
+}>;
+
+function bandShows({ notice, error, dirty }: BandState): boolean {
+  return notice !== null || error !== undefined || dirty;
+}
+
 /**
  * The band under the rows: what the posture costs, what the write refused, and
  * the verb that commits it.
@@ -48,15 +58,9 @@ function CommitBand({
   dirty,
   pending,
   onSave,
-}: Readonly<{
-  notice: ReactNode;
-  error: unknown;
-  dirty: boolean;
-  pending: boolean;
-  onSave: () => void;
-}>) {
+}: BandState & Readonly<{ pending: boolean; onSave: () => void }>) {
   const t = useT();
-  if (notice === null && error === undefined && !dirty) return null;
+  if (!bandShows({ notice, error, dirty })) return null;
   return (
     <div className="settings-panel-commit">
       {notice}
@@ -129,114 +133,114 @@ export function MailSharingCard() {
     <Panel title={t("mailSharing.title")}>
       <PanelBody>
         <PanelIntro>{t("mailSharing.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("mailSharing.title")}>
-          {(settings) => {
-            const shown = pending ?? settings.mail_sharing;
-            const dirty = pending !== null && pending !== settings.mail_sharing;
-            const sharedShown =
-              pendingShared ?? settings.shared_posture_allowed;
-            const sharedDirty =
-              pendingShared !== null &&
-              pendingShared !== settings.shared_posture_allowed;
-            return (
-              <>
-                <SettingList>
-                  {/* The row draws the naming, so the switch carries the same
-                      words as its hidden label rather than a second heading and
-                      a hint of its own beside them. */}
-                  <SettingRow
-                    label={t("mailSharing.label")}
-                    description={t("mailSharing.help")}
-                    // The function form, so the row's description reaches the
-                    // switch: the sentence saying what sharing DOES used to be
-                    // the switch's own `hint`, and moving it into the row would
-                    // otherwise take it away from every reader who cannot see
-                    // it. `labelHidden` still keeps the naming the row's.
-                    control={(control) => (
-                      <Switch
-                        describedBy={control["aria-describedby"]}
-                        testId="mail-sharing-toggle"
-                        label={t("mailSharing.label")}
-                        labelHidden
-                        reason={
-                          canManage ? undefined : t("captureSettings.adminOnly")
-                        }
-                        checked={shown}
-                        disabled={!canManage || save.isPending}
-                        onChange={(next) => setPending(next)}
-                      />
-                    )}
-                  />
-                  {/* Whether a seat may ask for `shared` at all. The only
-                      capture setting whose default WITHHOLDS, so it is the one
-                      row on this card where ON is the permissive answer — the
-                      warning below fires on true rather than on false. */}
-                  <SettingRow
-                    label={t("mailSharing.sharedPosture.label")}
-                    description={t("mailSharing.sharedPosture.help")}
-                    control={(control) => (
-                      <Switch
-                        describedBy={control["aria-describedby"]}
-                        testId="shared-posture-allowed-toggle"
-                        label={t("mailSharing.sharedPosture.label")}
-                        labelHidden
-                        reason={
-                          canManage ? undefined : t("captureSettings.adminOnly")
-                        }
-                        checked={sharedShown}
-                        disabled={!canManage || saveShared.isPending}
-                        onChange={(next) => setPendingShared(next)}
-                      />
-                    )}
-                  />
-                </SettingList>
-                <CommitBand
-                  notice={
-                    sharedShown ? (
-                      <Callout
-                        kind="standing"
-                        tone="warning"
-                        title={t("mailSharing.sharedPosture.warningTitle")}
-                      >
-                        {t("mailSharing.sharedPosture.warning")}
-                      </Callout>
-                    ) : null
-                  }
-                  error={saveShared.isError ? saveShared.error : undefined}
-                  dirty={sharedDirty}
-                  pending={saveShared.isPending}
-                  onSave={() => {
-                    if (pendingShared !== null) {
-                      saveShared.mutate(pendingShared);
-                    }
-                  }}
-                />
-                <CommitBand
-                  notice={
-                    shown ? null : (
-                      <Callout
-                        kind="standing"
-                        tone="warning"
-                        title={t("mailSharing.dangerTitle")}
-                      >
-                        {t("mailSharing.danger")}
-                      </Callout>
-                    )
-                  }
-                  error={save.isError ? save.error : undefined}
-                  dirty={dirty}
-                  pending={save.isPending}
-                  onSave={() => {
-                    if (pending !== null) {
-                      save.mutate(pending);
-                    }
-                  }}
-                />
-              </>
-            );
-          }}
-        </QueryGate>
       </PanelBody>
+      <QueryGate query={query} pendingLabel={t("mailSharing.title")}>
+        {(settings) => {
+          const shown = pending ?? settings.mail_sharing;
+          const dirty = pending !== null && pending !== settings.mail_sharing;
+          const sharedShown = pendingShared ?? settings.shared_posture_allowed;
+          const sharedDirty =
+            pendingShared !== null &&
+            pendingShared !== settings.shared_posture_allowed;
+          const sharedBand: BandState = {
+            notice: sharedShown ? (
+              <Callout
+                kind="standing"
+                tone="warning"
+                title={t("mailSharing.sharedPosture.warningTitle")}
+              >
+                {t("mailSharing.sharedPosture.warning")}
+              </Callout>
+            ) : null,
+            error: saveShared.isError ? saveShared.error : undefined,
+            dirty: sharedDirty,
+          };
+          const sharingBand: BandState = {
+            notice: shown ? null : (
+              <Callout
+                kind="standing"
+                tone="warning"
+                title={t("mailSharing.dangerTitle")}
+              >
+                {t("mailSharing.danger")}
+              </Callout>
+            ),
+            error: save.isError ? save.error : undefined,
+            dirty,
+          };
+          return (
+            <>
+              <SettingList bleed="settings">
+                {/* The row draws the naming, so the switch carries the same
+                    words as its hidden label rather than a second heading and
+                    a hint of its own beside them. */}
+                <SettingRow
+                  label={t("mailSharing.label")}
+                  description={t("mailSharing.help")}
+                  // Without the row's description, a screen reader never
+                  // hears what sharing does.
+                  control={(control) => (
+                    <Switch
+                      describedBy={control["aria-describedby"]}
+                      testId="mail-sharing-toggle"
+                      label={t("mailSharing.label")}
+                      labelHidden
+                      reason={
+                        canManage ? undefined : t("captureSettings.adminOnly")
+                      }
+                      checked={shown}
+                      disabled={!canManage || save.isPending}
+                      onChange={(next) => setPending(next)}
+                    />
+                  )}
+                />
+                {/* The one capture setting whose default withholds, so switching
+                    it on is the permissive answer and the warning fires on true. */}
+                <SettingRow
+                  label={t("mailSharing.sharedPosture.label")}
+                  description={t("mailSharing.sharedPosture.help")}
+                  control={(control) => (
+                    <Switch
+                      describedBy={control["aria-describedby"]}
+                      testId="shared-posture-allowed-toggle"
+                      label={t("mailSharing.sharedPosture.label")}
+                      labelHidden
+                      reason={
+                        canManage ? undefined : t("captureSettings.adminOnly")
+                      }
+                      checked={sharedShown}
+                      disabled={!canManage || saveShared.isPending}
+                      onChange={(next) => setPendingShared(next)}
+                    />
+                  )}
+                />
+              </SettingList>
+              {(bandShows(sharedBand) || bandShows(sharingBand)) && (
+                <PanelBody>
+                  <CommitBand
+                    {...sharedBand}
+                    pending={saveShared.isPending}
+                    onSave={() => {
+                      if (pendingShared !== null) {
+                        saveShared.mutate(pendingShared);
+                      }
+                    }}
+                  />
+                  <CommitBand
+                    {...sharingBand}
+                    pending={save.isPending}
+                    onSave={() => {
+                      if (pending !== null) {
+                        save.mutate(pending);
+                      }
+                    }}
+                  />
+                </PanelBody>
+              )}
+            </>
+          );
+        }}
+      </QueryGate>
     </Panel>
   );
 }

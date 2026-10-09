@@ -326,74 +326,71 @@ export function SignInMethodsCard() {
     <Panel title={t("signInMethods.title")}>
       <PanelBody>
         <p className="t-body">{t("signInMethods.sub")}</p>
-        <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
-          {(current) => {
-            // Defaulted, not asserted. The field is contract-required, but a
-            // body that lost one hands over `undefined` anyway, and this card
-            // sits on the settings screen — dereferencing it would take the
-            // whole page down over a list nobody could act on. The same reading
-            // Switch's own `checked` prop documents.
-            const providers = current.sign_in_providers ?? [];
-            const enabledKeys = providers
-              .filter((provider) => provider.enabled)
-              .map((provider) => provider.key);
-            return (
-              <>
-                {save.error && (
-                  <Callout
-                    tone="danger"
-                    kind="outcome"
-                    title={t("signInMethods.saveFailed")}
-                  >
-                    {problemMessageOf(save.error, t)}
-                  </Callout>
-                )}
-                <SettingList>
+        {settings.isSuccess && save.error && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("signInMethods.saveFailed")}
+          >
+            {problemMessageOf(save.error, t)}
+          </Callout>
+        )}
+      </PanelBody>
+      <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
+        {(current) => {
+          // Defaulted although required: a body missing it would otherwise
+          // take the whole settings page down.
+          const providers = current.sign_in_providers ?? [];
+          const enabledKeys = providers
+            .filter((provider) => provider.enabled)
+            .map((provider) => provider.key);
+          return (
+            <>
+              <SettingList bleed="settings">
+                <SettingRow
+                  label={t("signInMethods.password")}
+                  description={t("signInMethods.passwordAlways")}
+                  control={(control) => (
+                    <Switch
+                      label={t("signInMethods.password")}
+                      labelHidden
+                      checked
+                      describedBy={control["aria-describedby"]}
+                      reason={t("signInMethods.passwordReason")}
+                      onChange={() => undefined}
+                    />
+                  )}
+                />
+                {providers.map((provider) => (
                   <SettingRow
-                    label={t("signInMethods.password")}
-                    description={t("signInMethods.passwordAlways")}
+                    key={provider.key}
+                    label={provider.label}
+                    description={t("signInMethods.providerHint")}
                     control={(control) => (
                       <Switch
-                        label={t("signInMethods.password")}
+                        label={provider.label}
                         labelHidden
-                        checked
+                        checked={provider.enabled}
                         describedBy={control["aria-describedby"]}
-                        reason={t("signInMethods.passwordReason")}
-                        onChange={() => undefined}
+                        pending={save.isPending}
+                        // The list is sent whole, so a second flip during a
+                        // save would send the stale list and undo the first.
+                        disabled={!canManage || save.isPending}
+                        onChange={(next) =>
+                          save.mutate(
+                            next
+                              ? [...enabledKeys, provider.key]
+                              : enabledKeys.filter(
+                                  (key) => key !== provider.key,
+                                ),
+                          )
+                        }
                       />
                     )}
                   />
-                  {providers.map((provider) => (
-                    <SettingRow
-                      key={provider.key}
-                      label={provider.label}
-                      description={t("signInMethods.providerHint")}
-                      control={(control) => (
-                        <Switch
-                          label={provider.label}
-                          labelHidden
-                          checked={provider.enabled}
-                          describedBy={control["aria-describedby"]}
-                          pending={save.isPending}
-                          // Disabled while ANY save is in flight, not just for
-                          // a reader who may not write. The list travels whole,
-                          // so a second flip computed from the still-stale cache
-                          // would send a list that undoes the first one.
-                          disabled={!canManage || save.isPending}
-                          onChange={(next) =>
-                            save.mutate(
-                              next
-                                ? [...enabledKeys, provider.key]
-                                : enabledKeys.filter(
-                                    (key) => key !== provider.key,
-                                  ),
-                            )
-                          }
-                        />
-                      )}
-                    />
-                  ))}
-                </SettingList>
+                ))}
+              </SettingList>
+              <PanelBody>
                 {providers.length === 0 && (
                   <p>{t("signInMethods.noneConfigured")}</p>
                 )}
@@ -404,11 +401,11 @@ export function SignInMethodsCard() {
                   initial={current.oidc_group_role_map ?? {}}
                   canManage={canManageGrants}
                 />
-              </>
-            );
-          }}
-        </QueryGate>
-      </PanelBody>
+              </PanelBody>
+            </>
+          );
+        }}
+      </QueryGate>
     </Panel>
   );
 }

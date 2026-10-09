@@ -772,62 +772,58 @@ export function LeadHandlingCard() {
   const update = useUpdateLeadSettings();
   return (
     <Panel title={t("leadHandling.title")}>
-      {/* Plain body, for the reason the sources card carries in full. */}
       <PanelBody>
         <PanelIntro>{t("leadHandling.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
-          {(settings) => (
-            <SettingList>
-              {/* The posture comes first: the number below is only a
-                  judgement the switch above it makes readable. */}
-              <SettingRow
-                label={t("leadHandling.firstResponse")}
-                description={t("leadHandling.firstResponseHint")}
-                control={(control) => (
-                  // The switch keeps its own hidden label — it owns its
-                  // accessible name by design, and pointing it at the row's
-                  // span as well would name it twice — but it takes the row's
-                  // DESCRIPTION, or the sentence saying what the setting does
-                  // reaches nobody who cannot see it. `reason` refuses the
-                  // flip AND says why, which is what a stateful control a
-                  // permission denies owes its reader.
-                  <Switch
-                    describedBy={control["aria-describedby"]}
-                    label={t("leadHandling.firstResponse")}
-                    labelHidden
-                    checked={settings.first_response_enabled}
-                    pending={update.isPending}
-                    reason={canEdit ? undefined : t("leadSources.readOnly")}
-                    testId="lead-first-response-switch"
-                    onChange={(next) =>
-                      update.mutate({ first_response_enabled: next })
-                    }
-                  />
-                )}
-              />
-              <NumberSettingRow
-                label={t("leadHandling.targetMinutes")}
-                description={t("leadHandling.targetHint")}
-                testId="lead-first-response-target"
-                value={settings.first_response_target_minutes}
-                {...TARGET_BOUNDS.first_response_target_minutes}
-                refusal={t("leadHandling.targetOutOfRange")}
-                disabled={
-                  !canEdit ||
-                  !settings.first_response_enabled ||
-                  update.isPending
-                }
-                onCommit={(minutes) =>
-                  update.mutate({ first_response_target_minutes: minutes })
-                }
-              />
-            </SettingList>
-          )}
-        </QueryGate>
-        {/* The same component the two cards above report a refused write with.
-            This card's rows are switches every seat may flip, so no posture. */}
-        <VocabNotices error={update.isError ? update.error : undefined} />
       </PanelBody>
+      <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
+        {(settings) => (
+          <SettingList bleed="settings">
+            {/* The posture comes first: the number below is only a
+                judgement the switch above it makes readable. */}
+            <SettingRow
+              label={t("leadHandling.firstResponse")}
+              description={t("leadHandling.firstResponseHint")}
+              control={(control) => (
+                // Without the row's description, a screen reader never
+                // hears what this switch does.
+                <Switch
+                  describedBy={control["aria-describedby"]}
+                  label={t("leadHandling.firstResponse")}
+                  labelHidden
+                  checked={settings.first_response_enabled}
+                  pending={update.isPending}
+                  reason={canEdit ? undefined : t("leadSources.readOnly")}
+                  testId="lead-first-response-switch"
+                  onChange={(next) =>
+                    update.mutate({ first_response_enabled: next })
+                  }
+                />
+              )}
+            />
+            <NumberSettingRow
+              label={t("leadHandling.targetMinutes")}
+              description={t("leadHandling.targetHint")}
+              testId="lead-first-response-target"
+              value={settings.first_response_target_minutes}
+              {...TARGET_BOUNDS.first_response_target_minutes}
+              refusal={t("leadHandling.targetOutOfRange")}
+              disabled={
+                !canEdit || !settings.first_response_enabled || update.isPending
+              }
+              onCommit={(minutes) =>
+                update.mutate({ first_response_target_minutes: minutes })
+              }
+            />
+          </SettingList>
+        )}
+      </QueryGate>
+      {/* The same component the two cards above report a refused write with.
+          This card's rows are switches every seat may flip, so no posture. */}
+      {update.isError && (
+        <PanelBody>
+          <VocabNotices error={update.error} />
+        </PanelBody>
+      )}
     </Panel>
   );
 }

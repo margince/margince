@@ -1182,15 +1182,11 @@ export { useScrollRegion } from "./scrollregion";
 /**
  * The box a table too wide for its column scrolls sideways INSIDE.
  *
- * The one spelling of `.table-scroll`. A settings page is 720px wide and a
- * record's finance table is eight columns, so the overflow is a property of the
- * TABLE rather than a knob each page answers for — and the four screens that
- * had each written this wrapper by hand were four chances to forget the part
- * below.
+ * The one spelling of `.table-scroll`: the overflow is a property of the TABLE
+ * rather than a knob each page answers for.
  *
  * Reachability is `useScrollRegion`'s (scrollregion.ts): the tab stop and the
- * name arrive only while the box is actually holding something past its right
- * edge.
+ * name arrive only while the box holds something past its right edge.
  *
  * `label` is what the region is called ("Recent invoices", "Spend by task") and
  * is the caller's to translate. It is required rather than defaulted because a
@@ -1199,17 +1195,21 @@ export { useScrollRegion } from "./scrollregion";
  */
 export function TableScroll({
   label,
+  bleed,
   className,
   children,
-}: Readonly<{ label: string; className?: string; children: ReactNode }>) {
+}: Readonly<{
+  label: string;
+  bleed?: boolean;
+  className?: string;
+  children: ReactNode;
+}>) {
   const box = useRef<HTMLDivElement | null>(null);
   const region = useScrollRegion(box, label);
+  const bleedClass = bleed ? "table-scroll-bleed" : "";
+  const boxClasses = ["table-scroll", bleedClass, className ?? ""];
   return (
-    <div
-      ref={box}
-      className={["table-scroll", className ?? ""].filter(Boolean).join(" ")}
-      {...region}
-    >
+    <div ref={box} className={boxClasses.filter(Boolean).join(" ")} {...region}>
       {children}
     </div>
   );

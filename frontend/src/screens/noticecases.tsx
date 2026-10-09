@@ -44,6 +44,7 @@ import {
   UNRESOLVED_NOTICE_STATES,
 } from "./noticecases.logic";
 import { ExcuseModal, type ExcuseState } from "./noticeexcuse";
+import "./noticecases.css";
 
 // The two facets a privacy officer actually works in. `owed` is the default
 // because the queue exists to show duties nobody has discharged; `all` is there
@@ -353,28 +354,32 @@ function NoticeRow({
         )
       }
       control={
-        canWork ? (
-          <>
-            {mayAssign(row.state) ? (
-              // The control shows the CURRENT owner, not a permanent blank.
-              // A picker that reset itself after every assign would leave the
-              // row saying "Claimed" beside a field naming nobody, and the
-              // reader would have to guess whether their click landed.
-              <Select
-                options={options}
-                value={row.owner_user_id ?? ""}
-                onChange={onAssign}
-                disabled={assignPending || roster.isPending}
-                name={`notice-assign-${row.id}`}
-              />
-            ) : null}
-            {mayExcuse(row.state) ? (
-              <Button variant="ghost" onClick={onExcuse}>
-                {t("notice.excuse")}
-              </Button>
-            ) : null}
-          </>
-        ) : undefined
+        canWork
+          ? ({ id, "aria-describedby": describedBy }) => (
+              <span className="notice-row-actions">
+                {mayAssign(row.state) ? (
+                  // Shows the owner, so an assign names who claimed it.
+                  <Select
+                    id={id}
+                    aria-label={t("notice.ownerOf", {
+                      duty: humanizeToken(row.rule),
+                    })}
+                    aria-describedby={describedBy}
+                    options={options}
+                    value={row.owner_user_id ?? ""}
+                    onChange={onAssign}
+                    disabled={assignPending || roster.isPending}
+                    name={`notice-assign-${row.id}`}
+                  />
+                ) : null}
+                {mayExcuse(row.state) ? (
+                  <Button variant="ghost" onClick={onExcuse}>
+                    {t("notice.excuse")}
+                  </Button>
+                ) : null}
+              </span>
+            )
+          : undefined
       }
     />
   );

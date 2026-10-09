@@ -12,11 +12,18 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { IconAction } from "../design-system/iconaction";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { captureValueMessage } from "./capturevalue";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
@@ -101,40 +108,34 @@ export function OwnerIdentitiesCard() {
     <Panel title={t("ownerIdentities.title")}>
       <PanelBody>
         <PanelIntro>{t("ownerIdentities.sub")}</PanelIntro>
-        <SettingList>
-          <SettingRow
-            label={t("ownerIdentities.addLabel")}
-            description={t("ownerIdentities.addDescription")}
-            control={
-              <Button onClick={() => setDeclaring(true)}>
-                {t("ownerIdentities.add")}
-              </Button>
-            }
+      </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("ownerIdentities.addLabel")}
+          description={t("ownerIdentities.addDescription")}
+          control={
+            <Button onClick={() => setDeclaring(true)}>
+              {t("ownerIdentities.add")}
+            </Button>
+          }
+        />
+      </SettingList>
+      <PanelGroupHead title={t("ownerIdentities.current")} level="h3" />
+      {/* Not retroactive, and the note says so where the reader is deciding. */}
+      <PanelBody>
+        <PanelIntro>{t("ownerIdentities.notRetroactive")}</PanelIntro>
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("ownerIdentities.title")}>
+        {(list) => (
+          <IdentityRows
+            list={list.data}
+            pending={remove.isPending}
+            onRemove={(id) => remove.mutate(id)}
           />
-          {/* Not retroactive, and the row says so where the reader is deciding.
-              Mail already captured under the old reading stays, and a contact
-              already minted from an alias stays until it is merged. */}
-          <SettingRow
-            label={t("ownerIdentities.current")}
-            description={t("ownerIdentities.notRetroactive")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("ownerIdentities.title")}
-              >
-                {(list) => (
-                  <IdentityRows
-                    list={list.data}
-                    pending={remove.isPending}
-                    onRemove={(id) => remove.mutate(id)}
-                  />
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {remove.isError && (
+        )}
+      </QueryGate>
+      {remove.isError && (
+        <PanelBody>
           <Callout
             tone="danger"
             kind="outcome"
@@ -142,9 +143,9 @@ export function OwnerIdentitiesCard() {
           >
             {problemMessageOf(remove.error, t)}
           </Callout>
-        )}
-        {declaring && <DeclareDialog onClose={() => setDeclaring(false)} />}
-      </PanelBody>
+        </PanelBody>
+      )}
+      {declaring && <DeclareDialog onClose={() => setDeclaring(false)} />}
     </Panel>
   );
 }
@@ -201,7 +202,7 @@ function IdentityRows({
     );
   }
   return (
-    <SettingList testId="owner-identities-list">
+    <SettingList bleed="records" testId="owner-identities-list">
       {list.map((identity) => {
         const learned = learnedNote(identity.source);
         return (
@@ -211,14 +212,13 @@ function IdentityRows({
             description={learned === null ? undefined : t(learned)}
             value={t(kindLabel[identity.kind])}
             control={
-              <Button
+              <IconAction
                 variant="ghost"
                 disabled={pending}
-                aria-label={t("ownerIdentities.remove")}
+                label={t("ownerIdentities.remove", { value: identity.value })}
+                icon={<Trash2 aria-hidden />}
                 onClick={() => onRemove(identity.id)}
-              >
-                <Trash2 aria-hidden />
-              </Button>
+              />
             }
           />
         );
@@ -279,7 +279,7 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             kind="outcome"
             title={t("ownerIdentities.addFailed")}
           >
-            {problemMessageOf(add.error, t)}
+            {captureValueMessage(add.error, add.variables?.kind, t)}
           </Callout>
         )}
       </form>

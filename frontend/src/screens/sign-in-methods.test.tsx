@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -39,9 +39,13 @@ function mount(
   allow: GrantSpec = fullSignInGrants,
 ) {
   const calls: unknown[] = [];
+  const refusing = { writes: false, reads: false };
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
       return jsonResponse(meFixture({ allow }));
+    }
+    if (request.method === "PATCH" ? refusing.writes : refusing.reads) {
+      return jsonResponse({ title: "Unavailable", status: 503 }, 503);
     }
     if (request.method === "PATCH") {
       calls.push(JSON.parse(await request.text()));
@@ -69,7 +73,7 @@ function mount(
     </QueryClientProvider>
   );
   render(<SignInMethodsCard />, { wrapper: Wrap });
-  return { calls };
+  return { calls, refusing, qc };
 }
 
 describe("the sign-in methods card", () => {
@@ -117,6 +121,26 @@ describe("the sign-in methods card", () => {
         { enabled_oidc_providers: ["microsoft", "google"] },
       ]),
     );
+  });
+
+  // A failed refetch replaces the switches with the gate's error arm; a save
+  // failure about those switches has nothing left to stand beside.
+  it("drops a save failure once the settings themselves fail to load", async () => {
+    const { refusing, qc } = mount([
+      { key: "google", label: "Google", enabled: true },
+    ]);
+    const user = userEvent.setup();
+    refusing.writes = true;
+    await user.click(await screen.findByRole("switch", { name: /google/i }));
+    expect(await screen.findByText("Change not saved")).toBeTruthy();
+
+    refusing.reads = true;
+    await act(() => qc.refetchQueries());
+
+    expect(
+      await screen.findByText("Could not load this view. Reload the page."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Change not saved")).toBeNull();
   });
 
   // An admin cannot add a provider here, so a deployment with none has nothing

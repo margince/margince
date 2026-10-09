@@ -1093,8 +1093,8 @@ export const vi = {
   "confidence.med": "trung bình",
   "confidence.low": "thấp",
 
-  "autonomy.auto": "tự động",
-  "autonomy.confirm": "duyệt trước",
+  "autonomy.auto": "Tự động",
+  "autonomy.confirm": "Duyệt trước",
 
   "nav.brief": "Trang chủ",
   "nav.contacts": "Liên hệ",
@@ -5485,7 +5485,7 @@ export const vi = {
 
   "agents.connected": "Ứng dụng khách MCP đã kết nối",
   "agents.connectedSub":
-    "Ứng dụng khách MCP có thông tin xác thực riêng, giới hạn trong quyền truy cập đã duyệt",
+    "Ứng dụng khách MCP có thông tin xác thực riêng, giới hạn trong quyền truy cập đã duyệt.",
   "agents.noneConnected": "Chưa có ứng dụng khách MCP nào kết nối.",
   "agents.connectedOn": "đã kết nối {date}",
   "agents.disconnect": "Ngắt kết nối",
@@ -5510,7 +5510,7 @@ export const vi = {
     "Không agent nào có thể kết nối cho đến khi quản trị viên hoặc thành viên Vận hành bật trình kết nối. Passport vẫn dùng được làm thông tin xác thực REST.",
   "settings.token": "Thông tin xác thực",
   "settings.autonomy": "Cấp tự chủ",
-  "settings.autonomySub": "Thao tác nào chạy ngay, thao tác nào chờ duyệt",
+  "settings.autonomySub": "Thao tác nào chạy ngay, thao tác nào chờ duyệt.",
   "settings.tierRead":
     "Đọc, tóm tắt, soạn nháp: chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
@@ -5630,7 +5630,7 @@ export const vi = {
 
   "settings.jobs": "Tác vụ nền",
   "settings.jobsSub":
-    "Tác vụ nền đang chờ xử lý và tác vụ bị lỗi, theo bên sở hữu",
+    "Tác vụ nền đang chờ xử lý và tác vụ bị lỗi, theo bên sở hữu.",
   "jobs.adminOnly":
     "Tình trạng tác vụ nền bao trùm toàn bộ bản cài đặt và cần một quyền mà vai trò hiện tại không có.",
   "jobs.empty":
@@ -5789,7 +5789,7 @@ export const vi = {
   "audit.viaNamed": "qua {client}",
   "audit.noHumanAuthority": "Không ghi nhận người ủy quyền",
   "settings.auditSub":
-    "Mọi hành động, gắn với thành viên, trợ lý AI hoặc trình kết nối",
+    "Mọi hành động, gắn với thành viên, trợ lý AI hoặc trình kết nối.",
   "settings.auditAdminOnly":
     "Vai trò hiện tại không có quyền xem toàn bộ nhật ký hoạt động. Nhật ký ghi lại mọi tác nhân và mọi hồ sơ mà tác nhân đó đã truy cập.",
   "settings.auditFilters": "Bộ lọc",
@@ -5801,11 +5801,11 @@ export const vi = {
   "settings.auditAction": "Hành động",
   "settings.auditFrom": "Từ",
   "settings.auditTo": "Đến",
-  "settings.auditExpand": "Xem chi tiết thay đổi",
+  "settings.auditExpandEntry": "Xem chi tiết thay đổi: {action} trên {entity}",
   "settings.auditRule": "Quy tắc phân quyền",
   "settings.auditOnBehalf": "thay mặt",
   "settings.privacy": "Yêu cầu về quyền riêng tư",
-  "settings.privacySub": "Yêu cầu của chủ thể dữ liệu kèm thời hạn luật định",
+  "settings.privacySub": "Yêu cầu của chủ thể dữ liệu kèm thời hạn luật định.",
   "settings.due": "đến hạn {date}",
 
   "privacy.purposesReadOnly":
@@ -5924,6 +5924,7 @@ export const vi = {
     "Khiếu nại với cơ quan bảo vệ dữ liệu cá nhân của quý khách.",
   "notice.claimed": "Đã nhận",
   "notice.unclaimed": "Chưa ai nhận",
+  "notice.ownerOf": "Phụ trách {duty}",
   "notice.excuse": "Kết thúc mà không gửi",
   "notice.excuseTitle": "Kết thúc nghĩa vụ mà không gửi thông báo",
   "notice.excuseWhich": "Loại lý do",
@@ -6016,7 +6017,7 @@ export const vi = {
   "restricted.pin.confirm": "Ghim và giữ lại",
   "retention.title": "Lưu trữ",
   "retention.sub":
-    "Thời gian lưu trữ từng loại hồ sơ và điều sẽ xảy ra khi hết thời hạn",
+    "Thời gian lưu trữ từng loại hồ sơ và điều sẽ xảy ra khi hết thời hạn.",
   "retention.retainOnly": "Chế độ chỉ lưu trữ",
   "retention.retainOnlyHelp":
     "Khi bật, bản cài đặt này không hủy gì: không ẩn danh hóa và không xóa, bất kể chính sách bên dưới quy định gì. Tác vụ chuyển vào kho lưu trữ vẫn chạy; hồ sơ trong kho lưu trữ được giữ lại, không bị hủy.",
@@ -6831,7 +6832,7 @@ export const vi = {
   "consumerMail.kind.never": "Tên miền công ty, ghi đè danh sách có sẵn",
   "consumerMail.add": "Thêm",
   "consumerMail.addOpen": "Thêm tên miền",
-  "consumerMail.remove": "Gỡ",
+  "consumerMail.remove": "Gỡ {domain}",
   "consumerMail.none":
     "Chưa thêm tên miền nào. Danh sách có sẵn áp dụng cho mọi tên miền.",
   "consumerMail.adminOnly": "Bạn không có quyền thay đổi danh sách này.",
@@ -8183,8 +8184,8 @@ export const vi = {
   "knowledge.deleteConfirm.body":
     "Tệp, văn bản trích xuất và chỉ mục tìm kiếm của tệp sẽ bị xóa vĩnh viễn.",
   "knowledge.ingest.queued": "Đang chờ xử lý",
-  "knowledge.ingest.running": "Đang lập chỉ mục…",
-  "knowledge.ingest.done": "Tìm kiếm được",
+  "knowledge.ingest.running": "Đang nhập…",
+  "knowledge.ingest.done": "Đã nhập",
   "knowledge.ingest.failed": "Không thể đọc",
   "knowledge.ingestDetailTitle": "Lý do không thể đọc tệp này",
   "knowledge.upload.label": "Thêm tài liệu",
@@ -9059,6 +9060,8 @@ export const vi = {
   "aicalls.empty": "Chưa ghi nhận lượt gọi AI nào.",
   "aicalls.detail.identity":
     "Mô hình phục vụ: {served} qua {provider} (đã cấu hình: {configured})",
+  "aicalls.detail.identityNoModel":
+    "Mô hình phục vụ: {served} qua {provider} (chưa cấu hình mô hình)",
   "aicalls.detail.source": "Nguồn danh tính phục vụ: {source}",
   "aicalls.detail.context": "Ngữ cảnh đưa vào: {scopes}",
   "aicalls.detail.contextNone": "Không đưa ngữ cảnh công ty vào",
@@ -9672,7 +9675,7 @@ export const vi = {
   "ownerIdentities.notRetroactive":
     "Áp dụng từ thư tiếp theo. Thư đã thu thập vẫn giữ nguyên, và liên hệ đã tạo từ bí danh vẫn còn cho đến khi bạn gộp hoặc gỡ liên hệ đó.",
   "ownerIdentities.empty": "Chưa thêm địa chỉ nào khác.",
-  "ownerIdentities.remove": "Gỡ địa chỉ",
+  "ownerIdentities.remove": "Gỡ {value}",
   "ownerIdentities.added": "Đã thêm địa chỉ",
   "ownerIdentities.confirm": "Thêm",
   "ownerIdentities.kindLabel": "Loại",
@@ -9687,6 +9690,9 @@ export const vi = {
   "ownerIdentities.removeFailed": "Không thể gỡ địa chỉ",
   "ownerIdentities.addFailed": "Không thể thêm địa chỉ",
   "ownerIdentities.domainPlaceholder": "vidu.com",
+  "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
+  "captureValue.refusedDomain":
+    "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
   "captureExclusions.scope.user": "Hộp thư của bạn",
   "captureExclusions.scope.workspace": "Cả công ty",
   "captureExclusions.kind.address": "Địa chỉ",
@@ -12102,7 +12108,7 @@ export const vi = {
     "Bật một bước chuyển không làm deal bắt đầu tự chuyển. Margince vẫn hỏi cho đến khi thành tích ở trên đạt ngưỡng, rồi tự động áp dụng bước chuyển.",
   "stageAutomation.offTitle": "Tự động chuyển giai đoạn đang tắt",
   "stageAutomation.offBody":
-    "Khi tính năng này tắt, không deal nào tự chuyển, bất kể bước chuyển bên dưới được thiết lập thế nào. Quản trị viên bật tính năng này cho toàn bộ bản cài đặt trong phần cài đặt tự động chuyển giai đoạn.",
+    "Khi tính năng này tắt, không deal nào tự chuyển, bất kể bước chuyển bên dưới được thiết lập thế nào. Bên vận hành bản cài đặt này bật tính năng trong cấu hình của bản cài đặt.",
   "stageAutomation.modeHint":
     "Khi bật và thành tích đạt yêu cầu, Margince chuyển deal rồi báo cho bạn sau.",
   "stageAutomation.notEarnedYet": "Chưa đạt: {why}",

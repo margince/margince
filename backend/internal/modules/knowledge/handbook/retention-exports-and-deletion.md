@@ -182,7 +182,7 @@ Only an **Admin** or **Ops** user can change retention. Everyone else cannot eve
 
 ## Privacy requests
 
-The list of privacy requests, **Settings → Privacy and retention → Privacy requests**, holds "Data subject requests with their statutory deadlines". Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
+The list of privacy requests, **Settings → Privacy and retention → Privacy requests**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
 
 A request has a kind (access, rectify or erasure), a subject, an assignee, a due date, and a resolution. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Once set, an assignee cannot be cleared.
 
@@ -263,7 +263,7 @@ Agents cannot write consent at all; see [What the AI does](what-the-ai-does.md).
 
 ## The audit trail
 
-The audit trail, **Settings → Audit log**, records "Every action, attributed to a user, agent or connector".
+The audit trail, **Settings → Audit log**, records "Every action, attributed to a user, agent or connector."
 
 You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
 

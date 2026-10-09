@@ -337,41 +337,41 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
       <PanelBody className="pipeline-detail">
         {retired && <PanelIntro>{t("pipeline.retiredNote")}</PanelIntro>}
         <StageLadderEditor pipeline={pipeline} canEdit={canEdit} />
-        {(retired ? canEdit : canRetire) && (
-          <SettingList>
-            <SettingRow
-              label={retired ? t("pipeline.restore") : t("pipeline.retire")}
-              description={
-                retired ? undefined : (
-                  <>
-                    {t("pipeline.retireNote")}
-                    {/* Why the verb is refused sits in the description, which
-                        wraps; the control column is sized to its content. */}
-                    {pipeline.is_default && (
-                      <>
-                        {" "}
-                        <span id={retireBlockedId}>
-                          {t("pipeline.retireBlocked")}
-                        </span>
-                      </>
-                    )}
-                  </>
-                )
-              }
-              control={
-                <span className="pipeline-standing">
-                  <PipelineRetirement
-                    pipeline={pipeline}
-                    canRetire={canRetire}
-                    canRestore={canEdit}
-                    blockedReasonId={retireBlockedId}
-                  />
-                </span>
-              }
-            />
-          </SettingList>
-        )}
       </PanelBody>
+      {(retired ? canEdit : canRetire) && (
+        <SettingList bleed="settings">
+          <SettingRow
+            label={retired ? t("pipeline.restore") : t("pipeline.retire")}
+            description={
+              retired ? undefined : (
+                <>
+                  {t("pipeline.retireNote")}
+                  {/* Why the verb is refused sits in the description, which
+                      wraps; the control column is sized to its content. */}
+                  {pipeline.is_default && (
+                    <>
+                      {" "}
+                      <span id={retireBlockedId}>
+                        {t("pipeline.retireBlocked")}
+                      </span>
+                    </>
+                  )}
+                </>
+              )
+            }
+            control={
+              <span className="pipeline-standing">
+                <PipelineRetirement
+                  pipeline={pipeline}
+                  canRetire={canRetire}
+                  canRestore={canEdit}
+                  blockedReasonId={retireBlockedId}
+                />
+              </span>
+            }
+          />
+        </SettingList>
+      )}
     </Panel>
   );
 }

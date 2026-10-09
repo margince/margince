@@ -86,19 +86,13 @@ function render(node: ReactNode) {
   );
 }
 
-// One settings row, by the id it names itself with: an assertion that counted
-// rows would pass for the wrong reason the moment a row is reordered.
-function rowOf(testId: string): Promise<HTMLElement> {
-  return screen.findByTestId(testId);
-}
-
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
 describe("OwnDomainsCard", () => {
-  it("keeps the company-claimed domains and the managed ones in separate rows", async () => {
+  it("keeps the company-claimed domains and the managed ones in separate groups", async () => {
     const { fetchMock } = backendFor(CAPTURE_EDITOR, {
       anchors: ["brandt-automotive.de"],
       domains: [{ domain: "brandt.de", source: "admin", verified: true }],
@@ -107,21 +101,21 @@ describe("OwnDomainsCard", () => {
 
     render(<OwnDomainsCard />);
 
-    const company = await rowOf("own-domains-company-row");
-    expect(within(company).getByText(/company domains/i)).toBeTruthy();
+    const company = await screen.findByTestId("own-domains-from-company");
+    expect(
+      screen.getByRole("heading", { name: en["ownDomains.companyTitle"] }),
+    ).toBeTruthy();
     expect(within(company).getByText("brandt-automotive.de")).toBeTruthy();
-    // Read-only means read-only: nothing in this row offers to change a list
+    // Read-only means read-only: nothing in this list offers to change a list
     // the company profile owns.
     expect(within(company).queryByRole("button")).toBeNull();
     expect(within(company).queryByRole("textbox")).toBeNull();
 
-    const managed = await rowOf("own-domains-curated-row");
-    expect(within(managed).getByText(/managed here/i)).toBeTruthy();
-    // The note about what registering a domain does travels with the row that
-    // offers the acts it describes.
+    const managed = await screen.findByTestId("own-domains-list");
     expect(
-      within(managed).getByText(/applies from the next message/i),
+      screen.getByRole("heading", { name: en["ownDomains.curatedTitle"] }),
     ).toBeTruthy();
+    expect(screen.getByText(en["ownDomains.irreversible"])).toBeTruthy();
     expect(
       within(managed).getByRole("button", { name: /remove brandt\.de/i }),
     ).toBeTruthy();
@@ -134,16 +128,19 @@ describe("OwnDomainsCard", () => {
     expect(screen.queryByLabelText(/add own domain/i)).toBeNull();
   });
 
-  it("shows no company row when the company profile claims no domain", async () => {
+  it("shows no company group when the company profile claims no domain", async () => {
     const { fetchMock } = backendFor(CAPTURE_EDITOR);
     vi.stubGlobal("fetch", fetchMock);
 
     render(<OwnDomainsCard />);
 
-    // The empty managed list still states itself; a row whose whole content
+    // The empty managed list still states itself; a group whose whole content
     // would be an empty read-only list says nothing worth naming.
     expect(await screen.findByTestId("own-domains-empty")).toBeTruthy();
-    expect(screen.queryByTestId("own-domains-company-row")).toBeNull();
+    expect(screen.queryByTestId("own-domains-from-company")).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: en["ownDomains.companyTitle"] }),
+    ).toBeNull();
   });
 
   it("adds a domain through the dialog the add verb opens", async () => {

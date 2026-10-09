@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   Badge,
   Button,
@@ -10,6 +11,7 @@ import {
   Field,
   TextInput,
 } from "./atoms";
+import { DataTable } from "./datatable";
 import {
   Panel,
   PanelBody,
@@ -447,6 +449,114 @@ export const InteractiveRows: Story = {
         <PanelRow>Weighted against the open pipeline</PanelRow>
       </>
     ),
+  },
+};
+
+// `record`: one row per thing, so its rule reaches the pane's edges and it
+// takes a table row's hover whether or not it is pressable.
+export const RecordRows: Story = {
+  args: {
+    title: "Model tiers",
+    children: (
+      <>
+        <PanelBody>
+          <PanelIntro>Which model answers at each depth of work.</PanelIntro>
+        </PanelBody>
+        <PanelRow record>Fast — triage and short drafts</PanelRow>
+        <PanelRow record>Balanced — replies and summaries</PanelRow>
+        <PanelRow record>Deep — account reviews</PanelRow>
+      </>
+    ),
+  },
+};
+
+type Member = Readonly<{ name: string; role: string; seen: string }>;
+
+const MEMBERS: Member[] = [
+  { name: "Lena Fischer", role: "Administrator", seen: "Today" },
+  { name: "Bernd Kral", role: "Sales rep", seen: "Yesterday" },
+];
+
+function textX(element: Element): number {
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  return range.getBoundingClientRect().left;
+}
+
+// The three lists that bleed, each under an intro: the first row's text stands
+// at the intro's x while its row spans the pane.
+export const BleedListsLineUp: StoryObj = {
+  render: () => (
+    <div style={{ display: "grid", gap: "var(--space-4)" }}>
+      <Panel title="Members">
+        <PanelBody>
+          <PanelIntro>Everyone who can sign in to this workspace.</PanelIntro>
+        </PanelBody>
+        <DataTable
+          bleed
+          label="Members"
+          columns={[
+            { key: "name", header: "Name", render: (row: Member) => row.name },
+            { key: "role", header: "Role", render: (row: Member) => row.role },
+            {
+              key: "seen",
+              header: "Last seen",
+              render: (row: Member) => row.seen,
+            },
+          ]}
+          rows={MEMBERS}
+          rowKey={(row) => row.name}
+        />
+        <PanelBody>
+          <PanelIntro>An invitation expires after seven days.</PanelIntro>
+        </PanelBody>
+      </Panel>
+      <Panel title="Roles">
+        <PanelBody>
+          <PanelIntro>What each role may read and change.</PanelIntro>
+        </PanelBody>
+        <SettingList bleed="records">
+          <SettingRow
+            label="Administrator"
+            description="Every setting and every record."
+            control={<Button variant="ghost">Edit</Button>}
+          />
+          <SettingRow
+            label="Sales rep"
+            description="Their own deals and the accounts on them."
+            control={<Button variant="ghost">Edit</Button>}
+          />
+        </SettingList>
+      </Panel>
+      <Panel title="Model tiers">
+        <PanelBody>
+          <PanelIntro>Which model answers at each depth of work.</PanelIntro>
+        </PanelBody>
+        <PanelRow record>Fast — triage and short drafts</PanelRow>
+        <PanelRow record>Deep — account reviews</PanelRow>
+      </Panel>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Everyone who can sign in to this workspace.");
+    const panels = [...canvasElement.querySelectorAll(".panel")];
+    expect(panels).toHaveLength(3);
+    for (const panel of panels) {
+      const intro = panel.querySelector(".panel-intro");
+      const row = panel.querySelector(
+        "tbody tr, .settinglist > .settingrow, .panel-row",
+      );
+      const text = panel.querySelector(
+        "tbody td, .settingrow .t-name, .panel-row",
+      );
+      if (!intro || !row || !text) throw new Error("a bleed panel lost a part");
+      expect(textX(text)).toBeCloseTo(textX(intro), 0);
+      expect(row.getBoundingClientRect().width).toBeCloseTo(
+        panel.clientWidth,
+        0,
+      );
+    }
   },
 };
 

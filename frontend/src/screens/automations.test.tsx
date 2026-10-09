@@ -325,11 +325,11 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     if (confirmationRequired && autoExecute) {
       expect(
         within(confirmationRequired).getByRole("img", {
-          name: "approval first",
+          name: "Approval first",
         }),
       ).toBeTruthy();
       expect(
-        within(autoExecute).getByRole("img", { name: "automatic" }),
+        within(autoExecute).getByRole("img", { name: "Automatic" }),
       ).toBeTruthy();
     }
   });

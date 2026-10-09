@@ -182,3 +182,46 @@ describe("SettingList", () => {
     );
   });
 });
+
+describe("SettingList bleed", () => {
+  it("stays an inset list unless the caller opts in", () => {
+    render(<SettingList testId="list">{null}</SettingList>);
+    expect(screen.getByTestId("list").className).toBe("settinglist");
+  });
+
+  it("spans the pane as a form with no hover", () => {
+    render(
+      <SettingList testId="list" bleed="settings">
+        {null}
+      </SettingList>,
+    );
+    expect(screen.getByTestId("list").className).toBe(
+      "settinglist settinglist-bleed",
+    );
+  });
+
+  it("spans the pane as a list of records with a row hover", () => {
+    render(
+      <SettingList testId="list" bleed="records">
+        {null}
+      </SettingList>,
+    );
+    expect(screen.getByTestId("list").className).toBe(
+      "settinglist settinglist-bleed settinglist-records",
+    );
+  });
+
+  // Keyed on standing straight in a Panel. A bleed list left inside a PanelBody
+  // stays put instead of paying the pane's padding twice.
+  it("pads a bleeding row to the pane, and hovers only a record row", () => {
+    const css = settingRowCss().replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css).toMatch(
+      /\.panel > \.settinglist-bleed > :not\(\.empty, \.callout\)\s*\{\s*padding-inline:\s*var\(--padPanel\);/,
+    );
+    const hovers = [...css.matchAll(/([^{}]*:hover)\s*\{([^}]*)\}/g)];
+    expect(hovers.map(([, selector]) => selector.trim())).toEqual([
+      ".panel > .settinglist-records > .settingrow:hover",
+    ]);
+    expect(hovers[0][2]).toMatch(/background:\s*var\(--bgHover\)/);
+  });
+});

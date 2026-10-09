@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -7,7 +8,7 @@ import { Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatMoney, formatNumber } from "../format/format";
+import { formatMoney, formatNumber, monthAndYear } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { tierLabel } from "./ai-decision-labels";
 import { useRouting } from "./ai-routing-query";
@@ -218,23 +219,25 @@ function AiUsageBody({
     <SettingList>
       <SettingRow
         label={t("aiusage.monthLabel")}
+        value={monthAndYear(new Date(`${month.from}T00:00`), locale)}
         control={
-          // The two arrows keep their own names: a glyph announces as nothing,
-          // and the row's label says which decision this is, not which way each
-          // button moves it.
+          // The two arrows keep their own names. An icon announces as nothing,
+          // and the row's label names the decision, not which way each moves.
           <>
             <Button
+              iconOnly
               aria-label={t("aiusage.prevMonth")}
               onClick={() => onMonth(adjacentMonth(month, -1))}
             >
-              ‹
+              <ChevronLeft aria-hidden="true" />
             </Button>
             <Button
+              iconOnly
               aria-label={t("aiusage.nextMonth")}
               disabled={isCurrentMonth(month)}
               onClick={() => onMonth(adjacentMonth(month, 1))}
             >
-              ›
+              <ChevronRight aria-hidden="true" />
             </Button>
           </>
         }

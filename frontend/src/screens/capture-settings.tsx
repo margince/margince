@@ -77,68 +77,57 @@ export function CaptureSettingsCard() {
   // description leads the body instead of riding in the header.
   return (
     <Panel title={t("captureSettings.title")}>
-      {/* `form-stack` still earns its place: the failure Callout below the list
-          is a non-row child, and without the body's gap it would butt against
-          the last row's hairline. `.panel-intro`'s own interval is
-          already corrected for a `.form-stack` body, so the description lands
-          on the same 16px it does in a plain one. */}
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("captureSettings.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("captureSettings.title")}>
-          {(settings) => (
-            <SettingList>
-              {/* The row draws the naming — what the setting is, and what it
-                  does — so the switch carries the same words hidden: it owns
-                  its own accessible name by design, and pointing it at the
-                  row's label as well would name it twice. */}
-              <SettingRow
-                label={t("captureSettings.autoEnrich.label")}
-                description={t("captureSettings.autoEnrich.help")}
-                control={
-                  <Switch
-                    testId="capture-auto-enrich-toggle"
-                    label={t("captureSettings.autoEnrich.label")}
-                    labelHidden
-                    // Two reasons, and only one of them is worth words: a
-                    // caller who may never change this needs to know why,
-                    // where a write already in flight explains itself by
-                    // finishing.
-                    reason={
-                      canManage ? undefined : t("captureSettings.adminOnly")
-                    }
-                    checked={settings.auto_enrich}
-                    disabled={!canManage || update.isPending}
-                    onChange={(next) => update.mutate({ auto_enrich: next })}
-                  />
-                }
-              />
-              {/* The workspace DEFAULT, and the description says so: a mailbox
-                  that set its own switch keeps it, so this row is not the whole
-                  answer for every connection and must not read as though it
-                  were. */}
-              <SettingRow
-                label={t("captureSettings.signatureEnrich.label")}
-                description={t("captureSettings.signatureEnrich.help")}
-                control={
-                  <Switch
-                    testId="capture-signature-enrich-toggle"
-                    label={t("captureSettings.signatureEnrich.label")}
-                    labelHidden
-                    reason={
-                      canManage ? undefined : t("captureSettings.adminOnly")
-                    }
-                    checked={settings.signature_enrich}
-                    disabled={!canManage || update.isPending}
-                    onChange={(next) =>
-                      update.mutate({ signature_enrich: next })
-                    }
-                  />
-                }
-              />
-            </SettingList>
-          )}
-        </QueryGate>
-        {update.isError && (
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("captureSettings.title")}>
+        {(settings) => (
+          <SettingList bleed="settings">
+            {/* The switch carries its own hidden label; pointing it at the
+                row's label too would name it twice. */}
+            <SettingRow
+              label={t("captureSettings.autoEnrich.label")}
+              description={t("captureSettings.autoEnrich.help")}
+              control={
+                <Switch
+                  testId="capture-auto-enrich-toggle"
+                  label={t("captureSettings.autoEnrich.label")}
+                  labelHidden
+                  // A write in flight explains itself by finishing; only a
+                  // caller who may never change this needs words.
+                  reason={
+                    canManage ? undefined : t("captureSettings.adminOnly")
+                  }
+                  checked={settings.auto_enrich}
+                  disabled={!canManage || update.isPending}
+                  onChange={(next) => update.mutate({ auto_enrich: next })}
+                />
+              }
+            />
+            {/* The workspace default: a mailbox that set its own switch
+                keeps it, which the description says. */}
+            <SettingRow
+              label={t("captureSettings.signatureEnrich.label")}
+              description={t("captureSettings.signatureEnrich.help")}
+              control={
+                <Switch
+                  testId="capture-signature-enrich-toggle"
+                  label={t("captureSettings.signatureEnrich.label")}
+                  labelHidden
+                  reason={
+                    canManage ? undefined : t("captureSettings.adminOnly")
+                  }
+                  checked={settings.signature_enrich}
+                  disabled={!canManage || update.isPending}
+                  onChange={(next) => update.mutate({ signature_enrich: next })}
+                />
+              }
+            />
+          </SettingList>
+        )}
+      </QueryGate>
+      {update.isError && (
+        <PanelBody>
           <Callout
             tone="danger"
             kind="outcome"
@@ -146,8 +135,8 @@ export function CaptureSettingsCard() {
           >
             {problemMessageOf(update.error, t)}
           </Callout>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
     </Panel>
   );
 }
@@ -207,31 +196,33 @@ export function WebsiteReadingCard() {
   const locked = !canManage || update.isPending;
   return (
     <Panel title={t("captureReading.title")}>
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("captureReading.sub")}</PanelIntro>
         {!canManage && (
           <PanelIntro>{t("captureSettings.adminOnly")}</PanelIntro>
         )}
-        <QueryGate query={query} pendingLabel={t("captureReading.title")}>
-          {(settings) => (
-            <SettingList>
-              {READ_ROWS.map((row) => (
-                <NumberSettingRow
-                  key={row.property}
-                  label={t(`captureReading.${row.copy}.label`)}
-                  description={t(`captureReading.${row.copy}.help`)}
-                  testId={row.testId}
-                  value={row.value(settings)}
-                  {...READ_LIMITS[row.property]}
-                  refusal={t(`captureReading.${row.copy}.refusal`)}
-                  disabled={locked}
-                  onCommit={(next) => update.mutate({ [row.property]: next })}
-                />
-              ))}
-            </SettingList>
-          )}
-        </QueryGate>
-        {update.isError && (
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("captureReading.title")}>
+        {(settings) => (
+          <SettingList bleed="settings">
+            {READ_ROWS.map((row) => (
+              <NumberSettingRow
+                key={row.property}
+                label={t(`captureReading.${row.copy}.label`)}
+                description={t(`captureReading.${row.copy}.help`)}
+                testId={row.testId}
+                value={row.value(settings)}
+                {...READ_LIMITS[row.property]}
+                refusal={t(`captureReading.${row.copy}.refusal`)}
+                disabled={locked}
+                onCommit={(next) => update.mutate({ [row.property]: next })}
+              />
+            ))}
+          </SettingList>
+        )}
+      </QueryGate>
+      {update.isError && (
+        <PanelBody>
           <Callout
             tone="danger"
             kind="outcome"
@@ -239,8 +230,8 @@ export function WebsiteReadingCard() {
           >
             {problemMessageOf(update.error, t)}
           </Callout>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
     </Panel>
   );
 }
@@ -259,30 +250,32 @@ export function MailSyncCard() {
   const update = useUpdateCaptureSettings();
   return (
     <Panel title={t("captureMailSync.title")}>
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("captureMailSync.sub")}</PanelIntro>
         {!canManage && (
           <PanelIntro>{t("captureSettings.adminOnly")}</PanelIntro>
         )}
-        <QueryGate query={query} pendingLabel={t("captureMailSync.title")}>
-          {(settings) => (
-            <SettingList>
-              <NumberSettingRow
-                label={t("captureMailSync.interval.label")}
-                description={t("captureMailSync.interval.help")}
-                testId="capture-mail-sync"
-                value={settings.mail_sync_interval_seconds}
-                {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
-                refusal={t("captureMailSync.interval.refusal")}
-                disabled={!canManage || update.isPending}
-                onCommit={(next) =>
-                  update.mutate({ mail_sync_interval_seconds: next })
-                }
-              />
-            </SettingList>
-          )}
-        </QueryGate>
-        {update.isError && (
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("captureMailSync.title")}>
+        {(settings) => (
+          <SettingList bleed="settings">
+            <NumberSettingRow
+              label={t("captureMailSync.interval.label")}
+              description={t("captureMailSync.interval.help")}
+              testId="capture-mail-sync"
+              value={settings.mail_sync_interval_seconds}
+              {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
+              refusal={t("captureMailSync.interval.refusal")}
+              disabled={!canManage || update.isPending}
+              onCommit={(next) =>
+                update.mutate({ mail_sync_interval_seconds: next })
+              }
+            />
+          </SettingList>
+        )}
+      </QueryGate>
+      {update.isError && (
+        <PanelBody>
           <Callout
             tone="danger"
             kind="outcome"
@@ -290,8 +283,8 @@ export function MailSyncCard() {
           >
             {problemMessageOf(update.error, t)}
           </Callout>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
     </Panel>
   );
 }

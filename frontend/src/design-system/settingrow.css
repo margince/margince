@@ -239,6 +239,23 @@
   margin-top: var(--space-2);
 }
 
+/* bleed: a list standing straight in a Panel spans the pane, and each row keeps
+ * the pane's padding inside it so its text lines up with a PanelBody's. */
+.panel > .settinglist-bleed > :not(.empty, .callout) {
+  padding-inline: var(--padPanel);
+}
+.panel > .settinglist-bleed > :is(.empty, .callout) {
+  margin-inline: var(--padPanel);
+}
+
+/* bleed="records": one row per thing, so a row takes a table row's hover. */
+.panel > .settinglist-records > .settingrow {
+  transition: background-color var(--dur-state) var(--ease-out);
+}
+.panel > .settinglist-records > .settingrow:hover {
+  background: var(--bgHover);
+}
+
 /* Narrow viewport: the two columns become one. A right-aligned control in a
  * 320px column leaves the label with three words per line, so the row gives up
  * the alignment before it gives up the reading. */

@@ -146,20 +146,26 @@ export function TiersTable({
         />
       ))}
       {onAddDecisions && (
-        <PanelRow>
+        <PanelRow record className="ai-tier-row">
           <div
             data-testid="ai-routing-decisions"
             className={tierLineClass(health !== undefined)}
           >
             {health && <span />}
-            <span className="ai-tier-name">{DECISIONS}</span>
-            <span className="t-sub">{t("aiRouting.decisions.absent")}</span>
-            <Button
-              onClick={onAddDecisions}
-              reason={canManage ? undefined : t("aiRouting.adminOnly")}
-            >
-              {t("aiRouting.decisions.add")}
-            </Button>
+            <span className="ai-tier-who">
+              <span className="ai-tier-name">{DECISIONS}</span>
+            </span>
+            <span className="ai-tier-binding t-sub">
+              {t("aiRouting.decisions.absent")}
+            </span>
+            <span className="ai-tier-actions">
+              <Button
+                onClick={onAddDecisions}
+                reason={canManage ? undefined : t("aiRouting.adminOnly")}
+              >
+                {t("aiRouting.decisions.add")}
+              </Button>
+            </span>
           </div>
         </PanelRow>
       )}
@@ -213,7 +219,7 @@ function TierLine({
     : [price];
   const gloss = laneGloss(lane.name, t);
   return (
-    <PanelRow>
+    <PanelRow record className="ai-tier-row">
       <div
         data-testid={lane.testId ?? `ai-routing-tier-${lane.name}`}
         className={tierLineClass(health !== undefined)}

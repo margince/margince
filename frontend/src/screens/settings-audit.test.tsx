@@ -14,6 +14,9 @@ import { auditEntry, jsonResponse, render } from "./settings.testkit";
 // honest witness that a typed filter narrowed the question, and a change detail
 // that stays folded away until a reader asks for it.
 
+// The fixture entry's toggle, named by its action and entity.
+const EXPAND_UPDATE = "Show change detail: update on contact";
+
 // No shared fetch stub: the backend a claim needs is installed beside the claim,
 // so what answered it is readable where it is asserted.
 beforeEach(() => {
@@ -27,7 +30,7 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-function auditLogBackend() {
+function auditLogBackend(entries: readonly object[] = [auditEntry]) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     // `AuditLogCard` gates itself on `audit_log:read`, which is what
@@ -41,7 +44,7 @@ function auditLogBackend() {
     }
     if (url.includes("/audit-log")) {
       return jsonResponse({
-        data: [auditEntry],
+        data: entries,
         page: { next_cursor: null, has_more: false },
       });
     }
@@ -173,6 +176,20 @@ describe("AuditLogCard", () => {
     expect(screen.getByLabelText("Actor")).toBeInTheDocument();
   });
 
+  it("names the row its toggle opens, and points at a region in the document", async () => {
+    vi.stubGlobal("fetch", auditLogBackend());
+    render(<AuditLogCard />);
+    const user = userEvent.setup();
+    const toggle = await screen.findByRole("button", { name: EXPAND_UPDATE });
+
+    for (const expanded of ["false", "true"]) {
+      expect(toggle).toHaveAttribute("aria-expanded", expanded);
+      const controls = toggle.getAttribute("aria-controls") ?? "";
+      expect(document.getElementById(controls)).not.toBeNull();
+      await user.click(toggle);
+    }
+  });
+
   it("keeps the before/after diff hidden until the row is expanded", async () => {
     vi.stubGlobal("fetch", auditLogBackend());
     render(<AuditLogCard />);
@@ -183,9 +200,7 @@ describe("AuditLogCard", () => {
     expect(screen.queryByText("qualified")).toBeNull();
     expect(screen.queryByText("An agent")).toBeNull();
 
-    await user.click(
-      screen.getByRole("button", { name: "Show change detail" }),
-    );
+    await user.click(screen.getByRole("button", { name: EXPAND_UPDATE }));
 
     expect(await screen.findByText("new")).toBeTruthy();
     expect(screen.getByText("qualified")).toBeTruthy();
@@ -238,12 +253,39 @@ describe("AuditLogCard", () => {
     render(<AuditLogCard />);
     await screen.findByText("update");
 
-    await user.click(
-      screen.getByRole("button", { name: "Show change detail" }),
-    );
+    await user.click(screen.getByRole("button", { name: EXPAND_UPDATE }));
 
     expect(await screen.findByText('{"city":"Berlin"}')).toBeTruthy();
     expect(screen.getByText('{"city":"Munich"}')).toBeTruthy();
     expect(screen.queryByText("[object Object]")).toBeNull();
   });
+
+  it.each([
+    ["the resolved name", { on_behalf_of_name: "Anna Weber" }, "Anna Weber"],
+    ["a stand-in when no name resolved", {}, "Unknown member"],
+    [
+      "the viewer as You",
+      { on_behalf_of: "00000000-0000-4000-8000-000000000001" },
+      "You",
+    ],
+  ])(
+    "names the human authority in the change detail as %s, never the uuid",
+    async (_case, fields, expected) => {
+      const entry = { ...auditEntry, ...fields };
+      vi.stubGlobal("fetch", auditLogBackend([entry]));
+      const user = userEvent.setup();
+      render(<AuditLogCard />);
+      await screen.findByText("update");
+
+      await user.click(screen.getByRole("button", { name: EXPAND_UPDATE }));
+
+      const onBehalf = await screen.findByText(
+        (_text, element) =>
+          element?.classList.contains("t-caption") === true &&
+          element.textContent?.startsWith("on behalf of") === true,
+      );
+      expect(onBehalf).toHaveTextContent(`on behalf of ${expected}`);
+      expect(onBehalf).not.toHaveTextContent(entry.on_behalf_of);
+    },
+  );
 });

@@ -92,29 +92,25 @@ export function ModelPricesCard() {
       <QueryGate query={query} pendingLabel={t("aiPriceSync.title")}>
         {(state) => (
           <>
+            <SettingList bleed="settings">
+              <SettingRow
+                label={t("aiPriceSync.autoSync.label")}
+                description={t("aiPriceSync.autoSync.help")}
+                control={(props) => (
+                  <Switch
+                    describedBy={props["aria-describedby"]}
+                    testId="ai-price-sync-auto"
+                    label={t("aiPriceSync.autoSync.label")}
+                    labelHidden
+                    reason={canManage ? undefined : t("aiPriceSync.adminOnly")}
+                    checked={state.auto_sync}
+                    pending={setAutoSync.isPending}
+                    onChange={(next) => setAutoSync.mutate({ autoSync: next })}
+                  />
+                )}
+              />
+            </SettingList>
             <PanelBody className="form-stack">
-              <SettingList>
-                <SettingRow
-                  label={t("aiPriceSync.autoSync.label")}
-                  description={t("aiPriceSync.autoSync.help")}
-                  control={(props) => (
-                    <Switch
-                      describedBy={props["aria-describedby"]}
-                      testId="ai-price-sync-auto"
-                      label={t("aiPriceSync.autoSync.label")}
-                      labelHidden
-                      reason={
-                        canManage ? undefined : t("aiPriceSync.adminOnly")
-                      }
-                      checked={state.auto_sync}
-                      pending={setAutoSync.isPending}
-                      onChange={(next) =>
-                        setAutoSync.mutate({ autoSync: next })
-                      }
-                    />
-                  )}
-                />
-              </SettingList>
               <p className="t-caption">{t("aiPriceSync.sources")}</p>
               <LastSynced run={state.last_run} />
               {refresh.error ? <ErrorLine error={refresh.error} /> : null}
@@ -125,7 +121,7 @@ export function ModelPricesCard() {
             {state.last_run?.report.providers
               .filter((p) => !QUIET.has(p.outcome))
               .map((p) => (
-                <PanelRow key={p.provider}>
+                <PanelRow record key={p.provider}>
                   <div className="ai-price-sync-line">
                     <span>{providerName(p.provider, t)}</span>
                     <ProviderRefreshLine line={p} />

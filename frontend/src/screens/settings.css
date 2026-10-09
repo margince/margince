@@ -64,6 +64,10 @@
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
+/* Opening a body of its own under a list, the body's padding is the interval. */
+.panel-body > :is(.settings-panel-commit, .settings-danger-result):first-child {
+  margin-top: 0;
+}
 
 /* The one panel that announces its own danger: the red border is what separates
    a destructive surface from the ordinary settings around it. */

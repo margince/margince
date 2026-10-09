@@ -17,6 +17,7 @@ import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack } from "./booking-common";
 import { QueryGate, throwProblem } from "./common";
 import { useSchedulingProfile } from "./scheduling-profile-query";
+import "./booking-profile.css";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
@@ -193,11 +194,13 @@ function BookingIdentity({ profile }: Readonly<{ profile: Profile }>) {
           key: "company",
           term: t("scheduling.brand"),
           value: company ? (
-            <CompanyLogo
-              name={company}
-              src={profile.logo_url}
-              fallback={company}
-            />
+            <span className="booking-brand-mark">
+              <CompanyLogo
+                name={company}
+                src={profile.logo_url}
+                fallback={company}
+              />
+            </span>
           ) : (
             t("field.unset")
           ),

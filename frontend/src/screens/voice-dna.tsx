@@ -117,26 +117,21 @@ export function VoiceDnaCard() {
             <PanelBody>
               <PanelIntro>{t("settings.voice.intro")}</PanelIntro>
               <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
-              {/* The first sample is what MINTS the profile, so the control
-                  that adds it asks for the create grant rather than the update
-                  one every later sample rides on. Withheld rather than absent:
-                  an empty card with no way to start reads as a feature this
-                  installation does not have, when the truth is a seat that may
-                  not use it. */}
-              {canCreate ? (
-                <SettingList>
-                  <VoiceCorpusIntake
-                    first
-                    profileId={null}
-                    onChanged={() =>
-                      qc.invalidateQueries({ queryKey: ["voice-profile"] })
-                    }
-                  />
-                </SettingList>
-              ) : (
-                <p>{t("settings.voice.readOnly")}</p>
-              )}
+              {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
             </PanelBody>
+            {/* The first sample mints the profile, so adding it takes the
+                create grant rather than the update one. */}
+            {canCreate && (
+              <SettingList bleed="settings">
+                <VoiceCorpusIntake
+                  first
+                  profileId={null}
+                  onChanged={() =>
+                    qc.invalidateQueries({ queryKey: ["voice-profile"] })
+                  }
+                />
+              </SettingList>
+            )}
           </Panel>
         )
       }
@@ -223,36 +218,29 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
             canEdit={canEdit}
             onChanged={invalidate}
           />
-
-          <SettingList>
-            {/* Stacked: the preferences are the longest thing anybody types in
-                settings, and a control that IS the subject takes the width
-                rather than the right column. The row draws the label the box
-                announces, so the two cannot drift apart. */}
-            <SettingRow
-              label={t("settings.voice.personalityLabel")}
-              layout="stack"
-              control={(control) => (
-                <PersonalityEditor
-                  control={control}
-                  profile={profile}
-                  canEdit={canEdit}
-                  onSaved={invalidate}
-                />
-              )}
-            />
-            {/* The raw derived text is what a profile can show BEFORE it is
-                ready; once it is, the insights above quote the same build back
-                in a form a reader can use, and repeating the markdown under it
-                would say the same thing twice. Closed by default either way:
-                it is the artifact behind the reading, not the reading. */}
-            {profile.status !== "ready" && (
-              <Disclosure summary={t("settings.voice.derivedLabel")}>
-                <DerivedVoice profile={profile} />
-              </Disclosure>
-            )}
-          </SettingList>
         </PanelBody>
+        <SettingList bleed="settings">
+          {/* Stacked: the preferences are the longest text in settings. */}
+          <SettingRow
+            label={t("settings.voice.personalityLabel")}
+            layout="stack"
+            control={(control) => (
+              <PersonalityEditor
+                control={control}
+                profile={profile}
+                canEdit={canEdit}
+                onSaved={invalidate}
+              />
+            )}
+          />
+          {/* Once ready, the insights above quote this text, so showing it too
+              would say it twice. */}
+          {profile.status !== "ready" && (
+            <Disclosure summary={t("settings.voice.derivedLabel")}>
+              <DerivedVoice profile={profile} />
+            </Disclosure>
+          )}
+        </SettingList>
       </Panel>
 
       <Panel title={t("settings.voice.corpusLabel")}>

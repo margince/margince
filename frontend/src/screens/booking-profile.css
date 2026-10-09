@@ -1,0 +1,24 @@
+/* The company starts where every other value in the list starts. The mark
+   takes its size from its caller, and a logo paints only into a sized box. */
+.booking-brand-mark {
+  display: block;
+  inline-size: min(100%, 12rem);
+}
+
+.booking-brand-mark:has(.company-logo-img) {
+  block-size: 2.5rem;
+}
+
+.booking-brand-mark .company-logo {
+  inline-size: 100%;
+  block-size: 100%;
+  justify-content: flex-start;
+}
+
+.booking-brand-mark .company-logo-fallback {
+  justify-content: flex-start;
+}
+
+.booking-brand-mark .company-logo-img {
+  object-position: left center;
+}

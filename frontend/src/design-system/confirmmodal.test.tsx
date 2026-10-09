@@ -86,7 +86,7 @@ describe("ConfirmModal", () => {
     expect(
       within(screen.getByRole("heading", { name: /Move to Won/ })).getByRole(
         "img",
-        { name: "automatic" },
+        { name: "Automatic" },
       ),
     ).toBeTruthy();
     expect(document.querySelector(".dot-confirm")).toBeNull();

@@ -17,6 +17,7 @@ export function DataTable<Row>({
   rowKey,
   onRowClick,
   label,
+  bleed,
 }: Readonly<{
   columns: DataTableColumn<Row>[];
   rows: Row[];
@@ -24,9 +25,11 @@ export function DataTable<Row>({
   onRowClick?: (row: Row) => void;
   /** What the scroll region is called once the table is wider than its box. */
   label: string;
+  /** `TableScroll`'s `bleed`: the table spans the `Panel` it stands straight in. */
+  bleed?: boolean;
 }>) {
   return (
-    <TableScroll label={label}>
+    <TableScroll label={label} bleed={bleed}>
       <table className="table">
         <thead>
           <tr>

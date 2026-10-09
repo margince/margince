@@ -195,14 +195,14 @@ function SeatUsageReading({ seatsUsed }: Readonly<{ seatsUsed: number }>) {
     <Panel title={t("license.card.title")}>
       <PanelBody>
         <PanelIntro>{t("license.seats.capacityOnly")}</PanelIntro>
-        <SettingList>
-          <SettingRow
-            label={t("license.seats.title")}
-            description={t("license.counting")}
-            control={formatNumber(seatsUsed, locale)}
-          />
-        </SettingList>
       </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("license.seats.title")}
+          description={t("license.counting")}
+          control={formatNumber(seatsUsed, locale)}
+        />
+      </SettingList>
     </Panel>
   );
 }
@@ -281,59 +281,43 @@ export function LicenseReading({
             })}
           </Callout>
         )}
-        <SettingList>
-          {/* ONE row, stacked. The two figures and the bar under them are the
-            card's SUBJECT rather than an answer that fits in a right-hand
-            column (design-system README, `SettingList` / `SettingRow`): used
-            against granted is the whole question this screen answers, and
-            splitting it into two rows would make it two readings. What counts
-            as a seat rides as the row's description — it is the rule the
-            figures are drawn under, which is exactly what a description is
-            for, and it used to sit at the foot of the card where a reader met
-            it after taking the numbers at face value. */}
-          <SettingRow
-            label={t("license.seats.title")}
-            description={t("license.counting")}
-            layout="stack"
-            control={
-              <StatCard
-                label={t("license.seats.title")}
-                // Used AGAINST granted in one value, because that is one fact.
-                // Two slots and a bar under them said it three times: a reader
-                // comparing them had to work out that the second figure was the
-                // first one's denominator and that the bar was both of them
-                // again.
-                value={
-                  capped
-                    ? t("license.seats.ofGranted", {
-                        used: formatNumber(entitlement.seats_used, locale),
-                        granted: grantedText,
-                      })
-                    : formatNumber(entitlement.seats_used, locale)
-                }
-                // What is left, or what is past — and for a licence that caps
-                // nothing, the fact that there is nothing to be left of. Absent,
-                // not zero: an unlicensed installation and a licence that caps
-                // nothing both have no grant, and only the first is something an
-                // admin might want to change.
-                detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
-                // Only where the reading HAS a denominator: an uncapped
-                // installation has nothing to be a share of, and a bar drawn
-                // against an invented limit invents the limit.
-                meter={
-                  capped
-                    ? { filled: entitlement.seats_used, total: granted }
-                    : undefined
-                }
-                // The slot itself is the bad news when the count is past the
-                // grant, so `alert` rather than `tone`, which would only
-                // colour the figure.
-                alert={entitlement.over_limit}
-              />
-            }
-          />
-        </SettingList>
       </PanelBody>
+      <SettingList bleed="settings">
+        {/* Stacked: used against granted is the card's subject, too wide for
+            the answer column. */}
+        <SettingRow
+          label={t("license.seats.title")}
+          description={t("license.counting")}
+          layout="stack"
+          control={
+            <StatCard
+              label={t("license.seats.title")}
+              // Used against granted in one value, because that is one fact.
+              // As two figures, a reader must work out which one is the
+              // other's denominator.
+              value={
+                capped
+                  ? t("license.seats.ofGranted", {
+                      used: formatNumber(entitlement.seats_used, locale),
+                      granted: grantedText,
+                    })
+                  : formatNumber(entitlement.seats_used, locale)
+              }
+              detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
+              // An uncapped installation has no denominator, and a bar
+              // against an invented limit invents the limit.
+              meter={
+                capped
+                  ? { filled: entitlement.seats_used, total: granted }
+                  : undefined
+              }
+              // Past the grant the slot itself is the bad news; `tone`
+              // would only colour the figure.
+              alert={entitlement.over_limit}
+            />
+          }
+        />
+      </SettingList>
     </Panel>
   );
 }

@@ -254,63 +254,59 @@ export function LinkedInImportCard() {
             both halves of it belong to the import row rather than to the card:
             they say what that one setting does. */}
         <PanelIntro>{t("linkedinImport.sub")}</PanelIntro>
-        <SettingList>
-          <LinkedInProfileRow />
-          {/* The file is NAMED on the left, which is the row language doing the
-              job an icon used to: LinkedIn's export archive holds a dozen CSVs
-              and picking the wrong one fails with a parse error that explains
-              nothing, so the name of the file sits in the description the picker
-              is announced with rather than beside a glyph above it. The
-              description also carries what happens to the file — a member
-              uploading their own address book into a company system is owed that
-              before they press, and beside the picker is where they read it. */}
-          <SettingRow
-            label={t("linkedinImport.importLabel")}
-            description={t("linkedinImport.whichFile")}
-            control={
-              <div className="li-import-picker">
-                <label
-                  className="li-import-button"
-                  htmlFor="linkedin-import-file"
-                >
-                  {t("linkedinImport.choose")}
-                </label>
-                <input
-                  id="linkedin-import-file"
-                  type="file"
-                  accept=".csv,text/csv"
-                  data-testid="linkedin-import-file"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    setFileName(file?.name ?? null);
-                    if (file) {
-                      importer.mutate(file);
-                    }
-                  }}
-                />
-                {fileName && <span className="t-sub">{fileName}</span>}
-              </div>
-            }
-          />
-        </SettingList>
-
-        {/* What the import DID. Not a row: a row is an answer to a question the
-            card asks, and this is a report of an act that has already happened —
-            it has no setting to line up with and no verb of its own. */}
-        {importer.isPending && (
-          <p className="t-sub">{t("linkedinImport.working")}</p>
-        )}
-        {importer.isError && (
-          <Callout
-            kind="outcome"
-            tone="danger"
-            title={t("linkedinImport.importFailed")}
-          >
-            {problemMessageOf(importer.error, t)}
-          </Callout>
-        )}
-        {importer.isSuccess && <ImportResult summary={importer.data} />}
       </PanelBody>
+      <SettingList bleed="settings">
+        <LinkedInProfileRow />
+        {/* LinkedIn's export holds many CSVs and the wrong one fails with an
+            unhelpful parse error, so the description names the file to pick. */}
+        <SettingRow
+          label={t("linkedinImport.importLabel")}
+          description={t("linkedinImport.whichFile")}
+          control={
+            <div className="li-import-picker">
+              <label
+                className="li-import-button"
+                htmlFor="linkedin-import-file"
+              >
+                {t("linkedinImport.choose")}
+              </label>
+              <input
+                id="linkedin-import-file"
+                type="file"
+                accept=".csv,text/csv"
+                data-testid="linkedin-import-file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  setFileName(file?.name ?? null);
+                  if (file) {
+                    importer.mutate(file);
+                  }
+                }}
+              />
+              {fileName && <span className="t-sub">{fileName}</span>}
+            </div>
+          }
+        />
+      </SettingList>
+      {/* Outside the list: the import's progress and outcome answer no
+          setting. */}
+      {!importer.isIdle && (
+        <PanelBody>
+          {importer.isPending && (
+            <p className="t-sub">{t("linkedinImport.working")}</p>
+          )}
+          {importer.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.importFailed")}
+            >
+              {problemMessageOf(importer.error, t)}
+            </Callout>
+          )}
+          {importer.isSuccess && <ImportResult summary={importer.data} />}
+        </PanelBody>
+      )}
     </Panel>
   );
 }

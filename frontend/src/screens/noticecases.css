@@ -1,0 +1,8 @@
+/* The owner picker over its verb, at one width. Not side by side: the row's
+   control column cannot shrink, so a pair on one line overflows the card. */
+.notice-row-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--gapActions);
+}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import {
+  AutonomyDot,
   ConfidenceMeter,
   confidenceLevel,
   EvidenceChip,
@@ -19,6 +20,20 @@ afterEach(cleanup);
 // English catalog so the strings under test are the spec's own wording.
 const render = (ui: ReactNode) =>
   rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>);
+
+describe("AutonomyDot", () => {
+  it("prints the tier in words beside the dot when the dot is the answer", () => {
+    render(<AutonomyDot tier="confirm" withLabel />);
+    expect(screen.getByText("Approval first")).toBeTruthy();
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("stays a named glyph where words already stand beside it", () => {
+    render(<AutonomyDot tier="auto" />);
+    expect(screen.getByRole("img", { name: "Automatic" })).toBeTruthy();
+    expect(screen.queryByText("Automatic")).toBeNull();
+  });
+});
 
 describe("ConfidenceMeter", () => {
   it("shows low as low — there is no way to hide it (§4.2)", () => {

@@ -111,12 +111,12 @@ export function NotificationSettingsCard() {
 
   return (
     <Panel title={t("notifications.title")}>
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("notifications.sub")}</PanelIntro>
-        <QueryGate pendingLabel={t("notifications.title")} query={preferences}>
-          {(list) => <DeliveryChoices rows={list.items} />}
-        </QueryGate>
       </PanelBody>
+      <QueryGate pendingLabel={t("notifications.title")} query={preferences}>
+        {(list) => <DeliveryChoices rows={list.items} />}
+      </QueryGate>
     </Panel>
   );
 }
@@ -128,7 +128,7 @@ function DeliveryChoices({
   const save = useSaveNotificationPreference();
   return (
     <>
-      <SettingList>
+      <SettingList bleed="settings">
         {rows.map((row) => (
           <DeliveryRow
             key={row.class}
@@ -150,19 +150,21 @@ function DeliveryChoices({
           a render — it is the same value that went on the wire, so the sentence
           cannot name a different row from the one the server refused. */}
       {save.isError && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={
-            save.variables === undefined
-              ? t("notifications.saveFailed")
-              : t("notifications.saveFailedFor", {
-                  setting: t(CLASS_COPY[save.variables.class].label),
-                })
-          }
-        >
-          {problemMessageOf(save.error, t)}
-        </Callout>
+        <PanelBody>
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={
+              save.variables === undefined
+                ? t("notifications.saveFailed")
+                : t("notifications.saveFailedFor", {
+                    setting: t(CLASS_COPY[save.variables.class].label),
+                  })
+            }
+          >
+            {problemMessageOf(save.error, t)}
+          </Callout>
+        </PanelBody>
       )}
     </>
   );

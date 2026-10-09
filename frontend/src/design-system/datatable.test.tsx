@@ -3,9 +3,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { TableScroll } from "./atoms";
 import { DataTable } from "./datatable";
 
 afterEach(() => {
@@ -93,4 +97,63 @@ it("leaves a row unmarked where nothing answers a click", () => {
     />,
   );
   expect(container.querySelector("tbody tr")?.className).toBe("");
+});
+
+it("keeps a table inset unless the caller asks it to bleed", () => {
+  const { container } = render(
+    <DataTable
+      label="Products"
+      columns={PRODUCT_COLUMNS}
+      rows={PRODUCT_ROWS}
+      rowKey={(row) => row.name}
+    />,
+  );
+  expect(container.querySelector(".table-scroll-bleed")).toBeNull();
+});
+
+it("hands bleed to the scroll box that holds the table", () => {
+  const { container } = render(
+    <DataTable
+      label="Products"
+      columns={PRODUCT_COLUMNS}
+      rows={PRODUCT_ROWS}
+      rowKey={(row) => row.name}
+      bleed
+    />,
+  );
+  const box = container.querySelector(".table-scroll");
+  expect(box?.classList.contains("table-scroll-bleed")).toBe(true);
+  expect(box?.firstElementChild?.classList.contains("table")).toBe(true);
+});
+
+it("lets a hand-drawn table bleed through the same box", () => {
+  const { container } = render(
+    <TableScroll label="Spend by task" bleed>
+      <table className="table">
+        <tbody>
+          <tr>
+            <td>Drafting</td>
+          </tr>
+        </tbody>
+      </table>
+    </TableScroll>,
+  );
+  expect(
+    container.querySelector(".table-scroll-bleed > .table"),
+  ).not.toBeNull();
+});
+
+// The first and the last cell of every row, header included, carry the pane's
+// padding, so the first column's text stands at a PanelBody's x.
+it("pads a bleeding table's outer cells to the pane", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const css = readFileSync(join(here, "atoms.css"), "utf8");
+  for (const [edge, side] of [
+    ["first-child", "start"],
+    ["last-child", "end"],
+  ]) {
+    expect(css).toContain(
+      `.panel > .table-scroll-bleed > .table > * > tr > :${edge} {\n  padding-inline-${side}: var(--padPanel);`,
+    );
+  }
 });

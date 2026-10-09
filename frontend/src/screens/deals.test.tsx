@@ -1488,9 +1488,9 @@ describe("DealsScreen", () => {
 
     await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
     // progress_deal is catalogued "auto_execute" — a hardcoded
-    // "confirm" dot would render "approval first" here instead.
+    // "confirm" dot would render "Approval first" here instead.
     await waitFor(() =>
-      expect(screen.getByLabelText("automatic")).toBeTruthy(),
+      expect(screen.getByLabelText("Automatic")).toBeTruthy(),
     );
   });
 

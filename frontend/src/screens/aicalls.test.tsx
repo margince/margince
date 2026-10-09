@@ -549,3 +549,17 @@ it("shows the request settings the attempts were sent with, and the host that se
   expect(screen.getByText(/served by Cerebras/)).toBeTruthy();
   expect(screen.getByText(/The attempt before ran out of time/)).toBeTruthy();
 });
+
+it("leaves the configured model out of the served line when the binding named none", async () => {
+  mount(true, true, OPERATOR, {
+    call: { ...summary, provider: "fake", model_id: "", served_model: "fake" },
+    attempts: RETRIED.attempts,
+  });
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+  const identity = await screen.findByText(/^Served fake via fake/);
+  expect(identity.textContent).toBe(
+    "Served fake via fake (no model configured)",
+  );
+});

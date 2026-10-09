@@ -38,6 +38,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useSettledValue } from "../design-system/debouncedsearch";
 import { Heading } from "../design-system/heading";
+import { IconAction } from "../design-system/iconaction";
 import {
   Panel,
   PanelBody,
@@ -669,20 +670,16 @@ function AccountCard() {
             </div>
           )}
         </QueryGate>
-        <SettingList>
-          {/* The credential first, because it is the one row that decides
-              whether the other two are reachable at all. The row and its
-              three-field form live in passwordcard.tsx, exported as a ROW
-              precisely so this page can place it among its own. */}
-          <DisplayNameSettingRow toast={toast} />
-          <GreetingNameSettingRow toast={toast} />
-          <PasswordSettingRow />
-          <SignatureSettingRow toast={toast} />
-          <LanguageSettingRow />
-          <AppearanceSettingRow />
-          <BriefDeliveryRows />
-        </SettingList>
       </PanelBody>
+      <SettingList bleed="settings">
+        <DisplayNameSettingRow toast={toast} />
+        <GreetingNameSettingRow toast={toast} />
+        <PasswordSettingRow />
+        <SignatureSettingRow toast={toast} />
+        <LanguageSettingRow />
+        <AppearanceSettingRow />
+        <BriefDeliveryRows />
+      </SettingList>
     </Panel>
   );
 }
@@ -1260,72 +1257,59 @@ function AgentToolsCard() {
     <Panel title={t("tools.title")}>
       <PanelBody>
         <PanelIntro>{t("tools.sub")}</PanelIntro>
-        <SettingList>
-          {/* The dial FIRST, then the inventory it narrows — the posture before
-              the judgements that read it. Absent, not disabled, while this human
-              has minted nothing: a selector offering one choice is a control
-              with nothing behind it. `PassportSelect` carries its own accessible
-              name ("All passports"), the way `Switch` does, so the row hands it
-              no ARIA of its own. */}
-          {everMintedAPassport && (
-            <SettingRow
-              label={t("tools.scopeLabel")}
-              control={
-                <PassportSelect
-                  options={mintedPassports.map((p) => ({
-                    id: p.id,
-                    label: t("tools.scopedTo", { label: p.label }),
-                    scopes: p.scopes,
-                  }))}
-                  value={scopeId}
-                  onChange={setPassportId}
-                  allowEmpty
-                  emptyLabel={t("tools.scopeAll")}
-                  ariaLabel={t("tools.scopeAll")}
-                />
-              }
-            />
-          )}
-          {/* The inventory is a REFERENCE, and it is 68 tools long: each row
-              carries the tool's name, what it is for, and the text an agent
-              selects it by, which is the promise this console makes — and read
-              open it measured 14,000px, so the card was a page-long wall in
-              front of the two rows above it that a reader actually sets. So it
-              is the card's secondary half and it is closed: the rule this page
-              follows for anything advanced or diagnostic.
-
-              One row per governed tool, handed to the list inside as its own
-              children so the hairline between two tools comes from the list
-              that holds both. */}
-          <QueryGate
-            query={tools}
-            empty={(data) => data.data.length === 0}
-            pendingLabel={t("tools.title")}
-          >
-            {(data) => (
-              <Disclosure
-                summary={t("tools.inventory", {
-                  count: formatNumber(data.data.length, locale),
-                })}
-              >
-                <SettingList>
-                  {data.data.map((tool) => (
-                    <ToolRow
-                      key={tool.name}
-                      tool={tool}
-                      reachable={
-                        !scopeId ||
-                        tool.required_scope == null ||
-                        grantedScopes.has(tool.required_scope)
-                      }
-                    />
-                  ))}
-                </SettingList>
-              </Disclosure>
-            )}
-          </QueryGate>
-        </SettingList>
       </PanelBody>
+      <SettingList bleed="settings">
+        {/* Absent until this human mints a passport: a selector with one
+            choice has nothing behind it. */}
+        {everMintedAPassport && (
+          <SettingRow
+            label={t("tools.scopeLabel")}
+            control={
+              <PassportSelect
+                options={mintedPassports.map((p) => ({
+                  id: p.id,
+                  label: t("tools.scopedTo", { label: p.label }),
+                  scopes: p.scopes,
+                }))}
+                value={scopeId}
+                onChange={setPassportId}
+                allowEmpty
+                emptyLabel={t("tools.scopeAll")}
+                ariaLabel={t("tools.scopeAll")}
+              />
+            }
+          />
+        )}
+        {/* Closed: the tool inventory is a long reference that would bury the
+            rows a reader sets. */}
+        <QueryGate
+          query={tools}
+          empty={(data) => data.data.length === 0}
+          pendingLabel={t("tools.title")}
+        >
+          {(data) => (
+            <Disclosure
+              summary={t("tools.inventory", {
+                count: formatNumber(data.data.length, locale),
+              })}
+            >
+              <SettingList>
+                {data.data.map((tool) => (
+                  <ToolRow
+                    key={tool.name}
+                    tool={tool}
+                    reachable={
+                      !scopeId ||
+                      tool.required_scope == null ||
+                      grantedScopes.has(tool.required_scope)
+                    }
+                  />
+                ))}
+              </SettingList>
+            </Disclosure>
+          )}
+        </QueryGate>
+      </SettingList>
     </Panel>
   );
 }
@@ -1381,7 +1365,7 @@ function ToolRow({
         }
         control={
           <span className="settings-run">
-            <AutonomyDot tier={dotTier(tool.tier)} />
+            <AutonomyDot tier={dotTier(tool.tier)} withLabel />
             {tool.required_scope && <Badge>{tool.required_scope}</Badge>}
             {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
           </span>
@@ -1478,23 +1462,22 @@ function ResetDataCard() {
     >
       <PanelBody className="form-stack">
         <PanelIntro>{t("settings.dangerZoneSub")}</PanelIntro>
-        <SettingList>
-          {/* One row, because there is one act: what it does on the left, the
-              verb that does it on the right. This verb opens the question and
-              the dialog's confirm answers it, so each is named for its own act
-              — a destructive button and the button that asks again about it
-              must not read the same while both are on screen. */}
-          <SettingRow
-            label={t("settings.resetDataLabel")}
-            description={t("settings.resetDataDesc")}
-            control={
-              <Button variant="danger" onClick={() => setOpen(true)}>
-                {t("settings.resetDataButton")}
-              </Button>
-            }
-          />
-        </SettingList>
-        {summary && (
+      </PanelBody>
+      <SettingList bleed="settings">
+        {/* This button and the dialog's confirm share the screen, so each is
+            named for its own act. */}
+        <SettingRow
+          label={t("settings.resetDataLabel")}
+          description={t("settings.resetDataDesc")}
+          control={
+            <Button variant="danger" onClick={() => setOpen(true)}>
+              {t("settings.resetDataButton")}
+            </Button>
+          }
+        />
+      </SettingList>
+      {summary && (
+        <PanelBody>
           <p className="t-caption settings-danger-result" role="status">
             {t("settings.resetDataResult", {
               tables: formatNumber(summary.tables_cleared, locale),
@@ -1504,14 +1487,14 @@ function ResetDataCard() {
               objects: formatNumber(summary.objects_deleted, locale),
             })}
           </p>
-        )}
-        {summary?.drain_timed_out && (
-          // ds:ignore a warning in --warningText, not a refusal
-          <p className="settings-danger-warning" role="alert">
-            {t("settings.resetDataDrainWarning")}
-          </p>
-        )}
-      </PanelBody>
+          {summary.drain_timed_out && (
+            // ds:ignore a warning in --warningText, not a refusal
+            <p className="settings-danger-warning" role="alert">
+              {t("settings.resetDataDrainWarning")}
+            </p>
+          )}
+        </PanelBody>
+      )}
       <ConfirmModal
         open={open}
         onClose={() => {
@@ -1561,42 +1544,34 @@ function AutonomyCard() {
     <Panel title={t("settings.autonomy")}>
       <PanelBody>
         <PanelIntro>{t("settings.autonomySub")}</PanelIntro>
-        {/* Four rows in the page's own language, even though none of them is
-            settable: what the tier COVERS reads left as prose, and the tier it
-            runs at — the dot, and on the locked row the badge saying the answer
-            cannot move — sits at the same x as every answer on this page. A
-            reader coming from the tool inventory above is matching dots, which
-            is why sending carries the green one: a contact's grant of the `send`
-            scope IS the approval, so a funded send does not stage a second. */}
-        <SettingList>
-          <SettingRow
-            label={t("settings.tierRead")}
-            control={<AutonomyDot tier="auto" />}
-          />
-          <SettingRow
-            label={t("settings.tierSend")}
-            control={<AutonomyDot tier="auto" />}
-          />
-          <SettingRow
-            label={t("settings.tierWait")}
-            control={<AutonomyDot tier="confirm" />}
-          />
-          <SettingRow
-            label={t("settings.tierAdvance")}
-            // The dot and the badge are ONE answer — the tier, and the fact that
-            // it cannot move — so they travel as a run at the page's own 8px chip
-            // gap. Handed to the control column loose, they took its 12px flex
-            // gap instead, which put the one row on this page carrying two chips
-            // at a different interval from every tool row above it.
-            control={
-              <span className="settings-run">
-                <AutonomyDot tier="confirm" />
-                <Badge tone="warning">{t("settings.locked")}</Badge>
-              </span>
-            }
-          />
-        </SettingList>
       </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("settings.tierRead")}
+          control={<AutonomyDot tier="auto" withLabel />}
+        />
+        {/* Sending is green: a contact's grant of the `send` scope is the
+            approval, so a funded send does not stage a second. */}
+        <SettingRow
+          label={t("settings.tierSend")}
+          control={<AutonomyDot tier="auto" withLabel />}
+        />
+        <SettingRow
+          label={t("settings.tierWait")}
+          control={<AutonomyDot tier="confirm" withLabel />}
+        />
+        <SettingRow
+          label={t("settings.tierAdvance")}
+          // One run at the 8px chip gap; loose, the control column's 12px gap
+          // would space these chips unlike every tool row above.
+          control={
+            <span className="settings-run">
+              <AutonomyDot tier="confirm" withLabel />
+              <Badge tone="warning">{t("settings.locked")}</Badge>
+            </span>
+          }
+        />
+      </SettingList>
     </Panel>
   );
 }
@@ -1762,6 +1737,7 @@ function AuditLogRow({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const [expanded, setExpanded] = useState(false);
+  const diffId = useId();
   const keys = diffKeys(entry.before, entry.after);
   const evidence = toEvidence(entry.evidence);
 
@@ -1789,41 +1765,52 @@ function AuditLogRow({
             {entry.entity_id ? ` ${entry.entity_id}` : ""}
           </span>
         )}
-        <Button
-          aria-expanded={expanded}
-          aria-label={t("settings.auditExpand")}
+        <IconAction
+          label={t("settings.auditExpandEntry", {
+            action: entry.action,
+            entity: entry.entity_type,
+          })}
+          icon={<ChevronDown aria-hidden className="expander-chevron" />}
+          disclosure={{ expanded, controls: diffId }}
           onClick={() => setExpanded((value) => !value)}
-        >
-          <ChevronDown aria-hidden className="expander-chevron" />
-        </Button>
+        />
       </div>
-      {expanded && (
-        <div className="audit-row-diff">
-          {keys.map((key) => (
-            <div key={key} className="audit-diff-line">
-              <span className="t-label">{key}</span>
-              <FieldDiff
-                oldValue={diffValue(entry.before, key)}
-                newValue={diffValue(entry.after, key)}
-              />
-            </div>
-          ))}
-          {entry.passport_id && (
-            <ResolvedPassportChip passportId={entry.passport_id} />
-          )}
-          {entry.on_behalf_of && (
-            <span className="t-caption">
-              {t("settings.auditOnBehalf")} <span>{entry.on_behalf_of}</span>
-            </span>
-          )}
-          {entry.authorization_rule && (
-            <span className="t-caption">
-              {t("settings.auditRule")}: {entry.authorization_rule}
-            </span>
-          )}
-          {evidence && <EvidenceChip evidence={evidence} />}
-        </div>
-      )}
+      {/* Mounted while closed so the toggle's aria-controls always resolves;
+          the detail itself renders only when open. */}
+      <div id={diffId} hidden={!expanded}>
+        {expanded && (
+          <div className="audit-row-diff">
+            {keys.map((key) => (
+              <div key={key} className="audit-diff-line">
+                <span className="t-label">{key}</span>
+                <FieldDiff
+                  oldValue={diffValue(entry.before, key)}
+                  newValue={diffValue(entry.after, key)}
+                />
+              </div>
+            ))}
+            {entry.passport_id && (
+              <ResolvedPassportChip passportId={entry.passport_id} />
+            )}
+            {entry.on_behalf_of && (
+              <span className="t-caption">
+                {t("settings.auditOnBehalf")}{" "}
+                <span>
+                  {entry.on_behalf_of === meUserId
+                    ? t("audit.you")
+                    : (entry.on_behalf_of_name ?? t("audit.unknownMember"))}
+                </span>
+              </span>
+            )}
+            {entry.authorization_rule && (
+              <span className="t-caption">
+                {t("settings.auditRule")}: {entry.authorization_rule}
+              </span>
+            )}
+            {evidence && <EvidenceChip evidence={evidence} />}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

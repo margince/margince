@@ -33,30 +33,32 @@ export function AgentConnectionsCard() {
   }
   return (
     <Panel title={t("agentConnections.title")}>
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("agentConnections.sub")}</PanelIntro>
         {!canManage && (
           <PanelIntro>{t("agentConnections.adminOnly")}</PanelIntro>
         )}
-        <QueryGate query={query} pendingLabel={t("agentConnections.title")}>
-          {(settings) => (
-            <SettingList>
-              <NumberSettingRow
-                label={t("agentConnections.ttl.label")}
-                description={t("agentConnections.ttl.help")}
-                testId="agent-token-ttl"
-                value={settings.oauth_access_token_ttl_minutes}
-                {...TOKEN_BOUNDS.oauth_access_token_ttl_minutes}
-                refusal={t("agentConnections.ttl.refusal")}
-                disabled={!canManage || update.isPending}
-                onCommit={(next) =>
-                  update.mutate({ oauth_access_token_ttl_minutes: next })
-                }
-              />
-            </SettingList>
-          )}
-        </QueryGate>
-        {update.isError && (
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("agentConnections.title")}>
+        {(settings) => (
+          <SettingList bleed="settings">
+            <NumberSettingRow
+              label={t("agentConnections.ttl.label")}
+              description={t("agentConnections.ttl.help")}
+              testId="agent-token-ttl"
+              value={settings.oauth_access_token_ttl_minutes}
+              {...TOKEN_BOUNDS.oauth_access_token_ttl_minutes}
+              refusal={t("agentConnections.ttl.refusal")}
+              disabled={!canManage || update.isPending}
+              onCommit={(next) =>
+                update.mutate({ oauth_access_token_ttl_minutes: next })
+              }
+            />
+          </SettingList>
+        )}
+      </QueryGate>
+      {update.isError && (
+        <PanelBody>
           <Callout
             tone="danger"
             kind="outcome"
@@ -64,8 +66,8 @@ export function AgentConnectionsCard() {
           >
             {problemMessageOf(update.error, t)}
           </Callout>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
     </Panel>
   );
 }
