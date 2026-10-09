@@ -57,7 +57,7 @@ mine** or **Not a customer**.
 **Not a customer** removes the whole thread for everyone, and does not run out. Also called:
 dismiss, delete from worklist, hide, not relevant.
 
-Archiving a contact also takes their unanswered messages off every Worklist. Restoring the contact
+Archiving a contact also takes the messages they wait on a reply to off every Worklist. Restoring the contact
 brings them back. A message stays if another contact it is filed under is not archived.
 
 ### How do I undo a snooze or removal on my worklist?

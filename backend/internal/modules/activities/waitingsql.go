@@ -29,8 +29,8 @@ import (
 // contact pick and the owner walk both sort by it, so the owner named is the
 // named contact's.
 func waitingContactRank(contact string) string {
-	return `CASE WHEN EXISTS (SELECT 1 FROM contact gone
-	         WHERE gone.id = ` + contact + ` AND gone.archived_at IS NOT NULL) THEN 3
+	return `CASE WHEN NOT EXISTS (SELECT 1 FROM contact kept
+	         WHERE kept.id = ` + contact + ` AND kept.archived_at IS NULL) THEN 3
 	   WHEN ` + contact + ` = sender.contact_id THEN 0
 	   WHEN EXISTS (SELECT 1 FROM contact_email seat_mail
 	         JOIN app_user seat ON lower(seat.email) = lower(seat_mail.email)
