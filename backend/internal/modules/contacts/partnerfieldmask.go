@@ -30,6 +30,10 @@ const partnerMaskObject = "partner"
 // separate constants: one name they happen to share is not one vocabulary.
 const partnerFieldMarginTier = "margin_tier"
 
+// partnerFieldNextStepDue is the wire field a null clears; the sort catalog and
+// the audit image spell it the same way and stay their own vocabularies.
+const partnerFieldNextStepDue = "next_step_due_at"
+
 // partnerWithholds are the fields a mask may name on a partner, and how each is
 // withheld. One deliberate act per field, which is what keeps the set finite
 // enough to be offered as a catalog.
@@ -79,7 +83,7 @@ func clearsTheCallerMayMake(ctx context.Context, tx pgx.Tx, cleared []string) ([
 // to act on; this set and its refusal are the same contract. gate_metrics
 // clears both numbers it carries.
 var partnerClearable = []string{
-	partnerFieldMarginTier, "next_step", "next_step_due_at", "served_segments", "gate_metrics",
+	partnerFieldMarginTier, "next_step", partnerFieldNextStepDue, "served_segments", "gate_metrics",
 }
 
 // refuseUnclearablePartnerFields answers an explicit null on a field this
