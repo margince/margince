@@ -23,32 +23,25 @@ import (
 )
 
 // waitingContactRank orders the contacts one message is filed under so the
-// waiting row names who wrote it. The sender's own contact comes first, then a
-// contact that is no seat's record, then any other. An archived contact comes
-// last, because a reply from the row would open a record nobody can. The
-// contact pick and the owner walk both sort by it, so the owner named is the
-// named contact's.
+// waiting row names who wrote it: the sender's own contact, then a contact that
+// is no seat's record, then any other. The contact pick and the owner walk both
+// sort by it, so the owner named is the named contact's.
 func waitingContactRank(contact string) string {
-	return `CASE WHEN NOT EXISTS (SELECT 1 FROM contact kept
-	         WHERE kept.id = ` + contact + ` AND kept.archived_at IS NULL) THEN 3
-	   WHEN ` + contact + ` = sender.contact_id THEN 0
+	return `CASE WHEN ` + contact + ` = sender.contact_id THEN 0
 	   WHEN EXISTS (SELECT 1 FROM contact_email seat_mail
 	         JOIN app_user seat ON lower(seat.email) = lower(seat_mail.email)
 	        WHERE seat_mail.contact_id = ` + contact + ` AND seat_mail.archived_at IS NULL) THEN 2
 	   ELSE 1 END`
 }
 
-// filedUnderALiveContactSQL keeps a message off the queue once every contact it
-// is filed under is archived. An archived contact is no longer work, and a
-// restore brings the row back with nothing to undo. One live contact keeps the
-// message, and mail filed under no contact is left to the sales-link rule.
-// No hidden figure counts it, as none counts an archived message.
-// Ungated, like the sales-link rule, so the answer does not depend on the reader.
-const filedUnderALiveContactSQL = `(NOT EXISTS (SELECT 1 FROM activity_link filed
-	        WHERE filed.activity_id = a.id AND filed.contact_id IS NOT NULL)
-	   OR EXISTS (SELECT 1 FROM activity_link filed
-	        JOIN contact live ON live.id = filed.contact_id AND live.archived_at IS NULL
-	       WHERE filed.activity_id = a.id))`
+// filedUnderALiveContactSQL drops a message once every contact the reader can
+// see it filed under is archived; a restore brings it back. Read over wl, the
+// visibility-gated join, so a contact the reader may not see never decides
+// whether the row shows. A HAVING over rows already grouped adds no lookup per
+// candidate and still runs before the cap. No hidden figure counts it, as none
+// counts an archived message.
+const filedUnderALiveContactSQL = `(NOT coalesce(bool_or(wl.contact_id IS NOT NULL), false)
+	     OR coalesce(bool_or(ownerContact.id IS NOT NULL AND ownerContact.archived_at IS NULL), false))`
 
 // waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
 // sales link, colleagues and the reader's set-asides. Requests survive replies and
@@ -66,8 +59,10 @@ var waitingRepliesSQL = `
 	       -- naming the recipient would open the rep's own record as the buyer.
 	       -- waitingContactRank orders the sender first, then contacts that are
 	       -- nobody's seat, then the rest; text order breaks ties, so the pick is
-	       -- STABLE across reads.
-	       COALESCE((array_agg(wl.contact_id ORDER BY ` + waitingContactRank("wl.contact_id") + `, wl.contact_id::text)
+	       -- STABLE across reads. A live contact goes before an archived one,
+	       -- because a reply from the row would open a record nobody can.
+	       COALESCE((array_agg(wl.contact_id ORDER BY ownerContact.archived_at IS NULL DESC,
+	                           ` + waitingContactRank("wl.contact_id") + `, wl.contact_id::text)
 	                 FILTER (WHERE wl.contact_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.company_id ORDER BY wl.company_id::text)
@@ -170,7 +165,7 @@ var waitingRepliesSQL = `
 	         (array_agg(ownerLead.owner_id ORDER BY ownerLead.id::text)
 	          FILTER (WHERE ownerLead.owner_id IS NOT NULL))[1],
 	         (array_agg(ownerContact.owner_id ORDER BY ` + waitingContactRank("ownerContact.id") + `, ownerContact.id::text)
-	          FILTER (WHERE ownerContact.owner_id IS NOT NULL))[1],
+	          FILTER (WHERE ownerContact.owner_id IS NOT NULL AND ownerContact.archived_at IS NULL))[1],
 	         (array_agg(ownerCompany.owner_id ORDER BY ownerCompany.id::text)
 	          FILTER (WHERE ownerCompany.owner_id IS NOT NULL))[1],
 	         '00000000-0000-0000-0000-000000000000'::uuid),
@@ -202,7 +197,7 @@ var waitingRepliesSQL = `
 	                    WHERE ownerDeal.id = wl.deal_id OFFSET 0) ownerDeal ON true
 	  LEFT JOIN LATERAL (SELECT ownerLead.id, ownerLead.owner_id FROM lead ownerLead
 	                    WHERE ownerLead.id = wl.lead_id OFFSET 0) ownerLead ON true
-	  LEFT JOIN LATERAL (SELECT ownerContact.id, ownerContact.owner_id FROM contact ownerContact
+	  LEFT JOIN LATERAL (SELECT ownerContact.id, ownerContact.owner_id, ownerContact.archived_at FROM contact ownerContact
 	                    WHERE ownerContact.id = wl.contact_id OFFSET 0) ownerContact ON true
 	  LEFT JOIN LATERAL (SELECT ownerCompany.id, ownerCompany.owner_id FROM company ownerCompany
 	                    WHERE ownerCompany.id = wl.company_id OFFSET 0) ownerCompany ON true
@@ -264,7 +259,6 @@ var waitingRepliesSQL = `
 	                          WHERE d.id = sales.deal_id AND ( %[6]s OR (d.archived_at IS NULL AND (` + requestCandidateSQL + `))))
 	              OR EXISTS (SELECT 1 FROM lead ld
 	                          WHERE ld.id = sales.lead_id AND ( %[7]s OR (ld.archived_at IS NULL AND (` + requestCandidateSQL + `)))))))
-	   AND ` + filedUnderALiveContactSQL + `
 	   -- A COLLEAGUE is not a customer waiting.
 	   --
 	   -- Our own domains are read through the seam that owns them and passed in
@@ -337,7 +331,7 @@ var waitingRepliesSQL = `
 	 -- is a public-suffix question rather than a LIKE — so the caller filters
 	 -- what survives and asks for another page when too much of it went. The
 	 -- cap bounds ONE page; the caller bounds how many it will ask for.
-	 HAVING TRUE %[18]s
+	 HAVING ` + filedUnderALiveContactSQL + ` %[18]s
 	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
 

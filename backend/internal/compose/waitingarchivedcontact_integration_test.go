@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -117,11 +118,7 @@ func TestAMessageStaysWhileOneContactItIsFiledUnderIsLive(t *testing.T) {
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	robin := o.contact(t, "Robin Buyer", "robin@customer.example")
-	asked := o.capture(t, owedMail{
-		from: "pat@customer.example", to: o.seat, cc: "robin@customer.example",
-		subject: "Rollout dates", at: o.now.Add(-3 * time.Hour),
-		messageID: "in-" + ids.NewV7().String() + "@customer.example",
-	})
+	asked := o.ccMail(t, "pat@customer.example", "robin@customer.example", "Rollout dates")
 	if row, ok := o.waitingRow(t, asked); !ok || row.ContactID != pat {
 		t.Fatalf("before the archive the row is %+v (present=%v); want it naming the sender %v", row, ok, pat)
 	}
@@ -134,5 +131,74 @@ func TestAMessageStaysWhileOneContactItIsFiledUnderIsLive(t *testing.T) {
 	}
 	if row.ContactID != robin {
 		t.Fatalf("the row names %v; want the live contact %v rather than the archived sender %v", row.ContactID, robin, pat)
+	}
+}
+
+// ccMail captures a mail from one customer to the seat with a second on copy.
+func (o *owedEnv) ccMail(t *testing.T, from, cc, subject string) ids.UUID {
+	t.Helper()
+	return o.capture(t, owedMail{
+		from: from, to: o.seat, cc: cc, subject: subject, at: o.now.Add(-3 * time.Hour),
+		messageID: "in-" + ids.NewV7().String() + "@customer.example",
+	})
+}
+
+// A contact the reader may not see never decides whether the row shows. The
+// copied contact is live but private to a colleague. To this reader the
+// message is filed only under its archived sender, so it leaves the lane.
+func TestAContactTheReaderCannotSeeDoesNotKeepTheMessage(t *testing.T) {
+	o := setupOwed(t)
+	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
+	robin := o.contact(t, "Robin Buyer", "robin@customer.example")
+	asked := o.ccMail(t, "pat@customer.example", "robin@customer.example", "Rollout dates")
+	o.e.MakeCapturePrivate(t, "contact", robin, o.e.Rep3)
+	if !o.waiting(t, asked) {
+		t.Fatal("before the archive the message is not waiting; the case below would pass for the wrong reason")
+	}
+
+	o.archiveContact(t, pat)
+
+	if o.waiting(t, asked) {
+		t.Fatal("the message stayed on the lane because of a live contact this reader cannot see")
+	}
+}
+
+// The reply is owed by the named contact's owner. An unowned live contact is
+// named, so the archived sender's owner does not owe it.
+func TestTheArchivedContactsOwnerDoesNotOweTheReply(t *testing.T) {
+	o := setupOwed(t)
+	rep2 := ids.From[ids.UserKind](o.e.Rep2)
+	created, err := o.e.Contacts.CreateContact(o.e.Admin(), contacts.CreateContactInput{
+		FullName: "Pat Buyer", Source: "manual", OwnerID: &rep2,
+		Emails: []contacts.ContactEmailInput{{Email: "pat@customer.example", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the owned sender: %v", err)
+	}
+	pat := ids.UUID(created.Id)
+	created, err = o.e.Contacts.CreateContact(machineCtx(o.e), contacts.CreateContactInput{
+		FullName: "Robin Buyer", Source: "import",
+		Emails: []contacts.ContactEmailInput{{Email: "robin@customer.example", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the unowned copied contact: %v", err)
+	}
+	robin := ids.UUID(created.Id)
+	if created.OwnerId != nil {
+		t.Fatalf("the copied contact is owned by %v; the case needs it unowned", *created.OwnerId)
+	}
+	asked := o.ccMail(t, "pat@customer.example", "robin@customer.example", "Rollout dates")
+	if row, ok := o.waitingRow(t, asked); !ok || row.OwnerID != o.e.Rep2 {
+		t.Fatalf("before the archive the row is %+v (present=%v); want the sender's owner %v to owe it", row, ok, o.e.Rep2)
+	}
+
+	o.archiveContact(t, pat)
+
+	row, ok := o.waitingRow(t, asked)
+	if !ok || row.ContactID != robin {
+		t.Fatalf("after the archive the row is %+v (present=%v); want it naming the live contact %v", row, ok, robin)
+	}
+	if row.OwnerID == o.e.Rep2 {
+		t.Fatalf("the reply is owed by %v, the archived sender's owner, rather than by whoever owns the named contact", row.OwnerID)
 	}
 }
