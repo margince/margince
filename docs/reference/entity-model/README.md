@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 297 |
-| Columns | 3538 |
-| Foreign keys | 490 |
+| Columns | 3543 |
+| Foreign keys | 494 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -43,7 +43,7 @@ Ranked by how many foreign keys point at them.
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 33 |
-| [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 23 |
+| [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 24 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 37 | 15 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
@@ -166,7 +166,7 @@ erDiagram
 | [`assurance_run`](assurance.md#assurance_run) | assurance | 13 | 2 |
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
-| [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 8 | 0 |
+| [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |
 | [`attachment`](activities.md#attachment) | activities | 27 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 12 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 14 | 2 |
@@ -241,12 +241,12 @@ erDiagram
 | [`contact_provider_claim`](contacts.md#contact_provider_claim) | contacts | 16 | 1 |
 | [`contact_signature_enrich_state`](contacts.md#contact_signature_enrich_state) | contacts | 4 | 0 |
 | [`contact_social`](contacts.md#contact_social) | contacts | 5 | 0 |
-| [`contract`](contracts.md#contract) | contracts | 29 | 2 |
+| [`contract`](contracts.md#contract) | contracts | 29 | 3 |
 | [`conversation_claim`](contacts.md#conversation_claim) | contacts | 19 | 0 |
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
 | [`custom_field`](customfields.md#custom_field) | customfields | 14 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 14 | 0 |
-| [`deal`](deals.md#deal) | deals | 43 | 23 |
+| [`deal`](deals.md#deal) | deals | 43 | 24 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 9 | 1 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
 | [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
@@ -324,7 +324,7 @@ erDiagram
 | [`oauth_client`](identity.md#oauth_client) | identity | 10 | 1 |
 | [`oauth_grant`](identity.md#oauth_grant) | identity | 9 | 3 |
 | [`oauth_refresh_token`](identity.md#oauth_refresh_token) | identity | 7 | 0 |
-| [`offer`](deals.md#offer) | deals | 26 | 2 |
+| [`offer`](deals.md#offer) | deals | 26 | 3 |
 | [`offer_line_item`](deals.md#offer_line_item) | deals | 19 | 0 |
 | [`offer_template`](deals.md#offer_template) | deals | 10 | 1 |
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
@@ -375,7 +375,7 @@ erDiagram
 | [`session`](identity.md#session) | identity | 10 | 0 |
 | [`setting`](platform.md#setting) | platform | 3 | 0 |
 | [`setup_token`](identity.md#setup_token) | identity | 4 | 0 |
-| [`signal`](signals.md#signal) | signals | 24 | 2 |
+| [`signal`](signals.md#signal) | signals | 24 | 3 |
 | [`signal_resolution`](signals.md#signal_resolution) | signals | 12 | 0 |
 | [`signal_thread_scan`](compose.md#signal_thread_scan) | compose | 10 | 0 |
 | [`signing_key`](approvals.md#signing_key) | approvals | 5 | 0 |

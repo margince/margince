@@ -1221,16 +1221,47 @@ public.assurance_task_item.assurance_task_item_once UNIQUE (exception_id, cycle_
 public.assurance_task_item.assurance_task_item_one_task_per_subject EXCLUDE USING gist (cycle_id WITH =, subject_kind WITH =, subject_id WITH =, task_activity_id WITH <>)
 public.assurance_task_item.assurance_task_item_pkey PRIMARY KEY (id)
 public.assurance_task_item.assurance_task_item_state CHECK ((state = ANY (ARRAY['open'::text, 'resolved'::text, 'dismissed'::text])))
+public.assurance_task_item.assurance_task_item_subject_contract_id_bound CHECK ((subject_unkeyed OR (NOT (subject_contract_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'contract'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+public.assurance_task_item.assurance_task_item_subject_contract_id_fkey FOREIGN KEY (subject_contract_id) REFERENCES contract(id) ON DELETE CASCADE
+public.assurance_task_item.assurance_task_item_subject_deal_id_bound CHECK ((subject_unkeyed OR (NOT (subject_deal_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'deal'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+public.assurance_task_item.assurance_task_item_subject_deal_id_fkey FOREIGN KEY (subject_deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.assurance_task_item.assurance_task_item_subject_kind CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
+public.assurance_task_item.assurance_task_item_subject_offer_id_bound CHECK ((subject_unkeyed OR (NOT (subject_offer_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'offer'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+public.assurance_task_item.assurance_task_item_subject_offer_id_fkey FOREIGN KEY (subject_offer_id) REFERENCES offer(id) ON DELETE CASCADE
+public.assurance_task_item.assurance_task_item_subject_shape CHECK ((subject_unkeyed OR (num_nonnulls(subject_deal_id, subject_signal_id, subject_offer_id, subject_contract_id) = 1)))
+public.assurance_task_item.assurance_task_item_subject_signal_id_bound CHECK ((subject_unkeyed OR (NOT (subject_signal_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'signal'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+public.assurance_task_item.assurance_task_item_subject_signal_id_fkey FOREIGN KEY (subject_signal_id) REFERENCES signal(id) ON DELETE CASCADE
 public.assurance_task_item.assurance_task_item_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.assurance_task_item.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_task_item.cycle_id uuid NOT NULL gen=- def=-
 public.assurance_task_item.exception_id uuid NOT NULL gen=- def=-
 public.assurance_task_item.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_task_item.state text NOT NULL gen=- def='open'::text
+public.assurance_task_item.subject_contract_id uuid gen=- def=-
+public.assurance_task_item.subject_deal_id uuid gen=- def=-
 public.assurance_task_item.subject_id uuid NOT NULL gen=- def=-
 public.assurance_task_item.subject_kind text NOT NULL gen=- def=-
+public.assurance_task_item.subject_offer_id uuid gen=- def=-
+public.assurance_task_item.subject_signal_id uuid gen=- def=-
+public.assurance_task_item.subject_unkeyed boolean NOT NULL gen=- def=false
 public.assurance_task_item.task_activity_id uuid NOT NULL gen=- def=-
+public.assurance_task_item.trg_assurance_task_item_subject_keys CREATE TRIGGER trg_assurance_task_item_subject_keys BEFORE INSERT OR UPDATE ON public.assurance_task_item FOR EACH ROW EXECUTE FUNCTION trg_assurance_task_item_subject_keys()
 public.assurance_task_item_by_task CREATE INDEX assurance_task_item_by_task ON public.assurance_task_item USING btree (task_activity_id)
 public.assurance_task_item_once CREATE UNIQUE INDEX assurance_task_item_once ON public.assurance_task_item USING btree (exception_id, cycle_id)
 public.assurance_task_item_one_task_per_subject CREATE INDEX assurance_task_item_one_task_per_subject ON public.assurance_task_item USING gist (cycle_id, subject_kind, subject_id, task_activity_id)
@@ -4256,6 +4287,10 @@ public.idx_assurance_exception_owner CREATE INDEX idx_assurance_exception_owner 
 public.idx_assurance_exception_subject CREATE INDEX idx_assurance_exception_subject ON public.assurance_exception USING btree (subject_kind, subject_id)
 public.idx_assurance_resolution_exception CREATE INDEX idx_assurance_resolution_exception ON public.assurance_resolution USING btree (exception_id, created_at DESC)
 public.idx_assurance_run_as_of CREATE INDEX idx_assurance_run_as_of ON public.assurance_run USING btree (as_of DESC)
+public.idx_assurance_task_item_subject_contract CREATE INDEX idx_assurance_task_item_subject_contract ON public.assurance_task_item USING btree (subject_contract_id) WHERE (subject_contract_id IS NOT NULL)
+public.idx_assurance_task_item_subject_deal CREATE INDEX idx_assurance_task_item_subject_deal ON public.assurance_task_item USING btree (subject_deal_id) WHERE (subject_deal_id IS NOT NULL)
+public.idx_assurance_task_item_subject_offer CREATE INDEX idx_assurance_task_item_subject_offer ON public.assurance_task_item USING btree (subject_offer_id) WHERE (subject_offer_id IS NOT NULL)
+public.idx_assurance_task_item_subject_signal CREATE INDEX idx_assurance_task_item_subject_signal ON public.assurance_task_item USING btree (subject_signal_id) WHERE (subject_signal_id IS NOT NULL)
 public.idx_attachment_entity CREATE INDEX idx_attachment_entity ON public.attachment USING btree (entity_type, entity_id) WHERE (archived_at IS NULL)
 public.idx_attachment_extraction_activity_live CREATE INDEX idx_attachment_extraction_activity_live ON public.attachment_extraction USING btree (activity_announced_at NULLS FIRST) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.idx_attachment_extraction_activity_settled CREATE INDEX idx_attachment_extraction_activity_settled ON public.attachment_extraction USING btree (finished_at DESC) WHERE (status = ANY (ARRAY['done'::text, 'failed'::text]))
@@ -7019,6 +7054,21 @@ BEGIN
   RETURN NULL;
 END;
 
+public.trg_assurance_task_item_subject_keys() secdef=false cfg=- acl=- 
+BEGIN
+	IF TG_OP = 'INSERT' THEN
+		NEW.subject_unkeyed := false;
+	ELSE
+		NEW.subject_unkeyed := OLD.subject_unkeyed;
+	END IF;
+	IF NOT NEW.subject_unkeyed THEN
+		NEW.subject_deal_id     := CASE WHEN NEW.subject_kind = 'deal'     THEN NEW.subject_id END;
+		NEW.subject_signal_id   := CASE WHEN NEW.subject_kind = 'signal'   THEN NEW.subject_id END;
+		NEW.subject_offer_id    := CASE WHEN NEW.subject_kind = 'offer'    THEN NEW.subject_id END;
+		NEW.subject_contract_id := CASE WHEN NEW.subject_kind = 'contract' THEN NEW.subject_id END;
+	END IF;
+	RETURN NEW;
+END 
 public.trg_deal_last_activity() secdef=false cfg=- acl=- 
 BEGIN
   PERFORM move_last_activity('company', OLD.company_id);
