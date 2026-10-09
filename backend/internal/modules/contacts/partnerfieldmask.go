@@ -79,9 +79,9 @@ func clearsTheCallerMayMake(ctx context.Context, tx pgx.Tx, cleared []string) ([
 }
 
 // partnerClearable are the nullable fields the upsert sets to NULL. The write is
-// one upsert statement rather than a storekit.Patch, so ApplyClears has no patch
-// to act on; this set and its refusal are the same contract. gate_metrics
-// clears both numbers it carries.
+// one upsert statement, not a storekit.Patch, so ApplyClears has no patch to act
+// on. This set and its refusal are the same contract. gate_metrics clears both
+// numbers it carries.
 var partnerClearable = []string{
 	partnerFieldMarginTier, "next_step", partnerFieldNextStepDue, "served_segments", "gate_metrics",
 }

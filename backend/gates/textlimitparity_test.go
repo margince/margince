@@ -7,14 +7,12 @@
 
 package gates
 
-// A text cap a module applies is a number the contract also publishes, and the
-// generated server enforces no string length. So each cap is a hand-typed
-// mirror of `api/crm.yaml`, and this gate fails the day one of them drifts:
-// raise the contract alone and the server refuses what the schema calls valid,
-// raise the constant alone and a client truncates to a bound nobody applies.
-//
-// The list below is the subject, not a census of every maxLength. A cap joins
-// it when a module copies the number instead of reading it.
+// Each text cap a module applies is a hand-typed mirror of a number
+// `api/crm.yaml` publishes, because the generated server enforces no string
+// length. This gate fails the day one of them drifts. Raise the contract alone
+// and the server refuses what the schema calls valid. Raise the constant alone
+// and a client truncates to a bound nobody applies. A cap joins the list when a
+// module copies the number instead of reading it.
 
 import (
 	"go/ast"
@@ -86,8 +84,8 @@ func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 }
 
 // publishedMaxLength walks the contract to a schema node and answers its
-// maxLength, failing when the node moved or carries none: a gate whose subject
-// vanished must say so rather than pass over nothing.
+// maxLength. It fails when the node moved or carries none, because a gate
+// whose subject vanished must say so rather than pass over nothing.
 func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
 	t.Helper()
 	var node any = doc
