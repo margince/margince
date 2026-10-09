@@ -35025,6 +35025,14 @@ export interface components {
              */
             passport_id?: string | null;
             /**
+             * @description The tool a delegated change was typed through, as AuditHistoryEntry
+             *     carries it and with the same nulls. Read from the passport the row
+             *     itself recorded, so a token rotated or revoked since the change
+             *     still names its client; resolving through the passport list would
+             *     name only the newest token of each connection.
+             */
+            agent_client?: string | null;
+            /**
              * Format: uuid
              * @description The human authority for an agent action.
              */
@@ -35137,6 +35145,14 @@ export interface components {
              * @description Agent Seat Passport that authorized the change; present for agent actors only.
              */
             passport_id?: string | null;
+            /**
+             * @description The tool a delegated change was typed through, as AuditHistoryEntry
+             *     carries it and with the same nulls. Read from the passport the row
+             *     itself recorded, so a token rotated or revoked since the change
+             *     still names its client; resolving through the passport list would
+             *     name only the newest token of each connection.
+             */
+            agent_client?: string | null;
             /** @description Grounding evidence for an agent-authored change; present for agent actors only. */
             evidence?: {
                 [key: string]: unknown;

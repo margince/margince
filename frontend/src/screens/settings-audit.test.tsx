@@ -266,6 +266,23 @@ describe("AuditLogCard", () => {
     expect(detail).not.toHaveTextContent("pp-9");
   });
 
+  it("names the client the row's own passport recorded, though the reader's passports no longer list it", async () => {
+    const rotated = { ...auditEntry, agent_client: "Claude Desktop" };
+    vi.stubGlobal("fetch", auditLogBackend({ entries: [rotated] }));
+    const user = userEvent.setup();
+    render(<AuditLogCard />);
+    await screen.findByText("update");
+
+    await openDetail(user);
+
+    const toggle = screen.getByRole("button", { name: EXPAND_UPDATE });
+    const detail = document.getElementById(
+      toggle.getAttribute("aria-controls") ?? "",
+    );
+    expect(detail).toHaveTextContent("Claude Desktop");
+    expect(detail).not.toHaveTextContent("An agent");
+  });
+
   it("opens an entry from anywhere on its row, its id included, but not from a control in it", async () => {
     vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
     const user = userEvent.setup();

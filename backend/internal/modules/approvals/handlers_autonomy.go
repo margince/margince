@@ -50,6 +50,26 @@ func (h Handlers) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// An absent `kind` names no setting to change.
+	//
+	// The lookup answered 404 about an empty one, which reads as "no such
+	// kind" where the caller named none.
+	if raw, sent := httperr.PresentField(r, "kind"); !sent || raw == nil {
+		httperr.Write(w, r, httperr.Validation("kind", "required",
+			"name the kind of change to set, as GET /autonomy lists them"))
+		return
+	}
+	// An absent `auto` is a client that forgot the field, not one asking to be
+	// asked again.
+	//
+	// The contract requires it, so it decodes into a plain bool and absent is
+	// indistinguishable from false. Read off the struct alone, forgetting the
+	// field opted the installation out of applying this kind on sight.
+	if raw, sent := httperr.PresentField(r, "auto"); !sent || raw == nil {
+		httperr.Write(w, r, httperr.Validation("auto", "required",
+			"send auto as true to apply this kind on sight, or false to be asked"))
+		return
+	}
 	settings, err := h.svc.SetAutoApply(r.Context(), req.Kind, req.Auto)
 	if err != nil {
 		httperr.Write(w, r, err)

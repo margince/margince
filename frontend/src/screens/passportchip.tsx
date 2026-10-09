@@ -4,10 +4,21 @@
 import { PassportChip } from "../design-system/trust";
 import { usePassportName } from "./passports.queries";
 
-// The passport chip with its name looked up in the reader's own passports. A
-// component of its own so the list is read only where a row names a passport.
+// The passport chip, named from the row itself where the row says, and from
+// the reader's own passports otherwise. A component of its own so the list is
+// read only where a row names a passport.
+//
+// agentClient is the server's answer for this row, resolved from the passport
+// the row recorded.
+//
+// The list holds only the newest passport per connection.
+//
+// So a change made under a rotated token read as "An agent", even where the
+// reader still held the connection.
 export function ResolvedPassportChip({
   passportId,
-}: Readonly<{ passportId: string }>) {
-  return <PassportChip name={usePassportName(passportId)} />;
+  agentClient,
+}: Readonly<{ passportId: string; agentClient?: string | null }>) {
+  const fromList = usePassportName(passportId);
+  return <PassportChip name={agentClient ?? fromList} />;
 }

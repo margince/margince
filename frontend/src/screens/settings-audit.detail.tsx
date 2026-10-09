@@ -54,7 +54,12 @@ export function AuditDetail({ entry }: Readonly<{ entry: AuditLogEntry }>) {
           {
             key: "passport",
             term: t("history.passport"),
-            value: <ResolvedPassportChip passportId={entry.passport_id} />,
+            value: (
+              <ResolvedPassportChip
+                passportId={entry.passport_id}
+                agentClient={entry.agent_client}
+              />
+            ),
           },
         ]
       : []),
