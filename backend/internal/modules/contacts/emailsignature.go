@@ -65,16 +65,19 @@ type EmailSignature struct {
 }
 
 // SaveSignatureInput is what the caller writes about their own sign-off.
+// A nil Title or Phone leaves the stored value as it is.
 type SaveSignatureInput struct {
-	Body, Title, Phone string
+	Body         string
+	Title, Phone *string
 }
 
 // SenderSignature is what a send needs to sign as the caller: their own text,
 // their template values, and the workspace's template.
 type SenderSignature struct {
 	Body, Title, Phone, Template string
-	// HasLogo says the workspace's own company has a logo to embed.
-	HasLogo bool
+	// LogoKey is the stored object of the workspace's own logo, empty when it
+	// has none. A send stages this key, so a retry embeds the same picture.
+	LogoKey string
 }
 
 // GetMyEmailSignature reads the caller's own signature. A member who has never
@@ -121,9 +124,9 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 	if len([]rune(trimmed)) > SignatureMaxRunes {
 		return EmailSignature{}, &SignatureTooLongError{Runes: len([]rune(trimmed))}
 	}
-	title, phone := strings.TrimSpace(in.Title), strings.TrimSpace(in.Phone)
-	if len([]rune(title)) > SignatureFieldMaxRunes || len([]rune(phone)) > SignatureFieldMaxRunes {
-		return EmailSignature{}, &SignatureTooLongError{Runes: max(len([]rune(title)), len([]rune(phone)))}
+	title, phone := trimmedField(in.Title), trimmedField(in.Phone)
+	if longest := max(fieldRunes(title), fieldRunes(phone)); longest > SignatureFieldMaxRunes {
+		return EmailSignature{}, &SignatureTooLongError{Runes: longest}
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := readSignatureTx(ctx, tx, actor.UserID)
@@ -131,8 +134,11 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO email_signature (owner_id, body, title, phone) VALUES ($1, $2, $3, $4)
-			ON CONFLICT (owner_id) DO UPDATE SET body = $2, title = $3, phone = $4, archived_at = NULL`,
+			INSERT INTO email_signature (owner_id, body, title, phone)
+			VALUES ($1, $2, coalesce($3::text, ''), coalesce($4::text, ''))
+			ON CONFLICT (owner_id) DO UPDATE SET body = $2,
+			  title = coalesce($3::text, email_signature.title),
+			  phone = coalesce($4::text, email_signature.phone), archived_at = NULL`,
 			actor.UserID, trimmed, title, phone); err != nil {
 			return err
 		}
@@ -180,11 +186,6 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 			return err
 		}
 		out.Template = template
-		if err := tx.QueryRow(ctx, `
-			SELECT EXISTS (SELECT 1 FROM company WHERE is_anchor AND archived_at IS NULL
-			                 AND coalesce(logo_object_key, '') <> '')`).Scan(&out.HasLogo); err != nil {
-			return err
-		}
 		err = tx.QueryRow(ctx, `
 			SELECT body, title, phone FROM email_signature
 			 WHERE owner_id = $1 AND archived_at IS NULL`, userID).Scan(&out.Body, &out.Title, &out.Phone)
@@ -196,7 +197,13 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 	if err != nil {
 		return SenderSignature{}, fmt.Errorf("contacts: reading the sender's email signature: %w", err)
 	}
-	return out, nil
+	// Read even with no template stored, so a preview of an unsaved one shows
+	// the logo too. A seat that may not read companies signs without it.
+	out.LogoKey, err = s.AnchorLogoKey(ctx)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return out, nil
+	}
+	return out, err
 }
 
 func readSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID) (string, error) {
@@ -226,4 +233,20 @@ func (e *SignatureTooLongError) Error() string {
 // to retry — retrying a signature that is too long forever.
 func (e *SignatureTooLongError) FieldFault() (field, code, message string) {
 	return "body", "too_long", e.Error()
+}
+
+// trimmedField trims a field the caller sent and keeps an omitted one nil.
+func trimmedField(field *string) *string {
+	if field == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*field)
+	return &trimmed
+}
+
+func fieldRunes(field *string) int {
+	if field == nil {
+		return 0
+	}
+	return len([]rune(*field))
 }

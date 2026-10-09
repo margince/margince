@@ -69,7 +69,10 @@ type SignOff struct {
 	Text string
 	// HTML is the markup the HTML part carries, set only for a template.
 	HTML string
-	Kind SignOffKind
+	// LogoKey is the logo the markup embeds, staged with the message so a
+	// retry sends the same picture. Empty when the markup shows none.
+	LogoKey string
+	Kind    SignOffKind
 }
 
 // under returns the message with the sign-off beneath it.
@@ -104,9 +107,42 @@ func (s *Store) signOff(ctx context.Context, body, subject string) (SignOff, err
 	return s.signOffAs(ctx, body, subject, name)
 }
 
+// signatureDraft is what a settings form has typed and not saved. Each set
+// field stands in for the stored one in a preview; a send never carries one.
+type signatureDraft struct {
+	Template, Title, Phone *string
+}
+
+func (d signatureDraft) over(stored SenderSignature) SenderSignature {
+	if d.Template != nil {
+		stored.Template = *d.Template
+	}
+	if d.Title != nil {
+		stored.Title = *d.Title
+	}
+	if d.Phone != nil {
+		stored.Phone = *d.Phone
+	}
+	return stored
+}
+
+// previewSignOff is signOff with a form's unsaved values in place of the
+// stored ones, so a settings preview shows what Save would produce.
+func (s *Store) previewSignOff(ctx context.Context, body, subject string, draft signatureDraft) (SignOff, error) {
+	name, err := s.senderDisplayName(ctx)
+	if err != nil {
+		return SignOff{}, err
+	}
+	return s.signOffDrafted(ctx, body, subject, name, draft)
+}
+
 // signOffAs is signOff with the sender's display name already read, so a send
 // writes one name in its From header and its closing.
 func (s *Store) signOffAs(ctx context.Context, body, subject, name string) (SignOff, error) {
+	return s.signOffDrafted(ctx, body, subject, name, signatureDraft{})
+}
+
+func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, draft signatureDraft) (SignOff, error) {
 	if s.signature == nil {
 		return SignOff{Kind: SignOffNone}, nil
 	}
@@ -114,19 +150,24 @@ func (s *Store) signOffAs(ctx context.Context, body, subject, name string) (Sign
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
 		return SignOff{Kind: SignOffNone}, nil
 	}
-	signature, err := s.signature.SignatureFor(ctx, actor.UserID)
+	stored, err := s.signature.SignatureFor(ctx, actor.UserID)
 	if err != nil {
 		return SignOff{}, err
 	}
+	signature := draft.over(stored)
 	if strings.TrimSpace(signature.Template) != "" {
 		markup, text, err := renderSignatureTemplate(signature.Template, signatureValues{
 			Name: draftfloor.NameLine(name), Title: signature.Title, Phone: signature.Phone,
-			HasLogo: signature.HasLogo,
+			HasLogo: signature.LogoKey != "",
 		})
 		if err != nil {
 			return SignOff{}, err
 		}
-		return SignOff{Text: text, HTML: markup, Kind: SignOffTemplate}, nil
+		sign := SignOff{Text: text, HTML: markup, Kind: SignOffTemplate}
+		if strings.Contains(markup, signatureLogoSrc) {
+			sign.LogoKey = signature.LogoKey
+		}
+		return sign, nil
 	}
 	if sign := strings.TrimSpace(signature.Body); sign != "" {
 		return SignOff{Text: sign, Kind: SignOffSignature}, nil

@@ -21,13 +21,14 @@ type stubSignature struct {
 	template string
 	title    string
 	phone    string
+	logoKey  string
 	err      error
 	askedID  ids.UUID
 }
 
 func (s *stubSignature) SignatureFor(_ context.Context, userID ids.UUID) (SenderSignature, error) {
 	s.askedID = userID
-	return SenderSignature{Body: s.body, Template: s.template, Title: s.title, Phone: s.phone}, s.err
+	return SenderSignature{Body: s.body, Template: s.template, Title: s.title, Phone: s.phone, LogoKey: s.logoKey}, s.err
 }
 
 func humanCtx(userID ids.UUID) context.Context {

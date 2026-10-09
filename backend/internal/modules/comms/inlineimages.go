@@ -5,7 +5,6 @@ package comms
 
 import (
 	"context"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -13,9 +12,9 @@ import (
 // InlineImages supplies the images a staged message's markup shows by content
 // id. Compose binds it; this module owns neither the logo nor its storage.
 type InlineImages interface {
-	// SignatureLogo is the workspace logo sized for mail, or false when the
-	// workspace has none.
-	SignatureLogo(ctx context.Context) (connector.InlineImage, bool, error)
+	// SignatureLogo is the stored logo at key sized for mail, or false when
+	// the object no longer exists because the workspace replaced or removed it.
+	SignatureLogo(ctx context.Context, key string) (connector.InlineImage, bool, error)
 }
 
 // WithInlineImages binds the reader. Unbound, markup that refers to an image
@@ -25,13 +24,15 @@ func (d *Dispatcher) WithInlineImages(images InlineImages) *Dispatcher {
 	return d
 }
 
-// inlineFor is the images this markup shows. It is read before the delivery is
-// marked in flight, so a failed read retries rather than sending a broken mail.
-func (d *Dispatcher) inlineFor(ctx context.Context, html string) ([]connector.InlineImage, error) {
-	if d.images == nil || !strings.Contains(html, "cid:"+connector.SignatureLogoContentID) {
+// inlineFor is the images this delivery's markup shows: the logo staged with
+// it, never whichever logo the workspace has now. It is read before the
+// delivery is marked in flight, so a failed read retries rather than sending a
+// broken mail.
+func (d *Dispatcher) inlineFor(ctx context.Context, del Delivery) ([]connector.InlineImage, error) {
+	if d.images == nil || del.InlineLogoKey == "" {
 		return nil, nil
 	}
-	logo, ok, err := d.images.SignatureLogo(ctx)
+	logo, ok, err := d.images.SignatureLogo(ctx, del.InlineLogoKey)
 	if err != nil || !ok {
 		return nil, err
 	}

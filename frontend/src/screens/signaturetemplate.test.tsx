@@ -6,6 +6,7 @@ import { meFixture } from "../app/mefixture";
 import { useToast } from "../design-system/toast";
 import { jsonResponse, render } from "./settings.testkit";
 import { SignatureSettingRow } from "./settingssignaturerow";
+import { SignatureHtml } from "./signaturehtml";
 import { SignatureTemplateCard } from "./signaturetemplatecard";
 
 // A workspace signature template: an admin writes the layout once, and each
@@ -14,6 +15,7 @@ import { SignatureTemplateCard } from "./signaturetemplatecard";
 type Call = { url: string; method: string; body: unknown };
 
 const RENDERED = "<p><b>Ada Lovelace</b><br>Head of Sales</p>";
+const LOGO_URL = "/v1/companies/c1/logo";
 
 function backend(calls: Call[], templateActive: boolean) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -23,9 +25,13 @@ function backend(calls: Call[], templateActive: boolean) {
     const raw = request ? await request.text() : String(init?.body ?? "");
     calls.push({ url, method, body: raw ? JSON.parse(raw) : undefined });
     if (url.endsWith("/v1/me")) {
-      return jsonResponse(
-        meFixture({ allow: { installation_settings: ["read", "update"] } }),
-      );
+      return jsonResponse({
+        ...meFixture({ allow: { installation_settings: ["read", "update"] } }),
+        installation_brand: { display_name: "Company A", logo_url: LOGO_URL },
+      });
+    }
+    if (url.endsWith(LOGO_URL)) {
+      return new Response(new Blob(["logo"], { type: "image/png" }));
     }
     if (url.includes("/me/email-signature")) {
       return jsonResponse({
@@ -118,6 +124,16 @@ describe("the template card", () => {
 
     const box = await screen.findByRole("textbox", { name: "Template (HTML)" });
     await user.type(box, " Gradion");
+    // The preview asks for the layout as typed, before it is saved.
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) =>
+            c.url.endsWith("/emails:sign-off") &&
+            JSON.stringify(c.body).includes("{title}</p> Gradion"),
+        ),
+      ).toBe(true),
+    );
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(
@@ -127,5 +143,24 @@ describe("the template card", () => {
         ),
       ).toBe(true),
     );
+  });
+});
+
+describe("a rendered signature", () => {
+  it("shows the embedded logo from the workspace logo's bytes", async () => {
+    vi.stubGlobal("fetch", backend([], true));
+    render(
+      <SignatureHtml
+        html='<p><img src="cid:signature-logo@margince" alt="" width="150">Ada</p>'
+        title="Signature preview"
+      />,
+    );
+    const frame = await screen.findByTitle("Signature preview");
+    await waitFor(() =>
+      expect(frame.getAttribute("srcdoc")).toContain(
+        'src="data:image/png;base64,',
+      ),
+    );
+    expect(frame.getAttribute("srcdoc")).not.toContain("cid:");
   });
 });

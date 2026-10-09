@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -353,7 +352,7 @@ func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace send
 		// the one construction every send goes through, so no surface can end
 		// up with a dispatcher that checks nothing and looks green doing it.
 	).WithRequirementChecker(requirementCheckerFor(pool)).
-		WithInlineImages(newSignatureLogo(contacts.NewStore(InstallationDB(pool)), blob)), relay, vault)
+		WithInlineImages(newSignatureLogo(blob)), relay, vault)
 }
 
 // controllerLaneOn gives the dispatcher the transport for the installation's own

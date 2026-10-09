@@ -26,13 +26,16 @@ type SenderSignature struct {
 	Title    string
 	Phone    string
 	Template string
-	// HasLogo says the workspace has a logo for {logo} to show.
-	HasLogo bool
+	// LogoKey is the stored object of the workspace logo {logo} shows, empty
+	// when the workspace has none.
+	LogoKey string
 }
 
 // signatureLogoTag is what {logo} becomes: the workspace logo, embedded in the
 // message and shown by content id, never fetched from a server.
-const signatureLogoTag = `<img src="cid:` + connector.SignatureLogoContentID + `" alt="" width="150">`
+const signatureLogoTag = `<img src="` + signatureLogoSrc + `" alt="" width="150">`
+
+const signatureLogoSrc = "cid:" + connector.SignatureLogoContentID
 
 // signatureValues fills the template's placeholders. Each value is the
 // sender's own text, so it is escaped before it lands in markup.
@@ -83,17 +86,23 @@ func markupText(markup string) (string, error) {
 	return strings.Join(lines, "\n"), nil
 }
 
+// textBlocks are the allowed elements a reader sees on a line of their own.
+var textBlocks = map[atom.Atom]bool{atom.P: true, atom.Li: true, atom.Blockquote: true, atom.Ul: true, atom.Ol: true}
+
 func writeText(out *strings.Builder, node *xhtml.Node) {
 	switch {
 	case node.Type == xhtml.TextNode:
 		out.WriteString(node.Data)
-	case node.DataAtom == atom.Br:
+	case node.DataAtom == atom.Br || node.DataAtom == atom.Hr:
 		out.WriteString("\n")
 	default:
+		if textBlocks[node.DataAtom] {
+			out.WriteString("\n")
+		}
 		for child := node.FirstChild; child != nil; child = child.NextSibling {
 			writeText(out, child)
 		}
-		if node.DataAtom == atom.P {
+		if textBlocks[node.DataAtom] {
 			out.WriteString("\n")
 		}
 	}

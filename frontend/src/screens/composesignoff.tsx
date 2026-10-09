@@ -12,6 +12,7 @@ import { settingsHref } from "./settingsrouting";
 import { SignatureHtml } from "./signaturehtml";
 
 type SignOff = components["schemas"]["EmailSignOff"];
+type SignatureDraft = components["schemas"]["EmailSignatureDraft"];
 
 // How long the words must rest before the closing's language is asked again.
 const SETTLE_MS = 400;
@@ -70,18 +71,37 @@ export function SignOffPreview({
 export function useSignOff(
   body: string,
   subject: string,
+  draft?: SignatureDraft,
 ): { signOff: SignOff | undefined; stale: boolean; failed: boolean } {
   const userId = useMe().data?.user.id;
-  const [settled, setSettled] = useState({ body, subject });
+  // A settings form's unsaved values, compared by content: the form builds a
+  // new object on every render.
+  const draftKey = draft === undefined ? "" : JSON.stringify(draft);
+  const [settled, setSettled] = useState({ body, subject, draftKey });
   useEffect(() => {
-    const timer = setTimeout(() => setSettled({ body, subject }), SETTLE_MS);
+    const timer = setTimeout(
+      () => setSettled({ body, subject, draftKey }),
+      SETTLE_MS,
+    );
     return () => clearTimeout(timer);
-  }, [body, subject]);
+  }, [body, subject, draftKey]);
   const query = useQuery({
-    queryKey: [SIGN_OFF_QUERY, userId, settled.body, settled.subject],
+    queryKey: [
+      SIGN_OFF_QUERY,
+      userId,
+      settled.body,
+      settled.subject,
+      settled.draftKey,
+    ],
     queryFn: async () => {
       const { data, error } = await api.POST("/emails:sign-off", {
-        body: settled,
+        body: {
+          body: settled.body,
+          subject: settled.subject,
+          ...(settled.draftKey === ""
+            ? {}
+            : { draft: parseDraft(settled.draftKey) }),
+        },
       });
       if (error) {
         throwProblem(error);
@@ -95,10 +115,18 @@ export function useSignOff(
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === userId ? previous : undefined,
   });
-  const pending = settled.body !== body || settled.subject !== subject;
+  const pending =
+    settled.body !== body ||
+    settled.subject !== subject ||
+    settled.draftKey !== draftKey;
   return {
     signOff: query.data,
     stale: pending || query.isPlaceholderData,
     failed: query.isError,
   };
+}
+
+function parseDraft(key: string): SignatureDraft {
+  const parsed: SignatureDraft = JSON.parse(key);
+  return parsed;
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 const signOffBody = "Hallo Anna, wie besprochen schicke ich dir das Angebot und die Unterlagen für das Projekt. Ich freue mich auf deine Rückmeldung."
@@ -86,13 +87,23 @@ func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
 	if _, err := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(NewSettingsStore(e.Pool)).
-		SaveSignatureTemplate(e.Admin(), `<p><b>{name}</b><br>{title}<br><span style="color:#2a7">{phone}</span></p>`); err != nil {
+		SaveSignatureTemplate(e.Admin(), `<p>{logo}<b>{name}</b><br>{title}<br><span style="color:#2a7">{phone}</span></p>`); err != nil {
 		t.Fatalf("save template: %v", err)
 	}
-	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{
-		Body: "my own text", Title: "Head of Sales", Phone: "+49 30 1234",
+	logoKey := "logos/" + ids.NewV7().String() + ".png"
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, source, captured_by)
+		VALUES ($1, 'Company A', true, $2, 'manual', 'human:x')`, ids.NewV7(), logoKey)
+	signatures := contacts.NewStore(InstallationDB(e.Pool))
+	title, phone := "Head of Sales", "+49 30 1234"
+	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{
+		Body: "my own text", Title: &title, Phone: &phone,
 	}); err != nil {
 		t.Fatalf("save signature: %v", err)
+	}
+	// A save that sends only the text, as a client unaware of the fields does,
+	// keeps the title and phone.
+	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "my own text"}); err != nil {
+		t.Fatalf("save text only: %v", err)
 	}
 	if _, err := adapter.SendEmail(ctx, anchorID, agents.SendEmailArgs{
 		To: []string{recipient}, Subject: "Angebot", Body: signOffBody, ConsentPurpose: "transactional",
@@ -110,6 +121,9 @@ func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
 	}
 	if strings.Contains(sent.Body, "my own text") || strings.Contains(sent.HTMLBody, "my own text") {
 		t.Errorf("the member's own text signed alongside the template")
+	}
+	if sent.InlineLogoKey != logoKey || !strings.Contains(sent.HTMLBody, "cid:"+connector.SignatureLogoContentID) {
+		t.Errorf("the staged message embeds logo %q in %q, want %q", sent.InlineLogoKey, sent.HTMLBody, logoKey)
 	}
 }
 

@@ -40,8 +40,6 @@ import (
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // allowedElements are the tags a formatted business email is made of. Anything
@@ -231,7 +229,7 @@ func safeStyle(node *html.Node) string {
 
 func embeddedLogo(node *html.Node) bool {
 	for _, attr := range node.Attr {
-		if strings.EqualFold(attr.Key, "src") && attr.Val == "cid:"+connector.SignatureLogoContentID {
+		if strings.EqualFold(attr.Key, "src") && attr.Val == signatureLogoSrc {
 			return true
 		}
 	}

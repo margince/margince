@@ -5,11 +5,11 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
 
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -22,33 +22,36 @@ const signatureLogoEdge = 300
 // signatureLogoReadLimit bounds the stored logo read before resizing.
 const signatureLogoReadLimit = 16 << 20
 
-// signatureLogo hands the send path the workspace logo sized for mail. Each
-// stored logo is resized once and kept by its object key, which changes with
-// every upload, so a new logo is never served stale.
+// signatureLogoCacheSize bounds the sized logos kept in memory. Every upload
+// mints a new key, so without a bound each replaced logo would stay resident.
+const signatureLogoCacheSize = 16
+
+// signatureLogo hands the send path a stored logo sized for mail. A key names
+// one immutable upload, so a sized copy kept by key is never stale.
 type signatureLogo struct {
-	store *contacts.Store
 	blob  blobstore.Store
-	sized *sync.Map
+	mu    *sync.Mutex
+	sized map[string]connector.InlineImage
 }
 
-func newSignatureLogo(store *contacts.Store, blob blobstore.Store) signatureLogo {
-	return signatureLogo{store: store, blob: blob, sized: &sync.Map{}}
+func newSignatureLogo(blob blobstore.Store) signatureLogo {
+	return signatureLogo{blob: blob, mu: &sync.Mutex{}, sized: map[string]connector.InlineImage{}}
 }
 
-func (l signatureLogo) SignatureLogo(ctx context.Context) (connector.InlineImage, bool, error) {
+func (l signatureLogo) SignatureLogo(ctx context.Context, key string) (connector.InlineImage, bool, error) {
 	if l.blob == nil {
 		return connector.InlineImage{}, false, nil
 	}
-	key, err := l.store.AnchorLogoKey(ctx)
-	if err != nil || key == "" {
-		return connector.InlineImage{}, false, err
-	}
-	if sized, ok := l.sized.Load(key); ok {
-		if image, ok := sized.(connector.InlineImage); ok {
-			return image, true, nil
-		}
+	l.mu.Lock()
+	cached, ok := l.sized[key]
+	l.mu.Unlock()
+	if ok {
+		return cached, true, nil
 	}
 	reader, _, err := l.blob.Get(ctx, key)
+	if errors.Is(err, blobstore.ErrNotFound) {
+		return connector.InlineImage{}, false, nil
+	}
 	if err != nil {
 		return connector.InlineImage{}, false, fmt.Errorf("compose: reading the workspace logo: %w", err)
 	}
@@ -68,6 +71,11 @@ func (l signatureLogo) SignatureLogo(ctx context.Context) (connector.InlineImage
 		return connector.InlineImage{}, false, fmt.Errorf("compose: sizing the workspace logo for mail: %w", err)
 	}
 	image := connector.InlineImage{ContentID: connector.SignatureLogoContentID, ContentType: "image/png", Body: png}
-	l.sized.Store(key, image)
+	l.mu.Lock()
+	if len(l.sized) >= signatureLogoCacheSize {
+		clear(l.sized)
+	}
+	l.sized[key] = image
+	l.mu.Unlock()
 	return image, true, nil
 }

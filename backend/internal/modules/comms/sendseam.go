@@ -119,7 +119,7 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 	if err != nil {
 		return sendSeam{}, err
 	}
-	inline, err := d.inlineFor(ctx, del.HTMLBody)
+	inline, err := d.inlineFor(ctx, del)
 	if err != nil {
 		return sendSeam{}, err
 	}

@@ -37785,6 +37785,28 @@ components:
         subject:
           type: string
           description: The subject, read for its language when the body is too short to tell.
+        draft:
+          $ref: '#/components/schemas/EmailSignatureDraft'
+    EmailSignatureDraft:
+      type: object
+      additionalProperties: false
+      description: |
+        Values a settings form has typed and not saved. Each field present stands in for
+        the stored one, so the preview shows what saving would produce. Writes nothing,
+        and a send never reads it.
+      properties:
+        template:
+          type: string
+          maxLength: 4000
+          description: The workspace template as edited. Empty previews a workspace with none.
+        title:
+          type: string
+          maxLength: 120
+          description: The caller's title as edited.
+        phone:
+          type: string
+          maxLength: 120
+          description: The caller's phone as edited.
     EmailSignOff:
       type: object
       required: [text, kind]

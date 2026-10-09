@@ -26715,6 +26715,20 @@ export interface components {
             body: string;
             /** @description The subject, read for its language when the body is too short to tell. */
             subject?: string;
+            draft?: components["schemas"]["EmailSignatureDraft"];
+        };
+        /**
+         * @description Values a settings form has typed and not saved. Each field present stands in for
+         *     the stored one, so the preview shows what saving would produce. Writes nothing,
+         *     and a send never reads it.
+         */
+        EmailSignatureDraft: {
+            /** @description The workspace template as edited. Empty previews a workspace with none. */
+            template?: string;
+            /** @description The caller's title as edited. */
+            title?: string;
+            /** @description The caller's phone as edited. */
+            phone?: string;
         };
         EmailSignOff: {
             /**

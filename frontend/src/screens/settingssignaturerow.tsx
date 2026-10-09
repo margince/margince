@@ -43,7 +43,6 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
     },
   });
   const templated = signature.data?.template_active === true;
-  const rendered = useSignOff("", "").signOff;
   const save = useSaveSignature((saved) => {
     // Hand the edit back to the server's answer: it trims what it stores.
     setDraft(
@@ -67,20 +66,18 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
     shown.title !== stored.title ||
     shown.phone !== stored.phone;
   useUnsavedGuard(open && dirty);
+  // The preview shows the title and phone as typed, before they are saved.
+  const rendered = useSignOff(
+    "",
+    "",
+    draft === null ? undefined : { title: draft.title, phone: draft.phone },
+  ).signOff;
   const change = (field: keyof Draft, value: string) =>
     setDraft({ ...shown, [field]: value });
 
-  // The first line identifies a sign-off; nothing is claimed before the read
-  // has answered.
-  const firstLine = stored.body.split("\n")[0].trim();
-  let answer: string | undefined;
-  if (signature.isPending) {
-    answer = undefined;
-  } else if (templated) {
-    answer = t("settings.signatureFromTemplate");
-  } else {
-    answer = firstLine === "" ? t("settings.signatureNone") : firstLine;
-  }
+  const answer = signature.isPending
+    ? undefined
+    : rowAnswer(t, templated, stored.body);
 
   const close = () => setOpen(false);
   const edit = () => {
@@ -178,4 +175,18 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       </Modal>
     </>
   );
+}
+
+// The row's value: the first line identifies a sign-off. The caller claims
+// nothing before the read has answered.
+function rowAnswer(
+  t: ReturnType<typeof useT>,
+  templated: boolean,
+  body: string,
+): string {
+  if (templated) {
+    return t("settings.signatureFromTemplate");
+  }
+  const firstLine = body.split("\n")[0].trim();
+  return firstLine === "" ? t("settings.signatureNone") : firstLine;
 }

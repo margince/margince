@@ -10,24 +10,38 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-type fixedLogo struct{ calls int }
+// storedLogos holds logos by object key, as the blob store does.
+type storedLogos struct{ asked []string }
 
-func (f *fixedLogo) SignatureLogo(context.Context) (connector.InlineImage, bool, error) {
-	f.calls++
-	return connector.InlineImage{ContentID: connector.SignatureLogoContentID, ContentType: "image/png", Body: []byte("png")}, true, nil
+func (s *storedLogos) SignatureLogo(_ context.Context, key string) (connector.InlineImage, bool, error) {
+	s.asked = append(s.asked, key)
+	if key != "logos/a" {
+		return connector.InlineImage{}, false, nil
+	}
+	return connector.InlineImage{ContentID: connector.SignatureLogoContentID, ContentType: "image/png", Body: []byte("logo a")}, true, nil
 }
 
-// The logo is read only for markup that shows it.
-func TestTheLogoRidesOnlyWithMarkupThatShowsIt(t *testing.T) {
+// A delivery embeds the logo staged with it, and reads none when it staged none.
+func TestADeliveryEmbedsTheLogoStagedWithIt(t *testing.T) {
 	t.Parallel()
-	logo := &fixedLogo{}
-	d := (&Dispatcher{}).WithInlineImages(logo)
-	plain, err := d.inlineFor(context.Background(), "<p>Hello</p>")
-	if err != nil || len(plain) != 0 || logo.calls != 0 {
-		t.Fatalf("markup with no logo read %d image(s), %d call(s), err %v", len(plain), logo.calls, err)
+	logos := &storedLogos{}
+	d := (&Dispatcher{}).WithInlineImages(logos)
+	plain, err := d.inlineFor(context.Background(), Delivery{HTMLBody: "<p>Hello</p>"})
+	if err != nil || len(plain) != 0 || len(logos.asked) != 0 {
+		t.Fatalf("a delivery with no staged logo read %d image(s), asked %v, err %v", len(plain), logos.asked, err)
 	}
-	signed, err := d.inlineFor(context.Background(), `<img src="cid:`+connector.SignatureLogoContentID+`">`)
-	if err != nil || len(signed) != 1 || signed[0].ContentID != connector.SignatureLogoContentID {
-		t.Fatalf("markup showing the logo got %+v, err %v", signed, err)
+	signed, err := d.inlineFor(context.Background(), Delivery{InlineLogoKey: "logos/a"})
+	if err != nil || len(signed) != 1 || string(signed[0].Body) != "logo a" {
+		t.Fatalf("the staged logo came back as %+v, err %v", signed, err)
+	}
+}
+
+// A logo the workspace deleted after staging sends the message without it.
+func TestADeletedStagedLogoSendsWithoutTheImage(t *testing.T) {
+	t.Parallel()
+	d := (&Dispatcher{}).WithInlineImages(&storedLogos{})
+	images, err := d.inlineFor(context.Background(), Delivery{InlineLogoKey: "logos/replaced"})
+	if err != nil || len(images) != 0 {
+		t.Fatalf("a deleted logo gave %d image(s), err %v", len(images), err)
 	}
 }

@@ -55,8 +55,13 @@ export function SignatureTemplateCard() {
   const canEdit = useCanWrite("installation_settings", "update");
   const query = useSignatureTemplate();
   const save = useSaveSignatureTemplate();
-  const preview = useSignOff("", "").signOff;
   const [draft, setDraft] = useState<string | null>(null);
+  // The preview shows the template as typed, before it is saved.
+  const preview = useSignOff(
+    "",
+    "",
+    draft === null ? undefined : { template: draft },
+  ).signOff;
   return (
     <Panel title={t("signatureTemplate.title")}>
       <PanelBody>

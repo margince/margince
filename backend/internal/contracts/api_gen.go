@@ -33620,6 +33620,11 @@ type EmailSignOffRequest struct {
 	// Body The message as written so far, plain text. Read only for its language.
 	Body string `json:"body"`
 
+	// Draft Values a settings form has typed and not saved. Each field present stands in for
+	// the stored one, so the preview shows what saving would produce. Writes nothing,
+	// and a send never reads it.
+	Draft *EmailSignatureDraft `json:"draft,omitempty"`
+
 	// Subject The subject, read for its language when the body is too short to tell.
 	Subject *string `json:"subject,omitempty"`
 }
@@ -33641,6 +33646,20 @@ type EmailSignature struct {
 	// Title The member's title, filled into the workspace template's `{title}`.
 	Title     string     `json:"title"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+// EmailSignatureDraft Values a settings form has typed and not saved. Each field present stands in for
+// the stored one, so the preview shows what saving would produce. Writes nothing,
+// and a send never reads it.
+type EmailSignatureDraft struct {
+	// Phone The caller's phone as edited.
+	Phone *string `json:"phone,omitempty"`
+
+	// Template The workspace template as edited. Empty previews a workspace with none.
+	Template *string `json:"template,omitempty"`
+
+	// Title The caller's title as edited.
+	Title *string `json:"title,omitempty"`
 }
 
 // EmailSignatureTemplate defines model for EmailSignatureTemplate.

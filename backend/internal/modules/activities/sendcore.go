@@ -184,6 +184,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 			body:            derived.transmitted,
 			recordedBody:    derived.recorded,
 			htmlBody:        htmlBody,
+			inlineLogoKey:   sign.LogoKey,
 			files:           files,
 			listUnsubscribe: derived.listUnsubscribe,
 			to:              toRecipients(in.Recipients, in.Cc, in.Bcc),

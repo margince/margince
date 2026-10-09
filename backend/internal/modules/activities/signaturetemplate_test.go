@@ -86,3 +86,41 @@ func TestTheLogoPlaceholderEmbedsTheWorkspaceLogoAndNothingRemote(t *testing.T) 
 		t.Errorf("markup %q shows an image though the workspace has no logo", without)
 	}
 }
+
+// The text part keeps each list item, quote and rule-separated part on its
+// own line, as the markup shows them.
+func TestTheTextPartBreaksWhereTheMarkupBreaks(t *testing.T) {
+	t.Parallel()
+	_, text, err := renderSignatureTemplate(
+		`<b>{name}</b><ul><li>{title}</li><li>{phone}</li></ul><hr>Gradion<blockquote>Quote</blockquote>`,
+		signatureValues{Name: "Anna", Title: "Head of Sales", Phone: "+49 30 1234"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "Anna\nHead of Sales\n+49 30 1234\nGradion\nQuote"; text != want {
+		t.Fatalf("text part = %q, want %q", text, want)
+	}
+}
+
+// A preview renders the form's unsaved values over the stored ones, and the
+// logo key rides only with markup that shows the logo.
+func TestAPreviewRendersTheUnsavedDraft(t *testing.T) {
+	t.Parallel()
+	store := (&Store{}).
+		WithSignature(&stubSignature{template: "<p>{name}</p>", title: "Stored title", logoKey: "logos/a.png"}).
+		WithSenderName(&stubSenderName{name: "Anna"})
+	ctx := humanCtx(ids.NewV7())
+
+	stored, err := store.previewSignOff(ctx, "", "", signatureDraft{})
+	if err != nil || stored.Text != "Anna" || stored.LogoKey != "" {
+		t.Fatalf("stored preview = %+v, err %v; want the stored template and no logo", stored, err)
+	}
+	template, title := "<p>{logo}{name}<br>{title}</p>", "Draft title"
+	drafted, err := store.previewSignOff(ctx, "", "", signatureDraft{Template: &template, Title: &title})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if drafted.Text != "Anna\nDraft title" || drafted.LogoKey != "logos/a.png" || !strings.Contains(drafted.HTML, signatureLogoSrc) {
+		t.Fatalf("drafted preview = %+v, want the draft's template and title with the logo", drafted)
+	}
+}
