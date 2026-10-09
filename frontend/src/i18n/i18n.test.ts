@@ -141,6 +141,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiRouting.location.group.eu",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
+  // And naming the kind of evidence a tag suggestion cites.
+  "tagSuggestion.kind.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
   // keeps "Email". German translates it, and does.
   "deal.forecast.pipeline",

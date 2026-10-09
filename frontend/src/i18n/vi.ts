@@ -1,6 +1,18 @@
 import type { MessageKey } from "./en";
 
-// Vietnamese catalog; how to write it: docs/reference/ui-copy-style-vi.md.
+// Vietnamese catalog. `satisfies` forces exact key parity with en.ts;
+// i18n.test.ts proves every value differs from its English counterpart
+// except the allowlisted brand names, endonyms and other strings that are
+// correct in English on purpose.
+//
+// Two terminology rules a later batch must not drift from, because nothing
+// automated can catch a synonym:
+//   - The tenant a reader belongs to is "tổ chức" throughout. A107 makes the
+//     installation and the company one thing, so a second Vietnamese noun
+//     for it would read as a second concept the product does not have.
+//   - "tổ chức" is never the registered legal entity — that sense is
+//     "pháp nhân" (onboarding's legal-block copy). The two senses share no
+//     string in this catalog and must stay that way.
 export const vi = {
   "reporting.latestSnapshot": "Ảnh chụp mới nhất",
   "reporting.contextDetails": "Chi tiết báo cáo",
@@ -2822,6 +2834,29 @@ export const vi = {
   "tagAdmin.editTitle": "Sửa thẻ",
   "tagAdmin.nameLabel": "Tên",
   "tagAdmin.colorLabel": "Màu",
+  "brief.coverage.source.tag_suggestion": "Thẻ gợi ý",
+  "worklist.untitled.tag_suggestion": "Thẻ gợi ý từ bằng chứng",
+  "tagSuggestion.agent": "Gợi ý thẻ",
+  "tagSuggestion.citedHeading": "Lý do gợi ý:",
+  "tagSuggestion.evidence": "{kind}: {subject} ({when})",
+  "tagSuggestion.noSubject": "Không có tiêu đề",
+  "tagSuggestion.kind.email": "Email",
+  "tagSuggestion.kind.meeting": "Cuộc họp",
+  "tagSuggestion.kind.note": "Ghi chú",
+  "tagSuggestion.kind.call": "Cuộc gọi",
+  "tagSuggestion.accept": "Thêm thẻ",
+  "tagSuggestion.dismiss": "Không phải thẻ này",
+  "tagSuggestion.dismissed":
+    "Đã bỏ qua cho mọi thành viên. Gợi ý chỉ quay lại khi có email hoặc ghi chú mới hơn khớp.",
+  "tagSuggestion.accepted": "Đã gắn thẻ {tag} cho {record}.",
+  "tagSuggestion.decided":
+    "Gợi ý này đã có quyết định. Tải lại để xem tình trạng hiện tại.",
+  "tagSuggestion.unavailable": "Không thể tải gợi ý. Thử lại sau.",
+  "tagAdmin.descriptionLabel": "Từ ngữ cho thấy mối quan tâm",
+  "tagAdmin.descriptionHint":
+    "Phân tách các từ hoặc cụm từ bằng dấu phẩy, ví dụ: giá Product X, demo Product X.",
+  "tagAdmin.suggestibleLabel":
+    "Gợi ý thẻ này khi email hoặc ghi chú cuộc họp dùng các từ này",
   "tagAdmin.colorNone": "Không màu",
   "tagAdmin.color.teal": "Xanh mòng két",
   "tagAdmin.color.amber": "Hổ phách",
@@ -2885,6 +2920,19 @@ export const vi = {
     "Thêm bối cảnh lâu dài như một sự kiện, một mối quan hệ hoặc một nhóm đối tượng.",
   "tags.pickerLabel": "Tìm thẻ",
   "tags.alreadyAdded": "Đã thêm",
+  "tags.offerCompanyTitle": "Gắn thêm thẻ {tag} cho {company}?",
+  "tags.offerCompanyAccept": "Gắn thẻ cho {company}",
+  "tags.offerCompanyDone": "Đã gắn thẻ {tag} cho {company}",
+  "tags.offerDismiss": "Để sau",
+  "tags.offerContactsTitle": "Gắn thêm thẻ {tag} cho liên hệ tại công ty này?",
+  "tags.offerContactsAccept": "Chọn liên hệ",
+  "tags.contactsTitle": "Gắn thẻ {tag} cho liên hệ",
+  "tags.contactsLoading": "Đang tải liên hệ…",
+  "tags.contactsNone":
+    "Trong các liên hệ bạn xem được, hiện không ai làm việc tại công ty này.",
+  "tags.contactsAlready": "{name} (đã gắn thẻ)",
+  "tags.contactsTruncated": "Chỉ hiển thị 200 liên hệ đầu tiên.",
+  "tags.contactsContinue": "Tiếp tục",
   "tags.catalogTruncatedTitle": "Danh sách đã cắt bớt",
   "tags.catalogTruncated":
     "Có thể thiếu một thẻ. Tìm theo tên trước khi yêu cầu thẻ mới.",
@@ -8020,7 +8068,7 @@ export const vi = {
     "Xóa dữ liệu của bản cài đặt này. Không thể hoàn tác.",
   "settings.scope.self": "Chỉ bạn",
   "settings.scope.mixed": "H\u1ed7n h\u1ee3p",
-  "settings.scope.workspace": "Công ty",
+  "settings.scope.workspace": "C\u00f4ng ty",
   "settings.scope.installation": "B\u1ea3n c\u00e0i \u0111\u1eb7t",
   "settings.scopeAria": "Áp dụng cho: {scope}",
   "settings.scopeAriaMixed":
@@ -10829,7 +10877,8 @@ export const vi = {
   "lists.noteHint": "Lưu cùng thay đổi để đồng nghiệp biết lý do.",
   "lists.record.title": "Danh s\u00e1ch",
   "lists.record.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
-  "lists.record.empty": "Không có trong danh sách nào bạn có thể tìm thấy.",
+  "lists.record.empty":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch n\u00e0o b\u1ea1n c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y.",
   "lists.record.check": "Kiểm tra danh sách động",
   "lists.record.checkPick": "Chọn danh sách động",
   "lists.record.truncated": "Còn các danh sách khác không hiển thị ở đây.",

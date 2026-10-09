@@ -11,6 +11,7 @@ import {
 } from "../design-system/listpopover";
 import { TagPill } from "../design-system/tagpill";
 import { useT } from "../i18n";
+import type { PickedTag } from "./bulktag";
 import { problemMessageOf } from "./common";
 import type { RecordTag, TaggableType } from "./tags.queries";
 import { useApplyTag, useTagVocabulary } from "./tags.queries";
@@ -31,12 +32,15 @@ export function AddTagPicker({
   entityType,
   entityID,
   current,
+  onApplied,
 }: Readonly<{
   entityType: TaggableType;
   entityID: string;
   /** What the record already carries, so the list can say so rather than
    * offering a word twice and answering the second try with a conflict. */
   current: readonly RecordTag[];
+  /** Told which word landed, so the host can offer to carry it further. */
+  onApplied?: (tag: PickedTag) => void;
 }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -95,7 +99,14 @@ export function AddTagPicker({
       }
       pending={apply.isPending}
       error={apply.isError ? problemMessageOf(apply.error, t) : undefined}
-      onPick={(option, done) => apply.mutate(option.id, { onSuccess: done })}
+      onPick={(option, done) =>
+        apply.mutate(option.id, {
+          onSuccess: () => {
+            done();
+            onApplied?.({ id: option.id, name: option.name });
+          },
+        })
+      }
       footer={
         // The catalog was cut. Say so, because a reader who cannot find a word
         // in a SHORT list concludes the workspace lacks it and asks an admin

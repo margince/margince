@@ -2127,6 +2127,7 @@ const (
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
 	AttentionItemSourceNoticeCase          AttentionItemSource = "notice_case"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
+	AttentionItemSourceTagSuggestion       AttentionItemSource = "tag_suggestion"
 	AttentionItemSourceTask                AttentionItemSource = "task"
 	AttentionItemSourceUndelivered         AttentionItemSource = "undelivered"
 )
@@ -2175,6 +2176,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceNoticeCase:
 		return true
 	case AttentionItemSourceRelationshipDecay:
+		return true
+	case AttentionItemSourceTagSuggestion:
 		return true
 	case AttentionItemSourceTask:
 		return true
@@ -15772,6 +15775,48 @@ func (e TagDetailColor) Valid() bool {
 	}
 }
 
+// Defines values for TagSuggestionEntityType.
+const (
+	TagSuggestionEntityTypeCompany TagSuggestionEntityType = "company"
+	TagSuggestionEntityTypeContact TagSuggestionEntityType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the TagSuggestionEntityType enum.
+func (e TagSuggestionEntityType) Valid() bool {
+	switch e {
+	case TagSuggestionEntityTypeCompany:
+		return true
+	case TagSuggestionEntityTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TagSuggestionState.
+const (
+	TagSuggestionStateAccepted   TagSuggestionState = "accepted"
+	TagSuggestionStateDismissed  TagSuggestionState = "dismissed"
+	TagSuggestionStateOpen       TagSuggestionState = "open"
+	TagSuggestionStateSuperseded TagSuggestionState = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the TagSuggestionState enum.
+func (e TagSuggestionState) Valid() bool {
+	switch e {
+	case TagSuggestionStateAccepted:
+		return true
+	case TagSuggestionStateDismissed:
+		return true
+	case TagSuggestionStateOpen:
+		return true
+	case TagSuggestionStateSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TaggableEntityType.
 const (
 	TaggableEntityTypeCompany TaggableEntityType = "company"
@@ -18471,6 +18516,7 @@ const (
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceNoticeCase          WorklistItemSource = "notice_case"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
+	WorklistItemSourceTagSuggestion       WorklistItemSource = "tag_suggestion"
 	WorklistItemSourceTask                WorklistItemSource = "task"
 	WorklistItemSourceUndelivered         WorklistItemSource = "undelivered"
 	WorklistItemSourceWeeklyCommitment    WorklistItemSource = "weekly_commitment"
@@ -18526,6 +18572,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceNoticeCase:
 		return true
 	case WorklistItemSourceRelationshipDecay:
+		return true
+	case WorklistItemSourceTagSuggestion:
 		return true
 	case WorklistItemSourceTask:
 		return true
@@ -18615,6 +18663,7 @@ const (
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceNoticeCase          WorklistReachSource = "notice_case"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
+	WorklistReachSourceTagSuggestion       WorklistReachSource = "tag_suggestion"
 	WorklistReachSourceTask                WorklistReachSource = "task"
 	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 	WorklistReachSourceWeeklyCommitment    WorklistReachSource = "weekly_commitment"
@@ -18670,6 +18719,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceNoticeCase:
 		return true
 	case WorklistReachSourceRelationshipDecay:
+		return true
+	case WorklistReachSourceTagSuggestion:
 		return true
 	case WorklistReachSourceTask:
 		return true
@@ -24362,6 +24413,9 @@ type AttentionCounts struct {
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
 	RelationshipDecay *int `json:"relationship_decay,omitempty"`
+
+	// TagSuggestionsOpen Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`.
+	TagSuggestionsOpen *int `json:"tag_suggestions_open,omitempty"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`
@@ -35301,6 +35355,12 @@ type ImportSourceProfile struct {
 // list S-E15.4c requires, not a diff of what changed), or errored
 // because it could not be reversed — a single irreversible row never
 // aborts the rest of the run.
+//
+// A row the run CORRECTED rather than created is in none of them: undo
+// archives what a run landed, and a correction to a record another run
+// landed has nothing to archive and no previous value to restore.
+// `updates_not_reversed` counts those rows, so a reader is not told a
+// correction was taken back while it stands.
 type ImportUndoReport struct {
 	// Errored Import-created rows the reversal could not archive (a business
 	// rule refused it, or the caller's row scope no longer covers it) —
@@ -35382,6 +35442,9 @@ type ImportUndoReport struct {
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
 	// `complete` and only for the `csv` connector.
 	Status ImportRunStatus `json:"status"`
+
+	// UpdatesNotReversed Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
+	UpdatesNotReversed *int `json:"updates_not_reversed,omitempty"`
 }
 
 // ImportUnresolvedLink defines model for ImportUnresolvedLink.
@@ -43781,8 +43844,13 @@ type Tag struct {
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
 	Name        string             `json:"name"`
-	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
-	Version     *int64             `json:"version,omitempty"`
+
+	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+	// carries a description of what interest looks like, and that description is what
+	// the suggestion is matched against. Only Admin and Ops set it.
+	Suggestible *bool      `json:"suggestible,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+	Version     *int64     `json:"version,omitempty"`
 }
 
 // TagColor defines model for Tag.Color.
@@ -43796,7 +43864,12 @@ type TagDetail struct {
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
 	Name        string             `json:"name"`
-	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
+
+	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+	// carries a description of what interest looks like, and that description is what
+	// the suggestion is matched against. Only Admin and Ops set it.
+	Suggestible *bool      `json:"suggestible,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 
 	// Usage How many records of each advertised type carry this tag, counted within what the
 	// reader may see. Project taggings are storage the product does not advertise and are
@@ -43812,6 +43885,43 @@ type TagDetailColor string
 type TagListResponse struct {
 	Data []Tag    `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// TagSuggestion A suggestible tag proposed on one contact or company from captured mail or meeting
+// notes, waiting for somebody to accept or dismiss it.
+type TagSuggestion struct {
+	CreatedAt  time.Time               `json:"created_at"`
+	EntityId   openapi_types.UUID      `json:"entity_id"`
+	EntityName string                  `json:"entity_name"`
+	EntityType TagSuggestionEntityType `json:"entity_type"`
+
+	// Evidence The activities the suggestion cites, newest first.
+	Evidence []TagSuggestionEvidence `json:"evidence"`
+	Id       openapi_types.UUID      `json:"id"`
+	State    TagSuggestionState      `json:"state"`
+
+	// Tag A tag as a list ROW carries it: the word and its colour, nothing else. The full
+	// assignment — who applied it, when — comes from the record's own tags read, because a
+	// page of fifty rows does not need fifty assignments to draw a chip.
+	Tag RowTag `json:"tag"`
+}
+
+// TagSuggestionEntityType defines model for TagSuggestion.EntityType.
+type TagSuggestionEntityType string
+
+// TagSuggestionState defines model for TagSuggestion.State.
+type TagSuggestionState string
+
+// TagSuggestionEvidence defines model for TagSuggestionEvidence.
+type TagSuggestionEvidence struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Kind The activity kind: email, meeting, note or call.
+	Kind       string    `json:"kind"`
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Subject Absent when the activity has none or it was redacted.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // TagUsage How many records of each advertised type carry this tag, counted within what the
@@ -45331,6 +45441,9 @@ type UpdateTagRequest struct {
 	Color       *UpdateTagRequestColor `json:"color,omitempty"`
 	Description *string                `json:"description,omitempty"`
 	Name        *string                `json:"name,omitempty"`
+
+	// Suggestible Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held.
+	Suggestible *bool `json:"suggestible,omitempty"`
 }
 
 // UpdateTagRequestColor defines model for UpdateTagRequest.Color.
@@ -67645,6 +67758,15 @@ type ServerInterface interface {
 	// Anonymous reachability probe for external uptime monitors.
 	// (GET /status)
 	GetStatus(w http.ResponseWriter, r *http.Request)
+	// One open tag suggestion the caller may see, with the mail and notes it cites.
+	// (GET /tag-suggestions/{id})
+	GetTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// Apply the suggested tag, as the caller.
+	// (POST /tag-suggestions/{id}/accept)
+	AcceptTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that the evidence does not earn the tag, for the whole workspace.
+	// (POST /tag-suggestions/{id}/dismiss)
+	DismissTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// List tags.
 	// (GET /tags)
 	ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams)
@@ -72145,6 +72267,24 @@ func (_ Unimplemented) UpdateStageExitCriterion(w http.ResponseWriter, r *http.R
 // Anonymous reachability probe for external uptime monitors.
 // (GET /status)
 func (_ Unimplemented) GetStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One open tag suggestion the caller may see, with the mail and notes it cites.
+// (GET /tag-suggestions/{id})
+func (_ Unimplemented) GetTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply the suggested tag, as the caller.
+// (POST /tag-suggestions/{id}/accept)
+func (_ Unimplemented) AcceptTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that the evidence does not earn the tag, for the whole workspace.
+// (POST /tag-suggestions/{id}/dismiss)
+func (_ Unimplemented) DismissTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102974,6 +103114,102 @@ func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// GetTagSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) GetTagSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTagSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptTagSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AcceptTagSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptTagSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissTagSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) DismissTagSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissTagSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListTags operation middleware
 func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Request) {
 
@@ -108619,6 +108855,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/status", wrapper.GetStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tag-suggestions/{id}", wrapper.GetTagSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tag-suggestions/{id}/accept", wrapper.AcceptTagSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tag-suggestions/{id}/dismiss", wrapper.DismissTagSuggestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tags", wrapper.ListTags)
