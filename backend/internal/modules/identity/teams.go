@@ -128,7 +128,7 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 			}
 			err := tx.QueryRow(ctx, `UPDATE team SET `+set+` WHERE id = $1 RETURNING archived_at`, id).Scan(&out.ArchivedAt)
 			if storekit.IsUniqueViolation(err) {
-				return fmt.Errorf("%w: a team named %q already exists", apperrors.ErrConflict, before.Name)
+				return fmt.Errorf("%w: a team named %q already exists", apperrors.ErrConflict, out.Name)
 			}
 			if err != nil {
 				return err

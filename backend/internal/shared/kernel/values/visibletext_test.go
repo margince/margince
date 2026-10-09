@@ -23,6 +23,8 @@ func TestHasVisibleText(t *testing.T) {
 		zeroWidthSpace: false,
 		" " + zeroWidthJoiner + wordJoiner + byteOrderMark: false,
 		"\a":                                  false,
+		string(rune(0x034F)):                  false,
+		"e" + string(rune(0x0301)):            true,
 		"a":                                   true,
 		zeroWidthSpace + "A" + zeroWidthSpace: true,
 		"Đội bán hàng":                        true,
