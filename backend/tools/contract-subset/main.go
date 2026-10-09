@@ -41,6 +41,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/tools/internal/oasnode"
 )
 
 func main() {
@@ -75,7 +77,7 @@ func cut(src []byte, names []string) ([]byte, error) {
 	if err := yaml.Unmarshal(src, &doc); err != nil {
 		return nil, fmt.Errorf("parsing source: %w", err)
 	}
-	schemas := mapping(mapping(root(&doc), "components"), "schemas")
+	schemas := mapping(mapping(oasnode.Root(&doc), "components"), "schemas")
 	if schemas == nil {
 		return nil, fmt.Errorf("the source declares no components.schemas")
 	}
@@ -109,7 +111,7 @@ func keep(schemas *yaml.Node, name string, kept map[string]*yaml.Node) error {
 	}
 	rewriteFormats(schema)
 	kept[name] = schema
-	for _, ref := range refsIn(schema) {
+	for _, ref := range oasnode.Refs(schema) {
 		target, ok := strings.CutPrefix(ref, "#/components/schemas/")
 		if !ok {
 			return fmt.Errorf("schema %q references %q, which is not a component schema this subset can carry", name, ref)
@@ -133,8 +135,8 @@ var nonStdlibFormats = []string{"uuid", "email"}
 // otherwise generate a type the published package cannot import.
 func rewriteFormats(node *yaml.Node) {
 	if node.Kind == yaml.MappingNode {
-		format := scalar(node, "format")
-		_, isString := lookup(node, "x-go-type")
+		format := oasnode.Scalar(node, "format")
+		_, isString := oasnode.Lookup(node, "x-go-type")
 		if format != "" && !isString {
 			for _, f := range nonStdlibFormats {
 				if format == f {
@@ -147,20 +149,6 @@ func rewriteFormats(node *yaml.Node) {
 	for _, child := range node.Content {
 		rewriteFormats(child)
 	}
-}
-
-// refsIn collects every $ref value under a node.
-func refsIn(node *yaml.Node) []string {
-	var refs []string
-	if node.Kind == yaml.MappingNode {
-		if ref := scalar(node, "$ref"); ref != "" {
-			refs = append(refs, ref)
-		}
-	}
-	for _, child := range node.Content {
-		refs = append(refs, refsIn(child)...)
-	}
-	return refs
 }
 
 // marshalSubset writes the kept schemas as a minimal 3.1 document. It carries
@@ -197,43 +185,13 @@ func marshalSubset(kept map[string]*yaml.Node) ([]byte, error) {
 	return out, nil
 }
 
-// root unwraps a parsed document to its top-level mapping.
-func root(doc *yaml.Node) *yaml.Node {
-	if doc.Kind == yaml.DocumentNode && len(doc.Content) == 1 {
-		return doc.Content[0]
-	}
-	return doc
-}
-
 // mapping returns the mapping value stored under key, or nil.
 func mapping(node *yaml.Node, key string) *yaml.Node {
-	value, ok := lookup(node, key)
+	value, ok := oasnode.Lookup(node, key)
 	if !ok {
 		return nil
 	}
 	return value
-}
-
-// scalar returns the scalar value stored under key, or "".
-func scalar(node *yaml.Node, key string) string {
-	value, ok := lookup(node, key)
-	if !ok || value.Kind != yaml.ScalarNode {
-		return ""
-	}
-	return value.Value
-}
-
-// lookup finds a mapping's value node by key.
-func lookup(node *yaml.Node, key string) (*yaml.Node, bool) {
-	if node == nil || node.Kind != yaml.MappingNode {
-		return nil, false
-	}
-	for i := 0; i+1 < len(node.Content); i += 2 {
-		if node.Content[i].Value == key {
-			return node.Content[i+1], true
-		}
-	}
-	return nil, false
 }
 
 func setScalar(node *yaml.Node, key, value string) {
