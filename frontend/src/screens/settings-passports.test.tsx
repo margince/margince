@@ -161,12 +161,12 @@ async function openMintDialog(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("PassportCard — minting", () => {
-  it("puts the form in a confirm-width dialog, with the scopes as a named group", async () => {
+  it("puts the form in a form-width dialog, with the scopes as a named group", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
-    // A secret reveal takes the confirm shape.
-    expect(dialog).toHaveClass("modal-confirm");
+    // The passport and the code example each need a line of their own.
+    expect(dialog).toHaveClass("modal-form");
 
     // The name field is a real label, not a span pointed at by
     // aria-labelledby: clicking the words has to focus the control.

@@ -123,9 +123,8 @@
   flex-wrap: wrap;
 }
 
-/* PassportCard. The mint FORM is a drawer now — the design system's Field,
-   fieldset and form-stack draw it, so this sheet declares nothing for it. What
-   is left is the token the drawer hands back.
+/* PassportCard. The design system draws the mint form; this sheet draws only
+   what the dialog hands back.
 
    The region the minted passport lands in. It has no box of its own and no
    focus ring, because focus arrives here programmatically, not by tabbing. */

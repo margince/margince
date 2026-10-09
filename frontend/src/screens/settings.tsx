@@ -1142,7 +1142,8 @@ function PassportCard() {
         onClose={closeMint}
         closeDisabled={mint.isPending}
         labelledBy={mintTitleId}
-        intent="confirm"
+        // Wide enough that the passport and the curl line each fit on one line.
+        intent="form"
       >
         <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
           {t("settings.mint")}
