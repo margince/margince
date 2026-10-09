@@ -197,7 +197,7 @@ export function TeamsCard() {
       });
     },
   });
-  const people = (users.data ?? []).flatMap((entry) =>
+  const colleagues = (users.data ?? []).flatMap((entry) =>
     "email" in entry ? [entry] : [],
   );
   const verbs = { canRename, canArchive: canEditTeam };
@@ -235,7 +235,9 @@ export function TeamsCard() {
             <>
               <TeamTable
                 rows={rows}
-                people={canSeeMembership && users.isSuccess ? people : null}
+                colleagues={
+                  canSeeMembership && users.isSuccess ? colleagues : null
+                }
                 verbs={verbs}
                 archiving={archive.isPending}
                 onArchive={(id) => archive.mutate(id)}
@@ -244,7 +246,7 @@ export function TeamsCard() {
               {open && canSeeMembership && (
                 <TeamMembersModal
                   team={open}
-                  users={people}
+                  users={colleagues}
                   usersPartial={usersPartial}
                   canEdit={canEditTeam}
                   open
@@ -270,7 +272,7 @@ type TeamVerbs = Readonly<{ canRename: boolean; canArchive: boolean }>;
 // catch a press on the row's menu, and a `<tr>` takes no keyboard focus.
 function TeamTable({
   rows,
-  people,
+  colleagues,
   verbs,
   archiving,
   onArchive,
@@ -278,7 +280,7 @@ function TeamTable({
 }: Readonly<{
   rows: readonly Team[];
   /** The users the roster carries membership for; null while withheld. */
-  people: readonly TeamUser[] | null;
+  colleagues: readonly TeamUser[] | null;
   verbs: TeamVerbs;
   archiving: boolean;
   onArchive: (id: string) => void;
@@ -298,7 +300,7 @@ function TeamTable({
           : undefined;
         return (
           <CellStack>
-            {people ? (
+            {colleagues ? (
               <button
                 type="button"
                 className="cell-link"
@@ -324,7 +326,7 @@ function TeamTable({
       header: t("users.teamMembersColumn"),
       render: (team) => {
         const count = team.member_count ?? 0;
-        const faces = people ? membersOf(people, team.id, locale) : [];
+        const faces = colleagues ? membersOf(colleagues, team.id, locale) : [];
         return (
           <span className="users-team-faces">
             {faces.length > 0 ? (

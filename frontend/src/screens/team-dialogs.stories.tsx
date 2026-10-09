@@ -18,10 +18,10 @@ const LONG_TEAM = {
   member_count: 13,
 };
 
-function person(index: number, name: string, onTeam: boolean): TeamUser {
+function member(index: number, name: string, onTeam: boolean): TeamUser {
   return {
     id: `u-${index}`,
-    email: `person${index}@acme.test`,
+    email: `member${index}@acme.test`,
     display_name: name,
     timezone: viewerZone(),
     status: "active",
@@ -31,17 +31,17 @@ function person(index: number, name: string, onTeam: boolean): TeamUser {
 }
 
 const USERS = [
-  person(1, "Ada Lovelace", true),
-  person(2, "Bo Andersen", true),
-  person(3, "Chiara Rossi", false),
-  person(4, "Dang Thi Mai", false),
+  member(1, "Ada Lovelace", true),
+  member(2, "Bo Andersen", true),
+  member(3, "Chiara Rossi", false),
+  member(4, "Dang Thi Mai", false),
 ];
 const MANY = [
-  person(0, "Maximiliane Theodora von Habsburg-Lothringen", true),
+  member(0, "Maximiliane Theodora von Habsburg-Lothringen", true),
   ...Array.from({ length: 12 }, (_, i) =>
-    person(i + 1, `Colleague ${i + 1}`, true),
+    member(i + 1, `Colleague ${i + 1}`, true),
   ),
-  person(20, "Not yet on the team", false),
+  member(20, "Not yet on the team", false),
 ];
 
 const PROBLEM = {
@@ -102,7 +102,7 @@ export const ReadOnly: Story = {
 
 export const NoMembers: Story = {
   render: story({ ...TEAM, member_count: 0 }, [
-    person(3, "Chiara Rossi", false),
+    member(3, "Chiara Rossi", false),
   ]),
 };
 

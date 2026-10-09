@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../api/client";
+import { holdsAdminRole } from "../app/capability";
 import { ErrorLine } from "../design-system/errorline";
 import { Select, type SelectOption } from "../design-system/select";
 import { useToast } from "../design-system/toast";
@@ -84,7 +85,7 @@ export function roleRefusal(
 
 function soleActiveAdmin(member: User, roster: readonly User[]): boolean {
   const activeAdmin = (u: User) =>
-    u.status === "active" && (u.roles ?? []).includes("admin");
+    u.status === "active" && holdsAdminRole(u.roles);
   return (
     activeAdmin(member) &&
     !roster.some((other) => other.id !== member.id && activeAdmin(other))

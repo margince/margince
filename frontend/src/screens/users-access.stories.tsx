@@ -30,7 +30,7 @@ const TEAMS = [
 
 const USERS = Array.from({ length: 16 }, (_, i) => ({
   id: `u-${i}`,
-  email: `person${i}@acme.test`,
+  email: `member${i}@acme.test`,
   display_name:
     i === 0 ? "Maximiliane von Habsburg-Lothringen" : `Colleague ${i}`,
   timezone: viewerZone(),

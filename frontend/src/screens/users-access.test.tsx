@@ -562,7 +562,7 @@ describe("TeamsCard membership", () => {
     expect(within(list).queryByText("Bo Outside")).toBeNull();
   });
 
-  it("offers only the active people not yet on the team", async () => {
+  it("offers only the active colleagues not yet on the team", async () => {
     mount({ teams: NORD, users: ROSTER });
     const { user, dialog } = await openTeam();
 
@@ -576,7 +576,7 @@ describe("TeamsCard membership", () => {
     expect(offered[0]).toContain("Bo Outside");
   });
 
-  it("adds the person picked to the team the dialog names", async () => {
+  it("adds the colleague picked to the team the dialog names", async () => {
     const calls = mount({ teams: NORD, users: ROSTER });
     const { user, dialog } = await openTeam();
 
