@@ -30,6 +30,7 @@ import {
   Select,
   type SelectOption,
 } from "../design-system/select";
+import { useSendOnce } from "../design-system/sendonce";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProblemError, problemExistingId, problemMessageOf } from "./common";
@@ -603,10 +604,11 @@ export function RecordFormBody({
     }
   }, [error, formId]);
 
+  const sendOnce = useSendOnce(pending, error, dialog?.open);
   const submit = (event: { preventDefault: () => void }) => {
     event.preventDefault();
-    if (!pending && !requiredMissing && refusals.size === 0)
-      onSubmit(submittedValues(fields, values), rows);
+    if (requiredMissing || refusals.size > 0) return;
+    sendOnce(() => onSubmit(submittedValues(fields, values), rows));
   };
   const stack = (
     <>

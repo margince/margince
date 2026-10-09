@@ -5,6 +5,7 @@ import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
 import type { ModalIntent } from "./modal";
+import { useSendOnce } from "./sendonce";
 import { AutonomyDot } from "./trust";
 
 type DotTier = Parameters<typeof AutonomyDot>[0]["tier"];
@@ -79,6 +80,8 @@ export function ConfirmModal({
   const t = useT();
   const headingId = useId();
   const body = Children.toArray(children).length > 0 || Boolean(error);
+  const sendOnce = useSendOnce(pending, error, open);
+  const confirm = () => sendOnce(onConfirm);
   // Escape, the backdrop and the corner X all wait for a write in flight.
   const close = () => {
     if (!pending) onClose();
@@ -127,7 +130,7 @@ export function ConfirmModal({
             <span className="actions-split">
               <Button
                 variant={confirmVariant}
-                onClick={onConfirm}
+                onClick={confirm}
                 pending={pending}
                 disabled={confirmDisabled}
                 reason={confirmReason}
@@ -139,7 +142,7 @@ export function ConfirmModal({
           ) : (
             <Button
               variant={confirmVariant}
-              onClick={onConfirm}
+              onClick={confirm}
               pending={pending}
               disabled={confirmDisabled}
               reason={confirmReason}
