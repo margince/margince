@@ -20,6 +20,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose/agentbundle"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -65,8 +66,11 @@ func TestThePassportBaseIsTheAPIsThenThePublicThenTheRequestsOrigin(t *testing.T
 	plain := httptest.NewRequest(http.MethodGet, "http://arrived.example.test/v1/passports", nil)
 	secure := httptest.NewRequest(http.MethodGet, "https://arrived.example.test/v1/passports", nil)
 	secure.TLS = &tls.ConnectionState{}
+	// httptest's peer is 192.0.2.1, inside the one network and outside the other.
 	forwarded := httptest.NewRequest(http.MethodGet, "http://arrived.example.test/v1/passports", nil)
 	forwarded.Header.Set("X-Forwarded-Proto", "https")
+	trusted := mustTrustedProxies(t, "192.0.2.0/24")
+	elsewhere := mustTrustedProxies(t, "198.51.100.0/24")
 	for _, tc := range []struct {
 		name   string
 		origin agentAPIOrigin
@@ -77,12 +81,23 @@ func TestThePassportBaseIsTheAPIsThenThePublicThenTheRequestsOrigin(t *testing.T
 		{"the public base serves the API on one origin", agentAPIOrigin{public: "https://app.example.test"}, plain, "https://app.example.test/v1"},
 		{"no base: the request's origin", agentAPIOrigin{}, plain, "http://arrived.example.test/v1"},
 		{"no base, over TLS", agentAPIOrigin{}, secure, "https://arrived.example.test/v1"},
-		{"no base, behind a TLS proxy", agentAPIOrigin{}, forwarded, "https://arrived.example.test/v1"},
+		{"no base, behind a trusted TLS proxy", agentAPIOrigin{proxies: trusted}, forwarded, "https://arrived.example.test/v1"},
+		{"no base, X-Forwarded-Proto from a peer that is no trusted proxy", agentAPIOrigin{proxies: elsewhere}, forwarded, "http://arrived.example.test/v1"},
+		{"no base, X-Forwarded-Proto with no proxy trusted", agentAPIOrigin{}, forwarded, "http://arrived.example.test/v1"},
 	} {
 		if got := tc.origin.baseFor(tc.r); got != tc.want {
 			t.Errorf("%s: baseFor = %q, want %q", tc.name, got, tc.want)
 		}
 	}
+}
+
+func mustTrustedProxies(t *testing.T, raw string) httpserver.TrustedProxies {
+	t.Helper()
+	proxies, err := httpserver.ParseTrustedProxies(raw)
+	if err != nil {
+		t.Fatalf("ParseTrustedProxies(%q): %v", raw, err)
+	}
+	return proxies
 }
 
 // bundledSpec returns the openapi.yaml of a bundle.

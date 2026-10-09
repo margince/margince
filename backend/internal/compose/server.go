@@ -109,9 +109,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// first_run for it rather than only for a role that wired one. Reuses
 	// identitySvc — see its own comment below for why the process holds one.
 	srv.authHandlers = srv.WithFirstRunFn(srv.firstRunAnswer(identitySvc))
-	// After the option loop, because the two bases arrive by two options in
-	// either order.
-	agentOrigin := agentAPIOrigin{api: srv.origin.api, public: srv.send.PublicBaseURL}
+	// After the option loop, because the two bases and the trusted proxies
+	// arrive by options in any order.
+	agentOrigin := agentAPIOrigin{api: srv.apiBaseURL, public: srv.send.PublicBaseURL, proxies: srv.trustedProxies}
 	srv.agentBundleHandlers = newAgentBundleHandlers(agentOrigin, log)
 	srv.authHandlers = srv.WithAgentAPIBase(agentOrigin.baseFor)
 	// After the option loop, so /me's answer and the endpoints' gate resolve one

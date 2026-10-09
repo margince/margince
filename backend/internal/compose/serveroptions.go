@@ -391,7 +391,7 @@ func WithPublicBaseURL(base string) Option {
 // serves the API on a different origin than the SPA. Where a passport calls
 // the API is read from it first (agentAPIOrigin).
 func WithAPIBaseURL(base string) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.origin.api = base }
+	return func(s *Server, _ *pgxpool.Pool) { s.apiBaseURL = base }
 }
 
 // WithDelivery wires the machinery an accepted send is staged for

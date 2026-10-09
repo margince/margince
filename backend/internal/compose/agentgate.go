@@ -161,10 +161,8 @@ func refusedAsHumanOnly(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-// routeAdmitsAgents is the gate's first question of a route: may an agent
-// principal call it at all, before scope, tier and volume are asked. A read is
-// admitted unless the contract marks it; a mutation only under a tool policy.
-// It answers the route's policy, zero when the table has none.
+// routeAdmitsAgents asks whether an agent may call the route at all, and returns its policy, zero if none.
+// A read is admitted unless marked, and a mutation only under a tool policy.
 func routeAdmitsAgents(method, pattern string) (agentPolicy, bool) {
 	pol, known := agentPolicies[method+" "+pattern]
 	if !known {

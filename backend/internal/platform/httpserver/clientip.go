@@ -134,10 +134,16 @@ func ResolveClientIP(trusted TrustedProxies, next http.Handler) http.Handler {
 	})
 }
 
+// FromTrustedPeer reports whether the request's direct peer is a trusted
+// proxy, the only sender whose X-Forwarded-* headers this process believes.
+func (t TrustedProxies) FromTrustedPeer(r *http.Request) bool {
+	addr, err := netip.ParseAddr(peerHost(r))
+	return err == nil && t.contains(addr)
+}
+
 func (t TrustedProxies) resolve(r *http.Request) string {
 	peer := peerHost(r)
-	addr, err := netip.ParseAddr(peer)
-	if err != nil || !t.contains(addr) {
+	if !t.FromTrustedPeer(r) {
 		return peer
 	}
 	// Every X-Forwarded-For line, in order: a proxy that adds a second header

@@ -3,10 +3,8 @@
 
 package compose
 
-// GET /agent-bundle, the Margince skill an AI tool installs. It also holds the
-// one answer to where a passport calls this API. The ZIP and the Settings card
-// both read that address from agentAPIOrigin.baseFor. So the snippet a human
-// copies and the openapi.yaml an agent reads name one host.
+// GET /agent-bundle, the Margince skill. agentAPIOrigin.baseFor is the one answer to where
+// a passport calls, so the ZIP and the Settings card's snippet name one host.
 
 import (
 	"log/slog"
@@ -15,17 +13,22 @@ import (
 	"github.com/margince/margince/backend/internal/compose/agentbundle"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
-// agentAPIOrigin is the deployment's two configured bases.
-type agentAPIOrigin struct{ api, public string }
+// agentAPIOrigin is the deployment's two configured bases, and the proxies
+// whose X-Forwarded-Proto the request fallback believes.
+type agentAPIOrigin struct {
+	api, public string
+	proxies     httpserver.TrustedProxies
+}
 
 // baseFor is the API address a passport calls, `/v1` included.
 func (o agentAPIOrigin) baseFor(r *http.Request) string {
 	base := apiOrigin(o.api, o.public)
 	if base == "" {
-		// Only this session's no-store answer carries it, so a forged Host misleads nobody but the forger.
-		base = requestOrigin(r)
+		// A browser cannot send a forged Host with the victim's cookie, and no-store keeps a shared cache from replaying one.
+		base = requestOrigin(r, o.proxies)
 	}
 	return apiV1Base(base)
 }
@@ -39,10 +42,11 @@ func apiOrigin(apiBaseURL, publicBaseURL string) string {
 	return publicBaseURL
 }
 
-// requestOrigin is the scheme and host this request arrived on.
-func requestOrigin(r *http.Request) string {
+// requestOrigin is the scheme and host this request arrived on. Only a
+// trusted proxy may say the scheme was https before it reached us.
+func requestOrigin(r *http.Request, proxies httpserver.TrustedProxies) string {
 	scheme := schemeHTTP
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == schemeHTTPS {
+	if r.TLS != nil || (proxies.FromTrustedPeer(r) && r.Header.Get("X-Forwarded-Proto") == schemeHTTPS) {
 		scheme = schemeHTTPS
 	}
 	return scheme + "://" + r.Host

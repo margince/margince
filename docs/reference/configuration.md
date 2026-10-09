@@ -146,10 +146,13 @@ answered.
 
 The Margince skill (`GET /v1/agent-bundle`) and the code example on the **Agent passports** card name
 the address a passport calls. `GET /v1/passports` returns it as `api_base_url`. It is `--api-base-url`,
-else `--public-base-url`, else the scheme and host the request came in on, with `/v1` added. With
-neither set, it follows the `Host` and `X-Forwarded-Proto` headers of the request, and only that
-session's answer carries it. `agentAPIOrigin.baseFor` in `backend/internal/compose/agentbundletransport.go`
-holds the rule.
+else `--public-base-url`, else the scheme and host the request came in on, with `/v1` added.
+`agentAPIOrigin.baseFor` in `backend/internal/compose/agentbundletransport.go` holds the rule.
+
+With neither base set, it reads the request's `Host`, and its `X-Forwarded-Proto` only from a peer in
+`--trusted-proxies`. Both answers are `no-store`: a browser cannot send a forged `Host` together with
+another user's cookie, and no shared cache can replay one. Behind a proxy that rewrites `Host`, set
+one of the two bases.
 
 ### Licensed-data provider
 

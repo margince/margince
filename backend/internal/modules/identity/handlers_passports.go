@@ -99,6 +99,8 @@ func (h Handlers) ListPassports(w http.ResponseWriter, r *http.Request) {
 	if h.agentAPIBase != nil {
 		apiBase = h.agentAPIBase(r)
 	}
+	// api_base_url may be this request's own Host, which a shared cache must not replay.
+	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, struct {
 		Data       []crmcontracts.PassportSummary `json:"data"`
 		APIBaseURL string                         `json:"api_base_url"`
