@@ -522,6 +522,41 @@ describe("TeamsCard", () => {
     });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
+
+  it("reopens the new-team dialog without the last attempt's refusal", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backend({
+      teams: [],
+      refuse: (call) => call.method === "POST",
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    const open = async () => {
+      await user.click(
+        await screen.findByRole("button", { name: en["users.newTeamOpen"] }),
+      );
+      return screen.getByRole("dialog");
+    };
+
+    const first = await open();
+    await user.type(
+      within(first).getByLabelText(en["users.teamNameLabel"], { exact: false }),
+      "Nord",
+    );
+    await user.click(
+      within(first).getByRole("button", { name: en["users.createTeam"] }),
+    );
+    expect(await within(first).findByText(en["users.notCreated"])).toBeTruthy();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    const second = await open();
+    expect(within(second).queryByText(en["users.notCreated"])).toBeNull();
+  });
 });
 
 describe("TeamsCard membership", () => {

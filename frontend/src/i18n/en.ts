@@ -9171,7 +9171,8 @@ export const en = {
   "users.col.activity": "Activity",
   "users.addedOn": "Added {date}",
   "users.lastActiveUnknown": "Not available",
-  "users.role.lastAdmin": "Only admin. Make another user admin first.",
+  "users.role.lastAdmin":
+    "This is the only admin. Make another member an admin first.",
   "users.role.own": "Another admin changes your role.",
   "users.role.outside": "This role is outside your access.",
   "users.role.withheld": "Your role cannot change user roles.",
@@ -9617,6 +9618,7 @@ export const en = {
   "oauthApp.redirectUri": "URI",
   "oauthApp.redirectCopyFailed": "Select the address and copy it manually.",
   "oauthApp.redirectCopy": "Copy {purpose} URI",
+  "oauthApp.redirectCopiedFor": "Copied {purpose} URI",
   "oauthApp.redirect.mailbox_connect": "Mailbox",
   "oauthApp.redirect.calendar_connect": "Calendar",
   "oauthApp.redirect.sign_in": "Sign-in",

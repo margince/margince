@@ -9030,7 +9030,7 @@ export const de = {
   "users.addedOn": "Hinzugefügt am {date}",
   "users.lastActiveUnknown": "Nicht verfügbar",
   "users.role.lastAdmin":
-    "Einziger Admin. Mach zuerst ein anderes Mitglied zum Admin.",
+    "Das ist der einzige Admin. Mach zuerst ein anderes Mitglied zum Admin.",
   "users.role.own": "Deine Rolle ändert ein anderer Admin.",
   "users.role.outside": "Diese Rolle liegt außerhalb deines Zugriffs.",
   "users.role.withheld": "Deine Rolle darf keine Rollen ändern.",
@@ -9488,6 +9488,7 @@ export const de = {
   "oauthApp.redirectCopyFailed":
     "Markiere die Adresse und kopiere sie von Hand.",
   "oauthApp.redirectCopy": "URI für {purpose} kopieren",
+  "oauthApp.redirectCopiedFor": "URI für {purpose} kopiert",
   "oauthApp.redirect.mailbox_connect": "Postfach",
   "oauthApp.redirect.calendar_connect": "Kalender",
   "oauthApp.redirect.sign_in": "Anmeldung",

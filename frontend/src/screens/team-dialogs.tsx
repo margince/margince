@@ -369,7 +369,14 @@ export function NewTeamAction() {
   return (
     <>
       {/* Named for what it opens; the dialog's submit reads "Create team". */}
-      <Button onClick={() => setOpen(true)}>{t("users.newTeamOpen")}</Button>
+      <Button
+        onClick={() => {
+          create.reset();
+          setOpen(true);
+        }}
+      >
+        {t("users.newTeamOpen")}
+      </Button>
       <TeamNameDialog
         open={open}
         onClose={() => setOpen(false)}

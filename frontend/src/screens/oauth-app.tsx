@@ -159,7 +159,8 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const busy = save.isPending || remove.isPending;
   const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
   const failure = save.error ?? remove.error;
-  const loaded = app.data;
+  // A failed refetch keeps the old data while the gate above offers Retry.
+  const loaded = app.isError ? undefined : app.data;
 
   return (
     <Panel title={t(copy.title)}>

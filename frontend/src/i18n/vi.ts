@@ -8835,7 +8835,7 @@ export const vi = {
   "users.addedOn": "Đã thêm {date}",
   "users.lastActiveUnknown": "Không có dữ liệu",
   "users.role.lastAdmin":
-    "Quản trị viên duy nhất. Chỉ định thành viên khác làm quản trị viên trước.",
+    "Đây là quản trị viên duy nhất. Chỉ định thành viên khác làm quản trị viên trước.",
   "users.role.own": "Vai trò của bạn do quản trị viên khác thay đổi.",
   "users.role.outside": "Vai trò này nằm ngoài quyền truy cập của bạn.",
   "users.role.withheld":
@@ -9287,6 +9287,7 @@ export const vi = {
   "oauthApp.redirectUri": "Địa chỉ URI",
   "oauthApp.redirectCopyFailed": "Chọn địa chỉ rồi tự sao chép.",
   "oauthApp.redirectCopy": "Sao chép URI {purpose}",
+  "oauthApp.redirectCopiedFor": "Đã sao chép URI {purpose}",
   "oauthApp.redirect.mailbox_connect": "Hộp thư",
   "oauthApp.redirect.calendar_connect": "Lịch",
   "oauthApp.redirect.sign_in": "Đăng nhập",
