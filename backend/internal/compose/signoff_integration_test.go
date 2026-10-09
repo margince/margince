@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -84,7 +86,11 @@ func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
 	anchorID, recipient := seedTransactionalReply(t, e)
 	stager := &recordingStager{}
 	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+	// The logo is the workspace's own company, which a seat reads like any other.
+	perms := integration.SchedulerPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["company"] = principal.ObjectGrant{Read: true}
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 
 	if _, err := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(NewSettingsStore(e.Pool)).
 		SaveSignatureTemplate(e.Admin(), `<p>{logo}<b>{name}</b><br>{title}<br><span style="color:#2a7">{phone}</span></p>`); err != nil {
