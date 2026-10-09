@@ -224,9 +224,11 @@ var prebuiltReports = map[string]reportSpec{
 	// where every neighbour here excludes archived rows: an archived lead is
 	// not noise on this report, it IS the report.
 	//
-	// Row scope still applies — the engine binds the lead scope clause like
-	// any other key — so a count here never names leads the caller's own list
-	// would withhold.
+	// A count here never reaches a lead the caller's own list withholds,
+	// archived rows included. The reason is the table, not the clause. Lead is
+	// an identity table (platform/auth/tableclass.go), so every seat reads it
+	// whole and the bound scope clause renders empty. The list is not narrowed
+	// either.
 	"leads-by-status": {
 		entity:    datasource.EntityLead,
 		table:     tableLead,
