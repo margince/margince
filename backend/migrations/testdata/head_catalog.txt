@@ -4489,6 +4489,12 @@ public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
 public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
+public.idx_tag_suggestion_company CREATE INDEX idx_tag_suggestion_company ON public.tag_suggestion USING btree (company_id, tag_id, decided_at) WHERE (company_id IS NOT NULL)
+public.idx_tag_suggestion_contact CREATE INDEX idx_tag_suggestion_contact ON public.tag_suggestion USING btree (contact_id, tag_id, decided_at) WHERE (contact_id IS NOT NULL)
+public.idx_tag_suggestion_decided_by CREATE INDEX idx_tag_suggestion_decided_by ON public.tag_suggestion USING btree (decided_by) WHERE (decided_by IS NOT NULL)
+public.idx_tag_suggestion_evidence_activity CREATE INDEX idx_tag_suggestion_evidence_activity ON public.tag_suggestion_evidence USING btree (activity_id)
+public.idx_tag_suggestion_open CREATE INDEX idx_tag_suggestion_open ON public.tag_suggestion USING btree (created_at DESC, id DESC) WHERE (state = 'open'::text)
+public.idx_tag_suggestion_tag CREATE INDEX idx_tag_suggestion_tag ON public.tag_suggestion USING btree (tag_id)
 public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id)
 public.idx_team_membership_user CREATE INDEX idx_team_membership_user ON public.team_membership USING btree (user_id)
 public.idx_team_weekly_review_rep_review CREATE INDEX idx_team_weekly_review_rep_review ON public.team_weekly_review_rep USING btree (team_weekly_review_id, display_name)
@@ -6699,13 +6705,49 @@ public.tag.description text gen=- def=-
 public.tag.id uuid NOT NULL gen=- def=uuidv7()
 public.tag.name text NOT NULL gen=- def=-
 public.tag.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
+public.tag.suggestible boolean NOT NULL gen=- def=false
 public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text, 'sky'::text, 'violet'::text, 'lime'::text, 'orange'::text]))))
 public.tag.tag_pkey PRIMARY KEY (id)
+public.tag.tag_suggestible_is_described CHECK (((NOT suggestible) OR ((description IS NOT NULL) AND (btrim(description) <> ''::text))))
 public.tag.tag_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.tag.trg_tag_updated CREATE TRIGGER trg_tag_updated BEFORE UPDATE ON public.tag FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.tag.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.tag.version bigint NOT NULL gen=- def=1
 public.tag_pkey CREATE UNIQUE INDEX tag_pkey ON public.tag USING btree (id)
+public.tag_suggestion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.tag_suggestion.captured_by text NOT NULL gen=- def=-
+public.tag_suggestion.company_id uuid gen=- def=-
+public.tag_suggestion.contact_id uuid gen=- def=-
+public.tag_suggestion.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.tag_suggestion.decided_at timestamp with time zone gen=- def=-
+public.tag_suggestion.decided_by uuid gen=- def=-
+public.tag_suggestion.evidence_count integer NOT NULL gen=- def=-
+public.tag_suggestion.evidence_through timestamp with time zone NOT NULL gen=- def=-
+public.tag_suggestion.id uuid NOT NULL gen=- def=uuidv7()
+public.tag_suggestion.state text NOT NULL gen=- def='open'::text
+public.tag_suggestion.tag_id uuid NOT NULL gen=- def=-
+public.tag_suggestion.tag_suggestion_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.tag_suggestion.tag_suggestion_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.tag_suggestion.tag_suggestion_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.tag_suggestion.tag_suggestion_decided_shape CHECK (((state = 'open'::text) = (decided_at IS NULL)))
+public.tag_suggestion.tag_suggestion_evidence_count_check CHECK ((evidence_count > 0))
+public.tag_suggestion.tag_suggestion_one_record CHECK (((contact_id IS NULL) <> (company_id IS NULL)))
+public.tag_suggestion.tag_suggestion_pkey PRIMARY KEY (id)
+public.tag_suggestion.tag_suggestion_state_check CHECK ((state = ANY (ARRAY['open'::text, 'accepted'::text, 'dismissed'::text, 'superseded'::text])))
+public.tag_suggestion.tag_suggestion_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
+public.tag_suggestion.trg_tag_suggestion_updated CREATE TRIGGER trg_tag_suggestion_updated BEFORE UPDATE ON public.tag_suggestion FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.tag_suggestion.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.tag_suggestion_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.tag_suggestion_evidence.activity_id uuid NOT NULL gen=- def=-
+public.tag_suggestion_evidence.id uuid NOT NULL gen=- def=uuidv7()
+public.tag_suggestion_evidence.occurred_at timestamp with time zone NOT NULL gen=- def=-
+public.tag_suggestion_evidence.suggestion_id uuid NOT NULL gen=- def=-
+public.tag_suggestion_evidence.tag_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.tag_suggestion_evidence.tag_suggestion_evidence_pkey PRIMARY KEY (id)
+public.tag_suggestion_evidence.tag_suggestion_evidence_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES tag_suggestion(id) ON DELETE CASCADE
+public.tag_suggestion_evidence.uq_tag_suggestion_evidence UNIQUE (suggestion_id, activity_id)
+public.tag_suggestion_evidence_pkey CREATE UNIQUE INDEX tag_suggestion_evidence_pkey ON public.tag_suggestion_evidence USING btree (id)
+public.tag_suggestion_pkey CREATE UNIQUE INDEX tag_suggestion_pkey ON public.tag_suggestion USING btree (id)
 public.taggable acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.taggable.assigned_at timestamp with time zone NOT NULL gen=- def=now()
 public.taggable.assigned_by uuid gen=- def=-
@@ -7019,6 +7061,9 @@ public.uq_site_read_onboarding_inflight CREATE UNIQUE INDEX uq_site_read_onboard
 public.uq_site_read_triage_inflight CREATE UNIQUE INDEX uq_site_read_triage_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'domain_triage'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_stage_position CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL)
 public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name)) WHERE (archived_at IS NULL)
+public.uq_tag_suggestion_evidence CREATE UNIQUE INDEX uq_tag_suggestion_evidence ON public.tag_suggestion_evidence USING btree (suggestion_id, activity_id)
+public.uq_tag_suggestion_open_company CREATE UNIQUE INDEX uq_tag_suggestion_open_company ON public.tag_suggestion USING btree (tag_id, company_id) WHERE ((state = 'open'::text) AND (company_id IS NOT NULL))
+public.uq_tag_suggestion_open_contact CREATE UNIQUE INDEX uq_tag_suggestion_open_contact ON public.tag_suggestion USING btree (tag_id, contact_id) WHERE ((state = 'open'::text) AND (contact_id IS NOT NULL))
 public.uq_team_weekly_review_outlook_period CREATE UNIQUE INDEX uq_team_weekly_review_outlook_period ON public.team_weekly_review_outlook USING btree (team_weekly_review_id, period_kind)
 public.uq_team_weekly_review_rep CREATE UNIQUE INDEX uq_team_weekly_review_rep ON public.team_weekly_review_rep USING btree (team_weekly_review_id, user_id)
 public.uq_team_weekly_review_team_week CREATE UNIQUE INDEX uq_team_weekly_review_team_week ON public.team_weekly_review USING btree (team_id, local_week_start)

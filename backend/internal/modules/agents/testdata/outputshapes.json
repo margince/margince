@@ -8618,6 +8618,9 @@
                   },
                   "status": {
                     "type": "string"
+                  },
+                  "updates_not_reversed": {
+                    "type": "integer"
                   }
                 },
                 "required": [

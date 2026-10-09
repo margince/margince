@@ -18,7 +18,6 @@ import type { TimelineEntry } from "../design-system/composed";
 import { Row } from "../design-system/stack";
 import {
   EvidenceChip,
-  PassportChip,
   ProvenanceTag,
   toEvidence,
 } from "../design-system/trust";
@@ -40,6 +39,7 @@ import {
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
 import type { HistoryValueCtx } from "./historyvalues";
+import { ResolvedPassportChip } from "./passportchip";
 import "./history.css";
 import "./historyfields.css";
 
@@ -127,7 +127,9 @@ function ChangeGrounding({ change }: Readonly<{ change: FieldHistoryEntry }>) {
   }
   return (
     <>
-      {change.passport_id && <PassportChip id={change.passport_id} />}
+      {change.passport_id && (
+        <ResolvedPassportChip passportId={change.passport_id} />
+      )}
       {evidence && <EvidenceChip evidence={evidence} />}
     </>
   );

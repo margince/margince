@@ -211,7 +211,7 @@ func (s *Store) validatePolicyTime(ctx context.Context, host ids.UserID, profile
 	if s.calendar == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	return s.calendar.Check(ctx, host, string(profile.Provider))
+	return unconnectedAsRefusal(s.calendar.Check(ctx, host, string(profile.Provider)))
 }
 
 // Graph all-day responses can retain midnight wall dates despite a UTC preference.

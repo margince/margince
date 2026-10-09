@@ -41,8 +41,8 @@ import { Heading } from "../design-system/heading";
 import {
   Panel,
   PanelBody,
+  PanelGroupHead,
   PanelIntro,
-  PanelPlate,
 } from "../design-system/panel";
 import {
   PassportSelect,
@@ -57,7 +57,6 @@ import {
   AutonomyDot,
   EvidenceChip,
   FieldDiff,
-  PassportChip,
   toEvidence,
 } from "../design-system/trust";
 import { stable } from "../format/collate";
@@ -132,6 +131,7 @@ import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
+import { MintedPassport, PassportUses } from "./settings.passportuse";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
@@ -152,6 +152,8 @@ import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
 import { ProvidersStat } from "./ai-settings";
+import { ResolvedPassportChip } from "./passportchip";
+import { usePassports } from "./passports.queries";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
@@ -822,16 +824,7 @@ function PassportCard() {
 
   // Metadata only — the wire schema carries no token (PassportSummary),
   // so this list cannot re-disclose one.
-  const list = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const list = usePassports();
 
   const mint = useMutation({
     mutationFn: async () => {
@@ -954,10 +947,11 @@ function PassportCard() {
       }
     >
       <PanelBody>
-        {/* Both sentences above the rows, neither as a `panel-foot` band: every
-            card on this page reads title, prose, rows. */}
         <PanelIntro>{t("settings.passportsSub")}</PanelIntro>
-        <PanelIntro>{t("settings.passportsLendHint")}</PanelIntro>
+        <PassportUses apiBaseUrl={list.data?.api_base_url} />
+      </PanelBody>
+      <PanelGroupHead title={t("settings.passportsYours")} level="h3" />
+      <PanelBody>
         <SettingList>
           {/* Only what this human MINTED, each credential its own row: the name
               on the left, what it currently IS on the right — masked token,
@@ -994,32 +988,30 @@ function PassportCard() {
             }
           </QueryGate>
         </SettingList>
+        <p className="t-caption">{t("settings.passportsMcpHint")}</p>
       </PanelBody>
       <Modal
         open={minting}
         onClose={closeMint}
         closeDisabled={mint.isPending}
         labelledBy={mintTitleId}
-        intent="confirm"
+        intent="form"
       >
         <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
           {t("settings.mint")}
         </Heading>
-        {/* The token region is mounted for the whole life of the dialog rather
-            than appearing with the token in it: a live region inserted at the
-            same moment as its content is not reliably announced, and this token
-            is shown exactly once. */}
-        <div
-          className="passport-token"
-          ref={tokenRegion}
-          tabIndex={-1}
-          role="status"
-        >
+        {/* The live region is mounted for the whole life of the dialog: one
+            inserted with its content is not reliably announced. It says the
+            passport exists; the value itself is never read aloud. */}
+        <div className="passport-token" ref={tokenRegion} tabIndex={-1}>
+          <div role="status">
+            {mint.isSuccess && <p>{t("settings.passportCreated")}</p>}
+          </div>
           {mint.isSuccess && (
-            <PanelPlate>
-              <p>{t("settings.tokenOnce")}</p>
-              <p className="passport-token-value">{mint.data.token}</p>
-            </PanelPlate>
+            <MintedPassport
+              token={mint.data.token}
+              apiBaseUrl={list.data?.api_base_url}
+            />
           )}
         </div>
         {!mint.isSuccess && (
@@ -1235,16 +1227,7 @@ function AgentToolsCard() {
       return data;
     },
   });
-  const passports = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const passports = usePassports();
   // Live, and minted by the human themselves. A connection's credential is
   // neither: it is minted fresh by the token exchange from whatever the human
   // ticked on the consent screen, so it was never a standalone passport a
@@ -1825,7 +1808,9 @@ function AuditLogRow({
               />
             </div>
           ))}
-          {entry.passport_id && <PassportChip id={entry.passport_id} />}
+          {entry.passport_id && (
+            <ResolvedPassportChip passportId={entry.passport_id} />
+          )}
           {entry.on_behalf_of && (
             <span className="t-caption">
               {t("settings.auditOnBehalf")} <span>{entry.on_behalf_of}</span>

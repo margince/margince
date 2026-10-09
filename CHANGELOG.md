@@ -12,6 +12,16 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- **The Margince skill for AI tools.** Settings → Agents → **Agent passports**
+  shows two ways to use a passport. **In your AI tool** has **Download skill**,
+  and **In your own code** has a curl, Python and JavaScript example that reads
+  the passport from `MARGINCE_PASSPORT`. `GET /v1/agent-bundle` (session only)
+  answers `margince-skill.zip`: one `margince/` folder with `README.md`,
+  `SKILL.md`, `INDEX.md` and an `openapi.yaml` that keeps only the operations a
+  passport can call. The API address in it, and `api_base_url` on
+  `GET /v1/passports`, is `MARGINCE_API_BASE_URL`, else
+  `MARGINCE_PUBLIC_BASE_URL`, else the request's own origin. The
+  **Connected agents** card is now **Connected MCP clients**.
 - AI provider health. A provider that is out of credit, rejecting its key,
   unreachable or degraded is marked on Settings → AI models and in the new
   **AI provider status** card under System health. A blocked provider is skipped

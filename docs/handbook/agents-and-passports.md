@@ -16,7 +16,7 @@ There is one rule under everything here:
 ## Connecting and controlling agents
 
 ### What is an agent passport?
-An agent passport in Margince is the credential that lets one AI agent or script act as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
+An agent passport in Margince is your personal access token: whatever uses it, an AI tool or your own code, acts as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
 Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Buy contact data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → Agents**.
 Also called: API key, token, agent credential, access token.
 
@@ -27,19 +27,36 @@ To give a script or AI agent access to Margince, open **Settings → Agents** an
 3. Fill **Agent name**.
 4. Under **Agent permissions**, tick at least one permission.
 5. Choose **Mint passport**.
-6. Copy the **Credential** now: "Copy it now. This credential is shown only once."
-A passport lasts 30 days. For an MCP client, use **Connect an agent** on the **Connected agents** card instead.
+6. Choose **Copy passport** now: "Passport created. It is shown only once, so copy it now."
+7. Under **Next, use it**, choose **Download skill** for an AI tool, or **Copy example** for your own code.
+A passport lasts 30 days. For an MCP client, use **Connect MCP client** on the **Connected MCP clients** card instead.
 Also called: create an API key, connect ChatGPT or Claude, integrate an agent.
 
+### How do I use a passport in my AI tool?
+To use a passport in an AI tool such as Claude, Codex or Gemini, download the Margince skill. Then save your passport where the tool can find it.
+1. Open **Settings → Agents**. On the **Agent passports** card, under **In your AI tool**, choose **Download skill**.
+2. Open `margince-skill.zip`. It holds one folder, `margince`.
+3. For Claude Code, move the folder to `~/.claude/skills/margince`. For Claude Desktop, add the zip file as a skill in the app's settings.
+4. For Codex or Gemini, follow the `README.md` in the folder. You move the folder, then add one line to your `AGENTS.md` or `GEMINI.md`.
+5. Before you start the AI tool, set `MARGINCE_PASSPORT` to your passport, the only place the tool reads it from. The `README.md` shows how, also from your Keychain or 1Password.
+Never paste your passport into a chat with the AI tool. The skill tells the tool where to find it. No passport is in the download, so one download works for all your passports.
+Also called: Claude skill, add Margince to Claude, Codex, Gemini, AI tool setup.
+
+### How do I call Margince from my own code?
+To call Margince from your own code, send your passport with each call.
+On the **Agent passports** card, under **In your own code**, choose **curl**, **Python** or **JavaScript**, then **Copy example**. It reads the passport from `MARGINCE_PASSPORT`, so set that first.
+The `openapi.yaml` file in the skill lists every call a passport can make.
+Also called: REST API, API key, script, access token, integration.
+
 ### How do I connect an MCP client such as Claude to Margince?
-To connect an agent that uses MCP, open **Settings → Agents**, go to **Connected agents** and follow **Connect an agent**. Run one of the commands shown, and the client signs itself up.
+To connect an agent that uses MCP, open **Settings → Agents**, go to **Connected MCP clients** and follow **Connect MCP client**. Run one of the commands shown, and the client signs itself up.
 Margince then shows **Authorize access**: "{client} will be able to act in Margince as you, with the access checked below." Clear the boxes for what it should not get, then choose **Authorize**, or **Deny access**.
 If the page says "The MCP connector is off for this installation.", an administrator or operations user must turn it on first.
 Also called: MCP server, Claude Desktop, AI assistant integration.
 
 ### How do I revoke an agent's access?
 To stop an agent, open **Settings → Agents**. For a passport, choose **Revoke** on it: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
-For an MCP client, choose **Disconnect** under **Connected agents**, which ends the whole connection. Turning off a user revokes all their passports at once.
+For an MCP client, choose **Disconnect** under **Connected MCP clients**, which ends the whole connection. Turning off a user revokes all their passports at once.
 Also called: kill switch, remove an agent, disconnect, delete an API key.
 
 ### How do I let Margince work overnight for me?
@@ -246,9 +263,10 @@ original, wider request is not sent again.
 
 A **passport** is the credential that ties one agent to one colleague. You
 create it yourself in **Settings → Agents**, and you can revoke it yourself.
-Revoking cuts off that one agent. The **Agent passports** card says: "An agent
-acts with your permissions and never more: every request rechecks your
-permissions."
+Revoking cuts off that one agent. The **Agent passports** card says: "A passport
+is your personal access token. Whatever uses it acts as you, with the
+permissions you tick, and never more. Every request checks your permissions
+again."
 
 A passport carries narrower permissions than the colleague has. Each one stands
 alone: ticking one never includes another. The app names them **Agent
@@ -269,14 +287,14 @@ messages** too where approving sends a message.
 
 A passport lasts 30 days by default, at least an hour and at most 90 days. A
 passport created in Settings always gets the 30-day default. The credential is
-shown once and never again: "Copy it now. This credential is shown only once."
+shown once and never again: "Passport created. It is shown only once, so copy it now."
 Margince keeps no copy it can read, so nobody, including an administrator, can
 get it back for you.
 
-Passports are for scripts and other apps. The page says: "An MCP client
-connection does not use these; it is listed below." An MCP client gets its own
-credential under **Connected agents**, which renews itself until you choose
-**Disconnect**.
+Passports are for AI tools and your own code. The page says: "An MCP client
+gets its own credential when you connect it, so it does not need a passport. It
+is listed under Connected MCP clients." That credential renews itself until you
+choose **Disconnect**.
 
 Revoking takes effect at the agent's next call. So does moving the colleague
 behind it to a lower role. Margince checks the colleague's rights on every call,
