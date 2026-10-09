@@ -38,7 +38,7 @@ const upsertCompanyProfileField = `
 	              source_url = EXCLUDED.source_url, confidence = EXCLUDED.confidence,
 	              source = EXCLUDED.source,
 	              captured_by = EXCLUDED.captured_by, captured_at = now()
-	WHERE $9 OR company_profile_field.captured_by NOT LIKE 'human:%'`
+	WHERE $9 OR company_profile_field.source NOT IN ('human', 'agent')`
 
 // humanAuthoredConfidence is what a contact's own answer about their own company
 // scores. They are not guessing about themselves.
