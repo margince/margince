@@ -39,7 +39,7 @@ import (
 func TestEveryCounterpartyShapeIsAnsweredByBothSwitches(t *testing.T) {
 	const unhandled = "unhandled counterparty shape"
 	sink := &Sink{}
-	for shape := shapeNone; shape < shapeCount; shape++ {
+	for shape := range shapeCount {
 		if err := admitCounterpartyShape(shape); err != nil && strings.Contains(err.Error(), unhandled) {
 			t.Errorf("admission has no arm for shape %d — every shape is either captured or "+
 				"refused by name, and neither can be decided by falling through", shape)

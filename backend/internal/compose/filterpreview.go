@@ -217,8 +217,7 @@ func previewRowLimit(requested *int) (int, error) {
 // promises, naming the offending field. Everything else — a permission denial
 // from the engine's own read gate, a database fault — travels as itself.
 func writeFilterPreviewError(w http.ResponseWriter, r *http.Request, err error) {
-	var pred *storekit.PredicateError
-	if errors.As(err, &pred) {
+	if pred, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		httperr.Write(w, r, httperr.Validation(pred.Field, pred.Code, pred.Message))
 		return
 	}

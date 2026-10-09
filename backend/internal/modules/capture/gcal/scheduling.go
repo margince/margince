@@ -6,7 +6,7 @@ package gcal
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -91,7 +91,7 @@ func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to tim
 	}
 	found, ok := result.Calendars[calendar]
 	if !ok || len(found.Errors) != 0 {
-		return nil, fmt.Errorf("calendar: selected calendar could not be checked")
+		return nil, errors.New("calendar: selected calendar could not be checked")
 	}
 	// Read only occupancy metadata, so rescheduling can exclude its own event.
 	return a.eventBusy(ctx, token, calendar, from, to)
@@ -173,7 +173,7 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 			return connector.CalendarReceipt{}, lookupErr
 		}
 		if existing == nil {
-			return connector.CalendarReceipt{}, fmt.Errorf("calendar: conflicted invitation could not be reconciled")
+			return connector.CalendarReceipt{}, errors.New("calendar: conflicted invitation could not be reconciled")
 		}
 		return *existing, nil
 	}
@@ -181,7 +181,7 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 		return connector.CalendarReceipt{}, err
 	}
 	if result.ID == "" || result.Status == calendarCanceled {
-		return connector.CalendarReceipt{}, fmt.Errorf("calendar: event was not confirmed")
+		return connector.CalendarReceipt{}, errors.New("calendar: event was not confirmed")
 	}
 	receipt := connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL, VideoURL: result.VideoURL}
 	if receipt.VideoURL == "" && result.conferencePending() {

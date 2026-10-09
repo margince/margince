@@ -435,13 +435,13 @@ func searchSeat(e *SearchEnv, teams []ids.UUID, scope principal.RowScope, grants
 func TestSearchRankedCursorWalksAllHitsOnce(t *testing.T) {
 	e := SetupSearch(t)
 	want := map[string]bool{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		id := e.SeedID(t, fmt.Sprintf(`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Dresden Contact %d', 'manual', 'human:x')`, i))
 		want[id.String()] = false
 	}
 	got := 0
 	cursor := ""
-	for pages := 0; pages < 5; pages++ {
+	for range 5 {
 		page, err := e.Store.Search(e.Admin(), search.Input{Query: "dresden", Limit: 2, Cursor: cursor})
 		if err != nil {
 			t.Fatal(err)

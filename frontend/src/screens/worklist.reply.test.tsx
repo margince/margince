@@ -8,6 +8,7 @@
 
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { day, renderWorklist, row, stub } from "./worklist.testkit";
 
@@ -68,5 +69,53 @@ describe("a buyer waiting on a reply", () => {
 
     await screen.findByText(/can you resend the quote/);
     expect(screen.queryByRole("button", { name: /^reply$/i })).toBeNull();
+  });
+});
+
+describe("a message the reader sent and nobody answered", () => {
+  it("offers to draft the follow-up from the row", async () => {
+    stub(
+      aDayWith(
+        aWaitingBuyer({
+          source: "awaiting_reply",
+          category: "tasks",
+          title: "the proposal we discussed",
+          move: {
+            action: "draft_reply",
+            activity_id: "01a05500-0000-7000-8000-0000000000c1",
+          },
+        }),
+      ),
+    );
+    renderWorklist();
+
+    await screen.findByText(/the proposal we discussed/);
+    expect(
+      await screen.findByRole("button", { name: /draft follow-up/i }),
+    ).not.toBeNull();
+  });
+});
+
+describe("a meeting the reader has sent nothing after", () => {
+  it("offers to draft a follow-up to the contact they met", async () => {
+    stub(
+      aDayWith(
+        aWaitingBuyer({
+          source: "meeting_follow_up",
+          category: "meetings",
+          title: "Discovery workshop",
+          contact: { id: "01a05500-0000-7000-8000-0000000000c2" },
+        }),
+      ),
+    );
+    renderWorklist();
+
+    await screen.findByText(/Discovery workshop/);
+    const draft = await screen.findByRole("button", {
+      name: /draft follow-up/i,
+    });
+    expect(screen.queryByRole("button", { name: /^reply$/i })).toBeNull();
+    await userEvent.click(draft);
+    expect(await screen.findByRole("dialog")).not.toBeNull();
   });
 });

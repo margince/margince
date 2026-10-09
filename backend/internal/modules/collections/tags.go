@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type tagRow struct {
@@ -281,12 +282,20 @@ func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType stri
 		if err != nil {
 			return err
 		}
-		_, err = storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{
-			"applied": map[string]any{"entity_type": entityType, "entity_id": entityID},
-		})
+		_, err = auditTagLink(ctx, tx, tagID, tagApplied, linkImage{EntityType: entityType, EntityID: entityID})
 		return err
 	}()
 	return out, err
+}
+
+// The keys a tag audit row files a tagging under.
+const (
+	tagApplied = "applied"
+	tagRemoved = "removed"
+)
+
+func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string, link linkImage) (ids.UUID, error) {
+	return storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{change: link})
 }
 
 // EnsureTaggable refuses a record this caller may not tag.
@@ -337,7 +346,7 @@ func NormalizeTagName(name string) string {
 // name and an over-long one are the caller's to fix, so both name the field.
 func ValidateTagName(name string) (string, error) {
 	normalized := NormalizeTagName(name)
-	if normalized == "" {
+	if !values.HasVisibleText(normalized) {
 		return "", &BadInputError{Field: "name", Reason: "must not be empty"}
 	}
 	if utf8.RuneCountInString(normalized) > maxTagNameRunes {

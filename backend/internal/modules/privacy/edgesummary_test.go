@@ -72,7 +72,7 @@ func TestEdgeSummaryNamesTheOtherEndAndWhatMoved(t *testing.T) {
 func TestEdgeSummaryFallsBackToTheOtherEndsIDRatherThanABlank(t *testing.T) {
 	// A record whose name column is empty is still a record a reader can open, so
 	// the line names its id — never an invented name, and never "linked  as cto".
-	for _, label := range []*string{nil, strPtr("")} {
+	for _, label := range []*string{nil, new("")} {
 		got, phrased := edgeSummary("Uma", "create",
 			edgeSubject{kind: "employment", otherID: strayEdgeID, otherLabel: label},
 			map[string]any{"role": "cto"})
@@ -90,7 +90,7 @@ func TestTheDelegatedSubjectReadsTheSameOnAnEdgeLine(t *testing.T) {
 	devin := "Devin"
 	subject := recordSummarySubject(actorTypeAgent, "agent:enrich", &devin, false, nil)
 	edgeLine, phrased := edgeSummary(subject, actionArchive,
-		edgeSubject{kind: "employment", otherID: strayEdgeID, otherLabel: strPtr("Acme Corp")}, nil)
+		edgeSubject{kind: "employment", otherID: strayEdgeID, otherLabel: new("Acme Corp")}, nil)
 	if !phrased || edgeLine != "Devin, via an agent, unlinked Acme Corp" {
 		t.Errorf("edge line = %q", edgeLine)
 	}

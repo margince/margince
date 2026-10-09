@@ -77,8 +77,7 @@ func (h Handlers) RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id c
 }
 
 func writeGrantErr(w http.ResponseWriter, r *http.Request, err error) {
-	var invalid *InvalidScopeError
-	if errors.As(err, &invalid) {
+	if invalid, ok := errors.AsType[*InvalidScopeError](err); ok {
 		httperr.Write(w, r, httperr.Validation("record_type", "invalid", invalid.Error()))
 		return
 	}

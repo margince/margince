@@ -103,7 +103,8 @@ var logActivityCopy = toolCopy{
 		"second call — relink_activity — which waits for the user's yes when it files under a " +
 		"project.",
 	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
-		"act; create_task for something still owed.",
+		"act; create_task for something still owed; attach_document for a file, whose text never " +
+		"goes into a note.",
 	Retain: "Keep the activity id — draft_email, send_email and send_message identify a " +
 		"conversation by it.",
 }

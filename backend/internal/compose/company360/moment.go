@@ -180,7 +180,7 @@ func accountClaimCard(now time.Time, claim contacts.CompanyCommitment, late bool
 	return crmcontracts.ContactMoment{
 		ClaimKey:            momentKey("moment:account_promise_claim", openapi_types.UUID(claim.ID)),
 		Rule:                ruleFor(late),
-		RuleVersion:         ptrOf(momentRuleVersion),
+		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: accountFingerprint(evidence),
 		Headline:            owedHeadline(claim.ContactName, claim.Body),
 		WhyNow:              owedWhyNow(now, claim.DueAt),
@@ -205,7 +205,7 @@ func accountTaskCard(now time.Time, step crmcontracts.Company360NextStep, late b
 	moment := crmcontracts.ContactMoment{
 		ClaimKey:            momentKey("moment:account_promise_task", step.ActivityId),
 		Rule:                ruleFor(late),
-		RuleVersion:         ptrOf(momentRuleVersion),
+		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: accountFingerprint(evidence),
 		Headline:            owedHeadline("", step.Subject),
 		WhyNow:              whyNow,
@@ -270,7 +270,7 @@ func accountNothingNeeded() crmcontracts.ContactMoment {
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:nothing_needed",
 		Rule:                crmcontracts.ContactMomentRuleNothingNeeded,
-		RuleVersion:         ptrOf(momentRuleVersion),
+		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: "quiet",
 		Headline:            "Nothing is owed to this account",
 		WhyNow:              "No promise to this account is open or coming due.",
@@ -298,9 +298,6 @@ func momentKey(rung string, id openapi_types.UUID) string {
 	return rung + ":" + id.String()
 }
 
-// ptrOf is the address of a value the contract wants as a pointer.
-func ptrOf[T any](v T) *T { return &v }
-
 // accountFingerprint digests what this card fired on, through the same hash
 // the contact page's cards use.
 func accountFingerprint(evidence []crmcontracts.ContactMomentEvidence) string {
@@ -325,7 +322,7 @@ func openTheContact(contactID ids.ContactID) crmcontracts.ContactMomentAction {
 		State: crmcontracts.ContactMomentActionStateAvailable,
 		Destination: &crmcontracts.ContactMomentDestination{
 			Surface:    crmcontracts.ContactMomentDestinationSurfaceRecord,
-			EntityType: entityTypeOf(crmcontracts.ContactMomentDestinationEntityTypeContact),
+			EntityType: new(crmcontracts.ContactMomentDestinationEntityTypeContact),
 			EntityId:   &id,
 		},
 	}
@@ -344,7 +341,7 @@ func openTheTask(step crmcontracts.Company360NextStep) crmcontracts.ContactMomen
 			State: crmcontracts.ContactMomentActionStateAvailable,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface:    crmcontracts.ContactMomentDestinationSurfaceRecord,
-				EntityType: entityTypeOf(crmcontracts.ContactMomentDestinationEntityTypeDeal),
+				EntityType: new(crmcontracts.ContactMomentDestinationEntityTypeDeal),
 				EntityId:   step.LinkedDealId,
 			},
 		}
@@ -357,8 +354,4 @@ func openTheTask(step crmcontracts.Company360NextStep) crmcontracts.ContactMomen
 		Label: "Open it from the task list",
 		State: crmcontracts.ContactMomentActionStateBlocked,
 	}
-}
-
-func entityTypeOf(v crmcontracts.ContactMomentDestinationEntityType) *crmcontracts.ContactMomentDestinationEntityType {
-	return &v
 }

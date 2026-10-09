@@ -176,8 +176,6 @@ func today() time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
-func intp(v int) *int { return &v }
-
 // --- B-E09.19(a): the write layer rejects the invalid state at source ---
 
 func TestCloseDatePastRejectedOnOpenDealWrites(t *testing.T) {
@@ -217,10 +215,10 @@ func TestCloseDatePastRejectedOnOpenDealWrites(t *testing.T) {
 func TestForecastExcludesFlaggedDealsFromCommitAndBestCase(t *testing.T) {
 	e := setupCloseDate(t)
 
-	e.seedSweepDeal(t, "Healthy commit", e.late, stringp("commit"), intp(30), 3)
-	e.seedSweepDeal(t, "Overdue commit", e.late, stringp("commit"), intp(-10), 3)
-	e.seedSweepDeal(t, "Dateless commit", e.late, stringp("commit"), nil, 3)
-	provisional := e.seedSweepDeal(t, "Provisional best case", e.late, stringp("best_case"), intp(30), 3)
+	e.seedSweepDeal(t, "Healthy commit", e.late, new("commit"), new(30), 3)
+	e.seedSweepDeal(t, "Overdue commit", e.late, new("commit"), new(-10), 3)
+	e.seedSweepDeal(t, "Dateless commit", e.late, new("commit"), nil, 3)
+	provisional := e.seedSweepDeal(t, "Provisional best case", e.late, new("best_case"), new(30), 3)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE deal SET close_date_provisional = true WHERE id = $1`, provisional); err != nil {
 		t.Fatal(err)
@@ -260,7 +258,7 @@ func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
 	// Early stage (20%), plainly overdue, touched 3 days ago, no forecast
 	// override → the §11 worked example's 🟢 case. Two open stages remain
 	// from position 0, velocity falls back to 14 → today + 28.
-	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, intp(-12), 3)
+	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, new(-12), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -311,7 +309,7 @@ func TestCloseDateSweepRecordsTheForecastItMoved(t *testing.T) {
 	e := setupCloseDate(t)
 	// The 🟢 worked example again: overdue, active, no override — the tier that
 	// re-dates the deal outright, so the move is the sweep's and nothing else's.
-	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, intp(-12), 3)
+	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, new(-12), 3)
 
 	forecastRows := func(t *testing.T) int {
 		t.Helper()
@@ -369,7 +367,7 @@ func TestCloseDateSweepRecordsTheForecastItMoved(t *testing.T) {
 func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
 	e := setupCloseDate(t)
 	// Explicit commit + late stage: overdue, active — never auto-final.
-	id := e.seedSweepDeal(t, "Commit slipped", e.late, stringp("commit"), intp(-10), 3)
+	id := e.seedSweepDeal(t, "Commit slipped", e.late, new("commit"), new(-10), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -422,7 +420,7 @@ func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
 // Staged directly here, because the pass that used to make one does not.
 func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Confirm me", e.late, stringp("commit"), intp(-10), 3)
+	id := e.seedSweepDeal(t, "Confirm me", e.late, new("commit"), new(-10), 3)
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
@@ -458,7 +456,7 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	// Quiet 90 days, commit override, date still future but inside the
 	// stalled window (unrealistic_stale) → 🔻: one forecast notch down,
 	// the date untouched — the zombie guard.
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, new("commit"), new(30), 90)
 	originalDate := today().AddDate(0, 0, 30)
 
 	if err := e.sweep(); err != nil {
@@ -485,7 +483,7 @@ func TestCloseDateSweepDowngradesQuietOverdueDealWithProvisionalDate(t *testing.
 	e := setupCloseDate(t)
 	// Quiet AND overdue: the invariant forces a replacement date, but it
 	// lands provisional and the category still notches down.
-	id := e.seedSweepDeal(t, "Quiet and overdue", e.late, stringp("best_case"), intp(-20), 90)
+	id := e.seedSweepDeal(t, "Quiet and overdue", e.late, new("best_case"), new(-20), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -508,11 +506,11 @@ func TestCloseDateSweepDowngradesQuietOverdueDealWithProvisionalDate(t *testing.
 // date — while closed deals keep their historical dates untouched.
 func TestCloseDateSweepLeavesNoOpenDealWithPastCloseDate(t *testing.T) {
 	e := setupCloseDate(t)
-	e.seedSweepDeal(t, "Auto tier", e.early, nil, intp(-12), 3)
-	e.seedSweepDeal(t, "Provisional tier", e.late, stringp("commit"), intp(-10), 3)
-	e.seedSweepDeal(t, "Downgrade tier", e.late, stringp("commit"), intp(-20), 90)
-	e.seedSweepDeal(t, "Dateless", e.late, stringp("commit"), nil, 3)
-	won := e.seedSweepDeal(t, "Won long ago", e.late, nil, intp(-100), 3)
+	e.seedSweepDeal(t, "Auto tier", e.early, nil, new(-12), 3)
+	e.seedSweepDeal(t, "Provisional tier", e.late, new("commit"), new(-10), 3)
+	e.seedSweepDeal(t, "Downgrade tier", e.late, new("commit"), new(-20), 90)
+	e.seedSweepDeal(t, "Dateless", e.late, new("commit"), nil, 3)
+	won := e.seedSweepDeal(t, "Won long ago", e.late, nil, new(-100), 3)
 	// Amountless close: the deal_closed_fx CHECK only demands a frozen
 	// rate when a closed deal carries money, which is beside this point.
 	if _, err := e.owner.Exec(context.Background(),
@@ -553,7 +551,7 @@ func TestCloseDateSweepLeavesNoOpenDealWithPastCloseDate(t *testing.T) {
 // the 🟡 provisional path — a paused deal must not claim a past date.
 func TestCloseDateSweepWaitUntilSuppressesDowngradeButNotOverdue(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Paused politely", e.early, nil, intp(-5), 90)
+	id := e.seedSweepDeal(t, "Paused politely", e.early, nil, new(-5), 90)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE deal SET wait_until = current_date + 60 WHERE id = $1`, id); err != nil {
 		t.Fatal(err)
@@ -592,10 +590,10 @@ func TestCloseDateSweepReachesDealsPastTheOldPageLimit(t *testing.T) {
 	// window), flagged by nothing, so each settles as a plain check.
 	healthy := 200
 	for i := range healthy {
-		e.seedSweepDeal(t, fmt.Sprintf("Healthy %03d", i), e.early, nil, intp(30), 3)
+		e.seedSweepDeal(t, fmt.Sprintf("Healthy %03d", i), e.early, nil, new(30), 3)
 	}
 	// Created last, so it sorts behind every one of them.
-	overdue := e.seedSweepDeal(t, "Overdue behind the old cut", e.early, nil, intp(-12), 3)
+	overdue := e.seedSweepDeal(t, "Overdue behind the old cut", e.early, nil, new(-12), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -638,7 +636,7 @@ func TestCloseDateSweepReachesDealsPastTheOldPageLimit(t *testing.T) {
 func TestCloseDateSweepResumesAnUnfinishedPass(t *testing.T) {
 	e := setupCloseDate(t)
 	for i := range 3 {
-		e.seedSweepDeal(t, fmt.Sprintf("Overdue %d", i), e.early, nil, intp(-12), 3)
+		e.seedSweepDeal(t, fmt.Sprintf("Overdue %d", i), e.early, nil, new(-12), 3)
 	}
 
 	if err := e.sweep(); err != nil {
@@ -698,7 +696,7 @@ func TestCloseDateSweepResumesAnUnfinishedPass(t *testing.T) {
 // "checked N of M" reconcile instead of drifting with the live table.
 func TestCloseDateSweepFreezesItsMembershipAtTheStart(t *testing.T) {
 	e := setupCloseDate(t)
-	settled := e.seedSweepDeal(t, "Archived before the sweep runs", e.early, nil, intp(-12), 3)
+	settled := e.seedSweepDeal(t, "Archived before the sweep runs", e.early, nil, new(-12), 3)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE deal SET archived_at = now() WHERE id = $1`, settled); err != nil {
 		t.Fatal(err)
@@ -720,7 +718,7 @@ func TestCloseDateSweepFreezesItsMembershipAtTheStart(t *testing.T) {
 	}
 
 	// A deal created now is not retrofitted into the finished pass.
-	fresh := e.seedSweepDeal(t, "Created after the freeze", e.early, nil, intp(-12), 3)
+	fresh := e.seedSweepDeal(t, "Created after the freeze", e.early, nil, new(-12), 3)
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM close_date_run_member WHERE deal_id = $1`, fresh).Scan(&members); err != nil {
 		t.Fatal(err)
@@ -735,7 +733,7 @@ func TestCloseDateSweepFreezesItsMembershipAtTheStart(t *testing.T) {
 // "checked 9 of 9" would be true of a set that used to have ten deals in it.
 func TestCloseDateSweepSkipsAMemberArchivedMidPass(t *testing.T) {
 	e := setupCloseDate(t)
-	doomed := e.seedSweepDeal(t, "Archived after the freeze", e.early, nil, intp(-12), 3)
+	doomed := e.seedSweepDeal(t, "Archived after the freeze", e.early, nil, new(-12), 3)
 
 	// Run once so the deal is frozen into a pass, then reopen that pass with
 	// this member unsettled and archive the deal underneath it — the state a
@@ -805,7 +803,7 @@ func TestCloseDateSweepSkipsAMemberArchivedMidPass(t *testing.T) {
 // this ledger exists to expose.
 func TestCloseDateRunCountsOnlyWritesThatHappened(t *testing.T) {
 	e := setupCloseDate(t)
-	e.seedSweepDeal(t, "Overdue but maintenance is off", e.early, nil, intp(-12), 3)
+	e.seedSweepDeal(t, "Overdue but maintenance is off", e.early, nil, new(-12), 3)
 
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO setting (key, value, updated_at) VALUES ($1, 'false'::jsonb, now())
@@ -856,7 +854,7 @@ func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed t
 	proposal := deals.CloseDateCorrection{
 		DealID:            ids.From[ids.DealKind](dealID),
 		ExpectedCloseDate: proposed.Format(time.DateOnly),
-		PreviousCloseDate: stringp(proposed.Format(time.DateOnly)),
+		PreviousCloseDate: new(proposed.Format(time.DateOnly)),
 		Asking:            deals.AskingIsThisDateRight,
 	}
 	raw, err := json.Marshal(proposal)
@@ -892,7 +890,7 @@ func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed t
 // when the owner has moved, so the sweep never writes for the rep who declined.
 func TestADealOwnedByAnOptedOutRepIsLeftAlone(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Not to be touched", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Not to be touched", e.late, new("commit"), new(30), 90)
 	originalDate := today().AddDate(0, 0, 30)
 	e.optOutOfCorrections(t, e.Rep1)
 

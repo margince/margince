@@ -316,7 +316,7 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		// members rather than trusting that keeps the two answers from drifting
 		// apart if a second caller ever reaches this function without the
 		// guard in front of it.
-		Destination: destinationPtr(destinationOfGroup(members)),
+		Destination: new(destinationOfGroup(members)),
 	}
 	if cause != "" {
 		row.Batch.Cause = &cause

@@ -101,6 +101,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
+		WithSettings(NewSettingsStore(pool)).
 		WithConsent(gate).
 		WithSendPreview(gate).
 		// The SAME seam the check_availability tool reads, so the two doors
@@ -126,7 +127,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,
 		// like every other cross-module edge on this path.
-		WithSignature(contacts.NewStore(InstallationDB(pool))).
+		WithSignature(signatureReader{store: contacts.NewStore(InstallationDB(pool))}).
 		// The name on the envelope. identity owns who the acting human is —
 		// including the human an agent acts on behalf of — and that resolution
 		// must be the same one the audit log records, so it is injected rather

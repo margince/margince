@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -145,10 +146,8 @@ func (v Verb) subjectArgIsDeclared() error {
 			"a staged subject is read as a uuid string on every call, so any other type is a call that "+
 			"can never stage", v.OperationID, v.Subject.Arg, property.Type)
 	}
-	for _, name := range doc.Required {
-		if name == v.Subject.Arg {
-			return nil
-		}
+	if slices.Contains(doc.Required, v.Subject.Arg) {
+		return nil
 	}
 	return fmt.Errorf("operation %s stages against argument %q but does not require it — a call that omits "+
 		"it names no record, so the operation would stage on some invocations and be refused on others",

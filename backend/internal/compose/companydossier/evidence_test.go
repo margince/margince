@@ -11,6 +11,7 @@ package companydossier
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -22,18 +23,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 func siteReadField() crmcontracts.CompanyProfileField {
 	return crmcontracts.CompanyProfileField{
 		Id:              rowID(),
 		Field:           crmcontracts.CompanyProfileFieldFieldOfferSummary,
 		Value:           "Load-shifting software",
 		Source:          crmcontracts.CompanyProfileFieldSourceSiteRead,
-		CapturedBy:      ptr("site_read:crawler"),
-		EvidenceSnippet: ptr("We build load-shifting software for industry."),
-		SourceUrl:       ptr("https://voltaq.example/about"),
-		Confidence:      ptr(float32(0.9)),
+		CapturedBy:      new("site_read:crawler"),
+		EvidenceSnippet: new("We build load-shifting software for industry."),
+		SourceUrl:       new("https://voltaq.example/about"),
+		Confidence:      new(float32(0.9)),
 		UpdatedAt:       assessedAt,
 	}
 }
@@ -77,7 +76,7 @@ func TestASiteReadReceiptCarriesTheURLAndTheSpanItWasReadFrom(t *testing.T) {
 func TestAReceiptNamesTheFieldsItsKindOwesAndCannotFill(t *testing.T) {
 	bare := siteReadField()
 	bare.SourceUrl = nil
-	bare.EvidenceSnippet = ptr("   ")
+	bare.EvidenceSnippet = new("   ")
 
 	got := receiptFor(t, bare)
 
@@ -144,8 +143,8 @@ func TestOnlyAMachineReadValueCarriesAModelConfidence(t *testing.T) {
 func TestAReceiptKeepsWhenItWasReadApartFromWhenAContactConfirmedIt(t *testing.T) {
 	confirmed := assessedAt.Add(-time.Hour)
 	field := siteReadField()
-	field.RetrievedAt = ptr(assessedAt.Add(-48 * time.Hour))
-	field.VerifiedAt = ptr(confirmed)
+	field.RetrievedAt = new(assessedAt.Add(-48 * time.Hour))
+	field.VerifiedAt = new(confirmed)
 
 	got := receiptFor(t, field)
 
@@ -162,7 +161,7 @@ func TestAReceiptKeepsWhenItWasReadApartFromWhenAContactConfirmedIt(t *testing.T
 func TestAHumanValueNobodyConfirmedNamesThatGap(t *testing.T) {
 	field := siteReadField()
 	field.Source = crmcontracts.CompanyProfileFieldSourceHuman
-	field.CapturedBy = ptr("human:ada")
+	field.CapturedBy = new("human:ada")
 	field.VerifiedAt = nil
 
 	got := receiptFor(t, field)
@@ -208,10 +207,10 @@ func TestAFactReceiptCarriesItsOwnProvenance(t *testing.T) {
 		Field:           crmcontracts.CompanyFactFieldTechnology,
 		Value:           "SAP S/4HANA",
 		Source:          crmcontracts.CompanyFactSourceSiteRead,
-		CapturedBy:      ptr("site_read:crawler"),
-		EvidenceSnippet: ptr("We run SAP S/4HANA across the group."),
-		SourceUrl:       ptr("https://voltaq.example/tech"),
-		Confidence:      ptr(float32(0.8)),
+		CapturedBy:      new("site_read:crawler"),
+		EvidenceSnippet: new("We run SAP S/4HANA across the group."),
+		SourceUrl:       new("https://voltaq.example/tech"),
+		Confidence:      new(float32(0.8)),
 		UpdatedAt:       assessedAt,
 	}}}
 
@@ -298,12 +297,7 @@ func TestAnAbsentCapturerIsNamedAsAGapAndNotAlsoRenderedBlank(t *testing.T) {
 }
 
 func namesGap(gaps []string, want string) bool {
-	for _, gap := range gaps {
-		if gap == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(gaps, want)
 }
 
 // The human arm in full: the capturer is absent, so the receipt says so once

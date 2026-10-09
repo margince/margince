@@ -28,14 +28,14 @@ func TestDealLastEmail_TheNewestWorkspaceMailAndOnlyThat(t *testing.T) {
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	mailed, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Mailed deal", AmountMinor: Int64Ptr(100), Currency: StrPtr("EUR"),
+		Name: "Mailed deal", AmountMinor: new(int64(100)), Currency: new("EUR"),
 		PipelineID: pipeline, StageID: open, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	quiet, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Quiet deal", AmountMinor: Int64Ptr(100), Currency: StrPtr("EUR"),
+		Name: "Quiet deal", AmountMinor: new(int64(100)), Currency: new("EUR"),
 		PipelineID: pipeline, StageID: open, Source: "manual",
 	})
 	if err != nil {

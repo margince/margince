@@ -13,6 +13,7 @@ package compose
 
 import (
 	"net/mail"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -173,10 +174,8 @@ func isOfficerQualifier(extra string) bool {
 	// Gendered endings, the one shape that is the SAME job rather than a
 	// bigger one. Checked before anything else because "in" is short enough
 	// to look like a compound joiner.
-	for _, ending := range []string{"in", "innen", "e", "er"} {
-		if extra == ending {
-			return false
-		}
+	if slices.Contains([]string{"in", "innen", "e", "er"}, extra) {
+		return false
 	}
 	// A qualifier is a word of its own, or a compound long enough to be one.
 	// "svorsitzender" is 13 characters; no inflection reaches that.
@@ -187,7 +186,7 @@ func isOfficerQualifier(extra string) bool {
 // over, normalized for comparison against the page's own spelling.
 func declaredCompanions(list string) map[string]bool {
 	out := map[string]bool{}
-	for _, part := range strings.Split(list, ";") {
+	for part := range strings.SplitSeq(list, ";") {
 		if name := normalizeEvidence(strings.TrimSpace(part)); name != "" {
 			out[name] = true
 		}

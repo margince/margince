@@ -478,3 +478,19 @@ cases:
         The user says the flagged record is a different contact, so the pair is
         dismissed with decide_duplicate rather than merged, and the answer says
         they were kept apart.
+  case57_put_it_on_the_file:
+    1:
+      name: A file handed over is kept as a file
+      statement: >-
+        The notes the user gave land on the company's Documents tab as the same
+        bytes, and the answer says they are there.
+    2:
+      name: The file is not retyped as a note
+      statement: >-
+        No note or activity carries the file's text, and the answer does not act
+        on what the file says when it was only asked to keep it.
+    3:
+      name: A refused kind of file is reported, not worked around
+      statement: >-
+        The SVG logo is refused by the attachment store, and the answer says so
+        instead of keeping it under another name or as a note.

@@ -38,6 +38,9 @@ type providerDescriptor struct {
 	// vendorHosted marks an adapter whose omitted base_url is the vendor's own
 	// public API, which is what the routing preview calls cloud processing.
 	vendorHosted bool
+	// pathsUnderV1 marks an adapter that appends /v1/... to its host, so its
+	// host is the root above that version segment (hostRoot).
+	pathsUnderV1 bool
 	// vendorBaseURL is that public API's address, the same constant the adapter
 	// defaults to — so a lift can write out "the vendor directly" for a lane
 	// whose provider now sits behind a gateway.
@@ -118,7 +121,7 @@ var providerRegistry = []providerDescriptor{
 	},
 	{
 		priceSource: modelsDevSource("anthropic"),
-		name:        providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY",
+		name:        providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY", pathsUnderV1: true,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultAnthropicBaseURL, public: true,
 		carriage: anthropicCarries, thinkingFloor: anthropicTakesThinkingFloor, floorSkipsTools: true,
 	},
@@ -138,7 +141,7 @@ var providerRegistry = []providerDescriptor{
 		// this adapter can put on it.
 		priceSource: priceSource{kind: priceNotPublished},
 		name:        providerVLLM, caps: capChat, local: true, egress: egressOperatorEndpoint,
-		servedSource: servedIdentitySourceEcho, defaultBaseURL: defaultVLLMBaseURL,
+		servedSource: servedIdentitySourceEcho, defaultBaseURL: defaultVLLMBaseURL, pathsUnderV1: true,
 		public: true, defaultModel: defaultVLLMModel, carriage: carriesImages,
 		wildcardReason: "serves whichever model the operator loaded",
 	},
@@ -155,14 +158,14 @@ var providerRegistry = []providerDescriptor{
 		// variable is namespaced because it has no vendor convention.
 		priceSource: priceSource{kind: priceFromBroker},
 		name:        providerOpenAICompatible, caps: capChat, egress: egressOperatorEndpoint,
-		keyEnv: "OPENAI_COMPATIBLE_API_KEY", servedSource: servedIdentitySourceEcho,
+		keyEnv: "OPENAI_COMPATIBLE_API_KEY", servedSource: servedIdentitySourceEcho, pathsUnderV1: true,
 		public: true, carriage: carriesImages,
 		wildcardReason: "serves whichever vendor the operator pointed base_url at",
 		thinkingFloor:  openRouterTakesThinkingFloor, floorSkipsTools: true,
 	},
 	{
 		priceSource: modelsDevSource("openai"),
-		name:        providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY",
+		name:        providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY", pathsUnderV1: true,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultOpenAIBaseURL, public: true,
 		carriage: openAICarries, thinkingFloor: openaiTakesThinkingFloor,
 	},

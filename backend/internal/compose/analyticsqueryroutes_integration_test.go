@@ -81,10 +81,10 @@ func TestAnUnknownPopulationIsRefusedAsUnsupported(t *testing.T) {
 func TestAFilterHidingTooFewRecordsIsRefusedAsPrivacy(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount, nil)
 	}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount, nil)
 	}
 	rec := httptest.NewRecorder()
@@ -99,7 +99,7 @@ func TestAFilterHidingTooFewRecordsIsRefusedAsPrivacy(t *testing.T) {
 func TestASavedRunEchoesTheScopeItWasAskedWith(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
 	}
 	routes := e.analyticsRoutes()
@@ -165,7 +165,7 @@ func explainBody(t *testing.T, rec *httptest.ResponseRecorder) crmcontracts.Anal
 func TestAnExplanationNamesTheRecordsTheReaderCanName(t *testing.T) {
 	e := setupForecast(t)
 	named := map[string]string{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		name := fmt.Sprintf("Live Lead %d", i)
 		named[e.seedID(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
 			VALUES ($1, $2, 'new', 'inbound', 'human:x', $3)`, name, e.Rep1).String()] = name
@@ -206,10 +206,10 @@ func TestAnExplanationNamesTheRecordsTheReaderCanName(t *testing.T) {
 func TestAWithheldCellExplainsToAnEmptyListOverTheWire(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount, nil)
 	}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount, nil)
 	}
 	rec := httptest.NewRecorder()
@@ -228,7 +228,7 @@ func TestAWithheldCellExplainsToAnEmptyListOverTheWire(t *testing.T) {
 func TestACitedCellNamesItsRecords(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Cited Deal", 20, &e.Rep1, &amount, nil)
 	}
 	routes := e.analyticsRoutes()
@@ -276,7 +276,7 @@ func (e *forecastEnv) seedCompanyDeals(t *testing.T, name string, deals int) ids
 	t.Helper()
 	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, $2, 'manual', 'human:x')`, name)
-	for i := 0; i < deals; i++ {
+	for range deals {
 		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, owner_id, amount_minor,
 		                               currency, expected_close_date, source, captured_by)
 			VALUES ($1, $2, $3, $4, $5, $6, 100000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x')`,

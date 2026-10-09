@@ -372,8 +372,7 @@ func isOwnedElsewhere(err error) bool {
 // run on a clean cluster and the cleanup after a failed mint both hit this;
 // any OTHER failure of those statements is real and must propagate.
 func isMissingRole(err error) bool {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgErr.Code == undefinedObject
 	}
 	return false

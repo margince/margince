@@ -87,7 +87,7 @@ func idleBaseColumnOrder(t *testing.T) []string {
 		t.Fatalf("idlebase.SQL no longer renders a call with arguments (%q), so its order cannot be read", expression)
 	}
 	var columns []string
-	for _, argument := range strings.Split(expression[open+1:closed], ",") {
+	for argument := range strings.SplitSeq(expression[open+1:closed], ",") {
 		columns = append(columns, strings.TrimSpace(argument))
 	}
 	if len(columns) < 2 {

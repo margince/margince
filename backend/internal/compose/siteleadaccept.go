@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -66,7 +67,7 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 		// can capture nothing the deciding human could not.
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: site_lead effect without a deciding principal")
+			return errors.New("compose: site_lead effect without a deciding principal")
 		}
 		execCtx := principal.WithActor(ctx, principal.Principal{
 			Type:        principal.PrincipalConnector,

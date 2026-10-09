@@ -8,7 +8,7 @@ import "testing"
 // The explained tree folds unknown leaves the way SQL does, so a record whose
 // field is unset is explained as neither in nor out of a group that needs it.
 func TestAnExplainedGroupFoldsUnknownLeavesAsSQLDoes(t *testing.T) {
-	yes, no := boolPtr(true), boolPtr(false)
+	yes, no := new(true), new(false)
 	for name, tc := range map[string]struct {
 		join   string
 		leaves []*bool

@@ -15,7 +15,6 @@ import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigateReplacing, type Route } from "../app/router";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
-import { useUnsavedGuard } from "../app/unsaved";
 import {
   Avatar,
   Badge,
@@ -24,7 +23,6 @@ import {
   Disclosure,
   Field,
   Modal,
-  Textarea,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -33,8 +31,8 @@ import { Heading } from "../design-system/heading";
 import {
   Panel,
   PanelBody,
+  PanelGroupHead,
   PanelIntro,
-  PanelPlate,
 } from "../design-system/panel";
 import {
   PassportSelect,
@@ -44,7 +42,7 @@ import {
 import { FieldGuard, RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { type Toast, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -87,6 +85,7 @@ import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
+import { FollowUpSettingsCard } from "./followupsettings";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -113,6 +112,7 @@ import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
+import { MintedPassport, PassportUses } from "./settings.passportuse";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
@@ -122,7 +122,9 @@ import {
   DisplayNameSettingRow,
   GreetingNameSettingRow,
 } from "./settings-names";
+import { SignatureSettingRow } from "./settingssignaturerow";
 import { SignInMethodsCard } from "./sign-in-methods";
+import { SignatureTemplateCard } from "./signaturetemplatecard";
 import { TagVocabularyCard } from "./tagadmin";
 import { ThisDevicePanel } from "./thisdevice";
 import { TeamsCard } from "./users-access";
@@ -132,6 +134,7 @@ import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
 import { ProvidersStat } from "./ai-settings";
+import { usePassports } from "./passports.queries";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
@@ -145,7 +148,6 @@ import {
   useVisibleSettingsPages,
 } from "./settingsnav";
 import { settingsHref, settingsRouteTarget } from "./settingsrouting";
-import { useSaveSignature } from "./settingssignature";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -200,16 +202,16 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     // ---- company ----
     case "company":
       // The installation's own facts, then the money, then the company profile
-      // the AI reads. The currency pair stays ADJACENT and nothing is allowed
-      // between them: the base currency is declared in the second card of
-      // InstallationSettingsCard and every rate below converts to it, and
-      // before they were merged the lock reason was explained on one page while
-      // the consequence landed on another.
+      // the AI reads, then the follow-up window. The currency pair stays
+      // ADJACENT: the base currency is declared in InstallationSettingsCard and
+      // every rate below converts to it.
       return (
         <>
           <InstallationSettingsCard />
           <FxRatesCard />
           <CompanyContextCard />
+          <FollowUpSettingsCard />
+          <SignatureTemplateCard />
         </>
       );
     case "authentication":
@@ -666,145 +668,6 @@ function AccountCard() {
   );
 }
 
-// The sign-off appended below every message this member sends, as one row.
-//
-// It lives beside identity rather than under the composer because it is who
-// the sender IS, not something about one mail: a signature written per message
-// would be a different signature every time, which is the opposite of what one
-// is for. Plain text, because the transport sends text/plain — markup here
-// would arrive as tags in the message.
-//
-// A textarea committed with a Save button is the settings page's MODAL case,
-// not its row case: the row states what the setting is and what it currently
-// says, and the verb opens the form. The row's answer is the sign-off's first
-// line, which is the part a reader recognises their own signature by.
-function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
-  const t = useT();
-  const titleId = useId();
-  const formId = useId();
-  const [open, setOpen] = useState(false);
-  const [body, setBody] = useState<string | null>(null);
-  const signature = useQuery({
-    queryKey: ["me-email-signature"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/me/email-signature");
-      if (error) {
-        throwProblem(error);
-      }
-      return data ?? { body: "" };
-    },
-  });
-  const save = useSaveSignature((saved) => {
-    // Hand the edit back to the server's answer. It trims what it stores, so
-    // a member who typed trailing spaces would otherwise keep seeing them
-    // over a row that no longer has them — with Save still lit, offering to
-    // save a difference that exists only in the browser.
-    setBody(saved?.body ?? "");
-    // Committing the edit is what the dialog was opened for, so a save closes
-    // it — and the toast is what says the write landed, on the page the
-    // reader is handed back to.
-    setOpen(false);
-    toast.show(t("settings.saved"));
-  });
-
-  // The saved value until the member types; theirs from then on. Reading state
-  // straight from the query would discard every keystroke the moment a refetch
-  // landed underneath them.
-  const stored = signature.data?.body ?? "";
-  const shown = body ?? stored;
-  // The same comparison the Save button already made, now also the claim that
-  // stops a sidebar click throwing the draft away.
-  const dirty = shown !== stored;
-  // Only while the dialog is SHOWING. It outlives its own close, so a draft the
-  // reader already walked away from would otherwise go on blocking navigation
-  // from behind a dialog that is no longer on screen.
-  useUnsavedGuard(open && dirty);
-  // The first line, because a sign-off is several lines and only the first one
-  // identifies it. `.split` on a string always yields at least one element, so
-  // the empty signature reads as the empty string and the row says so instead —
-  // but only once the read has answered: "no sign-off set" while the request is
-  // still out is a claim about the member's signature made before anybody knows
-  // what it is.
-  const firstLine = stored.split("\n")[0].trim();
-  const answer = signature.isPending
-    ? undefined
-    : firstLine === ""
-      ? t("settings.signatureNone")
-      : firstLine;
-
-  // Leaving discards the draft rather than keeping it: the reader closed the
-  // form, and a sign-off half-typed into a dialog nobody reopened is not an
-  // edit anybody is coming back to.
-  // Closing only CLOSES. The dialog outlives it so it can animate out, and a
-  // draft cleared on the way out snaps back to the stored sign-off in front of
-  // a reader still watching the dialog leave. The discarding happens on the
-  // next OPEN, which is the same moment the reader asks for a blank form.
-  const close = () => setOpen(false);
-  const edit = () => {
-    setBody(null);
-    save.reset();
-    setOpen(true);
-  };
-
-  return (
-    <>
-      <SettingRow
-        label={t("settings.signature")}
-        description={t("settings.signatureSub")}
-        value={answer}
-        control={
-          <Button variant="ghost" onClick={edit}>
-            {t("settings.signatureEdit")}
-          </Button>
-        }
-      />
-      <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
-          {t("settings.signature")}
-        </Heading>
-        {/* A real form: nothing is written until Save is pressed. */}
-        <form
-          id={formId}
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (dirty && !save.isPending) save.mutate(shown);
-          }}
-        >
-          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-          <Field label={t("settings.signatureLabel")}>
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={5}
-                value={shown}
-                placeholder={t("settings.signaturePlaceholder")}
-                onChange={(event) => setBody(event.target.value)}
-              />
-            )}
-          </Field>
-          <p className="t-caption">{t("settings.signatureHint")}</p>
-        </form>
-        <div className="actions">
-          <Button variant="ghost" onClick={close}>
-            {t("settings.signatureCancel")}
-          </Button>
-          <Button
-            type="submit"
-            form={formId}
-            variant="primary"
-            disabled={!save.isPending && !dirty}
-            pending={save.isPending}
-            busyLabel={t("settings.signatureSaving")}
-          >
-            {t("record.save")}
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
 /**
  * The language this installation speaks to this reader in.
  *
@@ -942,16 +805,7 @@ function PassportCard() {
 
   // Metadata only — the wire schema carries no token (PassportSummary),
   // so this list cannot re-disclose one.
-  const list = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const list = usePassports();
 
   const mint = useMutation({
     mutationFn: async () => {
@@ -1074,10 +928,11 @@ function PassportCard() {
       }
     >
       <PanelBody>
-        {/* Both sentences above the rows, neither as a `panel-foot` band: every
-            card on this page reads title, prose, rows. */}
         <PanelIntro>{t("settings.passportsSub")}</PanelIntro>
-        <PanelIntro>{t("settings.passportsLendHint")}</PanelIntro>
+        <PassportUses apiBaseUrl={list.data?.api_base_url} />
+      </PanelBody>
+      <PanelGroupHead title={t("settings.passportsYours")} level="h3" />
+      <PanelBody>
         <SettingList>
           {/* Only what this human MINTED, each credential its own row: the name
               on the left, what it currently IS on the right — masked token,
@@ -1114,32 +969,30 @@ function PassportCard() {
             }
           </QueryGate>
         </SettingList>
+        <p className="t-caption">{t("settings.passportsMcpHint")}</p>
       </PanelBody>
       <Modal
         open={minting}
         onClose={closeMint}
         closeDisabled={mint.isPending}
         labelledBy={mintTitleId}
-        intent="confirm"
+        intent="form"
       >
         <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
           {t("settings.mint")}
         </Heading>
-        {/* The token region is mounted for the whole life of the dialog rather
-            than appearing with the token in it: a live region inserted at the
-            same moment as its content is not reliably announced, and this token
-            is shown exactly once. */}
-        <div
-          className="passport-token"
-          ref={tokenRegion}
-          tabIndex={-1}
-          role="status"
-        >
+        {/* The live region is mounted for the whole life of the dialog: one
+            inserted with its content is not reliably announced. It says the
+            passport exists; the value itself is never read aloud. */}
+        <div className="passport-token" ref={tokenRegion} tabIndex={-1}>
+          <div role="status">
+            {mint.isSuccess && <p>{t("settings.passportCreated")}</p>}
+          </div>
           {mint.isSuccess && (
-            <PanelPlate>
-              <p>{t("settings.tokenOnce")}</p>
-              <p className="passport-token-value">{mint.data.token}</p>
-            </PanelPlate>
+            <MintedPassport
+              token={mint.data.token}
+              apiBaseUrl={list.data?.api_base_url}
+            />
           )}
         </div>
         {!mint.isSuccess && (
@@ -1355,16 +1208,7 @@ function AgentToolsCard() {
       return data;
     },
   });
-  const passports = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const passports = usePassports();
   // Live, and minted by the human themselves. A connection's credential is
   // neither: it is minted fresh by the token exchange from whatever the human
   // ticked on the consent screen, so it was never a standalone passport a

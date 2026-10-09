@@ -248,6 +248,12 @@ type ActIn struct {
 	Record string `json:"record,omitempty"`
 }
 
+// ActivityKind lets draftcore.ThreadMail tell an email from a task or a call.
+func (a ActIn) ActivityKind() string { return a.Kind }
+
+// ActivitySubject is the subject draftcore.ThreadMail answers.
+func (a ActIn) ActivitySubject() string { return a.Subject }
+
 // String is the debug rendering, never the prompt payload — the prompt sends
 // JSON so the model reads a structure rather than prose it might imitate.
 func (in Input) String() string {

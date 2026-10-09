@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import { invalidateProviderHealth } from "./ai-provider-health";
 import type { CredentialKind } from "./ai-provider-key-entry";
@@ -22,6 +27,23 @@ export function useProviderKeys(enabled: boolean) {
       return data;
     },
   });
+}
+
+// Every read whose answer a provider's key decides: whether it is keyed, and
+// the locations, models and health that are asked with that key. Not awaited
+// by the save: a model list is a call to the vendor, and the save is done first.
+function invalidateProviderKeyState(
+  queryClient: QueryClient,
+  provider: string,
+) {
+  queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
+  queryClient.invalidateQueries({
+    queryKey: ["ai-provider-locations", provider],
+  });
+  queryClient.invalidateQueries({
+    queryKey: ["ai-available-models", provider],
+  });
+  invalidateProviderHealth(queryClient);
 }
 
 // Exported for onboarding's AI step, which writes the same credential through
@@ -65,11 +87,8 @@ export function useSetProviderKey() {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
-      // The locations a key reaches are asked with that key.
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
-      invalidateProviderHealth(queryClient);
+    onSuccess: (_, vars) => {
+      invalidateProviderKeyState(queryClient, vars.provider);
     },
   });
 }
@@ -85,10 +104,8 @@ export function useRemoveProviderKey() {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
-      invalidateProviderHealth(queryClient);
+    onSuccess: (_, vars) => {
+      invalidateProviderKeyState(queryClient, vars.provider);
     },
   });
 }

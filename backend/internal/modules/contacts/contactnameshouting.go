@@ -79,11 +79,11 @@ func isShouted(tokens []string) bool {
 // keeps it while still shedding a trailing code: "Anna/Maria Weber/DE" becomes
 // "Anna/Maria Weber", and "Anna/Maria Weber" is left entirely alone.
 func withoutSlashedUnit(name string) string {
-	cut := strings.LastIndex(name, "/")
-	if cut < 0 {
+	before, after, ok := strings.CutLast(name, "/")
+	if !ok {
 		return name
 	}
-	head, tail := strings.TrimSpace(name[:cut]), strings.TrimSpace(name[cut+1:])
+	head, tail := strings.TrimSpace(before), strings.TrimSpace(after)
 	if head == "" || tail == "" {
 		return name
 	}

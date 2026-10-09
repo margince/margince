@@ -560,14 +560,12 @@ func TestCompanyLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *
 	const readers = 5
 	var wg sync.WaitGroup
 	for range readers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			rec := httptest.NewRecorder()
 			handlers.GetCompanyLogo(rec,
 				httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx),
 				crmcontracts.Id(companyID.UUID))
-		}()
+		})
 	}
 	wg.Wait()
 

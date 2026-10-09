@@ -135,7 +135,7 @@ func (l layout) configuredAdminEmail() string {
 	}
 
 	blockIndent, fieldIndent := -1, -1
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		body := strings.TrimLeft(strings.TrimRight(line, "\r"), " \t")
 		if body == "" || strings.HasPrefix(body, "#") {
 			continue

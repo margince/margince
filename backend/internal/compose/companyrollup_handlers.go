@@ -50,8 +50,7 @@ func (h companyRollupHandlers) GetCompanyHierarchyRollup(w http.ResponseWriter, 
 		// machine-readable details a fault cannot carry. Detail is the error's OWN
 		// text, never a re-worded copy — that is what keeps both surfaces saying
 		// the same thing about the same condition.
-		var fxErr *FXRateUnavailableError
-		if errors.As(err, &fxErr) {
+		if fxErr, ok := errors.AsType[*FXRateUnavailableError](err); ok {
 			asOf := fxErr.AsOf.Format(time.DateOnly)
 			httperr.Write(w, r, &httperr.DetailedError{
 				Status: http.StatusUnprocessableEntity,

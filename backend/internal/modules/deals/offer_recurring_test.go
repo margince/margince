@@ -16,14 +16,12 @@ import (
 	"testing"
 )
 
-func months(n int) *int { return &n }
-
 func recurringLine(unitPriceMinor int64, interval int, count *int) RecurringLineInput {
 	return RecurringLineInput{
 		Line: OfferLineInput{
 			Quantity: "1", UnitPriceMinor: unitPriceMinor, DiscountPct: "0", TaxRate: "0",
 		},
-		BillingModel: BillingRecurring, IntervalMonths: months(interval), IntervalCount: count,
+		BillingModel: BillingRecurring, IntervalMonths: new(interval), IntervalCount: count,
 	}
 }
 
@@ -51,7 +49,7 @@ func TestOfferRecurringTotals(t *testing.T) {
 			// months, plus a 2,000 setup fee.
 			name: "monthly for a year plus a setup fee: ARR 12,000, committed 14,000",
 			lines: []RecurringLineInput{
-				recurringLine(100_000, 1, months(12)),
+				recurringLine(100_000, 1, new(12)),
 				oneTimeLine(200_000),
 			},
 			wantARR: 1_200_000,
@@ -60,7 +58,7 @@ func TestOfferRecurringTotals(t *testing.T) {
 		{
 			// The plan's second: 3,000 a quarter, four quarters.
 			name:    "quarterly for a year: ARR 12,000, committed 12,000",
-			lines:   []RecurringLineInput{recurringLine(300_000, 3, months(4))},
+			lines:   []RecurringLineInput{recurringLine(300_000, 3, new(4))},
 			wantARR: 1_200_000,
 			wantTCV: 1_200_000,
 		},
@@ -74,19 +72,19 @@ func TestOfferRecurringTotals(t *testing.T) {
 		},
 		{
 			name:    "a term shorter than a year: ARR 12,000, committed 3,000",
-			lines:   []RecurringLineInput{recurringLine(300_000, 3, months(1))},
+			lines:   []RecurringLineInput{recurringLine(300_000, 3, new(1))},
 			wantARR: 1_200_000,
 			wantTCV: 300_000,
 		},
 		{
 			name:    "half-yearly: ARR is twice the period price",
-			lines:   []RecurringLineInput{recurringLine(600_000, 6, months(2))},
+			lines:   []RecurringLineInput{recurringLine(600_000, 6, new(2))},
 			wantARR: 1_200_000,
 			wantTCV: 1_200_000,
 		},
 		{
 			name:    "annual: ARR is the period price itself",
-			lines:   []RecurringLineInput{recurringLine(1_200_000, 12, months(3))},
+			lines:   []RecurringLineInput{recurringLine(1_200_000, 12, new(3))},
 			wantARR: 1_200_000,
 			wantTCV: 3_600_000,
 		},
@@ -129,7 +127,7 @@ func TestOfferRecurringTotals(t *testing.T) {
 				Line: OfferLineInput{
 					Quantity: "1", UnitPriceMinor: 100_000, DiscountPct: "0", TaxRate: "20.00",
 				},
-				BillingModel: BillingRecurring, IntervalMonths: months(1), IntervalCount: months(12),
+				BillingModel: BillingRecurring, IntervalMonths: new(1), IntervalCount: new(12),
 			}},
 			wantARR: 1_200_000,
 			wantTCV: 1_200_000,
@@ -142,7 +140,7 @@ func TestOfferRecurringTotals(t *testing.T) {
 				Line: OfferLineInput{
 					Quantity: "1", UnitPriceMinor: 100_000, DiscountPct: "10.00", TaxRate: "0",
 				},
-				BillingModel: BillingRecurring, IntervalMonths: months(1), IntervalCount: &four,
+				BillingModel: BillingRecurring, IntervalMonths: new(1), IntervalCount: &four,
 			}},
 			wantARR: 1_080_000,
 			wantTCV: 360_000,
@@ -154,7 +152,7 @@ func TestOfferRecurringTotals(t *testing.T) {
 				Line: OfferLineInput{
 					Quantity: "3", UnitPriceMinor: 5_000, DiscountPct: "0", TaxRate: "0",
 				},
-				BillingModel: BillingRecurring, IntervalMonths: months(1), IntervalCount: months(12),
+				BillingModel: BillingRecurring, IntervalMonths: new(1), IntervalCount: new(12),
 			}},
 			wantARR: 180_000,
 			wantTCV: 180_000,
@@ -168,7 +166,7 @@ func TestOfferRecurringTotals(t *testing.T) {
 				Line: OfferLineInput{
 					Quantity: "0.5", UnitPriceMinor: 3_333, DiscountPct: "0", TaxRate: "0",
 				},
-				BillingModel: BillingRecurring, IntervalMonths: months(1), IntervalCount: months(12),
+				BillingModel: BillingRecurring, IntervalMonths: new(1), IntervalCount: new(12),
 			}},
 			// 0.5 × 3333 = 1666.5, half up → 1667 a month, × 12 = 20004.
 			wantARR: 20_004,
@@ -214,7 +212,7 @@ func TestAnAnnualizedFigurePastTheCeilingIsRefusedRatherThanWrapped(t *testing.T
 	t.Parallel()
 	const nearCeiling = int64(1) << 62
 	_, err := OfferRecurringTotals([]RecurringLineInput{
-		recurringLine(nearCeiling, 1, months(12)),
+		recurringLine(nearCeiling, 1, new(12)),
 	})
 	var rangeErr *MoneyRangeError
 	if !errors.As(err, &rangeErr) {

@@ -109,7 +109,7 @@ func requestLine(req model.Request) string {
 func payloadPassages(req model.Request) int {
 	n := 0
 	for _, msg := range req.Messages {
-		for _, line := range strings.Split(msg.Content, "\n") {
+		for line := range strings.SplitSeq(msg.Content, "\n") {
 			if isNumberedPassage(strings.TrimSpace(line)) {
 				n++
 			}

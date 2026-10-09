@@ -120,3 +120,90 @@ func lastTouchFor(ctx context.Context, t *testing.T, e *integration.Env, compani
 	}
 	return out
 }
+
+// A called-off meeting moves neither direction clock.
+//
+// The last_contact tile already skips one, through InteractionCountsSQL. The
+// direction arms did not, so one statement answered the same question two
+// ways. The tile said the account had gone quiet while the inbound clock read
+// the date of a meeting nobody attended.
+func TestACalledOffMeetingMovesNeitherDirectionClock(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	company := e.SeedCompany(t, "Scale Commerce", &e.Rep1)
+	// A meeting is with a contact and the account follows, which the schema
+	// refuses to let a fixture shortcut.
+	employee := e.SeedContact(t, "Christian Contact", &e.Rep1)
+	employAt(t, e, employee, company, nil)
+
+	// The real touch, a day back in each direction.
+	inbound := integration.AccountMailDirectedAt(t, owner, e.WS, "their reply", "inbound",
+		company360Clock.Add(-26*time.Hour))
+	integration.LinkToCompany(t, e, inbound, company)
+	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "our nudge", "outbound",
+		company360Clock.Add(-25*time.Hour))
+	integration.LinkToCompany(t, e, outbound, company)
+
+	// Newer than both, and called off in each direction.
+	for _, dir := range []string{"inbound", "outbound"} {
+		meeting := integration.AccountMailDirectedAt(t, owner, e.WS, "the "+dir+" meeting nobody took", dir,
+			company360Clock.Add(-1*time.Hour))
+		calledOff(t, owner, meeting)
+		integration.LinkActivity(t, owner, meeting, "contact", employee)
+	}
+
+	touched := lastTouchFor(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), t, e, []ids.UUID{company})
+	got := touched[ids.From[ids.CompanyKind](company)]
+	if got.InboundAt == nil || !got.InboundAt.Equal(company360Clock.Add(-26*time.Hour)) {
+		t.Errorf("last inbound = %v, want the reply at -26h: a canceled meeting moved the clock", got.InboundAt)
+	}
+	if got.OutboundAt == nil || !got.OutboundAt.Equal(company360Clock.Add(-25*time.Hour)) {
+		t.Errorf("last outbound = %v, want the nudge at -25h: a canceled meeting moved the clock", got.OutboundAt)
+	}
+}
+
+// A meeting that happened is a touch, so the clock does move for it. Without
+// this the fix could read as "meetings never count", which would be a second
+// defect wearing the first one's test.
+func TestAMeetingThatHappenedMovesTheDirectionClock(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	company := e.SeedCompany(t, "Scale Commerce", &e.Rep1)
+	employee := e.SeedContact(t, "Christian Contact", &e.Rep1)
+	employAt(t, e, employee, company, nil)
+
+	older := integration.AccountMailDirectedAt(t, owner, e.WS, "their reply", "inbound",
+		company360Clock.Add(-26*time.Hour))
+	integration.LinkToCompany(t, e, older, company)
+	met := integration.AccountMailDirectedAt(t, owner, e.WS, "the meeting we had", "inbound",
+		company360Clock.Add(-2*time.Hour))
+	held(t, owner, met)
+	integration.LinkActivity(t, owner, met, "contact", employee)
+
+	touched := lastTouchFor(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), t, e, []ids.UUID{company})
+	got := touched[ids.From[ids.CompanyKind](company)]
+	if got.InboundAt == nil || !got.InboundAt.Equal(company360Clock.Add(-2*time.Hour)) {
+		t.Errorf("last inbound = %v, want the meeting at -2h: a meeting that happened is a touch",
+			got.InboundAt)
+	}
+}
+
+// calledOff turns a seeded activity into a meeting nobody attended.
+func calledOff(t *testing.T, owner *pgx.Conn, id ids.UUID) {
+	t.Helper()
+	setMeeting(t, owner, id, "canceled")
+}
+
+// held turns one into a meeting that took place.
+func held(t *testing.T, owner *pgx.Conn, id ids.UUID) {
+	t.Helper()
+	setMeeting(t, owner, id, "held")
+}
+
+func setMeeting(t *testing.T, owner *pgx.Conn, id ids.UUID, status string) {
+	t.Helper()
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE activity SET kind = 'meeting', meeting_status = $2 WHERE id = $1`, id, status); err != nil {
+		t.Fatalf("making activity %s a %s meeting: %v", id, status, err)
+	}
+}

@@ -68,7 +68,7 @@ func TestRetrieveAcceptsTheShortQuestionForm(t *testing.T) {
 // product does not make.
 func TestNothingIsWrittenWhenNothingClearsTheFloor(t *testing.T) {
 	var out strings.Builder
-	cfg := aiTaskRetrieveFlags{question: "how can I create a project", floor: floatPtr(0.9), workDir: t.TempDir()}
+	cfg := aiTaskRetrieveFlags{question: "how can I create a project", floor: new(0.9), workDir: t.TempDir()}
 	result := compose.CorpusProbeResult{Embedded: 42}
 	if err := writeRetrieval(&out, cfg, result); err != nil {
 		t.Fatalf("report: %v", err)
@@ -91,7 +91,7 @@ func TestNothingIsWrittenWhenNothingClearsTheFloor(t *testing.T) {
 // carry the four facts a passage is judged on.
 func TestTheReportNamesEveryPassageAndWhereItCameFrom(t *testing.T) {
 	var out strings.Builder
-	cfg := aiTaskRetrieveFlags{question: "how can I create a project", page: "records.md", floor: floatPtr(0.35)}
+	cfg := aiTaskRetrieveFlags{question: "how can I create a project", page: "records.md", floor: new(0.35)}
 	err := writeRetrieval(&out, cfg, compose.CorpusProbeResult{Embedded: 7, Passages: []compose.CorpusProbePassage{
 		{DocumentName: "records.md", Text: "A project is\nnot a folder you create when you win.", StartLine: 198, Similarity: 0.7123},
 	}})
@@ -171,7 +171,7 @@ func TestACaptureIsNamedAfterItsQuestion(t *testing.T) {
 // preview is also cut, because eight rows have to stay one screen.
 func TestALongMultiLinePassageStaysOneTableRow(t *testing.T) {
 	var out strings.Builder
-	cfg := aiTaskRetrieveFlags{question: "how can I create a project", floor: floatPtr(0.35)}
+	cfg := aiTaskRetrieveFlags{question: "how can I create a project", floor: new(0.35)}
 	passage := "A project is\nnot a folder you create when you win — it is born while you are still selling,\nand it carries the deal's own history with it."
 	err := writeRetrieval(&out, cfg, compose.CorpusProbeResult{Embedded: 31, Passages: []compose.CorpusProbePassage{
 		{DocumentName: "records.md", Text: passage, StartLine: 198, Similarity: 0.7123},
@@ -244,5 +244,3 @@ func TestRetrieveStopsBeforeSpendingWhenTheRunCannotBeMade(t *testing.T) {
 		})
 	}
 }
-
-func floatPtr(f float64) *float64 { return &f }

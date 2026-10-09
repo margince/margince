@@ -214,10 +214,7 @@ func validateAnswers(questions []ReviewQuestion, answers map[string]string) erro
 // ensureReviewAuthority is the object permission a review write needs. Row
 // scope is the DEAL's, checked by the caller that holds the deal.
 func ensureReviewAuthority(ctx context.Context) error {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return err
-	}
-	return nil
+	return auth.Require(ctx, "activity", principal.ActionCreate)
 }
 
 // errReviewTemplateRetired reports that the installation has no live template

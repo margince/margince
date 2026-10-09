@@ -161,6 +161,11 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	if err != nil {
 		return PreparedSend{}, err
 	}
+	// A template signs in markup, so a plain message gains an HTML part that
+	// carries its own text and the formatted sign-off under it.
+	if safeHTML == "" && sign.HTML != "" {
+		safeHTML = "<p>" + htmlLines(in.Body) + "</p>"
+	}
 
 	// The markup alternative gets the SAME sign-off and the same unsubscribe
 	// footer, in its own syntax. Two alternatives of one message that disagreed
@@ -179,6 +184,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 			body:            derived.transmitted,
 			recordedBody:    derived.recorded,
 			htmlBody:        htmlBody,
+			inlineLogoKey:   sign.LogoKey,
 			files:           files,
 			listUnsubscribe: derived.listUnsubscribe,
 			to:              toRecipients(in.Recipients, in.Cc, in.Bcc),

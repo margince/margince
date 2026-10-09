@@ -37,7 +37,7 @@ var clientTotalKeys = []string{
 
 // rejectClientTotals answers 422 when an extension-carrying request body
 // smuggles a total; returns false when the response has been written.
-func rejectClientTotals(w http.ResponseWriter, r *http.Request, extra map[string]interface{}) bool {
+func rejectClientTotals(w http.ResponseWriter, r *http.Request, extra map[string]any) bool {
 	for _, key := range clientTotalKeys {
 		if _, found := extra[key]; found {
 			httperr.Write(w, r, httperr.Validation(key, "totals_derived",

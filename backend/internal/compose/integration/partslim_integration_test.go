@@ -60,10 +60,7 @@ func slimWrap76(body []byte) string {
 		if at > 0 {
 			out.WriteString("\r\n")
 		}
-		end := at + 76
-		if end > len(b64) {
-			end = len(b64)
-		}
+		end := min(at+76, len(b64))
 		out.WriteString(b64[at:end])
 	}
 	return out.String()

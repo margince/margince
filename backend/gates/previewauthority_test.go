@@ -101,7 +101,7 @@ func TestTheAuthorityLevelsAgreeAcrossTheWire(t *testing.T) {
 	}
 
 	published := map[string]bool{}
-	for _, raw := range strings.Split(string(match[1]), ",") {
+	for raw := range strings.SplitSeq(string(match[1]), ",") {
 		if v := strings.TrimSpace(raw); v != "" {
 			published[v] = true
 		}

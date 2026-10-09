@@ -382,7 +382,7 @@ func TestStandingSyncRefusesBadState(t *testing.T) {
 type faultySink struct{}
 
 func (faultySink) Upsert(context.Context, connector.NormalizedRecord) (datasource.EntityRef, error) {
-	return datasource.EntityRef{}, fmt.Errorf("sink: db down")
+	return datasource.EntityRef{}, errors.New("sink: db down")
 }
 
 func TestStandingSyncSurfacesWriteFaults(t *testing.T) {

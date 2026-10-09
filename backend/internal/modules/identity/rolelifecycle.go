@@ -44,7 +44,7 @@ var rowScopes = []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTe
 // validRoleName trims and bounds a role name.
 func validRoleName(raw string) (string, error) {
 	name := strings.TrimSpace(raw)
-	if name == "" || utf8.RuneCountInString(name) > maxRoleName {
+	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > maxRoleName {
 		return "", &values.ParseError{
 			Field: roleFieldName, Code: "invalid_role_name",
 			Message: fmt.Sprintf("a role name is 1 to %d characters", maxRoleName),

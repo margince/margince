@@ -18,6 +18,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -214,7 +215,7 @@ func (r *sendMessageResolver) Guards(ctx context.Context, cmd SendMessageCommand
 		return err
 	}
 	if strings.TrimSpace(cmd.Body) == "" {
-		return &BadArgsError{Cause: fmt.Errorf("body is empty or whitespace-only; a channel provider rejects a text-less message")}
+		return &BadArgsError{Cause: errors.New("body is empty or whitespace-only; a channel provider rejects a text-less message")}
 	}
 	var anchor struct {
 		Kind            string `json:"kind"`

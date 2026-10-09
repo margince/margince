@@ -80,10 +80,7 @@ func (p Period) Cutoff(ref time.Time) time.Time {
 		year--
 	}
 	lastDay := time.Date(year, time.Month(month+2), 0, 0, 0, 0, 0, ref.Location()).Day()
-	day := ref.Day()
-	if day > lastDay {
-		day = lastDay
-	}
+	day := min(ref.Day(), lastDay)
 	anchored := time.Date(year, time.Month(month+1), day,
 		ref.Hour(), ref.Minute(), ref.Second(), ref.Nanosecond(), ref.Location())
 	return anchored.AddDate(0, 0, -p.Days)

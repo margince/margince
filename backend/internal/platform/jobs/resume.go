@@ -26,7 +26,7 @@ func (r *Runner) ResumeScheduledTx(ctx context.Context, tx pgx.Tx, kind, field s
 	var attempt, limit int
 	err := tx.QueryRow(ctx, query, args...).Scan(&id, &state, &attempt, &limit)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, fmt.Errorf("budget recovery: the existing job is missing or terminal")
+		return false, errors.New("budget recovery: the existing job is missing or terminal")
 	}
 	if err != nil {
 		return false, err
@@ -35,7 +35,7 @@ func (r *Runner) ResumeScheduledTx(ctx context.Context, tx pgx.Tx, kind, field s
 		return false, nil
 	}
 	if attempt >= limit {
-		return false, fmt.Errorf("budget recovery: the existing job has exhausted its attempts")
+		return false, errors.New("budget recovery: the existing job has exhausted its attempts")
 	}
 	if state == "available" {
 		return true, nil

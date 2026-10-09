@@ -116,7 +116,7 @@ func TestUndoingABulkTagLeavesATagSomebodyPutBackSince(t *testing.T) {
 	}
 	tags := collections.NewStore(e.DB())
 	reapplied := ids.UUID(items[0].Id)
-	if err := tags.RemoveTag(e.Admin(), tag, "contact", reapplied); err != nil {
+	if _, err := tags.RemoveTag(e.Admin(), tag, "contact", reapplied); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tags.ApplyTag(e.Admin(), tag, "contact", reapplied); err != nil {
@@ -142,9 +142,15 @@ func TestABulkRemoveTagAndItsUndoPutsItBack(t *testing.T) {
 	tag := seedBulkTag(t, e)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
 	tags := collections.NewStore(e.DB())
-	if _, err := tags.ApplyTag(e.Admin(), tag, "contact", ids.UUID(items[0].Id)); err != nil {
+	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, bulkTagPerms())
+	if _, err := tags.ApplyTag(rep1, tag, "contact", ids.UUID(items[0].Id)); err != nil {
 		t.Fatal(err)
 	}
+	assignment := func() string {
+		return e.WsScalar(t, `SELECT concat_ws('|', id, created_at, assigned_by, assigned_by_kind, assigned_at)
+			FROM taggable WHERE tag_id = $1 AND entity_id = $2`, tag, items[0].Id)
+	}
+	assigned := assignment()
 	engine := bulkEngineFor(e)
 	out, err := engine.Execute(e.Admin(), tagChange(crmcontracts.BulkVerbRemoveTag, tag, items))
 	if err != nil || out.Changed != 1 || len(out.Skipped) != 1 || out.Skipped[0].Reason != crmcontracts.BulkSkipReasonNoChange {
@@ -161,6 +167,9 @@ func TestABulkRemoveTagAndItsUndoPutsItBack(t *testing.T) {
 	}
 	if n := taggedCount(t, e, tag); n != 1 {
 		t.Errorf("after the undo %d contacts carry the tag, want only the one it was taken off", n)
+	}
+	if back := assignment(); back != assigned {
+		t.Errorf("the undo put the tag back as %q, want the assignment it had: %q", back, assigned)
 	}
 }
 
@@ -272,8 +281,7 @@ func TestABulkCreateTaskRefusesAnAssigneeWhoCannotHoldWork(t *testing.T) {
 	items := seedBulkContacts(t, e, e.Rep1, 1)
 	nobody := ids.NewV7()
 	_, err := bulkEngineFor(e).Execute(e.Admin(), taskChange(items, &nobody))
-	var refused *auth.AssigneeNotAllowedError
-	if !errors.As(err, &refused) {
+	if _, ok := errors.AsType[*auth.AssigneeNotAllowedError](err); !ok {
 		t.Fatalf("an assignee who is no colleague answered %v, want a refusal before any row", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task' AND subject = 'Call back about the renewal'`); n != 0 {

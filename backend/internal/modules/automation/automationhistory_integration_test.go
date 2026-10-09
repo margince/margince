@@ -107,8 +107,7 @@ func TestListRunsOutcomeFilterSpeaksTheWireVocabulary(t *testing.T) {
 	}
 	bad := "exploded"
 	_, err = store.ListRuns(ctx, autoID, nil, nil, &bad)
-	var param *ParamError
-	if !errors.As(err, &param) {
+	if _, ok := errors.AsType[*ParamError](err); !ok {
 		t.Fatalf("unknown outcome → %v, want a ParamError (not an empty page)", err)
 	}
 }

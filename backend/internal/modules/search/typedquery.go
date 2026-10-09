@@ -65,7 +65,7 @@ func carriesOperators(query string) bool {
 	if strings.Contains(query, `"`) {
 		return true
 	}
-	for _, field := range strings.Fields(query) {
+	for field := range strings.FieldsSeq(query) {
 		if strings.HasPrefix(field, "-") || strings.EqualFold(field, "or") {
 			return true
 		}
@@ -89,13 +89,13 @@ func carriesOperators(query string) bool {
 // exactly right — those are words the reader finished typing and the last is
 // the one still under the cursor.
 //
-// An EMPTY fragment renders an empty tsquery, and `”:*` would be a syntax
-// error, so the caller omits the arm entirely rather than building one. That is
-// also what makes a finished query match exactly what it matched before.
+// `:*` alone is a syntax error, and "%" or "(" parse to nothing; `&&` drops
+// the empty tsquery the arm falls back to.
 func prefixArmSQL(tailPos int) string {
+	parsed := fmt.Sprintf(`plainto_tsquery('simple', f_unaccent($%d))`, tailPos)
 	return fmt.Sprintf(
-		`(plainto_tsquery('simple', f_unaccent($%d))::text || ':*')::tsquery`,
-		tailPos)
+		`(CASE WHEN numnode(%[1]s) = 0 THEN ''::tsquery ELSE (%[1]s::text || ':*')::tsquery END)`,
+		parsed)
 }
 
 // matchExpression is the tsquery one branch matches against: the words the

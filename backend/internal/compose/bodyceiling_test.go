@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -123,6 +124,28 @@ func TestAPathTheRouterDoesNotServeIsNotAnUploadRoute(t *testing.T) {
 		if got != httperr.MaxBodyBytes {
 			t.Errorf("%q rode the file ceiling %d — only the exact path the "+
 				"router mounts carries a file", path, got)
+		}
+	}
+}
+
+func TestMCPRidesItsOwnCeilingOnlyForAPostedJSONBody(t *testing.T) {
+	if got := ceilingFor(t, http.MethodPost, "/mcp", "application/json; charset=utf-8"); got != agents.MaxMCPRequestBytes {
+		t.Errorf("POST /mcp application/json rode %d, want the MCP ceiling %d — an agent "+
+			"attaching a file as base64 would be refused below the size it was promised",
+			got, agents.MaxMCPRequestBytes)
+	}
+	for _, c := range []struct{ method, path, contentType string }{
+		{http.MethodGet, "/mcp", "application/json"},
+		{http.MethodPost, "/mcp", "text/plain"},
+		{http.MethodPost, "/mcp", ""},
+		{http.MethodPost, "/mcp/", "application/json"},
+		{http.MethodPost, "/v1/deals", "application/json"},
+		{http.MethodPost, "/oauth/register", "application/json"},
+	} {
+		if got := ceilingFor(t, c.method, c.path, c.contentType); got != httperr.MaxBodyBytes {
+			t.Errorf("%s %s %q rode %d, want the JSON ceiling %d — the MCP grant is one "+
+				"route, one method and one media type", c.method, c.path, c.contentType,
+				got, httperr.MaxBodyBytes)
 		}
 	}
 }

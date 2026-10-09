@@ -55,6 +55,7 @@ const ACRONYMS = new Map([
   ["IMAP", "the mail protocol, as the copy writes it"],
   ["DNA", "Voice DNA, the product's name for a writing voice"],
   ["VAT", "the tax, as the copy writes it"],
+  ["MCP", "the Model Context Protocol, as the copy writes it"],
 ]);
 
 type Filed = { path: string; title: string };
@@ -391,7 +392,7 @@ describe("the sidebar detectors report what they are for", () => {
       "1ALERT",
       "360View",
       "SMTP relay",
-      "MCP server",
+      "LDAP server",
       "Stat Äpfel",
       "ärger",
       "Ai pending",

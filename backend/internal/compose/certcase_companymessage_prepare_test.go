@@ -20,8 +20,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-func stringPointer(s string) *string { return &s }
-
 // A fixture the onboarding transport would refuse, or a context block the server
 // could not have assembled, describes a call the product cannot make — so a
 // scenario over one measures a prompt that never ships.
@@ -76,7 +74,7 @@ func TestCompanyMessageCaseRefusesAFixtureProductionCouldNotProduce(t *testing.T
 		{
 			name: "a draft field past the bound the transport applies",
 			mutate: func(f *onboardingCompanyMessageFixture) {
-				f.Conversation.CurrentDraft.History = stringPointer(strings.Repeat("ü", onboardingCompanyDraftMaxRunes+1))
+				f.Conversation.CurrentDraft.History = new(strings.Repeat("ü", onboardingCompanyDraftMaxRunes+1))
 			},
 			wantMsg: "bounds every draft field",
 		},
@@ -93,7 +91,7 @@ func TestCompanyMessageCaseRefusesAFixtureProductionCouldNotProduce(t *testing.T
 		{
 			name: "a next question the draft has already answered",
 			mutate: func(f *onboardingCompanyMessageFixture) {
-				f.Conversation.CurrentDraft.DisplayName = stringPointer("Acme Robotics")
+				f.Conversation.CurrentDraft.DisplayName = new("Acme Robotics")
 				f.Conversation.RemainingRequired = []string{fieldOfferSummary, fieldICP}
 			},
 			wantMsg: "the server asks for",

@@ -82,6 +82,7 @@ declared by an operation, or listed as a composed intent. `TestEveryDeclaredTool
 | `at_risk_relationships` | 🟢 | `read` | no |
 | `annotate_brief` | 🟢 | `write` | no |
 | `apply_tag` | 🟢 | `write` | no |
+| `attach_document` | 🟢 | `write` | no |
 | `book_meeting` | 🟢 | `send` | yes |
 | `bulk_update_records` | 🟢 | `write` | no |
 | `invite_meeting` | 🟡 | `send` | yes |
@@ -112,6 +113,7 @@ declared by an operation, or listed as a composed intent. `TestEveryDeclaredTool
 | `list_approvals` | 🟢 | `read` | no |
 | `list_channel_providers` | 🟢 | `read` | no |
 | `list_colleagues` | 🟢 | `read` | no |
+| `list_documents` | 🟢 | `read` | no |
 | `list_records` | 🟢 | `read` | no |
 | `log_activity` | 🟢 | `write` | no |
 | `merge_records` | 🟢 | `write` | no |

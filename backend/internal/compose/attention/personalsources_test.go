@@ -102,6 +102,8 @@ func TestThePerUserSourcesAreTheOnesTheirPortsDeclare(t *testing.T) {
 		"weekly_commitment":    "Commitments: one promise this rep made",
 		"failed_approval":      "FailedEffects: the decisions the acting rep approved",
 		"introduction_request": "Introductions: per-user like Notices, the ask names one colleague",
+		"awaiting_reply":       "Awaiting: the reader's own sends, read only on their own day",
+		"meeting_follow_up":    "Awaiting: the reader's own meetings, read only on their own day",
 	}
 	for source, why := range perUser {
 		if !sourceAnswersForTheActorOnly[source] {

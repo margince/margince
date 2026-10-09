@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -334,10 +335,8 @@ func mailboxWasARecipientTx(ctx context.Context, tx pgx.Tx, rec connector.Normal
 	if self.CoversAddressExactly(rec.DeliveredTo) {
 		return true, nil
 	}
-	for _, a := range rec.Addresses {
-		if self.CoversAddressExactly(a) {
-			return true, nil
-		}
+	if slices.ContainsFunc(rec.Addresses, self.CoversAddressExactly) {
+		return true, nil
 	}
 	return false, nil
 }

@@ -210,15 +210,12 @@ func TestConfirmCompanyFactHandler(t *testing.T) {
 	}
 }
 
-// A correction that does not survive the next enrichment run is not a
-// correction — the rep fixes the phone number, the nightly deep read puts the
-// wrong one back, and nothing says it happened.
+// A correction the next enrichment run undoes was never a correction. The rep
+// fixes the phone number. The nightly deep read puts the wrong one back, and
+// nothing says it happened.
 //
-// The guard both enrichment upserts apply is `captured_by NOT LIKE 'human:%'`.
-// They test WHO OWNS the row, not what its `source` column says, so a verdict
-// that moved source alone left the row claimable. This drives the real
-// ApplyDeepRead rather than asserting on the column, because the column is only
-// evidence about a rule that lives in the enrichment query.
+// Both upserts guard on `source NOT IN ('human', 'agent')`. This drives the
+// real ApplyDeepRead, because that query is where the rule lives.
 func TestACorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -259,6 +256,52 @@ func TestACorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 		}
 		if f.Value != "+49 30 9999" {
 			t.Fatalf("phone = %q after a deep read, want the human's correction to stand", f.Value)
+		}
+		return
+	}
+	t.Fatal("the corrected phone fact is gone entirely")
+}
+
+// The same protection, for an agent's correction. A passport is trusted to
+// correct a fact, so a nightly re-read that reclaimed it would discard the work
+// the passport was granted for. The sibling above covers a contact's.
+func TestAnAgentCorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
+	e := setupDedupe(t)
+	companyID := seedCompanyWithEvidence(e.as(), t, e)
+
+	corrected := "+49 30 7777"
+	out, err := e.store.UpdateCompanyFact(e.asAgent(), companyID, "phone:",
+		FactWriteInput{Value: &corrected})
+	if err != nil {
+		t.Fatalf("agent correction: %v", err)
+	}
+	if string(out.Source) != "agent" {
+		t.Fatalf("source = %q, want agent before the deep read is even run", out.Source)
+	}
+
+	if err := e.store.ApplyDeepRead(e.as(), DeepReadProposal{
+		CompanyID:  companyID,
+		SourceURL:  "https://voltaq.test/impressum",
+		SiteReadID: ids.NewV7(),
+		Facts: []DeepReadFact{{
+			Category: "company", Field: "phone", Value: "+49 30 1234", ValueKey: "",
+			EvidenceSnippet: `"+49 30 1234"`, SourceURL: "https://voltaq.test/impressum",
+			Confidence: 0.95,
+		}},
+	}); err != nil {
+		t.Fatalf("ApplyDeepRead: %v", err)
+	}
+
+	facts, err := e.store.ListCompanyFacts(e.as(), companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range facts {
+		if string(f.Field) != "phone" {
+			continue
+		}
+		if f.Value != corrected {
+			t.Fatalf("phone = %q after a deep read, want the agent's correction to stand", f.Value)
 		}
 		return
 	}

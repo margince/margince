@@ -3,12 +3,7 @@
 
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { type Fact, FactList } from "../design-system/factlist";
-import {
-  EvidenceChip,
-  FieldDiff,
-  PassportChip,
-  toEvidence,
-} from "../design-system/trust";
+import { EvidenceChip, FieldDiff, toEvidence } from "../design-system/trust";
 import {
   type PluralTranslator,
   type Translator,
@@ -16,6 +11,7 @@ import {
   useT,
 } from "../i18n";
 import { humanizeToken } from "./audit";
+import { ResolvedPassportChip } from "./passportchip";
 import { roleLabel } from "./roles.queries";
 import {
   type AuditLogEntry,
@@ -58,7 +54,7 @@ export function AuditDetail({ entry }: Readonly<{ entry: AuditLogEntry }>) {
           {
             key: "passport",
             term: t("history.passport"),
-            value: <PassportChip id={entry.passport_id} />,
+            value: <ResolvedPassportChip passportId={entry.passport_id} />,
           },
         ]
       : []),

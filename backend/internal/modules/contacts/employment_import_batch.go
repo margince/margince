@@ -52,7 +52,7 @@ func (s *Store) SweepEmploymentImports(ctx context.Context) error {
 	}
 	var after *ids.UUID
 	var failed []error
-	for batch := 0; batch < 10; batch++ {
+	for range 10 {
 		contacts, more, err := s.employmentImportContacts(ctx, after, 10, true)
 		if err != nil {
 			return err

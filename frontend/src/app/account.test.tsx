@@ -17,6 +17,20 @@ import { setThemeChoice } from "./theme";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 
+// The bundle's release is compiled in, and every local build leaves it empty.
+// A getter over a hoisted value lets each case set the release it needs. The
+// comparison rule stays the real one.
+const bundle = vi.hoisted(() => ({ release: "" }));
+vi.mock("./release", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./release")>();
+  return {
+    ...actual,
+    get SPA_RELEASE() {
+      return bundle.release;
+    },
+  };
+});
+
 // The account block: an avatar in the top bar's trail, and the menu it opens is
 // the product's ONE door into settings and its ONE appearance control — the
 // sidebar's foot carried the first and no longer exists, and the second used to
@@ -32,6 +46,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  bundle.release = "";
   vi.unstubAllGlobals();
   window.localStorage.removeItem(THEME_KEY);
 });
@@ -362,6 +377,33 @@ describe("AccountMenu", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Your session is already gone.");
   });
+
+  // The release the reader is running, at the foot of the menu, so whoever
+  // reports a problem can say which build it is in. A statement rather than a
+  // row: it goes nowhere, so it is not a menu item and the keyboard skips it.
+  it("names the release this bundle was built from", async () => {
+    bundle.release = "v1.4.0";
+    const user = userEvent.setup();
+    render(<AccountMenu />);
+    await openMenu(user, railTrigger());
+    const version = screen.getByText("Version v1.4.0");
+    expect(version.closest("[role=menuitem]")).toBeNull();
+    expect(screen.getAllByRole("menuitem").at(-1)).toBe(row("Sign out"));
+  });
+
+  // An unstamped build does not know its release, and an empty or "dev" line
+  // would print a version that is not one.
+  it.each(["", "dev"])(
+    "prints no release for an unstamped build (%j)",
+    async (release) => {
+      bundle.release = release;
+      const user = userEvent.setup();
+      const { container } = render(<AccountMenu />);
+      await openMenu(user, railTrigger());
+      expect(screen.queryByText(/^Version/)).toBeNull();
+      expect(container.querySelector(".acctversion")).toBeNull();
+    },
+  );
 
   // Closed, the panel is not rendered at all — so there is nothing behind the
   // trigger for Tab to land on, and nothing for a screen reader to read out of

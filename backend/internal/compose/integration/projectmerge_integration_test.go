@@ -255,8 +255,7 @@ func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
 
 	// The merge refuses on exactly that pair, which is the agreement.
 	_, err = e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target), nil)
-	var both *contacts.BothCompaniesCarryProjectsError
-	if !errors.As(err, &both) {
+	if _, ok := errors.AsType[*contacts.BothCompaniesCarryProjectsError](err); !ok {
 		t.Fatalf("the merge produced %v, want the refusal the card is predicting", err)
 	}
 

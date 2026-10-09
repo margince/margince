@@ -391,6 +391,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 		// the backfill surface isn't wired. Appended after baseComposeOptions'
 		// WithCaptureBackfill so the shared registry is already set.
 		opts = append(opts, compose.WithBackfillEstimator(modelPath.Router()))
+		opts = append(opts, compose.WithLaneHealthBindings(modelPath.Router()))
 	}
 	return opts, modelPath, nil
 }

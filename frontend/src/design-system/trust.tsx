@@ -378,12 +378,14 @@ function DiffSide({
   );
 }
 
-// A governed agent's passport id: an agent's identity, so the provenance tone.
-export function PassportChip({ id }: Readonly<{ id: string }>) {
+// The agent passport a change was made under, by name: an agent's identity,
+// so the provenance tone. The design system has no lookups, so the caller
+// resolves the name; without one the chip says "An agent" and never an id.
+export function PassportChip({ name }: Readonly<{ name?: string }>) {
   const t = useT();
   return (
     <span title={t("history.passport")}>
-      <Badge tone="ai">{id}</Badge>
+      <Badge tone="ai">{name?.trim() || t("history.passportUnnamed")}</Badge>
     </span>
   );
 }

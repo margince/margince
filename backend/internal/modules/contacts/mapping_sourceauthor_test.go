@@ -35,7 +35,7 @@ func TestTheRecordImporterDoorsCarryTheAuthor(t *testing.T) {
 	})
 	assertAuthor(t, "company", companyIn.Author, err, seat)
 	leadIn, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-		FullName: ptr("Imported"), SourceSystem: &hubspot, SourceAuthorId: &seat, SourceAuthorName: &name,
+		FullName: new("Imported"), SourceSystem: &hubspot, SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	assertAuthor(t, "lead", leadIn.Author, err, seat)
 }
@@ -45,7 +45,7 @@ func TestTheRecordClientDoorsRefuseAnAuthor(t *testing.T) {
 	name := "Anna Müller"
 	_, contactErr := contactCreateInput(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
 	_, companyErr := companyCreateInput(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
-	_, leadErr := leadCreateInput(crmcontracts.CreateLeadRequest{FullName: ptr("X"), SourceSystem: &legacy, SourceAuthorName: &name})
+	_, leadErr := leadCreateInput(crmcontracts.CreateLeadRequest{FullName: new("X"), SourceSystem: &legacy, SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {
 		assertAuthorRefused(t, record, err, "reserved_source_author")
 	}
@@ -57,7 +57,7 @@ func TestTheRecordImporterDoorsRefuseAnAuthorFromNowhere(t *testing.T) {
 	name := "Anna Müller"
 	_, contactErr := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceAuthorName: &name})
 	_, companyErr := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceAuthorName: &name})
-	_, leadErr := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{FullName: ptr("X"), SourceAuthorName: &name})
+	_, leadErr := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{FullName: new("X"), SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {
 		assertAuthorRefused(t, record, err, "source_author_needs_a_source")
 	}

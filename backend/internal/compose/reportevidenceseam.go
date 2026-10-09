@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -115,7 +116,7 @@ func explainedIDs(out AnalyticsExplanation) ([]ids.UUID, error) {
 	for _, row := range out.Rows {
 		raw, ok := row["id"].(string)
 		if !ok {
-			return nil, fmt.Errorf("compose: an explained row carries no record id")
+			return nil, errors.New("compose: an explained row carries no record id")
 		}
 		id, err := ids.Parse(raw)
 		if err != nil {

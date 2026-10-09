@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,7 +27,7 @@ func (s *Store) strictHours(ctx context.Context, host ids.UserID) (WorkingHours,
 		return hours, err
 	}
 	if hours.Location == nil {
-		return hours, fmt.Errorf("scheduling: host time zone unavailable")
+		return hours, errors.New("scheduling: host time zone unavailable")
 	}
 	return hours, nil
 }
@@ -56,7 +57,7 @@ func (s *Store) calendarBusy(ctx context.Context, host ids.UserID, p crmcontract
 				continue
 			}
 			if !interval.End.After(interval.Start) {
-				return nil, fmt.Errorf("scheduling: invalid provider interval")
+				return nil, errors.New("scheduling: invalid provider interval")
 			}
 			busy = append(busy, slot{Start: interval.Start.Add(-buffer), End: interval.End.Add(buffer)})
 		}
@@ -210,10 +211,7 @@ func (s *Store) validatePolicyTime(ctx context.Context, host ids.UserID, profile
 	if s.calendar == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
-		return err
-	}
-	return nil
+	return unconnectedAsRefusal(s.calendar.Check(ctx, host, string(profile.Provider)))
 }
 
 // Graph all-day responses can retain midnight wall dates despite a UTC preference.

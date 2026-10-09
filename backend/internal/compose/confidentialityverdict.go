@@ -19,6 +19,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -107,7 +108,7 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		// Exported, so a caller other than the worker can reach it: refuse
 		// rather than run a pass against a context whose tenant nobody bound.
-		return fmt.Errorf("confidentiality: a verdict pass requires a workspace-bound context")
+		return errors.New("confidentiality: a verdict pass requires a workspace-bound context")
 	}
 	wsCtx := e.workspaceCtx(ctx)
 	resolved := 0
@@ -363,7 +364,7 @@ func asActivityIDs(raw []ids.UUID) []ids.ActivityID {
 // where threads exhaust their attempts.
 func (e *ConfidentialityVerdictEngine) RetireExhausted(ctx context.Context) (int64, error) {
 	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return 0, fmt.Errorf("confidentiality: retiring threads requires a workspace-bound context")
+		return 0, errors.New("confidentiality: retiring threads requires a workspace-bound context")
 	}
 	return e.threads.RetireExhausted(e.workspaceCtx(ctx),
 		"no confidentiality answer was reached before the attempts ran out")

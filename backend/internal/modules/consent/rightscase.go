@@ -166,7 +166,7 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	}
 	// Unreachable: the loop above either returns or exhausts its attempts and
 	// returns the last error. Go cannot see that, so this states it.
-	return "", fmt.Errorf("consent: opening the rights case this request owes an answer to: no attempt ran")
+	return "", errors.New("consent: opening the rights case this request owes an answer to: no attempt ran")
 }
 
 // errSavepointPoisoned marks a savepoint whose rollback did not take. The

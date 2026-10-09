@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -186,14 +187,16 @@ func (s *Store) ListSuggestions(ctx context.Context, in SuggestionQuery) ([]Sugg
 	}
 	query := `SELECT ` + suggestionColumns + ` FROM deal_suggestion s JOIN company c ON c.id = s.company_id
 	 WHERE s.state = 'open' AND ` + visible
+	var querySb189 strings.Builder
 	for _, filter := range []struct {
 		column string
 		value  *ids.UUID
 	}{{"s.company_id", in.CompanyID}, {"s.pipeline_id", in.PipelineID}, {"s.proposed_stage_id", in.StageID}} {
 		if filter.value != nil {
-			query += fmt.Sprintf(" AND %s = $%d", filter.column, arg(*filter.value))
+			fmt.Fprintf(&querySb189, " AND %s = $%d", filter.column, arg(*filter.value))
 		}
 	}
+	query += querySb189.String()
 	if in.Cursor != "" {
 		cur, err := storekit.DecodeOpaque[suggestionCursor](in.Cursor)
 		if err != nil || cur.ID.IsZero() {

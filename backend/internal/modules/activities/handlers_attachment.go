@@ -138,7 +138,7 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		ContractID:  contractID,
 	})
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	w.Header().Set("Location", "/v1/attachments/"+att.Id.String())
@@ -160,7 +160,7 @@ func (h Handlers) ListAttachments(w http.ResponseWriter, r *http.Request, params
 	atts, page, err := h.store.ListAttachments(r.Context(),
 		string(params.EntityType), ids.UUID(params.EntityId), cursor, limit)
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AttachmentListResponse{Data: atts, Page: pageInfo(page)})
@@ -171,7 +171,7 @@ func (h Handlers) ListAttachments(w http.ResponseWriter, r *http.Request, params
 func (h Handlers) DownloadAttachment(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	meta, rc, err := h.store.OpenAttachment(r.Context(), ids.UUID(id))
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	contentType := "application/octet-stream"
@@ -183,8 +183,8 @@ func (h Handlers) DownloadAttachment(w http.ResponseWriter, r *http.Request, id 
 		size = *meta.ByteSize
 	}
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: contentType, Filename: meta.Filename, Size: size},
-		Body:     rc,
+		ContentType: contentType, Filename: meta.Filename, Size: size,
+		Body: rc,
 	}, "attachment "+id.String())
 }
 
@@ -192,20 +192,10 @@ func (h Handlers) DownloadAttachment(w http.ResponseWriter, r *http.Request, id 
 // erasure/retention path, not here).
 func (h Handlers) DeleteAttachment(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if err := h.store.ArchiveAttachment(r.Context(), ids.UUID(id)); err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// writeAttachmentErr maps a role that wired no object store to a 501, and
-// otherwise defers to the module's shared store-error mapping.
-func writeAttachmentErr(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, ErrBlobstoreUnconfigured) {
-		httperr.NotImplemented(w, r, "attachments")
-		return
-	}
-	writeStoreErr(w, r, err)
 }
 
 // ListCompanyDocuments serves the account's document library. Every row is
@@ -239,7 +229,7 @@ func (h Handlers) ListCompanyDocuments(w http.ResponseWriter, r *http.Request,
 	}
 	docs, page, err := h.store.ListCompanyDocuments(r.Context(), ids.UUID(id), in)
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK,
@@ -281,7 +271,7 @@ func (h Handlers) UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Reques
 	}
 	out, err := h.store.UpdateAttachmentMetadata(r.Context(), ids.UUID(id), in)
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

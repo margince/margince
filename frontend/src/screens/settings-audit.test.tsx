@@ -243,7 +243,8 @@ describe("AuditLogCard", () => {
       toggle.getAttribute("aria-controls") ?? "",
     );
     expect(detail).toHaveTextContent("qualified");
-    expect(detail).toHaveTextContent("pp-9");
+    expect(detail).toHaveTextContent("An agent");
+    expect(detail).not.toHaveTextContent("pp-9");
   });
 
   it("opens an entry from anywhere on its row, but not from a control in it", async () => {

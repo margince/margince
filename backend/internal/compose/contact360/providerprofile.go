@@ -186,17 +186,17 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 		latest := runs[0]
 		profile.RetrievedAt = latest.completedAt
 		if latest.safeCode != "" {
-			profile.SafeStatusCode = providerPtr(latest.safeCode)
+			profile.SafeStatusCode = new(latest.safeCode)
 		}
-		profile.LatestRun = providerPtr(toWireRun(latest))
-		profile.ContributingRuns = providerPtr(contributingRuns(runs))
+		profile.LatestRun = new(toWireRun(latest))
+		profile.ContributingRuns = new(contributingRuns(runs))
 		if s.providers != nil {
 			if desc, err := s.providers.Descriptor(name); err == nil {
 				profile.CategoriesNotRequested = categoriesNotRequested(desc, runs, claims)
 				if answerable(latest) {
 					delivered := deliveredKeys(latest.id, claims)
-					profile.CategoriesAsked = providerPtr(asked(desc, latest.requested, delivered))
-					profile.CategoriesWithoutAnswer = providerPtr(categoriesWithoutAnswer(
+					profile.CategoriesAsked = new(asked(desc, latest.requested, delivered))
+					profile.CategoriesWithoutAnswer = new(categoriesWithoutAnswer(
 						desc, latest.requested, delivered))
 				}
 			}

@@ -142,9 +142,7 @@ func (m *mailPageConnector) walkAtOnce(ctx context.Context, sink connector.Sink)
 		res.Captured++
 	}
 	for _, raw := range m.raws {
-		walking.Add(1)
-		go func() {
-			defer walking.Done()
+		walking.Go(func() {
 			msg, err := mailmap.Parse(raw, captureOwner)
 			if err == nil {
 				msg = msg.AttestSentByOwner(m.sent[msg.ID()])
@@ -158,7 +156,7 @@ func (m *mailPageConnector) walkAtOnce(ctx context.Context, sink connector.Sink)
 			}
 			res.Scanned++
 			res.Captured++
-		}()
+		})
 	}
 	walking.Wait()
 	if failed != nil {

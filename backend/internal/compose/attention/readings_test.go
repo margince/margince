@@ -33,7 +33,7 @@ func TestTheReadingsDoNotShrinkAsAReaderPagesThroughTheQueue(t *testing.T) {
 	// The same day read one row at a time. `pageFrom` is what a page cut is, so
 	// this walks the real one rather than a slice invented here.
 	var pages []crmcontracts.WorklistReadings
-	for at := 0; at < len(considered); at++ {
+	for at := range considered {
 		shown, _, _ := pageFrom(append([]ranked(nil), considered...), 1, worklistCursor{At: at})
 		if len(shown) == 0 {
 			t.Fatalf("the walk ran dry at offset %d with rows still owed", at)

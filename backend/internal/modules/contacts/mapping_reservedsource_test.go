@@ -26,7 +26,7 @@ import (
 func TestLeadCreateInputRefusesTheImporterNamespace(t *testing.T) {
 	reserved := "mirror:legacy_crm"
 	_, err := leadCreateInput(crmcontracts.CreateLeadRequest{
-		SourceSystem: &reserved, SourceId: ptr("501"),
+		SourceSystem: &reserved, SourceId: new("501"),
 	})
 	var refused *provenance.ReservedError
 	if !errors.As(err, &refused) {
@@ -40,7 +40,7 @@ func TestLeadCreateInputRefusesTheImporterNamespace(t *testing.T) {
 func TestLeadCreateInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 	ordinary := "legacy_crm"
 	in, err := leadCreateInput(crmcontracts.CreateLeadRequest{
-		SourceSystem: &ordinary, SourceId: ptr("501"),
+		SourceSystem: &ordinary, SourceId: new("501"),
 	})
 	if err != nil {
 		t.Fatalf("an ordinary source system must stay writable: %v", err)
@@ -69,7 +69,7 @@ func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
 		t.Errorf("company: err = %v, want the namespace refused", err)
 	}
 	if _, err := leadCreateInput(crmcontracts.CreateLeadRequest{
-		FullName: ptr("Planted"), Source: reserved,
+		FullName: new("Planted"), Source: reserved,
 	}); !errors.As(err, &refused) {
 		t.Errorf("lead source: err = %v, want the namespace refused", err)
 	}
@@ -139,15 +139,13 @@ func TestTheRecordWiresRefuseTheImporterNamespaceOnSourceSystem(t *testing.T) {
 	}
 }
 
-func ptr(s string) *string { return &s }
-
 // The lead importer door admits its own namespace and nothing else — the same
 // boundary the activity door holds, asserted the same way, because the lead
 // store keys the same replay on (source_system, source_id).
 func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	namespaced := "mirror:hubspot"
 	in, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-		FullName: ptr("Imported"), SourceSystem: &namespaced, SourceId: ptr("501"),
+		FullName: new("Imported"), SourceSystem: &namespaced, SourceId: new("501"),
 	})
 	if err != nil {
 		t.Fatalf("the importer must be able to stamp its own namespace: %v", err)
@@ -164,10 +162,9 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	} {
 		planted := engine
 		_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-			FullName: ptr("Planted"), SourceSystem: &planted, SourceId: ptr("planted"),
+			FullName: new("Planted"), SourceSystem: &planted, SourceId: new("planted"),
 		})
-		var refused *provenance.ReservedError
-		if !errors.As(err, &refused) {
+		if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 			t.Errorf("%q: err = %v, want it refused — the importer is not the automation engine", engine, err)
 		}
 	}
@@ -175,7 +172,7 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	// `source` is guarded independently of the admission.
 	var sourceRefused *provenance.ReservedError
 	if _, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-		FullName: ptr("Planted"), Source: "mirror:hubspot",
+		FullName: new("Planted"), Source: "mirror:hubspot",
 	}); !errors.As(err, &sourceRefused) {
 		t.Errorf("source: err = %v, want the namespace refused on source", err)
 	} else if sourceRefused.Field != "source" {
@@ -186,7 +183,7 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	// is still refused, or the admission would have leaked to every caller.
 	var clientRefused *provenance.ReservedError
 	if _, err := leadCreateInput(crmcontracts.CreateLeadRequest{
-		FullName: ptr("Planted"), SourceSystem: &namespaced, SourceId: ptr("501"),
+		FullName: new("Planted"), SourceSystem: &namespaced, SourceId: new("501"),
 	}); !errors.As(err, &clientRefused) {
 		t.Errorf("the client door admitted the importer namespace: %v", err)
 	}
@@ -228,7 +225,7 @@ func TestALeadFromAContactNamesNoSourceSystem(t *testing.T) {
 	namespaced := "mirror:hubspot"
 	contact := openapi_types.UUID(ids.NewV7())
 	_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-		ContactId: &contact, SourceSystem: &namespaced, SourceId: ptr("501"),
+		ContactId: &contact, SourceSystem: &namespaced, SourceId: new("501"),
 	})
 	if err == nil {
 		t.Fatal("a lead naming both a contact and a source system was admitted")

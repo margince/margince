@@ -93,8 +93,7 @@ func TestRequireBodyIDSaysWhichFieldInTheDetailBothSurfacesRender(t *testing.T) 
 	// And the verdict survives WRAPPING, because a module that adds context with
 	// %w must not have to know which concrete type carries it.
 	wrapped := fmt.Errorf("mapping the advance body: %w", RequireBodyID("to_stage_id", ids.UUID{}))
-	var detailed *DetailedError
-	if !errors.As(wrapped, &detailed) {
+	if _, ok := errors.AsType[*DetailedError](wrapped); !ok {
 		t.Fatal("the refusal does not survive wrapping, so a module that adds context loses the verdict")
 	}
 	if wrappedFault, ok := Classify(wrapped); !ok || len(wrappedFault.Fields) != 1 {

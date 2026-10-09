@@ -153,13 +153,13 @@ func endsChain(line string) bool {
 // enclosingFunc names the function a construction sits in, so a waiver ratifies
 // ONE construction rather than every construction of that package in the file.
 func enclosingFunc(source, construction string) string {
-	at := strings.Index(source, construction)
-	if at < 0 {
+	before, _, ok := strings.Cut(source, construction)
+	if !ok {
 		return "?"
 	}
 	declaration := regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?([A-Za-z0-9_]+)\(`)
 	name := "?"
-	for _, match := range declaration.FindAllStringSubmatchIndex(source[:at], -1) {
+	for _, match := range declaration.FindAllStringSubmatchIndex(before, -1) {
 		name = source[match[2]:match[3]]
 	}
 	return name

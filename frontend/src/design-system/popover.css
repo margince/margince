@@ -66,7 +66,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   /* The page's brightest ground, not the card's. The panel floats OVER cards
-     that are already --bgCard, and a panel the same value as what it covers
+     that are already --bgInset, and a panel the same value as what it covers
      loses its own edge and sets its text at the contrast of the layer below
      rather than its own. */
   background: var(--bgElevated);

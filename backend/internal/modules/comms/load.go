@@ -62,12 +62,13 @@ func (s *Store) Load(ctx context.Context, id ids.UUID) (Delivery, error) {
 			          coalesce(list_unsubscribe, ''), inflight_at, status, attempts, created_at,
 			          attachments, sender_kind, coalesce(template_key, ''),
 			          coalesce(template_version, 0), coalesce(payload_ref, ''),
-			          payload_expires_at, link_id, execution_authority, instruction_id`,
+			          payload_expires_at, link_id, execution_authority, instruction_id,
+			          coalesce(inline_logo_key, '')`,
 			id).Scan(&d.ID, &d.ActivityID, &userID, &d.Provider, &d.MessageID,
 			&recipients, &cc, &bcc, &d.Subject, &d.Body, &d.HTMLBody, &d.FromName, &d.ChannelUserID, &d.ConsentPurpose,
 			&d.InReplyTo, &refs, &d.ListUnsubscribe, &d.InFlightAt, &d.Status, &d.Attempts, &d.CreatedAt,
 			&files, &d.SenderKind, &d.TemplateKey, &d.TemplateVersion, &d.PayloadRef,
-			&d.PayloadExpiresAt, &linkID, &d.ExecutionAuthority, &instructionID)
+			&d.PayloadExpiresAt, &linkID, &d.ExecutionAuthority, &instructionID, &d.InlineLogoKey)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Delivery{}, ErrTerminal

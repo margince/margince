@@ -23,11 +23,11 @@ func TestTheRecommendationIsTheHeadOfTheList(t *testing.T) {
 		[]crmcontracts.ContactGraphEdge{
 			{
 				From: userNodeID(uuidFor(1)), To: anchor,
-				Interactions90d: 2, Inbound90d: intp(1), Outbound90d: intp(1), LastAt: daysBefore(20),
+				Interactions90d: 2, Inbound90d: new(1), Outbound90d: new(1), LastAt: daysBefore(20),
 			},
 			{
 				From: userNodeID(uuidFor(2)), To: contactNodeID(uuidFor(3)),
-				Interactions90d: 40, Inbound90d: intp(20), Outbound90d: intp(20), LastAt: daysBefore(1),
+				Interactions90d: 40, Inbound90d: new(20), Outbound90d: new(20), LastAt: daysBefore(1),
 			},
 		})
 
@@ -61,11 +61,11 @@ func TestAContactToContactEdgeIsNeverARoute(t *testing.T) {
 			// Loud, recent, and entirely on their side of the wall.
 			{
 				From: contactNodeID(uuidFor(4)), To: contactNodeID(uuidFor(3)),
-				Interactions90d: 90, Inbound90d: intp(45), Outbound90d: intp(45), LastAt: daysBefore(1),
+				Interactions90d: 90, Inbound90d: new(45), Outbound90d: new(45), LastAt: daysBefore(1),
 			},
 			{
 				From: userNodeID(uuidFor(1)), To: anchor,
-				Interactions90d: 3, Inbound90d: intp(1), Outbound90d: intp(2), LastAt: daysBefore(30),
+				Interactions90d: 3, Inbound90d: new(1), Outbound90d: new(2), LastAt: daysBefore(30),
 			},
 		})
 
@@ -95,11 +95,11 @@ func TestARouteIdSaysWhichKindItIs(t *testing.T) {
 		[]crmcontracts.ContactGraphEdge{
 			{
 				From: userNodeID(uuidFor(1)), To: anchor,
-				Interactions90d: 8, Inbound90d: intp(4), Outbound90d: intp(4), LastAt: daysBefore(2),
+				Interactions90d: 8, Inbound90d: new(4), Outbound90d: new(4), LastAt: daysBefore(2),
 			},
 			{
 				From: userNodeID(uuidFor(2)), To: contactNodeID(uuidFor(3)),
-				Interactions90d: 4, Inbound90d: intp(2), Outbound90d: intp(2), LastAt: daysBefore(6),
+				Interactions90d: 4, Inbound90d: new(2), Outbound90d: new(2), LastAt: daysBefore(6),
 			},
 		})
 
@@ -130,7 +130,7 @@ func TestARouteIdSaysWhichKindItIs(t *testing.T) {
 // edge itself obeys.
 func TestOnlyADirectRouteCarriesReceipts(t *testing.T) {
 	anchor := contactNodeID(uuidFor(9))
-	receipts := []crmcontracts.ContactGraphReceipt{{Subject: strptr("Retrofit review")}}
+	receipts := []crmcontracts.ContactGraphReceipt{{Subject: new("Retrofit review")}}
 	graph := graphWith(
 		[]crmcontracts.ContactGraphNode{
 			colleague(1, "Direct Dana", crmcontracts.ContactGraphNodeGroupDirect),
@@ -140,11 +140,11 @@ func TestOnlyADirectRouteCarriesReceipts(t *testing.T) {
 		[]crmcontracts.ContactGraphEdge{
 			{
 				From: userNodeID(uuidFor(1)), To: anchor, Receipts: &receipts,
-				Interactions90d: 8, Inbound90d: intp(4), Outbound90d: intp(4), LastAt: daysBefore(2),
+				Interactions90d: 8, Inbound90d: new(4), Outbound90d: new(4), LastAt: daysBefore(2),
 			},
 			{
 				From: userNodeID(uuidFor(2)), To: contactNodeID(uuidFor(3)), Receipts: &receipts,
-				Interactions90d: 4, Inbound90d: intp(2), Outbound90d: intp(2), LastAt: daysBefore(6),
+				Interactions90d: 4, Inbound90d: new(2), Outbound90d: new(2), LastAt: daysBefore(6),
 			},
 		})
 
@@ -167,7 +167,7 @@ func TestEvidenceCrossesTheWireAsFactsNotProse(t *testing.T) {
 		},
 		[]crmcontracts.ContactGraphEdge{{
 			From: userNodeID(uuidFor(1)), To: anchor,
-			Interactions90d: 6, Inbound90d: intp(3), Outbound90d: intp(3), LastAt: daysBefore(2),
+			Interactions90d: 6, Inbound90d: new(3), Outbound90d: new(3), LastAt: daysBefore(2),
 		}})
 
 	routes := chooseRoutes(graph, graphNow)
@@ -195,11 +195,11 @@ func TestAnExchangeOutranksAOneSidedRelationshipInTheList(t *testing.T) {
 		[]crmcontracts.ContactGraphEdge{
 			{
 				From: userNodeID(uuidFor(1)), To: anchor,
-				Interactions90d: 30, Inbound90d: intp(0), Outbound90d: intp(30), LastAt: daysBefore(1),
+				Interactions90d: 30, Inbound90d: new(0), Outbound90d: new(30), LastAt: daysBefore(1),
 			},
 			{
 				From: userNodeID(uuidFor(2)), To: anchor,
-				Interactions90d: 6, Inbound90d: intp(3), Outbound90d: intp(3), LastAt: daysBefore(3),
+				Interactions90d: 6, Inbound90d: new(3), Outbound90d: new(3), LastAt: daysBefore(3),
 			},
 		})
 
@@ -221,7 +221,7 @@ func TestEveryRouteIsOfferableBeforeAnythingHasBeenAsked(t *testing.T) {
 		},
 		[]crmcontracts.ContactGraphEdge{{
 			From: userNodeID(uuidFor(1)), To: anchor,
-			Interactions90d: 6, Inbound90d: intp(3), Outbound90d: intp(3), LastAt: daysBefore(2),
+			Interactions90d: 6, Inbound90d: new(3), Outbound90d: new(3), LastAt: daysBefore(2),
 		}})
 
 	routes := chooseRoutes(graph, graphNow)
@@ -240,7 +240,7 @@ func TestTheListStopsAtTheCap(t *testing.T) {
 		nodes = append(nodes, colleague(i+10, "Colleague", crmcontracts.ContactGraphNodeGroupDirect))
 		edges = append(edges, crmcontracts.ContactGraphEdge{
 			From: userNodeID(uuidFor(i + 10)), To: anchor,
-			Interactions90d: int(i) + 1, Inbound90d: intp(1), Outbound90d: intp(1), LastAt: daysBefore(2),
+			Interactions90d: int(i) + 1, Inbound90d: new(1), Outbound90d: new(1), LastAt: daysBefore(2),
 		})
 	}
 
@@ -248,5 +248,3 @@ func TestTheListStopsAtTheCap(t *testing.T) {
 		t.Errorf("the list offered %d routes; the cap is %d", got, routeCandidateCap)
 	}
 }
-
-func strptr(s string) *string { return &s }

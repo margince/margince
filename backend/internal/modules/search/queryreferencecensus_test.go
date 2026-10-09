@@ -34,7 +34,7 @@ func TestEveryQueryableReferenceResolvesToItsRecordType(t *testing.T) {
 	}
 
 	found := 0
-	for _, line := range strings.Split(string(catalog), "\n") {
+	for line := range strings.SplitSeq(string(catalog), "\n") {
 		m := searchableReference.FindStringSubmatch(line)
 		if m == nil {
 			continue
@@ -84,7 +84,7 @@ func TestEveryDeclaredRoleNameIsAColumnTheSchemaHolds(t *testing.T) {
 	for column := range selfReferences {
 		declared[column] = false
 	}
-	for _, line := range strings.Split(string(catalog), "\n") {
+	for line := range strings.SplitSeq(string(catalog), "\n") {
 		m := searchableReference.FindStringSubmatch(line)
 		if m == nil {
 			continue

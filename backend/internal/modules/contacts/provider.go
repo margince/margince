@@ -11,7 +11,7 @@ package contacts
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -156,8 +156,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		// index — so a text query is refused rather than silently dropped,
 		// which would answer an unfiltered page and read as "no matches".
 		if text != nil && *text != "" {
-			return nil, "", false, fmt.Errorf(
-				"contacts: partner has no text index; narrow by partner_role or cert_status, or search company instead")
+			return nil, "", false, errors.New("contacts: partner has no text index; narrow by partner_role or cert_status, or search company instead")
 		}
 		in := ListPartnersInput{Limit: &limit}
 		if cursor != nil {

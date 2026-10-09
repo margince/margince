@@ -415,28 +415,39 @@ a gate: a cached test file that runs `git` or `go` must declare its inputs.
 
 ## The jobs
 
-| Job | What it checks |
-|---|---|
-| `changes` | The scope classifier above (it always runs first, when not a draft; its answer is overridden on `merge_group`) |
-| `deterministic-gates` | `make check-backend`: build, vet, lint (baseline + strict for new code), `arch-lint`, unit + root fitness tests (with `audit_log` enum agreement + the contract `$ref` check before the run), generated drift, and the script gates. Those are the craft doc floor, image pins, contract breaking, test lanes, file length, `rls-store-path`, jurisdiction isolation, and the lock on the published `backend/pkg` surface. It fetches the full history, so the gates scoped to the diff have a base ref |
-| `extension-reference` | The composed build lane. It proves the **empty** extension set still builds, byte for byte, into the committed `composition/` stub. Then it turns on the reference fixture, and runs the backend build + unit lane + `check-composition` against the composed workspace, plus the module lane of every unit turned on. It writes its own coverage profile, because extension units are separate Go modules that the shard profiles cannot reach |
-| `craftsmanship` | `make craft-static`, strict: BLOCKER **and** MAJOR findings fail it, and MINOR is advisory. It runs **after** `deterministic-gates`, so a red build is never judged on how the code reads |
-| `craft-residue` | No open `CRAFT-FIX`/`CRAFT-DISPUTE` markers reach `main` |
-| `secret-scan` | gitleaks over the committed tree, then the scan's own tests and the image pin gate; see [What `secret-scan` runs](#what-secret-scan-runs) |
-| `integration shard (k/6)` | `make test-integration` with `INTEGRATION_SHARD=k/6`: a fixed part of the whole integration lane, handed out test by test in turn. The parts are by count, not by run time. The slow `e2e` tests at the end land on the shard that draws them. `INTEGRATION_JOBS=16` (the tests wait on Postgres, not on cores) lets that shard work through its part without running minutes past its siblings. It boots the dev compose stack (`make db-up`: Postgres 16 (pgvector) pinned by digest + Redis 7 + MinIO + the app role; one stack file, and no GH services mirrored by hand). Each shard builds its own `margince_test` template with migrations run, and copies it per package. It uploads the manifest of its part + each binary coverage pod |
-| `integration unit coverage` | The unit `-cover` pass over every package, with a binary coverage pod only. It is needed because the shards run just the packages tagged for integration. Without it, SonarCloud would see the packages with only unit tests at a false coverage of about 0% for new code. No services (the test lanes gate checks that tests with no tag open no real DB) |
-| `integration` | The fan-in that the `ci` aggregate reads. It stands for the whole sharded lane, so the aggregate needs one entry per lane. It checks that every shard + the unit pass passed (a failed shard must turn this check red, not skipped). Then `scripts/test-integration-reconcile.sh` proves the parts add up: every shard is there, they found the same tests, and together they cover all with no overlap. It merges every coverage pod into `coverage.out`, and uploads `go-coverage` |
-| `images (build only)` | `docker buildx bake` of the default group (the three roles), pushing nothing; runs on the `images` scope |
-| `vuln` | `make vuln` (govulncheck over all packages). **Advisory**: it sits outside the `ci` aggregate, so a red one does not stop a merge. It still runs on every backend change, so a weak dependency that a PR *brings in* is reported before merge. `scheduled.yml` catches a weak spot made public after the merge, since it runs this daily on `main` |
-| `license gate` | `make sbom` then `make sbom-check`: the license policy for dependencies (`grant`, policy in `.grant.yaml`), over the resolved dependency graph, not each manifest. It lives here and not in `sbom.yml`, because it is a **gate** and that workflow makes build output. `sbom.yml` filters at the workflow level, so a PR that touches no dependency gets no check run from it. A required check that never shows up blocks the merge forever. Gating at the job level makes a path skip report as passing. It runs on `merge_group` as well as `pull_request`. It is the **only** run of this policy that starts on its own (`sbom.yml` only runs by hand, so the copy of the gate inside it fires just before a signing run) |
-| `fe-quality` | `make fe-quality`: the design system script gates, the check for contract type drift, Biome, the type check of the composed SPA, and the vitest suite of each unit screen. It is the only frontend job with a Go toolchain, because the composed lane needs the output of `gen-composition`, which nothing else makes |
-| `fe-unit (k/4)` | `make fe-unit FE_COVERAGE=1 FE_SHARD=k/4`: one of four parts of the vitest suite, set up so the run that decides the verdict also holds the coverage. It uploads a **blob** report, not an lcov, because one part measures only the part of the tree its tests loaded until the four are added up. Four is where the measure stops paying off; the comment above the job holds the math |
-| `frontend` (merge half) | `make fe-unit-merge` in the fan-in: `vitest --merge-reports` adds the four blob reports into one verdict and one lcov. `frontend/scripts/check-shard-union.sh` then proves the parts split the suite with nothing left out (every file found was run, once). `check-lcov-paths.sh` proves every path in the report resolves from the repo root (see below). It writes `fe-coverage` |
-| `fe-bundle` | `make fe-bundle`: the Vite production build plus the Storybook catalog build (stories must compile and register) |
-| `frontend` | The fan-in that the `ci` aggregate reads, standing for every SPA job. It checks that all of them passed. A failed lane must turn this fan-in **red, not skipped**, because the aggregate reads a skip as "this part was out of scope". That check runs first, before the merge half above. So a red shard ends the job, and does not hand the merge a partial set of blob reports. The jobs run at the same time because they share no state; one after the other, the lane needed about `340s`, of which vitest alone needed about `207s` |
-| `uat` | `make frontend-e2e`: the `AC-<screen>-N` screen tests that set what is accepted, as named Playwright tests + axe WCAG 2.2 AA + the sweep that checks no page moves side to side at `390px` + the PERF-1 claim that a record opens with the read held. The budget for how fast it seems belongs to `make bench-mobile`, not this lane. A clock reading on a runner shared with the integration shards measures the machine. It fakes the API at its edge, so it needs nothing outside itself |
-| `live-boot` | The README steps to start, run as written: compose up → migrate → api → `seed-dev` → `verify-boot`. It keeps the seed that runs through the API, and the boot proof, working. The integration shards never boot the api or run the seed script, so those would break with no one seeing without this job |
-| `sonarcloud` | The scan run from CI (below) |
+What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
+
+### Why some jobs are shaped as they are
+
+- **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
+- **`craftsmanship` runs after `deterministic-gates`**, so a red build is never judged on how the code
+  reads.
+- **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
+  and the shard profiles cannot reach them.
+- **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
+  the slow `e2e` tests work through its part without running minutes past its siblings.
+- **`integration unit coverage`** exists because the shards run just the packages tagged for
+  integration. Without it, SonarCloud would see the packages with only unit tests at a false coverage
+  of about 0% for new code.
+- **A fan-in turns red, not skipped**, when a job in its lane fails. The aggregate reads a skip as "this
+  part was out of scope". The `frontend` fan-in checks its jobs before the merge half. So a red shard
+  ends the job, and does not hand the merge a partial set of blob reports.
+- **`vuln` runs on every backend change**, so a weak dependency that a PR *brings in* is reported before
+  merge. The daily run on `main` in `scheduled.yml` catches a weak spot made public after the merge.
+- **The license gate lives in `ci.yml`**, not in `sbom.yml`. It is a **gate**, and that workflow makes
+  build output. `sbom.yml` filters at the workflow level, so a PR that touches no dependency gets no
+  check run from it. A required check that never shows up blocks the merge forever. Gating at the job
+  level makes a path skip report as passing. The copy of the gate in `sbom.yml` fires just before a
+  signing run.
+- **`fe-quality`** is the only frontend job with a Go toolchain, because the composed lane needs the
+  output of `gen-composition`, which nothing else makes.
+- **`fe-unit` uploads a blob report, not an lcov.** One part measures only the part of the tree its
+  tests loaded, until the four are added up. Four is where the measure stops paying off; the comment
+  above the job holds the math.
+- **The SPA jobs run at the same time**, because they share no state. One after the other, the lane
+  needed about `340s`, of which vitest alone needed about `207s`.
+- **`live-boot`** exists because the integration shards never boot the api or run the seed script.
+  Without it, the seed that runs through the API and the boot proof would break with no one seeing.
 
 ### What `secret-scan` runs
 

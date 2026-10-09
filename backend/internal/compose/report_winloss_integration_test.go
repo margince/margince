@@ -152,7 +152,7 @@ func TestWinLossGroupsClosedDealsByYearAndExcludesOpenOnes(t *testing.T) {
 	e.seedClosedDeal(t, "Lost", "lost", "2025-06-01T10:00:00Z", 90000)
 	// An open deal has not been won or lost: absent from this report, never a
 	// zero in it (REPORT-VOCAB-1's base set).
-	e.seedOpenDeal(t, "Still open", 60, nil, int64p(500000), stringp("commit"))
+	e.seedOpenDeal(t, "Still open", 60, nil, new(int64(500000)), new("commit"))
 
 	result := e.runReport(e.Admin(), t, "win-loss",
 		`{"group_by":["period_year","status","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)

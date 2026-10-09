@@ -21,7 +21,7 @@ func importSample(t *testing.T, series string) float64 {
 	t.Helper()
 	var b strings.Builder
 	capturemetrics.WriteProcessMetrics(&b)
-	for _, line := range strings.Split(b.String(), "\n") {
+	for line := range strings.SplitSeq(b.String(), "\n") {
 		if value, ok := strings.CutPrefix(line, series+" "); ok {
 			f, err := strconv.ParseFloat(value, 64)
 			if err != nil {

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
@@ -79,12 +80,7 @@ func validateDocumentPayload(payload documentPayload, src documentSource) string
 // filtered: the extra field is evidence the reading did not read the prompt,
 // which makes the fields it DID report worth less trust, not more.
 func isDocumentField(name string) bool {
-	for _, known := range modelFieldOrder() {
-		if name == known {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(modelFieldOrder(), name)
 }
 
 // validateDocumentField holds one reported field to what a document can
@@ -153,20 +149,10 @@ func valueSupportedByQuote(field documentField) bool {
 	switch fromModelField(field.Field) {
 	case documentFieldAmount:
 		want := stripGrouping(field.Value)
-		for _, token := range numberTokens(field.Quote) {
-			if token == want {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(numberTokens(field.Quote), want)
 	case documentFieldCurrency:
 		want := strings.ToUpper(strings.TrimSpace(field.Value))
-		for _, token := range wordTokens(field.Quote) {
-			if token == want {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(wordTokens(field.Quote), want)
 	}
 	return true
 }

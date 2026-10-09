@@ -14,6 +14,7 @@ package privacy
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -156,8 +157,9 @@ type SARPackage struct {
 	// ListMemberships is each Shortlist the subject is on, by name, with who
 	// chose them, when and the note on why. ListMembershipHistory is every
 	// time they were added or taken off one, or seen joining or leaving a
-	// Live List. LiveListMemberships is each Live List whose last check held
-	// them, and since when.
+	// Live List; a removal also keeps the note the membership carried.
+	// LiveListMemberships is each Live List whose last check held them, and
+	// since when.
 	ListMemberships       []map[string]any `json:"list_memberships"`
 	ListMembershipHistory []map[string]any `json:"list_membership_history"`
 	LiveListMemberships   []map[string]any `json:"live_list_memberships"`
@@ -304,9 +306,7 @@ func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	if err := tx.QueryRow(ctx, query, contactID).Scan(dests...); err != nil {
 		return err
 	}
-	for name, value := range storekit.ExtractValues(columns, dests) {
-		subject[name] = value
-	}
+	maps.Copy(subject, storekit.ExtractValues(columns, dests))
 	return nil
 }
 

@@ -46,18 +46,15 @@ func pathID(id crmcontracts.Id) ids.ContractID {
 // writeStoreErr maps this module's typed refusals onto the wire, falling
 // through to the shared sentinel registry.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	var transition *InvalidStatusTransitionError
-	if errors.As(err, &transition) {
+	if transition, ok := errors.AsType[*InvalidStatusTransitionError](err); ok {
 		httperr.Write(w, r, httperr.Validation("status", "invalid_status_transition", transition.Error()))
 		return
 	}
-	var crossCompany *CrossCompanyLinkError
-	if errors.As(err, &crossCompany) {
+	if crossCompany, ok := errors.AsType[*CrossCompanyLinkError](err); ok {
 		httperr.Write(w, r, httperr.Validation(crossCompany.Field, "cross_company_link", crossCompany.Error()))
 		return
 	}
-	var check *ContractCheckError
-	if errors.As(err, &check) {
+	if check, ok := errors.AsType[*ContractCheckError](err); ok {
 		field := check.Field
 		if field == "" {
 			field = "contract"

@@ -75,7 +75,8 @@ Code, docs and settings all go through the same checks.
   that a workspace sees only its own data, GDPR erase requests, and an audit log no one can change. With
   no database it fails and does not skip, because a skipped security check looks the same as a passed one.
 - The craftsmanship gate (`craft static --strict`) runs on each push once you run `make hooks`. It blocks
-  each `BLOCKER` and `MAJOR` finding in the backend code you changed. A `MINOR` finding does not block.
+  each `BLOCKER` and `MAJOR` finding in the Go code you changed and in the comments you add to Go or
+  TypeScript. A `MINOR` finding does not block.
 - Every check in CI must be green before a merge: the same checks, plus review bots and SonarCloud. Fix
   what they find, and do not dismiss it.
 

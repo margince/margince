@@ -9,6 +9,7 @@ package main
 // the offending kind, because the reader is someone who has just added one.
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 )
@@ -77,7 +78,7 @@ var (
 // added one and needs to know which line to fix.
 func (c contract) validate() error {
 	if len(c.Queues) == 0 {
-		return fmt.Errorf("contract declares no queues")
+		return errors.New("contract declares no queues")
 	}
 	for name, q := range c.Queues {
 		if q.MaxWorkers <= 0 {
@@ -88,7 +89,7 @@ func (c contract) validate() error {
 		}
 	}
 	if len(c.Kinds) == 0 {
-		return fmt.Errorf("contract declares no kinds")
+		return errors.New("contract declares no kinds")
 	}
 	byGoType := make(map[string]string, len(c.Kinds))
 	// fannedOutBy records which dispatcher first claimed a child, so a second

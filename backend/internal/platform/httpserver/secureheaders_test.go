@@ -37,7 +37,7 @@ func TestSecureHeadersSetsTheWholeBrowserFacingSet(t *testing.T) {
 // for this origin only.
 func TestPermissionsPolicyAllowsOnlyTheClipboardWriteTheAppUses(t *testing.T) {
 	clipboardWrites := 0
-	for _, directive := range strings.Split(PermissionsPolicy, ", ") {
+	for directive := range strings.SplitSeq(PermissionsPolicy, ", ") {
 		feature, allow, ok := strings.Cut(directive, "=")
 		if !ok {
 			t.Fatalf("malformed directive %q", directive)

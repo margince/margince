@@ -28,8 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-func ptr(s string) *string { return &s }
-
 // THE WRITE SHAPE. Domain row, audit row and event in ONE transaction — the
 // obligation every mutation in this tree carries, and a plan's prose is a
 // mutation like any other.
@@ -37,8 +35,8 @@ func TestRisksAndCapacityNoteAreAuditedAndEmitted(t *testing.T) {
 	e := setupPlan(t)
 
 	plan, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
-		SetRisks: true, Risks: ptr("Two contacts out; the Nordwind renewal has no sponsor"),
-		SetCapacityNote: true, CapacityNote: ptr("Conference Thursday and Friday"),
+		SetRisks: true, Risks: new("Two contacts out; the Nordwind renewal has no sponsor"),
+		SetCapacityNote: true, CapacityNote: new("Conference Thursday and Friday"),
 	})
 	if err != nil {
 		t.Fatalf("writing the contract: %v", err)
@@ -82,7 +80,7 @@ func TestRisksAndCapacityNoteAreAuditedAndEmitted(t *testing.T) {
 func TestAClosedWeeksContractCannotBeRewritten(t *testing.T) {
 	e := setupPlan(t)
 
-	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: ptr("As planned"), SetCapacityNote: true, CapacityNote: nil}); err != nil {
+	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: new("As planned"), SetCapacityNote: true, CapacityNote: nil}); err != nil {
 		t.Fatalf("writing the contract while the week is open: %v", err)
 	}
 	// Closing runs the week on, exactly as the weekly job does.
@@ -90,7 +88,7 @@ func TestAClosedWeeksContractCannotBeRewritten(t *testing.T) {
 		t.Fatalf("closing the week: %v", err)
 	}
 
-	_, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: ptr("Rewritten after the fact"), SetCapacityNote: true, CapacityNote: nil})
+	_, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: new("Rewritten after the fact"), SetCapacityNote: true, CapacityNote: nil})
 	var parse *values.ParseError
 	if !errors.As(err, &parse) || parse.Code != "week_closed" {
 		t.Fatalf("rewriting a closed week got %v, wanted a week_closed refusal", err)
@@ -162,8 +160,8 @@ func TestAComposedCapacitySeamReportsEvenAnEmptyWeek(t *testing.T) {
 func TestWritingOneHalfOfTheContractLeavesTheOtherAlone(t *testing.T) {
 	e := setupPlan(t)
 	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
-		SetRisks: true, Risks: ptr("Sponsor risk"),
-		SetCapacityNote: true, CapacityNote: ptr("Conference Thursday"),
+		SetRisks: true, Risks: new("Sponsor risk"),
+		SetCapacityNote: true, CapacityNote: new("Conference Thursday"),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +169,7 @@ func TestWritingOneHalfOfTheContractLeavesTheOtherAlone(t *testing.T) {
 	// store resolves it from the row under its own lock — which is the whole
 	// point: passing the value read a moment ago would race a concurrent save.
 	plan, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
-		SetRisks: true, Risks: ptr("Sponsor risk, now escalated"),
+		SetRisks: true, Risks: new("Sponsor risk, now escalated"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -186,10 +184,10 @@ func TestWritingOneHalfOfTheContractLeavesTheOtherAlone(t *testing.T) {
 // surface, so both must survive a round trip.
 func TestAClearedRiskIsTellableFromOneNeverWritten(t *testing.T) {
 	e := setupPlan(t)
-	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: ptr("Something"), SetCapacityNote: true, CapacityNote: nil}); err != nil {
+	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: new("Something"), SetCapacityNote: true, CapacityNote: nil}); err != nil {
 		t.Fatal(err)
 	}
-	cleared, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: ptr(""), SetCapacityNote: true, CapacityNote: nil})
+	cleared, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: new(""), SetCapacityNote: true, CapacityNote: nil})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +219,7 @@ func TestASavedContractStillCarriesTheCountedCapacity(t *testing.T) {
 	})
 
 	plan, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
-		SetRisks: true, Risks: ptr("Sponsor risk"),
+		SetRisks: true, Risks: new("Sponsor risk"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -280,8 +278,8 @@ func deref(s *string) string {
 func TestAContractSaveThatChangesNothingWritesNothing(t *testing.T) {
 	e := setupPlan(t)
 	saved, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
-		SetRisks: true, Risks: ptr("one contact out"),
-		SetCapacityNote: true, CapacityNote: ptr(""),
+		SetRisks: true, Risks: new("one contact out"),
+		SetCapacityNote: true, CapacityNote: new(""),
 	})
 	if err != nil {
 		t.Fatalf("writing the contract: %v", err)
@@ -299,8 +297,8 @@ func TestAContractSaveThatChangesNothingWritesNothing(t *testing.T) {
 
 	for name, edit := range map[string]weeklyplan.ContractEdit{
 		"nothing sent":          {},
-		"the stored text again": {SetRisks: true, Risks: ptr("one contact out")},
-		"an empty note again":   {SetCapacityNote: true, CapacityNote: ptr("")},
+		"the stored text again": {SetRisks: true, Risks: new("one contact out")},
+		"an empty note again":   {SetCapacityNote: true, CapacityNote: new("")},
 	} {
 		got, err := e.store.SetContract(e.rep1Ctx, planClock, edit)
 		if err != nil {
@@ -332,7 +330,7 @@ func TestClearingAnUnwrittenHalfIsNoChangeButClearingTextIs(t *testing.T) {
 		t.Fatalf("clearing an unwritten half filed %d audit rows", n)
 	}
 	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
-		SetRisks: true, Risks: ptr("text"),
+		SetRisks: true, Risks: new("text"),
 	}); err != nil {
 		t.Fatal(err)
 	}

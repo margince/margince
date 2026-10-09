@@ -72,6 +72,7 @@
 package extension
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"regexp"
@@ -170,7 +171,7 @@ type Version string
 // and whitespace framing have no honest reading there.
 func (v Version) Validate() error {
 	if v == "" {
-		return fmt.Errorf("extension version is empty — the boot inventory records it")
+		return errors.New("extension version is empty — the boot inventory records it")
 	}
 	if strings.TrimSpace(string(v)) != string(v) {
 		return fmt.Errorf("extension version %q carries surrounding whitespace", string(v))
@@ -196,7 +197,7 @@ type Description string
 // verbatim to an operator and written into the unit manifest.
 func (d Description) Validate() error {
 	if strings.TrimSpace(string(d)) == "" {
-		return fmt.Errorf("extension description is empty — the access screen lists the unit by it")
+		return errors.New("extension description is empty — the access screen lists the unit by it")
 	}
 	if strings.TrimSpace(string(d)) != string(d) {
 		return fmt.Errorf("extension description %q carries surrounding whitespace", string(d))

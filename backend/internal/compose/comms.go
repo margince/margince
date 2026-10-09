@@ -102,8 +102,7 @@ func (c commsAdapter) ReplyAddress(ctx context.Context, anchor ids.UUID) (string
 		return "", fmt.Errorf("compose: reading who counts as a colleague: %w", err)
 	}
 	to, err := c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor), own.Covers)
-	var noAddress *activities.NoReplyAddressError
-	if errors.As(err, &noAddress) {
+	if noAddress, ok := errors.AsType[*activities.NoReplyAddressError](err); ok {
 		return "", workflow.DeclinedBecause(noAddress)
 	}
 	return to, err
@@ -374,7 +373,7 @@ func defaultHost(ctx context.Context, host *ids.UUID) (ids.UUID, error) {
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		return ids.Nil, fmt.Errorf("comms: no host named and the principal has no user calendar")
+		return ids.Nil, errors.New("comms: no host named and the principal has no user calendar")
 	}
 	return actor.UserID, nil
 }

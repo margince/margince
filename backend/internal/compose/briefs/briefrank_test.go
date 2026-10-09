@@ -21,13 +21,9 @@ import (
 // midnight the way localDay returns it.
 var briefTestClock = time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC)
 
-func datePtr(t time.Time) *time.Time { return &t }
-
-func int64Ptr(v int64) *int64 { return &v }
-
 // closeIn returns a date the given whole days after the test clock's day.
 func closeIn(days int) *time.Time {
-	return datePtr(briefTestClock.UTC().Truncate(24*time.Hour).AddDate(0, 0, days))
+	return new(briefTestClock.UTC().Truncate(24*time.Hour).AddDate(0, 0, days))
 }
 
 func uuidAt(b byte) ids.UUID {
@@ -41,7 +37,7 @@ func workedExampleFacts() (a, b, c briefDealFacts) {
 	a = briefDealFacts{
 		dealID:               uuidAt(1),
 		winProbability:       80,
-		baseValueMinor:       int64Ptr(60_000_00),
+		baseValueMinor:       new(int64(60_000_00)),
 		expectedClose:        closeIn(5),
 		overnightActivityIDs: []ids.UUID{uuidAt(101)},
 		warmthStrength:       47,
@@ -152,23 +148,23 @@ func TestBriefTieBreaksAreStable(t *testing.T) {
 	richer, sooner, lowestID, higherID, poorer := base, base, base, base, base
 
 	richer.dealID = uuidAt(4)
-	richer.baseValueMinor = int64Ptr(200_000_00)
+	richer.baseValueMinor = new(int64(200_000_00))
 	richer.expectedClose = closeIn(5)
 
 	sooner.dealID = uuidAt(3)
-	sooner.baseValueMinor = int64Ptr(100_000_00)
+	sooner.baseValueMinor = new(int64(100_000_00))
 	sooner.expectedClose = closeIn(3)
 
 	lowestID.dealID = uuidAt(2)
-	lowestID.baseValueMinor = int64Ptr(100_000_00)
+	lowestID.baseValueMinor = new(int64(100_000_00))
 	lowestID.expectedClose = closeIn(5)
 
 	higherID.dealID = uuidAt(5)
-	higherID.baseValueMinor = int64Ptr(100_000_00)
+	higherID.baseValueMinor = new(int64(100_000_00))
 	higherID.expectedClose = closeIn(5)
 
 	poorer.dealID = uuidAt(1)
-	poorer.baseValueMinor = int64Ptr(50_000_00)
+	poorer.baseValueMinor = new(int64(50_000_00))
 	poorer.expectedClose = closeIn(5)
 
 	facts := map[ids.UUID]briefDealFacts{}
@@ -200,7 +196,7 @@ func TestBriefTieBreaksAreStable(t *testing.T) {
 func TestBriefQueueIsHonestlyShortNeverPadded(t *testing.T) {
 	facts := map[ids.UUID]briefDealFacts{}
 	var scored []BriefQueueItem
-	for i := byte(0); i < 12; i++ {
+	for i := range byte(12) {
 		f := briefDealFacts{dealID: uuidAt(10 + i)}
 		if i < 3 {
 			f.winProbability = 90 // well above the bar

@@ -79,17 +79,27 @@ type RungHealth struct {
 func (r RungHealth) Healthy() bool { return r.Calls > 0 && !r.LastOutcomeFailed }
 
 // RungHealthReport reads what every model tier has been doing for the last
-// hour.
+// hour. On each tier in bound it counts only the attempts its bound model made.
+//
+// A tier's row reads as "the model bound here". After a rebind, the attempts of
+// the model it was bound to before are not this tier's any more. Counted, they
+// would show a healthy model as failing, or a broken one as fine once the
+// old failures aged out. A tier absent from bound keeps every attempt, since
+// nothing says which model it serves now.
 //
 // Admin-gated through the automation-config write grant, the same door
 // UsageReport uses and for the same reason: the closed RBAC object set carries
 // no AI-runtime entry, and this is operational configuration rather than
 // anybody's own data.
-func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
+func (m *Meter) RungHealthReport(ctx context.Context, bound map[Tier]ModelRef) ([]RungHealth, error) {
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	since := m.now().Add(-HealthWindow)
+	args := []any{m.now().Add(-HealthWindow), answeredSentinels}
+	failed := failedAttemptSQL("ac", len(args))
+	tiers, providers, models := boundColumns(bound)
+	args = append(args, tiers, providers, models)
+	madeByBound := madeByBoundModelSQL("ac", len(args)-2)
 	var out []RungHealth
 	err := m.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Every attempt counts once, on the tier that made it: a call that
@@ -128,12 +138,13 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 		rows, err := tx.Query(ctx, `
 			WITH attempts AS (
 			  SELECT tier, occurred_at, attempt, id, latency_ms,
-			         `+failedAttemptSQL("ac", 2)+` AS failed,
+			         `+failed+` AS failed,
 			         coalesce(error_sentinel, '') AS sentinel
 			    FROM ai_call ac
 			   WHERE occurred_at >= $1
 			     AND NOT cache_hit
 			     AND tier <> ''
+			     AND `+madeByBound+`
 			)
 			SELECT tier,
 			       count(*)                                   AS calls,
@@ -148,7 +159,7 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 			       coalesce((array_agg(failed ORDER BY occurred_at DESC, attempt DESC, id DESC))[1], false) AS last_failed
 			  FROM attempts
 			 GROUP BY tier
-			 ORDER BY tier`, since, answeredSentinels)
+			 ORDER BY tier`, args...)
 		if err != nil {
 			return fmt.Errorf("ai: reading rung health: %w", err)
 		}
@@ -169,4 +180,29 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// boundColumns spreads bound into three parallel columns for unnest. Never nil:
+// a nil slice binds as NULL, and `tier = ANY(NULL)` would drop every attempt
+// rather than keep them all.
+func boundColumns(bound map[Tier]ModelRef) (tiers, providers, models []string) {
+	tiers = make([]string, 0, len(bound))
+	providers = make([]string, 0, len(bound))
+	models = make([]string, 0, len(bound))
+	for tier, ref := range bound {
+		tiers = append(tiers, string(tier))
+		providers = append(providers, ref.Provider)
+		models = append(models, ref.Model)
+	}
+	return tiers, providers, models
+}
+
+// madeByBoundModelSQL tests whether the ai_call row aliased alias came from its
+// tier's current model, or from a tier the binding does not name. The
+// three columns boundColumns returns are bound from firstArg on.
+func madeByBoundModelSQL(alias string, firstArg int) string {
+	return fmt.Sprintf(`(NOT %[1]s.tier = ANY($%[2]d::text[])
+	  OR (%[1]s.tier, %[1]s.provider, %[1]s.model_id) IN (
+	       SELECT * FROM unnest($%[2]d::text[], $%[3]d::text[], $%[4]d::text[])))`,
+		alias, firstArg, firstArg+1, firstArg+2)
 }

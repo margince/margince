@@ -5,7 +5,7 @@ package keyvault
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,7 +35,7 @@ func NewMemory() Vault {
 
 func (m *memoryVault) Put(_ context.Context, ws ids.WorkspaceID, secret []byte) (Ref, error) {
 	if ws.IsZero() {
-		return "", fmt.Errorf("keyvault: cannot store a secret for a zero workspace id")
+		return "", errors.New("keyvault: cannot store a secret for a zero workspace id")
 	}
 	ref, err := mintRef(ws)
 	if err != nil {

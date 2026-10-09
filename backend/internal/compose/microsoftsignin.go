@@ -159,7 +159,7 @@ func (cfg MicrosoftSignInConfig) envClient() signInClient {
 func tenantsOf(raw string) []string {
 	seen := map[string]bool{}
 	var out []string
-	for _, raw := range strings.Split(raw, ",") {
+	for raw := range strings.SplitSeq(raw, ",") {
 		id := strings.ToLower(strings.TrimSpace(raw))
 		if id == "" || seen[id] {
 			continue
@@ -194,10 +194,8 @@ func routingAuthorityFor(ids []string) string {
 		}
 		return ids[0]
 	}
-	for _, id := range ids {
-		if id == microsoftConsumerTenant {
-			return microsoftCommonAuthority
-		}
+	if slices.Contains(ids, microsoftConsumerTenant) {
+		return microsoftCommonAuthority
 	}
 	return microsoftWorkAuthority
 }
@@ -426,7 +424,7 @@ func (m *microsoftSignInSource) provider(ctx context.Context) (identity.OIDCProv
 // while they are creating the app registration, which is precisely when no
 // client id exists yet.
 func MicrosoftSignInRedirectURI(redirectBase string) string {
-	return identity.SignInRedirectURI(signInRedirectBase(redirectBase), microsoftProviderKey)
+	return identity.SignInRedirectURI(apiV1Base(redirectBase), microsoftProviderKey)
 }
 
 // WithMicrosoftSignIn wires /auth/oidc/microsoft/* into identity.Handlers when
@@ -443,7 +441,7 @@ func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 		// pass. The Microsoft app card tells them to register every URI it
 		// lists, so one missing here is a sign-in that fails at Microsoft's
 		// consent screen with AADSTS50011 — naming no URI.
-		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
+		if base := apiV1Base(cfg.RedirectBase); base != "" {
 			s.addRedirectURI(capture.AppProviderMicrosoft, crmcontracts.ConnectorAppRedirectUriPurposeSignIn,
 				identity.SignInRedirectURI(base, microsoftProviderKey))
 		}
@@ -459,7 +457,7 @@ func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 			config: identity.OIDCProviderConfig{Key: microsoftProviderKey, Label: microsoftProviderLabel},
 			source: source.provider,
 		}, identity.OIDCRoutes{
-			RedirectBase: signInRedirectBase(cfg.RedirectBase),
+			RedirectBase: apiV1Base(cfg.RedirectBase),
 			PostLoginURL: cfg.PostLoginURL,
 			FailureURL:   cfg.FailureURL,
 		}, cfg.StateKey)

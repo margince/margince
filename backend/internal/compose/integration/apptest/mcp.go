@@ -229,7 +229,7 @@ func unframe(contentType, body string) string {
 		return body
 	}
 	var payload strings.Builder
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if data, found := strings.CutPrefix(line, "data: "); found {
 			payload.WriteString(data)
 		}

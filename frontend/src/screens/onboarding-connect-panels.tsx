@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
-  CheckCircle2,
   Circle,
+  CircleCheck,
   Mail,
   ShieldCheck,
 } from "lucide-react";
@@ -314,7 +314,7 @@ export function OAuthReturnPanel({
   return (
     <div className="connect-result">
       <div className="cr-h">
-        <CheckCircle2 aria-hidden /> {t("ob.s4.connectOkTitle")}
+        <CircleCheck aria-hidden /> {t("ob.s4.connectOkTitle")}
       </div>
       <p className="ob-sub">{t("ob.s4.connectOkBody")}</p>
       {connections.isPending && (
@@ -467,7 +467,7 @@ export function ImapConnectPanel({
     return (
       <div className="connect-result">
         <div className="cr-h">
-          <CheckCircle2 aria-hidden /> {t("ob.s4.capturedTitle")}
+          <CircleCheck aria-hidden /> {t("ob.s4.capturedTitle")}
         </div>
         <p className="ob-sub">{t("ob.s4.capturedBody")}</p>
         {/* The same question the OAuth arm asks, in the same place: after the

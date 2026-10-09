@@ -58,7 +58,7 @@ func publicConfirm(limits publicConfirmLimiters) func(http.Handler) http.Handler
 			// middleware — the layer that answers first, and that used to
 			// answer a not-bootstrapped installation with no header at all
 			// while this line made the surface look covered.
-			token := strings.SplitN(strings.TrimPrefix(r.URL.Path, publicConfirmPrefix), "/", 2)[0]
+			token, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, publicConfirmPrefix), "/")
 			if token == "" {
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return

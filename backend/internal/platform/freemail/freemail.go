@@ -71,7 +71,7 @@ func Hostname(domain string) (string, bool) {
 	if err != nil || base == "" || !strings.Contains(base, ".") {
 		return "", false
 	}
-	for _, label := range strings.Split(base, ".") {
+	for label := range strings.SplitSeq(base, ".") {
 		if !validHostnameLabel(label) {
 			return "", false
 		}

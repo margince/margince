@@ -13,6 +13,7 @@ package reportdoc
 
 import (
 	"fmt"
+	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -139,23 +140,13 @@ func (k Kind) carriesFigures() bool {
 // here beside that list would be two copies of the grammar, disagreeing the
 // first time a block was added.
 func (k Kind) known() bool {
-	for _, known := range allKinds {
-		if k == known {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allKinds, k)
 }
 
 // known says whether a severity is in the closed set. Derived from
 // allSeverities for the same reason Kind.known is derived from allKinds.
 func (s Severity) known() bool {
-	for _, known := range allSeverities {
-		if s == known {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allSeverities, s)
 }
 
 // blockRef names a block in a refusal so a composer can find it.

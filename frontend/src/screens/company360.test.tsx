@@ -64,7 +64,7 @@ const emptyPage = { has_more: false, next_cursor: null };
 function view(overrides: Partial<Company360> = {}): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
-    company: company,
+    company,
     sections_omitted: [],
     contacts: { data: [], page: emptyPage },
     deals: {

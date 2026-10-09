@@ -603,7 +603,7 @@ func isSQLKeyword(word string) bool {
 // firstLiveMemberLine points the report at the line that names a half rather
 // than dumping the statement.
 func firstLiveMemberLine(sql string) string {
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if strings.Contains(line, "archived_at") || strings.Contains(line, "status = 'active'") {
 			return strings.TrimSpace(line)
 		}

@@ -371,8 +371,7 @@ func TestAnActivityThatCarriesNoTranscriptCannotBeRead(t *testing.T) {
 	if err == nil {
 		t.Fatal("an activity with no transcript has no lines to cite and must be refused")
 	}
-	var notTranscript *activities.NotATranscriptError
-	if !errors.As(err, &notTranscript) {
+	if _, ok := errors.AsType[*activities.NotATranscriptError](err); !ok {
 		t.Errorf("want the not-a-transcript refusal, got %v", err)
 	}
 }
@@ -499,8 +498,7 @@ func TestATranscriptTooLongForOneReadingIsRefusedAtTheDoor(t *testing.T) {
 	if err == nil {
 		t.Fatal("a transcript past the reading bound must be refused here, not after a queued job fails minutes later")
 	}
-	var tooLong *activities.TranscriptTooLongError
-	if !errors.As(err, &tooLong) {
+	if _, ok := errors.AsType[*activities.TranscriptTooLongError](err); !ok {
 		t.Fatalf("want the too-long refusal, got %v", err)
 	}
 	if e.WsCount(t, `SELECT count(*) FROM transcript_read`) != 0 {
@@ -616,7 +614,7 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 	// separate ones about a stamp and a render. A proposal for the 8th came
 	// back as a task the reader saw as the 9th, and neither half of it was
 	// wrong on its own.
-	if day := strings.SplitN(due, " ", 2)[0]; day != "2026-09-08" {
+	if day, _, _ := strings.Cut(due, " "); day != "2026-09-08" {
 		t.Errorf("the approved day was %q and the task landed on %q", "2026-09-08", day)
 	}
 }

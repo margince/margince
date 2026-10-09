@@ -257,7 +257,7 @@ func procCPUInfoField(field string) string {
 	if err != nil {
 		return ""
 	}
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		name, value, found := strings.Cut(line, ":")
 		if found && strings.TrimSpace(name) == field {
 			return strings.TrimSpace(value)
@@ -296,7 +296,7 @@ func linuxMemoryGiB() int {
 	if err != nil {
 		return 0
 	}
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		name, value, found := strings.Cut(line, ":")
 		if !found || strings.TrimSpace(name) != "MemTotal" {
 			continue

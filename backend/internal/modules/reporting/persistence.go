@@ -52,7 +52,7 @@ func storedError(err error) error {
 
 func recordChange[T any](ctx context.Context, tx pgx.Tx, object string, id ids.UUID, action string, before *T, after T) error {
 	if action != "create" && before == nil {
-		return fmt.Errorf("reporting mutation requires its previous image")
+		return errors.New("reporting mutation requires its previous image")
 	}
 	audit, err := storekit.Audit(ctx, tx, action, object, id, before, after)
 	if err != nil {

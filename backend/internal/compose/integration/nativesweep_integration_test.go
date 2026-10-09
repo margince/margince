@@ -186,8 +186,7 @@ func TestTheNativeSweepRefusesACursorFromAStreamItDoesNotSearch(t *testing.T) {
 		t.Fatalf("minting the foreign position: %v", err)
 	}
 	res, err := sweepingProvider(e).Search(e.Admin(), datasource.SearchQuery{Text: "Sweepable", Cursor: foreign})
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 		t.Fatalf("a cursor from a stream this seam does not search answered %d records / %v, want the "+
 			"malformed-cursor fault — a complete empty page tells a caller mid-walk that there is nothing "+
 			"left, which is the answer they cannot check", len(res.Records), err)

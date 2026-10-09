@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read a scenario, and judge one run of it against what the assistant said.
 
-Four things are checked per run, and all four must hold:
+Five things are checked per run, and all five must hold:
 
   must_call        Did it reach the tools it needed? An answer written from the
                    model's own memory, with Margince never asked, is a failure
@@ -13,6 +13,10 @@ Four things are checked per run, and all four must hold:
                    group.
   must_not_mention Does it avoid what it must avoid? This half matters more than
                    the first: a confident wrong answer is worse than no answer.
+  must_not_call_with
+                   Did it keep out of a call what must not be sent? Each entry
+                   is `tool~regex`, searched in every call's arguments: the
+                   file's text pasted into log_activity, which no answer shows.
   judge            Does the answer do what this sentence says? Each entry is a
                    criterion in plain words, decided by a model (judge.py).
 
@@ -474,6 +478,26 @@ def _called_with(calls, alternative):
     return False, seen
 
 
+def _sent_problems(calls, entry):
+    """A problem line per call whose arguments carry what `tool~regex` forbids.
+
+    The arguments are searched as one JSON text, so the forbidden words are
+    found whichever field the model put them in: a body, a summary, a subject.
+    A malformed entry is a problem rather than a pass, like must_call_with's.
+    """
+    tool, sep, pattern = str(entry).partition("~")
+    if not sep or not tool or not pattern:
+        return [f"must_not_call_with entry {entry!r} is not tool~regex"]
+    problems = []
+    for name, arguments in calls:
+        if not tool_matches([name], tool):
+            continue
+        found = re.search(pattern, json.dumps(arguments, ensure_ascii=False), re.IGNORECASE)
+        if found:
+            problems.append(f"called {tool} carrying {found.group(0)!r}, which /{pattern}/ forbids")
+    return problems
+
+
 def check(scenario, transcript_path):
     called, said, calls = read_transcript(transcript_path)
     problems = []
@@ -505,6 +529,9 @@ def check(scenario, transcript_path):
                 f"never called {' or '.join(wanted)} — "
                 f"saw {', '.join(repr(s) for s in seen) or 'no such call'}"
             )
+
+    for entry in scenario.get("must_not_call_with", []):
+        problems.extend(_sent_problems(calls, entry))
 
     for pattern in scenario.get("must_mention", []):
         if not re.search(pattern, said, re.IGNORECASE):

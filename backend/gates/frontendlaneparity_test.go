@@ -183,7 +183,7 @@ func parseMakefile(t *testing.T, path string) map[string]*makeTarget {
 	targets := map[string]*makeTarget{}
 	vars := readLiteralVars(string(body))
 	var current []string
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		if strings.HasPrefix(line, "\t") {
 			delegated, works := parseRecipe(t, line, vars)
 			for _, name := range current {

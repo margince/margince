@@ -158,7 +158,7 @@ func commitmentTaskEffect(
 		}
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: commitment proposal effect without a deciding principal")
+			return errors.New("compose: commitment proposal effect without a deciding principal")
 		}
 		assignee := decider.UserID
 		if proposal.SeatID != nil {
@@ -255,7 +255,7 @@ func commitmentTaskPrecheck() approvals.ReleasePrecheck {
 			return &approvals.InvalidEditError{Cause: err}
 		}
 		if strings.TrimSpace(after.Summary) == "" {
-			return &approvals.InvalidEditError{Cause: fmt.Errorf("a task needs a summary — say what was committed to")}
+			return &approvals.InvalidEditError{Cause: errors.New("a task needs a summary — say what was committed to")}
 		}
 		if _, err := time.Parse(time.DateOnly, after.DueDate); after.DueDate != "" && err != nil {
 			return &approvals.InvalidEditError{Cause: fmt.Errorf(
@@ -271,8 +271,7 @@ func commitmentTaskPrecheck() approvals.ReleasePrecheck {
 			return fmt.Errorf("compose: marshal staged commitment proposal: %w", err)
 		}
 		if string(pinned) != string(original) {
-			return &approvals.InvalidEditError{Cause: fmt.Errorf(
-				"only the promise's wording and its due date may be edited")}
+			return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording and its due date may be edited")}
 		}
 		return nil
 	}

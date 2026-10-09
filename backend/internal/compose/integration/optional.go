@@ -20,11 +20,17 @@ package integration
 // originals; the parent's own files read them unqualified either way.
 
 // StrPtr carries a string into an optional field.
-func StrPtr(s string) *string { return &s }
+//
+//go:fix inline
+func StrPtr(s string) *string { return new(s) }
 
 // BoolPtr carries a bool into an optional field, including a deliberate false —
 // which is the case a bare omission cannot express.
-func BoolPtr(v bool) *bool { return &v }
+//
+//go:fix inline
+func BoolPtr(v bool) *bool { return new(v) }
 
 // Int64Ptr carries an int64 into an optional field.
-func Int64Ptr(v int64) *int64 { return &v }
+//
+//go:fix inline
+func Int64Ptr(v int64) *int64 { return new(v) }

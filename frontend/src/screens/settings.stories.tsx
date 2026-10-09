@@ -46,6 +46,7 @@ const passports = () =>
         revoked_at: null,
       },
     ],
+    api_base_url: "https://crm.example.com/v1",
     page: { next_cursor: null, has_more: false },
   });
 
@@ -210,6 +211,14 @@ export const AgentsTabDark: Story = {
   render: tab("agents", agentsTabRoutes),
 };
 
+// At 390px. The code example wraps inside the card instead of widening it.
+export const AgentsTabPhone: Story = {
+  name: "Your agents — phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: tab("agents", agentsTabRoutes),
+};
+
 // The connector switched off: the guide has no commands to print, so its one row
 // says so and says what still works. It is the state a default install is in, and
 // it used to render as a bold line and a paragraph flush against the disclosure.
@@ -245,6 +254,51 @@ export const PassportMintDialog: Story = {
       await canvas.findByRole("button", { name: "New passport" }),
     );
   },
+};
+
+// After the mint: the passport once, with its own copy control, and the ways to
+// use it under it. The example keeps the variable, never the new value.
+const mintedRoutes = {
+  ...agentsTabRoutes,
+  "POST /passports": () =>
+    jsonResponse({
+      id: "pp-new",
+      label: "Claude Code on my laptop",
+      scopes: ["read", "draft"],
+      created_at: "2026-10-01T08:00:00Z",
+      expires_at: "2026-10-31T08:00:00Z",
+      revoked_at: null,
+      token: "mgp_7Hq2vXkP9rLw4Tn8sYc1Zb6Ud3Fe0Ga5Jm",
+    }),
+};
+
+const mintPassport = async ({
+  canvasElement,
+}: {
+  canvasElement: HTMLElement;
+}) => {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("button", { name: "New passport" }),
+  );
+  // The Modal portals into the document body, outside the canvas.
+  const body = within(canvasElement.ownerDocument.body);
+  const dialog = within(await body.findByRole("dialog"));
+  await userEvent.click(dialog.getByRole("button", { name: "Mint passport" }));
+  await dialog.findByText("Next, use it");
+};
+
+export const PassportMinted: Story = {
+  name: "Mint a passport — minted",
+  render: tab("agents", mintedRoutes),
+  play: mintPassport,
+};
+
+export const PassportMintedDark: Story = {
+  name: "Mint a passport — minted, dark",
+  globals: { theme: "dark" },
+  render: tab("agents", mintedRoutes),
+  play: mintPassport,
 };
 
 // The same dialog in dark, because the fieldset's legend, the checkbox rows and

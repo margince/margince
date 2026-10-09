@@ -233,4 +233,4 @@ None of these ships today, and each needs its own decision before it ships:
   that hold it.
 - [desktop-distribution.md](desktop-distribution.md): the other way Margince is served, on the local
   machine.
-- [../deployment.md](../deployment.md): the nginx and ingress setup the headers above live in.
+- [deploy-margince.md](../how-to/deploy-margince.md): the nginx and ingress setup the headers above live in.

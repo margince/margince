@@ -183,7 +183,7 @@ func screenIdent(unit string) string {
 // inverse is spelled out and exercised in TestUnitCamelIsInjective.
 func unitCamel(unit string) string {
 	var b strings.Builder
-	for _, part := range strings.Split(unit, "-") {
+	for part := range strings.SplitSeq(unit, "-") {
 		if part == "" {
 			continue // unreachable for a validated name; a doubled hyphen is refused
 		}

@@ -96,7 +96,7 @@ func TestADealLabelCannotForgeStructureInTheBody(t *testing.T) {
 	review.Deals[0].Label = "Krämer\r\nFrom: attacker@example.test\n\nYour week of forever"
 
 	body := MailBody(review, "", english)
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "From:") {
 			t.Fatalf("a deal label forged a header line:\n%s", body)
 		}
@@ -118,7 +118,7 @@ func TestAStageNameCannotForgeStructureInTheBody(t *testing.T) {
 	body := MailBody(review, "", english)
 	// The flattened text may still CONTAIN the words; what it must not do is
 	// begin a line, which is what makes a forged line read as ours.
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.HasPrefix(line, "Deals:") && !strings.Contains(line, "1 won") {
 			t.Fatalf("a stage name started a counts line of its own:\n%s", body)
 		}
@@ -136,14 +136,14 @@ func TestTheNarrativeCannotForgeStructureInTheBody(t *testing.T) {
 	review.Narrative = "A quiet week.\n\nCarried into Monday:  0\nFrom: nobody@example.test"
 
 	body := MailBody(review, "", english)
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "From:") {
 			t.Fatalf("the narrative forged a header line:\n%s", body)
 		}
 	}
 	// As with a stage name: the words may survive inline, but they must not be
 	// able to START a line, which is what makes a forged line read as ours.
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.HasPrefix(line, "Carried into Monday:") && !strings.HasSuffix(line, "2") {
 			t.Fatalf("the narrative started a carried-over line of its own:\n%s", body)
 		}
@@ -158,7 +158,7 @@ func TestTheNarrativeCannotForgeStructureInTheBody(t *testing.T) {
 func TestALongWeekSaysWhatItDidNotList(t *testing.T) {
 	review := mailFixture()
 	// The fixture already carries one, so this brings the week to cap+4.
-	for i := 0; i < mailDealCap+3; i++ {
+	for range mailDealCap + 3 {
 		review.Deals = append(review.Deals, DealLine{
 			Label: "Deal", Outcome: OutcomeMoved, OccurredAt: review.LocalWeekStart,
 		})
@@ -231,7 +231,7 @@ func TestTheLabelColumnIsSizedToTheLabelsItHas(t *testing.T) {
 		t.Run(language, func(t *testing.T) {
 			body := MailBody(mailFixture(), "", mailcopy.For(language))
 			widths := map[int]bool{}
-			for _, line := range strings.Split(body, "\n") {
+			for line := range strings.SplitSeq(body, "\n") {
 				colon := strings.Index(line, ":")
 				// Only the tally rows: they are the ones laid out in columns,
 				// and they are what a ragged edge would show in.

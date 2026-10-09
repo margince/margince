@@ -109,6 +109,7 @@ export function ProviderSheet({
         <ProviderPrices
           provider={status.provider}
           pricedBy={status.priced_by}
+          keyed={status.usable}
           usage={usage}
         />
       </DrawerBody>
@@ -134,10 +135,12 @@ function firstVerb(section: HTMLElement | null): HTMLElement | null {
 function ProviderPrices({
   provider,
   pricedBy,
+  keyed,
   usage,
 }: Readonly<{
   provider: string;
   pricedBy?: string;
+  keyed: boolean;
   usage: ProviderUsage | undefined;
 }>) {
   const t = useT();
@@ -145,8 +148,11 @@ function ProviderPrices({
   const canWrite = useCanUpsert("ai_model_rate");
   const sheet = useAiModelCatalogue(canRead);
   const sync = usePriceSync(canRead);
+  // The last sync's line is stored with its run. Its "No key" is about the key
+  // held then, and says nothing true once one is held now.
   const lastLine = sync.data?.last_run?.report.providers.find(
-    (p) => p.provider === provider,
+    (p) =>
+      p.provider === provider && !(keyed && p.outcome === "not_configured"),
   );
   // The row being edited, `{}` for a new price, nothing while the table shows.
   const [form, setForm] = useState<{

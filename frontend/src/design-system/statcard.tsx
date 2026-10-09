@@ -179,7 +179,9 @@ export function StatCard({
     .filter(Boolean)
     .join(" ");
   return (
-    <section className={cardClass}>
+    // The full figure on hover, on the CARD: the door's overlay covers the value,
+    // and a tooltip shows the nearest title above the pointer.
+    <section className={cardClass} title={value}>
       <span className="stat-card-label">
         {/* Its own box, so a clamp on the name spares the badge and trigger. */}
         <span className="stat-card-label-text" id={labelId}>

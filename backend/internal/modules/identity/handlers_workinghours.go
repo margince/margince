@@ -4,7 +4,7 @@
 package identity
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -75,16 +75,16 @@ func workingHoursResponse(hours WorkingHours, chosen bool) crmcontracts.MyWorkin
 func minutePastMidnight(written string) (int, error) {
 	hour, minute, found := strings.Cut(written, ":")
 	if !found {
-		return 0, fmt.Errorf("a time is written HH:MM")
+		return 0, errors.New("a time is written HH:MM")
 	}
 	hours, hoursOK := twoDigitField(hour)
 	minutes, minutesOK := twoDigitField(minute)
 	if !hoursOK || !minutesOK {
-		return 0, fmt.Errorf("a time is written HH:MM")
+		return 0, errors.New("a time is written HH:MM")
 	}
 	total := hours*60 + minutes
 	if minutes > 59 || total > minutesInADay {
-		return 0, fmt.Errorf("a time is between 00:00 and 24:00")
+		return 0, errors.New("a time is between 00:00 and 24:00")
 	}
 	return total, nil
 }

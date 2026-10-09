@@ -6,7 +6,7 @@ package gcal
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -31,13 +31,13 @@ func (a *httpAPI) Lookup(ctx context.Context, token string, in connector.Calenda
 		return nil, err
 	}
 	if event.ID != id || (!in.Cancel && event.Status == calendarCanceled) {
-		return nil, fmt.Errorf("calendar: event identity is unavailable")
+		return nil, errors.New("calendar: event identity is unavailable")
 	}
 	if !in.Cancel && (!event.Start.At.Equal(in.Start) || !event.End.At.Equal(in.End)) {
 		if in.EventID != "" {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("calendar: existing invitation has changed; reconcile before retrying")
+		return nil, errors.New("calendar: existing invitation has changed; reconcile before retrying")
 	}
 	return &connector.CalendarReceipt{EventID: event.ID, UID: event.UID, URL: event.URL, VideoURL: event.VideoURL}, nil
 }
@@ -68,7 +68,7 @@ func occupancyInstant(value occupancyTime, zone *time.Location) (time.Time, erro
 func (a *httpAPI) eventBusy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
 	query := url.Values{"timeMin": {from.Format(time.RFC3339)}, "timeMax": {to.Format(time.RFC3339)}, calendarSingleEvents: {"true"}, calendarMaxResults: {"2500"}, "fields": {"timeZone,nextPageToken,items(id,status,transparency,start,end,attendees(self,responseStatus))"}}
 	busy := []connector.CalendarInterval{}
-	for page := 0; page < 100; page++ {
+	for range 100 {
 		var result struct {
 			Zone  string           `json:"timeZone"`
 			Next  string           `json:"nextPageToken"`
@@ -91,7 +91,7 @@ func (a *httpAPI) eventBusy(ctx context.Context, token, calendar string, from, t
 		}
 		query.Set("pageToken", result.Next)
 	}
-	return nil, fmt.Errorf("calendar: incomplete availability")
+	return nil, errors.New("calendar: incomplete availability")
 }
 
 func (a *httpAPI) Inspect(ctx context.Context, token, calendar, event string) (connector.CalendarState, error) {
@@ -104,7 +104,7 @@ func (a *httpAPI) Inspect(ctx context.Context, token, calendar, event string) (c
 		return connector.CalendarState{}, err
 	}
 	if out.ID != event {
-		return connector.CalendarState{}, fmt.Errorf("calendar: mismatched event identity")
+		return connector.CalendarState{}, errors.New("calendar: mismatched event identity")
 	}
 	return connector.CalendarState{Start: out.Start.At, End: out.End.At, Canceled: out.Status == calendarCanceled}, nil
 }
@@ -133,7 +133,7 @@ func occupancyIntervals(events []occupancyEvent, zone *time.Location) ([]connect
 			return nil, err
 		}
 		if !end.After(start) {
-			return nil, fmt.Errorf("calendar: invalid busy interval")
+			return nil, errors.New("calendar: invalid busy interval")
 		}
 		busy = append(busy, connector.CalendarInterval{EventID: event.ID, Start: start, End: end})
 	}

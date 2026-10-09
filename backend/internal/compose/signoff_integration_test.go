@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,6 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 const signOffBody = "Hallo Anna, wie besprochen schicke ich dir das Angebot und die Unterlagen für das Projekt. Ich freue mich auf deine Rückmeldung."
@@ -59,7 +62,7 @@ func TestASendSignsOffTheWayTheComposerPreviewSays(t *testing.T) {
 		t.Fatalf("sent body = %q, want %q", got, want)
 	}
 
-	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(ctx, "Marek Janetzke\nGradion"); err != nil {
+	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Marek Janetzke\nGradion"}); err != nil {
 		t.Fatalf("save signature: %v", err)
 	}
 	preview = previewSignOff(ctx, t, e)
@@ -72,6 +75,61 @@ func TestASendSignsOffTheWayTheComposerPreviewSays(t *testing.T) {
 	}
 	if strings.Contains(got, "Viele Grüße") {
 		t.Fatalf("a signed send also carried the closing: %q", got)
+	}
+}
+
+// A workspace template signs every member's mail in their own values, over
+// their own plain-text signature. It lands as markup in the HTML part and as
+// lines in the text part. A plain send gains the HTML part that carries it.
+func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
+	e := integration.Setup(t)
+	anchorID, recipient := seedTransactionalReply(t, e)
+	stager := &recordingStager{}
+	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	// The logo is the workspace's own company, which a seat reads like any other.
+	perms := integration.SchedulerPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["company"] = principal.ObjectGrant{Read: true}
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+
+	if _, err := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(NewSettingsStore(e.Pool)).
+		SaveSignatureTemplate(e.Admin(), `<p>{logo}<b>{name}</b><br>{title}<br><span style="color:#2a7">{phone}</span></p>`); err != nil {
+		t.Fatalf("save template: %v", err)
+	}
+	logoKey := "logos/" + ids.NewV7().String() + ".png"
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, source, captured_by)
+		VALUES ($1, 'Company A', true, $2, 'manual', 'human:x')`, ids.NewV7(), logoKey)
+	signatures := contacts.NewStore(InstallationDB(e.Pool))
+	title, phone := "Head of Sales", "+49 30 1234"
+	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{
+		Body: "my own text", Title: &title, Phone: &phone,
+	}); err != nil {
+		t.Fatalf("save signature: %v", err)
+	}
+	// A save that sends only the text, as a client unaware of the fields does,
+	// keeps the title and phone.
+	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "my own text"}); err != nil {
+		t.Fatalf("save text only: %v", err)
+	}
+	if _, err := adapter.SendEmail(ctx, anchorID, agents.SendEmailArgs{
+		To: []string{recipient}, Subject: "Angebot", Body: signOffBody, ConsentPurpose: "transactional",
+	}); err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	sent := stager.staged[len(stager.staged)-1]
+	if want := signOffBody + "\n\nRep\nHead of Sales\n+49 30 1234"; sent.Body != want {
+		t.Fatalf("text part = %q, want %q", sent.Body, want)
+	}
+	for _, want := range []string{"<b>Rep</b>", "Head of Sales", `style="color:#2a7"`} {
+		if !strings.Contains(sent.HTMLBody, want) {
+			t.Errorf("HTML part %q lacks %q", sent.HTMLBody, want)
+		}
+	}
+	if strings.Contains(sent.Body, "my own text") || strings.Contains(sent.HTMLBody, "my own text") {
+		t.Errorf("the member's own text signed alongside the template")
+	}
+	if sent.InlineLogoKey != logoKey || !strings.Contains(sent.HTMLBody, "cid:"+connector.SignatureLogoContentID) {
+		t.Errorf("the staged message embeds logo %q in %q, want %q", sent.InlineLogoKey, sent.HTMLBody, logoKey)
 	}
 }
 

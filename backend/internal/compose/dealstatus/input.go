@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -62,9 +63,11 @@ func moveKey(move crmcontracts.DealStatusCardMove) string {
 	if id, ok := operandActivity(move); ok {
 		key += " [activity:" + id.String() + "]"
 	}
+	var keySb65 strings.Builder
 	for _, id := range NamedContacts(move) {
-		key += " [contact:" + id.String() + "]"
+		keySb65.WriteString(" [contact:" + id.String() + "]")
 	}
+	key += keySb65.String()
 	return key
 }
 

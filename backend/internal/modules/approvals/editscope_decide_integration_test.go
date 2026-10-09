@@ -59,8 +59,7 @@ func TestDecideRefusesAnEditThatRepointsARestStagedCall(t *testing.T) {
 		other.String() + `","body":{"proposed_name":"Acme GmbH"}}`)
 
 	_, decideErr := e.svc.DecideEdited(ctx, id, edited)
-	var retargeted *RetargetedEditError
-	if !errors.As(decideErr, &retargeted) {
+	if _, ok := errors.AsType[*RetargetedEditError](decideErr); !ok {
 		t.Fatalf("DecideEdited(a path-retargeting edit) = %v, want *RetargetedEditError", decideErr)
 	}
 

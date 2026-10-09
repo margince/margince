@@ -61,8 +61,7 @@ func TestTheRoleLifecycleRejectsANameOrScopeItCannotStore(t *testing.T) {
 			return err
 		}(),
 	} {
-		var parse *values.ParseError
-		if !errors.As(err, &parse) {
+		if _, ok := errors.AsType[*values.ParseError](err); !ok {
 			t.Errorf("%s: %v, want a field refusal", name, err)
 		}
 	}

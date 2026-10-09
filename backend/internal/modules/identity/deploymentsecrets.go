@@ -40,7 +40,7 @@ package identity
 // is easy to drop.
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
@@ -92,7 +92,7 @@ var LicenseTokenRef = settings.Define[string](
 // unsealed even once something can — deleting it is (issue #2162).
 func validateSecretRef(ref string) error {
 	if ref == "" {
-		return fmt.Errorf("identity: a sealed credential reference cannot be empty; delete the row to unseal")
+		return errors.New("identity: a sealed credential reference cannot be empty; delete the row to unseal")
 	}
 	return nil
 }

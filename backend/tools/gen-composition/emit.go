@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"go/format"
 	"os"
@@ -263,14 +264,14 @@ func composedWork(root string, units []extensionUnit) ([]byte, string, error) {
 		return nil, "", fmt.Errorf("root go.work: %w", err)
 	}
 	if rootWork.Go == nil {
-		return nil, "", fmt.Errorf("root go.work carries no go directive")
+		return nil, "", errors.New("root go.work carries no go directive")
 	}
 	// Only go + use are carried over; silently dropping a replace,
 	// toolchain or godebug directive would make the composed lane resolve
 	// differently from the bare one. Support arrives when a directive is
 	// actually needed — until then, refuse loudly.
 	if len(rootWork.Replace) > 0 || rootWork.Toolchain != nil || len(rootWork.Godebug) > 0 {
-		return nil, "", fmt.Errorf("root go.work carries replace/toolchain/godebug directives gen-composition does not compose yet — extend composedWork before using them")
+		return nil, "", errors.New("root go.work carries replace/toolchain/godebug directives gen-composition does not compose yet — extend composedWork before using them")
 	}
 	goVersion := rootWork.Go.Version
 

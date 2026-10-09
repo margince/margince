@@ -17,6 +17,7 @@ package compose
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -87,7 +88,7 @@ func ParseFeed(r io.Reader) ([]FeedItem, error) {
 	if items, ok := parseAtom(body); ok {
 		return items, nil
 	}
-	return nil, fmt.Errorf("the response is neither an RSS nor an Atom feed")
+	return nil, errors.New("the response is neither an RSS nor an Atom feed")
 }
 
 func parseRSS(body []byte) ([]FeedItem, bool) {

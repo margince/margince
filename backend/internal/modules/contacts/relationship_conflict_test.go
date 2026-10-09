@@ -45,8 +45,7 @@ func TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint(t *te
 			// The driver error must NOT survive: httperr reads a PgError in the
 			// chain as an infrastructure fault, and the agent runner would echo
 			// its SQLSTATE text into a model prompt.
-			var pgErr *pgconn.PgError
-			if errors.As(mapped, &pgErr) {
+			if _, ok := errors.AsType[*pgconn.PgError](mapped); ok {
 				t.Fatalf("the driver error rode along: %v", mapped)
 			}
 			// httperr sends a sentinel's own text as the 409 detail, so the

@@ -660,7 +660,7 @@ func TestTeamsAreAdministeredAndTheAccessPreviewTellsTheTruth(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM team_membership WHERE team_id = $1`, team.ID).Scan(&members); err != nil || members != 1 {
 		t.Errorf("memberships = %d (%v), want 1", members, err)
 	}
-	renamed, err := e.svc.UpdateTeam(ctx, e.admin, team.ID, UpdateTeamInput{Name: strPtr("DACH")})
+	renamed, err := e.svc.UpdateTeam(ctx, e.admin, team.ID, UpdateTeamInput{Name: new("DACH")})
 	if err != nil || renamed.Name != "DACH" {
 		t.Errorf("rename → %+v %v", renamed, err)
 	}
@@ -709,7 +709,7 @@ func TestTeamsAreAdministeredAndTheAccessPreviewTellsTheTruth(t *testing.T) {
 	}
 
 	// Archiving keeps the rows; the team stops resolving.
-	if _, err := e.svc.UpdateTeam(ctx, e.admin, team.ID, UpdateTeamInput{Archived: boolPtr(true)}); err != nil {
+	if _, err := e.svc.UpdateTeam(ctx, e.admin, team.ID, UpdateTeamInput{Archived: new(true)}); err != nil {
 		t.Fatal(err)
 	}
 	if err := e.svc.SetTeamMember(ctx, e.admin, team.ID, e.member.UserID.UUID, true); !errors.Is(err, apperrors.ErrNotFound) {
@@ -721,7 +721,7 @@ func TestTeamsAreAdministeredAndTheAccessPreviewTellsTheTruth(t *testing.T) {
 	if err != nil || len(archivedAccess.Teams) != 0 {
 		t.Errorf("access while the team is archived = %d teams (%v), want none", len(archivedAccess.Teams), err)
 	}
-	if _, err := e.svc.UpdateTeam(ctx, e.admin, team.ID, UpdateTeamInput{Archived: boolPtr(false)}); err != nil {
+	if _, err := e.svc.UpdateTeam(ctx, e.admin, team.ID, UpdateTeamInput{Archived: new(false)}); err != nil {
 		t.Fatal(err)
 	}
 	restoredAccess, err := e.svc.UserAccess(ctx, e.admin, invited)
@@ -729,6 +729,3 @@ func TestTeamsAreAdministeredAndTheAccessPreviewTellsTheTruth(t *testing.T) {
 		t.Errorf("access after restoring the team = %d teams (%v), want the one", len(restoredAccess.Teams), err)
 	}
 }
-
-func strPtr(s string) *string { return &s }
-func boolPtr(b bool) *bool    { return &b }

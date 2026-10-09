@@ -38,7 +38,7 @@ const (
 // movement with its own bucket: a number that moved because the rules changed
 // must not be reported as the business moving. Bump it when a reading's
 // membership or arithmetic changes.
-const DefinitionVersion = "forecast_v1"
+const DefinitionVersion = "forecast_v2"
 
 // Column and payload keys shared by the insert and the audit payload. Named
 // rather than repeated, because a key written in two places can come to be
@@ -158,7 +158,7 @@ func (s *Store) writeContributions(
 			"snapshot_id", "deal_id", "owner_id", colAmountMinor, colCurrency,
 			"base_minor", "fx_rate", "fx_date", "effective_close_date",
 			"close_provisional", "category", "stage_probability", "stage_id", "weighted_minor",
-			"in_won", "in_evidence", "in_best_case", "in_open", "exclusion_reason",
+			"in_won", "in_evidence", "in_best_case", "in_open", "in_lost", "exclusion_reason",
 			"audit_id", "approval_id", "captured_by",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
@@ -192,7 +192,7 @@ func (s *Store) writeContributions(
 				currency, row.BaseMinor, nil, nil,
 				row.EffectiveClose, row.CloseProvisional, nullIfEmpty(row.Category),
 				nullableInt(row.StageProbability), nullableID(row.StageID), weighted,
-				row.InWon, row.InEvidence, row.InBestCase, row.InOpen,
+				row.InWon, row.InEvidence, row.InBestCase, row.InOpen, row.InLost,
 				nullIfEmpty(row.ExclusionReason),
 				row.AuditID, row.ApprovalID, capturedBy,
 			}, nil
@@ -284,7 +284,7 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	rows, err := tx.Query(ctx, `
 		SELECT deal_id, owner_id, amount_minor, currency, base_minor,
 		       effective_close_date, close_provisional, category, stage_probability,
-		       weighted_minor, in_won, in_evidence, in_best_case, in_open,
+		       weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
 		       exclusion_reason, audit_id, approval_id
 		FROM forecast_contribution
 		WHERE snapshot_id = $1
@@ -303,7 +303,7 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		var weighted *int64
 		err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
 			&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
-			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen,
+			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
 			&exclusion, &c.AuditID, &c.ApprovalID)
 		c.DealID = dealID.String()
 		if owner != nil {

@@ -36,8 +36,7 @@ func TestTheProjectDoorsAdmitAnAuthorOnlyFromTheImporter(t *testing.T) {
 		"client door":           errOf(projectCreateInput(body(&legacy))),
 		"importer from nowhere": errOf(projectCreateInputFromImporter(body(nil))),
 	} {
-		var refused *provenance.AuthorError
-		if !errors.As(err, &refused) {
+		if _, ok := errors.AsType[*provenance.AuthorError](err); !ok {
 			t.Errorf("%s admitted an author: %v", door, err)
 		}
 	}

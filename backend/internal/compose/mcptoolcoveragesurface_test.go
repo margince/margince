@@ -97,7 +97,7 @@ func shippedUnits(dir string) (map[string]bool, error) {
 		return nil, fmt.Errorf("asking git which units are shipped under %s: %w", dir, err)
 	}
 	units := map[string]bool{}
-	for _, path := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
+	for path := range strings.SplitSeq(strings.TrimRight(string(out), "\x00"), "\x00") {
 		if path == "" {
 			continue
 		}

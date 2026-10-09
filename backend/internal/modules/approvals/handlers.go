@@ -207,18 +207,15 @@ func (h Handlers) decideBundle(w http.ResponseWriter, r *http.Request, bundleID 
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
-	var oversized *BundleTooLargeError
-	if errors.As(err, &oversized) {
+	if oversized, ok := errors.AsType[*BundleTooLargeError](err); ok {
 		httperr.Write(w, r, httperr.Validation("bundle_id", "bundle_too_large", oversized.Error()))
 		return
 	}
-	var retargeted *RetargetedEditError
-	if errors.As(err, &retargeted) {
+	if retargeted, ok := errors.AsType[*RetargetedEditError](err); ok {
 		httperr.Write(w, r, httperr.Validation("edited_payload", "retargeted", retargeted.Error()))
 		return
 	}
-	var edit *InvalidEditError
-	if errors.As(err, &edit) {
+	if edit, ok := errors.AsType[*InvalidEditError](err); ok {
 		httperr.Write(w, r, httperr.Validation("edited_payload", "malformed", edit.Error()))
 		return
 	}
