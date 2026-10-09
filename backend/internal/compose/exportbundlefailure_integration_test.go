@@ -12,8 +12,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -22,7 +21,7 @@ import (
 // gets the opaque 500, not an empty download named like an archive. A closed
 // pool fails the read without reaching any database.
 func TestAnExportThatFailsBeforeItsFirstByteAnswersFiveHundred(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://export@127.0.0.1:1/none")
+	pool, err := testdb.OwnPool(context.Background(), "postgres://export@127.0.0.1:1/none")
 	if err != nil {
 		t.Fatalf("building the pool: %v", err)
 	}
