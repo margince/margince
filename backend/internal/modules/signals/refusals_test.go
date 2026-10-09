@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -18,13 +19,18 @@ import (
 // its own verdict, so no handler-side list has to name it.
 func TestEverySignalRefusalAnswers422NamingItsField(t *testing.T) {
 	refusals := []struct {
-		err         error
-		field, code string
+		err                  error
+		field, code, message string
 	}{
-		{&RequiredFieldError{Field: "summary"}, "summary", "required"},
-		{&NotResolvableError{Reason: "already resolved"}, "resolution_state", "not_resolvable"},
-		{&NoWarmthError{Reason: "not resolved to a company"}, "resolution_state", "no_warmth"},
-		{&InvalidSignalEntityTypeError{EntityType: "task"}, "entity_type", "invalid_entity_type"},
+		{&RequiredFieldError{Field: "summary"}, "summary", "required", "summary is required"},
+		{&NotResolvableError{Reason: "already resolved"}, "resolution_state", "not_resolvable", "already resolved"},
+		{&NoWarmthError{Reason: "not resolved to a company"}, "resolution_state", "no_warmth", "not resolved to a company"},
+		// The caller's value stays out of the answer, so a long one cannot
+		// push the list of allowed types past the wire's length cap.
+		{
+			&InvalidSignalEntityTypeError{EntityType: strings.Repeat("ticket", 100)}, "entity_type", "invalid_entity_type",
+			"entity_type must be one of company, contact, deal, project",
+		},
 	}
 	for _, refusal := range refusals {
 		t.Run(refusal.code, func(t *testing.T) {
@@ -35,8 +41,9 @@ func TestEverySignalRefusalAnswers422NamingItsField(t *testing.T) {
 			var problem struct {
 				Details struct {
 					Errors []struct {
-						Field string `json:"field"`
-						Code  string `json:"code"`
+						Field   string `json:"field"`
+						Code    string `json:"code"`
+						Message string `json:"message"`
 					} `json:"errors"`
 				} `json:"details"`
 			}
@@ -45,8 +52,8 @@ func TestEverySignalRefusalAnswers422NamingItsField(t *testing.T) {
 			}
 			errs := problem.Details.Errors
 			if rec.Code != http.StatusUnprocessableEntity || len(errs) != 1 ||
-				errs[0].Field != refusal.field || errs[0].Code != refusal.code {
-				t.Fatalf("%T → %d %s, want 422 %s on %s", refusal.err, rec.Code, rec.Body.String(), refusal.code, refusal.field)
+				errs[0].Field != refusal.field || errs[0].Code != refusal.code || errs[0].Message != refusal.message {
+				t.Fatalf("%T → %d %s, want 422 %s on %s saying %q", refusal.err, rec.Code, rec.Body.String(), refusal.code, refusal.field, refusal.message)
 			}
 		})
 	}
