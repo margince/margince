@@ -210,13 +210,14 @@ describe("AuditLogCard", () => {
     expect(link).toHaveAttribute("href", "#/contacts/p-1");
   });
 
-  it("names a record without a label by its kind and a short id, and asks the server nothing else", async () => {
+  it("names a record without a label by its kind and its id's random tail, and asks the server nothing else", async () => {
     const backend = auditLogBackend({ entries: [created] });
     vi.stubGlobal("fetch", backend);
     render(<AuditLogCard />);
-    const shortId = await screen.findByText(RECORD_ID.slice(0, 8));
+    const shortId = await screen.findByText("eb3f4280");
     expect(shortId.tagName).toBe("CODE");
     expect(shortId).toHaveAttribute("title", RECORD_ID);
+    expect(screen.queryByText(RECORD_ID.slice(0, 8))).toBeNull();
     expect(
       screen.getByRole("button", { name: "Copy record ID" }),
     ).toBeInTheDocument();

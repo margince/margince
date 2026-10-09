@@ -38,8 +38,8 @@ import {
   type AuditLogEntry,
   type AuditLogFilters,
   auditLogQueryParams,
+  idTail,
   isNarrowed,
-  SHORT_ID_LENGTH,
   UNFILTERED_AUDIT_LOG,
 } from "./settings-audit.format";
 import "./settings-audit.css";
@@ -401,7 +401,7 @@ function ShortId({ id }: Readonly<{ id: string }>) {
     <>
       <span className="auditlog-shortid">
         <code className="auditlog-id" title={id}>
-          {id.slice(0, SHORT_ID_LENGTH)}
+          {idTail(id)}
         </code>
         <IconAction
           inline
