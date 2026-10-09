@@ -14,8 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// The contract bounds a report name in characters, so an accented name that
-// fits is not refused for its byte length, and one a character too long is.
+// The contract bounds a report name in characters. An accented name that fits
+// is accepted, and one a character too long is refused.
 func TestAReportNameLimitCountsCharactersNotBytes(t *testing.T) {
 	f := reportingBusiness(t)
 	create := func(name string) error {

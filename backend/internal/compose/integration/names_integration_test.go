@@ -5,8 +5,8 @@
 
 package integration
 
-// A name is refused with a 4xx when it is taken, blank or invisible, on every
-// write path that holds one: the answer must never be a 500.
+// A taken, blank or invisible name is refused with a 4xx on every write path.
+// The answer is never a 500.
 
 import (
 	"net/http"
