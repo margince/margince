@@ -653,9 +653,6 @@ jobs:
     defaults:
       run:
         working-directory: .
-    env:
-      SLOP_TREND_DIR: ${{ runner.temp }}/slop-trend
-      PREV_DIR: ${{ runner.temp }}/slop-trend-prev
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -675,16 +672,21 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          mkdir -p "$PREV_DIR"
-          url="$(gh api "repos/$REPO/actions/artifacts?name=slop-trend&per_page=1" --jq '.artifacts[0].archive_download_url // empty')"
+          prev="$RUNNER_TEMP/slop-trend-prev"
+          mkdir -p "$prev"
+          # The newest live artifact from a run on main. A manual run on another
+          # branch must not become the week the next run is compared with.
+          url="$(gh api "repos/$REPO/actions/artifacts?name=slop-trend&per_page=50" \
+            --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main")][0].archive_download_url // empty')"
           if [[ -z "$url" ]]; then
-            echo "No earlier slop-trend artifact: this run records the first one."
+            echo "No earlier slop-trend artifact from main: this run records the first one."
             exit 0
           fi
           gh api "$url" > "$RUNNER_TEMP/slop-trend-prev.zip"
-          unzip -o -q "$RUNNER_TEMP/slop-trend-prev.zip" -d "$PREV_DIR"
+          unzip -o -q "$RUNNER_TEMP/slop-trend-prev.zip" -d "$prev"
+      # runner.temp is not available in a job's env, so the paths are set here.
       - name: Record the trend
-        run: make slop-trend PREV="$PREV_DIR"
+        run: SLOP_TREND_DIR="$RUNNER_TEMP/slop-trend" make slop-trend PREV="$RUNNER_TEMP/slop-trend-prev"
       - uses: ./.github/actions/upload-artifact-retried
         with:
           name: slop-trend
