@@ -50,7 +50,7 @@ const COLUMN_COUNT = 5;
 const RELATIVE_TICK_MS = 60_000;
 
 // The filters stay in a closed disclosure: a reader arrives to read what
-// happened, and each dial applies on its own, so there is nothing to submit.
+// happened. Each dial applies on its own, so there is nothing to submit.
 export function AuditLogCard() {
   const t = useT();
   const user = useMe().data?.user;

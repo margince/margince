@@ -3,8 +3,8 @@
 
 package collections
 
-// Names for a set of tags or lists, one query per kind, under the same grant
-// and list row scope as a single get, so an unreadable record has no name.
+// Names for a set of tags or lists, one query per kind. Each runs under a
+// single get's grant and list row scope, so an unreadable record has no name.
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func (s *Store) ListLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]s
 }
 
 // labelsOf is safe to format because object is a constant from the callers
-// above, and the object name is also the table name for both kinds.
+// above. The object name is also the table name for both kinds.
 func (s *Store) labelsOf(ctx context.Context, object string, want []ids.UUID, rowScoped bool) (map[ids.UUID]string, error) {
 	if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
 		return nil, err

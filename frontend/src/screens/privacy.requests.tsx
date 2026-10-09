@@ -162,8 +162,8 @@ function assigneeOptions(
   ];
 }
 
-// The holder as an option when the picker does not offer them: deactivated,
-// past the roster walk's bound, or an agent seat that may not be chosen.
+// The holder as an option when the picker does not offer them. They may be
+// deactivated, past the roster walk's bound, or an agent seat nobody may pick.
 function useUnofferedAssignee(
   assigneeId: string | null | undefined,
   offered: readonly User[],

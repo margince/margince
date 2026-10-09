@@ -5,7 +5,7 @@
 
 package consent
 
-// Opening and patching a subject request over the handler: a request needs its
+// Opening and patching a subject request over the handler. A request needs its
 // deadline, and a patch tells an explicit null from a field it left out.
 
 import (

@@ -38,7 +38,7 @@ type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
 type Resolution = "accepted" | "rejected";
 
 // A correction is only reviewable as a comparison ("she says Schmidt, we hold
-// Schmitt"), so a row shows the proposal beside what the record holds now.
+// Schmitt"). A row shows the proposal beside what the record holds now.
 export function ConfirmSubmissionsPanel() {
   const t = useT();
   const queryClient = useQueryClient();

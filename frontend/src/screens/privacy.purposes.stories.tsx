@@ -12,8 +12,8 @@ import {
   stubWithSession,
 } from "./story-utils";
 
-// The consent registry: a seat that may append to it, and one that may only
-// read it, where the create verb is absent and the card says why.
+// The consent registry for a seat that may append to it, and for one that may
+// only read it. The read-only seat has no create verb, and the card says why.
 
 const PURPOSES = {
   data: [

@@ -73,8 +73,8 @@ func attachAcquisitions(ctx context.Context, tx pgx.Tx, cases []NoticeCase) erro
 	return nil
 }
 
-// Wire is the one place the evidence crosses into the contract, shared by the
-// privacy queue and the attention lane so the two cannot spell it differently.
+// Wire is the one place the evidence crosses into the contract. The privacy
+// queue and the attention lane share it, so neither can spell it differently.
 func (a *NoticeAcquisition) Wire() *crmcontracts.NoticeAcquisition {
 	if a == nil {
 		return nil

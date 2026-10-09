@@ -4,7 +4,7 @@
 package privacy
 
 // What each audit row is about, by name. The names live in tables this module
-// does not own, so each owning module answers for its own rows and visibility
+// does not own. Each owning module answers for its rows and their visibility
 // through a port compose fills.
 
 import (
@@ -28,9 +28,9 @@ func (h Handlers) WithRecordLabeler(labeler RecordLabeler) Handlers {
 }
 
 // labelAuditPage asks once per entity type on the page, with that type's
-// distinct ids, so the cost follows the types present and not the row count.
+// distinct ids. The cost follows the types present, not the row count.
 //
-// A type whose read fails keeps null labels and the page still answers; the
+// A type whose read fails keeps null labels and the page still answers. The
 // failure is logged, since the page alone cannot tell lost names from none.
 func labelAuditPage(ctx context.Context, labeler RecordLabeler, entries []AuditEntry) {
 	if labeler == nil {

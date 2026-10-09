@@ -308,8 +308,8 @@ const DSRS = {
   page: { next_cursor: null, has_more: false },
 };
 
-// The facet bar's status words are the transition verbs' words too, so a
-// query scopes to the request: its open drawer, or else its table row.
+// The facet bar's status words are the transition verbs' words too. So a query
+// scopes to the request: its open drawer, or else its table row.
 async function findDsrRow(subjectRef: string) {
   const drawer = screen.queryByRole("dialog", { name: subjectRef });
   if (drawer) {
@@ -428,7 +428,7 @@ describe("PrivacyInboxCard", () => {
     ).toBeGreaterThan(1);
   });
 
-  // A request opens beside the queue: its siblings and the facet bar stay
+  // A request opens beside the queue. Its siblings and the facet bar stay
   // loaded behind the drawer, so closing it returns the officer to their place.
   it("opens a request beside the queue rather than in place of it", async () => {
     stubRoutes();
@@ -1149,7 +1149,7 @@ describe("fulfilling an erasure", () => {
   });
 
   // A fulfilled request is terminal, so the verb the confirm was opened from is
-  // gone once it succeeds; focus lands on the drawer's title instead of <body>.
+  // gone once it succeeds. Focus lands on the drawer's title instead of <body>.
   it("returns focus to the request's title after the fulfil, never to the document", async () => {
     let fulfilled = false;
     const closed = { status: "fulfilled", resolution: "verified" };

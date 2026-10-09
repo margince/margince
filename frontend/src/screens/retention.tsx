@@ -53,7 +53,7 @@ import "./retention.css";
 // The storage-limitation ladder and the retain-only posture that overrides its
 // destructive half: an enabled policy can be inert, so a row not acting says so.
 
-// A row's two writes are one PATCH on one policy, so they stay one mutation;
+// A row's two writes are one PATCH on one policy, so they stay one mutation.
 // `intent` says which of the two it is, because only a save closes the editor.
 type PolicyWrite = Readonly<{
   intent: "save" | "switch";
@@ -65,8 +65,8 @@ type PolicyWrite = Readonly<{
   }>;
 }>;
 
-// Mounted once per opening (keyed on the session), so the fields always start
-// from the policy as it now stands rather than from an abandoned draft.
+// Mounted once per opening, keyed on the session. The fields always start from
+// the policy as it now stands rather than from an abandoned draft.
 function PolicyEditorBody({
   policy,
   titleId,

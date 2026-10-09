@@ -49,8 +49,8 @@ var (
 // Every surface that names records reads through it: the attention feed, the
 // analytics drill-through, the audit log and the privacy queues. They share this
 // constructor because a name must resolve identically on each. A second assembly
-// could bind a different store set, and then the same record would be named on
-// one surface and withheld on the other for no reason a reader could see.
+// could bind a different store set. The same record would then be named on one
+// surface and withheld on the other, for no reason a reader could see.
 func newAttentionNames(db *database.DB) attentionNames {
 	return attentionNames{
 		contacts:    contacts.NewStore(db),

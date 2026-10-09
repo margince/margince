@@ -50,8 +50,8 @@ export function NoticeDuty({
   const caseId = item.id;
   const queryClient = useQueryClient();
   const mayWrite = useCan("contact", "update");
-  // The worklist row names whose queue it sits in, not who claimed the duty;
-  // only a reader of the privacy queue may ask the case itself.
+  // The worklist row names whose queue it sits in, not who claimed the duty.
+  // Only a reader of the privacy queue may ask the case itself.
   const canReadCase = useCan("privacy_request", "read");
   const duty = useQuery({
     queryKey: ["notice-cases", "one", caseId],

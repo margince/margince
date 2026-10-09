@@ -85,8 +85,8 @@ func TestAPageAsksOncePerEntityTypeWithEachRecordOnce(t *testing.T) {
 	}
 }
 
-// The id is the same record under one type and a different one under another,
-// so a label must never cross from one type's answer to another type's row.
+// The same id is one record under one type and a different one under another.
+// A label must never cross from one type's answer to another type's row.
 func TestALabelStaysWithTheTypeThatAnsweredIt(t *testing.T) {
 	shared := ids.NewV7()
 	labeler := &recordingLabeler{names: map[ids.UUID]string{shared: "Weber GmbH"}, failOn: "contact", asked: map[string][][]ids.UUID{}}

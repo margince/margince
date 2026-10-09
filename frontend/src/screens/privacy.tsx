@@ -104,7 +104,7 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<DsrDraft>(EMPTY_DSR);
   const formId = useId();
-  // Minted in the operator's zone, the one the row renders it back in; a bare
+  // Minted in the operator's zone, the one the row renders it back in. A bare
   // `new Date(day)` reads the day as UTC midnight and rolls it back west of UTC.
   const tz = viewerZone();
 
@@ -290,8 +290,8 @@ function FulfilErasureModal({
     patch.error instanceof ProblemError ? patch.error.problem : null;
   const held = problem !== null && isLegalHold(problem);
   const movedOn = problem !== null && isIllegalTransition(problem);
-  // Neither a hold nor a race is a mistake a retry fixes, so both keep their
-  // own sentence and leave the generic slot to everything else.
+  // Neither a hold nor a race is a mistake a retry fixes. Both keep their own
+  // sentence and leave the generic slot to everything else.
   const errorMessage =
     patch.isError && !held && !movedOn
       ? problemMessageOf(patch.error, t)

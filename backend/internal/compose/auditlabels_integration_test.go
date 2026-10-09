@@ -5,10 +5,9 @@
 
 package compose
 
-// GET /audit-log against real Postgres and the wiring production serves: every
-// entry names the record it is about when the reader may see that record, and
-// reads null when the record is outside their scope, erased, or of a type
-// nothing names.
+// GET /audit-log against real Postgres and the wiring production serves. Every
+// entry names its record when the reader may see that record. It reads null
+// when the record is outside their scope, erased, or of a type nothing names.
 
 import (
 	"context"
@@ -187,7 +186,7 @@ func TestAnAuditEntryOutsideTheReadersScopeReadsNull(t *testing.T) {
 		t.Fatalf("creating another rep's list: %v", err)
 	}
 
-	// A rep handed the trail but holding only their own rows: the grant on
+	// A rep handed the trail but holding only their own rows. The grant on
 	// audit_log admits the page and must not widen what its labels name.
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},

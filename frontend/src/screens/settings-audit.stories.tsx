@@ -169,7 +169,8 @@ export default meta;
 type Story = StoryObj<typeof AuditLogCard>;
 
 // An agent for a member, the viewer, a delete, a connector import and a system
-// expiry: every actor kind, every action tone, labelled and unlabelled targets.
+// expiry. They cover every actor kind, every action tone, and labelled and
+// unlabelled targets.
 export const Trail: Story = { render: story(page(ENTRIES)) };
 
 export const Expanded: Story = {

@@ -79,7 +79,7 @@ export const ACTION_TONE: Readonly<
   delete: "danger",
 };
 
-// The shape of the images decides how a row reads, not the verb: an archive or
+// The shape of the images decides how a row reads, not the verb. An archive or
 // a merge that carries both images is an update to the reader.
 export type ChangeShape = "created" | "changed" | "removed";
 
@@ -154,8 +154,8 @@ export const ROW_SCOPE_WORDS: Readonly<Record<string, MessageKey>> = {
   all: "settings.auditScopeAll",
 };
 
-// The tail, not the head: a uuidv7 leads with its timestamp, so every recent
-// id shares its first characters and only the random end tells two apart.
+// The tail, not the head: a uuidv7 leads with its timestamp. Every recent id
+// shares its first characters, and only the random end tells two apart.
 export function idTail(id: string): string {
   return id.slice(-8);
 }

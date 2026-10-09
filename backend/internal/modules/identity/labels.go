@@ -3,7 +3,7 @@
 
 package identity
 
-// Names for a set of teams or roles, one query per kind, so a page that names
+// Names for a set of teams or roles, one query per kind. A page that names
 // fifty of them asks twice rather than fifty times. Each read carries the gate
 // the kind's own list carries, and a row it may not answer is absent.
 
