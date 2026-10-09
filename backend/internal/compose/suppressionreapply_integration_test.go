@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -413,4 +414,52 @@ func addEmail(t *testing.T, contact ids.UUID, email string) {
 		ids.NewV7(), contact, email); err != nil {
 		t.Fatalf("seeding the second address: %v", err)
 	}
+}
+
+// The export job writes the journal, which is what a restore replays from.
+//
+// ExportSuppressions asks to be run on a schedule and nothing ran it, so the
+// entries a restore would need were never written. A restore to a point before
+// an erasure then brought the subject back with nothing left to refuse them.
+func TestTheSuppressionJournalJobWritesWhatARestoreWouldLose(t *testing.T) {
+	e := integration.Setup(t)
+	store := &countingBlobstore{Store: blobstore.NewMemory()}
+	seedSuppressedEmail(t, "erased@journal.example")
+
+	worker := &suppressionJournalWorker{pool: e.Pool, blob: store, log: slog.New(slog.DiscardHandler)}
+	if err := worker.exportWorkspace(e.Admin(), e.WS); err != nil {
+		t.Fatalf("exporting the journal: %v", err)
+	}
+
+	if len(store.puts) == 0 {
+		t.Fatal("the export wrote nothing, so a restore has no journal to replay")
+	}
+	// Neither the key nor the body carries the address. The journal keeps only
+	// a fingerprint, because the value is gone.
+	//
+	// An entry carrying it would reconstitute what the erasure destroyed.
+	for key, body := range store.puts {
+		if strings.Contains(key, "erased@journal.example") || strings.Contains(body, "erased@journal.example") {
+			t.Errorf("the journal entry %s carries the erased address", key)
+		}
+	}
+}
+
+// countingBlobstore records what the export wrote. The object store is a true
+// boundary, and the memory store it wraps offers no enumeration.
+type countingBlobstore struct {
+	blobstore.Store
+	puts map[string]string
+}
+
+func (c *countingBlobstore) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
+	body, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	if c.puts == nil {
+		c.puts = map[string]string{}
+	}
+	c.puts[key] = string(body)
+	return c.Store.Put(ctx, key, strings.NewReader(string(body)), size, contentType)
 }

@@ -901,6 +901,7 @@ export const en = {
   "systemJob.stage_evidence_read": "Deal stage evidence read",
   "systemJob.stage_progression": "Deal stage progression",
   "systemJob.stage_progression_outcome": "Deal stage outcome",
+  "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
   "systemJob.technical_lookup": "Company technical lookup",
