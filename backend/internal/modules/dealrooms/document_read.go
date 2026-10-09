@@ -95,8 +95,12 @@ const inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 // room document. A file that arrived with a message is shown only to a seat
 // that may read that message. To any other seat its title and filename answer
 // as absent, as the message does. It needs the attachment aliased `a` and
-// renders an AND-prefixed clause.
+// renders an AND-prefixed clause. With no seat bound it refuses rather than
+// render a clause that answers for nobody.
 func sellerReadsTheCarrier(ctx context.Context, arg func(any) int) (string, error) {
+	if _, ok := principal.Actor(ctx); !ok {
+		return "", apperrors.ErrPermissionDenied
+	}
 	if !auth.ReadGranted(ctx, "activity") {
 		return " AND a.entity_type <> 'activity'", nil
 	}
