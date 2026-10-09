@@ -188,6 +188,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [ui-copy-style.md](reference/ui-copy-style.md): how to write English text in the app.
 - [docs-prose-style.md](reference/docs-prose-style.md): how to write a doc page.
 - [ui-copy-style-de.md](reference/ui-copy-style-de.md): what German text in the app adds.
+- [ui-copy-style-vi.md](reference/ui-copy-style-vi.md): what Vietnamese text in the app adds.
 - [issue-labels.md](reference/issue-labels.md): every issue label. `AGENTS.md` has the short form.
 - [license-release-rule.md](reference/license-release-rule.md): the license date on each release.
   [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md` have the license line each

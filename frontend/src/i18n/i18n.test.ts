@@ -34,16 +34,14 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Quoted words between quotation marks, which Vietnamese writes as English
   // does; only the words inside change, and they are the speaker's own.
   "commitment.quote",
+  "filters.propose.unusedItem",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",
   "tab.dealRoom",
-  // Two sales nouns Vietnamese borrows rather than translates, on the
-  // drill-through's column headers. The vi catalog already carries both
-  // untranslated where they appear as words in a sentence — "Thuộc deal" on
-  // the partner and commission columns, "Pipeline" on the deal's own field —
-  // so translating them only here would give one screen a vocabulary the
-  // rest of the product does not use.
+  "buyer.eyebrow",
+  // Sales nouns Vietnamese borrows: vi writes "Tên deal" and "Pipeline" elsewhere,
+  // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
   "explain.col.pipeline",
   // The settings group heading. "AI" is the initialism Vietnamese uses too —
@@ -98,9 +96,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.
   "co.360.subject",
-  // A number and the SI symbol for millisecond. The symbol is the same in every
-  // language by definition — it is written "ms" in Vietnamese too — so a locale
-  // that changed it would be naming a different unit.
   // An acronym, not a word: DNS is DNS in every language this product speaks,
   // and a "translation" of it would be a different protocol.
   "co.tech.lane.dns",
@@ -146,22 +141,17 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiRouting.location.group.eu",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
+  // And naming the kind of evidence a tag suggestion cites.
+  "tagSuggestion.kind.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
   // keeps "Email". German translates it, and does.
   "deal.forecast.pipeline",
-  "contactdealrooms.title",
   "room.create.defaultTitle",
-  "buyer.poweredBy",
-  "buyer.poweredByMargince",
-  // TEMPORARY, with the release marker it labels (app/shell.tsx): "Alpha" is
-  // the release stage's own name and Vietnamese keeps it, the same way it keeps
-  // "Email" and "pipeline". Delete this entry with the marker.
-  // A placeholder and a percent sign. Vietnamese writes a percentage the way
-  // English does — digits then the sign, no space — so the value is identical by
-  // agreement rather than by omission. German differs (it takes the space) and
-  // carries its own.
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
+  "dealSuggestion.name",
+  "lead.sla.answeredAt",
+  "projectFiling.decision",
   // A filter clause's slots, a group's brackets, a value not given yet.
   "filters.sentence.clause",
   "filters.sentence.clauseBare",
@@ -189,15 +179,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.s4.provGoogle",
   "ob.s4.provMicrosoft",
   "ob.conv.connect.linkedinName",
-  // "Email" is the loanword vi uses for the field, as en spells it.
-  // Employee-count bands: digits and an en dash, the same in every locale.
-  "lead.signal.employees.1-10",
-  "lead.signal.employees.11-50",
-  "lead.signal.employees.51-200",
+  "magic.by.system",
+  // A number and a plus sign, written alike in every locale.
   "lead.signal.employees.201+",
-  // "Email" is the Vietnamese word for email. de has "E-Mail" and differs;
-  // vi does not, and inventing a difference would name the transport
-  // something no Vietnamese speaker calls it.
   // The same proper noun as connectors.provGmail and its neighbours, one
   // surface over.
   "provider.profile.linkedin",
@@ -205,32 +189,34 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.ai.speakerName",
   "auth.title",
 
-  // The RFC 5322 header name. "Bcc" is the field's identity in every mail
-  // client in every locale — a translated label would name a field the
-  // recipient's own client does not call that, and the placeholder beside it
-  // is what carries the meaning.
-
-  // CRM domain nouns kept in English by design (glossary, design.md §6.1):
-  // "deal", "pipeline", "timeline" etc. read the same in Vietnamese usage.
-  "nav.deals",
-  "tab.deals",
+  // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
   "deals.pipeline",
   "deal.fcPipeline",
   "filters.field.pipeline_id",
+  "analytics.field.pipeline_id",
+  "analytics.sectionPipeline",
+  "reporting.pipeline",
+  "lead.qualify.pipeline",
+  "stageAutomation.pipeline",
+  "review.colDeal",
+  "worklist.category.leads",
   "filters.sentence.ref.pipeline_one",
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
-  // The singular of the same noun, on the overnight scan's tally and on the
-  // forecast tile's deal count. Both are the borrowed word beside a numeral, so there is nothing left in any
-  // of them for Vietnamese to translate. Only the `_one` arms land here: the
-  // `_other` arms differ because English pluralises and Vietnamese does not.
+  // The borrowed noun in the singular, which English and Vietnamese spell alike;
+  // the plural arms differ because English pluralises.
   "today.scan.readDeals_one",
   "analytics.forecastDeals_one",
-  "deals.unit",
+  "filters.library.records.deal_one",
+  "filters.library.records.lead_one",
   "contracts.renew.deal",
   "contracts.deal",
-  "history.actorAgent",
+
+  // The forecast categories Commit and Best case keep their English names.
+  "deal.fcCommit",
+  "deal.fcBestCase",
+  "brief.weekly.outlook.bestCase",
 
   // Endonyms: a locale's own name for itself, identical in every catalog.
   "locale.name.en",
@@ -239,6 +225,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Field labels where the English word is also the Vietnamese usage.
   "contacts.email",
+  "users.emailLabel",
   "create.email",
   "restricted.kind.email",
   "timeline.filters.kind.email",
@@ -253,12 +240,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "compose.cc",
   "compose.bcc",
   "compose.transportEmail",
-  "settings.token",
   "passport.select",
 
   // Placeholders, examples and other machine-shaped literals: emails,
   // URLs, hostnames — content a translation would corrupt, not prose.
-  "auth.emailPlaceholder",
   "users.emailPlaceholder",
   "consumerMail.domainPlaceholder",
   "consumerMail.baselinePlaceholder",
@@ -266,7 +251,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.conv.linkedin.profilePlaceholder",
   "ob.s4.imapHostPlaceholder",
   "ob.s4.imapEmail",
-  "ob.conv.triage.companyWebsite",
   "ob.conv.clarify.question",
   "ob.conv.clarify.optionDetail",
   "create.linkedin",
@@ -285,29 +269,15 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // the feature name to "Voice", which vi translates.
   "settings.voice.title",
   "co.decisions.group",
-  "partner.role.hosting",
 
-  // Actor labels built on "Agent" and "Connector", which vi carries as
-  // loanwords everywhere else in this catalog — translating them only here
-  // would make the same actor read as two different things.
-  "trust.agentTag",
-  "consent.actorAgent",
-  "consent.actorConnector",
-  "users.agentSeat",
   // "Lead" is the loanword in both de and vi — every other lead key in this
   // catalog leaves it untranslated, and the marker on the record page names
   // the same object those keys do.
   "lead.marker",
-  // The SINGULAR kind name on a search hit's second line. vi carries "Deal",
-  // "Lead" and "Tag" as loanwords — the same words the plural group headings
-  // above them already use — and those headings only escape this check because
-  // en pluralises and vi does not. A singular pair is therefore identical for
-  // the same reason the plural pair is not: the word is borrowed, not missed.
+  // The singular kind name on a search hit: "Deal" and "Lead" are loanwords, and
+  // only the plural headings differ because English pluralises.
   "search.kind.deal",
   "search.kind.lead",
-  "search.kind.tag",
-  // The same loanword naming the tag field on Filters and views.
-  "filters.field.tag",
   // The lead rail's own deal card title, the same singular loanword as
   // search.kind.deal above it.
   "lead.rail.deal.title",
@@ -331,6 +301,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.fieldEg.legal_form",
   "ob.fieldEg.register_court",
   "ob.fieldEg.register_number",
+  // A fixture company name, which a locale would rename into a different company.
+  "ob.fieldEg.display_name",
 
   // Brand names, a protocol's acronym, and the console Google itself names
   // in English.
@@ -448,15 +420,15 @@ describe("i18n catalogs", () => {
     expect(leftovers, `untranslated keys: ${leftovers.join(", ")}`).toEqual([]);
   });
 
-  // The allowlist above is the one hand-written list in this file, and a key
-  // deleted from the catalogs leaves its entry behind silently — an exemption
-  // for a string that no longer exists, which the next reader has to research
-  // before they can tell it is stale.
-  it("the untranslated-copy allowlist names only keys that still exist", () => {
-    const stale = [...KEPT_IN_ENGLISH].filter((key) => !(key in en));
-    expect(stale, `allowlist entries with no key: ${stale.join(", ")}`).toEqual(
-      [],
+  // The allowlist is the one hand-written list in this file, and a key deleted
+  // or translated since leaves an exemption behind that nothing else notices.
+  it("the untranslated-copy allowlist names only keys vi still copies from en", () => {
+    const reference: Record<string, string> = en;
+    const translated: Record<string, string> = viCatalog;
+    const stale = [...KEPT_IN_ENGLISH].filter(
+      (key) => !(key in en) || translated[key] !== reference[key],
     );
+    expect(stale, `stale allowlist entries: ${stale.join(", ")}`).toEqual([]);
   });
 });
 
