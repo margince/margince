@@ -15,8 +15,8 @@ const meta: Meta<typeof ResolvedPassportChip> = {
 export default meta;
 type Story = StoryObj<typeof ResolvedPassportChip>;
 
-// The reader's passport list is empty in both: a rotated token is no longer in
-// it, so only the row's own answer can name the client.
+// Both stories stub an empty passport list, since a rotated token has left it.
+// Only the row's own answer can then name the client.
 function withNoPassports(node: () => ReactElement) {
   return () => {
     installFetchStub({});
