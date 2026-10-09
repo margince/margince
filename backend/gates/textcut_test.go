@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind prohibition H2
+
 package gates_test
+
+// A string is cut to a length only through kernel/textcut.
 
 import (
 	"go/ast"
@@ -9,6 +13,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -27,11 +32,11 @@ var handCutWaivers = gatekit.Waive(map[string]string{
 	"internal/compose/sitesnippet.go":           "splits one long sentence into consecutive pieces and keeps every rune, which a prefix cut cannot say; a change to how runes are counted has to be made there too.",
 })
 
-// A string cut to a length is written once, in kernel/textcut. A copy is
-// matched by its statements, so it fails whatever its function is called.
+// A copy is matched by its statements, so it fails whatever its function is called.
 // Three shapes count: a loop that backs off to a rune boundary,
 // string(runes[:n]) over a []rune conversion, and strings.ToValidUTF8 over a
-// byte slice.
+// byte slice. It cannot see a plain s[:n] that ignores runes, nor a []rune
+// value passed in from another function.
 func TestEveryStringCutGoesThroughTextcut(t *testing.T) {
 	read := 0
 	var offenders []string
@@ -187,10 +192,5 @@ func isSelector(expr ast.Expr, pkg string, names ...string) bool {
 	if !ok || ident.Name != pkg {
 		return false
 	}
-	for _, name := range names {
-		if sel.Sel.Name == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, sel.Sel.Name)
 }
