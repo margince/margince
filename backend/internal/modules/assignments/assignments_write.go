@@ -89,11 +89,11 @@ func (s *Store) CreateAssignment(
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "record_assignment", id, nil,
 			map[string]any{
-				"record_type":  string(in.RecordType),
-				"record_id":    in.RecordID.String(),
-				"subject_kind": string(in.SubjectKind),
-				"subject_id":   in.SubjectID.String(),
-				"role_id":      in.RoleID.String(),
+				"record_type":    string(in.RecordType),
+				"record_id":      in.RecordID.String(),
+				fieldSubjectKind: string(in.SubjectKind),
+				"subject_id":     in.SubjectID.String(),
+				"role_id":        in.RoleID.String(),
 			})
 		if err != nil {
 			return err
@@ -220,6 +220,9 @@ func ensureAssignableRole(
 	ctx context.Context, tx pgx.Tx,
 	roleID ids.UUID, rt crmcontracts.AssignmentRecordType, kind crmcontracts.AssignmentSubjectKind,
 ) error {
+	if err := admitSubjectKind(kind); err != nil {
+		return err
+	}
 	var active bool
 	var recordTypes, assigneeKinds []string
 	err := tx.QueryRow(ctx,
@@ -244,6 +247,29 @@ func ensureAssignableRole(
 		return &values.ParseError{
 			Field: fieldRoleID, Code: "role_wrong_assignee_kind",
 			Message: fmt.Sprintf("that role cannot be held by a %s", kind),
+		}
+	}
+	return nil
+}
+
+// admitSubjectKind refuses a kind the contract does not declare, naming the
+// field the caller can correct.
+//
+// The role's own check answers whether a declared kind may hold that role.
+//
+// So a kind outside the vocabulary fell through to it and blamed `role_id`. An
+// absent kind read as a role that cannot be held by a blank.
+func admitSubjectKind(kind crmcontracts.AssignmentSubjectKind) error {
+	if kind == "" {
+		return &values.ParseError{
+			Field: fieldSubjectKind, Code: "required",
+			Message: "name the subject kind: user or team",
+		}
+	}
+	if !kind.Valid() {
+		return &values.ParseError{
+			Field: fieldSubjectKind, Code: "invalid_enum",
+			Message: fmt.Sprintf("%s is not a subject kind: name user or team", kind),
 		}
 	}
 	return nil
