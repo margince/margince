@@ -5417,6 +5417,7 @@ public.partner.margin_tier text gen=- def=-
 public.partner.next_step text gen=- def=-
 public.partner.next_step_due_at date gen=- def=-
 public.partner.partner_cert_status_check CHECK ((cert_status = ANY (ARRAY['applied'::text, 'certified'::text, 'suspended'::text])))
+public.partner.partner_certified_staff_check CHECK ((certified_staff >= 0))
 public.partner.partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.partner.partner_company_id_key UNIQUE (company_id)
 public.partner.partner_fit_override_reason text gen=- def=-
