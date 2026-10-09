@@ -145,3 +145,38 @@ func TestPartnerGateMetricsRefuseWhatTheColumnCannotHold(t *testing.T) {
 			after.GateMetrics)
 	}
 }
+
+// A nullable lifecycle field sent as null is cleared; one the body leaves out
+// is kept.
+func TestPartnerNullableFieldsClearOnNullAndKeepWhenOmitted(t *testing.T) {
+	e := setupRelationships(t)
+	path := "/v1/companies/" + e.companyID + "/partner"
+	if status := e.Call(t, "PUT", path, AnyMap{
+		"partner_role": "consulting", "margin_tier": "tier2_20", "next_step": "Send the one-pager",
+		"next_step_due_at": "2026-08-01", "served_segments": []string{"fintech"},
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("seeding the partner → %d", status)
+	}
+
+	var kept partnerWire
+	if status := e.Call(t, "PUT", path, AnyMap{"partner_role": "consulting"}, nil, &kept); status != http.StatusOK {
+		t.Fatalf("an edit that names no nullable field → %d", status)
+	}
+	if kept.NextStep == nil || kept.NextStepDueAt == nil || len(kept.ServedSegments) != 1 {
+		t.Fatalf("an omitted field was cleared: %+v", kept)
+	}
+
+	var cleared struct {
+		partnerWire
+		MarginTier *string `json:"margin_tier"`
+	}
+	if status := e.Call(t, "PUT", path, AnyMap{
+		"partner_role": "consulting", "margin_tier": nil, "next_step": nil,
+		"next_step_due_at": nil, "served_segments": nil,
+	}, nil, &cleared); status != http.StatusOK {
+		t.Fatalf("a body of nulls → %d", status)
+	}
+	if cleared.MarginTier != nil || cleared.NextStep != nil || cleared.NextStepDueAt != nil || len(cleared.ServedSegments) != 0 {
+		t.Fatalf("a null left a value behind: %+v", cleared)
+	}
+}

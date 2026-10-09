@@ -5,13 +5,17 @@ package compose
 
 import (
 	"fmt"
-	"strings"
+	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// maxBulkTaskSubject is BulkTask.subject's maxLength in the contract, in characters.
+const maxBulkTaskSubject = 500
 
 // The parameters a bulk change can name beside its verb and items.
 const (
@@ -82,8 +86,12 @@ func validateBulkParams(change bulkChange, need, why string) error {
 			return httperr.Validation(p.param, "not_allowed", fmt.Sprintf("%s takes no %s", change.verb, p.param))
 		}
 	}
-	if change.task != nil && strings.TrimSpace(change.task.Subject) == "" {
+	if change.task != nil && !values.HasVisibleText(change.task.Subject) {
 		return httperr.Validation("task.subject", "required", "create_task needs a subject: what has to be done")
+	}
+	if change.task != nil && utf8.RuneCountInString(change.task.Subject) > maxBulkTaskSubject {
+		return httperr.Validation("task.subject", "too_long",
+			fmt.Sprintf("a task subject holds at most %d characters", maxBulkTaskSubject))
 	}
 	return nil
 }

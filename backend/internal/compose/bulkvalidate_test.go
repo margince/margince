@@ -5,6 +5,7 @@ package compose
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -24,18 +25,21 @@ func TestEachVerbNamesItsOneParameterAndNoOther(t *testing.T) {
 		change bulkChange
 		field  string
 	}{
-		"add_tag without a tag":        {bulkChange{verb: crmcontracts.BulkVerbAddTag, items: one}, "tag_id"},
-		"remove_tag with an owner":     {bulkChange{verb: crmcontracts.BulkVerbRemoveTag, items: one, tagID: &tag, ownerID: &owner}, "owner_id"},
-		"add_tag with a note":          {bulkChange{verb: crmcontracts.BulkVerbAddTag, items: one, tagID: &tag, note: &note}, "note"},
-		"create_task without a task":   {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one}, "task"},
-		"create_task with a blank one": {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one, task: blank}, "task.subject"},
-		"archive with a Shortlist":     {bulkChange{verb: crmcontracts.BulkVerbArchive, items: one, listID: &list}, "list_id"},
-		"reassign with a task":         {bulkChange{verb: crmcontracts.BulkVerbReassignOwner, items: one, ownerID: &owner, task: task}, "task"},
-		"a list verb with its note":    {bulkChange{verb: crmcontracts.BulkVerbAddToList, items: one, listID: &list, note: &note}, ""},
-		"a well-formed tag change":     {bulkChange{verb: crmcontracts.BulkVerbAddTag, items: one, tagID: &tag}, ""},
-		"a well-formed task change":    {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one, task: task}, ""},
-		"complete with a tag":          {bulkChange{verb: crmcontracts.BulkVerbComplete, items: one, tagID: &tag}, "tag_id"},
-		"a well-formed completion":     {bulkChange{verb: crmcontracts.BulkVerbComplete, items: one}, ""},
+		"add_tag without a tag":              {bulkChange{verb: crmcontracts.BulkVerbAddTag, items: one}, "tag_id"},
+		"remove_tag with an owner":           {bulkChange{verb: crmcontracts.BulkVerbRemoveTag, items: one, tagID: &tag, ownerID: &owner}, "owner_id"},
+		"add_tag with a note":                {bulkChange{verb: crmcontracts.BulkVerbAddTag, items: one, tagID: &tag, note: &note}, "note"},
+		"create_task without a task":         {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one}, "task"},
+		"create_task with a blank one":       {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one, task: blank}, "task.subject"},
+		"create_task with an invisible one":  {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one, task: &crmcontracts.BulkTask{Subject: "\u200b"}}, "task.subject"},
+		"create_task past 500 characters":    {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one, task: &crmcontracts.BulkTask{Subject: strings.Repeat("a", 501)}}, "task.subject"},
+		"create_task at 500 wide characters": {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one, task: &crmcontracts.BulkTask{Subject: strings.Repeat("é", 500)}}, ""},
+		"archive with a Shortlist":           {bulkChange{verb: crmcontracts.BulkVerbArchive, items: one, listID: &list}, "list_id"},
+		"reassign with a task":               {bulkChange{verb: crmcontracts.BulkVerbReassignOwner, items: one, ownerID: &owner, task: task}, "task"},
+		"a list verb with its note":          {bulkChange{verb: crmcontracts.BulkVerbAddToList, items: one, listID: &list, note: &note}, ""},
+		"a well-formed tag change":           {bulkChange{verb: crmcontracts.BulkVerbAddTag, items: one, tagID: &tag}, ""},
+		"a well-formed task change":          {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one, task: task}, ""},
+		"complete with a tag":                {bulkChange{verb: crmcontracts.BulkVerbComplete, items: one, tagID: &tag}, "tag_id"},
+		"a well-formed completion":           {bulkChange{verb: crmcontracts.BulkVerbComplete, items: one}, ""},
 	} {
 		err := validateBulkChange(tc.change)
 		var refused *httperr.DetailedError

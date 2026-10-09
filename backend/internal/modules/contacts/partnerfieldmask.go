@@ -10,6 +10,7 @@ package contacts
 
 import (
 	"context"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -50,6 +51,26 @@ func maskPartners(ctx context.Context, tx pgx.Tx, page []crmcontracts.Partner) e
 		partnerWithholds,
 		func(p *crmcontracts.Partner, names []string) { p.MaskedFields = &names },
 		nil, nil)
+}
+
+// clearsTheCallerMayMake drops, from the fields a body sent as null, those this
+// reader's role withholds. A seat that cannot read the tier is handed a null
+// there and sends it back with every unrelated edit. Honouring it would let the
+// mask wipe what it hides.
+func clearsTheCallerMayMake(ctx context.Context, tx pgx.Tx, cleared []string) ([]string, error) {
+	if len(cleared) == 0 {
+		return nil, nil
+	}
+	probe := []crmcontracts.Partner{{}}
+	if err := maskPartners(ctx, tx, probe); err != nil {
+		return nil, err
+	}
+	if probe[0].MaskedFields == nil {
+		return cleared, nil
+	}
+	return slices.DeleteFunc(slices.Clone(cleared), func(field string) bool {
+		return slices.Contains(*probe[0].MaskedFields, field)
+	}), nil
 }
 
 // refuseMaskedPartnerSort refuses an order over a column this caller's role
