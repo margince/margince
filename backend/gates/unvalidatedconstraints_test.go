@@ -45,6 +45,13 @@ type unvalidatedSubject string
 // It is not a backlog. A constraint belongs here when scanning the existing
 // rows cannot be made to succeed — not when nobody got round to it.
 var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
+	"analytics_share.analytics_share_scope_team_id_fkey": polymorphicBranchKey,
+	"analytics_share.analytics_share_scope_user_id_fkey": polymorphicBranchKey,
+	"record_grant.record_grant_company_id_fkey":          polymorphicBranchKey,
+	"record_grant.record_grant_contact_id_fkey":          polymorphicBranchKey,
+	"record_grant.record_grant_deal_id_fkey":             polymorphicBranchKey,
+	"record_grant.record_grant_lead_id_fkey":             polymorphicBranchKey,
+	"record_grant.record_grant_project_id_fkey":          polymorphicBranchKey,
 	"provider_applied_field.provider_applied_field_run_subject_fkey": "" +
 		"the marker-to-run key cannot be checked against history from a migration. An installation " +
 		"that erased a subject before the two erasure paths ordered themselves correctly may hold a " +
@@ -53,6 +60,13 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"what both purge paths do — the markers are deleted before the run is scrubbed — so what it " +
 		"binds from here on is the whole guarantee asked for",
 })
+
+// polymorphicBranchKey is the one cost shared by every key generated from a
+// polymorphic pair that had none before.
+const polymorphicBranchKey = "" +
+	"a key generated from a polymorphic pair that had none: rows written before it may name a " +
+	"record already deleted, so a VALIDATE would fail the migration on the installations that " +
+	"ran longest. It binds every new row, and a delete cascades to every row whose record exists"
 
 // unvalidatedConstraint reads one catalog record that ends NOT VALID. The
 // suffix is what the dump prints for `convalidated = false`, on a CHECK and a
