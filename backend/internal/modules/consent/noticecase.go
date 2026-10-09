@@ -174,6 +174,9 @@ type OpenNoticeCase struct {
 	// deadline came from history this installation imported late.
 	OpenedAt time.Time
 	Blocked  bool
+	// Acquisition is the evidence the deadline was computed from; nil when
+	// none resolves.
+	Acquisition *NoticeAcquisition
 }
 
 // openNoticeLaneDefault mirrors the DSR lane's small page for the same reason:
@@ -258,7 +261,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 		if in.TeamOwners != nil {
 			where += storekit.SQLf(" AND ("+owner+" IS NULL OR "+owner+" = ANY($%d))", arg(in.TeamOwners))
 		}
-		query := `SELECT n.id, n.contact_id, n.rule, n.due_at, n.created_at, n.state = 'blocked', ` + owner + `
+		query := `SELECT n.id, n.contact_id, n.rule, n.due_at, n.created_at, n.state = 'blocked', ` + owner + `, n.acquisition_id
    FROM privacy_notice_case n JOIN contact c ON c.id = n.contact_id
    WHERE ` + where + storekit.SQLf(" ORDER BY n.due_at, n.id LIMIT $%d", arg(in.Limit))
 		rows, err := tx.Query(ctx, query, args...)
@@ -266,14 +269,30 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 			return err
 		}
 		defer rows.Close()
+		var acquisitions []ids.UUID
 		for rows.Next() {
 			var c OpenNoticeCase
-			if err := rows.Scan(&c.ID, &c.ContactID, &c.Rule, &c.DueAt, &c.OpenedAt, &c.Blocked, &c.OwnerID); err != nil {
+			var acquisition ids.UUID
+			if err := rows.Scan(&c.ID, &c.ContactID, &c.Rule, &c.DueAt, &c.OpenedAt, &c.Blocked, &c.OwnerID, &acquisition); err != nil {
 				return err
 			}
 			out = append(out, c)
+			acquisitions = append(acquisitions, acquisition)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		rows.Close()
+		found, err := acquisitionsFor(ctx, tx, acquisitions)
+		if err != nil {
+			return err
+		}
+		for i, acquisition := range acquisitions {
+			if evidence, ok := found[acquisition]; ok {
+				out[i].Acquisition = &evidence
+			}
+		}
+		return nil
 	})
 	return out, err
 }

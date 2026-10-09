@@ -39,6 +39,7 @@ type Handlers struct {
 	// module's table — so the store that owns it is injected rather than the
 	// row being written from here.
 	settings *settings.Store
+	names    RecordNames
 }
 
 // WithSettings hands the handlers the store that owns installation settings.

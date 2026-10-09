@@ -70,6 +70,9 @@ type NoticeCase struct {
 	CompletedAt    *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// Acquisition is read beside the row rather than in noticeCaseColumns,
+	// because it lives in the table the deadline was computed from.
+	Acquisition *NoticeAcquisition
 }
 
 // noticeCaseColumns is the one spelling of the row, so the read below and any
@@ -145,7 +148,7 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 			return err
 		}
 		if len(out) <= limit {
-			return nil
+			return attachAcquisitions(ctx, tx, out)
 		}
 		out = out[:limit]
 		last := out[limit-1]
@@ -154,7 +157,7 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 			return err
 		}
 		page = storekit.Page{HasMore: true, NextCursor: token}
-		return nil
+		return attachAcquisitions(ctx, tx, out)
 	})
 	return out, page, err
 }
@@ -230,7 +233,10 @@ func (s *Store) GetNoticeCase(ctx context.Context, id ids.UUID) (NoticeCase, err
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		return attachOneAcquisition(ctx, tx, &out)
 	})
 	return out, err
 }
@@ -289,9 +295,12 @@ func (s *Store) AssignNoticeCase(ctx context.Context, id ids.UUID, owner ids.UUI
 		if err != nil {
 			return fmt.Errorf("give this notice case an owner: %w", err)
 		}
-		return auditNoticeCase(ctx, tx, current, out, map[string]any{
+		if err := auditNoticeCase(ctx, tx, current, out, map[string]any{
 			fieldOwner: owner.String(),
-		})
+		}); err != nil {
+			return err
+		}
+		return attachOneAcquisition(ctx, tx, &out)
 	})
 	return out, err
 }
@@ -397,7 +406,7 @@ func (s *Store) ExcuseNoticeCase(ctx context.Context, id ids.UUID, in ExcuseInpu
 		if err != nil {
 			return fmt.Errorf("record why this duty ends without a disclosure: %w", err)
 		}
-		return auditNoticeCase(ctx, tx, current, out, map[string]any{
+		err = auditNoticeCase(ctx, tx, current, out, map[string]any{
 			// The note itself is NOT audited. It is free prose an officer
 			// wrote about a named contact, and copying it into audit_log would
 			// put the same personal data in a second place with its own
@@ -405,6 +414,10 @@ func (s *Store) ExcuseNoticeCase(ctx context.Context, id ids.UUID, in ExcuseInpu
 			// was given, and privacy's erasure reaches the row.
 			fieldResolutionNote: true,
 		})
+		if err != nil {
+			return err
+		}
+		return attachOneAcquisition(ctx, tx, &out)
 	})
 	return out, err
 }

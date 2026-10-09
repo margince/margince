@@ -34625,6 +34625,16 @@ export interface components {
              */
             entity_id: string;
             /**
+             * @description The record's current display name, read on the read path from the
+             *     record's own live row under the reader's grants: a contact, lead or
+             *     user's name, a company, deal, project, team, role, tag, list,
+             *     pipeline, stage or product's name, an activity's subject. Null when
+             *     the reader may not see the record, when it is archived, erased or
+             *     gone, when it has no name, and for every other entity type. It is
+             *     never taken from the row's `before` or `after` image.
+             */
+            entity_label?: string | null;
+            /**
              * @description The record image before the change. For an `activity` row this read
              *     REDACTS content the caller's audience does not admit. What survives
              *     is what the activity READ surface answers on a withheld row — the
@@ -37243,6 +37253,12 @@ export interface components {
             kind: "access" | "rectify" | "erasure";
             /** @description The data subject: a contact id or external identifier. */
             subject_ref: string;
+            /**
+             * @description The display name of the contact or lead `subject_ref` names. Absent or null when the
+             *     reference names no record, or names one the caller may not read: a hidden subject and an
+             *     external identifier read the same, so the queue discloses no more than the record would.
+             */
+            subject_label?: string | null;
             /** @enum {string} */
             status: "open" | "in_progress" | "fulfilled" | "rejected";
             /**
@@ -37312,6 +37328,13 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             /**
+             * @description The contact's display name. Absent or null when the caller may not read that contact, or
+             *     it no longer resolves: the privacy queue reaches duties outside the caller's CRM view, and
+             *     the name stays as visible as the record.
+             */
+            contact_name?: string | null;
+            acquisition?: components["schemas"]["NoticeAcquisition"];
+            /**
              * @description Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
              * @enum {string}
              */
@@ -37337,6 +37360,31 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
+         *     `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
+         *     happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+         *     such rather than presenting a bare deadline. On an attention or worklist item only the
+         *     `notice_case` source sends it.
+         */
+        NoticeAcquisition: {
+            /** @description How the contact was obtained, in the closed vocabulary `contact_acquisition_evidence.kind` uses. */
+            kind: string;
+            /**
+             * Format: date-time
+             * @description When the acquisition happened. Null when the door that recorded it did not know.
+             */
+            occurred_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the evidence was recorded.
+             */
+            captured_at: string;
+            /** @description The principal that recorded it: `human:<uuid>`, `agent:<id>`, `connector:<name>` or `system`. */
+            captured_by: string;
+            /** @description The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves. */
+            captured_by_name?: string | null;
+        } | null;
         AssignNoticeCase: {
             /** Format: uuid */
             owner_user_id: string;
@@ -37382,16 +37430,24 @@ export interface components {
             /** @enum {string} */
             kind: "access" | "rectify" | "erasure";
             subject_ref: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description The statutory deadline the caller computed. A request without one is refused with 422 naming `due_at`.
+             */
             due_at: string;
             /** Format: uuid */
             assignee_id?: string | null;
         };
+        /** @description A sparse patch: an absent field is left as it is, and an explicit null clears a nullable one. */
         UpdateDataSubjectRequest: {
             /** @enum {string} */
             status?: "open" | "in_progress" | "fulfilled" | "rejected";
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description null hands the request back to the unassigned pool.
+             */
             assignee_id?: string | null;
+            /** @description null clears the answer, which a fulfilled or rejected request refuses with 422: a closed request keeps its answer. */
             resolution?: string | null;
         };
         /**
@@ -40528,6 +40584,7 @@ export interface components {
             /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
             confidence?: number;
             subject?: components["schemas"]["AttentionSubject"];
+            acquisition?: components["schemas"]["NoticeAcquisition"];
             pair?: components["schemas"]["AttentionPair"];
             deal?: components["schemas"]["AttentionDealFacts"];
             /**
@@ -41921,6 +41978,7 @@ export interface components {
              */
             consequence: "buyer_waits" | "promise_breaks" | "deal_drifts" | "deal_slips_past_close" | "meeting_unprepared" | "task_slips" | "work_blocked" | "customer_never_received" | "you_believe_it_happened" | "legal_deadline_missed" | "mailbox_blind" | "data_drifts" | "none";
             subject?: components["schemas"]["AttentionSubject"];
+            acquisition?: components["schemas"]["NoticeAcquisition"];
             lead?: components["schemas"]["WorklistLeadFacts"];
             /** @description The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
@@ -61198,6 +61256,7 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     getControllerParticulars: {
@@ -61504,6 +61563,7 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     listConfirmSubmissions: {

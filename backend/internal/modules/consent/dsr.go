@@ -38,6 +38,8 @@ const (
 	fieldStatus     = "status"
 	fieldSubjectRef = "subject_ref"
 	fieldResolution = "resolution"
+	fieldDueAt      = "due_at"
+	fieldAssigneeID = "assignee_id"
 
 	// The request kinds the handlers branch on. Constants for the same reason
 	// as the field names above, and dsrKindErasure carries the higher stake:
@@ -226,6 +228,11 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 	if strings.TrimSpace(in.SubjectRef) == "" {
 		return dsrRow{}, &ValidationError{Field: fieldSubjectRef, Reason: "required"}
 	}
+	// An absent or null due_at decodes to the zero time, which the queue would
+	// sort as overdue since the year 1.
+	if in.DueAt.IsZero() {
+		return dsrRow{}, &ValidationError{Field: fieldDueAt, Reason: "required"}
+	}
 	var out dsrRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
@@ -238,7 +245,7 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "data_subject_request", out.ID, nil, map[string]any{
-			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, "due_at": in.DueAt,
+			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, fieldDueAt: in.DueAt,
 		})
 		return err
 	})
@@ -268,6 +275,10 @@ type UpdateDSRInput struct {
 	Status     *string
 	AssigneeID *ids.UserID
 	Resolution *string
+	// ClearAssignee and ClearResolution carry an explicit null, which a nil
+	// pointer cannot tell apart from a field the caller left out.
+	ClearAssignee   bool
+	ClearResolution bool
 }
 
 // hasResolution reports whether an update carries (or the row already
@@ -285,17 +296,35 @@ func hasResolution(value *string) bool {
 // an erasure (an early refusal, so a request that could never legally
 // close never triggers the irreversible erase).
 func validateDSRUpdate(current dsrRow, in UpdateDSRInput) *ValidationError {
-	if in.Status == nil || *in.Status == current.Status {
+	next := current.Status
+	if in.Status != nil && *in.Status != current.Status {
+		if !dsrTransitions[current.Status][*in.Status] {
+			return illegalTransition(current.Status, *in.Status)
+		}
+		next = *in.Status
+	}
+	if !closedDSRStatus(next) {
 		return nil
 	}
-	if !dsrTransitions[current.Status][*in.Status] {
-		return illegalTransition(current.Status, *in.Status)
+	if in.ClearResolution {
+		return &ValidationError{Field: fieldResolution, Reason: "a closed request keeps its answer"}
 	}
-	if (*in.Status == "fulfilled" || *in.Status == "rejected") &&
-		!hasResolution(in.Resolution) && !hasResolution(current.Resolution) {
+	if next != current.Status && !hasResolution(in.Resolution) && !hasResolution(current.Resolution) {
 		return &ValidationError{Field: fieldResolution, Reason: "closing a request needs its answer"}
 	}
 	return nil
+}
+
+// closedDSRStatus reports the two statuses a request ends in.
+func closedDSRStatus(status string) bool {
+	return status == "fulfilled" || status == "rejected"
+}
+
+// dsrAssigneeSet is the assignee assignment both update writers share: an
+// explicit clear empties it, an absent value keeps what is stored.
+func dsrAssigneeSet(in UpdateDSRInput, arg func(any) int) string {
+	return storekit.SQLf("assignee_id = CASE WHEN $%d THEN NULL ELSE coalesce($%d, assignee_id) END",
+		arg(in.ClearAssignee), arg(in.AssigneeID))
 }
 
 func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (dsrRow, error) {
@@ -315,21 +344,22 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 		if verr := validateDSRUpdate(current, in); verr != nil {
 			return verr
 		}
-		sql := `
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		assignee := dsrAssigneeSet(in, arg)
+		sql := storekit.SQLf(`
 			UPDATE data_subject_request SET
-			  status = coalesce($2, status),
-			  assignee_id = coalesce($3, assignee_id),
-			  resolution = coalesce($4, resolution)
-			WHERE id = $1`
-		args := []any{id, in.Status, in.AssigneeID, in.Resolution}
+			  status = coalesce($%d, status),
+			  %s,
+			  resolution = CASE WHEN $%d THEN NULL ELSE coalesce($%d, resolution) END
+			WHERE id = $%d`, arg(in.Status), assignee, arg(in.ClearResolution), arg(in.Resolution), arg(id))
 		if in.Status != nil {
 			// Nothing holds this row locked between the read above and the
 			// write below, so require it to still be in the state we just
 			// validated the transition against — a status change that lands
 			// in that window (another officer closing or rejecting the same
 			// request) is refused as illegal rather than silently overwritten.
-			args = append(args, current.Status)
-			sql += storekit.SQLf(" AND status = $%d", len(args))
+			sql += storekit.SQLf(" AND status = $%d", arg(current.Status))
 		}
 		sql += " RETURNING " + dsrColumns
 		row := tx.QueryRow(ctx, sql, args...)
@@ -342,14 +372,14 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 		_, err = storekit.Audit(ctx, tx, "update", "data_subject_request", id, map[string]any{
 			fieldStatus: current.Status,
 		}, map[string]any{
-			fieldStatus: out.Status, fieldResolution: in.Resolution != nil,
+			fieldStatus: out.Status, fieldResolution: in.Resolution != nil || in.ClearResolution,
 		})
 		return err
 	})
 	return out, err
 }
 
-func wireDSR(d dsrRow) crmcontracts.DataSubjectRequest {
+func wireDSR(d dsrRow, labels map[ids.UUID]string) crmcontracts.DataSubjectRequest {
 	out := crmcontracts.DataSubjectRequest{
 		Id:         openapi_types.UUID(d.ID),
 		Kind:       crmcontracts.DataSubjectRequestKind(d.Kind),
@@ -362,6 +392,9 @@ func wireDSR(d dsrRow) crmcontracts.DataSubjectRequest {
 	if d.AssigneeID != nil {
 		assignee := openapi_types.UUID(d.AssigneeID.UUID)
 		out.AssigneeId = &assignee
+	}
+	if subject, ok := resolveDSRSubject(d); ok {
+		out.SubjectLabel = labelOf(labels, subject)
 	}
 	return out
 }

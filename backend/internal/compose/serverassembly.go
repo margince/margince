@@ -465,5 +465,8 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// The edge that writes an accepted correction, through contacts' own
 		// update path — so the subject's correction is governed by the same
 		// gates as any other edit to that field.
-		WithCorrectionApplier(correctionApplier{store: contacts.NewStore(InstallationDB(pool))})
+		WithCorrectionApplier(correctionApplier{store: contacts.NewStore(InstallationDB(pool))}).
+		// The privacy queues name the contacts and leads they point at through
+		// the resolver every other surface names records with.
+		WithRecordNames(newAttentionNames(InstallationDB(pool)))
 }

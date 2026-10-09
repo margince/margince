@@ -51,9 +51,14 @@ func (h Handlers) ListNoticeCases(w http.ResponseWriter, r *http.Request, params
 		writeConsentErr(w, r, err)
 		return
 	}
+	names, err := h.noticeContactNames(r.Context(), cases...)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
 	data := make([]crmcontracts.NoticeCase, 0, len(cases))
 	for _, c := range cases {
-		data = append(data, wireNoticeCase(c))
+		data = append(data, wireNoticeCase(c, names))
 	}
 	info := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
@@ -73,7 +78,7 @@ func (h Handlers) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id cr
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(updated))
+	h.writeNoticeCase(w, r, updated)
 }
 
 // ExcuseNoticeCase ends a disclosure duty on a stated ground, or records that
@@ -103,20 +108,32 @@ func (h Handlers) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id cr
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(updated))
+	h.writeNoticeCase(w, r, updated)
+}
+
+// writeNoticeCase answers one case, named under the same rule as the queue.
+func (h Handlers) writeNoticeCase(w http.ResponseWriter, r *http.Request, c NoticeCase) {
+	names, err := h.noticeContactNames(r.Context(), c)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(c, names))
 }
 
 // wireNoticeCase is the one place a case crosses into the contract shape, so a
 // column added to the row cannot reach two readers in two different spellings.
-func wireNoticeCase(c NoticeCase) crmcontracts.NoticeCase {
+func wireNoticeCase(c NoticeCase, names map[ids.UUID]string) crmcontracts.NoticeCase {
 	out := crmcontracts.NoticeCase{
-		Id:        openapi_types.UUID(c.ID),
-		ContactId: openapi_types.UUID(c.ContactID.UUID),
-		Rule:      crmcontracts.NoticeCaseRule(c.Rule),
-		DueAt:     c.DueAt,
-		State:     crmcontracts.NoticeCaseState(c.State),
-		Attempts:  c.Attempts,
-		CreatedAt: c.CreatedAt,
+		Id:          openapi_types.UUID(c.ID),
+		ContactId:   openapi_types.UUID(c.ContactID.UUID),
+		ContactName: labelOf(names, c.ContactID.UUID),
+		Acquisition: c.Acquisition.Wire(),
+		Rule:        crmcontracts.NoticeCaseRule(c.Rule),
+		DueAt:       c.DueAt,
+		State:       crmcontracts.NoticeCaseState(c.State),
+		Attempts:    c.Attempts,
+		CreatedAt:   c.CreatedAt,
 
 		AssignedAt:     c.AssignedAt,
 		ResolutionNote: c.ResolutionNote,
@@ -147,7 +164,7 @@ func (h Handlers) GetNoticeCase(w http.ResponseWriter, r *http.Request, id crmco
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(found))
+	h.writeNoticeCase(w, r, found)
 }
 
 // GetControllerParticulars answers what this installation says about itself.

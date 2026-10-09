@@ -17,8 +17,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -28,27 +31,34 @@ import (
 
 // attentionNames resolves each subject type through the store that owns it.
 type attentionNames struct {
-	contacts   *contacts.Store
-	deals      *deals.Store
-	activities *activities.Store
-	projects   *projects.Store
+	contacts    *contacts.Store
+	deals       *deals.Store
+	activities  *activities.Store
+	projects    *projects.Store
+	identity    *identity.Service
+	collections *collections.Store
 }
 
-var _ attention.Names = attentionNames{}
+var (
+	_ attention.Names       = attentionNames{}
+	_ privacy.RecordLabeler = attentionNames{}
+)
 
 // newAttentionNames assembles the resolver over one installation's stores.
 //
-// Two surfaces read display names through it: the attention feed's cards and
-// the analytics drill-through's source rows. They share this constructor
-// because a name must resolve identically on both — a second assembly could
-// bind a different store set, and then the same record would be named on one
-// surface and withheld on the other for no reason a reader could see.
+// Every surface that names records reads through it: the attention feed, the
+// analytics drill-through, the audit log and the privacy queues. They share this
+// constructor because a name must resolve identically on each. A second assembly
+// could bind a different store set, and then the same record would be named on
+// one surface and withheld on the other for no reason a reader could see.
 func newAttentionNames(db *database.DB) attentionNames {
 	return attentionNames{
-		contacts:   contacts.NewStore(db),
-		deals:      deals.NewStore(db, DealsInstallation()),
-		activities: activities.NewStore(db),
-		projects:   projects.NewStore(db),
+		contacts:    contacts.NewStore(db),
+		deals:       deals.NewStore(db, DealsInstallation()),
+		activities:  activities.NewStore(db),
+		projects:    projects.NewStore(db),
+		identity:    identity.NewServiceFor(db),
+		collections: collections.NewStore(db),
 	}
 }
 
@@ -99,6 +109,39 @@ func (n attentionNames) read(ctx context.Context, entityType string, want []ids.
 		return n.activities.ActivityLabels(ctx, want)
 	case string(datasource.RecordProject):
 		return n.projects.ProjectLabels(ctx, want)
+	default:
+		return n.catalogRead(ctx, entityType, want)
+	}
+}
+
+const (
+	entityUser    = "user"
+	entityTeam    = "team"
+	entityTag     = "tag"
+	entityList    = "list"
+	entityProduct = "product"
+)
+
+// catalogRead names the seats and the administered vocabulary a page can be
+// about, each through its owning module's batched read.
+func (n attentionNames) catalogRead(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error) {
+	switch entityType {
+	case entityUser:
+		return seatNamer(n.identity)(ctx, want)
+	case entityTeam:
+		return n.identity.TeamLabels(ctx, want)
+	case "role":
+		return n.identity.RoleLabels(ctx, want)
+	case entityTag:
+		return n.collections.TagLabels(ctx, want)
+	case entityList:
+		return n.collections.ListLabels(ctx, want)
+	case "pipeline":
+		return n.deals.PipelineLabels(ctx, want)
+	case "stage":
+		return n.deals.StageLabels(ctx, want)
+	case entityProduct:
+		return n.deals.ProductLabels(ctx, want)
 	default:
 		// A type outside the vocabulary names nothing rather than guessing.
 		return map[ids.UUID]string{}, nil

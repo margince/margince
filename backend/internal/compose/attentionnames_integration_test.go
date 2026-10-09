@@ -16,23 +16,14 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func namesOver(e *integration.Env) attentionNames {
-	db := InstallationDB(e.Pool)
-	return attentionNames{
-		contacts:   contacts.NewStore(db),
-		deals:      deals.NewStore(db, DealsInstallation()),
-		activities: activities.NewStore(db),
-		projects:   projects.NewStore(db),
-	}
+	return newAttentionNames(InstallationDB(e.Pool))
 }
 
 func TestALabelIsExactlyAsVisibleAsItsRecord(t *testing.T) {

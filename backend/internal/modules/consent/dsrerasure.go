@@ -122,16 +122,19 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 	// way — the audit trail, or a column the tombstone does not touch — which
 	// is a change to how a fulfilment re-finds its subject rather than to what
 	// this statement writes.
-	row := tx.QueryRow(ctx, `
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	assignee := dsrAssigneeSet(in, arg)
+	row := tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE data_subject_request SET
 			  status = 'fulfilled',
-			  assignee_id = coalesce($2, assignee_id),
+			  %s,
 			  resolution = CASE
-			    WHEN coalesce($3, resolution) IS NULL THEN NULL ELSE 'erased' END,
+			    WHEN coalesce($%d, resolution) IS NULL THEN NULL ELSE 'erased' END,
 			  contact_id = NULL
-			WHERE id = $1 AND status = $4
-			RETURNING `+dsrColumns,
-		id, in.AssigneeID, in.Resolution, current.Status)
+			WHERE id = $%d AND status = $%d
+			RETURNING `+dsrColumns, assignee, arg(in.Resolution), arg(id), arg(current.Status)),
+		args...)
 	out, err := scanDSR(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

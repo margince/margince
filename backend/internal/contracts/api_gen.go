@@ -24358,6 +24358,13 @@ type AttentionDealFacts struct {
 // feed adds no decision authority of its own, exactly as the second approvals door
 // adds none.
 type AttentionItem struct {
+	// Acquisition The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
+	// `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
+	// happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+	// such rather than presenting a bare deadline. On an attention or worklist item only the
+	// `notice_case` source sends it.
+	Acquisition *NoticeAcquisition `json:"acquisition,omitempty"`
+
 	// Actions What this item offers. `decide` and `merge` mean the verb is irreversible and a
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
@@ -24830,8 +24837,17 @@ type AuditLogEntry struct {
 	Before *map[string]interface{} `json:"before,omitempty"`
 
 	// EntityId Every audit_log row names the record it mutated (NOT NULL since 0075).
-	EntityId   openapi_types.UUID `json:"entity_id"`
-	EntityType string             `json:"entity_type"`
+	EntityId openapi_types.UUID `json:"entity_id"`
+
+	// EntityLabel The record's current display name, read on the read path from the
+	// record's own live row under the reader's grants: a contact, lead or
+	// user's name, a company, deal, project, team, role, tag, list,
+	// pipeline, stage or product's name, an activity's subject. Null when
+	// the reader may not see the record, when it is archived, erased or
+	// gone, when it has no name, and for every other entity type. It is
+	// never taken from the row's `before` or `after` image.
+	EntityLabel *string `json:"entity_label,omitempty"`
+	EntityType  string  `json:"entity_type"`
 
 	// Evidence e.g. which inbound email/meeting triggered a promotion.
 	Evidence   *map[string]interface{} `json:"evidence,omitempty"`
@@ -31481,7 +31497,9 @@ type CreateCustomFieldRequestType string
 
 // CreateDataSubjectRequest defines model for CreateDataSubjectRequest.
 type CreateDataSubjectRequest struct {
-	AssigneeId *openapi_types.UUID          `json:"assignee_id,omitempty"`
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
+	// DueAt The statutory deadline the caller computed. A request without one is refused with 422 naming `due_at`.
 	DueAt      time.Time                    `json:"due_at"`
 	Kind       CreateDataSubjectRequestKind `json:"kind"`
 	SubjectRef string                       `json:"subject_ref"`
@@ -32264,6 +32282,11 @@ type DataSubjectRequest struct {
 	Kind       DataSubjectRequestKind   `json:"kind"`
 	Resolution *string                  `json:"resolution,omitempty"`
 	Status     DataSubjectRequestStatus `json:"status"`
+
+	// SubjectLabel The display name of the contact or lead `subject_ref` names. Absent or null when the
+	// reference names no record, or names one the caller may not read: a hidden subject and an
+	// external identifier read the same, so the queue discloses no more than the record would.
+	SubjectLabel *string `json:"subject_label,omitempty"`
 
 	// SubjectRef The data subject: a contact id or external identifier.
 	SubjectRef string `json:"subject_ref"`
@@ -38021,25 +38044,59 @@ type Notice struct {
 	Subject string `json:"subject"`
 }
 
+// NoticeAcquisition The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
+// `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
+// happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+// such rather than presenting a bare deadline. On an attention or worklist item only the
+// `notice_case` source sends it.
+type NoticeAcquisition struct {
+	// CapturedAt When the evidence was recorded.
+	CapturedAt time.Time `json:"captured_at"`
+
+	// CapturedBy The principal that recorded it: `human:<uuid>`, `agent:<id>`, `connector:<name>` or `system`.
+	CapturedBy string `json:"captured_by"`
+
+	// CapturedByName The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves.
+	CapturedByName *string `json:"captured_by_name,omitempty"`
+
+	// Kind How the contact was obtained, in the closed vocabulary `contact_acquisition_evidence.kind` uses.
+	Kind string `json:"kind"`
+
+	// OccurredAt When the acquisition happened. Null when the door that recorded it did not know.
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+}
+
 // NoticeCase One Art. 13 or Art. 14 disclosure duty: whose it is, what put it there, and by when.
 //
 // `contact_id` is carried because the duty is discharged on that contact's own screen. There
 // is no notice-case screen to route to, so a row naming only the case would prompt a reader
 // with nowhere to go.
 type NoticeCase struct {
+	// Acquisition The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
+	// `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
+	// happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+	// such rather than presenting a bare deadline. On an attention or worklist item only the
+	// `notice_case` source sends it.
+	Acquisition *NoticeAcquisition `json:"acquisition,omitempty"`
+
 	// AllowedRoutes How this duty may be discharged. A case with no route is one the product cannot close by sending anything, and it says so rather than offering a button that fails.
 	AllowedRoutes *[]string  `json:"allowed_routes,omitempty"`
 	AssignedAt    *time.Time `json:"assigned_at,omitempty"`
 
 	// Attempts How many disclosures have been sent for this duty.
-	Attempts      int                 `json:"attempts"`
-	BlockedReason *string             `json:"blocked_reason,omitempty"`
-	CompletedAt   *time.Time          `json:"completed_at,omitempty"`
-	ContactId     openapi_types.UUID  `json:"contact_id"`
-	CreatedAt     time.Time           `json:"created_at"`
-	DueAt         time.Time           `json:"due_at"`
-	Id            openapi_types.UUID  `json:"id"`
-	OwnerUserId   *openapi_types.UUID `json:"owner_user_id,omitempty"`
+	Attempts      int                `json:"attempts"`
+	BlockedReason *string            `json:"blocked_reason,omitempty"`
+	CompletedAt   *time.Time         `json:"completed_at,omitempty"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+
+	// ContactName The contact's display name. Absent or null when the caller may not read that contact, or
+	// it no longer resolves: the privacy queue reaches duties outside the caller's CRM view, and
+	// the name stays as visible as the record.
+	ContactName *string             `json:"contact_name,omitempty"`
+	CreatedAt   time.Time           `json:"created_at"`
+	DueAt       time.Time           `json:"due_at"`
+	Id          openapi_types.UUID  `json:"id"`
+	OwnerUserId *openapi_types.UUID `json:"owner_user_id,omitempty"`
 
 	// ResolutionNote Why the duty was excused, or where it was provided. Present exactly when the state is provided_elsewhere or exempt_with_reason.
 	ResolutionNote *string             `json:"resolution_note,omitempty"`
@@ -44573,9 +44630,12 @@ type UpdateCustomFieldOptionsRequest struct {
 	Options []string `json:"options"`
 }
 
-// UpdateDataSubjectRequest defines model for UpdateDataSubjectRequest.
+// UpdateDataSubjectRequest A sparse patch: an absent field is left as it is, and an explicit null clears a nullable one.
 type UpdateDataSubjectRequest struct {
-	AssigneeId *openapi_types.UUID             `json:"assignee_id,omitempty"`
+	// AssigneeId null hands the request back to the unassigned pool.
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
+	// Resolution null clears the answer, which a fulfilled or rejected request refuses with 422: a closed request keeps its answer.
 	Resolution *string                         `json:"resolution,omitempty"`
 	Status     *UpdateDataSubjectRequestStatus `json:"status,omitempty"`
 }
@@ -46971,6 +47031,13 @@ type WorklistItem struct {
 	//
 	// Absent on the last row of the page, which has nothing below it to beat.
 	AboveNext *WorklistComparison `json:"above_next,omitempty"`
+
+	// Acquisition The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
+	// `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
+	// happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+	// such rather than presenting a bare deadline. On an attention or worklist item only the
+	// `notice_case` source sends it.
+	Acquisition *NoticeAcquisition `json:"acquisition,omitempty"`
 
 	// Actions What this item offers, routed to the endpoint that owns the verb.
 	Actions []WorklistItemActions `json:"actions"`

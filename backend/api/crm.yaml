@@ -17517,6 +17517,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /privacy/controller-particulars:
     get:
       tags: [Compliance]
@@ -17961,6 +17962,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /confirm-submissions:
     get:
       tags: [Compliance]
@@ -47613,6 +47615,16 @@ components:
           enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold]
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
+        entity_label:
+          type: [string, 'null']
+          description: |
+            The record's current display name, read on the read path from the
+            record's own live row under the reader's grants: a contact, lead or
+            user's name, a company, deal, project, team, role, tag, list,
+            pipeline, stage or product's name, an activity's subject. Null when
+            the reader may not see the record, when it is archived, erased or
+            gone, when it has no name, and for every other entity type. It is
+            never taken from the row's `before` or `after` image.
         before:
           type: [object, 'null']
           additionalProperties: true
@@ -50760,6 +50772,12 @@ components:
         id: { type: string, format: uuid }
         kind: { type: string, enum: [access, rectify, erasure] }
         subject_ref: { type: string, description: 'The data subject: a contact id or external identifier.' }
+        subject_label:
+          type: [string, 'null']
+          description: |
+            The display name of the contact or lead `subject_ref` names. Absent or null when the
+            reference names no record, or names one the caller may not read: a hidden subject and an
+            external identifier read the same, so the queue discloses no more than the record would.
         status: { type: string, enum: [open, in_progress, fulfilled, rejected] }
         due_at: { type: string, format: date-time, description: 'Statutory deadline (e.g. 30 days).' }
         assignee_id: { type: [string, 'null'], format: uuid }
@@ -50833,6 +50851,13 @@ components:
       properties:
         id: { type: string, format: uuid }
         contact_id: { type: string, format: uuid }
+        contact_name:
+          type: [string, 'null']
+          description: |
+            The contact's display name. Absent or null when the caller may not read that contact, or
+            it no longer resolves: the privacy queue reaches duties outside the caller's CRM view, and
+            the name stays as visible as the record.
+        acquisition: { $ref: '#/components/schemas/NoticeAcquisition' }
         rule:
           type: string
           description: 'Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.'
@@ -50855,6 +50880,31 @@ components:
         blocked_reason: { type: [string, 'null'] }
         completed_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+
+    NoticeAcquisition:
+      type: [object, 'null']
+      description: |
+        The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
+        `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
+        happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+        such rather than presenting a bare deadline. On an attention or worklist item only the
+        `notice_case` source sends it.
+      required: [kind, captured_at, captured_by]
+      properties:
+        kind:
+          type: string
+          description: 'How the contact was obtained, in the closed vocabulary `contact_acquisition_evidence.kind` uses.'
+        occurred_at:
+          type: [string, 'null']
+          format: date-time
+          description: 'When the acquisition happened. Null when the door that recorded it did not know.'
+        captured_at: { type: string, format: date-time, description: 'When the evidence was recorded.' }
+        captured_by:
+          type: string
+          description: 'The principal that recorded it: `human:<uuid>`, `agent:<id>`, `connector:<name>` or `system`.'
+        captured_by_name:
+          type: [string, 'null']
+          description: 'The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves.'
 
     AssignNoticeCase:
       type: object
@@ -50911,15 +50961,21 @@ components:
       properties:
         kind: { type: string, enum: [access, rectify, erasure] }
         subject_ref: { type: string }
-        due_at: { type: string, format: date-time }
+        due_at:
+          type: string
+          format: date-time
+          description: 'The statutory deadline the caller computed. A request without one is refused with 422 naming `due_at`.'
         assignee_id: { type: [string, 'null'], format: uuid }
 
     UpdateDataSubjectRequest:
       type: object
+      description: 'A sparse patch: an absent field is left as it is, and an explicit null clears a nullable one.'
       properties:
         status: { type: string, enum: [open, in_progress, fulfilled, rejected] }
-        assignee_id: { type: [string, 'null'], format: uuid }
-        resolution: { type: [string, 'null'] }
+        assignee_id: { type: [string, 'null'], format: uuid, description: 'null hands the request back to the unassigned pool.' }
+        resolution:
+          type: [string, 'null']
+          description: 'null clears the answer, which a fulfilled or rejected request refuses with 422: a closed request keeps its answer.'
 
     CaptureConsent:
       type: object
@@ -54247,6 +54303,8 @@ components:
           description: How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
         subject:
           $ref: '#/components/schemas/AttentionSubject'
+        acquisition:
+          $ref: '#/components/schemas/NoticeAcquisition'
         pair:
           $ref: '#/components/schemas/AttentionPair'
         deal:
@@ -55703,6 +55761,7 @@ components:
             source, because one source has several honest answers: a deal past its close
             date slips, one merely idle drifts.
         subject: { $ref: '#/components/schemas/AttentionSubject' }
+        acquisition: { $ref: '#/components/schemas/NoticeAcquisition' }
         lead: { $ref: '#/components/schemas/WorklistLeadFacts' }
         email_summary:
           allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
