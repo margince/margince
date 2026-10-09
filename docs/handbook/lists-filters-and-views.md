@@ -105,7 +105,7 @@ Also called: closing this quarter, filter by close date, deals due to close, exp
 ## Sorting a list and choosing columns
 
 ### How do I sort a list, such as deals by value?
-To sort deals by value in Margince, open **Deals**, switch to **Table**, and click the **Value** heading. Or press **Sort** and pick **Value**. The biggest deal comes first. Every list sorts the same way.
+To sort deals by value in Margince, open **Deals**, switch to **Table**, and click the **Value** heading. Or press **Sort** and pick **Value**. The biggest deal comes first. Deals in other currencies are compared in your base currency: a closed deal at the rate it closed at, an open one at today's rate. A deal whose currency has no rate yet comes last. Every list sorts the same way.
 1. Click a column heading, or press **Sort** and pick it under **Sort by**.
 2. Click it again to switch between ascending and descending order.
 3. The button then names it, for example **Sort: Value**, and the count line adds "sorted by Value".

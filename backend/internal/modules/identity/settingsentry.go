@@ -152,7 +152,11 @@ var BaseCurrency = settings.Define[string](
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+).AsInstallationIdentity().
+	// Read ungated when a list orders deals by value. Every converted figure
+	// already shows the base currency. The gate would protect nothing and
+	// refuse a seat that may read the deals.
+	MachineryApplied()
 
 // Country is where this installation is established, as a lower-case ISO
 // 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer
@@ -254,6 +258,13 @@ func BaseCurrencyOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // the hardest kind of wrong to notice.
 func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.RequireTx(ctx, tx, Timezone)
+}
+
+// BaseCurrencyAppliedTx resolves the base currency for a read that only
+// orders by it. It skips the installation_settings.read gate and the lock
+// BaseCurrencyOf takes, because nothing is frozen or written against it.
+func BaseCurrencyAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.ApplyTx(ctx, tx, BaseCurrency)
 }
 
 // TimezoneAppliedTx resolves the installation's zone for an INTERNAL date

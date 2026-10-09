@@ -62,6 +62,14 @@ var withheldWith = map[string]map[string][]string{
 	},
 }
 
+// DealBaseValueInputs are the masks a deal's base-currency value answers to.
+// The value is converted from the amount and the currency, so a mask on
+// either withholds it. Beside the visible amount, the base value gives the
+// rate away, and the rate gives the masked currency away.
+func DealBaseValueInputs() []string {
+	return []string{DealAmountMinor, DealCurrency}
+}
+
 // Maskable is the sorted set of fields an administrator may name on the
 // object, and the catalog the database's maskable_field table offers.
 func Maskable(object string) []string {

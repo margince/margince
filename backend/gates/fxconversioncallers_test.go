@@ -24,7 +24,7 @@ package gates
 //
 // WHAT THIS CANNOT SEE, stated so the next reader does not trust it further
 // than it goes: the SQL spellings of the same rule. There are two,
-// company_open_pipeline_rollup and dealvalue.BaseValueSQL. Both read
+// company_open_pipeline_rollup and deals.BaseValueSQL. Both read
 // currency_minor_digits, the database mirror of the Go digit table.
 //
 // Their agreement is held in the integration lane against a live database. The

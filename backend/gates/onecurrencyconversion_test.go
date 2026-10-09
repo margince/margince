@@ -77,8 +77,9 @@ var fxConversionExempt = gatekit.Waive(map[string]string{
 		"judging them would report its own evidence as a finding. The file holds nothing but the gate, so " +
 		"skipping it whole costs no coverage — unlike a census whose probes sit beside real code, where the " +
 		"exemption belongs on the declaration",
-	"internal/compose/dealvalue/basevalue.go": "a second conversion, spelled in SQL so it can run inside the " +
-		"forecast, report and brief statements that compose it. It answers a wider question than the engine: " +
+	"internal/modules/deals/basevalue.go": "a second conversion, spelled in SQL so it can run inside the " +
+		"deal list's Value sort and the forecast, report and brief statements that compose it. It answers a " +
+		"wider question than the engine: " +
 		"a closed deal reads its frozen amount_minor_base, which is a stored figure rather than a conversion. " +
 		"Moving it into the engine means teaching the engine that frozen case, which is its own change. " +
 		"Recorded so it is a known copy rather than an unnoticed one",

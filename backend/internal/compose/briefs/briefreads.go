@@ -22,7 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/dealvalue"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -73,7 +73,7 @@ func briefRevenueNorm(ctx context.Context, tx pgx.Tx, now time.Time, base string
 		)
 		SELECT count(*), percentile_cont(%v) WITHIN GROUP (ORDER BY base_value::double precision)
 		FROM sized WHERE base_value IS NOT NULL`,
-		dealvalue.BaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"),
+		deals.BaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"),
 		summable, briefRevenueNormPercentile), args...).Scan(&valued, &p90)
 	if err != nil {
 		return 0, err
@@ -122,7 +122,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	// this fold already has, and scores its floor for the same reason a missing
 	// FX rate does: the factor floors rather than guessing.
 	baseValue, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
-		dealvalue.BaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), arg)
+		deals.BaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), arg)
 	if err != nil {
 		return err
 	}

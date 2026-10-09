@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
-	"github.com/margince/margince/backend/internal/compose/dealvalue"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -173,7 +172,7 @@ func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 
 // dealWorthTodaySQL is what the filter builder's deal amount compares: the
 // forecast's base value, priced at today's rate for an open deal.
-var dealWorthTodaySQL = dealvalue.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
+var dealWorthTodaySQL = deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
 
 // installationBaseCurrencySQL reads the reporting currency inside the filter's
 // own statement, which the segment engine compiles without a Go-side bind.

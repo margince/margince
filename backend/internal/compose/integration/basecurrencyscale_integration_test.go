@@ -25,7 +25,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/dealvalue"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -114,18 +113,18 @@ func TestTheForecastReadsTheSharedExpression(t *testing.T) {
 	e.WsExec(t, `INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
 		VALUES ('VND', 'EUR', 0.000035, DATE '2020-01-01')`)
 
-	deals := forecastDeals(t, e, midQuarter)
-	if len(deals) != 1 || deals[0].BaseMinor == nil {
-		t.Fatalf("the forecast did not convert the seeded deal: %+v", deals)
+	forecast := forecastDeals(t, e, midQuarter)
+	if len(forecast) != 1 || forecast[0].BaseMinor == nil {
+		t.Fatalf("the forecast did not convert the seeded deal: %+v", forecast)
 	}
-	fromSQL := *deals[0].BaseMinor
+	fromSQL := *forecast[0].BaseMinor
 
 	// The same deal through the SQL expression the morning brief and the report
 	// engine share, read directly so a change to either spelling shows up here.
 	var fromExpr int64
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT `+
-			dealvalue.BaseValueSQL("$1", "'EUR'", "d")+
+			deals.BaseValueSQL("$1", "'EUR'", "d")+
 			` FROM deal d WHERE d.currency = 'VND'`,
 			time.Now().UTC()).Scan(&fromExpr)
 	})

@@ -162,9 +162,21 @@ func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.D
 // refuseMaskedSort refuses a sort over a column the caller's role masks on any
 // row, through the refusal every list offering a maskable order shares. The
 // deal's own contribution is which of its columns can be withheld at all.
+//
+// The Value sort orders by the base value. A mask on any input
+// fieldmask.DealBaseValueInputs names refuses it, the currency included.
 func refuseMaskedSort(ctx context.Context, sort *string) error {
-	return auth.RefuseMaskedSort(ctx, maskObject, sort, func(field string) bool {
-		_, withholdable := dealWithholders[field]
-		return withholdable
-	})
+	withholdable := func(field string) bool {
+		_, ok := dealWithholders[field]
+		return ok
+	}
+	if !sortsByValue(sort) {
+		return auth.RefuseMaskedSort(ctx, maskObject, sort, withholdable)
+	}
+	for _, input := range fieldmask.DealBaseValueInputs() {
+		if err := auth.RefuseMaskedSort(ctx, maskObject, &input, withholdable); err != nil {
+			return err
+		}
+	}
+	return nil
 }
