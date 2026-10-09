@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { viewerZone } from "../format/timezone";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import type { User } from "./users-members";
 import { MemberVerbs } from "./users-memberverbs";
@@ -12,7 +13,7 @@ function member(over: Partial<User>): User {
     id: "u-2",
     email: "dana@brandt.example",
     display_name: "Dana Kessler",
-    timezone: "Europe/Berlin",
+    timezone: viewerZone(),
     status: "active",
     is_agent: false,
     roles: ["rep"],

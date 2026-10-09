@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { viewerZone } from "../format/timezone";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import {
   RenameTeamAction,
@@ -22,7 +23,7 @@ function person(index: number, name: string, onTeam: boolean): TeamUser {
     id: `u-${index}`,
     email: `person${index}@acme.test`,
     display_name: name,
-    timezone: "Europe/Berlin",
+    timezone: viewerZone(),
     status: "active",
     is_agent: false,
     team_ids: onTeam ? ["t-1"] : [],

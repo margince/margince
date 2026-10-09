@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { memberCounts, RolesSettings } from "./roles-settings";
@@ -75,7 +76,7 @@ function member(email: string, roles?: string[]): User {
     display_name: email,
     status: "active",
     is_agent: false,
-    timezone: "Europe/Berlin",
+    timezone: viewerZone(),
     ...(roles ? { roles } : {}),
   };
 }
