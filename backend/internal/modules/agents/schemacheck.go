@@ -27,7 +27,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // ResultDefect reports the first way value fails schema, or "" when it keeps
@@ -249,9 +250,5 @@ func summarize(value json.RawMessage) string {
 	// Cut on a RUNE boundary. The comment above says a result can carry captured
 	// text, and captured text is exactly where a multi-byte rune sits — a byte
 	// slice through one writes invalid UTF-8 into a line a reader reads.
-	cut := trimmed[:summaryBytes]
-	for len(cut) > 0 && !utf8.ValidString(cut) {
-		cut = cut[:len(cut)-1]
-	}
-	return cut + "…"
+	return textcut.BytesMarked(trimmed, summaryBytes, "…")
 }

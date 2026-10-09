@@ -24,7 +24,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // modernProtocolVersion is the revision this server serves in the modern
@@ -337,14 +338,7 @@ const maxEchoedVersion = 32
 // would put invalid UTF-8 into a JSON string, which the encoder then silently
 // rewrites into replacement characters.
 func boundedEcho(value string) string {
-	if len(value) <= maxEchoedVersion {
-		return value
-	}
-	cut := value[:maxEchoedVersion]
-	for len(cut) > 0 && !utf8.ValidString(cut) {
-		cut = cut[:len(cut)-1]
-	}
-	return cut + "…"
+	return textcut.BytesMarked(value, maxEchoedVersion, "…")
 }
 
 // discover answers server/discover: the supported revisions, the capabilities

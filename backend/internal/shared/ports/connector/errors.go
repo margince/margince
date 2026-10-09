@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
-	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The shared sync-failure vocabulary (ADR-0063). Providers wrap their own
@@ -178,14 +179,7 @@ const maxOpLen = 120
 // record that explains a failure. Cutting short of the boundary keeps the
 // truncated name valid text.
 func boundedOp(op string) string {
-	if len(op) <= maxOpLen {
-		return op
-	}
-	cut := maxOpLen
-	for cut > 0 && !utf8.RuneStart(op[cut]) {
-		cut--
-	}
-	return op[:cut] + "…"
+	return textcut.BytesMarked(op, maxOpLen, "…")
 }
 
 // maxReasonLen bounds a machine reason. Every real one is a short identifier

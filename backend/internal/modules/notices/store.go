@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // subjectBound and bodyBound cap what a producer can put in front of a
@@ -184,8 +185,8 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	if err != nil {
 		return Notice{}, err
 	}
-	subject := truncate(in.Subject, subjectBound)
-	body := truncate(in.Body, bodyBound)
+	subject := textcut.Runes(in.Subject, subjectBound)
+	body := textcut.Runes(in.Body, bodyBound)
 	id := ids.NewV7()
 	var createdAt time.Time
 	var dedupe *string
@@ -427,14 +428,6 @@ func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 			NoticeId: openapi_types.UUID(id),
 		})
 	})
-}
-
-// truncate bounds s to at most n runes.
-func truncate(s string, n int) string {
-	if runes := []rune(s); len(runes) > n {
-		return string(runes[:n])
-	}
-	return s
 }
 
 // Retract takes back every seat's copy of one announcement: the thing it asked

@@ -13,11 +13,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -292,14 +292,7 @@ const MaxStagedSummary = 300
 // boundedSummary keeps the repeated summary to MaxStagedSummary bytes, cut on a
 // rune boundary so the answer is never invalid UTF-8.
 func boundedSummary(s string) string {
-	if len(s) <= MaxStagedSummary {
-		return s
-	}
-	cut := MaxStagedSummary
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
+	return textcut.BytesMarked(s, MaxStagedSummary, "…")
 }
 
 func (e *StagedApprovalError) Error() string {

@@ -10,36 +10,6 @@ package compose
 
 import "unicode/utf8"
 
-// headRunes answers what string([]rune(s)[:n]) answers when s holds more than
-// n runes, and s itself otherwise — reading only those n runes.
-//
-// The windows this file measures are 60 and 300 runes, and they used to be
-// taken by converting the WHOLE page to []rune first. Inside sharedOpening's
-// pages × offsets × pages loop that was hundreds of thousands of full-page
-// conversions per round: one call on a 60-page site of ~14k runes a page took
-// 58 s and allocated 52 GB, which was a deep read's extraction time and most
-// of the garbage a worker bursts to gigabytes on.
-//
-// The answer is kept byte-for-byte, broken bytes included: the old conversion
-// re-encoded each one as U+FFFD, so a window over invalid UTF-8 is re-encoded
-// the same way here. Valid text — nearly all of it — is returned as a slice
-// of s with nothing allocated.
-func headRunes(s string, n int) string {
-	i := 0
-	for count := 0; count < n && i < len(s); count++ {
-		_, size := utf8.DecodeRuneInString(s[i:])
-		i += size
-	}
-	if i >= len(s) {
-		return s
-	}
-	head := s[:i]
-	if utf8.ValidString(head) {
-		return head
-	}
-	return string([]rune(head))
-}
-
 // runesAtLeast reports whether s holds at least n runes, counting them the way
 // utf8.RuneCountInString does (a broken byte is one rune) but stopping at n.
 // The thresholds here are a few hundred runes; the strings they are asked of

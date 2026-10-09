@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -148,11 +149,8 @@ func triageRequest(page crawlPage, lang string) model.Request {
 
 // triageExcerpt bounds the page text to the budget, cutting on a rune boundary.
 func triageExcerpt(text string) string {
-	runes := []rune(strings.TrimSpace(text))
-	if len(runes) <= triageExcerptRunes {
-		return string(runes)
-	}
-	return string(runes[:triageExcerptRunes])
+	// The conversion re-encodes a broken byte as U+FFFD whether or not the cut happens.
+	return textcut.Runes(string([]rune(strings.TrimSpace(text))), triageExcerptRunes)
 }
 
 // gateTriageVerdict reads the reply and refuses anything outside the closed
