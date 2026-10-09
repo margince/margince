@@ -8486,6 +8486,11 @@ components:
         run_id: {type: string, format: uuid}
         status: {$ref: '#/components/schemas/ImportRunStatus'}
         reversed_count: {type: integer, minimum: 0, description: 'Import-created rows that were untouched since and have been reversed (archived).'}
+        updates_not_reversed:
+          type: integer
+          minimum: 0
+          description: >-
+            Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
         kept:
           type: array
           description: 'Import-created rows a human edited since import, therefore left in place (A93).'
