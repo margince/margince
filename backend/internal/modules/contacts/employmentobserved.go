@@ -101,14 +101,14 @@ func auditFirstObservation(ctx context.Context, tx pgx.Tx, move firstObservation
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, actionUpdate, tableRelationship, move.edge,
 		map[string]any{fieldFirstObservedAt: move.before},
 		map[string]any{fieldFirstObservedAt: move.after},
-		map[string]any{"origin": move.origin})
+		map[string]any{auditKeyOrigin: move.origin})
 	if err != nil {
 		return fmt.Errorf("contacts: audit the employment edge's first observation: %w", err)
 	}
 	delta := map[string]any{
 		eventKeyDelta: map[string]any{tableRelationship: map[string]any{
 			"id": move.edge, relationshipKindField: employmentKind, employmentActionField: actionUpdate,
-			companyFK: move.company, fieldFirstObservedAt: move.after, "origin": move.origin,
+			companyFK: move.company, fieldFirstObservedAt: move.after, auditKeyOrigin: move.origin,
 		}},
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, move.contact.UUID,
@@ -118,8 +118,8 @@ func auditFirstObservation(ctx context.Context, tx pgx.Tx, move firstObservation
 	return nil
 }
 
-// fieldFirstObservedAt is the column name the audit row and the event delta
-// both carry, spelled once so the two cannot disagree.
+// fieldFirstObservedAt is the column name the audit row, the event delta and
+// the undo refusal carry.
 const fieldFirstObservedAt = "first_observed_at"
 
 // foldFirstObservations carries the earliest first observation of the
@@ -130,9 +130,9 @@ const fieldFirstObservedAt = "first_observed_at"
 // mergedColumn is the endpoint the merge rewrites ("contact_id" or
 // "company_id"); the edges must agree on the other one.
 func foldFirstObservations(ctx context.Context, tx pgx.Tx, mergedColumn string, source, target ids.UUID) error {
-	sharedColumn := "contact_id"
-	if mergedColumn == "contact_id" {
-		sharedColumn = "company_id"
+	sharedColumn := contactFK
+	if mergedColumn == contactFK {
+		sharedColumn = companyFK
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		UPDATE relationship s SET first_observed_at = f.earliest

@@ -119,7 +119,7 @@ func TestAnOlderMessageMovesTheFirstObservationEarlier(t *testing.T) {
 }
 
 // The domain verdict plants the edges for everybody who wrote while the
-// question was open, and dates each from that person's own mail.
+// question was open, and dates each from that contact's own mail.
 func TestTheDomainVerdictDatesTheEdgesItPlants(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

@@ -197,7 +197,7 @@ func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCo
 // it can do so without every existing consumer of contact.updated changing.
 func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, contactID ids.ContactID, companyID ids.CompanyID, origin string) error {
 	auditID, err := storekit.Audit(ctx, tx, actionCreate, tableRelationship, edgeID, nil, map[string]any{
-		relationshipKindField: employmentKind, "origin": origin,
+		relationshipKindField: employmentKind, auditKeyOrigin: origin,
 	})
 	if err != nil {
 		return fmt.Errorf("contacts: audit the captured employment edge: %w", err)
@@ -205,7 +205,7 @@ func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, co
 	delta := map[string]any{
 		eventKeyDelta: map[string]any{tableRelationship: map[string]any{
 			"id": edgeID, relationshipKindField: employmentKind, employmentActionField: actionCreate,
-			companyFK: companyID, "origin": origin,
+			companyFK: companyID, auditKeyOrigin: origin,
 		}},
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID,
@@ -232,3 +232,7 @@ const relationshipOriginProvider = auditKeyProvider
 // SQL, the audit row and the event delta cannot drift apart.
 // Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const employmentKind = "employment"
+
+// auditKeyOrigin names what wrote an employment edge, on the audit row and in
+// the event delta.
+const auditKeyOrigin = "origin"

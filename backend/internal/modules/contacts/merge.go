@@ -270,7 +270,7 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	// duplicate, not a (kind, company, deal) one, and this predicate would archive
 	// a source edge because the target pairs with ANYBODY.
 	// The role counts for the kinds keyed on it — see roleKeyedDuplicateSQL.
-	if err := foldFirstObservations(ctx, tx, "contact_id", sourceID.UUID, targetID.UUID); err != nil {
+	if err := foldFirstObservations(ctx, tx, contactFK, sourceID.UUID, targetID.UUID); err != nil {
 		return 0, err
 	}
 	if _, err := tx.Exec(ctx, `

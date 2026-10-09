@@ -136,7 +136,7 @@ func CurrentPrimarySlotSQL(alias string) string {
 }
 
 // InPlaceAtSQL is whether an employment edge (alias) had started by `at`. The
-// start is started_at, which a person supplied, else capture's first_observed_at.
+// start is started_at, which a user supplied, else capture's first_observed_at.
 // An edge with neither is unbounded, which the trailing `at` in the coalesce
 // does. Reading NULL as "unknown" would cut every edge capture planted before
 // it dated any off from its whole history.

@@ -38,7 +38,7 @@ func relinkCompanyEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 		sourceID, targetID, now); err != nil {
 		return err
 	}
-	if err := foldFirstObservations(ctx, tx, "company_id", sourceID.UUID, targetID.UUID); err != nil {
+	if err := foldFirstObservations(ctx, tx, companyFK, sourceID.UUID, targetID.UUID); err != nil {
 		return err
 	}
 	// Duplicates of edges the survivor already has, on either column.

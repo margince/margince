@@ -13,7 +13,7 @@ package integration
 // (activities.CompanyLinkedActivityExists) and the set the signal producers
 // file through (activities.CompanyReachSet). The edges are written by the real
 // writers: capture's ensure for a first observation, the relationship store for
-// a date a person supplied.
+// a date a user supplied.
 
 import (
 	"testing"
@@ -139,9 +139,9 @@ func TestMailReachesTheEmployerThroughAnUndatedEdge(t *testing.T) {
 	}
 }
 
-// A start date a person supplied outranks what capture observed, in either
+// A start date a user supplied outranks what capture observed, in either
 // direction; this is the direction that widens.
-func TestAStartDateAPersonSuppliedWinsOverTheFirstObservation(t *testing.T) {
+func TestAStartDateAUserSuppliedWinsOverTheFirstObservation(t *testing.T) {
 	e := Setup(t)
 	newco := seedEmployerOnDomain(t, e, "Newco", "newco.test")
 	newJob := seedMailFrom(t, "ann@newco.test", mailAtTheNewJob)
@@ -162,7 +162,7 @@ func TestAStartDateAPersonSuppliedWinsOverTheFirstObservation(t *testing.T) {
 		t.Fatalf("supplying the start date: %v", err)
 	}
 	if !reaches(t, e, oldJob, newco) {
-		t.Fatal("mail after the start date a person supplied does not reach the employer, " +
+		t.Fatal("mail after the start date a user supplied does not reach the employer, " +
 			"because the later first observation still bounds the edge")
 	}
 }
