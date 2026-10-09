@@ -1483,7 +1483,7 @@ paths:
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c2
               closeWon:
-                summary: Closing won ( — requires approval token for agents)
+                summary: Closing won (requires approval token for agents)
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c9
                   status: won
@@ -5651,7 +5651,7 @@ paths:
     post:
       tags: [CustomFields]
       operationId: createCustomField
-      summary: Define a new custom field on an existing core object ( — a schema change).
+      summary: Define a new custom field on an existing core object (a schema change).
       description: |-
         Runs the governed engine's single-transaction add: schema
         change + catalog row + one audit entry land or roll back together. Always —
@@ -5775,7 +5775,7 @@ paths:
                       route: source_development_path
         '501':
           description: >-
-            Schema changes are not enabled on this deployment — the schema-change pool (--schema-dsn) is not mounted.
+            Schema changes are not enabled on this deployment — the schema-change pool (schema-dsn) is not mounted.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -5793,7 +5793,7 @@ paths:
     patch:
       tags: [CustomFields]
       operationId: renameCustomField
-      summary: Rename a custom field's display label ( — not a schema change).
+      summary: Rename a custom field's display label (not a schema change).
       description: |-
         Audited catalog `label` update only; `column_name` never
         moves — the physical column identity is stable across rename. Merge-PATCH:
@@ -5897,7 +5897,7 @@ paths:
     patch:
       tags: [CustomFields]
       operationId: updateCustomFieldOptions
-      summary: Edit a picklist custom field's allowed options ( — regenerates the column's CHECK).
+      summary: Edit a picklist custom field's allowed options (regenerates the column's CHECK).
       description: |-
         Only valid for `type=picklist` fields (422 `not_picklist`
         otherwise). Replaces the catalog's `options` array and regenerates the physical
@@ -5991,7 +5991,7 @@ paths:
                         - {field: options, code: min_one_required}
         '501':
           description: >-
-            Schema changes are not enabled on this deployment — the schema-change pool (--schema-dsn) is not mounted.
+            Schema changes are not enabled on this deployment — the schema-change pool (schema-dsn) is not mounted.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -7765,7 +7765,7 @@ components:
             rbac:
               value: {type: 'https://errors.gradion.com/forbidden', title: Forbidden, status: 403, code: forbidden, detail: Your role does not permit this action.}
     PermissionDenied:
-      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` ( gate).'
+      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (gate).'
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}

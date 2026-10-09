@@ -5275,7 +5275,7 @@ export const de = {
   "settings.snippetCopyFailed":
     "Markiere das Beispiel oben und kopiere es von Hand.",
   "settings.snippetFoot":
-    "Setze {variable} in deiner Shell oder ersetze es durch deinen Passport.",
+    "Setze zuerst {variable} in deiner Shell.",
   "settings.passportsYours": "Deine Passports",
   "settings.passportsMcpHint":
     "Ein MCP-Client erhält beim Verbinden eigene Zugangsdaten und braucht daher keinen Passport. Er steht unter Verbundene MCP-Clients.",

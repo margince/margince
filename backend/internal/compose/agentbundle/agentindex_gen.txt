@@ -221,11 +221,11 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /custom-fields` | listCustomFields | List custom fields for an object (admin read; includes retired by default). | any | at once |
-| `POST /custom-fields` | createCustomField | Define a new custom field on an existing core object ( — a schema change). | Change records | waits for approval |
-| `PATCH /custom-fields/{id}` | renameCustomField | Rename a custom field's display label ( — not a schema change). | Change records | at once |
+| `POST /custom-fields` | createCustomField | Define a new custom field on an existing core object (a schema change). | Change records | waits for approval |
+| `PATCH /custom-fields/{id}` | renameCustomField | Rename a custom field's display label (not a schema change). | Change records | at once |
 | `GET /custom-fields/{id}/lists` | listCustomFieldLiveLists | The Live Lists whose filter names this custom field. | any | at once |
 | `POST /custom-fields/{id}/retire` | retireCustomField | Retire (soft-retire) a custom field — irreversible-feeling, confirm-first. | Change records | waits for approval |
-| `PATCH /custom-fields/{id}/options` | updateCustomFieldOptions | Edit a picklist custom field's allowed options ( — regenerates the column's CHECK). | Change records | waits for approval |
+| `PATCH /custom-fields/{id}/options` | updateCustomFieldOptions | Edit a picklist custom field's allowed options (regenerates the column's CHECK). | Change records | waits for approval |
 
 ## Reports
 

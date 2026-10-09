@@ -5371,7 +5371,7 @@ export const en = {
   "settings.snippetCopied": "Copied",
   "settings.snippetCopyFailed": "Select the example above and copy it by hand.",
   "settings.snippetFoot":
-    "Set {variable} in your shell, or swap it for your passport.",
+    "Set {variable} in your shell first.",
   "settings.passportsYours": "Your passports",
   "settings.passportsMcpHint":
     "An MCP client gets its own credential when you connect it, so it does not need a passport. It is listed under Connected MCP clients.",

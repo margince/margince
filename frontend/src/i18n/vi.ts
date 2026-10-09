@@ -5204,7 +5204,7 @@ export const vi = {
   "settings.snippetCopyFailed":
     "Hãy bôi đen ví dụ ở trên rồi sao chép thủ công.",
   "settings.snippetFoot":
-    "Đặt {variable} trong shell, hoặc thay nó bằng passport của bạn.",
+    "Hãy đặt {variable} trong shell trước.",
   "settings.passportsYours": "Passport của bạn",
   "settings.passportsMcpHint":
     "Client MCP nhận thông tin xác thực riêng khi bạn kết nối nên không cần passport. Nó nằm trong mục Client MCP đã kết nối.",

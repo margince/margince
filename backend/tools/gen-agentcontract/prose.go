@@ -95,13 +95,23 @@ func (p prose) clean(node *yaml.Node) string {
 		if p.isDeveloperNote(parenthetical) {
 			return ""
 		}
-		return parenthetical
+		return withoutLeadingDash(parenthetical)
 	})
 	text = p.withoutNotes(text)
 	if p.isDeveloperNote(text) {
 		return ""
 	}
 	return text
+}
+
+// withoutLeadingDash drops the dash a removed tier mark leaves at the start of
+// an aside, so the aside opens on its first word.
+func withoutLeadingDash(parenthetical string) string {
+	lead, inner, ok := strings.Cut(parenthetical, "(")
+	if !ok {
+		return parenthetical
+	}
+	return lead + "(" + strings.TrimLeft(inner, " —–-")
 }
 
 // describeOperation rewrites an operation's summary and description: the

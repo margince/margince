@@ -277,6 +277,13 @@ func TestOnlyTheSentenceNamingStorageIsCut(t *testing.T) {
 	}
 }
 
+func TestATierMarkLeavesNoDashInItsAside(t *testing.T) {
+	node := &yaml.Node{Kind: yaml.ScalarNode, Value: "Define a custom field (🟡 — a schema change)."}
+	if got, want := (prose{}).clean(node), "Define a custom field (a schema change)."; got != want {
+		t.Errorf("clean = %q, want %q", got, want)
+	}
+}
+
 func TestTheIndexListsEveryKeptOperationOnce(t *testing.T) {
 	_, index, _, err := agentContract([]byte(fixture), tables)
 	if err != nil {
