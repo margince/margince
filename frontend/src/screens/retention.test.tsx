@@ -178,13 +178,15 @@ describe("RetentionCard rows", () => {
     ).not.toBeInTheDocument();
 
     // Archiving retains, so the posture leaves it alone. An acting row carries
-    // no status at all: the intro says once that enabled policies act nightly.
+    // no status at all: the intro says once that enabled policies act on the schedule.
     const acting = await findRow("deal/won");
     expect(
       within(acting).queryByText(/paused by retain-only mode/i),
     ).not.toBeInTheDocument();
     expect(within(acting).queryByText(/disabled/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/enabled policies act nightly/i)).toBeVisible();
+    expect(
+      screen.getByText(/enabled policies act on the data retention schedule/i),
+    ).toBeVisible();
   });
 
   it("tones each action by what it destroys", async () => {

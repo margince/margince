@@ -6410,7 +6410,7 @@ export const en = {
   "restricted.pin.confirm": "Pin and hold",
   "retention.title": "Retention",
   "retention.sub":
-    "How long each record type is kept, and what happens when its window ends. Enabled policies act nightly.",
+    "How long each record type is kept, and what happens when its window ends. Enabled policies act on the data retention schedule.",
   "retention.colScope": "Record type",
   "retention.colKeep": "Keep for",
   "retention.colThen": "Then",

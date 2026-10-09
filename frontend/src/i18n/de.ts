@@ -6266,7 +6266,7 @@ export const de = {
   "restricted.pin.confirm": "Festsetzen und sperren",
   "retention.title": "Aufbewahrung",
   "retention.sub":
-    "Wie lange jede Art von Datensatz aufbewahrt wird und was nach Ablauf der Frist geschieht. Aktive Regeln laufen jede Nacht.",
+    "Wie lange jede Art von Datensatz aufbewahrt wird und was nach Ablauf der Frist geschieht. Aktive Regeln laufen nach dem Zeitplan der Datenaufbewahrung.",
   "retention.colScope": "Datensatzart",
   "retention.colKeep": "Aufbewahren für",
   "retention.colThen": "Danach",

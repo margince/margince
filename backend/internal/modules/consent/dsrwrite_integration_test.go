@@ -11,12 +11,14 @@ package consent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -162,12 +164,62 @@ func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
 		t.Fatalf("fulfilling → %d: %s", w.Code, w.Body)
 	}
 
-	w := e.patchDSR(t, request.ID, `{"resolution":null}`)
-	if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldResolution {
-		t.Fatalf("clearing a fulfilled request's answer → %d %s, want 422 naming resolution", w.Code, w.Body)
+	for _, blank := range []string{`null`, `""`, `"   "`} {
+		w := e.patchDSR(t, request.ID, `{"resolution":`+blank+`}`)
+		if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldResolution {
+			t.Fatalf("resolution %s on a fulfilled request → %d %s, want 422 naming resolution", blank, w.Code, w.Body)
+		}
 	}
-	if after := e.read(t, request.ID); after.Resolution == nil {
-		t.Fatal("a refused clear emptied the answer anyway")
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != "package sent" {
+		t.Fatalf("a refused patch left the answer %v, want %q", after.Resolution, "package sent")
+	}
+}
+
+func TestClosingCannotBlankADraftAnswer(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindAccess, "draft-close@dsr.test")
+	if w := e.patchDSR(t, request.ID, `{"resolution":"draft answer"}`); w.Code != http.StatusOK {
+		t.Fatalf("drafting an answer → %d: %s", w.Code, w.Body)
+	}
+
+	w := e.patchDSR(t, request.ID, `{"status":"rejected","resolution":"  "}`)
+	if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldResolution {
+		t.Fatalf("closing over the draft with a blank answer → %d %s, want 422 naming resolution", w.Code, w.Body)
+	}
+	if after := e.read(t, request.ID); after.Status != "open" || after.Resolution == nil {
+		t.Fatalf("a refused close left status %q and answer %v", after.Status, after.Resolution)
+	}
+}
+
+// A key-share lock admits a plain read and the `UPDATE` but stops a `FOR
+// UPDATE` read. A patch that waits on one validated the row it writes.
+func TestAPatchValidatesTheRowItHolds(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindAccess, "held@dsr.test")
+	holder, err := e.pool.Begin(context.Background())
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	release := func() {
+		if err := holder.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("releasing the holder: %v", err)
+		}
+	}
+	t.Cleanup(release)
+	if _, err := holder.Exec(context.Background(),
+		`SELECT 1 FROM data_subject_request WHERE id = $1 FOR KEY SHARE`, request.ID); err != nil {
+		t.Fatalf("holding the request: %v", err)
+	}
+
+	bounded, cancel := context.WithTimeout(e.ctx, 250*time.Millisecond)
+	defer cancel()
+	if _, err := e.store.UpdateDSR(bounded, request.ID, UpdateDSRInput{ClearResolution: true}); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("a patch beside a held key-share lock answered %v, want it to wait: "+
+			"its validating read took no row lock, so another close can land before its write", err)
+	}
+	release()
+	if _, err := e.store.UpdateDSR(e.ctx, request.ID, UpdateDSRInput{ClearResolution: true}); err != nil {
+		t.Fatalf("the patch once the lock is released: %v", err)
 	}
 }
 

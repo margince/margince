@@ -58,10 +58,7 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 	}
 	var out dsrRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		current, err := scanDSR(tx.QueryRow(ctx, dsrSelectForUpdate, id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		current, err := lockDSR(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -95,11 +92,10 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 	return out, err
 }
 
-// finalizeErasureFulfil flips the FOR UPDATE-locked request to fulfilled and
-// appends the audit row, run inside the caller's held-lock transaction (never
-// on its own). The AND status guard mirrors UpdateDSR's finalize as defense in
-// depth — with the lock held it can only match, but a miss still maps to the
-// honest illegal-transition error rather than a silent no-op.
+// finalizeErasureFulfil flips the locked request to fulfilled and appends the
+// audit row, inside the caller's held-lock transaction. The `AND status` guard
+// can only match under that lock. A miss still answers as an illegal
+// transition, never a silent no-op.
 func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateDSRInput, current dsrRow) (dsrRow, error) {
 	// THE RESOLUTION COMES OUT, and subject_ref deliberately does NOT.
 	//

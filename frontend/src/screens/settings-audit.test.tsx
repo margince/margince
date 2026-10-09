@@ -266,17 +266,20 @@ describe("AuditLogCard", () => {
     expect(detail).not.toHaveTextContent("pp-9");
   });
 
-  it("opens an entry from anywhere on its row, but not from a control in it", async () => {
+  it("opens an entry from anywhere on its row, its id included, but not from a control in it", async () => {
     vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
     const user = userEvent.setup();
     render(<AuditLogCard />);
     const toggle = await screen.findByRole("button", { name: ANY_EXPAND });
 
-    await user.click(screen.getByText("Anna Weber"));
+    await user.click(screen.getByText("eb3f4280"));
     expect(toggle).toHaveAttribute("aria-expanded", "true");
 
     await user.click(screen.getByRole("button", { name: "Copy record ID" }));
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(screen.getByText("Anna Weber"));
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 
   it("shows a created record's values alone, and a structured one as code", async () => {

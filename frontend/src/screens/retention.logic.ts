@@ -79,7 +79,7 @@ export function actionLabelKey(action: RetentionAction): MessageKey {
 }
 
 /**
- * What a stored policy is actually doing tonight.
+ * What a stored policy does on the next retention pass.
  *
  * Three states, because "enabled" alone does not answer the question the
  * screen exists to answer: the retain-only posture overrides a destructive
@@ -99,7 +99,7 @@ export function policyEffect(
 }
 
 // An acting policy carries no status: the intro says every enabled policy acts
-// nightly, so a row speaks only when it differs.
+// on the retention schedule, so a row speaks only when it differs.
 const EFFECT_BADGES: Record<
   PolicyEffect,
   Readonly<{ key: MessageKey; tone?: "warning" }> | null

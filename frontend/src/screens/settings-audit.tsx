@@ -222,7 +222,7 @@ const ROLE = {
 // is not a request to open the entry.
 function pressOpensRow(event: MouseEvent<HTMLTableRowElement>): boolean {
   const target = event.target;
-  if (target instanceof Element && target.closest("a, button, code")) {
+  if (target instanceof Element && target.closest("a, button")) {
     return false;
   }
   return globalThis.getSelection?.()?.isCollapsed !== false;

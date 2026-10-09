@@ -6134,7 +6134,7 @@ export const vi = {
   "restricted.pin.confirm": "Ghim và giữ lại",
   "retention.title": "Lưu trữ",
   "retention.sub":
-    "Thời gian lưu trữ từng loại hồ sơ và điều sẽ xảy ra khi hết thời hạn. Các chính sách đang bật sẽ chạy hằng đêm.",
+    "Thời gian lưu trữ từng loại hồ sơ và điều sẽ xảy ra khi hết thời hạn. Các chính sách đang bật sẽ chạy theo lịch lưu trữ dữ liệu.",
   "retention.colScope": "Loại hồ sơ",
   "retention.colKeep": "Lưu trữ trong",
   "retention.colThen": "Sau đó",
