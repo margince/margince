@@ -78,7 +78,7 @@ func markupText(markup string) (string, error) {
 		writeText(&out, node)
 	}
 	var lines []string
-	for _, line := range strings.Split(out.String(), "\n") {
+	for line := range strings.SplitSeq(out.String(), "\n") {
 		if line = strings.TrimSpace(line); line != "" {
 			lines = append(lines, line)
 		}
