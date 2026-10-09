@@ -18,8 +18,8 @@ package agentvolume
 // Readiness is deliberately NOT where this goes. It is per-pod, so a probe
 // would take the pod out of rotation for human traffic too, over a fault no
 // human request can meet — trading an agent-only outage for a total one. So
-// the signal is a metric an operator alerts on, and the alert's own text says
-// what it means: agent reads are refusing, human traffic is unaffected.
+// the signal is a metric an operator alerts on. The alert's own text says what
+// it means: agent reads are refusing, and draining the pod does not fix it.
 
 import "sync/atomic"
 

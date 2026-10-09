@@ -291,8 +291,8 @@ func (m *Meter) Read(ctx context.Context, c Counter) Reading {
 		// WHERE AN OPERATOR SEES THIS. Not /readyz — that is per-pod and would
 		// drain the pod for human traffic over a fault no human request meets.
 		// Answerable() feeds margince_agent_volume_answerable on /metrics, and
-		// the alert on it carries the sentence that matters: agent reads are
-		// refusing, human traffic is unaffected. docs/how-to/deploy-margince.md
+		// the alert on it says what matters. Agent reads are refusing, and
+		// draining the pod does not fix it. docs/how-to/deploy-margince.md
 		// says so under "Alert on the agent bound, do not drain on it".
 		return Reading{Counter: c, Limit: m.limits.of(c), Allowance: m.limits.of(c), Exceeded: true, Bucket: bucket}
 	}

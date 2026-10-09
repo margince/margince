@@ -360,7 +360,7 @@ func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 			continue
 		}
 		if !validScopes[principal.Scope(sc)] {
-			return nil, false, fmt.Errorf("scope %q is not one of read|draft|write|send|enrich", sc)
+			return nil, false, fmt.Errorf("scope %q is not one of %s", sc, passportScopeList())
 		}
 		scopes = append(scopes, sc)
 	}

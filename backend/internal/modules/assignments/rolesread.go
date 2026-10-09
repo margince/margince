@@ -35,6 +35,7 @@ const (
 const (
 	fieldRoleID        = "role_id"
 	fieldSubjectID     = "subject_id"
+	fieldSubjectKind   = "subject_kind"
 	codeInvalidRecType = "invalid_record_type"
 )
 

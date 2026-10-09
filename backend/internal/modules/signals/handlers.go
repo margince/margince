@@ -8,7 +8,6 @@ package signals
 // store owns the transactional write shape and the row-scope gates.
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
@@ -46,7 +45,7 @@ func (h Handlers) ListSignals(w http.ResponseWriter, r *http.Request, params crm
 	}
 	signals, page, err := h.store.ListSignals(r.Context(), in)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SignalListResponse{Data: signals, Page: pageInfo(page)})
@@ -83,7 +82,7 @@ func (h Handlers) CreateSignal(w http.ResponseWriter, r *http.Request, _ crmcont
 	}
 	sig, err := h.store.CreateSignal(r.Context(), in)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	w.Header().Set("Location", "/v1/signals/"+sig.Id.String())
@@ -93,7 +92,7 @@ func (h Handlers) CreateSignal(w http.ResponseWriter, r *http.Request, _ crmcont
 func (h Handlers) GetSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	sig, err := h.store.GetSignal(r.Context(), pathID[ids.SignalKind](id), storekit.IncludeArchived)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, sig)
@@ -116,7 +115,7 @@ func (h Handlers) UpdateSignal(w http.ResponseWriter, r *http.Request, id crmcon
 	}
 	sig, err := h.store.UpdateSignal(r.Context(), pathID[ids.SignalKind](id), in)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, sig)
@@ -125,7 +124,7 @@ func (h Handlers) UpdateSignal(w http.ResponseWriter, r *http.Request, id crmcon
 func (h Handlers) ArchiveSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	sig, err := h.store.ArchiveSignal(r.Context(), pathID[ids.SignalKind](id))
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, sig)
@@ -134,7 +133,7 @@ func (h Handlers) ArchiveSignal(w http.ResponseWriter, r *http.Request, id crmco
 func (h Handlers) ResolveSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ResolveSignalParams) {
 	sig, err := h.store.Resolve(r.Context(), pathID[ids.SignalKind](id))
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, sig)
@@ -143,7 +142,7 @@ func (h Handlers) ResolveSignal(w http.ResponseWriter, r *http.Request, id crmco
 func (h Handlers) GetSignalWarmth(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	warmth, err := h.store.Warmth(r.Context(), pathID[ids.SignalKind](id), time.Now().UTC())
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, warmth)
@@ -152,7 +151,7 @@ func (h Handlers) GetSignalWarmth(w http.ResponseWriter, r *http.Request, id crm
 func (h Handlers) GetSignalIntroPath(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	path, err := h.store.IntroPath(r.Context(), pathID[ids.SignalKind](id), time.Now().UTC())
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, path)
@@ -171,22 +170,4 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 		info.NextCursor = &p.NextCursor
 	}
 	return info
-}
-
-// writeStoreErr maps this module's typed store errors onto the wire
-// codes, then falls through to the sentinel registry.
-func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	if missing, ok := errors.AsType[*RequiredFieldError](err); ok {
-		httperr.Write(w, r, httperr.Validation(missing.Field, "required", missing.Error()))
-		return
-	}
-	if notResolvable, ok := errors.AsType[*NotResolvableError](err); ok {
-		httperr.Write(w, r, httperr.Validation("resolution_state", "not_resolvable", notResolvable.Error()))
-		return
-	}
-	if noWarmth, ok := errors.AsType[*NoWarmthError](err); ok {
-		httperr.Write(w, r, httperr.Validation("resolution_state", "no_warmth", noWarmth.Error()))
-		return
-	}
-	httperr.Write(w, r, err)
 }
