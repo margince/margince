@@ -42,11 +42,15 @@ import (
 // its author already thought of.
 var candidatePath = regexp.MustCompile(`"([A-Za-z0-9_.][A-Za-z0-9_./*-]*(?:/[A-Za-z0-9_./*-]*|\.[A-Za-z]{2,4}))"`)
 
-// coveredBy reports whether a paths-filter pattern matches this path. The two
-// shapes the filter uses: a `**` tree and an exact file.
+// coveredBy reports whether a paths-filter pattern matches this path. The
+// shapes the filter uses: a `**` tree, a one-segment glob such as
+// `Dockerfile*`, and an exact file.
 func coveredBy(pattern, path string) bool {
 	if tree, ok := strings.CutSuffix(pattern, "/**"); ok {
 		return path == tree || strings.HasPrefix(path, tree+"/")
+	}
+	if matched, err := filepath.Match(pattern, path); err == nil && matched {
+		return true
 	}
 	return pattern == path
 }
@@ -176,4 +180,27 @@ func backendFilterPatterns(t *testing.T) []string {
 			len(patterns))
 	}
 	return patterns
+}
+
+// The matcher has to read each pattern the way paths-filter does, or a path the
+// filter covers is reported uncovered and the fix is a duplicate filter line.
+func TestCoveredByReadsEachFilterShape(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		pattern, path string
+		want          bool
+	}{
+		{"docs/**", "docs/how-to/x.md", true},
+		{"docs/**", "docsx/a.md", false},
+		{"Dockerfile*", "Dockerfile", true},
+		{"Dockerfile*", "Dockerfile.dev", true},
+		{"Dockerfile*", "docker/Dockerfile", false},
+		{"README.md", "README.md", true},
+		{"README.md", "README.mdx", false},
+	}
+	for _, c := range cases {
+		if got := coveredBy(c.pattern, c.path); got != c.want {
+			t.Errorf("coveredBy(%q, %q) = %v, want %v", c.pattern, c.path, got, c.want)
+		}
+	}
 }

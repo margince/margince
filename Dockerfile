@@ -47,7 +47,7 @@
 # The base always runs on the build platform and cross-compiles to the target:
 # in a multi-platform bake only the thin runtime stages run emulated, never
 # the toolchains.
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS gobase
+FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine@sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673 AS gobase
 
 RUN apk add --no-cache git ca-certificates
 

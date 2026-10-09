@@ -31,6 +31,9 @@ import (
 // goDirective matches the `go 1.27.0` line a module or workspace file carries.
 var goDirective = regexp.MustCompile(`(?m)^go (\d+\.\d+(?:\.\d+)?)$`)
 
+// golangBase matches the version tag of a `FROM ... golang:<tag>` stage.
+var golangBase = regexp.MustCompile(`(?m)^FROM\b.*\bgolang:(\d+(?:\.\d+)*)\b`)
+
 func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 	t.Parallel()
 	want := goVersionOf(t, "go.mod")
@@ -66,6 +69,21 @@ func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 			t.Errorf("`.tool-versions` does not pin golang %s:\n%s\n\n"+
 				"A developer's shell installs what this file says, so a stale pin here "+
 				"keeps building with the toolchain the bump replaced.", want, pinned)
+		}
+	})
+
+	// The release image builds under GOTOOLCHAIN=local, so a base image behind
+	// go.mod refuses the workspace and the shipped binaries never get the bump.
+	t.Run("the release image's Go base", func(t *testing.T) {
+		bases := golangBase.FindAllStringSubmatch(readFile(t, "../Dockerfile"), -1)
+		if len(bases) == 0 {
+			t.Fatal("the Dockerfile names no golang: base image, so this check is reading nothing")
+		}
+		for _, base := range bases {
+			if base[1] != want {
+				t.Errorf("the Dockerfile builds on golang:%s, backend/go.mod pins %s; "+
+					"pin the patch tag and its digest", base[1], want)
+			}
 		}
 	})
 
