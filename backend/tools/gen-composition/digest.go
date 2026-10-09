@@ -28,6 +28,9 @@ type treeHasher struct {
 func newTreeHasher(root string) *treeHasher { return &treeHasher{root: root} }
 
 func (h *treeHasher) addFile(rel string) error {
+	// G703 taints rel because it is a parameter. Every caller is this tool's
+	// own walk of the tree it digests, so no outside input reaches here.
+	//nolint:gosec // the path comes from this tool's walk of its own root
 	content, err := os.ReadFile(filepath.Join(h.root, filepath.FromSlash(rel)))
 	if err != nil {
 		return err
@@ -41,6 +44,7 @@ func (h *treeHasher) addFile(rel string) error {
 // not share a digest, or presence itself would stop being part of the
 // input identity.
 func (h *treeHasher) addFileOrEmpty(rel string) error {
+	//nolint:gosec // as addFile above: rel is a path this tool walked itself
 	content, err := os.ReadFile(filepath.Join(h.root, filepath.FromSlash(rel)))
 	if os.IsNotExist(err) {
 		h.lines = append(h.lines, rel+"\x00absent")

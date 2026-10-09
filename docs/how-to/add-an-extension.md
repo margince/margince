@@ -36,7 +36,7 @@ review on its own.
    ```text
    module github.com/margince/margince/extensions/<name>
 
-   go 1.27.1
+   go 1.27.2
    ```
 
 3. **Write the declaration** `extensions/<name>/<name>.go`.
