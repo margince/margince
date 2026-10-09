@@ -5,7 +5,7 @@ package contacts
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -23,7 +23,7 @@ func (s *Store) GetSignatureTemplate(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if s.settings == nil {
-		return "", fmt.Errorf("contacts: the signature template is not wired; the installation cannot read it")
+		return "", errors.New("contacts: the signature template is not wired; the installation cannot read it")
 	}
 	return settings.Get(ctx, s.settings, SignatureTemplate)
 }
@@ -36,7 +36,7 @@ func (s *Store) SaveSignatureTemplate(ctx context.Context, template string) (str
 		return "", err
 	}
 	if s.settings == nil {
-		return "", fmt.Errorf("contacts: the signature template is not wired; the installation cannot change it")
+		return "", errors.New("contacts: the signature template is not wired; the installation cannot change it")
 	}
 	trimmed := strings.TrimSpace(template)
 	if err := settings.Set(ctx, s.settings, SignatureTemplate, trimmed); err != nil {
