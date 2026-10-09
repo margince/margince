@@ -25,10 +25,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// siteLeadCapturedBy is the executor identity the captured lead carries:
-// the Sink requires captured_by to equal the acting principal's id, so
-// the one spelling covers both.
-const siteLeadCapturedBy = "agent:siteread"
+// siteLeadCapturedBy is the executor identity the captured lead carries. The
+// Sink requires captured_by to equal the acting principal's id, so one
+// spelling covers both.
+//
+// `connector:` and not `agent:`. The Sink admits a PrincipalConnector alone,
+// and storekit stamps actor_type from the type beside actor_id from this. Both
+// prefixes read as machine-captured where provenance is matched by prefix, so
+// this spelling moves no row between those arms.
+const siteLeadCapturedBy = "connector:siteread"
 
 // siteLeadAcceptEffect builds the approvals.ApprovedEffect compose
 // injects for kind "site_lead".

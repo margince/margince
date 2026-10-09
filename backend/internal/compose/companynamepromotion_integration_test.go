@@ -76,7 +76,7 @@ func seedDossierName(t *testing.T, e *integration.Env, company ids.UUID, legalNa
 	t.Helper()
 	e.WsExec(t, `
 		INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'agent:siteread')`,
+		VALUES ($1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'connector:siteread')`,
 		company, legalName)
 }
 
