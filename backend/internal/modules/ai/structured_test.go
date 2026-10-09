@@ -9,8 +9,10 @@ package ai
 // error — never a partial fabrication handed to the caller.
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -178,6 +180,37 @@ func TestStructuredExhaustionMarksTheTerminalAttemptRejected(t *testing.T) {
 		if attempt.ErrorSentinel != want {
 			t.Errorf("attempt %d (terminal %v) carries sentinel %q, want %q",
 				attempt.Attempt, attempt.IsTerminal, attempt.ErrorSentinel, want)
+		}
+	}
+}
+
+// A validator's message echoes model output, and the model read a
+// correspondent's mail. The log keeps the rule and drops what was echoed.
+func TestARefusalIsLoggedByItsRuleWithoutTheTextItEchoed(t *testing.T) {
+	var logged bytes.Buffer
+	r := assembleRouter(
+		map[Tier]model.Client{TierCheapCloud: stubClient{resp: model.Response{Text: "x"}}},
+		NewFakeClient(), ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, &fakeCallStore{},
+		map[Tier]routeMeta{TierCheapCloud: {provider: "openai", model: "gpt-x"}},
+		false, slog.New(slog.NewTextHandler(&logged, nil)),
+	)
+	leaky := func(string) error {
+		return errors.New(`event cites message "anna@example.com said sk-or-v1-abcdefghijklmnopqrstuvwxyz012345", which was not in the conversation`)
+	}
+
+	if _, _, err := r.CompleteStructured(wsCtx(), TaskColdStart, structuredReq(), leaky); !errors.Is(err, ErrOutputRejected) {
+		t.Fatalf("three refused answers → %v, want ErrOutputRejected", err)
+	}
+	out := logged.String()
+	if n := strings.Count(out, "the validator refused an answer"); n != 3 {
+		t.Errorf("logged %d refusals, want one per attempt:\n%s", n, out)
+	}
+	if !strings.Contains(out, "which was not in the conversation") {
+		t.Errorf("the log lost the rule that refused:\n%s", out)
+	}
+	for _, echoed := range []string{"anna@example.com", "sk-or-v1-"} {
+		if strings.Contains(out, echoed) {
+			t.Errorf("the log carries %q, which the validator echoed from the answer:\n%s", echoed, out)
 		}
 	}
 }

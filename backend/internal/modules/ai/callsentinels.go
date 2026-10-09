@@ -22,8 +22,9 @@ const sentinelOutputRejected = "output_rejected"
 const sentinelTimeout = "timeout"
 
 // answeredSentinels are the sentinels the health read does not count as a
-// failure. metering_failed is an answer whose usage write failed. The rest are
-// outcomes: the model was reached and decided, or answered and was refused.
+// failure. metering_failed is an answer whose usage write failed, and
+// request_rejected is the provider refusing a malformed request. The other two
+// are outcomes: a model was reached and decided, or answered and was refused.
 var answeredSentinels = []string{
 	sentinelMeteringFailed, sentinelOutputWithheld, sentinelRequestRejected, sentinelOutputRejected,
 }

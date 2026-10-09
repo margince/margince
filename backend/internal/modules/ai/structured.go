@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -130,22 +131,24 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 	return resp, info, nil
 }
 
-// maxLoggedRefusal bounds the validator's message in the log. Sites echo model
-// output into it, and the model read a correspondent's text.
-const maxLoggedRefusal = 200
+// quotedSpan is a Go-quoted string. Validators echo model output through %q,
+// and the model read a correspondent's text, so those spans never reach a log.
+var quotedSpan = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 
 // refused records that the validator refused the attempt info describes: the
 // cache forgets the answer, and the log says which rule refused it. ai_call has
 // no column for the rule, so this line is what groups refusals by cause.
 func (r *Router) refused(ctx context.Context, lc *logicalCall, task Task, info RouteInfo, cause error) {
 	r.Reject(info)
-	reason := []rune(cause.Error())
-	if len(reason) > maxLoggedRefusal {
-		reason = append(reason[:maxLoggedRefusal], '…')
-	}
 	r.log.InfoContext(ctx, "ai: the validator refused an answer",
 		"task", string(task), "logical_call_id", lc.id.String(), "attempt", len(lc.attempts),
-		"tier", string(info.Tier), "model", info.ModelID, "reason", string(reason))
+		"tier", string(info.Tier), "model", info.ModelID, "reason", refusalReason(ctx, cause))
+}
+
+// refusalReason is the validator's message with every echoed token blanked,
+// then passed through the same stripping and bound as a provider's sentence.
+func refusalReason(ctx context.Context, cause error) string {
+	return safeProviderText(ctx, quotedSpan.ReplaceAllString(cause.Error(), `"…"`))
 }
 
 // rejected names what refused the text. The offline fake cannot produce a

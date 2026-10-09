@@ -1126,7 +1126,7 @@ Counted per record (one task and binding pair) over the 37 stale record(s) this 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 1 | The test case changed. Re-certify: the old result measured a different case. |
-| **the prompt this build sends** | 37 | The product changed. The band describes the new prompt, so a drop is the cost of that change and not the model. |
+| **the prompt this build sends** | 37 | The product changed. The band measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is the cost of that change and not the model. |
 | how a run is graded | 26 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A

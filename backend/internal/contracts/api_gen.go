@@ -22225,7 +22225,7 @@ type AiCall struct {
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-	// Three codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing.
+	// Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
 	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
@@ -22375,7 +22375,7 @@ type AiCallSummary struct {
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-	// Three codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing.
+	// Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
 	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
@@ -23118,7 +23118,7 @@ type AiRungHealth struct {
 	// rebound to another model drops the attempts of the one before it.
 	Calls int `json:"calls"`
 
-	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the outcomes `output_withheld`, `request_rejected` and `output_rejected` are not failures, since the model was reached.
+	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`), the provider's refusal of a malformed request (`request_rejected`), and the model outcomes `output_withheld` and `output_rejected` are not failures.
 	Failures int `json:"failures"`
 
 	// Healthy The tier's latest attempt in the window answered. The latest, not a ratio: a tier
