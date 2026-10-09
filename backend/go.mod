@@ -4,7 +4,7 @@ module github.com/margince/margince/backend
 // `ON DELETE SET NULL (column_list)` semantics and current-toolchain
 // tooling. Contributors/operators need the 1.27 toolchain; this is a PoC
 // choice, revisit if broader portability becomes a goal.
-go 1.27.1
+go 1.27.2
 
 replace github.com/margince/margince/composition => ../composition
 
@@ -39,7 +39,7 @@ require (
 	github.com/tetratelabs/wazero v1.12.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/image v0.46.0
-	golang.org/x/net v0.59.0
+	golang.org/x/net v0.60.0
 	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.46.0
 	golang.org/x/text v0.42.0
