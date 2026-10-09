@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 294 |
-| Columns | 3508 |
-| Foreign keys | 476 |
+| Tables | 296 |
+| Columns | 3525 |
+| Foreign keys | 482 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -39,10 +39,10 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 24 | 126 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 43 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 40 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 24 | 127 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 44 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 41 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 33 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 22 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 37 | 14 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
@@ -96,7 +96,7 @@ erDiagram
 | [assurance](assurance.md) | 7 |
 | [automation](automation.md) | 3 |
 | [capture](capture.md) | 22 |
-| [collections](collections.md) | 10 |
+| [collections](collections.md) | 12 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 36 |
@@ -128,7 +128,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 58 | 32 |
+| [`activity`](activities.md#activity) | activities | 58 | 33 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
@@ -157,7 +157,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 24 | 126 |
+| [`app_user`](identity.md#app_user) | identity | 24 | 127 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 3 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -209,7 +209,7 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 11 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 43 | 40 |
+| [`company`](contacts.md#company) | contacts | 43 | 41 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
 | [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 19 | 0 |
@@ -228,7 +228,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 32 | 43 |
+| [`contact`](contacts.md#contact) | contacts | 32 | 44 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
@@ -386,7 +386,9 @@ erDiagram
 | [`stored_object_intent`](platform.md#stored_object_intent) | platform | 3 | 0 |
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
-| [`tag`](collections.md#tag) | collections | 9 | 2 |
+| [`tag`](collections.md#tag) | collections | 10 | 3 |
+| [`tag_suggestion`](collections.md#tag_suggestion) | collections | 12 | 1 |
+| [`tag_suggestion_evidence`](collections.md#tag_suggestion_evidence) | collections | 4 | 0 |
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |
 | [`team`](identity.md#team) | identity | 6 | 7 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |

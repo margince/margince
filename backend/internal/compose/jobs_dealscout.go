@@ -3,8 +3,10 @@
 
 package compose
 
-// Deal Scout's River wiring: one hourly pass per workspace. Job args and the
-// worker adapter only — the pass itself is RunDealScout.
+// The River wiring of the hourly scout passes, Deal Scout's and the tag
+// scout's. Each runs once per workspace, in that workspace's transaction, as
+// the scout's own system principal. The passes themselves are RunDealScout and
+// RunTagScout.
 
 import (
 	"context"
@@ -31,39 +33,56 @@ func (DealScoutArgs) Kind() string { return "deal_scout" }
 // workspace, and walks them itself (jobs.FleetWide).
 func (DealScoutArgs) FleetWide() {}
 
-type dealScoutWorker struct {
+// scoutTally is what one scout pass did, for the log line. DealScoutPass and
+// TagScoutPass convert to it.
+type scoutTally struct {
+	Superseded, Considered, Raised int
+}
+
+// scoutWorker runs one scout's pass in every workspace. Each scout's own
+// worker type embeds it and names its job args.
+type scoutWorker struct {
 	pool *pgxpool.Pool
 	now  func() time.Time
 	log  *slog.Logger
+	// actor is the scout's system principal, so every suggestion reads as the
+	// scout's claim rather than a colleague's.
+	actor, logLine string
+	run            func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error)
 }
 
-func (w *dealScoutWorker) Work(ctx context.Context, _ *river.Job[DealScoutArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scoutWorkspace))
-}
-
-func (w *dealScoutWorker) scoutWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	// The scout is the acting principal, so every suggestion carries agent:
-	// provenance and reads as the scout's claim rather than a colleague's.
-	wsCtx = principal.SystemActing(wsCtx, "agent:deal-scout")
-	var pass DealScoutPass
+func (w *scoutWorker) scoutWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), w.actor)
+	var pass scoutTally
 	if err := database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 		var err error
-		pass, err = RunDealScout(wsCtx, tx, w.now())
+		pass, err = w.run(wsCtx, tx, w.now())
 		return err
 	}); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	// Logged on every pass: considered tells a quiet week from a broken read,
 	// which raised alone cannot.
-	w.log.InfoContext(wsCtx, "deal scout pass",
+	w.log.InfoContext(wsCtx, w.logLine,
 		"considered", pass.Considered, "raised", pass.Raised, "superseded", pass.Superseded)
 	return nil
+}
+
+type dealScoutWorker struct{ scoutWorker }
+
+func (w *dealScoutWorker) Work(ctx context.Context, _ *river.Job[DealScoutArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scoutWorkspace))
 }
 
 // addDealScoutJobs registers the pass and hands back its schedule, whose
 // cadence is api/jobs.yaml's.
 func addDealScoutJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
-	addDeclaredWorker[DealScoutArgs](reg, &dealScoutWorker{pool: pool, now: time.Now, log: log})
+	addDeclaredWorker[DealScoutArgs](reg, &dealScoutWorker{scoutWorker{
+		pool: pool, now: time.Now, log: log, actor: "agent:deal-scout", logLine: "deal scout pass",
+		run: func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error) {
+			pass, err := RunDealScout(ctx, tx, now)
+			return scoutTally(pass), err
+		},
+	}})
 	return periodicFor(cfg, DealScoutArgs{})
 }

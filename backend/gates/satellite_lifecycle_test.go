@@ -134,6 +134,7 @@ var satelliteLifecyclePaths = []satellitePath{
 // asks about is reported as unmatched, so a ratification cannot outlive the
 // reason for it.
 var carriedElsewhere = gatekit.Waive(map[string]string{
+	"tag_suggestion":         "a tag suggestion is the tag scout's reading of ONE record's evidence. The merge archives the merged-away contact, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion. Moving the row could collide with the survivor's own open suggestion of the same tag",
 	"graph_interaction_edge": "search owns it and REBUILDS it rather than moving it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's, which is the right shape for a table derived entirely from activities the merge has already relinked. Moving the rows instead would carry a fold computed against the pre-merge graph",
 })
 
