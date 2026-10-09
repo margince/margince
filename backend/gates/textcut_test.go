@@ -152,7 +152,7 @@ func isValidUTF8OfSlice(call *ast.CallExpr) bool {
 	return ok && slice.Low == nil && slice.High != nil
 }
 
-// runeSliceNames is every name in file assigned from a []rune conversion.
+// runeSliceNames returns the names in file assigned from a []rune conversion.
 func runeSliceNames(file *ast.File) map[string]bool {
 	names := map[string]bool{}
 	ast.Inspect(file, func(node ast.Node) bool {
