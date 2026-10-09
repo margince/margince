@@ -33,10 +33,7 @@ export const UsesWithoutAddress: Story = {
 
 export const Minted: Story = {
   render: withStub(() => (
-    <MintedPassport
-      token="mgp_7Hq2vXkP9rLw4Tn8sYc1Zb6Ud3Fe0Ga5Jm"
-      apiBaseUrl={API_BASE}
-    />
+    <MintedPassport token="mgp_example_passport" apiBaseUrl={API_BASE} />
   )),
 };
 
