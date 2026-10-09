@@ -5996,7 +5996,7 @@ export const vi = {
   "retention.keepDays_one": "{count} ngày",
   "retention.keepDays_other": "{count} ngày",
   "retention.editScope": "Sửa {scope}",
-  "retention.retainOnly":"Chế độ chỉ lưu giữ",
+  "retention.retainOnly": "Chế độ chỉ lưu giữ",
   "retention.retainOnlyHelp":
     "Khi bật, bản triển khai này không phá huỷ bất cứ gì: không ẩn danh hoá và không xoá, bất kể chính sách bên dưới nói gì. Việc lưu trữ vẫn chạy — bản ghi được lưu trữ là bản ghi vẫn còn.",
   "retention.adminOnly":

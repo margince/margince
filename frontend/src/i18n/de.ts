@@ -6071,7 +6071,7 @@ export const de = {
   "retention.keepDays_one": "{count} Tag",
   "retention.keepDays_other": "{count} Tage",
   "retention.editScope": "{scope} bearbeiten",
-  "retention.retainOnly":"Nur-Aufbewahren-Modus",
+  "retention.retainOnly": "Nur-Aufbewahren-Modus",
   "retention.retainOnlyHelp":
     "Solange er aktiv ist, vernichtet diese Installation nichts: kein Anonymisieren und kein Löschen, unabhängig davon, was eine Regel unten vorsieht. Archivieren läuft weiter; ein archivierter Datensatz bleibt erhalten und wird nicht vernichtet.",
   "retention.adminOnly":
