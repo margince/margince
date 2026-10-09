@@ -26,8 +26,10 @@ func TestASignalTheStoreRefusesAnswers422NamingTheField(t *testing.T) {
 	}{
 		{
 			name: "subject type outside the set", field: "entity_type", code: "invalid_entity_type",
-			body: AnyMap{"kind": "risk", "summary": "x", "source": "manual",
-				"entity_type": "task", "entity_id": ids.NewV7().String()},
+			body: AnyMap{
+				"kind": "risk", "summary": "x", "source": "manual",
+				"entity_type": "task", "entity_id": ids.NewV7().String(),
+			},
 		},
 		{
 			name: "summary left out", field: "summary", code: "required",

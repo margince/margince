@@ -55,9 +55,8 @@ type RequiredFieldError struct{ Field string }
 
 func (e *RequiredFieldError) Error() string { return e.Field + " is required" }
 
-// The refusals below carry their verdict through apperrors.FieldFault, so
-// httperr answers them without a per-type list in this module's handlers
-// that a new refusal could be left out of.
+// FieldFault carries the verdict on the error, so httperr answers every
+// refusal here without a per-type list in the handlers that one could miss.
 func (e *RequiredFieldError) FieldFault() (field, code, message string) {
 	return e.Field, "required", e.Error()
 }
@@ -68,6 +67,7 @@ type NotResolvableError struct{ Reason string }
 
 func (e *NotResolvableError) Error() string { return e.Reason }
 
+// FieldFault names the field and code this refusal answers with.
 func (e *NotResolvableError) FieldFault() (field, code, message string) {
 	return resolutionStateField, "not_resolvable", e.Error()
 }
@@ -78,6 +78,7 @@ type NoWarmthError struct{ Reason string }
 
 func (e *NoWarmthError) Error() string { return e.Reason }
 
+// FieldFault names the field and code this refusal answers with.
 func (e *NoWarmthError) FieldFault() (field, code, message string) {
 	return resolutionStateField, "no_warmth", e.Error()
 }
@@ -107,6 +108,7 @@ func (e *InvalidSignalEntityTypeError) Error() string {
 	return "entity_type " + e.EntityType + " is not one of " + strings.Join(SignalEntityTables(), ", ")
 }
 
+// FieldFault names the field and code this refusal answers with.
 func (e *InvalidSignalEntityTypeError) FieldFault() (field, code, message string) {
 	return "entity_type", "invalid_entity_type", e.Error()
 }
