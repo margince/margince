@@ -43,7 +43,7 @@ func TestInvitingWithoutAUsableCalendarIsRefusedNamingTheProvider(t *testing.T) 
 	if _, err := e.owner.Exec(ctx, `INSERT INTO contact(id,full_name,source,captured_by)VALUES(`+args.add(contact)+`,'Guest','manual','human:test')`, args...); err != nil {
 		t.Fatal(err)
 	}
-	calendar.listErr = connector.ErrAuthRejected
+	calendar.checkErr = connector.ErrAuthRejected
 
 	_, err := store.CreateInvitation(ctx, crmcontracts.MeetingInvitationRequest{
 		ContactId: crmcontracts.Id(contact), AttendeeEmail: "guest@example.test", Subject: "Project meeting",
@@ -54,6 +54,7 @@ func TestInvitingWithoutAUsableCalendarIsRefusedNamingTheProvider(t *testing.T) 
 	if !errors.As(err, &refusal) || refusal.Field != "provider" || refusal.Code != "required" {
 		t.Fatalf("inviting answered %v, want a refusal naming provider", err)
 	}
+	calendar.listErr = connector.ErrAuthRejected
 
 	rec := httptest.NewRecorder()
 	Handlers{store: store}.GetSchedulingCalendars(rec,

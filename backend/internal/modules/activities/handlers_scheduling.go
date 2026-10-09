@@ -121,7 +121,7 @@ func (h Handlers) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request,
 	}
 	calendars, err := h.store.calendar.List(r.Context(), host, string(params.Provider))
 	if err != nil {
-		writeStoreErr(w, r, unconnectedAsRefusal(err))
+		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, calendars)
