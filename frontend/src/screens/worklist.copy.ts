@@ -707,8 +707,6 @@ export function sourceUnavailableText(
     : t("worklist.source.failed", { source: name });
 }
 
-// One source, in the reader's words.
-//
 // Through the same known-source check the titles use, so a source this build
 // has never heard of is described generically rather than printed as its own
 // identifier — a reader must never be shown `ai_work_health` as a noun.
