@@ -33,7 +33,7 @@ import {
   throwProblem,
   WriteRefused,
 } from "./common";
-import { scheduleFields } from "./compose";
+import { scheduleFields } from "./composesend";
 import "./scheduledsends.css";
 import { QueueSkewNotice } from "./scheduledsends.notices";
 import { SendPermission } from "./sendpermission";
