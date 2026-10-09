@@ -22,7 +22,8 @@ import (
 const nextMeetingHorizon = 30 * 24 * time.Hour
 
 // The two side reads, named on the page when they fail. Each speaks for the
-// meetings reading, so categoryOfSource files both under meetings.
+// meetings reading, so categoryOfSource files both under meetings. Neither puts
+// a row on the queue, and horizonSide says so on the entry.
 const (
 	sourceCalendar    = "calendar"
 	sourceNextMeeting = "next_meeting"
@@ -96,7 +97,9 @@ func (s *Service) horizonSide(
 		return nil
 	}
 	slog.ErrorContext(ctx, "a meeting-horizon read failed", "source", source, "error", err)
+	rowless := false
 	return &crmcontracts.WorklistSourceUnavailable{
 		Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
+		ContributesRows: &rowless,
 	}
 }

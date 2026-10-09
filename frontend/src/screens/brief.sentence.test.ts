@@ -243,6 +243,18 @@ it("does not call a partly read empty queue clear", () => {
   expect(briefSentence(partial, t, "en")).toBeNull();
 });
 
+it("calls an empty queue clear when only a side read failed", () => {
+  const calendarUnread = {
+    ...day([]),
+    sources_unavailable: [
+      { source: "calendar", reason: "failed", contributes_rows: false },
+    ],
+  } satisfies Worklist;
+  expect(briefSentence(calendarUnread, t, "en")).toMatchObject({
+    key: "brief.sentence.clear",
+  });
+});
+
 it("counts actionable rows and keeps informational updates out of the headline", () => {
   const notice = item({
     source: "notice",

@@ -19,6 +19,7 @@ import {
   DECISIONS,
   decisionsBlocking,
   floorTest,
+  laneUnread,
   scopeWasCut,
   TASKS,
 } from "./brief.readings.honesty";
@@ -226,7 +227,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   // second copy of it, so an unavailable lane marks the whole strip — which
   // over-marks rather than calling a figure exact over work nobody could see.
   const scopeCut = scopeWasCut(day);
-  const unread = day.sources_unavailable.length > 0 || scopeCut;
+  const unread = laneUnread(day) || scopeCut;
   const floorOf = floorTest(day);
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
