@@ -40,13 +40,16 @@ func everyFamilyNotRecorded(since time.Time) crmcontracts.WeeklyFigureCoverageSe
 	}
 }
 
-// rowOf is the body line a tally label opens, empty when there is none.
-func rowOf(body, label string) string {
+// rowOf is the body line a tally label opens. A missing row fails the test, so
+// no assertion on a row can pass because the row is gone.
+func rowOf(t *testing.T, body, label string) string {
+	t.Helper()
 	for _, line := range strings.Split(body, "\n") {
 		if strings.HasPrefix(line, label) {
 			return line
 		}
 	}
+	t.Fatalf("the message has no %q row:\n%s", label, body)
 	return ""
 }
 
@@ -66,7 +69,7 @@ func TestAWeekBeforeEverySourceSaysSoAndPrintsNoZero(t *testing.T) {
 		}
 	}
 	for _, label := range []string{"Tasks delivered:", "Won · Lost · Moved:", "Carried over:"} {
-		if row := rowOf(body, label); !strings.HasSuffix(row, "Not recorded · Recorded from 2026-06-15") {
+		if row := rowOf(t, body, label); !strings.HasSuffix(row, "Not recorded · Recorded from 2026-06-15") {
 			t.Errorf("the %q row prints a figure its source never measured: %q", label, row)
 		}
 	}
@@ -98,10 +101,10 @@ func TestAPartialWeekKeepsItsCountAndSaysWhenCountingBegan(t *testing.T) {
 
 	body := MailBody(coveredFixture(crmcontracts.WeeklyFigureCoverageSet{Deals: partial, Tasks: recorded}), "", english)
 
-	if row := rowOf(body, "Won · Lost · Moved:"); !strings.HasSuffix(row, "1 · 1 · 3 · Partial week: counted from 2026-06-15") {
+	if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, "1 · 1 · 3 · Partial week: counted from 2026-06-15") {
 		t.Errorf("the partial deals figure is not qualified with its start: %q", row)
 	}
-	if row := rowOf(body, "Tasks delivered:"); !strings.HasSuffix(row, " 7 of 9") {
+	if row := rowOf(t, body, "Tasks delivered:"); !strings.HasSuffix(row, " 7 of 9") {
 		t.Errorf("a fully recorded figure gained a qualifier: %q", row)
 	}
 }
@@ -139,7 +142,7 @@ func TestWonReadsUnavailableWhenItsBookingsWereNotRead(t *testing.T) {
 
 			body := MailBody(review, "", english)
 
-			if row := rowOf(body, "Won · Lost · Moved:"); !strings.HasSuffix(row, " Unavailable · 1 · 3") {
+			if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, " Unavailable · 1 · 3") {
 				t.Errorf("Won prints a count its bookings read never saw: %q", row)
 			}
 		})
@@ -154,7 +157,7 @@ func TestAPartialBookingsReadMarksWonAlone(t *testing.T) {
 
 	body := MailBody(review, "", english)
 
-	if row := rowOf(body, "Won · Lost · Moved:"); !strings.HasSuffix(row, " 1 (partial) · 1 · 3") {
+	if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, " 1 (partial) · 1 · 3") {
 		t.Errorf("a partial bookings read did not mark Won: %q", row)
 	}
 }
@@ -165,7 +168,28 @@ func TestNotRecordedOutranksUnavailable(t *testing.T) {
 	review := coveredFixture(everyFamilyNotRecorded(firstRecord))
 	review.NumericSummary.BookingsCoverage = crmcontracts.ReportingCoverage{Status: crmcontracts.ReportingStatusUnavailable}
 
-	if row := rowOf(MailBody(review, "", english), "Won · Lost · Moved:"); strings.Contains(row, "Unavailable") {
-		t.Errorf("an unrecorded week reads as unavailable: %q", row)
+	row := rowOf(t, MailBody(review, "", english), "Won · Lost · Moved:")
+	if !strings.HasSuffix(row, "Not recorded · Recorded from 2026-06-15") {
+		t.Errorf("an unrecorded week does not read as unrecorded: %q", row)
+	}
+}
+
+// A source with no record at all has no date to give, which is every new seat.
+func TestASourceWithNoRecordSaysSoWithoutADate(t *testing.T) {
+	never := coverageOf(crmcontracts.WeeklyFigureCoverageStatusNotRecorded, nil)
+
+	body := MailBody(coveredFixture(crmcontracts.WeeklyFigureCoverageSet{Deals: never}), "", english)
+
+	if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, "Not recorded · No records from this source") {
+		t.Errorf("a source with no record is not stated as such: %q", row)
+	}
+}
+
+func TestAnUnknownZoneDatesInUTCAndSaysSo(t *testing.T) {
+	review := coveredFixture(everyFamilyNotRecorded(firstRecord))
+	review.NumericSummary.Timezone = "Not/AZone"
+
+	if row := rowOf(t, MailBody(review, "", english), "Tasks delivered:"); !strings.HasSuffix(row, "Recorded from 2026-06-14 UTC") {
+		t.Errorf("an unknown zone did not fall back to a labelled UTC date: %q", row)
 	}
 }

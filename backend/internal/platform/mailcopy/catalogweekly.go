@@ -8,8 +8,8 @@ package mailcopy
 
 // weeklyLines is the Monday retrospective: what the week did, and then what a
 // reader does next with it. It is split where the mail changes subject: the
-// counted figures, then the movement and the two links. The list is one call
-// per line and grows every time the mail says something new.
+// counted figures, the movement and the two links, and the words for a figure
+// nobody measured. The list is one call per line and grows with the mail.
 func weeklyLines(line writeLine) {
 	weeklyFigureLines(line)
 	weeklyMovementLines(line)

@@ -41,8 +41,8 @@ func figuresOf(review Review, words mailcopy.Copy) mailFigures {
 		out.set = review.NumericSummary.FigureCoverage
 	}
 	out.bookings = &review.NumericSummary.BookingsCoverage
-	// The zone was valid when the engine froze it. A build without that zone's
-	// data writes the date in UTC and says so, rather than shifting it.
+	// A frozen zone name this tz database does not know prints the date in UTC
+	// and says so, rather than shifting it.
 	if zone, err := time.LoadLocation(review.NumericSummary.Timezone); err == nil {
 		out.zone = zone
 	}
@@ -57,6 +57,8 @@ func (f mailFigures) value(coverage *crmcontracts.WeeklyFigureCoverage, count st
 		return count
 	}
 	since := coverage.RecordedSince
+	// The engine's Reason is English prose and the mail speaks the installation's
+	// language. An undated figure takes the catalog's words where the panel shows Reason.
 	switch coverage.Status {
 	case crmcontracts.WeeklyFigureCoverageStatusNotRecorded:
 		if since == nil {
