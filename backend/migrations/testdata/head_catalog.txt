@@ -1941,6 +1941,7 @@ public.comms_outbound.html_body text gen=- def=-
 public.comms_outbound.id uuid NOT NULL gen=- def=-
 public.comms_outbound.in_reply_to text gen=- def=-
 public.comms_outbound.inflight_at timestamp with time zone gen=- def=-
+public.comms_outbound.inline_logo_key text gen=- def=-
 public.comms_outbound.instruction_id uuid gen=- def=-
 public.comms_outbound.link_id uuid gen=- def=-
 public.comms_outbound.list_unsubscribe text gen=- def=-
