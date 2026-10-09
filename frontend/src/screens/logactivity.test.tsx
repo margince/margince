@@ -24,11 +24,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { RecordZoneProvider } from "../app/recordzone";
 import { useRecordTimeline } from "../design-system/recordtimeline";
+import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
-import { LogActivity } from "./logactivity";
+import { LogActivity, LogActivityAction } from "./logactivity";
 
 // Logging from a 360 (the "you can actually add to the timeline" acceptance):
 // the POST body carries the contract's shape (kind, subject, the viewed
@@ -230,7 +231,7 @@ describe("log activity from a 360", () => {
       await screen.findByLabelText("Subject *"),
       "Call recap",
     );
-    await userEvent.type(screen.getByLabelText("Details"), "Agreed next step");
+    writeMessage("Details", "Agreed next step");
     await userEvent.click(screen.getByRole("button", { name: "Log" }));
 
     await waitFor(() =>
@@ -656,10 +657,7 @@ describe("log activity from a 360", () => {
     // must never silently carry source_system: transcript.
     expect(screen.queryByLabelText("Transcript")).toBeNull();
     await userEvent.type(screen.getByLabelText("Subject *"), "Quick sync");
-    await userEvent.type(
-      screen.getByLabelText("Details"),
-      "discussed pricing, follow up Tuesday",
-    );
+    writeMessage("Details", "discussed pricing, follow up Tuesday");
     await userEvent.click(screen.getByRole("button", { name: "Log" }));
     await waitFor(() =>
       expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
@@ -828,6 +826,64 @@ describe("log activity from a 360", () => {
     expect(
       (screen.getByLabelText("Transcript") as HTMLTextAreaElement).value,
     ).toBe("");
+  });
+});
+
+// The drawer is opened to write a recap, so Details is the rich editor and takes
+// the drawer's height; the card in a record's rail keeps its three lines. A
+// transcript is never formatted: its lines are what a citation points at.
+describe("the Details field", () => {
+  it("is a growing rich editor in the drawer, not the three-row box", () => {
+    stubApi({});
+    render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
+    const details = screen.getByRole("textbox", { name: "Details" });
+
+    expect(details.getAttribute("contenteditable")).toBe("true");
+    expect(details.closest(".richtext")?.classList).toContain("is-growing");
+    expect(details.style.minHeight).toBe("12em");
+    expect(details.style.height).toBe("");
+  });
+
+  it("keeps its compact height on the record's card", () => {
+    stubApi({});
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    const details = screen.getByRole("textbox", { name: "Details" });
+
+    expect(details.style.height).toBe("4.5em");
+    expect(details.closest(".richtext")?.classList).not.toContain("is-growing");
+  });
+
+  it("sends the formatting as markdown", async () => {
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await userEvent.type(screen.getByLabelText("Subject *"), "Recap");
+    const details = screen.getByRole("textbox", { name: "Details" });
+    details.innerHTML = "<p><b>Summary</b></p><ul><li>first point</li></ul>";
+    fireEvent.input(details);
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({ body: "**Summary**\n\n- first point" });
+  });
+
+  it("stays a plain textarea for a transcript, in the drawer too", async () => {
+    stubApi({});
+    render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
+    await pickOption(
+      userEvent.setup(),
+      screen.getByLabelText("Type"),
+      "Meeting",
+    );
+    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+
+    expect(screen.getByLabelText("Transcript").tagName).toBe("TEXTAREA");
+    expect(screen.queryByRole("toolbar")).toBeNull();
   });
 });
 

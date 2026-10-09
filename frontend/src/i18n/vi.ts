@@ -10277,6 +10277,7 @@ export const vi = {
   "contact.rail.channelNotDeliverable": "Không thể gửi",
   "contact.drawer.close": "Đóng",
   "richtext.bold": "Đậm",
+  "richtext.heading": "Tiêu đề",
   "richtext.italic": "Nghiêng",
   "richtext.bulletList": "Danh sách dấu đầu dòng",
   "richtext.numberList": "Danh sách đánh số",

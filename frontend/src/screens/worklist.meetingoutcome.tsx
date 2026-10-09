@@ -36,22 +36,18 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
-import {
-  Button,
-  Field,
-  Modal,
-  Textarea,
-  TextInput,
-} from "../design-system/atoms";
+import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { useT } from "../i18n";
+import { ActivityBodyField } from "./activitybodyfield";
 import { useActivity } from "./activityread";
 import { throwProblem } from "./common";
 import { useMeetingOutcome } from "./taskactions";
+import { isTranscriptActivity } from "./transcriptread";
 import { worklistKey } from "./worklist.queries";
 
 // The two statuses the dialog can record. `canceled` is deliberately absent:
@@ -278,21 +274,16 @@ function MeetingOutcomeDialog({
                 />
               )}
             </Field>
-            <Field
+            {/* The editor Log activity writes with; a transcript keeps its
+                lines, which a citation points at. */}
+            <ActivityBodyField
               label={t("log.body")}
               hint={t("worklist.verb.meetingBodyHint")}
-            >
-              {(control) => (
-                <Textarea
-                  {...control}
-                  rows={6}
-                  value={draft.body}
-                  onChange={(event) =>
-                    setDraft({ ...draft, body: event.target.value })
-                  }
-                />
-              )}
-            </Field>
+              transcript={isTranscriptActivity(meeting.data)}
+              rows={6}
+              value={draft.body}
+              onChange={(body) => setDraft({ ...draft, body })}
+            />
             <ErrorLine error={save.error} />
           </form>
           <div className="actions">

@@ -1,0 +1,16 @@
+/* The Log activity drawer: the body field takes the height the fields above it
+   leave, down to the Log button, and the drawer body scrolls once the text
+   outgrows it. Each link in the column passes the room on to the next. */
+.logactivity-drawer-body {
+  display: flex;
+  flex-direction: column;
+}
+.logactivity-drawer-body > .form-stack {
+  flex: 1 0 auto;
+}
+.logactivity-drawer-body .logactivity-body-field {
+  flex: 1 0 auto;
+}
+.logactivity-drawer-body .logactivity-body-field > .richtext {
+  flex: 1 0 auto;
+}

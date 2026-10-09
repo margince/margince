@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Bold, Italic, Link2, List, ListOrdered } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
-import { escapeHtml } from "../format/html";
+import { Bold, Heading2, Italic, Link2, List, ListOrdered } from "lucide-react";
+import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react";
+import { plainTextOf, safeEditorHTML } from "./richtext-html";
+import {
+  editorHTMLFromMarkdown,
+  markdownOf,
+  pastedMarkup,
+} from "./richtext-markdown";
 import "./richtext.css";
+
+export { paragraphsFrom, plainTextOf, safeEditorHTML } from "./richtext-html";
 
 /**
  * RichText — the light formatting a business email needs, and nothing more.
@@ -32,6 +39,14 @@ import "./richtext.css";
  * a message whose halves disagree — and which half a recipient reads is their
  * client's decision, not ours.
  *
+ * ## Markdown mode
+ *
+ * `format="markdown"` is the same editor for a body stored as markdown, an
+ * activity's: `value` is markdown, every change also reports `markdown`, and
+ * the toolbar adds a heading. A paste ends formatted whether the clipboard
+ * held a document's markup or markdown source. The marks are the mode's, so
+ * the email composer keeps its outbound set and offers no heading.
+ *
  * ## What it does not do
  *
  * No image button: this product refuses tracking pixels, and a remote image is
@@ -47,16 +62,18 @@ export function RichText({
   hint,
   actions,
   rows = 12,
+  grow = false,
+  format = "html",
   id,
   disabled = false,
 }: Readonly<{
   /**
-   * The markup to show. Read on mount and when it changes from OUTSIDE — an
+   * The markup to show, or the markdown in markdown mode. Read on mount and when it changes from OUTSIDE — an
    * AI draft arriving, a form reset — never on every keystroke, which would
    * fight the caret.
    */
   value: string;
-  onChange: (next: { html: string; text: string }) => void;
+  onChange: (next: { html: string; text: string; markdown: string }) => void;
   label: string;
   /**
    * The toolbar's accessible names. Copy never lives in a primitive: words
@@ -69,6 +86,8 @@ export function RichText({
     numberList: string;
     link: string;
     linkPrompt: string;
+    /** Shown in markdown mode only, which is the mode that keeps headings. */
+    heading?: string;
   }>;
   placeholder?: string;
   /**
@@ -91,6 +110,13 @@ export function RichText({
    */
   actions?: React.ReactNode;
   rows?: number;
+  /**
+   * `rows` is the floor rather than the height, and the surface grows with its
+   * text and with the room its host gives it: for a host whose body is the
+   * field, the Log activity drawer's.
+   */
+  grow?: boolean;
+  format?: "html" | "markdown";
   id?: string;
   /**
    * Not now — the surface and its toolbar both refuse.
@@ -118,6 +144,7 @@ export function RichText({
   // the node — so a composer reopened with a message in state rendered blank
   // while Send still carried the invisible text.
   const [ours, setOurs] = useState("");
+  const markdown = format === "markdown";
 
   useEffect(() => {
     const node = editor.current;
@@ -128,9 +155,13 @@ export function RichText({
     // recipient's. The server's allowlist governs what goes out; this one
     // governs what a model's draft may put in the page a rep is looking at,
     // which is a different trust boundary with a different victim.
-    node.innerHTML = safeEditorHTML(value);
-    setOurs(node.innerHTML);
-  }, [value, ours]);
+    // A markdown body is rebuilt from the parser's closed tree, so it holds
+    // only elements this file names.
+    node.innerHTML = markdown
+      ? editorHTMLFromMarkdown(value)
+      : safeEditorHTML(value);
+    setOurs(markdown ? value : node.innerHTML);
+  }, [value, ours, markdown]);
 
   const report = () => {
     const node = editor.current;
@@ -138,11 +169,28 @@ export function RichText({
       return;
     }
     const html = node.innerHTML;
-    setOurs(html);
-    onChange({ html, text: plainTextOf(node) });
+    const source = markdownOf(node);
+    setOurs(markdown ? source : html);
+    onChange({ html, text: plainTextOf(node), markdown: source });
   };
 
-  const apply = (command: string) => {
+  const paste = (event: ClipboardEvent<HTMLDivElement>) => {
+    const node = editor.current;
+    if (!markdown || disabled || !node) {
+      return;
+    }
+    event.preventDefault();
+    insertMarkup(
+      node,
+      pastedMarkup(
+        event.clipboardData.getData("text/html"),
+        event.clipboardData.getData("text/plain"),
+      ),
+    );
+    report();
+  };
+
+  const apply = (command: string, argument?: string) => {
     if (disabled) {
       return;
     }
@@ -151,9 +199,15 @@ export function RichText({
     // formatting to a selection without a document model. The alternative is
     // reimplementing selection surgery, which is where hand-rolled editors go
     // wrong; what it produces is bounded by the server's allowlist anyway.
-    document.execCommand(command);
+    document.execCommand(command, false, argument);
     report();
   };
+
+  const toggleHeading = () =>
+    apply(
+      "formatBlock",
+      document.queryCommandValue("formatBlock") === "h2" ? "p" : "h2",
+    );
 
   const addLink = () => {
     if (disabled) {
@@ -175,7 +229,9 @@ export function RichText({
   };
 
   return (
-    <div className={`richtext${disabled ? " is-disabled" : ""}`}>
+    <div
+      className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}`}
+    >
       {/* biome-ignore lint/a11y/useSemanticElements: a textarea cannot carry formatting; this is the editable surface the toolbar acts on */}
       <div
         ref={editor}
@@ -196,9 +252,14 @@ export function RichText({
         tabIndex={0}
         data-placeholder={placeholder}
         className="richtext-input"
-        style={{ height: `${rows * 1.5}em` }}
+        style={
+          grow
+            ? { minHeight: `${rows * 1.5}em` }
+            : { height: `${rows * 1.5}em` }
+        }
         onInput={report}
         onBlur={report}
+        onPaste={paste}
       />
       {/* UNDER the words, and quiet. The toolbar led the control for a while —
           a filled band above the box, before a reader had written anything to
@@ -216,6 +277,15 @@ export function RichText({
           </p>
         )}
         <div className="richtext-bar" role="toolbar" aria-label={label}>
+          {markdown && labels.heading && (
+            <RichTextButton
+              onClick={toggleHeading}
+              title={labels.heading}
+              disabled={disabled}
+            >
+              <Heading2 size={14} aria-hidden="true" />
+            </RichTextButton>
+          )}
           <RichTextButton
             onClick={() => apply("bold")}
             title={labels.bold}
@@ -287,218 +357,42 @@ function RichTextButton({
 }
 
 /**
- * The plain-text rendering of what the editor holds.
+ * Put sanitised markup at the caret, replacing the selection.
  *
- * Not `textContent`: that runs every block together, so three paragraphs arrive
- * as one sentence with no space between them. Block boundaries become newlines
- * and a list item keeps its marker, because the plain part is a real
- * alternative somebody reads rather than a fallback nobody checks.
+ * `insertHTML` first, because it keeps the paste on the browser's undo stack.
+ * An engine without it gets the same markup through the selection's range.
  */
-export function plainTextOf(node: HTMLElement): string {
-  const lines: string[] = [];
-  // The line being built. Inline formatting must NOT break it: "The <b>deadline
-  // </b> is Friday" is one sentence, and a renderer that emitted a line per
-  // element would hand the plain reader a column of words.
-  let current = "";
-  const flush = () => {
-    if (current.trim() !== "") {
-      lines.push(current.trim());
-    }
-    current = "";
-  };
-  const walkListItem = (element: HTMLElement, prefix: string) => {
-    flush();
-    // An ordered list numbers its items and an unordered one bullets them.
-    // Emitting neither leaves the plain reader a list that is not a list.
-    const ordered = element.parentElement?.tagName.toLowerCase() === "ol";
-    current = `${prefix}${ordered ? `${itemNumber(element)}. ` : "- "}`;
-    walk(element, `${prefix}  `);
-    flush();
-  };
-  const walkLink = (element: HTMLElement, prefix: string) => {
-    // The destination is the point of a link, and a text client shows no href —
-    // so the URL rides beside the label rather than being lost.
-    walk(element, prefix);
-    const href = element.getAttribute("href") ?? "";
-    if (href !== "" && !current.includes(href)) {
-      current += ` <${href}>`;
-    }
-  };
-  const walkElement = (element: HTMLElement, prefix: string) => {
-    const tag = element.tagName.toLowerCase();
-    if (tag === "br") {
-      flush();
-    } else if (tag === "li") {
-      walkListItem(element, prefix);
-    } else if (tag === "a") {
-      walkLink(element, prefix);
-    } else if (isBlock(tag)) {
-      flush();
-      walk(element, prefix);
-      flush();
-      lines.push("");
-    } else {
-      // Inline: the line continues, which keeps a formatted sentence one
-      // sentence.
-      walk(element, prefix);
-    }
-  };
-  const walk = (parent: Node, prefix: string) => {
-    for (const child of Array.from(parent.childNodes)) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        current += child.textContent ?? "";
-      } else if (child instanceof HTMLElement) {
-        walkElement(child, prefix);
-      }
-    }
-  };
-  walk(node, "");
-  flush();
-  return lines
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-/**
- * The subset of markup this editor will render.
- *
- * `value` is not always something a rep typed: an AI draft arrives here, and a
- * model's output is untrusted input however friendly its source. The server
- * filters what LEAVES for a recipient; this filters what ENTERS our own
- * document, and the two protect different contacts.
- *
- * It mirrors the server's allowlist deliberately — the same elements, the same
- * three link schemes — so a rep never sees formatting in the composer that the
- * outbound filter would strip on the way out. Built with the DOM parser rather
- * than a regex: the browser is the thing that decides what markup means, so it
- * is the thing that should parse it.
- */
-export function safeEditorHTML(markup: string): string {
-  const allowed = new Set([
-    "P",
-    "BR",
-    "B",
-    "STRONG",
-    "I",
-    "EM",
-    "U",
-    "UL",
-    "OL",
-    "LI",
-    "A",
-    "BLOCKQUOTE",
-    "HR",
-  ]);
-  const dropped = new Set([
-    "SCRIPT",
-    "STYLE",
-    "IFRAME",
-    "OBJECT",
-    "EMBED",
-    "FORM",
-    "INPUT",
-    "BUTTON",
-    "SELECT",
-    "TEXTAREA",
-    "TEMPLATE",
-    "NOSCRIPT",
-    "TITLE",
-    "LINK",
-    "META",
-    "IMG",
-  ]);
-  const parsed = new DOMParser().parseFromString(markup, "text/html");
-  const cleanElement = (element: Element): string => {
-    const tag = element.tagName;
-    if (dropped.has(tag)) {
-      return "";
-    }
-    if (!allowed.has(tag)) {
-      // Unwrap, exactly as the server does: a sender whose <div> vanished still
-      // meant the sentence inside it.
-      return clean(element);
-    }
-    const lower = tag.toLowerCase();
-    if (lower === "br" || lower === "hr") {
-      return `<${lower}>`;
-    }
-    const href = tag === "A" ? safeHref(element.getAttribute("href")) : "";
-    const attr = href ? ` href="${escapeHtml(href)}"` : "";
-    return `<${lower}${attr}>${clean(element)}</${lower}>`;
-  };
-  const clean = (parent: Node): string => {
-    let out = "";
-    for (const child of Array.from(parent.childNodes)) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        out += escapeHtml(child.textContent ?? "");
-      } else if (child instanceof Element) {
-        out += cleanElement(child);
-      }
-    }
-    return out;
-  };
-  return clean(parsed.body);
-}
-
-// Which item this is within its own list, counting only siblings — so a nested
-// list restarts rather than continuing its parent's numbering.
-function itemNumber(item: HTMLElement): number {
-  let n = 1;
-  for (
-    let prev = item.previousElementSibling;
-    prev !== null;
-    prev = prev.previousElementSibling
+function insertMarkup(editor: HTMLElement, markup: string): void {
+  editor.focus();
+  // The type says execCommand always exists; a test engine (happy-dom) has
+  // none, and the range path is the one that works there.
+  if (
+    typeof document.execCommand === "function" &&
+    document.execCommand("insertHTML", false, markup)
   ) {
-    if (prev.tagName.toLowerCase() === "li") {
-      n += 1;
-    }
+    return;
   }
-  return n;
+  const selection = window.getSelection();
+  const current = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  const range =
+    current && editor.contains(current.commonAncestorContainer)
+      ? current
+      : endOf(editor);
+  range.deleteContents();
+  const fragment = range.createContextualFragment(markup);
+  const last = fragment.lastChild;
+  range.insertNode(fragment);
+  if (last) {
+    range.setStartAfter(last);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
 }
 
-// A block element ends the line it was on; an inline one continues it.
-function isBlock(tag: string): boolean {
-  return (
-    tag === "p" ||
-    tag === "div" ||
-    tag === "ul" ||
-    tag === "ol" ||
-    tag === "blockquote"
-  );
-}
-
-function safeHref(href: string | null): string {
-  const trimmed = (href ?? "").trim();
-  const lowered = trimmed.toLowerCase();
-  const ok = ["http://", "https://", "mailto:"].some((scheme) =>
-    lowered.startsWith(scheme),
-  );
-  return ok ? trimmed : "";
-}
-
-/**
- * Plain text as the markup this editor round-trips — the inverse of
- * {@link plainTextOf}, and the way a machine-written draft arrives in a field a
- * human formats from.
- *
- * The drafting endpoints answer in PLAIN text by contract. Handed to the editor
- * unchanged, a three-paragraph mail renders as one run-on block that the rep
- * then has to break up by hand before they can read what was written for them;
- * handed through here it arrives shaped the way the model wrote it. Nothing is
- * INVENTED on the rep's behalf — a blank line is a paragraph and a single
- * newline is a line break, which is what those two characters already mean in
- * the text being converted.
- *
- * It escapes before it wraps. A draft is model output and can carry the three
- * characters that would otherwise close a tag; escaping after wrapping would
- * escape our own markup instead of the words inside it.
- */
-export function paragraphsFrom(text: string): string {
-  return text
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .filter((block) => block !== "")
-    .map((block) => `<p>${escapeHtml(block).replaceAll("\n", "<br>")}</p>`)
-    .join("");
+function endOf(node: HTMLElement): Range {
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  range.collapse(false);
+  return range;
 }

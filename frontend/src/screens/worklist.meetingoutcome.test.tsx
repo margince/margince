@@ -17,9 +17,10 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { messageText, writeMessage } from "../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { WorklistScreen } from "./worklist";
@@ -155,9 +156,11 @@ describe("a meeting that owes an answer", () => {
       "Discovery call with Turbinenbau",
     );
     expect(subject).not.toBeNull();
-    expect(
-      screen.getByDisplayValue(/Organizer: greta@turbinenbau\.example/),
-    ).not.toBeNull();
+    await waitFor(() =>
+      expect(messageText("Details")).toMatch(
+        /Organizer: greta@turbinenbau\.example/,
+      ),
+    );
   });
 
   it("patches the meeting with the outcome rather than logging a second one", async () => {
@@ -167,11 +170,8 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(await screen.findByRole("button", { name: /update/i }));
-    const details = await screen.findByDisplayValue(
-      /Organizer: greta@turbinenbau\.example/,
-    );
-    await user.clear(details);
-    await user.type(details, "They want a pilot in Q1.");
+    await screen.findByDisplayValue("Discovery call with Turbinenbau");
+    writeMessage("Details", "They want a pilot in Q1.");
     await user.click(screen.getByRole("button", { name: /^log$/i }));
 
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();

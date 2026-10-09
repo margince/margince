@@ -90,3 +90,43 @@ export const HostileDraft: Story = {
     />
   ),
 };
+
+/** Markdown mode, as an activity body uses it: markdown in, markdown out. */
+function MarkdownDemo({ initial }: Readonly<{ initial: string }>) {
+  const [value, setValue] = useState(initial);
+  return (
+    <div style={{ display: "grid", gap: "var(--space-3)" }}>
+      <RichText
+        format="markdown"
+        value={value}
+        onChange={(next) => setValue(next.markdown)}
+        label="Details"
+        labels={{
+          bold: "Bold",
+          italic: "Italic",
+          bulletList: "Bulleted list",
+          numberList: "Numbered list",
+          link: "Link",
+          linkPrompt: "Web address for this link",
+          heading: "Heading",
+        }}
+        rows={8}
+        grow
+      />
+      <pre className="t-caption" style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+        {value || "—"}
+      </pre>
+    </div>
+  );
+}
+
+/** A meeting recap stored as markdown; the heading button appears here only. */
+export const Markdown: Story = {
+  render: () => (
+    <MarkdownDemo
+      initial={
+        "## Summary\n\n**Budget** is approved.\n\n- signed scope\n- depot list"
+      }
+    />
+  ),
+};

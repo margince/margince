@@ -5,8 +5,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { RecordView } from "./recordview";
 
-// How TimelineText draws a body by kind: a note as markdown whose links show
-// their real address, a mail as plain text with its bare addresses linked.
+// How TimelineText draws a body by kind: what a rep writes (a note, call,
+// meeting or task) as markdown whose links show their real address; a mail and
+// a transcript as plain text with bare addresses linked.
 
 afterEach(cleanup);
 
@@ -39,7 +40,11 @@ describe("TimelineText's links in a mail", () => {
 });
 
 describe("TimelineText on a note", () => {
-  const row = (kind: "note" | "email", body: string) => (
+  const row = (
+    kind: "note" | "email" | "meeting" | "call",
+    body: string,
+    transcript?: boolean,
+  ) => (
     <RecordView
       identity="r-1"
       name="Acme"
@@ -52,10 +57,36 @@ describe("TimelineText on a note", () => {
           atIso: "2026-07-01T00:00:00Z",
           provenance: { kind: "human" as const, self: true },
           body,
+          transcript,
         },
       ]}
     />
   );
+
+  for (const kind of ["meeting", "call"] as const) {
+    it(`draws a ${kind}'s bold and list, with no syntax left`, () => {
+      const { container } = render(
+        row(kind, "**Summary**\n\n- first point\n- second point"),
+      );
+      expect(screen.getByText("Summary").tagName).toBe("STRONG");
+      expect(
+        [...container.querySelectorAll(".tl-text li")].map(
+          (li) => li.textContent,
+        ),
+      ).toEqual(["first point", "second point"]);
+      expect(screen.queryByText(/\*\*|^- /)).toBeNull();
+    });
+  }
+
+  it("leaves a transcript's lines as the text they are", () => {
+    const { container } = render(
+      row("meeting", "**Anna:** hello\n- Ben: hi", true),
+    );
+    expect(container.querySelector(".tl-text strong, .tl-text ul")).toBeNull();
+    expect(container.querySelector(".tl-text-clamp")?.textContent).toBe(
+      "**Anna:** hello\n- Ben: hi",
+    );
+  });
 
   it("draws a note's headings, lists and emphasis", () => {
     const { container } = render(
