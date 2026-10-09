@@ -133,6 +133,11 @@ func SelectionFromQuery(q url.Values) (crmcontracts.ReportingSelection, error) {
 		for _, value := range queryItems(q["metrics"]) {
 			selection.Metrics = append(selection.Metrics, crmcontracts.ReportingMetricID(value))
 		}
+		// The default charts belong to the default metrics; paired with metrics
+		// the caller chose they fail the "charts belong to the metrics" rule.
+		if !q.Has("blocks") {
+			selection.Blocks = []crmcontracts.ReportingBlockKind{}
+		}
 	}
 	if q.Has("blocks") {
 		selection.Blocks = nil

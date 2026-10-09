@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 257.1 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66707 |
+| Approx. wire tokens | 66717 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 112.1 KB | 43% | **No**: a result's shape, never listed to a model |
+| Output schemas | 112.2 KB | 43% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 66.9 KB | 26% | Yes, every step |
 | Input schemas | 57.8 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
@@ -12799,6 +12799,9 @@ immediately; requires passport scope "read".)
                 },
                 "status": {
                   "type": "string"
+                },
+                "updates_not_reversed": {
+                  "type": "integer"
                 }
               },
               "required": [

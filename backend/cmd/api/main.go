@@ -312,6 +312,9 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	case cfg.metricsToken == "":
 		logger.Info("api: /metrics refuses every scrape — set MARGINCE_METRICS_TOKEN to require a Bearer credential, or MARGINCE_METRICS_ACCESS=open where the port is already contained")
 	}
+	if cfg.apiBaseURL != "" {
+		opts = append(opts, compose.WithAPIBaseURL(cfg.apiBaseURL))
+	}
 	if cfg.publicBaseURL != "" {
 		opts = append(opts, compose.WithPublicBaseURL(cfg.publicBaseURL))
 		// The canonical MCP resource (RFC 9728) is the same configured

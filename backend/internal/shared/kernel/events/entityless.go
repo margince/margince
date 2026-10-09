@@ -52,4 +52,9 @@ var pipelineEventTypes = map[string]struct{}{
 	"deal_suggestion.accepted":   {},
 	"deal_suggestion.dismissed":  {},
 	"deal_suggestion.superseded": {},
+	// The same holds for a tag suggestion, whose evidence may be one owner's mail.
+	"tag_suggestion.created":    {},
+	"tag_suggestion.accepted":   {},
+	"tag_suggestion.dismissed":  {},
+	"tag_suggestion.superseded": {},
 }

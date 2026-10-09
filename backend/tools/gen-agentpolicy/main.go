@@ -31,16 +31,11 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/tools/internal/oasnode"
 )
 
-// httpMethods maps every operation key the contract may carry onto the
-// method the chi router registers. mutating names the subset the
-// fail-closed drift-lint applies to.
-var httpMethods = map[string]string{
-	"get": "GET", "head": "HEAD", "options": "OPTIONS",
-	"post": "POST", "put": "PUT", "patch": "PATCH", "delete": "DELETE",
-}
-
+// mutating names the methods the fail-closed drift-lint applies to.
 var mutating = map[string]bool{"POST": true, "PUT": true, "PATCH": true, "DELETE": true}
 
 type policy struct {
@@ -110,7 +105,7 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 	var defects []string
 	for path, item := range paths {
 		for method, node := range item {
-			httpMethod, isOperation := httpMethods[method]
+			httpMethod, isOperation := oasnode.HTTPMethods[method]
 			if !isOperation {
 				continue // parameters, summary, and the other path-item keys
 			}

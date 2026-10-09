@@ -416,3 +416,102 @@ func importOneEmployer(t *testing.T, e *apptest.AppEnv, company string) importRe
 	}
 	return report
 }
+
+// Undoing a run that UPDATED a contact tells the caller what it did not
+// reverse.
+//
+// Undo archives the rows a run created, which is what its own contract says.
+// A second run correcting an address the first one landed creates nothing, so
+// undo has nothing to archive and the corrected value stays.
+//
+// The run was still reported as undone. Somebody undoing a wrong correction was
+// told it had been taken back while it stood.
+func TestUndoingAnUpdateOnlyRunSaysWhatItDidNotReverse(t *testing.T) {
+	e := setupImportApp(t)
+	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
+
+	const firstFile = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Old title\n"
+	first, status := uploadCSV(t, e, "contact", firstFile)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "contact", first.SourceRef, mapping)
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", s)
+	}
+
+	// The same address, a new title: an update, and the run creates nothing.
+	const correction = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,New title\n"
+	second, secondStatus := uploadCSV(t, e, "contact", correction)
+	if secondStatus != http.StatusOK {
+		t.Fatalf("second upload → %d, want 200", secondStatus)
+	}
+	rerun, rerunStatus := createRunWithMapping(t, e, "contact", second.SourceRef, mapping)
+	if rerunStatus != http.StatusAccepted {
+		t.Fatalf("create re-run → %d, want 202", rerunStatus)
+	}
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+		t.Fatalf("approve the correction → %d, want 202", s)
+	}
+	if got := contactTitle(t, e, "ada@lovelace.example"); got != "New title" {
+		t.Fatalf("title after the correction = %q, want New title", got)
+	}
+	// The premise this rests on: the run itself says it corrected one record.
+	var ran importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &ran); s != http.StatusOK {
+		t.Fatalf("report → %d, want 200", s)
+	}
+	if ran.Disposition.Updated != 1 || ran.Disposition.Created != 0 {
+		t.Fatalf("the correcting run reports %+v, want 1 update and no creation", ran.Disposition)
+	}
+
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/undo", nil, nil, nil); s != http.StatusAccepted {
+		t.Fatalf("undo → %d, want 202", s)
+	}
+	// The undo endpoint answers with the run; the reversal's own report is
+	// served beside the import report, which is where a reader finds it.
+	var after importReportWithUndoDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &after); s != http.StatusOK {
+		t.Fatalf("report after undo → %d, want 200", s)
+	}
+	if after.Undo == nil {
+		t.Fatalf("the run reports no reversal after being undone: %+v", after)
+	}
+	// The run reversed nothing, because it created nothing. The report has to
+	// carry that, so a reader is not told the correction was taken back.
+	if after.Undo.ReversedCount != 0 {
+		t.Errorf("reversed_count = %d, want 0: the run created nothing to archive", after.Undo.ReversedCount)
+	}
+	if after.Undo.UpdatesNotReversed != 1 {
+		t.Errorf("updates_not_reversed = %d, want 1: the run corrected one contact and undo left it corrected",
+			after.Undo.UpdatesNotReversed)
+	}
+	if got := contactTitle(t, e, "ada@lovelace.example"); got != "New title" {
+		t.Errorf("title after undo = %q: undo archives what a run created and restores no value, "+
+			"so this is what the report must admit to", got)
+	}
+}
+
+// contactTitle reads one imported contact's title through the API.
+func contactTitle(t *testing.T, e *apptest.AppEnv, email string) string {
+	t.Helper()
+	var contacts struct {
+		Data []AnyMap `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/contacts?limit=100", nil, nil, &contacts); status != http.StatusOK {
+		t.Fatalf("GET /v1/contacts → %d, want 200", status)
+	}
+	for _, c := range contacts.Data {
+		if c["primary_email"] == email || c["email"] == email {
+			if title, ok := c["title"].(string); ok {
+				return title
+			}
+			return ""
+		}
+	}
+	t.Fatalf("no imported contact carries the address %s", email)
+	return ""
+}
