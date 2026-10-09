@@ -220,6 +220,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "deal.fcPipeline",
   "filters.field.pipeline_id",
   "analytics.field.pipeline_id",
+  "analytics.sectionPipeline",
   "reporting.pipeline",
   "lead.qualify.pipeline",
   "stageAutomation.pipeline",
@@ -229,16 +230,18 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
-  // The singular of the same noun, on the overnight scan's tally and on the
-  // forecast tile's deal count. Both are the borrowed word beside a numeral, so there is nothing left in any
-  // of them for Vietnamese to translate. Only the `_one` arms land here: the
-  // `_other` arms differ because English pluralises and Vietnamese does not.
+  // The singular of these nouns, on the overnight scan's tally, the forecast
+  // tile's deal count and the filter library's record count. Each is the
+  // borrowed word beside a numeral, so there is nothing left in any of them
+  // for Vietnamese to translate. Only the `_one` arms land here: the `_other`
+  // arms differ because English pluralises and Vietnamese does not.
   "today.scan.readDeals_one",
   "analytics.forecastDeals_one",
+  "filters.library.records.deal_one",
+  "filters.library.records.lead_one",
   "deals.unit",
   "contracts.renew.deal",
   "contracts.deal",
-  "history.actorAgent",
 
   // The forecast categories Commit and Best case keep their English names.
   "deal.fcCommit",
@@ -301,13 +304,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.decisions.group",
   "partner.role.hosting",
 
-  // Actor labels built on "Agent" and "Connector", which vi carries as
-  // loanwords everywhere else in this catalog — translating them only here
-  // would make the same actor read as two different things.
-  "trust.agentTag",
-  "consent.actorAgent",
-  "consent.actorConnector",
-  "users.agentSeat",
   // "Lead" is the loanword in both de and vi — every other lead key in this
   // catalog leaves it untranslated, and the marker on the record page names
   // the same object those keys do.

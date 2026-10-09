@@ -369,7 +369,7 @@ func confirmAskLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmMarketingNo },
 		"Do not send news",
 		"Keine Neuigkeiten senden",
-		"Không gửi tin")
+		"Không gửi tin cho tôi")
 	// THE DEDICATED SUBSCRIPTION LINK'S OWN QUESTION, which names the purpose
 	// rather than describing a frequency. A grant through that door binds this;
 	// one through the record-confirmation door binds the pair above.

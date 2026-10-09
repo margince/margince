@@ -227,7 +227,20 @@ const RETIRED_WORDS = [
   "bản ghi lời",
   "làm giàu dữ liệu",
   "điểm cuối",
+  "nhật ký kiểm tra",
+  "dừng giữa chừng",
+  "quản trị viên hệ thống",
+  "nhờ quản trị viên",
+  "lưu giữ pháp lý",
+  "suất",
 ];
+
+// The compounds where a retired word keeps an ordinary sense: hiệu suất is
+// performance, not a seat.
+const ORDINARY_COMPOUNDS = word(
+  "(?:hiệu|xác|tần|thuế|lãi|năng|công|áp) suất",
+  "giu",
+);
 
 // A file name or a URL is typed exactly as the reader must type it.
 function withoutPaths(value: string): string {
@@ -430,7 +443,25 @@ describe("vi copy style", () => {
   });
 
   it("uses no retired word", () => {
-    expect(matching(RETIRED, { text: withoutPaths })).toEqual([]);
+    expect(
+      matching(RETIRED, {
+        text: (value) => withoutPaths(value).replace(ORDINARY_COMPOUNDS, " "),
+      }),
+    ).toEqual([]);
+  });
+
+  // A short value is a title, label, status or counter, where a failure is
+  // "bị lỗi" or "không thành công".
+  it("says thất bại only in a sentence, never in a short value", () => {
+    const wordsIn = (value: string) =>
+      prose(value)
+        .split(/\s+/)
+        .filter((token) => /\p{L}/u.test(token)).length;
+    expect(
+      offenders(
+        ([, , value]) => word("thất bại").test(value) && wordsIn(value) <= 8,
+      ),
+    ).toEqual([]);
   });
 
   it("retires exactly the words the Vocabulary table sets in code format", () => {
