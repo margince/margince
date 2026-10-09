@@ -463,10 +463,3 @@ export function companyWebsite(company: Company): string | undefined {
     (primaryDomain ? `https://${primaryDomain}` : undefined)
   );
 }
-
-// useAccountChronology assembles the middle column's history: what happened
-// with this account, what changed about the record, or both in one order.
-//
-// The two feeds page independently, so "both" is not a concatenation — the
-// merge is cut where it stops being provably complete (mergeChronology), and
-// the cut is stated rather than left to look like the end of the history.

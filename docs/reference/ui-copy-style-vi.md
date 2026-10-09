@@ -180,7 +180,8 @@ bạn".
 - **Loanwords** deal, lead and pipeline take a classifier, never an English
   plural ("3 deal", "một lead").
 - **Product nouns** stay: Commit, Best case, passport, token, webhook,
-  endpoint, email, API, CRM, AI, MCP, OAuth, VAT, GDPR, Deal Room, Voice DNA.
+  endpoint, email, API, CRM, AI, MCP, OAuth, VAT, GDPR, Deal Room, Voice DNA,
+  and skill, the package an AI tool installs.
   The word agent stays only where the English names an external agent client or a protocol object, such as an
   agent connection or a passport scope, and in identifiers.
 - **Everything else is Vietnamese**, even what an engineer keeps in English:

@@ -65,6 +65,16 @@ func (s *Service) evaluateSelection(ctx context.Context, tx pgx.Tx, selection cr
 }
 
 func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (Evaluation, error) {
+	// A selection with no charts serialises the same whichever door built it,
+	// so the evaluation key does not depend on nil versus empty.
+	if selection.Blocks == nil {
+		selection.Blocks = []crmcontracts.ReportingBlockKind{}
+	}
+	// A selection with no charts serialises the same whichever door built it,
+	// so the evaluation key does not depend on nil versus empty.
+	if selection.Blocks == nil {
+		selection.Blocks = []crmcontracts.ReportingBlockKind{}
+	}
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}

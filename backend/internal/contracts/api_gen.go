@@ -65632,6 +65632,9 @@ type ServerInterface interface {
 	// Reset an installation that armed the capability to its first-boot state.
 	// (POST /admin/reset-data)
 	ResetData(w http.ResponseWriter, r *http.Request)
+	// Download the Margince skill for an AI tool, as a ZIP.
+	// (GET /agent-bundle)
+	DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request)
 	// The governed tool surface (registry metadata) for the operator UI.
 	// (GET /agent-tools)
 	ListAgentTools(w http.ResponseWriter, r *http.Request)
@@ -67057,7 +67060,7 @@ type ServerInterface interface {
 	// Discard one of the caller's unsent messages.
 	// (DELETE /mail-drafts/{id})
 	DiscardMailDraft(w http.ResponseWriter, r *http.Request, id Id)
-	// Get the current authenticated principal (user or agent).
+	// Get the signed-in human's own profile, roles and settings.
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
 	// The calling rep's own standing answers, one per scheduled agent.
@@ -68116,6 +68119,12 @@ func (_ Unimplemented) PauseReportingSchedules(w http.ResponseWriter, r *http.Re
 // Reset an installation that armed the capability to its first-boot state.
 // (POST /admin/reset-data)
 func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download the Margince skill for an AI tool, as a ZIP.
+// (GET /agent-bundle)
+func (_ Unimplemented) DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -70969,7 +70978,7 @@ func (_ Unimplemented) DiscardMailDraft(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Get the current authenticated principal (user or agent).
+// Get the signed-in human's own profile, roles and settings.
 // (GET /me)
 func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -74301,6 +74310,26 @@ func (siw *ServerInterfaceWrapper) ResetData(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResetData(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadAgentSkillBundle operation middleware
+func (siw *ServerInterfaceWrapper) DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadAgentSkillBundle(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -94469,8 +94498,6 @@ func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -106579,6 +106606,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/reset-data", wrapper.ResetData)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/agent-bundle", wrapper.DownloadAgentSkillBundle)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-tools", wrapper.ListAgentTools)

@@ -2433,7 +2433,6 @@ export const de = {
   "co.signals.openProject": "Projekt öffnen",
   "co.signals.openSource": "Meldung lesen",
   "chronology.label": "Verlaufsfilter",
-  "chronology.activities": "Aktivitäten",
   "chronology.changes": "Änderungen",
   "filter.label": "Filter",
   "chronology.all": "Alles",
@@ -2443,9 +2442,6 @@ export const de = {
   "convo.waitingOnThem": "Wartet auf Antwort der Gegenseite",
   "chronology.changesEmpty":
     "Seit dem Anlegen dieses Datensatzes wurde kein Feld geändert.",
-  "chronology.allEmpty": "Noch keine Aktivität zu diesem Datensatz.",
-  "chronology.truncated":
-    "Ältere Einträge werden nicht angezeigt, weil es zu viele sind, um sie gemeinsam zu sortieren. Wähle Aktivitäten oder Änderungen, um weiter zurückzublicken.",
   "chronology.truncatedActivities":
     "Nur die neuesten Aktivitäten werden angezeigt.",
   "timeline.sentTo": "Gesendet an {who}",
@@ -5252,7 +5248,7 @@ export const de = {
   "rbac.masked": "Verborgener Wert",
   "settings.passports": "Agenten-Passports",
   "settings.passportsSub":
-    "Ein Agent handelt mit deinen Berechtigungen und nie darüber hinaus: Jede Anfrage prüft deine Berechtigungen erneut.",
+    "Ein Passport ist dein persönliches Zugriffstoken. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du ankreuzt, und nie darüber hinaus. Jede Anfrage prüft deine Berechtigungen erneut.",
   "passport.scope.read": "Datensätze lesen",
   "passport.scope.draft": "Nachrichten entwerfen",
   "passport.scope.write": "Datensätze ändern",
@@ -5260,8 +5256,31 @@ export const de = {
   "passport.scope.enrich": "Kontaktdaten kaufen",
   "passport.select": "Passport",
   "passport.noneOption": "Kein Passport",
-  "settings.passportsLendHint":
-    "Passports, die du für Skripte und andere Werkzeuge erstellt hast. Eine MCP-Client-Verbindung nutzt sie nicht; sie ist unten aufgeführt.",
+  "settings.passportUseAi": "In deinem KI-Werkzeug",
+  "settings.passportUseAiDetail":
+    "Installiere den Margince-Skill in Claude, Codex oder Gemini und gib ihm dann deinen Passport. Der Skill sagt der KI, wie sie in Margince für dich arbeitet.",
+  "settings.skillDownload": "Skill herunterladen",
+  "settings.skillDownloadFailed": "Skill nicht heruntergeladen",
+  "settings.passportUseCode": "In deinem eigenen Code",
+  "settings.passportUseCodeDetail":
+    "Sende ihn als Bearer-Token. Die openapi.yaml des Skills listet jeden Aufruf, den er machen kann.",
+  "settings.snippetLanguage": "Sprache",
+  "settings.snippetLabel": "Beispiel in {language}",
+  "settings.snippetCopy": "Beispiel kopieren",
+  "settings.snippetCopied": "Kopiert",
+  "settings.snippetCopyFailed":
+    "Markiere das Beispiel oben und kopiere es von Hand.",
+  "settings.snippetFoot": "Setze zuerst {variable} in deiner Shell.",
+  "settings.passportsYours": "Deine Passports",
+  "settings.passportsMcpHint":
+    "Ein MCP-Client erhält beim Verbinden eigene Zugangsdaten und braucht daher keinen Passport. Er steht unter Verbundene MCP-Clients.",
+  "settings.passportCreated":
+    "Passport erstellt. Er wird nur einmal angezeigt, kopiere ihn also jetzt.",
+  "settings.tokenCopy": "Passport kopieren",
+  "settings.tokenCopied": "Kopiert",
+  "settings.tokenCopyFailed":
+    "Markiere den Passport oben und kopiere ihn von Hand.",
+  "settings.passportNext": "So nutzt du ihn",
   "settings.passportLabel": "Agentenname",
   "settings.mint": "Passport ausstellen",
   "settings.minting": "Wird ausgestellt…",
@@ -5455,10 +5474,10 @@ export const de = {
   "agent.tip.recap": "Öffne den Agentenbereich für die heutige Aktivität.",
   "agent.tip.edge": "Der Bildschirmrand leuchtet, während der Agent arbeitet.",
 
-  "agents.connected": "Verbundene Agenten",
+  "agents.connected": "Verbundene MCP-Clients",
   "agents.connectedSub":
     "MCP-Clients mit eigenen Zugangsdaten, beschränkt auf den Zugriff, den du freigegeben hast",
-  "agents.noneConnected": "Noch keine Agenten verbunden.",
+  "agents.noneConnected": "Noch keine MCP-Clients verbunden.",
   "agents.connectedOn": "verbunden {date}",
   "agents.disconnect": "Trennen",
   "agents.disconnectOpen": "Trennen",
@@ -5472,7 +5491,7 @@ export const de = {
   "agents.revokeGrantNamed": "Verbindung zu {client} beenden",
   "agents.disconnectConfirm":
     "Damit endet die gesamte Verbindung, nicht nur ein Satz Zugangsdaten. Der Agent verliert den Zugriff beim nächsten Aufruf und kann ihn nicht erneuern. Für eine neue Verbindung muss der Zugriff erneut freigegeben werden.",
-  "agents.connectHow": "Agent verbinden",
+  "agents.connectHow": "MCP-Client verbinden",
   "agents.connectSteps":
     "Führe einen dieser Befehle aus. Der Client registriert sich selbst und kehrt hierher zurück, damit du seinen Zugriff wählen kannst.",
   "agents.connectAntigravityPath":
@@ -5481,8 +5500,6 @@ export const de = {
     "Der MCP-Connector ist für diese Installation ausgeschaltet.",
   "agents.connectorOffDetail":
     "Kein Agent kann sich verbinden, bis Admins oder Operations ihn einschalten. Passports funktionieren weiterhin als REST-Zugangsdaten.",
-  "settings.tokenOnce":
-    "Jetzt kopieren. Diese Zugangsdaten werden nur einmal angezeigt.",
   "settings.token": "Zugangsdaten",
   "settings.autonomy": "Autonomiestufen",
   "settings.autonomySub": "Was sofort läuft und was auf Freigabe wartet",

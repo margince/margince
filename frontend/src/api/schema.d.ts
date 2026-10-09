@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the current authenticated principal (user or agent). */
+        /** Get the signed-in human's own profile, roles and settings. */
         get: operations["getCurrentPrincipal"];
         put?: never;
         post?: never;
@@ -443,6 +443,35 @@ export interface paths {
          *     kill switch belongs to the granting human, never to the agent it bounds.
          */
         delete: operations["revokePassport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the Margince skill for an AI tool, as a ZIP.
+         * @description The skill an AI tool (Claude, Codex, Gemini) installs to call this API with a passport. The
+         *     ZIP holds one folder, `margince/`, with `README.md` (how to save a passport and install the
+         *     skill), `SKILL.md` (the rules an agent follows), `INDEX.md` (one row per operation a passport
+         *     can call) and `openapi.yaml` (those operations in full, generated from this contract).
+         *     `servers` in `openapi.yaml` and the base URL in both guides are this install's API address,
+         *     the same value `GET /passports` answers as `api_base_url`.
+         *
+         *     It carries no credential. The passport is saved apart from the skill, so one download serves
+         *     every passport and a revoked passport leaves nothing to delete. Human-only: the bundle is how a
+         *     human hands an agent the API, and an agent that can call the API already has it.
+         */
+        get: operations["downloadAgentSkillBundle"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -43905,6 +43934,11 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PassportSummary"][];
+                        /**
+                         * Format: uri
+                         * @description The address a passport calls this API at, `/v1` included: the configured API base URL, else the public base URL, else the origin this request arrived on. The skill bundle's `openapi.yaml` names the same address.
+                         */
+                        api_base_url: string;
                     };
                 };
             };
@@ -43967,6 +44001,28 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    downloadAgentSkillBundle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The skill as a downloadable ZIP attachment, `margince-skill.zip`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getConsentRequest: {
