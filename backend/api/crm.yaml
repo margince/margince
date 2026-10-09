@@ -176,7 +176,9 @@ paths:
     get:
       tags: [Identity]
       operationId: getCurrentPrincipal
-      summary: Get the current authenticated principal (user or agent).
+      security: [ { cookieAuth: [] } ]   # human session only — a passport never binds the session identity this reads
+      x-agent-access: human-only
+      summary: Get the signed-in human's own profile, roles and settings.
       responses:
         '200':
           description: The current principal.

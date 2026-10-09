@@ -66996,7 +66996,7 @@ type ServerInterface interface {
 	// Discard one of the caller's unsent messages.
 	// (DELETE /mail-drafts/{id})
 	DiscardMailDraft(w http.ResponseWriter, r *http.Request, id Id)
-	// Get the current authenticated principal (user or agent).
+	// Get the signed-in human's own profile, roles and settings.
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
 	// The calling rep's own standing answers, one per scheduled agent.
@@ -70902,7 +70902,7 @@ func (_ Unimplemented) DiscardMailDraft(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Get the current authenticated principal (user or agent).
+// Get the signed-in human's own profile, roles and settings.
 // (GET /me)
 func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -94379,8 +94379,6 @@ func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *ht
 func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

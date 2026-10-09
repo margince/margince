@@ -280,7 +280,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
-| `GET /me` | getCurrentPrincipal | Get the current authenticated principal (user or agent). | any | at once |
 | `GET /installation/settings` | getInstallationSettings | The installation's own settings. | any | at once |
 | `GET /users` | listUsers | List workspace members (roster) — cursor-paginated. Read-only. | any | at once |
 | `GET /users/names` | nameSeats | Name the colleagues behind a set of ids. Read-only. | any | at once |

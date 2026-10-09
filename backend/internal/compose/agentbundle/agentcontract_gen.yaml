@@ -56,35 +56,6 @@ tags:
   - name: Bulk
     description: One change over a selection of contacts, companies or deals — previewed, confirmed by whoever asked for it, and applied record by record.
 paths:
-  /me:
-    get:
-      tags: [Identity]
-      operationId: getCurrentPrincipal
-      summary: Get the current authenticated principal (user or agent).
-      responses:
-        '200':
-          description: The current principal.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/MeResponse'}
-              examples:
-                human:
-                  value:
-                    user:
-                      id: 018f3a1b-0000-7000-8000-000000000001
-                      email: jane@acme.com
-                      display_name: Jane Rep
-                      timezone: Europe/Berlin
-                      status: active
-                      is_agent: false
-                      created_at: '2026-01-02T09:00:00Z'
-                      updated_at: '2026-01-02T09:00:00Z'
-                      archived_at: null
-                    roles: [rep]
-                    teams: [018f3a1b-0000-7000-8000-0000000000ab]
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PasswordChangeRequired'}
-      description: Get the current authenticated principal (user or agent).
   /contacts/{id}/employment-import:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7784,14 +7755,6 @@ components:
           examples:
             denied:
               value: {type: 'https://errors.gradion.com/permission_denied', title: Permission denied, status: 403, code: permission_denied, detail: Your role does not grant permission for this action on this object.}
-    PasswordChangeRequired:
-      description: 'Reads are refused too. Unlike its 403 siblings this is a property of the ACCOUNT rather than of the operation, so any authenticated operation can answer it, and no grant of role, seat or scope lifts it.'
-      content:
-        application/problem+json:
-          schema: {$ref: '#/components/schemas/Problem'}
-          examples:
-            forced:
-              value: {type: 'https://errors.gradion.com/password_change_required', title: Password change required, status: 403, code: password_change_required, detail: This account must set its own password before it can be used.}
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:
@@ -15463,53 +15426,6 @@ components:
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
         member_count: {type: integer, description: 'Active memberships; populated by listTeams.'}
-    MeResponse:
-      type: object
-      required: [user, roles, teams, workspace_name, non_production, admin_password_link]
-      properties:
-        user: {$ref: '#/components/schemas/User'}
-        workspace_name:
-          type: string
-          description: >-
-            The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates.
-        non_production:
-          type: boolean
-          description: >-
-            True when the installation runs a non-production posture (MARGINCE_ENV=dev|test). DEPRECATED as the gate for the "Reset data" action — read `data_reset_available` instead. A deployment being non-production is not consent to purge its tenant data, and inferring one from the other is why a `staging` installation full of real internal users could be wiped through the API.
-          deprecated: true
-        data_reset_available:
-          type: boolean
-          description: >-
-            True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
-        admin_password_link:
-          type: boolean
-          description: >-
-            Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail.
-        roles:
-          type: array
-          items: {type: string}
-          description: >-
-            Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact.
-        teams:
-          type: array
-          items: {type: string, format: uuid}
-        authorization:
-          $ref: '#/components/schemas/Authorization'
-        settings_availability:
-          $ref: '#/components/schemas/SettingsAvailability'
-        installation_brand:
-          $ref: '#/components/schemas/InstallationBrand'
-        passport:
-          type: [object, 'null']
-          deprecated: true
-          description: >-
-            Always null. This endpoint is reachable only by a human session: a passport bearer is admitted as an agent principal and never binds the session identity this operation reads, so an agent receives 401 here rather than a passport claim. The field is retained because removing a response property breaks published clients; a client MUST NOT branch on it. An agent's own scopes are what the MCP surface advertises in tools/list, which is the honest place to ask.
-          properties:
-            passport_id: {type: string, format: uuid}
-            on_behalf_of: {type: string, format: uuid}
-            scopes:
-              type: array
-              items: {type: string, enum: [read_only, draft_only, act_with_approval, auto_execute_low_risk]}
     ForecastReadings:
       type: object
       description: >-
@@ -16102,79 +16018,6 @@ components:
           description: >-
             The privacy floor kept this figure back for this reader. The block still renders — a figure that vanished would leave the report reading as complete while saying less.
       additionalProperties: false
-    RbacObjectGrant:
-      type: object
-      additionalProperties: false
-      required: [create, read, update, delete]
-      description: >-
-        One object's effective CRUD grant, already merged across every role the principal holds (any role allowing an action allows it).
-      properties:
-        create: {type: boolean}
-        read: {type: boolean}
-        update: {type: boolean}
-        delete: {type: boolean}
-    Authorization:
-      type: object
-      additionalProperties: false
-      required: [seat_type, objects, row_scope]
-      description: >-
-        What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
-      properties:
-        seat_type:
-          type: string
-          enum: [full, read]
-          description: >-
-            The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
-        objects:
-          type: object
-          description: >-
-            Effective grants keyed by RbacObject. An absent key denies — the server resolves an unknown object to the zero grant, and a client must do the same rather than treat a missing entry as unrestricted.
-          additionalProperties: {$ref: '#/components/schemas/RbacObjectGrant'}
-        row_scope:
-          type: string
-          enum: [own, team, all]
-          description: >-
-            How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
-    InstallationBrand:
-      type: object
-      additionalProperties: false
-      required: [display_name]
-      description: >-
-        The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
-      properties:
-        display_name:
-          type: string
-          description: What the company is called day to day.
-        logo_url:
-          type: string
-          description: >-
-            The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries. Absent when the company wears none, or when this caller holds no read on companies and so could not load it; a client draws the company's monogram instead.
-        logo_icon_url:
-          type: string
-          description: >-
-            The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent on the same terms as `logo_url`. A client without one draws the wide mark.
-    SettingsAvailability:
-      type: object
-      additionalProperties: false
-      required: [company_context, embedding_reindex]
-      description: >-
-        Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.
-      properties:
-        company_context:
-          type: boolean
-          description: >-
-            True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it.
-        reporting:
-          type: boolean
-          description: Reporting is always available. Retained for compatibility with older clients.
-        lists:
-          type: boolean
-          description: >-
-            True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
-        embedding_reindex:
-          type: boolean
-          description: >-
-            True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
     CustomField:
       type: object
       description: |-

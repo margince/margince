@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the current authenticated principal (user or agent). */
+        /** Get the signed-in human's own profile, roles and settings. */
         get: operations["getCurrentPrincipal"];
         put?: never;
         post?: never;

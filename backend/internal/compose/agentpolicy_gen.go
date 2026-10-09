@@ -328,6 +328,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/magic":                                                         {Op: "getMagic", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/magic/lines/{id}/records":                                      {Op: "getMagicLineRecords", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/mail-drafts":                                                   {Op: "getMailDraft", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/me":                                                            {Op: "getCurrentPrincipal", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/me/agent-grants":                                               {Op: "listMyAgentGrants", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/me/ai-activity":                                                {Op: "getMyAiActivity", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/me/brief-delivery":                                             {Op: "getMyBriefDelivery", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
