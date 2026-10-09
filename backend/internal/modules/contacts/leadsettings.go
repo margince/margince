@@ -86,7 +86,7 @@ var UnassignedEscalationUserID = settings.Define[string](
 // concatenates each module's list.
 func Definitions() []settings.Definition {
 	return []settings.Definition{
-		FirstResponseEnabled, FirstResponseTargetMinutes, UnassignedEscalationUserID,
+		FirstResponseEnabled, FirstResponseTargetMinutes, UnassignedEscalationUserID, SignatureTemplate,
 	}
 }
 

@@ -6225,6 +6225,29 @@ export interface paths {
         patch: operations["updateFollowUpSettings"];
         trace?: never;
     };
+    "/email-signature-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The workspace's signature template.
+         * @description The layout every member's mail signs with when it is set, filled in with each member's
+         *     own name, title and phone. Read by a seat that may read installation settings; changed
+         *     by admin/ops. Governed by the `installation_settings` RBAC object.
+         */
+        get: operations["getEmailSignatureTemplate"];
+        /** Set the workspace's signature template (admin/ops). */
+        put: operations["saveEmailSignatureTemplate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/settings": {
         parameters: {
             query?: never;
@@ -26665,14 +26688,48 @@ export interface components {
              *     the member's display name when one is on file.
              */
             body: string;
+            /** @description The member's title, filled into the workspace template's `{title}`. */
+            title: string;
+            /** @description The member's phone number, filled into the workspace template's `{phone}`. */
+            phone: string;
+            /**
+             * @description The workspace has a signature template. Every send this member makes then signs
+             *     with the template, filled in with their name, title and phone, instead of `body`.
+             *     An agent's send carries no sign-off.
+             */
+            template_active: boolean;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        EmailSignatureTemplate: {
+            /**
+             * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+             *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
+             *     mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+             *     and spans with a colour and a pixel size, and drops everything else. Empty means
+             *     none: each member signs with their own plain-text signature.
+             */
+            template: string;
         };
         EmailSignOffRequest: {
             /** @description The message as written so far, plain text. Read only for its language. */
             body: string;
             /** @description The subject, read for its language when the body is too short to tell. */
             subject?: string;
+            draft?: components["schemas"]["EmailSignatureDraft"];
+        };
+        /**
+         * @description Values a settings form has typed and not saved. Each field present stands in for
+         *     the stored one, so the preview shows what saving would produce. Writes nothing,
+         *     and a send never reads it.
+         */
+        EmailSignatureDraft: {
+            /** @description The workspace template as edited. Empty previews a workspace with none. */
+            template?: string;
+            /** @description The caller's title as edited. */
+            title?: string;
+            /** @description The caller's phone as edited. */
+            phone?: string;
         };
         EmailSignOff: {
             /**
@@ -26681,12 +26738,18 @@ export interface components {
              */
             text: string;
             /**
+             * @description The same block as the sanitized markup the HTML part carries. Present only when
+             *     `kind` is `template`.
+             */
+            html?: string;
+            /**
              * @description `signature`: the caller's own, from Settings. `closing`: the caller has written
-             *     none, so the send closes with a plain greeting and their name when available. `none`: this
-             *     send appends nothing.
+             *     none, so the send closes with a plain greeting and their name when available.
+             *     `template`: the workspace's template, filled in with the caller's values. `none`:
+             *     this send appends nothing.
              * @enum {string}
              */
-            kind: "signature" | "closing" | "none";
+            kind: "signature" | "closing" | "template" | "none";
         };
         SaveEmailSignatureRequest: {
             /**
@@ -26695,6 +26758,10 @@ export interface components {
              *     is a document riding on every message.
              */
             body: string;
+            /** @description The member's title, for the workspace template. Omitted leaves it as it is. */
+            title?: string;
+            /** @description The member's phone number, for the workspace template. Omitted leaves it as it is. */
+            phone?: string;
         };
         SaveMyDisplayNameRequest: {
             /**
@@ -53428,6 +53495,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FollowUpSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getEmailSignatureTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignatureTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    saveEmailSignatureTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailSignatureTemplate"];
+            };
+        };
+        responses: {
+            /** @description The saved template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignatureTemplate"];
                 };
             };
             401: components["responses"]["Unauthorized"];

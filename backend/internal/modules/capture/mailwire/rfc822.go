@@ -191,7 +191,30 @@ func writeText(b *strings.Builder, msg connector.EmailMessage) {
 	writeHeader(b, "Content-Type", `multipart/alternative; boundary="`+boundary+`"`)
 	b.WriteString("\r\n")
 	writePart(b, boundary, `text/plain; charset="utf-8"`, msg.Body)
+	if len(msg.Inline) == 0 {
+		writePart(b, boundary, `text/html; charset="utf-8"`, msg.HTMLBody)
+	} else {
+		b.WriteString("--" + boundary + "\r\n")
+		writeRelated(b, boundary+"_related", msg)
+	}
+	b.WriteString("--" + boundary + "--\r\n")
+}
+
+// writeRelated renders the markup with the images it shows by content id, as
+// multipart/related: the markup first, then each image as an inline part.
+func writeRelated(b *strings.Builder, boundary string, msg connector.EmailMessage) {
+	writeHeader(b, "Content-Type", `multipart/related; boundary="`+boundary+`"`)
+	b.WriteString("\r\n")
 	writePart(b, boundary, `text/html; charset="utf-8"`, msg.HTMLBody)
+	for _, image := range msg.Inline {
+		b.WriteString("--" + boundary + "\r\n")
+		writeHeader(b, "Content-Type", image.ContentType)
+		writeHeader(b, "Content-ID", "<"+image.ContentID+">")
+		writeHeader(b, "Content-Disposition", "inline")
+		writeHeader(b, "Content-Transfer-Encoding", "base64")
+		b.WriteString("\r\n")
+		b.WriteString(wrapBase64(base64.StdEncoding.EncodeToString(image.Body)))
+	}
 	b.WriteString("--" + boundary + "--\r\n")
 }
 

@@ -28,13 +28,21 @@ func (h Handlers) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 	if req.Subject != nil {
 		subject = *req.Subject
 	}
-	sign, err := h.store.signOff(r.Context(), req.Body, subject)
+	var draft signatureDraft
+	if req.Draft != nil {
+		draft = signatureDraft{Template: req.Draft.Template, Title: req.Draft.Title, Phone: req.Draft.Phone}
+	}
+	sign, err := h.store.previewSignOff(r.Context(), req.Body, subject, draft)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignOff{
+	out := crmcontracts.EmailSignOff{
 		Text: sign.Text,
 		Kind: crmcontracts.EmailSignOffKind(sign.Kind),
-	})
+	}
+	if sign.HTML != "" {
+		out.Html = &sign.HTML
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

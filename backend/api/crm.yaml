@@ -9410,6 +9410,44 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /email-signature-template:
+    get:
+      tags: [Contacts]
+      operationId: getEmailSignatureTemplate
+      summary: The workspace's signature template.
+      description: |
+        The layout every member's mail signs with when it is set, filled in with each member's
+        own name, title and phone. Read by a seat that may read installation settings; changed
+        by admin/ops. Governed by the `installation_settings` RBAC object.
+      responses:
+        '200':
+          description: The template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailSignatureTemplate' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Contacts]
+      operationId: saveEmailSignatureTemplate
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Set the workspace's signature template (admin/ops).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailSignatureTemplate' }
+      responses:
+        '200':
+          description: The saved template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailSignatureTemplate' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /leads/settings:
     get:
       tags: [Leads]
@@ -37704,7 +37742,7 @@ components:
 
     EmailSignature:
       type: object
-      required: [body]
+      required: [body, title, phone, template_active]
       properties:
         body:
           type: string
@@ -37712,7 +37750,32 @@ components:
             The sign-off appended below every message this member sends, plain text.
             Empty means none written; a send then closes with a plain greeting and
             the member's display name when one is on file.
+        title:
+          type: string
+          description: The member's title, filled into the workspace template's `{title}`.
+        phone:
+          type: string
+          description: The member's phone number, filled into the workspace template's `{phone}`.
+        template_active:
+          type: boolean
+          description: |
+            The workspace has a signature template. Every send this member makes then signs
+            with the template, filled in with their name, title and phone, instead of `body`.
+            An agent's send carries no sign-off.
         updated_at: { type: [string, 'null'], format: date-time }
+    EmailSignatureTemplate:
+      type: object
+      required: [template]
+      properties:
+        template:
+          type: string
+          maxLength: 4000
+          description: |
+            The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+            `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
+            mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+            and spans with a colour and a pixel size, and drops everything else. Empty means
+            none: each member signs with their own plain-text signature.
     EmailSignOffRequest:
       type: object
       required: [body]
@@ -37723,6 +37786,28 @@ components:
         subject:
           type: string
           description: The subject, read for its language when the body is too short to tell.
+        draft:
+          $ref: '#/components/schemas/EmailSignatureDraft'
+    EmailSignatureDraft:
+      type: object
+      additionalProperties: false
+      description: |
+        Values a settings form has typed and not saved. Each field present stands in for
+        the stored one, so the preview shows what saving would produce. Writes nothing,
+        and a send never reads it.
+      properties:
+        template:
+          type: string
+          maxLength: 4000
+          description: The workspace template as edited. Empty previews a workspace with none.
+        title:
+          type: string
+          maxLength: 120
+          description: The caller's title as edited.
+        phone:
+          type: string
+          maxLength: 120
+          description: The caller's phone as edited.
     EmailSignOff:
       type: object
       required: [text, kind]
@@ -37732,13 +37817,19 @@ components:
           description: |
             The block appended below the message, plain text, exactly as sent. Empty when
             `kind` is `none`.
+        html:
+          type: string
+          description: |
+            The same block as the sanitized markup the HTML part carries. Present only when
+            `kind` is `template`.
         kind:
           type: string
-          enum: [signature, closing, none]
+          enum: [signature, closing, template, none]
           description: |
             `signature`: the caller's own, from Settings. `closing`: the caller has written
-            none, so the send closes with a plain greeting and their name when available. `none`: this
-            send appends nothing.
+            none, so the send closes with a plain greeting and their name when available.
+            `template`: the workspace's template, filled in with the caller's values. `none`:
+            this send appends nothing.
     SaveEmailSignatureRequest:
       type: object
       required: [body]
@@ -37750,6 +37841,14 @@ components:
             Plain text. Empty clears the signature. The cap is what a signature is
             FOR — a name, a role, a way to reach the sender — and past it a block
             is a document riding on every message.
+        title:
+          type: string
+          maxLength: 120
+          description: The member's title, for the workspace template. Omitted leaves it as it is.
+        phone:
+          type: string
+          maxLength: 120
+          description: The member's phone number, for the workspace template. Omitted leaves it as it is.
 
     SaveMyDisplayNameRequest:
       type: object

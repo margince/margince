@@ -5281,6 +5281,19 @@ export const en = {
   "settings.removedItem": "“{name}” removed",
   "settings.removed": "Removed",
   "settings.saved": "Saved",
+  "settings.signatureFromTemplate": "Company template",
+  "settings.signatureTemplateHint":
+    "Your company’s signature template signs your mail. It fills in your name, title and phone.",
+  "settings.signatureTitle": "Title",
+  "settings.signaturePhone": "Phone",
+  "settings.signaturePreview": "Signature preview",
+  "signatureTemplate.title": "Email signature template",
+  "signatureTemplate.sub":
+    "One signature layout for everyone. Each member’s mail fills in their own name, title and phone.",
+  "signatureTemplate.label": "Template (HTML)",
+  "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
+  "signatureTemplate.hint":
+    "Use {name}, {title}, {phone} and {logo}, the company logo embedded in the mail. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",

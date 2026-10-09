@@ -5188,6 +5188,19 @@ export const de = {
   "settings.removedItem": "„{name}“ entfernt",
   "settings.removed": "Entfernt",
   "settings.saved": "Gespeichert",
+  "settings.signatureFromTemplate": "Firmenvorlage",
+  "settings.signatureTemplateHint":
+    "Die Signaturvorlage deines Unternehmens unterschreibt deine E-Mails mit deinem Namen, deiner Position und deiner Telefonnummer.",
+  "settings.signatureTitle": "Position",
+  "settings.signaturePhone": "Telefon",
+  "settings.signaturePreview": "Signaturvorschau",
+  "signatureTemplate.title": "E-Mail-Signaturvorlage",
+  "signatureTemplate.sub":
+    "Ein Signaturlayout für alle. Jede E-Mail setzt Namen, Position und Telefonnummer des Absenders ein.",
+  "signatureTemplate.label": "Vorlage (HTML)",
+  "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
+  "signatureTemplate.hint":
+    "Nutze {name}, {title}, {phone} und {logo}, das in die E-Mail eingebettete Unternehmenslogo. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links sowie Farbe und Pixelgröße auf einem span bleiben erhalten. Ein leeres Feld deaktiviert die Vorlage.",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",
