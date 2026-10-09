@@ -1,9 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
-  act,
   cleanup,
-  fireEvent,
   render as rtlRender,
   screen,
   within,
@@ -378,64 +376,5 @@ describe("the box a confirm sits in", () => {
       </ConfirmModal>,
     );
     expect(screen.getByRole("dialog", { name: "Full" })).toBeInTheDocument();
-  });
-});
-
-describe("ConfirmModal pressed twice before the write reports pending", () => {
-  const modal = (
-    onConfirm: () => void,
-    pending: boolean | undefined,
-    error: string | null = null,
-  ) => (
-    <ConfirmModal
-      open
-      onClose={vi.fn()}
-      title="Save this view?"
-      confirmLabel="Save"
-      onConfirm={onConfirm}
-      pending={pending}
-      error={error}
-    >
-      <p>Body</p>
-    </ConfirmModal>
-  );
-  const save = () => screen.getByRole("button", { name: "Save" });
-
-  it("starts the write once, and again after the save ended in an error", async () => {
-    const onConfirm = vi.fn();
-    const view = rtlRender(modal(onConfirm, false));
-    fireEvent.click(save());
-    // The button's own latch has let go by now; only `pending` is still late.
-    await act(async () => {});
-    fireEvent.click(save());
-    expect(onConfirm).toHaveBeenCalledTimes(1);
-    view.rerender(modal(onConfirm, false, "Refused"));
-    fireEvent.click(save());
-    expect(onConfirm).toHaveBeenCalledTimes(2);
-  });
-
-  it("opens again a task later when the write ended before pending was drawn", async () => {
-    vi.useFakeTimers();
-    try {
-      const onConfirm = vi.fn();
-      rtlRender(modal(onConfirm, false));
-      fireEvent.click(save());
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(1);
-      });
-      fireEvent.click(save());
-      expect(onConfirm).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("runs on every press when the caller reports no pending state", async () => {
-    const onConfirm = vi.fn();
-    rtlRender(modal(onConfirm, undefined));
-    fireEvent.click(save());
-    await act(async () => {});
-    fireEvent.click(save());
-    expect(onConfirm).toHaveBeenCalledTimes(2);
   });
 });

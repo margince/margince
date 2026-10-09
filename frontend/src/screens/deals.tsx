@@ -1876,7 +1876,11 @@ function DealCreateAction({
   const [formCompany, setFormCompany] = useState("");
   const openProjects = useProjectsOfCompany(formCompany || undefined);
 
-  const createDeal = async (values: Record<string, string>) => {
+  const createDeal = async (
+    values: Record<string, string>,
+    _rows: unknown,
+    idempotencyKey: string,
+  ) => {
     if (!pipeline) {
       throwProblem(null);
     }
@@ -1889,6 +1893,7 @@ function DealCreateAction({
     );
     return unwrap(
       await api.POST("/deals", {
+        params: { header: { "Idempotency-Key": idempotencyKey } },
         body: {
           ...mapDealCreate(
             { ...values, project_id: projectId ?? "" },
