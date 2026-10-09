@@ -28,7 +28,7 @@ import {
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import "./approvalrow.css";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import "./common.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
@@ -117,13 +117,11 @@ export function ApprovalDetailModal({
     queryKey: ["approval", approvalId],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await api.GET("/approvals/{id}", {
-        params: { path: { id: approvalId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/approvals/{id}", {
+          params: { path: { id: approvalId } },
+        }),
+      );
     },
   });
   return (

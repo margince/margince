@@ -7,7 +7,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import { RedirectUriGroup } from "./oauth-redirects";
 
 /**
@@ -89,19 +89,18 @@ export function useSetOAuthApp(provider: Vendor) {
       clientSecret: string;
       tenant: string;
     }) => {
-      const { error } = await api.PUT("/installation/oauth-apps/{provider}", {
-        params: { path: { provider } },
-        body: {
-          client_id: vars.clientId,
-          client_secret: vars.clientSecret,
-          // Omitted rather than sent empty: the server refuses a tenant on a
-          // vendor that has no directories, and an empty string is a value.
-          ...(vars.tenant === "" ? {} : { tenant: vars.tenant }),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/installation/oauth-apps/{provider}", {
+          params: { path: { provider } },
+          body: {
+            client_id: vars.clientId,
+            client_secret: vars.clientSecret,
+            // Omitted rather than sent empty: the server refuses a tenant on a
+            // vendor that has no directories, and an empty string is a value.
+            ...(vars.tenant === "" ? {} : { tenant: vars.tenant }),
+          },
+        }),
+      );
     },
     onSuccess: async () => {
       // All three: the card's own view, the setup report (which names this
@@ -119,13 +118,11 @@ function useRemoveOAuthApp(provider: Vendor) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE(
-        "/installation/oauth-apps/{provider}",
-        { params: { path: { provider } } },
+      unwrap(
+        await api.DELETE("/installation/oauth-apps/{provider}", {
+          params: { path: { provider } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });

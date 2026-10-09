@@ -23,12 +23,7 @@ import {
 } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import {
-  LoadMoreButton,
-  QueryStates,
-  throwProblem,
-  useViewerId,
-} from "./common";
+import { LoadMoreButton, QueryStates, unwrap, useViewerId } from "./common";
 import {
   type ActorFacet,
   distinctFields,
@@ -73,22 +68,20 @@ export function useFieldHistory(
     enabled: enabled ?? true,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/field-history", {
-        params: {
-          query: {
-            entity_type: kind,
-            entity_id: id,
-            limit: 20,
-            ...(pageParam ? { cursor: pageParam } : {}),
-            ...(field ? { field } : {}),
-            ...(actorType ? { actor_type: actorType } : {}),
+      return unwrap(
+        await api.GET("/field-history", {
+          params: {
+            query: {
+              entity_type: kind,
+              entity_id: id,
+              limit: 20,
+              ...(pageParam ? { cursor: pageParam } : {}),
+              ...(field ? { field } : {}),
+              ...(actorType ? { actor_type: actorType } : {}),
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last?.page?.next_cursor ?? null,
   });

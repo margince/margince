@@ -15,7 +15,7 @@ import {
 } from "../format/format";
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { usePipelines } from "./pipelines.queries";
 import { StageRulesCard } from "./settings.stagerules";
 
@@ -56,13 +56,11 @@ export function StageAutomationCard() {
     // the reader never asked for.
     enabled: chosen !== "",
     queryFn: async () => {
-      const { data, error } = await api.GET("/stage-automation/report", {
-        params: { query: { pipeline_id: chosen } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/stage-automation/report", {
+          params: { query: { pipeline_id: chosen } },
+        }),
+      );
     },
   });
 

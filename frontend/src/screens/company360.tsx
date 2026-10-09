@@ -35,7 +35,7 @@ import type { MessageKey } from "../i18n/en";
 import {
   problemCodeOf,
   problemMessageOf,
-  throwProblem,
+  unwrap,
   useFinanceSummary,
 } from "./common";
 import type { CompanyTab } from "./companytab";
@@ -84,13 +84,11 @@ export function useCompany360(id: string, enabled = true) {
     queryKey: ["company360", id],
     enabled: enabled && id !== "",
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/360", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}/360", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -119,12 +117,11 @@ const VIEW_ACK_DWELL_MS = 5_000;
 export function useAcknowledgeCompanyView(id: string, visited: boolean) {
   const ack = useMutation({
     mutationFn: async (companyId: string) => {
-      const { error } = await api.POST("/companies/{id}/view-ack", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/companies/{id}/view-ack", {
+          params: { path: { id: companyId } },
+        }),
+      );
     },
   });
   // The mutation's own error state holds a failure; nothing renders it. A
@@ -446,14 +443,12 @@ export function AskSection({
       question: Question;
       project: string;
     }) => {
-      const { data, error } = await api.POST("/companies/{id}/ask", {
-        params: { path: { id: companyId } },
-        body: { question, ...(project ? { project_id: project } : {}) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/companies/{id}/ask", {
+          params: { path: { id: companyId } },
+          body: { question, ...(project ? { project_id: project } : {}) },
+        }),
+      );
     },
   });
 
@@ -1345,13 +1340,12 @@ export function useSuggestionsBody({
   const client = useQueryClient();
   const dismiss = useMutation({
     mutationFn: async (fingerprint: string) => {
-      const { error } = await api.POST("/companies/{id}/suggestions/dismiss", {
-        params: { path: { id: companyId } },
-        body: { fingerprint },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/companies/{id}/suggestions/dismiss", {
+          params: { path: { id: companyId } },
+          body: { fingerprint },
+        }),
+      );
     },
     // The 360 is the only thing that knows which suggestions survive, so the
     // row goes when the re-read says it does. Hiding it locally on click would
@@ -1368,10 +1362,7 @@ export function useSuggestionsBody({
     // The body is the SERVER's, passed as a variable: the click posts the step
     // the row was drawn from, never one recomposed here from the row's words.
     mutationFn: async (body: CreateTaskRequest) => {
-      const { error } = await api.POST("/tasks", { body });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(await api.POST("/tasks", { body }), t);
     },
     // Three reads change. The 360 decides whether the advice still stands — it
     // fired on there being no open task, and there is one now — while the task

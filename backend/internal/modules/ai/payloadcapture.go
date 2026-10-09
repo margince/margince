@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -172,9 +173,5 @@ const captureTruncationMarker = "…[truncated]"
 // capturePayloadContent truncates one captured field to maxCapturedPayloadRunes,
 // appending a visible marker so a reader knows the trace is not the full text.
 func capturePayloadContent(s string) string {
-	runes := []rune(s)
-	if len(runes) <= maxCapturedPayloadRunes {
-		return s
-	}
-	return string(runes[:maxCapturedPayloadRunes]) + captureTruncationMarker
+	return textcut.RunesMarked(s, maxCapturedPayloadRunes, captureTruncationMarker)
 }

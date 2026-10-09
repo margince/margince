@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export type MagicReceipt = components["schemas"]["MagicReceipt"];
 export type MagicLine = components["schemas"]["MagicLine"];
@@ -78,15 +78,13 @@ export function useMagic(span: MagicWindow = "brief") {
     queryKey: [...magicKey, span],
     queryFn: async (): Promise<MagicReceipt> => {
       const since = sinceFor(span, new Date());
-      const { data, error } = await api.GET("/magic", {
-        params: {
-          query: { limit: MAGIC_PAGE_LINES, ...(since ? { since } : {}) },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/magic", {
+          params: {
+            query: { limit: MAGIC_PAGE_LINES, ...(since ? { since } : {}) },
+          },
+        }),
+      );
     },
   });
 }

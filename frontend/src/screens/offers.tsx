@@ -24,6 +24,7 @@ import {
   problemMessageOf,
   QueryGate,
   throwProblem,
+  unwrap,
 } from "./common";
 import {
   EMPTY_LINE_BILLING,
@@ -51,12 +52,11 @@ type UpdateOfferLineItemRequest =
 async function searchCompanyCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((company) => ({
     id: company.id,
     name: company.display_name,
@@ -67,12 +67,11 @@ function useOfferTemplates() {
   return useQuery({
     queryKey: ["offer-templates-all"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/offer-templates", {
-        params: { query: { limit: 100 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/offer-templates", {
+          params: { query: { limit: 100 } },
+        }),
+      );
       return data.data;
     },
   });
@@ -100,12 +99,11 @@ function useBuyerCompanyPreview(buyerCompanyId: string | null, open: boolean) {
   const existingQuery = useQuery({
     queryKey: ["company", "ref", buyerCompanyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}", {
-        params: { path: { id: buyerCompanyId ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies/{id}", {
+          params: { path: { id: buyerCompanyId ?? "" } },
+        }),
+      );
       return {
         id: buyerCompanyId ?? "",
         name: data.display_name ?? "",
@@ -161,24 +159,22 @@ function EditOfferHeaderModal({
 
   const mutation = useMutation({
     mutationFn: async (input: HeaderEditValues) => {
-      const { data, error } = await api.PATCH("/offers/{id}", {
-        params: {
-          path: { id: offer.id },
-          ...ifMatch(requireVersion(offer.version)),
-        },
-        body: {
-          currency: input.currency,
-          buyer_company_id: input.buyer_company_id,
-          valid_until: input.valid_until || null,
-          template_id: input.template_id,
-          intro_text: input.intro_text || null,
-          terms_text: input.terms_text || null,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/offers/{id}", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+          body: {
+            currency: input.currency,
+            buyer_company_id: input.buyer_company_id,
+            valid_until: input.valid_until || null,
+            template_id: input.template_id,
+            intro_text: input.intro_text || null,
+            terms_text: input.terms_text || null,
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
@@ -462,14 +458,12 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
 
   const addMutation = useMutation({
     mutationFn: async (input: OfferLineItemInput) => {
-      const { data, error } = await api.POST("/offers/{id}/line-items", {
-        params: { path: { id: offer.id } },
-        body: input,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/line-items", {
+          params: { path: { id: offer.id } },
+          body: input,
+        }),
+      );
     },
     onSuccess: (data) => {
       applyOffer(data);
@@ -487,17 +481,12 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       lineItemId: string;
       patch: UpdateOfferLineItemRequest;
     }) => {
-      const { data, error } = await api.PATCH(
-        "/offers/{id}/line-items/{lineItemId}",
-        {
+      return unwrap(
+        await api.PATCH("/offers/{id}/line-items/{lineItemId}", {
           params: { path: { id: offer.id, lineItemId: variables.lineItemId } },
           body: variables.patch,
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: (data) => {
       applyOffer(data);
@@ -506,14 +495,11 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
 
   const removeMutation = useMutation({
     mutationFn: async (lineItemId: string) => {
-      const { data, error } = await api.DELETE(
-        "/offers/{id}/line-items/{lineItemId}",
-        { params: { path: { id: offer.id, lineItemId } } },
+      return unwrap(
+        await api.DELETE("/offers/{id}/line-items/{lineItemId}", {
+          params: { path: { id: offer.id, lineItemId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: (data) => {
       applyOffer(data);
@@ -785,16 +771,14 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/offers/{id}/send", {
-        params: {
-          path: { id: offer.id },
-          ...ifMatch(requireVersion(offer.version)),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/send", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
@@ -848,16 +832,14 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/offers/{id}/accept", {
-        params: {
-          path: { id: offer.id },
-          ...ifMatch(requireVersion(offer.version)),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/accept", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
@@ -916,17 +898,15 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/offers/{id}/reject", {
-        params: {
-          path: { id: offer.id },
-          ...ifMatch(requireVersion(offer.version)),
-        },
-        body: { reason: reason || null },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/reject", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+          body: { reason: reason || null },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
@@ -994,13 +974,11 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/offers/{id}/regenerate", {
-        params: { path: { id: offer.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/regenerate", {
+          params: { path: { id: offer.id } },
+        }),
+      );
     },
     onSuccess: (newDraft) => {
       queryClient.setQueryData(["offer", newDraft.id], newDraft);
@@ -1226,13 +1204,11 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
   const offerQuery = useQuery({
     queryKey: ["offer", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/offers/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/offers/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     // RegenerateOfferAction seeds this exact key with its 201 response — the
     // only place ai_disclosure/diff_from_previous are ever populated — right

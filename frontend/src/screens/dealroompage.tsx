@@ -20,7 +20,7 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { problemMessageOf, QueryStates, unwrap } from "./common";
 import { RoomFacts, RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
 import {
   FINISHED_STATES,
@@ -184,12 +184,12 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
   const move = useMutation({
     mutationFn: async (verb: "pause" | "resume" | "close") => {
       const path = `/deal-rooms/{id}/${verb}` as const;
-      const { error } = await api.POST(path, {
-        params: { path: { id: room.id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST(path, {
+          params: { path: { id: room.id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       refresh();
@@ -272,18 +272,18 @@ function ExpiryDialog({
     // The version rides in the variables: a click between a room refresh and
     // the mutation re-arming would otherwise pin a version already gone.
     mutationFn: async (input: { day: string; version: number }) => {
-      const { error } = await api.PUT("/deal-rooms/{id}/expiry", {
-        params: { path: { id: room.id }, ...ifMatch(input.version) },
-        body: {
-          expires_at:
-            input.day === ""
-              ? null
-              : new Date(`${input.day}T23:59:59Z`).toISOString(),
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.PUT("/deal-rooms/{id}/expiry", {
+          params: { path: { id: room.id }, ...ifMatch(input.version) },
+          body: {
+            expires_at:
+              input.day === ""
+                ? null
+                : new Date(`${input.day}T23:59:59Z`).toISOString(),
+          },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       refresh();

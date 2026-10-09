@@ -6,7 +6,7 @@ import { Button, Field, Textarea } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { SIGN_OFF_QUERY, useSignOff } from "./composesignoff";
 import { SignatureHtml } from "./signaturehtml";
 
@@ -31,13 +31,11 @@ function useSaveSignatureTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (template: string) => {
-      const { data, error } = await api.PUT("/email-signature-template", {
-        body: { template },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/email-signature-template", {
+          body: { template },
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TEMPLATE_KEY });

@@ -10,7 +10,7 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
   editionLabel,
@@ -55,11 +55,11 @@ export function ReportingComparison({
     enabled: !!left && !!right && left !== right,
     queryKey: ["reporting-comparison", left, right],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/editions/compare", {
-        params: { query: { left_id: left, right_id: right } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/analytics/editions/compare", {
+          params: { query: { left_id: left, right_id: right } },
+        }),
+      );
     },
   });
   const options = editions.map((edition) => ({

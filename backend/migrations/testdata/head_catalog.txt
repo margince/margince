@@ -5788,7 +5788,7 @@ public.provider_run.provider_run_contact_id_fkey FOREIGN KEY (contact_id) REFERE
 public.provider_run.provider_run_external_correlation_id_key UNIQUE (external_correlation_id)
 public.provider_run.provider_run_pkey PRIMARY KEY (id)
 public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id)
-public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text, 'no_identifiers'::text]))))
+public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text, 'no_identifiers'::text, 'category_in_flight'::text]))))
 public.provider_run.provider_run_skip_reason_shape CHECK (((state = 'skipped'::text) = (skip_reason IS NOT NULL)))
 public.provider_run.provider_run_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text, 'no_match'::text, 'skipped'::text, 'submission_unknown'::text, 'failed'::text, 'cancelled'::text])))
 public.provider_run.provider_run_subject_identity UNIQUE (id, contact_id, provider)
@@ -5801,14 +5801,30 @@ public.provider_run.skip_reason text gen=- def=-
 public.provider_run.state text NOT NULL gen=- def=-
 public.provider_run.subject_kind text NOT NULL gen=- def=-
 public.provider_run.submitted_at timestamp with time zone gen=- def=-
+public.provider_run.trg_provider_run_release_categories CREATE TRIGGER trg_provider_run_release_categories BEFORE UPDATE OF state, contact_id ON public.provider_run FOR EACH ROW WHEN (((new.state <> ALL (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'submission_unknown'::text])) OR (new.contact_id IS NULL))) EXECUTE FUNCTION provider_run_release_categories()
 public.provider_run.trg_provider_run_updated CREATE TRIGGER trg_provider_run_updated BEFORE UPDATE ON public.provider_run FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.provider_run.trigger text NOT NULL gen=- def=-
 public.provider_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.provider_run_category acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.provider_run_category.category text NOT NULL gen=- def=-
+public.provider_run_category.contact_id uuid NOT NULL gen=- def=-
+public.provider_run_category.provider text NOT NULL gen=- def=-
+public.provider_run_category.provider_run_category_one_live_buyer UNIQUE (contact_id, provider, category)
+public.provider_run_category.provider_run_category_pkey PRIMARY KEY (run_id, contact_id, provider, category)
+public.provider_run_category.provider_run_category_run_fkey FOREIGN KEY (run_id, contact_id, provider) REFERENCES provider_run(id, contact_id, provider) ON UPDATE CASCADE ON DELETE CASCADE
+public.provider_run_category.run_id uuid NOT NULL gen=- def=-
+public.provider_run_category_one_live_buyer CREATE UNIQUE INDEX provider_run_category_one_live_buyer ON public.provider_run_category USING btree (contact_id, provider, category)
+public.provider_run_category_pkey CREATE UNIQUE INDEX provider_run_category_pkey ON public.provider_run_category USING btree (run_id, contact_id, provider, category)
 public.provider_run_contact_history CREATE INDEX provider_run_contact_history ON public.provider_run USING btree (contact_id, provider, created_at DESC) WHERE (subject_kind = 'contact'::text)
 public.provider_run_due CREATE INDEX provider_run_due ON public.provider_run USING btree (state, next_attempt_at) WHERE (state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text]))
 public.provider_run_external_correlation_id_key CREATE UNIQUE INDEX provider_run_external_correlation_id_key ON public.provider_run USING btree (external_correlation_id)
 public.provider_run_one_live_contact_fingerprint CREATE UNIQUE INDEX provider_run_one_live_contact_fingerprint ON public.provider_run USING btree (contact_id, provider, input_fingerprint) WHERE ((subject_kind = 'contact'::text) AND (state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'submission_unknown'::text])))
 public.provider_run_pkey CREATE UNIQUE INDEX provider_run_pkey ON public.provider_run USING btree (id)
+public.provider_run_release_categories() secdef=false cfg=- acl=- 
+BEGIN
+  DELETE FROM provider_run_category WHERE run_id = OLD.id;
+  RETURN NEW;
+END 
 public.provider_run_reservation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.provider_run_reservation.actual_credits integer gen=- def=-
 public.provider_run_reservation.pool text NOT NULL gen=- def=-
@@ -5959,6 +5975,7 @@ public.relationship.deal_id uuid gen=- def=-
 public.relationship.employment_status text gen=- def=-
 public.relationship.ended_at date gen=- def=-
 public.relationship.ended_precision text gen=- def=-
+public.relationship.first_observed_at timestamp with time zone gen=- def=-
 public.relationship.id uuid NOT NULL gen=- def=uuidv7()
 public.relationship.is_current_primary boolean NOT NULL gen=- def=false
 public.relationship.kind text NOT NULL gen=- def=-

@@ -33,7 +33,7 @@ import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { AuditEntryLine } from "./audit";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
 import { objectLabels, typeLabels } from "./customfields.labels";
 import {
   apiKey,
@@ -581,13 +581,11 @@ export function CustomFieldsAdmin() {
   const list = useQuery({
     queryKey: ["custom-fields", object],
     queryFn: async () => {
-      const { data, error } = await api.GET("/custom-fields", {
-        params: { query: { object } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/custom-fields", {
+          params: { query: { object } },
+        }),
+      );
     },
   });
 
@@ -599,13 +597,11 @@ export function CustomFieldsAdmin() {
     // succeed, over a refusal they cannot act on.
     enabled: readsAuditTrail,
     queryFn: async () => {
-      const { data, error } = await api.GET("/audit-log", {
-        params: { query: { entity_type: "custom_field" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/audit-log", {
+          params: { query: { entity_type: "custom_field" } },
+        }),
+      );
     },
   });
 
@@ -616,13 +612,11 @@ export function CustomFieldsAdmin() {
 
   const create = useMutation({
     mutationFn: async (draft: NewFieldDraft) => {
-      const { data, error } = await api.POST("/custom-fields", {
-        body: createBody(draft),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/custom-fields", {
+          body: createBody(draft),
+        }),
+      );
     },
     onMutate: async (draft: NewFieldDraft) => {
       // Key the optimistic write to the DRAFT's object, not the current-render
@@ -659,19 +653,17 @@ export function CustomFieldsAdmin() {
 
   const rename = useMutation({
     mutationFn: async (input: { field: CustomField; label: string }) => {
-      const { data, error } = await api.PATCH("/custom-fields/{id}", {
-        params: {
-          path: { id: input.field.id },
-          header: input.field.version
-            ? { "If-Match": String(input.field.version) }
-            : undefined,
-        },
-        body: { label: input.label },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/custom-fields/{id}", {
+          params: {
+            path: { id: input.field.id },
+            header: input.field.version
+              ? { "If-Match": String(input.field.version) }
+              : undefined,
+          },
+          body: { label: input.label },
+        }),
+      );
     },
     onSuccess: (_data, input) => {
       invalidate();

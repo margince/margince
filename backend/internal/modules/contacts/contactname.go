@@ -25,6 +25,7 @@ import (
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/mailrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // ParsedName is what a header could be read as. First and Last are set only
@@ -88,7 +89,7 @@ func ParseContactName(displayName, email string) ParsedName {
 		// An address this long is not a name to read. It still has to be
 		// displayable, so it is truncated to something a human can see in a
 		// list rather than dropped or stored whole.
-		return ParsedName{Full: string([]rune(email)[:maxNameInputRunes])}
+		return ParsedName{Full: textcut.Runes(email, maxNameInputRunes)}
 	}
 	parsed := parseLocalPart(email)
 	if parsed.Full == "" {

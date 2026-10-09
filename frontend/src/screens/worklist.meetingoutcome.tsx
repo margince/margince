@@ -46,7 +46,7 @@ import { useT } from "../i18n";
 import { outgoingBody } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
 import { useActivity } from "./activityread";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { useMeetingOutcome } from "./taskactions";
 import { isTranscriptActivity } from "./transcriptread";
 import { worklistKey } from "./worklist.queries";
@@ -169,26 +169,26 @@ function MeetingOutcomeDialog({
       zone: string;
       transcript: boolean;
     }) => {
-      const { error } = await api.PATCH("/activities/{id}", {
-        params: {
-          path: { id },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: {
-          meeting_status: input.draft.status,
-          subject: input.draft.subject.trim(),
-          // An emptied box clears the note rather than storing "": null is what
-          // the column holds for a meeting nobody has written about.
-          body: outgoingBody(input.draft.body, input.transcript),
-          // Noon on the picked day, in the RECORD's zone — the same instant
-          // activitybody mints for a backdated entry, so a meeting moved by a
-          // day here and one logged by hand land on the same timeline heading.
-          occurred_at: middayInstant(input.draft.day, input.zone),
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.PATCH("/activities/{id}", {
+          params: {
+            path: { id },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: {
+            meeting_status: input.draft.status,
+            subject: input.draft.subject.trim(),
+            // An emptied box clears the note rather than storing "": null is what
+            // the column holds for a meeting nobody has written about.
+            body: outgoingBody(input.draft.body, input.transcript),
+            // Noon on the picked day, in the record's zone: the instant activitybody
+            // mints for a backdated entry. So a meeting moved by a day here and one
+            // logged by hand land on the same timeline heading.
+            occurred_at: middayInstant(input.draft.day, input.zone),
+          },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });

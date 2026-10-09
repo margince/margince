@@ -18,7 +18,7 @@ import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { problemMessageOf, QueryStates, unwrap } from "./common";
 import { IssuedNotice } from "./dealroomaccess.notices";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -70,13 +70,11 @@ export function useParticipants(roomId: string) {
   return useQuery({
     queryKey: participantsKey(roomId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms/{id}/participants", {
-        params: { path: { id: roomId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deal-rooms/{id}/participants", {
+          params: { path: { id: roomId } },
+        }),
+      );
     },
   });
 }
@@ -327,19 +325,18 @@ function InviteDialog({
       email: string;
       capability: Capability;
     }) => {
-      const { data, error } = await api.POST("/deal-rooms/{id}/participants", {
-        params: { path: { id: room.id } },
-        body: {
-          full_name: input.name,
-          email: input.email,
-          capability: input.capability,
-          source: "manual",
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/participants", {
+          params: { path: { id: room.id } },
+          body: {
+            full_name: input.name,
+            email: input.email,
+            capability: input.capability,
+            source: "manual",
+          },
+        }),
+        t,
+      );
     },
     onSuccess: (data) => {
       void refreshSeats(queryClient, room.id);
@@ -436,14 +433,12 @@ function ReissueDialog({
   const [issued, setIssued] = useState<Issued | null>(null);
   const reissue = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST(
-        "/deal-rooms/{id}/participants/{participantId}/resend",
-        { params: { path: { id: room.id, participantId: participant.id } } },
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/participants/{participantId}/resend", {
+          params: { path: { id: room.id, participantId: participant.id } },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
     },
     onSuccess: (data) => {
       void refreshSeats(queryClient, room.id);
@@ -493,15 +488,12 @@ function RevokeDialog({
   const queryClient = useQueryClient();
   const revoke = useMutation({
     mutationFn: async () => {
-      const { error } = await api.POST(
-        "/deal-rooms/{id}/participants/{participantId}/revoke",
-        {
+      unwrap(
+        await api.POST("/deal-rooms/{id}/participants/{participantId}/revoke", {
           params: { path: { id: room.id, participantId: participant.id } },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onSuccess: () => {
       void refreshSeats(queryClient, room.id);
@@ -548,16 +540,13 @@ function CapabilityDialog({
   );
   const change = useMutation({
     mutationFn: async (next: Capability) => {
-      const { error } = await api.PATCH(
-        "/deal-rooms/{id}/participants/{participantId}",
-        {
+      unwrap(
+        await api.PATCH("/deal-rooms/{id}/participants/{participantId}", {
           params: { path: { id: room.id, participantId: participant.id } },
           body: { capability: next },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onSuccess: () => {
       void refreshSeats(queryClient, room.id);

@@ -15,7 +15,7 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../app/storage";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import type {
   ImportObject,
   ImportProfile,
@@ -351,30 +351,27 @@ export function useImportFlow(initialObject: ImportObject) {
   const validate = useMutation({
     mutationFn: async (input: ValidateInput) => {
       const at = current();
-      const { data, error } = await api.POST("/imports", {
-        body: {
-          connector: "csv",
-          object: input.object,
-          source_ref: input.profile.source_ref,
-          mapping: mappedOnly(input.mapping),
-          // Omitted rather than sent empty: the endpoint refuses a tag id that
-          // names no word, and "" is not a choice the reader made.
-          ...(input.contextTagID === ""
-            ? {}
-            : { context_tag_id: input.contextTagID }),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      const created = data;
-      const { data: fetched, error: reportError } = await api.GET(
-        "/imports/{id}/report",
-        { params: { path: { id: created.id } } },
+      const data = unwrap(
+        await api.POST("/imports", {
+          body: {
+            connector: "csv",
+            object: input.object,
+            source_ref: input.profile.source_ref,
+            mapping: mappedOnly(input.mapping),
+            // Omitted rather than sent empty: the endpoint refuses a tag id that
+            // names no word, and "" is not a choice the reader made.
+            ...(input.contextTagID === ""
+              ? {}
+              : { context_tag_id: input.contextTagID }),
+          },
+        }),
       );
-      if (reportError) {
-        throwProblem(reportError);
-      }
+      const created = data;
+      const fetched = unwrap(
+        await api.GET("/imports/{id}/report", {
+          params: { path: { id: created.id } },
+        }),
+      );
       return { at, value: { run: created, report: fetched } };
     },
     onSuccess: ({ at, value }) => {

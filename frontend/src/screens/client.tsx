@@ -13,7 +13,7 @@ import {
 import { ErrorLine } from "../design-system/errorline";
 import { Row } from "../design-system/stack";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./client.css";
 
 // Client surfaces (B-EP09.13a): the rail-less extension chrome — the fixed
@@ -28,12 +28,11 @@ export function ClientSurfaceScreen() {
 
   const lookup = useMutation({
     mutationFn: async (query: string) => {
-      const { data, error } = await api.GET("/search", {
-        params: { query: { q: query, limit: 5 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/search", {
+          params: { query: { q: query, limit: 5 } },
+        }),
+      );
       return data.data.filter((hit) => hit.type === "contact");
     },
   });

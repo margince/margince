@@ -28,7 +28,7 @@ import { useT } from "../i18n";
 import { useFolderOptions } from "./capture-exclusions.queries";
 import { PurgeDialog } from "./capture-purge-dialog";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
 // store at all. Two scopes on one card, because a reader sees both kinds of
@@ -73,11 +73,7 @@ function useAddExclusion() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: { scope: Scope; kind: Kind; value: string }) => {
-      const { data, error } = await api.POST("/capture/exclusions", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/capture/exclusions", { body }));
     },
     onSuccess: (_written, added) => {
       queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });
@@ -92,12 +88,11 @@ function useRemoveExclusion() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/capture/exclusions/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/capture/exclusions/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });

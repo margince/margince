@@ -18,7 +18,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { LoadMoreButton, QueryStates, throwProblem } from "./common";
+import { LoadMoreButton, QueryStates, unwrap } from "./common";
 // The shapes this file draws. Imported here rather than left to the caller:
 // the row that folds these open lives in another sheet, and a story or a test
 // that mounts one panel alone would otherwise render it unstyled.
@@ -177,20 +177,18 @@ export function AutomationRuns({
     queryKey: ["automation-runs", automationId, outcome ?? ""],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/automations/{id}/runs", {
-        params: {
-          path: { id: automationId },
-          query: {
-            limit: 20,
-            ...(pageParam ? { cursor: pageParam } : {}),
-            ...(outcome ? { outcome } : {}),
+      return unwrap(
+        await api.GET("/automations/{id}/runs", {
+          params: {
+            path: { id: automationId },
+            query: {
+              limit: 20,
+              ...(pageParam ? { cursor: pageParam } : {}),
+              ...(outcome ? { outcome } : {}),
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
@@ -280,14 +278,12 @@ export function AutomationPreview({
   const query = useQuery({
     queryKey: ["automation-preview", automationId, windowDays],
     queryFn: async (): Promise<AutomationPreviewResult> => {
-      const { data, error } = await api.POST("/automations/{id}/preview", {
-        params: { path: { id: automationId } },
-        body: { window_days: Number(windowDays) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/automations/{id}/preview", {
+          params: { path: { id: automationId } },
+          body: { window_days: Number(windowDays) },
+        }),
+      );
     },
   });
 

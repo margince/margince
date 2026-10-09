@@ -8,7 +8,7 @@ import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { AnalyticsScope } from "./analytics.context";
 import { ForecastShareActions } from "./analytics.share";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
@@ -37,11 +37,11 @@ export function ReportingForecastGraphs({
     queryKey: ["reporting-forecast", selection],
     enabled: showCharts,
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/evaluate", {
-        params: { query: reportingQuery(selection) },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/analytics/evaluate", {
+          params: { query: reportingQuery(selection) },
+        }),
+      );
     },
   });
   return (

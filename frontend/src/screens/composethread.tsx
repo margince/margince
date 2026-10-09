@@ -18,7 +18,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import type { RelinkKind } from "./compose";
 import { groupChronology } from "./timelinegroups";
 import "./composethread.css";
@@ -54,13 +54,11 @@ export function useThreadMessages(anchor: Activity | undefined): ThreadRead {
   const query = useQuery({
     queryKey: ["compose-thread", threadKey],
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities", {
-        params: { query: { thread_key: threadKey, limit: SHOWN } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/activities", {
+          params: { query: { thread_key: threadKey, limit: SHOWN } },
+        }),
+      );
     },
     enabled: Boolean(threadKey),
   });
@@ -289,20 +287,18 @@ export function useRecentConversations(
   const query = useQuery({
     queryKey: ["compose-recent-threads", entityType, entityId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities", {
-        params: {
-          query: {
-            entity_type: entityType,
-            entity_id: entityId,
-            kind: "email",
-            limit: SCANNED,
+      return unwrap(
+        await api.GET("/activities", {
+          params: {
+            query: {
+              entity_type: entityType,
+              entity_id: entityId,
+              kind: "email",
+              limit: SCANNED,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     enabled,
   });

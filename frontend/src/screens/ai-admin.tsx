@@ -23,7 +23,7 @@ import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
 import { AiFeatureTable } from "./ai-feature-table";
 import { SpendEstimate } from "./ai-settings";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, unwrap } from "./common";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];
@@ -35,8 +35,7 @@ export function useAiStatus(enabled: boolean) {
     enabled,
     refetchInterval: 60_000,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/status");
-      if (error) throwProblem(error);
+      const data = unwrap(await api.GET("/ai/status"));
       if (!data) throw new Error("AI status is unavailable");
       return data;
     },
@@ -52,8 +51,7 @@ export function AiBudgetCard() {
     enabled: canSee,
     refetchInterval: 60_000,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/budget");
-      if (error) throwProblem(error);
+      const data = unwrap(await api.GET("/ai/budget"));
       if (!data) throw new Error("AI allowance is unavailable");
       return data;
     },
@@ -170,18 +168,16 @@ function BudgetBody({
   useUnsavedGuard(editing);
   const preview = useMutation({
     mutationFn: async (change: Change) => {
-      const { data, error } = await api.POST("/ai/budget/preview", {
-        body: change,
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.POST("/ai/budget/preview", {
+          body: change,
+        }),
+      );
     },
   });
   const save = useMutation({
     mutationFn: async (change: Change) => {
-      const { data, error } = await api.PUT("/ai/budget", { body: change });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.PUT("/ai/budget", { body: change }));
     },
     onSuccess: async (data) => {
       client.setQueryData(["ai-budget"], data);

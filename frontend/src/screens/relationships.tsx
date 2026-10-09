@@ -20,7 +20,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "./activitykeys";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import type { CreateField } from "./create";
 import {
   type Candidate,
@@ -122,12 +122,11 @@ export function scopeCopy(scope: RelationshipScope): {
 export async function fetchRelationships(
   scope: RelationshipScope,
 ): Promise<Relationship[]> {
-  const { data, error } = await api.GET("/relationships", {
-    params: { query: scopeQuery(scope) },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/relationships", {
+      params: { query: scopeQuery(scope) },
+    }),
+  );
   return data.data;
 }
 
@@ -378,11 +377,7 @@ export function AddRelationshipAction({
         ...scopeQuery(scope),
         ...endpointBody(chosen.field, chosen.target.id),
       };
-      const { data, error } = await api.POST("/relationships", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/relationships", { body }));
     },
     onSuccess: (created) => {
       invalidateAfterEdge(queryClient, created.deal_id != null);

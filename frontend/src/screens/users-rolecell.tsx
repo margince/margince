@@ -6,7 +6,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Select, type SelectOption } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { type QueryLike, throwProblem } from "./common";
+import { type QueryLike, unwrap } from "./common";
 import {
   type AssignableRole,
   roleLabel,
@@ -115,13 +115,12 @@ export function MemberRole({
   const setRole = useMutation({
     mutationKey: memberMutationKey(member.id, "role"),
     mutationFn: async ({ id, role }: Readonly<{ id: string; role: Role }>) => {
-      const { error } = await api.PATCH("/users/{id}/role", {
-        params: { path: { id } },
-        body: { role },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/users/{id}/role", {
+          params: { path: { id } },
+          body: { role },
+        }),
+      );
     },
     onSuccess: async () => {
       await refresh();

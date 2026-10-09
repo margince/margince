@@ -29,7 +29,7 @@ import { StageStrip } from "../design-system/stagestrip";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { type CreateField, CreateRecordModal } from "./create";
 import { EditAction } from "./edit";
 import { StageExitCriteria } from "./settings.exitcriteria";
@@ -98,17 +98,15 @@ async function createStage(
   input: Readonly<{ values: Record<string, string>; pipeline: Pipeline }>,
 ) {
   const last = Math.max(0, ...ladderOf(input.pipeline).map((s) => s.position));
-  const { data, error } = await api.POST("/stages", {
-    body: {
-      ...mapStageBody(input.values),
-      pipeline_id: input.pipeline.id,
-      position: last + 1,
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/stages", {
+      body: {
+        ...mapStageBody(input.values),
+        pipeline_id: input.pipeline.id,
+        position: last + 1,
+      },
+    }),
+  );
 }
 
 function StageCreate({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
@@ -159,12 +157,11 @@ function StageRemove({
   const canRemove = useCanWrite("pipeline", "delete");
   const remove = useMutation({
     mutationFn: async (target: Stage) => {
-      const { error } = await api.DELETE("/stages/{id}", {
-        params: { path: { id: target.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/stages/{id}", {
+          params: { path: { id: target.id } },
+        }),
+      );
     },
     onSuccess: async () => {
       // The refetched ladder FIRST, then the dialog: closing it hands focus
@@ -221,14 +218,12 @@ function StageEdit({ stage }: Readonly<{ stage: Stage }>) {
       }}
       fields={stageFields(t)}
       update={async (values) => {
-        const { data, error } = await api.PATCH("/stages/{id}", {
-          params: { path: { id: stage.id } },
-          body: mapStageBody(values),
-        });
-        if (error) {
-          throwProblem(error);
-        }
-        return data;
+        return unwrap(
+          await api.PATCH("/stages/{id}", {
+            params: { path: { id: stage.id } },
+            body: mapStageBody(values),
+          }),
+        );
       }}
     />
   );

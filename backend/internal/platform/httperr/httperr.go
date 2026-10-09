@@ -14,11 +14,11 @@ import (
 	"maps"
 	"net/http"
 	"strconv"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -162,14 +162,7 @@ const MaxFaultText = 300
 
 // boundFaultText caps one caller-facing value from a module-declared fault.
 func boundFaultText(s string) string {
-	if len(s) <= MaxFaultText {
-		return s
-	}
-	cut := MaxFaultText
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
+	return textcut.BytesMarked(s, MaxFaultText, "…")
 }
 
 // messageFaultStatus is the status a message-carrying refusal asked for.

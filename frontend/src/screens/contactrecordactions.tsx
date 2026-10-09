@@ -9,7 +9,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { navigate } from "../app/router";
 import { useT } from "../i18n";
 import { ArchiveAction } from "./archive";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { MergeAction } from "./merge";
 import { invalidateRecord } from "./recordwritekeys";
 
@@ -23,12 +23,11 @@ type Contact = components["schemas"]["Contact"];
 async function searchContactsTargets(
   q: string,
 ): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await api.GET("/contacts", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.full_name,
@@ -68,16 +67,16 @@ export function ContactRecordActions({
         sourceName={contact.full_name}
         searchTargets={searchContactsTargets}
         merge={async (targetId) => {
-          const { data, error } = await api.POST("/contacts/{id}/merge", {
-            params: {
-              path: { id: contact.id },
-              ...ifMatch(requireVersion(contact.version)),
-            },
-            body: { target_id: targetId },
-          });
-          if (error) {
-            throwProblem(error, t);
-          }
+          const data = unwrap(
+            await api.POST("/contacts/{id}/merge", {
+              params: {
+                path: { id: contact.id },
+                ...ifMatch(requireVersion(contact.version)),
+              },
+              body: { target_id: targetId },
+            }),
+            t,
+          );
           // Both ends of the merge: the source is gone and the survivor
           // may now carry fields the source contributed — a reader landing
           // on either via survivorRoute must not see pre-merge state.
@@ -101,15 +100,14 @@ export function ContactRecordActions({
           name: contact.full_name,
         })}
         archive={async () => {
-          const { data, error } = await api.DELETE("/contacts/{id}", {
-            params: {
-              path: { id },
-              ...ifMatch(requireVersion(contact.version)),
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
+          const data = unwrap(
+            await api.DELETE("/contacts/{id}", {
+              params: {
+                path: { id },
+                ...ifMatch(requireVersion(contact.version)),
+              },
+            }),
+          );
           await invalidateRecord(queryClient, "contact", id);
           return data;
         }}

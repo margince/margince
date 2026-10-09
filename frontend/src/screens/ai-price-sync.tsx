@@ -13,7 +13,7 @@ import { Switch } from "../design-system/switch";
 import { formatElapsed, useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
 import { providerName } from "./ai-provider-names";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import {
   ProviderRefreshLine,
   RefreshModelPricesButton,
@@ -49,13 +49,11 @@ function useSetAutoSync() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { autoSync: boolean }) => {
-      const { data, error } = await api.PUT("/ai/price-sync", {
-        body: { auto_sync: vars.autoSync },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/ai/price-sync", {
+          body: { auto_sync: vars.autoSync },
+        }),
+      );
     },
     onSuccess: (data) => queryClient.setQueryData(["ai-price-sync"], data),
   });

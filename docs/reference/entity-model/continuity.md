@@ -11,11 +11,11 @@ The 1 table owned by `continuity`, as the migrations build them. [Back to the en
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `finished_at` | `timestamp with time zone` |  |  |
-| `notes` | `text` |  |  |
-| `operator` | `text` | yes |  |
+| `finished_at` | `timestamp with time zone` |  | Null while the drill runs, and on a drill nobody closed. |
+| `notes` | `text` |  | What the drill checked, or why it failed. |
+| `operator` | `text` | yes | Who ran the drill, as the operator named themselves on the command line. |
 | `outcome` | `text`, default `'running'::text` | yes | One of `running`, `passed`, `failed`. |
-| `restored_to` | `timestamp with time zone` | yes |  |
+| `restored_to` | `timestamp with time zone` | yes | The point in time the backup was restored to. |
 | `started_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 

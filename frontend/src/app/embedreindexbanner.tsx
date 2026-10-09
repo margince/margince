@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { throwProblem } from "../screens/common";
+import { unwrap } from "../screens/common";
 import {
   embedReindexStatusQueryKey,
   useEmbedReindexAvailable,
@@ -36,10 +36,7 @@ export function EmbedReindexBanner() {
     enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await api.GET("/embeddings/reindex/status");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/embeddings/reindex/status"));
       if (!data) {
         throw new Error("malformed reindex status response");
       }

@@ -9,7 +9,7 @@ import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, usePlural, useT } from "../i18n";
-import { ProblemError, problemMessageOf, throwProblem } from "./common";
+import { ProblemError, problemMessageOf, throwProblem, unwrap } from "./common";
 import { useRoster } from "./entityref";
 import { leadWriteKeys } from "./leadkeys";
 import { useLeadDisqualifyReasons } from "./leadsources";
@@ -116,13 +116,13 @@ export function LeadBulkBar({
   // the mutation's variable, so neither can be a value that had left the
   // screen by the time the write went out.
   const apply = async (lead: Lead, action: DisqualifyAction) => {
-    const { error } = await api.DELETE("/leads/{id}", {
-      params: { path: { id: lead.id } },
-      body: { reason_id: action.reasonId },
-    });
-    if (error) {
-      throwProblem(error, t);
-    }
+    unwrap(
+      await api.DELETE("/leads/{id}", {
+        params: { path: { id: lead.id } },
+        body: { reason_id: action.reasonId },
+      }),
+      t,
+    );
   };
 
   // Assignment is ONE request for the whole selection, because the server owns

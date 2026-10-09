@@ -29,7 +29,7 @@ import { linkedinUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BriefQueue } from "./brief.queue";
-import { provenanceOf, throwProblem, useViewerId } from "./common";
+import { provenanceOf, unwrap, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
 import { intentAbout } from "./compose.intent";
 import { useWaitingDraftBand } from "./composewaitingdraft";
@@ -313,39 +313,33 @@ export function ContactPageV2({
   const view = useQuery({
     queryKey: ["contact360", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}/360", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/contacts/{id}/360", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 
   const brief = useQuery({
     queryKey: ["contactBrief", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}/brief", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/contacts/{id}/brief", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 
   const guard = useQuery({
     queryKey: ["contactConsentGuard", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}/consent/guard", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/contacts/{id}/consent/guard", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 

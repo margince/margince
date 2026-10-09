@@ -20,7 +20,7 @@ import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import {
   LEAD_STATUS_COUNTS_KEY,
   leadTerminalKey,
@@ -137,14 +137,15 @@ function useLeadStatusCounts() {
   return useQuery({
     queryKey: LEAD_STATUS_COUNTS_KEY,
     queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "leads-by-status" } },
-        body: {
-          group_by: ["status"],
-          aggregates: [{ fn: "count", as: "leads" }],
-        },
-      });
-      if (error) throwProblem(error);
+      const data = unwrap(
+        await api.POST("/reports/{report}", {
+          params: { path: { report: "leads-by-status" } },
+          body: {
+            group_by: ["status"],
+            aggregates: [{ fn: "count", as: "leads" }],
+          },
+        }),
+      );
       const counts = new Map<string, number>();
       for (const row of data.rows) {
         const status = row.status;
@@ -172,18 +173,13 @@ function useTerminalLeads(status: TerminalStatus, enabled: boolean) {
     enabled,
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/leads", {
-        params: {
-          query: {
-            status,
-            include_archived: true,
-            limit: 50,
-            cursor: pageParam ?? undefined,
-          },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
+      const query = {
+        status,
+        include_archived: true,
+        limit: 50,
+        cursor: pageParam ?? undefined,
+      };
+      return unwrap(await api.GET("/leads", { params: { query } }));
     },
     // The cursor the page hands back, so a column whose count runs to
     // thousands is reachable past its first fifty. A list that stopped there
@@ -281,17 +277,18 @@ export function LeadBoard({
       version?: number;
       status: "new" | "contacted" | "engaged";
     }) => {
-      const { data, error } = await api.PATCH("/leads/{id}", {
-        // Refused rather than sent unpinned: a row the server did not version is
-        // one this client can make no concurrency claim about.
-        params: {
-          path: { id: moved.id },
-          ...ifMatch(requireVersion(moved.version)),
-        },
-        body: { status: moved.status },
-      });
-      if (error) throwProblem(error, t);
-      return data;
+      return unwrap(
+        await api.PATCH("/leads/{id}", {
+          // Refused rather than sent unpinned: a row the server did not version is
+          // one this client can make no concurrency claim about.
+          params: {
+            path: { id: moved.id },
+            ...ifMatch(requireVersion(moved.version)),
+          },
+          body: { status: moved.status },
+        }),
+        t,
+      );
     },
     // The moved lead is named on BOTH arms. The board reads
     // `["leads", query]` and the detail page reads the sibling `["lead", id]`,

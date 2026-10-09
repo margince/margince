@@ -248,6 +248,11 @@ System health and Reset data sit in the **Governance** group, and Data import in
   back in the whole installation. It shows counts only; the contacts and messages stay
   in view to their mailbox owner alone. The same readers as Background jobs see
   it.
+- **Restore drills**: when a restore from a backup was last tested, if it
+  passed, and how long it took against the targets. Whoever runs the
+  installation records each test. Margince does not see backups, so the card
+  says "Not observed by Margince" for the last backup. The same readers as
+  Background jobs see it.
 - **Reset data**: takes an installation back to how it was on its first start.
   It deletes every record and setting, but keeps the company and its users, so
   everyone can still sign in. It appears only where whoever runs the

@@ -17,7 +17,7 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import { ReportingFilters } from "./reporting.filters";
 import {
   blockLabel,
@@ -52,9 +52,7 @@ export function SaveReportingDialog({
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const allowedBlocks =

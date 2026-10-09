@@ -1,6 +1,6 @@
 import { api } from "../api/client";
 import { ifMatch } from "../api/version";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { companyEditComparison } from "./companyform";
 import { contactEditComparison } from "./contactformfields";
 import { saveIndependentEdit } from "./independentedit";
@@ -20,19 +20,19 @@ export function saveRecordEdit(
         patch,
         project: companyEditComparison,
         read: async () => {
-          const { data, error } = await api.GET("/companies/{id}", {
-            params: { path: { id: original.id } },
-          });
-          if (error) throwProblem(error);
-          return data;
+          return unwrap(
+            await api.GET("/companies/{id}", {
+              params: { path: { id: original.id } },
+            }),
+          );
         },
         write: async (body, version) => {
-          const { data, error } = await api.PATCH("/companies/{id}", {
-            params: { path: { id: original.id }, ...ifMatch(version) },
-            body,
-          });
-          if (error) throwProblem(error);
-          return data;
+          return unwrap(
+            await api.PATCH("/companies/{id}", {
+              params: { path: { id: original.id }, ...ifMatch(version) },
+              body,
+            }),
+          );
         },
       });
     case "contact":
@@ -42,19 +42,19 @@ export function saveRecordEdit(
         project: contactEditComparison,
         groups: [["full_name", "first_name", "last_name"]],
         read: async () => {
-          const { data, error } = await api.GET("/contacts/{id}", {
-            params: { path: { id: original.id } },
-          });
-          if (error) throwProblem(error);
-          return data;
+          return unwrap(
+            await api.GET("/contacts/{id}", {
+              params: { path: { id: original.id } },
+            }),
+          );
         },
         write: async (body, version) => {
-          const { data, error } = await api.PATCH("/contacts/{id}", {
-            params: { path: { id: original.id }, ...ifMatch(version) },
-            body,
-          });
-          if (error) throwProblem(error);
-          return data;
+          return unwrap(
+            await api.PATCH("/contacts/{id}", {
+              params: { path: { id: original.id }, ...ifMatch(version) },
+              body,
+            }),
+          );
         },
       });
     case "deal":
@@ -67,19 +67,19 @@ export function saveRecordEdit(
           ["company_id", "project_id"],
         ],
         read: async () => {
-          const { data, error } = await api.GET("/deals/{id}", {
-            params: { path: { id: original.id } },
-          });
-          if (error) throwProblem(error);
-          return data;
+          return unwrap(
+            await api.GET("/deals/{id}", {
+              params: { path: { id: original.id } },
+            }),
+          );
         },
         write: async (body, version) => {
-          const { data, error } = await api.PATCH("/deals/{id}", {
-            params: { path: { id: original.id }, ...ifMatch(version) },
-            body,
-          });
-          if (error) throwProblem(error);
-          return data;
+          return unwrap(
+            await api.PATCH("/deals/{id}", {
+              params: { path: { id: original.id }, ...ifMatch(version) },
+              body,
+            }),
+          );
         },
       });
     case "lead":
@@ -87,19 +87,19 @@ export function saveRecordEdit(
         opened,
         patch,
         read: async () => {
-          const { data, error } = await api.GET("/leads/{id}", {
-            params: { path: { id: original.id } },
-          });
-          if (error) throwProblem(error);
-          return data;
+          return unwrap(
+            await api.GET("/leads/{id}", {
+              params: { path: { id: original.id } },
+            }),
+          );
         },
         write: async (body, version) => {
-          const { data, error } = await api.PATCH("/leads/{id}", {
-            params: { path: { id: original.id }, ...ifMatch(version) },
-            body,
-          });
-          if (error) throwProblem(error);
-          return data;
+          return unwrap(
+            await api.PATCH("/leads/{id}", {
+              params: { path: { id: original.id }, ...ifMatch(version) },
+              body,
+            }),
+          );
         },
       });
   }

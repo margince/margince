@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -361,13 +362,9 @@ func quotedFromTranscript(step proposedStep, lines []string) string {
 		quoted = append(quoted, lines[line-1])
 	}
 	snippet := strings.Join(quoted, "\n")
-	if len(snippet) > approvals.MaxEvidenceSnippet {
-		// Trimmed on a rune boundary: cutting mid-sequence would replace the
-		// last character with U+FFFD, so a quotation of the transcript would
-		// end in a glyph the transcript does not contain.
-		snippet = strings.ToValidUTF8(snippet[:approvals.MaxEvidenceSnippet], "")
-	}
-	return snippet
+	// Trimmed on a rune boundary: cutting mid-sequence would replace the last
+	// character with U+FFFD, a glyph the transcript does not contain.
+	return textcut.Bytes(snippet, approvals.MaxEvidenceSnippet)
 }
 
 // transcriptReadStore is the slice of the activities store this engine drives.

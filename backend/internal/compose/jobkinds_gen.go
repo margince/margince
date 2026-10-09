@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "cc01d2968ba7fa1e74aa11a25acec40a60bc38f4a3bc57f6133212bd3a0021d1"
+const jobContractHash = "77da0aed6126d41032ef591ab20c139565ba00b84911a039b27f65e9a3918421"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -93,6 +93,7 @@ type declaredJobArgs interface {
 		SiteDeepReadArgs |
 		StageEvidenceReadArgs |
 		StoredObjectReapArgs |
+		SuppressionJournalArgs |
 		TagScoutArgs |
 		TechnicalEnrichBackfillArgs |
 		TechnicalEnrichCompanyArgs |
@@ -162,6 +163,7 @@ var (
 	_ jobs.FleetWide = RiskVerdictSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
 	_ jobs.FleetWide = StoredObjectReapArgs{}
+	_ jobs.FleetWide = SuppressionJournalArgs{}
 	_ jobs.FleetWide = TagScoutArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
 	_ jobs.FleetWide = TimeScanArgs{}

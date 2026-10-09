@@ -3,7 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 /**
  * Who a reply to this anchor goes to, resolved without drafting.
@@ -25,14 +25,11 @@ export function useReplyRecipient(anchor: string | undefined): {
   const query = useQuery({
     queryKey: ["compose-reply-recipient", anchor],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/activities/{id}/reply-recipient",
-        { params: { path: { id: anchor ?? "" } } },
+      return unwrap(
+        await api.GET("/activities/{id}/reply-recipient", {
+          params: { path: { id: anchor ?? "" } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     enabled: anchor !== undefined,
   });

@@ -32,10 +32,14 @@ package contacts
 // cannot be skipped: between a probe and its write there is a window, and the
 // column set below is the most contended in the product.
 
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+)
+
 // companyWriteAuthority says what a writer may do to a column somebody has already
 // answered. It has no zero value on purpose — a writer states which it holds.
-import "strings"
-
 type companyWriteAuthority uint8
 
 const (
@@ -140,11 +144,10 @@ const companyDescriptionMax = 500
 // byte cut would both refuse text the column accepts and split a multi-byte
 // character.
 func headerLine(value string) string {
-	runes := []rune(value)
-	if len(runes) <= companyDescriptionMax {
+	cut := textcut.Runes(value, companyDescriptionMax)
+	if cut == value {
 		return value
 	}
-	cut := string(runes[:companyDescriptionMax])
 	if at := strings.LastIndexAny(cut, " \t\n"); at > 0 {
 		return strings.TrimRight(cut[:at], " \t\n")
 	}

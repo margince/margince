@@ -5,7 +5,7 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import {
   memberAnchorId,
   memberMutationKey,
@@ -34,12 +34,11 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
   const reactivate = useMutation({
     mutationKey: memberMutationKey(member.id, "reactivate"),
     mutationFn: async (id: string) => {
-      const { error } = await api.POST("/users/{id}/reactivate", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/users/{id}/reactivate", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: async () => {
       await refresh();
@@ -54,12 +53,11 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
   const deactivate = useMutation({
     mutationKey: memberMutationKey(member.id, "deactivate"),
     mutationFn: async (id: string) => {
-      const { error } = await api.POST("/users/{id}/deactivate", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/users/{id}/deactivate", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: async () => {
       // The roster first: closing the dialog hands focus back to the row, which

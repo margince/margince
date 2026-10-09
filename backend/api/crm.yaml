@@ -800,6 +800,37 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /admin/recovery-health:
+    get:
+      tags: [Identity]
+      operationId: getRecoveryHealth
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: When the restore procedure was last rehearsed, and what it measured.
+      description: >
+        Admin and ops only (`job_health:read`). Reports the most recent restore drill from the installation's drill
+        ledger, against the two published recovery targets: back within four hours, and
+        no more than one hour of data lost. The recovery time is measured by the database
+        clock between drill-start and drill-finish. The data lost is the start minus the
+        restore point the operator gave to drill-start. `last_drill` is null on an installation that has never
+        recorded a drill. Drills are recorded by the operator with `margince-migrate
+        drill-start` and `drill-finish`; there is no HTTP write. Margince does not observe
+        backups, so this report names none. Human session only (x-agent-access: human-only).
+      responses:
+        '200':
+          description: The installation's restore-drill evidence.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecoveryHealth' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Refused: the caller is an agent/passport principal (this endpoint is human-only)
+            or a seat without `job_health:read` (held by the admin and ops roles).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ------------------------------ /passports --------------------------------
   /passports:
     get:
@@ -33157,7 +33188,7 @@ components:
         state: { type: string, enum: [queued, submitting, in_progress, completed, no_match, skipped, submission_unknown, failed, cancelled] }
         skip_reason:
           type: [string, 'null']
-          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, no_identifiers, null]
+          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, no_identifiers, category_in_flight, null]
           description: |
             Why a `skipped` run sent nothing. Null for every other state.
             `duplicate_subject_candidate` means the subject looked like a duplicate of an
@@ -33170,6 +33201,10 @@ components:
             a company, so the provider has nothing to match on; an automatic trigger declines
             rather than spending a call that can only answer "no match". A human pressing the
             button on the contact is still allowed to try.
+            `category_in_flight` means a live run for this contact and provider was already
+            buying at least one of the categories asked for. The request is refused whole
+            rather than narrowed, nothing was reserved, and asking again once that run has
+            finished is admitted.
         connection_version: { type: integer, format: int64, minimum: 1 }
         configuration_snapshot: { $ref: '#/components/schemas/ProviderConfiguration' }
         requested_categories: { type: array, uniqueItems: true, items: { type: string } }
@@ -47937,6 +47972,59 @@ components:
           type: array
           description: One row per composed unit with anything refused in the window.
           items: { $ref: '#/components/schemas/ExtensionUnitIngestHealth' }
+
+    RecoveryHealth:
+      type: object
+      additionalProperties: false
+      description: |
+        The installation's restore-drill evidence, read against the published recovery
+        targets. Margince does not observe backups; this report carries none.
+      required: [generated_at, recovery_target_seconds, data_loss_target_seconds, last_drill]
+      properties:
+        generated_at: { type: string, format: date-time }
+        recovery_target_seconds:
+          type: integer
+          description: The published recovery target, in seconds.
+        data_loss_target_seconds:
+          type: integer
+          description: The published data-loss target, in seconds.
+        last_drill:
+          allOf: [{ $ref: '#/components/schemas/RestoreDrill' }]
+          nullable: true
+          description: The most recent drill, or null when none was ever recorded.
+
+    RestoreDrill:
+      type: object
+      additionalProperties: false
+      description: One rehearsal of the restore procedure, as the drill ledger holds it.
+      required: [started_at, finished_at, restored_to, outcome, operator, notes, recovery_seconds, data_loss_seconds]
+      properties:
+        started_at: { type: string, format: date-time }
+        finished_at:
+          type: [string, 'null']
+          format: date-time
+          description: Null while the drill runs, and on a drill nobody closed.
+        restored_to:
+          type: string
+          format: date-time
+          description: The point in time the backup was restored to.
+        outcome:
+          type: string
+          enum: [running, passed, failed]
+        operator:
+          type: string
+          description: Who ran the drill, as the operator named themselves on the command line.
+        notes:
+          type: [string, 'null']
+          description: What the drill checked, or why it failed.
+        recovery_seconds:
+          type: [integer, 'null']
+          description: Finished minus started. Null until the drill finishes.
+        data_loss_seconds:
+          type: integer
+          description: >
+            Started minus the restore point. The restore point is what the operator gave to
+            drill-start, so this figure is only as true as that input.
 
     ExtensionUnitIngestHealth:
       type: object

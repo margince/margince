@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { SIGN_OFF_QUERY } from "./composesignoff";
 
 type EmailSignature = components["schemas"]["EmailSignature"];
@@ -22,13 +22,11 @@ export function useSaveSignature(
     mutationFn: async (
       next: components["schemas"]["SaveEmailSignatureRequest"],
     ) => {
-      const { data, error } = await api.PUT("/me/email-signature", {
-        body: next,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/me/email-signature", {
+          body: next,
+        }),
+      );
     },
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ["me-email-signature"] });

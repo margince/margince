@@ -11,7 +11,7 @@ import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
 import { rowCount, rowMoney } from "./analytics.cells";
 import { MEETING_STATUSES } from "./analytics.questions.values";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 // What a reading says when the row it needs is not there. THREE facts, not one:
 // a read in flight resolves by waiting, a failed one never will, and a lens
@@ -45,24 +45,21 @@ export function MyOutcomesView({
     queryKey: ["report", "pipeline-current", "outcomes", self],
     enabled: self != null,
     queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "pipeline-current" } },
-        body: {
-          // The seat pinned EXPLICITLY, not left to the server's default
-          // population: the default is also the caller's own today, so the
-          // two agree, but this card's heading says "my" and a heading must
-          // not be true by a coincidence this file cannot see.
-          filters: { owner_id: self },
-          aggregates: [
-            { fn: "count", as: "deal_count" },
-            { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-          ],
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/reports/{report}", {
+          params: { path: { report: "pipeline-current" } },
+          body: {
+            // The seat is pinned here, not left to the server's default population.
+            // The default is the caller's own today, but this card's heading says
+            // "my", and that must not hold by a coincidence this file cannot see.
+            filters: { owner_id: self },
+            aggregates: [
+              { fn: "count", as: "deal_count" },
+              { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+            ],
+          },
+        }),
+      );
     },
   });
 
@@ -70,18 +67,16 @@ export function MyOutcomesView({
     queryKey: ["report", "activities-by-kind", "outcomes", self],
     enabled: self != null,
     queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "activities-by-kind" } },
-        body: {
-          filters: { kind: "meeting", host_user_id: self },
-          group_by: ["meeting_status"],
-          aggregates: [{ fn: "count", as: "meetings" }],
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/reports/{report}", {
+          params: { path: { report: "activities-by-kind" } },
+          body: {
+            filters: { kind: "meeting", host_user_id: self },
+            group_by: ["meeting_status"],
+            aggregates: [{ fn: "count", as: "meetings" }],
+          },
+        }),
+      );
     },
   });
 

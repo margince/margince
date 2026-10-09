@@ -19,7 +19,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
@@ -42,12 +42,11 @@ function stringField(value: unknown): string {
 export async function searchCompanyTargets(
   q: string,
 ): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.display_name,
@@ -362,29 +361,27 @@ export async function createCompany(
   customFields: Record<string, unknown>,
   t: (key: MessageKey) => string,
 ): Promise<Company> {
-  const { data, error } = await api.POST("/companies", {
-    body: { ...mapCompanyBody(values, rows ?? {}), ...customFields },
-  });
-  if (error) {
-    throwProblem(error, t);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/companies", {
+      body: { ...mapCompanyBody(values, rows ?? {}), ...customFields },
+    }),
+    t,
+  );
 }
 
 export async function patchCompanyField(
   company: Pick<Company, "id" | "version">,
   body: UpdateCompanyRequest,
 ): Promise<void> {
-  const { error } = await api.PATCH("/companies/{id}", {
-    params: {
-      path: { id: company.id },
-      ...ifMatch(requireVersion(company.version)),
-    },
-    body,
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  unwrap(
+    await api.PATCH("/companies/{id}", {
+      params: {
+        path: { id: company.id },
+        ...ifMatch(requireVersion(company.version)),
+      },
+      body,
+    }),
+  );
 }
 
 // The editable domain shape excludes row ids and other server metadata.

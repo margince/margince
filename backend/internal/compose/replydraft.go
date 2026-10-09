@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -176,12 +177,12 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		// server-derived and fixed-shape.
 		Envelope:          envelope,
 		Thread:            threadFlag(threaded),
-		Recipient:         boundedRunes(recipient, recipientMaxRunes),
-		RecipientLastName: boundedRunes(surname, recipientMaxRunes),
-		Subject:           boundedRunes(topic, replyActivityMaxRunes),
-		Body:              boundedRunes(body, replyActivityMaxRunes),
+		Recipient:         textcut.Runes(recipient, recipientMaxRunes),
+		RecipientLastName: textcut.Runes(surname, recipientMaxRunes),
+		Subject:           textcut.Runes(topic, replyActivityMaxRunes),
+		Body:              textcut.Runes(body, replyActivityMaxRunes),
 		OccurredAt:        activity.OccurredAt.UTC().Format(time.RFC3339),
-		Intent:            boundedRunes(strings.TrimSpace(intent), replyActivityMaxRunes),
+		Intent:            textcut.Runes(strings.TrimSpace(intent), replyActivityMaxRunes),
 		Conversation:      conversation,
 	}
 

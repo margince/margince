@@ -171,6 +171,7 @@ func (s *Service) profilesFor(names []string, statuses map[string]string, runs [
 // profileFor is one provider's section: what it was asked, what it answered,
 // and what it sold us.
 func (s *Service) profileFor(name string, status string, runs []providerRunRow, claims []storedClaim, idents provider.ContactIdentifiers) (crmcontracts.ContactProviderProfile, error) {
+	runs = withoutDeferrals(runs)
 	profile := crmcontracts.ContactProviderProfile{
 		Provider:               crmcontracts.Provider(name),
 		State:                  resolveProviderState(runs, status, s.lookupable(name, idents)),
@@ -206,6 +207,20 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 		return crmcontracts.ContactProviderProfile{}, err
 	}
 	return profile, nil
+}
+
+// withoutDeferrals drops the runs refused because another live run was
+// already buying one of their categories. Such a refusal says nothing about
+// this contact: the run it deferred to does, and the page shows and watches
+// that one. The refusal stays in the contact's run history.
+func withoutDeferrals(runs []providerRunRow) []providerRunRow {
+	out := make([]providerRunRow, 0, len(runs))
+	for _, r := range runs {
+		if r.skipReason != string(provider.SkipCategoryInFlight) {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // runsOf and claimsOf narrow the contact's history to one provider, preserving

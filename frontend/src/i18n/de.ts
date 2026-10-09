@@ -912,6 +912,7 @@ export const de = {
   "systemJob.release_version": "Versionsprüfung",
   "systemJob.report_schedule": "Geplante Auswertungen",
   "systemJob.request_settlement": "Abschluss von Anfragen",
+  "systemJob.restore_drill": "Eintrag einer Wiederherstellungsprobe",
   "systemJob.risk_verdict": "Prüfung des Deal-Risikos",
   "systemJob.routing_seed": "Einrichtung der Zuweisung",
   "systemJob.schedule_read": "Lesen des Zeitplans",
@@ -921,6 +922,7 @@ export const de = {
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
   "systemJob.stage_progression": "Phasenfortschritt",
   "systemJob.stage_progression_outcome": "Ergebnis des Phasenwechsels",
+  "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
   "systemJob.technical_lookup": "Technische Abfrage für Unternehmen",
@@ -5852,6 +5854,36 @@ export const de = {
   "extIngest.noDetail":
     "Zeigt nur Anzahlen und die abweisende Prüfung, nie den Datensatz, weil das abgewiesene Feld Inhalte des Absenders zitieren kann. Das Connector-Protokoll enthält den vollständigen Grund für jeden Fall.",
   "extIngest.generatedAt": "Stand: {time}",
+  "settings.recoveryHealth": "Wiederherstellungsproben",
+  "settings.recoveryHealthSub":
+    "Wann die Wiederherstellung aus dem Backup zuletzt geprobt wurde und wie lange sie gedauert hat.",
+  "recoveryHealth.adminOnly":
+    "Wiederherstellungsproben betreffen die ganze Installation und brauchen eine Berechtigung, die deine Rolle nicht hat.",
+  "recoveryHealth.lastDrill": "Letzte Wiederherstellungsprobe",
+  "recoveryHealth.lastDrillHint":
+    "Die Zeiten stammen aus dem Eintrag der Probe selbst. Wer die Probe durchführt, trägt sie über die Kommandozeile ein.",
+  "recoveryHealth.never":
+    "Es ist noch keine Wiederherstellungsprobe eingetragen. Bis dahin zeigt nichts, dass eine Wiederherstellung die Ziele einhält.",
+  "recoveryHealth.outcome": "Ergebnis",
+  "recoveryHealth.outcome.passed": "Bestanden",
+  "recoveryHealth.outcome.failed": "Fehlgeschlagen",
+  "recoveryHealth.outcome.running": "Läuft",
+  "recoveryHealth.startedAt": "begonnen {when}",
+  "recoveryHealth.recovery": "Dauer der Wiederherstellung",
+  "recoveryHealth.notFinished": "Nicht abgeschlossen",
+  "recoveryHealth.dataLoss": "Verlorene Daten",
+  "recoveryHealth.restoredTo": "Wiederhergestellt auf",
+  "recoveryHealth.operator": "Durchgeführt von",
+  "recoveryHealth.notes": "Notizen",
+  "recoveryHealth.window": "{hours} Std. {minutes} Min.",
+  "recoveryHealth.windowHours": "{hours} Std.",
+  "recoveryHealth.withinTarget": "innerhalb des Ziels von {target}",
+  "recoveryHealth.overTarget": "über dem Ziel von {target}",
+  "recoveryHealth.lastBackup": "Letztes Backup",
+  "recoveryHealth.lastBackupHint":
+    "Backups laufen außerhalb von Margince. Prüfe sie in deinem Backup-Werkzeug.",
+  "recoveryHealth.backupNotObserved": "Von Margince nicht erfasst",
+  "recoveryHealth.generatedAt": "Stand {time}",
   "settings.captureHealth": "Prüfungen der Mailerfassung",
   "settings.captureHealthSub":
     "Ob die Mailerfassung mit den Fragen Schritt hält, die sie beantworten muss.",

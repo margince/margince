@@ -892,6 +892,7 @@ export const en = {
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
   "systemJob.request_settlement": "Request settlement",
+  "systemJob.restore_drill": "Restore drill record",
   "systemJob.risk_verdict": "Deal risk check",
   "systemJob.routing_seed": "Routing setup",
   "systemJob.schedule_read": "Schedule read",
@@ -901,6 +902,7 @@ export const en = {
   "systemJob.stage_evidence_read": "Deal stage evidence read",
   "systemJob.stage_progression": "Deal stage progression",
   "systemJob.stage_progression_outcome": "Deal stage outcome",
+  "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
   "systemJob.technical_lookup": "Company technical lookup",
@@ -6009,6 +6011,36 @@ export const en = {
   "extIngest.noDetail":
     "Shows counts and the refusing check only, never the record, because the refused field can quote sender content. The connector log has the full reason for each.",
   "extIngest.generatedAt": "As of {time}",
+  "settings.recoveryHealth": "Restore drills",
+  "settings.recoveryHealthSub":
+    "When the restore from backup was last rehearsed, and how long it took.",
+  "recoveryHealth.adminOnly":
+    "Restore drills cover the whole installation and need a permission your role does not have.",
+  "recoveryHealth.lastDrill": "Last restore drill",
+  "recoveryHealth.lastDrillHint":
+    "Times come from the drill record itself. Whoever runs the drill records it from the command line.",
+  "recoveryHealth.never":
+    "No restore drill has been recorded. Until one is, nothing shows that a restore meets the recovery targets.",
+  "recoveryHealth.outcome": "Outcome",
+  "recoveryHealth.outcome.passed": "Passed",
+  "recoveryHealth.outcome.failed": "Failed",
+  "recoveryHealth.outcome.running": "Running",
+  "recoveryHealth.startedAt": "started {when}",
+  "recoveryHealth.recovery": "Time to recover",
+  "recoveryHealth.notFinished": "Not finished",
+  "recoveryHealth.dataLoss": "Data lost",
+  "recoveryHealth.restoredTo": "Restored to",
+  "recoveryHealth.operator": "Run by",
+  "recoveryHealth.notes": "Notes",
+  "recoveryHealth.window": "{hours} h {minutes} min",
+  "recoveryHealth.windowHours": "{hours} h",
+  "recoveryHealth.withinTarget": "within the {target} target",
+  "recoveryHealth.overTarget": "over the {target} target",
+  "recoveryHealth.lastBackup": "Last backup",
+  "recoveryHealth.lastBackupHint":
+    "Backups run outside Margince, so your backup tool is where to check them.",
+  "recoveryHealth.backupNotObserved": "Not observed by Margince",
+  "recoveryHealth.generatedAt": "As of {time}",
   "settings.captureHealth": "Mail capture checks",
   "settings.captureHealthSub":
     "Whether mail capture keeps up with the questions it has to answer.",

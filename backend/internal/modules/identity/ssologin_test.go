@@ -17,7 +17,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -329,26 +328,6 @@ func TestOidcSignInCallbackUnverifiedEmailIsRefused(t *testing.T) {
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
 		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
-	}
-}
-
-// TestTruncateForLogNeverSplitsAMultiByteRune matters because the result is
-// written to system_log as jsonb text: Postgres rejects invalid UTF-8
-// outright (error 22021), so a raw byte cut landing mid-rune would fail that
-// best-effort write silently and lose the very refusal record truncation
-// exists to keep — for exactly the attacker-controlled value (Google's
-// `error` query parameter) this function bounds.
-func TestTruncateForLogNeverSplitsAMultiByteRune(t *testing.T) {
-	s := strings.Repeat("é", 40) // each "é" is 2 bytes; a cut at byte 63 lands mid-rune
-	got := truncateForLog(s, 63)
-	if !utf8.ValidString(got) {
-		t.Fatalf("truncateForLog(_, 63) = %q, not valid UTF-8", got)
-	}
-	if len(got) > 63 {
-		t.Fatalf("len(got) = %d, want <= 63", len(got))
-	}
-	if got := truncateForLog("short", 63); got != "short" {
-		t.Fatalf("a string under the limit must be returned unchanged, got %q", got)
 	}
 }
 

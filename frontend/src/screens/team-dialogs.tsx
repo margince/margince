@@ -21,7 +21,7 @@ import { useToast } from "../design-system/toast";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { RosterPartialNote } from "./roster";
 import "./users-access.css";
 
@@ -76,10 +76,11 @@ export function TeamMembersModal({
       member: boolean;
     }) => {
       const params = { params: { path: { id: teamId, userId } } };
-      const { error } = member
-        ? await api.PUT("/teams/{id}/members/{userId}", params)
-        : await api.DELETE("/teams/{id}/members/{userId}", params);
-      if (error) throwProblem(error);
+      unwrap(
+        member
+          ? await api.PUT("/teams/{id}/members/{userId}", params)
+          : await api.DELETE("/teams/{id}/members/{userId}", params),
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["users"] });
@@ -237,11 +238,12 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
   const [draft, setDraft] = useState(team.name);
   const rename = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { error } = await api.PATCH("/teams/{id}", {
-        params: { path: { id } },
-        body: { name },
-      });
-      if (error) throwProblem(error);
+      unwrap(
+        await api.PATCH("/teams/{id}", {
+          params: { path: { id } },
+          body: { name },
+        }),
+      );
     },
     onSuccess: (_renamed, { name }) => {
       setOpen(false);
@@ -355,9 +357,7 @@ export function NewTeamAction() {
   const [draft, setDraft] = useState("");
   const create = useMutation({
     mutationFn: async (name: string) => {
-      const { data, error } = await api.POST("/teams", { body: { name } });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.POST("/teams", { body: { name } }));
     },
     onSuccess: () => {
       setDraft("");

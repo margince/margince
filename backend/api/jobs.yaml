@@ -1215,6 +1215,22 @@ kinds:
       minutes.
 
 
+  suppression_journal_export:
+    role: worker
+    fleet: true
+    go_type: SuppressionJournalArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    registration: {when: [Blobstore], absent: registers_nothing}
+    reason: >-
+      Hourly, and the cadence answers how much of the journal a restore may
+      lose rather than how long the export takes: an erasure recorded after the
+      last export is one a restored database has no entry to refuse. The pass
+      itself is one indexed read of the suppression list and one Put per entry,
+      all of it idempotent, so a re-run costs writes and changes nothing.
+
   stored_object_reap:
     role: worker
     fleet: true

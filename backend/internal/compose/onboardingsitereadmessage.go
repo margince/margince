@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -421,8 +422,8 @@ func companyReadEvidenceSet(read contacts.SiteRead) []companyReadEvidence {
 		}
 		evidence = append(evidence, companyReadEvidence{
 			ID: fmt.Sprintf("S%d", len(evidence)+1), Kind: kind, Field: field,
-			Value: boundedRunes(value, companyReadSourceMaxRunes),
-			Quote: boundedRunes(quote, companyReadSourceMaxRunes), URL: sourceURL,
+			Value: textcut.Runes(value, companyReadSourceMaxRunes),
+			Quote: textcut.Runes(quote, companyReadSourceMaxRunes), URL: sourceURL,
 		})
 	}
 	for _, entity := range read.LegalEntities {

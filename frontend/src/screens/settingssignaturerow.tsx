@@ -13,7 +13,7 @@ import { Heading } from "../design-system/heading";
 import { SettingRow } from "../design-system/settingrow";
 import type { Toast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { throwProblem, WriteRefused } from "./common";
+import { unwrap, WriteRefused } from "./common";
 import { useSignOff } from "./composesignoff";
 import { useSaveSignature } from "./settingssignature";
 import { SignatureHtml } from "./signaturehtml";
@@ -35,11 +35,7 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const signature = useQuery({
     queryKey: ["me-email-signature"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/me/email-signature");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/me/email-signature"));
     },
   });
   const templated = signature.data?.template_active === true;

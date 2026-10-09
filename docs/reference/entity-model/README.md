@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 296 |
-| Columns | 3533 |
-| Foreign keys | 489 |
+| Tables | 297 |
+| Columns | 3538 |
+| Foreign keys | 490 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -110,7 +110,7 @@ erDiagram
 | [finance](finance.md) | 5 |
 | [forecasting](forecasting.md) | 4 |
 | [identity](identity.md) | 22 |
-| [integrations](integrations.md) | 4 |
+| [integrations](integrations.md) | 5 |
 | [introductions](introductions.md) | 1 |
 | [knowledge](knowledge.md) | 3 |
 | [migration](migration.md) | 2 |
@@ -341,13 +341,14 @@ erDiagram
 | [`provider_connection`](integrations.md#provider_connection) | integrations | 20 | 1 |
 | [`provider_connection_budget`](integrations.md#provider_connection_budget) | integrations | 6 | 0 |
 | [`provider_employment_resolution`](contacts.md#provider_employment_resolution) | contacts | 9 | 0 |
-| [`provider_run`](integrations.md#provider_run) | integrations | 25 | 4 |
+| [`provider_run`](integrations.md#provider_run) | integrations | 25 | 5 |
+| [`provider_run_category`](integrations.md#provider_run_category) | integrations | 4 | 0 |
 | [`provider_run_reservation`](integrations.md#provider_run_reservation) | integrations | 6 | 0 |
 | [`raw_capture`](capture.md#raw_capture) | capture | 6 | 1 |
 | [`record_assignment`](assignments.md#record_assignment) | assignments | 13 | 0 |
 | [`record_grant`](identity.md#record_grant) | identity | 16 | 0 |
 | [`record_role`](assignments.md#record_role) | assignments | 11 | 1 |
-| [`relationship`](contacts.md#relationship) | contacts | 21 | 1 |
+| [`relationship`](contacts.md#relationship) | contacts | 22 | 1 |
 | [`relationship_nudge_dismissal`](contacts.md#relationship_nudge_dismissal) | contacts | 5 | 0 |
 | [`report_definition`](reporting.md#report_definition) | reporting | 9 | 2 |
 | [`report_definition_revision`](reporting.md#report_definition_revision) | reporting | 6 | 2 |

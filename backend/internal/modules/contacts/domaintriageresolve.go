@@ -273,7 +273,8 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 // the verdict.
 //
 // It never reassigns: someone whose current employer a human already recorded
-// keeps it, exactly as the capture ensure never overrides one.
+// keeps it, as the capture ensure never overrides one. Each edge is dated
+// from the earliest mail of its contact on the domain.
 func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, companyID ids.CompanyID) (int, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -304,8 +305,8 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 	// point of the split: the candidate read above is a snapshot, and this is
 	// the decision.
 	rows, err := tx.Query(ctx, `
-		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by)
-		SELECT 'employment', p.id, $1, true, $2, $3
+		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by, first_observed_at)
+		SELECT 'employment', p.id, $1, true, $2, $3, `+employmentFirstObservedSQL("p.id", "$5", "NULL::uuid", "$6")+`
 		FROM contact p
 		WHERE p.id = ANY($4)
 		  AND NOT EXISTS (
@@ -313,7 +314,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 			WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id, contact_id`,
-		companyID, domainTriageSource(domain), by, candidates)
+		companyID, domainTriageSource(domain), by, candidates, domain, mailClockSkewAllowance)
 	if err != nil {
 		return 0, fmt.Errorf("contacts: planting the employment edges for %s: %w", domain, err)
 	}

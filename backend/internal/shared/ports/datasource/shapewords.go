@@ -17,7 +17,8 @@ import (
 	"encoding/json"
 	"reflect"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // maxShapeSketch bounds the rendered object sketch. Not an echo bound — the
@@ -146,14 +147,7 @@ func objectSketch(t reflect.Type) string {
 // character into a problem body; no contract field name is non-ASCII today,
 // which makes this the kind of difference that is invisible until it is not.
 func boundSketch(sketch string) string {
-	if len(sketch) <= maxShapeSketch {
-		return sketch
-	}
-	cut := maxShapeSketch
-	for cut > 0 && !utf8.RuneStart(sketch[cut]) {
-		cut--
-	}
-	return sketch[:cut] + "…}"
+	return textcut.BytesMarked(sketch, maxShapeSketch, "…}")
 }
 
 // leafShape is the one-word shape a sketch shows for a key's value.

@@ -14,7 +14,7 @@ import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import "./dealfiles.css";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived
@@ -63,16 +63,14 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
   const query = useQuery({
     queryKey: dealDocumentsKey(dealId, showHidden),
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/documents", {
-        params: {
-          path: { id: dealId },
-          query: { limit: PAGE_LIMIT, include_hidden: showHidden },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/documents", {
+          params: {
+            path: { id: dealId },
+            query: { limit: PAGE_LIMIT, include_hidden: showHidden },
+          },
+        }),
+      );
     },
   });
   const files = query.data?.data ?? [];
@@ -288,15 +286,12 @@ function useFileVerbs(dealId: string, attachmentId: string) {
     toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
   const hide = useMutation({
     mutationFn: async () => {
-      const { error } = await api.PUT(
-        "/deals/{id}/documents/{attachmentId}/hide",
-        {
+      unwrap(
+        await api.PUT("/deals/{id}/documents/{attachmentId}/hide", {
           params: { path: { id: dealId, attachmentId } },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onError: sayRefused,
     onSuccess: async () => {
@@ -309,15 +304,12 @@ function useFileVerbs(dealId: string, attachmentId: string) {
   });
   const unhide = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE(
-        "/deals/{id}/documents/{attachmentId}/hide",
-        {
+      unwrap(
+        await api.DELETE("/deals/{id}/documents/{attachmentId}/hide", {
           params: { path: { id: dealId, attachmentId } },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onError: sayRefused,
     onSuccess: async () => {
@@ -327,12 +319,12 @@ function useFileVerbs(dealId: string, attachmentId: string) {
   });
   const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE("/attachments/{id}", {
-        params: { path: { id: attachmentId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.DELETE("/attachments/{id}", {
+          params: { path: { id: attachmentId } },
+        }),
+        t,
+      );
     },
     onSuccess: refresh,
   });

@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -108,8 +109,5 @@ func cliFinishReason(stop string) string {
 // clipped keeps an error readable when the CLI prints a page of output.
 func clipped(text string) string {
 	text = strings.TrimSpace(text)
-	if len(text) > cliStderrLimit {
-		return text[:cliStderrLimit] + "…"
-	}
-	return text
+	return textcut.BytesMarked(text, cliStderrLimit, "…")
 }

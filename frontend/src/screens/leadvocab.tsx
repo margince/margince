@@ -15,7 +15,7 @@ import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, unwrap } from "./common";
 import {
   LEAD_DISQUALIFY_REASONS_KEY,
   LEAD_SOURCES_KEY,
@@ -71,11 +71,7 @@ function useSourceMutations() {
       key?: string;
       intent: LeadSourceIntent;
     }) => {
-      const { data, error } = await api.POST("/lead-sources", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/lead-sources", { body }));
     },
     onSuccess: invalidate,
   });
@@ -90,25 +86,22 @@ function useSourceMutations() {
       active?: boolean;
       sort_order?: number;
     }) => {
-      const { data, error } = await api.PATCH("/lead-sources/{id}", {
-        params: { path: { id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/lead-sources/{id}", {
+          params: { path: { id } },
+          body,
+        }),
+      );
     },
     onSuccess: invalidate,
   });
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/lead-sources/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/lead-sources/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -546,13 +539,11 @@ function useReasonMutations() {
   };
   const create = useMutation({
     mutationFn: async (body: { label: string }) => {
-      const { data, error } = await api.POST("/lead-disqualify-reasons", {
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/lead-disqualify-reasons", {
+          body,
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -565,25 +556,22 @@ function useReasonMutations() {
       label?: string;
       active?: boolean;
     }) => {
-      const { data, error } = await api.PATCH("/lead-disqualify-reasons/{id}", {
-        params: { path: { id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/lead-disqualify-reasons/{id}", {
+          params: { path: { id } },
+          body,
+        }),
+      );
     },
     onSuccess: invalidate,
   });
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/lead-disqualify-reasons/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/lead-disqualify-reasons/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: invalidate,
   });

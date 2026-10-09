@@ -43,6 +43,7 @@ import {
   QueryGate,
   type QueryLike,
   throwProblem,
+  unwrap,
   useMe,
   WriteRefused,
 } from "./common";
@@ -146,11 +147,7 @@ export function useCompanyContextCapabilities(enabled = true) {
     queryKey: companyContextCapabilitiesQueryKey,
     enabled,
     queryFn: async (): Promise<Capabilities> => {
-      const { data, error } = await api.GET("/company/context/capabilities");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/company/context/capabilities"));
     },
   });
 }
@@ -164,13 +161,11 @@ export function ManualCompanySetup() {
   const [form, setForm] = useState<CompanyInput>(EMPTY_COMPANY_INPUT);
   const save = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.PUT("/company", {
-        body: trimCompanyInput(form),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/company", {
+          body: trimCompanyInput(form),
+        }),
+      );
     },
     onSuccess: (profile) => {
       storeCompany(queryClient, profile);
@@ -358,11 +353,7 @@ export function CompanyContextCard() {
 
   const save = useMutation({
     mutationFn: async (body: CompanyInput) => {
-      const { data, error } = await api.PUT("/company", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.PUT("/company", { body }));
     },
     onSuccess: (profile) => {
       storeCompany(queryClient, profile);
@@ -395,14 +386,12 @@ export function CompanyContextCard() {
       if (!website) {
         throwProblem({ title: t("settings.companyWebsiteRequired") });
       }
-      const { data, error } = await api.POST("/company/site-reads", {
-        params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-        body: { url: absoluteWebsite(website) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/company/site-reads", {
+          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+          body: { url: absoluteWebsite(website) },
+        }),
+      );
     },
     onSuccess: (read) => {
       setReadID(read.id);
@@ -415,13 +404,11 @@ export function CompanyContextCard() {
     queryKey: ["company-context-refresh", readID],
     enabled: readID !== null,
     queryFn: async (): Promise<SiteRead> => {
-      const { data, error } = await api.GET("/company/site-reads/{readId}", {
-        params: { path: { readId: readID ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/company/site-reads/{readId}", {
+          params: { path: { readId: readID ?? "" } },
+        }),
+      );
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;

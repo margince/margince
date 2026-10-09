@@ -8,7 +8,7 @@ import { Panel } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { isTooShort } from "./passwordrule";
 
 // Changing your own password, from the account settings page.
@@ -66,18 +66,17 @@ export function PasswordSettingRow({
     // the click belongs to the committed render, so a variable it passes cannot
     // be older than the control that carried it.
     mutationFn: async (values: ChangeFields) => {
-      const { error } = await api.POST("/auth/change-password", {
-        body: {
-          current_password: values.current,
-          new_password: values.next,
-        },
-      });
-      if (error) {
-        // The house error path: the server's problem detail is what says
-        // whether the current password was wrong or the new one was refused,
-        // and a generic message here would throw that away.
-        throwProblem(error, t);
-      }
+      // The server's problem says whether the current password was wrong or the
+      // new one was refused; a generic message would throw that away.
+      unwrap(
+        await api.POST("/auth/change-password", {
+          body: {
+            current_password: values.current,
+            new_password: values.next,
+          },
+        }),
+        t,
+      );
     },
     onSuccess: async () => {
       setFields(EMPTY);

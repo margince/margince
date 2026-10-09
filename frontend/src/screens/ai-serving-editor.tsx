@@ -22,7 +22,7 @@ import { OPENROUTER_ROUTING_DOCS } from "./ai-openrouter-settings";
 import { isOpenRouter } from "./ai-provider-links";
 import { type SliceValue, withSlice } from "./ai-routing-slice";
 import { FieldReference, RequestSummary } from "./ai-serving-reference";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import "./ai-settings.css";
 
 // How OpenRouter serves one lane, as the JSON OpenRouter itself takes. The
@@ -134,11 +134,11 @@ function usePreview(body: Routing | null, delayMs: number, enabled: boolean) {
     enabled: enabled && debounced.body !== null,
     queryFn: async () => {
       if (debounced.body === null) return null;
-      const { data, error } = await api.POST("/ai/routing/preview", {
-        body: debounced.body,
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.POST("/ai/routing/preview", {
+          body: debounced.body,
+        }),
+      );
     },
   });
   return { query, checking: debounced.key !== key || query.isFetching };
