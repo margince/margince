@@ -130,7 +130,7 @@ func writeEvidence[T any](
 			return apperrors.ErrVersionSkew
 		}
 
-		p, err := humanVerdictPatch(ctx, before, w.value, actor.UserID, now)
+		p, err := verdictPatch(ctx, before, w.value, actor.UserID, now)
 		if err != nil {
 			return err
 		}
@@ -183,28 +183,36 @@ func writeEvidence[T any](
 	return out, err
 }
 
-// humanVerdictPatch is what a correction or a confirmation writes: the value
-// when there is one, and in either case the provenance saying a human now
-// stands behind the claim.
+// verdictPatch is what a correction or a confirmation writes: the value when
+// there is one, plus the provenance saying who stands behind the claim. The
+// machine's proposal stays as extracted, for the audit trail's before-image.
 //
-// The machine's own proposal is NOT in here. evidence_snippet, source_url and
-// confidence stay exactly as extracted, which is what lets the before-image
-// carry them into the audit trail rather than an answer overwriting them.
-func humanVerdictPatch(
+// Who stands behind it comes from the principal: an agent writes source
+// 'agent' and no verified columns, a contact's correction 'human' and a name.
+// The refresh protects both, reading source to decide.
+func verdictPatch(
 	ctx context.Context, before evidenceRow, value *string, by ids.UUID, now time.Time,
 ) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if value != nil {
 		p.Set(auditKeyValue, before.Value, *value)
 	}
-	p.Set(auditKeySource, before.Source, CompanySourceHuman)
-	p.Set(auditKeyVerifiedAt, before.VerifiedAt, now)
-	p.Set(auditKeyVerifiedBy, before.VerifiedBy, by)
-	// The row changes HANDS, not just provenance. Both enrichment upserts
-	// decline to overwrite a row whose captured_by is a human, and they test
-	// that column rather than `source` — so a verdict that moved source
-	// alone was reclaimed by the next ordinary refresh, silently undoing
-	// the correction a contact had just made.
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return nil, fmt.Errorf("contacts: a verdict with no principal bound cannot say who stands behind it")
+	}
+	if actor.Type == principal.PrincipalAgent {
+		// Nothing was verified, so neither verified column is written: a name
+		// or a time there would read as a confirmation nobody made. When the
+		// row was written, and by whom, is captured_at and captured_by.
+		p.Set(auditKeySource, before.Source, CompanySourceAgent)
+	} else {
+		p.Set(auditKeySource, before.Source, CompanySourceHuman)
+		p.Set(auditKeyVerifiedAt, before.VerifiedAt, now)
+		p.Set(auditKeyVerifiedBy, before.VerifiedBy, by)
+	}
+	// captured_by follows the principal too, recording which identity wrote
+	// the row. Whose judgement the value carries is source, above.
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return nil, err

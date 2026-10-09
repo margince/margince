@@ -8,6 +8,7 @@
 
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { day, renderWorklist, row, stub } from "./worklist.testkit";
 
@@ -110,9 +111,11 @@ describe("a meeting the reader has sent nothing after", () => {
     renderWorklist();
 
     await screen.findByText(/Discovery workshop/);
-    expect(
-      await screen.findByRole("button", { name: /draft follow-up/i }),
-    ).not.toBeNull();
+    const draft = await screen.findByRole("button", {
+      name: /draft follow-up/i,
+    });
     expect(screen.queryByRole("button", { name: /^reply$/i })).toBeNull();
+    await userEvent.click(draft);
+    expect(await screen.findByRole("dialog")).not.toBeNull();
   });
 });
