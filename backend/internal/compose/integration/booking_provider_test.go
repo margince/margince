@@ -11,7 +11,21 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"testing"
 )
+
+// deliveredEvent is the event body the gcal adapter last sent for one invitation.
+// A new event takes its invitation's id as its own.
+func (b *bookingProviderTransport) deliveredEvent(t *testing.T, invitationID string) json.RawMessage {
+	t.Helper()
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	event, found := b.events[strings.ReplaceAll(invitationID, "-", "")]
+	if !found {
+		t.Fatalf("Google holds no event for invitation %s", invitationID)
+	}
+	return event
+}
 
 func (b *bookingProviderTransport) event(r *http.Request) (*http.Response, error) {
 	b.mu.Lock()

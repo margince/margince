@@ -15,8 +15,15 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/riverqueue/river"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -40,6 +47,16 @@ func setupBookingProvider(t *testing.T) (*apptest.AppEnv, *bookingProviderTransp
 	}, compose.CaptureConfig{}))
 	e.Vault = vault
 	return e, provider
+}
+
+// startBookingWorker boots the composed job runner with Google registered behind
+// the fixture's transport, so calendar delivery runs through the real gcal adapter.
+func startBookingWorker(t *testing.T, e *apptest.AppEnv) (*jobs.Runner, <-chan *river.Event, <-chan *river.Event) {
+	t.Helper()
+	db := compose.InstallationDB(e.Pool)
+	registry := capture.NewRegistry(db, capture.NewSink(db), identity.NewServiceFor(db), e.Vault)
+	registry.Register(gcal.New(gcal.NewOAuth(gcal.OAuthConfig{ClientID: "calendar-fixture", ClientSecret: "calendar-fixture"}), gcal.NewAPI(nil, "")))
+	return jobtest.StartTestJobRunner(t, e.Pool, compose.JobRunnerConfig{GmailRegistry: registry, ControllerVault: e.Vault, SendOrigin: compose.SendOrigin{PublicBaseURL: "https://mail.example.test"}})
 }
 
 type bookingProviderTransport struct {

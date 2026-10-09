@@ -2246,7 +2246,7 @@ export function DealsScreen({
           me: meQuery.data,
           partnerOptions,
           partnerApplied: query.filters.partner_company_id,
-          acquisitionSources: acquisitionSources,
+          acquisitionSources,
           retiredSuffix: t("deal.acquisitionRetired"),
         })}
         views={[...standardViews(viewerId, { sort: "" })]}
@@ -2415,7 +2415,7 @@ export function DealDetails({
             me: meId,
             currentOwner: deal.owner_id ?? null,
             currency: deal.currency ?? "",
-            acquisitionSources: acquisitionSources,
+            acquisitionSources,
             currentAcquisitionSource: deal.acquisition_source,
           }).map(
             (field): CreateField =>
