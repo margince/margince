@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
+import { foldForMatch } from "../format/collate";
 import { useT } from "../i18n";
 import { Radio } from "./atoms";
 import { useDebouncedSearch } from "./debouncedsearch";
@@ -26,9 +27,20 @@ function FilterValueList({
   value: string;
   onPick: (value: string, label: string) => void;
 }>) {
+  const t = useT();
   // One filter takes one value, so these are radios; the name groups them and
   // the enclosing `Menu` fieldset is what names the question they answer.
   const group = useId();
+  const [query, setQuery] = useState("");
+  const typed = foldForMatch(query.trim());
+  // The chosen option stays drawn whatever is typed, so the radio that says
+  // what the list is narrowed by never disappears from under the reader.
+  const shown = typed
+    ? chip.options.filter(
+        (option) =>
+          option.value === value || foldForMatch(option.label).includes(typed),
+      )
+    : chip.options;
   return (
     <>
       <Radio
@@ -38,7 +50,23 @@ function FilterValueList({
         label={chip.allLabel}
         onChange={() => onPick("", chip.allLabel)}
       />
-      {chip.options.map((option) => (
+      {chip.filterable && (
+        <label className="lt-fsearch">
+          <span className="sr-only">
+            {t("table.filterValueSearch", { filter: chip.label })}
+          </span>
+          <input
+            className="lt-fsearch-input"
+            value={query}
+            placeholder={t("table.filterValueSearch", { filter: chip.label })}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+      )}
+      {chip.filterable && shown.length === 0 && (
+        <p className="lt-fvalue-status">{t("table.filterNoMatches")}</p>
+      )}
+      {shown.map((option) => (
         <Radio
           key={option.value}
           className="lt-mi"

@@ -34,14 +34,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// KindTimestamp and KindUUID type the core vocabulary entries the six
-// fieldcatalog custom-column types do not cover: the timestamptz columns
-// (created_at, updated_at, last_activity_at) and the uuid references the
-// spec's sort tables name (owner_id, DM-VOCAB-1/2).
-const (
-	KindTimestamp = "timestamptz"
-	KindUUID      = "uuid"
-)
+// KindTimestamp types the core vocabulary entries the six fieldcatalog
+// custom-column types do not cover: the timestamptz columns (created_at,
+// updated_at, last_activity_at).
+const KindTimestamp = "timestamptz"
 
 // defaultSortSpelling is the contract's documented default sort. It IS
 // the default, so the spelling is accepted and normalized to it — the
@@ -335,9 +331,6 @@ func parsesAsKind(kind, value string) bool {
 		return err == nil
 	case fieldcatalog.TypeBoolean:
 		return value == "true" || value == "false"
-	case KindUUID:
-		_, err := ids.Parse(value)
-		return err == nil
 	case KindTimestamp:
 		return parsesAsTimestamptz(value)
 	default: // text, picklist
@@ -376,8 +369,6 @@ func kindOperandShape(kind string) string {
 		return "an ISO date (YYYY-MM-DD)"
 	case fieldcatalog.TypeBoolean:
 		return "true or false"
-	case KindUUID:
-		return "a UUID"
 	case KindTimestamp:
 		return "a timestamp"
 	default: // text, picklist
@@ -400,8 +391,6 @@ func listBindCast(kind string) string {
 		return "::bigint"
 	case KindTimestamp:
 		return "::timestamptz"
-	case KindUUID:
-		return "::uuid"
 	default: // text, picklist
 		return "::text"
 	}

@@ -1562,6 +1562,8 @@ export const de = {
   "list.filterOwnerMe": "In deiner Zuständigkeit",
   "list.filterOwnerAll": "Alle Zuständigen",
   "list.filterOwnerUnassigned": "Nicht zugewiesen",
+  "list.team": "Team",
+  "list.filterTeamAll": "Alle Teams",
   "views.save": "Ansicht speichern",
   "views.saveConfirm": "Speichern",
   "views.saveTitle": "Diese Ansicht speichern",
@@ -3447,13 +3449,14 @@ export const de = {
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
-  "deals.filterOwnerMe": "Meine Deals",
   "deals.totalsOwnerNotMeasurable":
     "Nur geladene Deals. Die Summen der zuständigen Person darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":
     "Nur geladene Deals. Die Phasensummen kennen keine Suche, daher wird keine gezeigt.",
+  "deals.totalsNoTeamFilter":
+    "Nur geladene Deals. Die Summen je Phase lassen sich nicht nach Team oder auf nicht zugewiesene Deals eingrenzen, darum steht hier keine.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Beliebiger Partner",
   "deals.filterMotion": "Geschäftsart",
@@ -3468,7 +3471,6 @@ export const de = {
   "deals.filterStageAll": "Alle Phasen",
   "deals.filterCompanyAll": "Alle Unternehmen",
   "deals.filterStalledAll": "Alle Deals",
-  "deals.filterOwnerAll": "Alle Zuständigen",
   "deals.filterPartnerAll": "Alle Quellen",
   "deals.unit": "Deals",
   "deals.bulkStage": "In Phase verschieben",
