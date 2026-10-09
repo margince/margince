@@ -469,7 +469,7 @@ describe("the brief readings strip", () => {
       [wholeMeetings(3)],
       { urgent: 4 },
     );
-    day.sources_unavailable = [{ source: "calendar", reason: "failed" }];
+    day.sources_unavailable = [{ source: "waiting", reason: "failed" }];
     drawDay(day);
 
     // All three worklist slots, LEADS INCLUDED — a fallback wired to two of

@@ -184,6 +184,39 @@ func TestAFailedNextMeetingReadIsNamedUnderMeetings(t *testing.T) {
 	}
 }
 
+// A side read puts no row on the queue, so its failure leaves the queue's
+// figures exact. A lane that did not answer may hide rows and floors them.
+func TestOnlyAMissingLaneMakesTheQueueFiguresAFloor(t *testing.T) {
+	broken := errors.New("connection reset")
+	for _, tc := range []struct {
+		name     string
+		meetings *stubMeetings
+		horizon  *stubHorizon
+		source   string
+		lane     bool
+	}{
+		{"calendar read", &stubMeetings{}, &stubHorizon{calendarErr: broken}, sourceCalendar, false},
+		{"next-meeting read", &stubMeetings{}, &stubHorizon{nextErr: broken}, sourceNextMeeting, false},
+		{"withheld meetings lane", &stubMeetings{err: apperrors.ErrPermissionDenied}, &stubHorizon{}, sourceMeeting, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			page := readHorizonPage(t, horizonService(tc.meetings, tc.horizon), scopeMine)
+
+			entry, named := unavailableEntry(page, tc.source)
+			if !named {
+				t.Fatalf("sources_unavailable = %+v, want %q named", page.SourcesUnavailable, tc.source)
+			}
+			if entry.ContributesRows == nil || *entry.ContributesRows != tc.lane {
+				t.Errorf("contributes_rows = %v, want %v", entry.ContributesRows, tc.lane)
+			}
+			if page.Readings.MoreAvailable != tc.lane {
+				t.Errorf("readings.more_available = %v with only the %s missing, want %v",
+					page.Readings.MoreAvailable, tc.name, tc.lane)
+			}
+		})
+	}
+}
+
 func unavailableEntry(page crmcontracts.Worklist, source string) (crmcontracts.WorklistSourceUnavailable, bool) {
 	for _, entry := range page.SourcesUnavailable {
 		if entry.Source == source {

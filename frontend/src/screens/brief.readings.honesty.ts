@@ -41,6 +41,15 @@ export function floorTest(day: Worklist): (category: string) => boolean {
     day.sources_unavailable.some((e) => e.category === category || !e.category);
 }
 
+// Whether a source that puts rows on the queue went unread. A failed side read
+// such as the calendar status is named too. It carries no row, so it cannot
+// make a queue count a floor. An entry without the flag reads as a lane.
+export function laneUnread(day: Worklist): boolean {
+  return day.sources_unavailable.some(
+    (entry) => entry.contributes_rows !== false,
+  );
+}
+
 // Whether the SCOPE itself was answered short.
 //
 // A capped team roster is not a bounded lane and not an unreadable source: every

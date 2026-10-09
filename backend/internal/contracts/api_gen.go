@@ -47807,9 +47807,16 @@ type WorklistReasonKind string
 // different answers and only one of them means the day is clear.
 type WorklistSourceUnavailable struct {
 	// Category Worklist category affected by this missing source.
-	Category *string                         `json:"category,omitempty"`
-	Reason   WorklistSourceUnavailableReason `json:"reason"`
-	Source   string                          `json:"source"`
+	Category *string `json:"category,omitempty"`
+
+	// ContributesRows False for a side read that puts no row on the queue — `calendar` and
+	// `next_meeting` — so its failure cannot hide a row, and a figure counted over
+	// the queue stays exact. True for a lane whose rows may be missing. Absent from
+	// an older server and from a surface that names only lanes, and a client reads
+	// absent as true.
+	ContributesRows *bool                           `json:"contributes_rows,omitempty"`
+	Reason          WorklistSourceUnavailableReason `json:"reason"`
+	Source          string                          `json:"source"`
 }
 
 // WorklistSourceUnavailableReason defines model for WorklistSourceUnavailable.Reason.

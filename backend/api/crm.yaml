@@ -56824,6 +56824,14 @@ components:
           type: string
           description: Worklist category affected by this missing source.
         reason: { type: string, enum: [withheld, failed] }
+        contributes_rows:
+          type: boolean
+          description: |
+            False for a side read that puts no row on the queue — `calendar` and
+            `next_meeting` — so its failure cannot hide a row, and a figure counted over
+            the queue stays exact. True for a lane whose rows may be missing. Absent from
+            an older server and from a surface that names only lanes, and a client reads
+            absent as true.
     KnowledgeCorpus:
       type: object
       required: [id, name, topic_statement, min_similarity, default_ask, coverage, created_at]
