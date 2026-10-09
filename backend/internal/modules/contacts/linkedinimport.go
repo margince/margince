@@ -405,7 +405,7 @@ func companyMatchKeys(company string) []string {
 	fields := strings.Fields(exact)
 	if len(fields) == 1 {
 		for _, tld := range webTLDs {
-			if trimmed := strings.TrimSuffix(exact, tld); trimmed != exact {
+			if trimmed, ok := strings.CutSuffix(exact, tld); ok {
 				add(trimmed)
 				break
 			}

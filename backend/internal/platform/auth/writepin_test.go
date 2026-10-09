@@ -21,8 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-func pin(v int64) *int64 { return &v }
-
 func TestTheWritePinPrecedenceIsCallerThenReleasedThenAdmitted(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -34,11 +32,11 @@ func TestTheWritePinPrecedenceIsCallerThenReleasedThenAdmitted(t *testing.T) {
 		wantSource auth.PinSource
 		wantPin    int64
 	}{
-		{"the caller's own pin wins", pin(7), pin(9), 7, true, auth.PinCaller, 7},
-		{"the released pin comes next", nil, pin(9), 9, true, auth.PinReleased, 9},
+		{"the caller's own pin wins", new(int64(7)), new(int64(9)), 7, true, auth.PinCaller, 7},
+		{"the released pin comes next", nil, new(int64(9)), 9, true, auth.PinReleased, 9},
 		{"the admitted pin is the last resort", nil, nil, 9, true, auth.PinAdmitted, 9},
 		{"nothing read a version, nothing pins the write", nil, nil, 0, false, auth.PinNone, 0},
-		{"a caller pin with no gate read is taken as given", pin(7), nil, 0, false, auth.PinCaller, 7},
+		{"a caller pin with no gate read is taken as given", new(int64(7)), nil, 0, false, auth.PinCaller, 7},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -67,7 +65,7 @@ func TestTheWritePinPrecedenceIsCallerThenReleasedThenAdmitted(t *testing.T) {
 // not describe: a caller naming the version a racing close will PRODUCE.
 func TestACallerPinTheGateDidNotReadIsSkew(t *testing.T) {
 	t.Parallel()
-	_, err := auth.ResolveWritePin(auth.WritePinInputs{CallerPin: pin(7), Admitted: 9, GateRead: true})
+	_, err := auth.ResolveWritePin(auth.WritePinInputs{CallerPin: new(int64(7)), Admitted: 9, GateRead: true})
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("a caller pin of 7 against an admitted 9 answered %v, want version skew", err)
 	}
@@ -89,8 +87,8 @@ func TestNoDisagreementRefusesOnceTheApprovalIsSpent(t *testing.T) {
 		released *int64
 		wantPin  int64
 	}{
-		{"the caller's pin disagrees", pin(7), nil, 7},
-		{"the released pin disagrees", nil, pin(7), 7},
+		{"the caller's pin disagrees", new(int64(7)), nil, 7},
+		{"the released pin disagrees", nil, new(int64(7)), 7},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -117,7 +115,7 @@ func TestNoDisagreementRefusesOnceTheApprovalIsSpent(t *testing.T) {
 // the impossible case, and a warning on every ordinary write would bury it.
 func TestAnAgreeingPinReportsNothing(t *testing.T) {
 	t.Parallel()
-	for _, released := range []*int64{pin(9), nil} {
+	for _, released := range []*int64{new(int64(9)), nil} {
 		got, err := auth.ResolveWritePin(auth.WritePinInputs{ReleasedPin: released, Admitted: 9, GateRead: true, ApprovalSpent: true})
 		if err != nil {
 			t.Fatalf("resolving: %v", err)

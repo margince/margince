@@ -19,10 +19,9 @@ import (
 func TestActivityLogInputRefusesTheImporterNamespace(t *testing.T) {
 	reserved := "mirror:legacy_crm"
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "email", SourceSystem: &reserved, SourceId: strPtr("emails:900"),
+		Kind: "email", SourceSystem: &reserved, SourceId: new("emails:900"),
 	})
-	var refused *provenance.ReservedError
-	if !errors.As(err, &refused) {
+	if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 		t.Fatalf("err = %v, want provenance.ReservedError — a client must not write the importer's namespace", err)
 	}
 }
@@ -32,7 +31,7 @@ func TestActivityLogInputRefusesTheImporterNamespace(t *testing.T) {
 func TestActivityLogInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 	ordinary := "gmail"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "email", SourceSystem: &ordinary, SourceId: strPtr("msg-1"),
+		Kind: "email", SourceSystem: &ordinary, SourceId: new("msg-1"),
 	})
 	if err != nil {
 		t.Fatalf("an ordinary source system must stay writable: %v", err)
@@ -41,8 +40,6 @@ func TestActivityLogInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 		t.Errorf("SourceSystem = %v, want it carried through", in.SourceSystem)
 	}
 }
-
-func strPtr(s string) *string { return &s }
 
 // The mail identity is the store's replay key for every captured and sent
 // message, so a caller who could write it would plant a row under a Message-ID
@@ -54,7 +51,7 @@ func TestActivityLogInputRefusesTheMailIdentity(t *testing.T) {
 	for _, kind := range []crmcontracts.CreateActivityRequestKind{"email", "note", "call"} {
 		reserved := connector.EmailSourceSystem
 		_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-			Kind: kind, SourceSystem: &reserved, SourceId: strPtr("planted@acme.test"),
+			Kind: kind, SourceSystem: &reserved, SourceId: new("planted@acme.test"),
 		})
 		var refused *ReservedMailIdentityError
 		if !errors.As(err, &refused) {
@@ -99,7 +96,7 @@ func TestAStatedMessageIDIsAcceptedAndClaimsOnlyAnIdentity(t *testing.T) {
 	planted := "never-received@counterparty.example"
 	ordinary := "hubspot"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "email", SourceSystem: &ordinary, SourceId: strPtr("engagement-4471"),
+		Kind: "email", SourceSystem: &ordinary, SourceId: new("engagement-4471"),
 		RfcMessageId: &planted,
 	})
 	if err != nil {
@@ -154,9 +151,8 @@ func TestActivityLogInputAcceptsAnOrdinarySource(t *testing.T) {
 
 func TestActivityLogInputRefusesInternalRequestProvenance(t *testing.T) {
 	reserved := provenance.EmailRequestSource
-	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "task", SourceSystem: &reserved, SourceId: strPtr("request-1")})
-	var refused *provenance.ReservedError
-	if !errors.As(err, &refused) {
+	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "task", SourceSystem: &reserved, SourceId: new("request-1")})
+	if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 		t.Fatalf("internal request source was writable: %v", err)
 	}
 }
@@ -179,7 +175,7 @@ func TestActivityLogInputRefusesAQuietAccountReminderIdentity(t *testing.T) {
 			planted := reserved
 			_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 				Kind: kind, SourceSystem: &planted,
-				SourceId: strPtr("no_activity_reminder:company:11111111-1111-1111-1111-111111111111:anchor:2026-09-05T00:00:00Z"),
+				SourceId: new("no_activity_reminder:company:11111111-1111-1111-1111-111111111111:anchor:2026-09-05T00:00:00Z"),
 			})
 			var refused *provenance.ReservedError
 			if !errors.As(err, &refused) {
@@ -201,7 +197,7 @@ func TestActivityLogInputRefusesAQuietAccountReminderIdentity(t *testing.T) {
 func TestTheImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	namespaced := "mirror:hubspot"
 	in, err := LogActivityInputFromImporter(crmcontracts.CreateActivityRequest{
-		Kind: "email", SourceSystem: &namespaced, SourceId: strPtr("emails:900"),
+		Kind: "email", SourceSystem: &namespaced, SourceId: new("emails:900"),
 	})
 	if err != nil {
 		t.Fatalf("the importer must be able to stamp its own namespace: %v", err)
@@ -220,10 +216,9 @@ func TestTheImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	} {
 		planted := engines
 		_, err := LogActivityInputFromImporter(crmcontracts.CreateActivityRequest{
-			Kind: "task", SourceSystem: &planted, SourceId: strPtr("planted"),
+			Kind: "task", SourceSystem: &planted, SourceId: new("planted"),
 		})
-		var refused *provenance.ReservedError
-		if !errors.As(err, &refused) {
+		if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 			t.Errorf("%q: err = %v, want it refused — the importer is not the automation engine", engines, err)
 		}
 	}
@@ -233,7 +228,7 @@ func TestTheImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	mail := connector.EmailSourceSystem
 	var mailRefused *ReservedMailIdentityError
 	if _, err := LogActivityInputFromImporter(crmcontracts.CreateActivityRequest{
-		Kind: "email", SourceSystem: &mail, SourceId: strPtr("msg-1"),
+		Kind: "email", SourceSystem: &mail, SourceId: new("msg-1"),
 	}); !errors.As(err, &mailRefused) {
 		t.Errorf("email: err = %v, want the mail identity refused even for the importer", err)
 	}

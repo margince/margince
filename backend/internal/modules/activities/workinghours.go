@@ -15,6 +15,7 @@ package activities
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -65,12 +66,7 @@ func (h WorkingHours) works(at time.Time) bool {
 		// wire and the database reading as the standard says.
 		weekday = 7
 	}
-	for _, day := range h.Days {
-		if day == weekday {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(h.Days, weekday)
 }
 
 // covers reports whether a candidate slot lies inside one working day.

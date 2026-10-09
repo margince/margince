@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"slices"
@@ -88,9 +89,7 @@ func (o *oauthEnv) authorizeQuery(extra url.Values) url.Values {
 		"code_challenge":        {o.challenge()},
 		"code_challenge_method": {"S256"},
 	}
-	for k, vs := range extra {
-		q[k] = vs
-	}
+	maps.Copy(q, extra)
 	return q
 }
 
@@ -148,9 +147,7 @@ func (o *oauthEnv) armConsent(t *testing.T, extra url.Values) url.Values {
 		t.Fatalf("the consent redirect carries no nonce: %q", location)
 	}
 	form := url.Values{}
-	for k, vs := range o.authorizeQuery(extra) {
-		form[k] = vs
-	}
+	maps.Copy(form, o.authorizeQuery(extra))
 	form.Set("consent", nonce)
 	return form
 }
@@ -187,7 +184,7 @@ func (o *oauthEnv) postConsent(t *testing.T, form url.Values) (status int, locat
 // as identity's parseOAuthScopes does.
 func requestedScopes(scope string) []string {
 	var scopes []string
-	for _, sc := range strings.Fields(scope) {
+	for sc := range strings.FieldsSeq(scope) {
 		if sc != "offline_access" {
 			scopes = append(scopes, sc)
 		}
@@ -234,9 +231,7 @@ func (o *oauthEnv) exchange(t *testing.T, form url.Values) (int, map[string]any)
 		"redirect_uri":  {oauthRedirect},
 		"code_verifier": {o.verifier},
 	}
-	for k, vs := range form {
-		base[k] = vs
-	}
+	maps.Copy(base, form)
 	return o.postToken(t, base)
 }
 
@@ -336,9 +331,7 @@ func TestOAuthConsentGateBlocksSilentAuthorization(t *testing.T) {
 	// mint-nothing consequence, are TestAStaleConsentNonceComesBackToTheScreen's
 	// subject; here it is only the absence of a code that matters.
 	form := url.Values{}
-	for k, vs := range q {
-		form[k] = vs
-	}
+	maps.Copy(form, q)
 	form.Set("consent", "forged")
 	post, _ := http.NewRequest(http.MethodPost, o.TS.URL+"/oauth/authorize", strings.NewReader(form.Encode()))
 	post.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -395,9 +388,7 @@ func TestOAuthRefusesDowngradesAndPrivilegedClients(t *testing.T) {
 			"redirect_uri": {oauthRedirect}, "code_challenge": {o.challenge()},
 			"code_challenge_method": {"S256"},
 		}
-		for k, vs := range extra {
-			q[k] = vs
-		}
+		maps.Copy(q, extra)
 		req, _ := http.NewRequest(http.MethodGet, o.TS.URL+"/oauth/authorize?"+q.Encode(), nil)
 		resp, err := o.Client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below; bodyclose only recognises a Close in the same package
 		if err != nil {

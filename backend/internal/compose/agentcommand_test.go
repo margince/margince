@@ -251,8 +251,7 @@ func TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead(t *testing.T) {
 	_, err := reg.Invoke(anArchivingAgent(), "archive_record",
 		json.RawMessage(`{"record_type":"contact","id":"`+ids.NewV7().String()+`"}`))
 
-	var staged *workflow.StagedApprovalError
-	if errors.As(err, &staged) {
+	if staged, ok := errors.AsType[*workflow.StagedApprovalError](err); ok {
 		t.Errorf("the tool door staged approval %s against a record whose authority lives elsewhere — "+
 			"nobody could ever release it, because the decidability probe and the version pin both read "+
 			"tables this record has no row in", staged.ApprovalID)

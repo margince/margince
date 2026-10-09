@@ -77,7 +77,7 @@ func checkTransactionShape(t *testing.T, namespace string, m dbmigrate.Migration
 		// drop: dropping old_idx and building new_idx leaves the build's own retry
 		// unsafe, and that is the shape this would otherwise wave through.
 		dropped := ""
-		for _, statement := range strings.Split(sql, ";") {
+		for statement := range strings.SplitSeq(sql, ";") {
 			bare := strings.TrimSpace(stripSQLComments(statement))
 			if bare == "" {
 				continue

@@ -22,6 +22,7 @@ package draftreply
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -54,7 +55,7 @@ func Parse(raw string, mustName ...string) (subject, body string, err error) {
 	subject = strings.TrimSpace(ai.PlainText(answer.Subject))
 	body = strings.TrimSpace(ai.PlainText(answer.Body))
 	if subject == "" || body == "" {
-		return "", "", fmt.Errorf("the reply carries no message to send")
+		return "", "", errors.New("the reply carries no message to send")
 	}
 	for _, needed := range mustName {
 		if !draftfloor.NamesContact(body, needed) {

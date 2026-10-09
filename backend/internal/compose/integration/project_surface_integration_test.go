@@ -15,6 +15,7 @@ package integration
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -135,21 +136,11 @@ func TestBothPagesNameTheProjectsSectionWhenTheCallerLacksTheGrant(t *testing.T)
 }
 
 func containsCompanySection(names []crmcontracts.Company360SectionsOmitted, want crmcontracts.Company360SectionsOmitted) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
 
 func containsContactSection(names []crmcontracts.Contact360SectionsOmitted, want crmcontracts.Contact360SectionsOmitted) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
 
 // A contact is part of a project through a seat on it, or through the company
@@ -359,7 +350,7 @@ func TestLoggingAnActivityWithAContactAndAProjectLinkWritesBothAndTheEvidence(t 
 	f := seedTwoEngagementAccount(t, e)
 	subject := "Cutover date confirmed"
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Direction: StrPtr("outbound"), Subject: &subject,
+		Kind: "email", Direction: new("outbound"), Subject: &subject,
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "contact", EntityID: f.contact},
 			{EntityType: "project", EntityID: f.erp.UUID},

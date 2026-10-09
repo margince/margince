@@ -285,7 +285,7 @@ func TestReplace_WriteWithEmptyProvidersMapClearsUnboundEntries(t *testing.T) {
 	native := current
 	native.Providers = map[string]ProviderSettings{}
 	native.Tiers = map[Tier]ProviderConfig{TierPremium: {Provider: providerOllama, Model: "qwen3"}}
-	native.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOllama, Model: "bge-m3"}, Dimensions: 1024}
+	native.Embeddings = EmbeddingsConfig{Provider: providerOllama, Model: "bge-m3", Dimensions: 1024}
 	native.Profile = ProfileSovereign
 	stored, _, err := native.replacing(current)
 	if err != nil {

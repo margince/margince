@@ -14,6 +14,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -80,7 +81,7 @@ var Name = settings.Define[string](
 	func(v string) error {
 		trimmed := strings.TrimSpace(v)
 		if trimmed == "" {
-			return fmt.Errorf("the company needs a name")
+			return errors.New("the company needs a name")
 		}
 		// Counted in RUNES, like every other length bound in this module: a name
 		// of 200 CJK characters is not three times too long.
@@ -147,7 +148,7 @@ var BaseCurrency = settings.Define[string](
 	"EUR",
 	func(v string) error {
 		if !values.ValidCurrency(v) {
-			return fmt.Errorf("a base currency is three uppercase ISO-4217 letters, like EUR")
+			return errors.New("a base currency is three uppercase ISO-4217 letters, like EUR")
 		}
 		return nil
 	},

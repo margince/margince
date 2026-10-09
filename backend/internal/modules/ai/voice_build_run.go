@@ -130,11 +130,8 @@ func (s *VoiceStore) ClaimBuild(ctx context.Context, profileID, buildID ids.UUID
 			return err
 		}
 		if currentHash != build.SourceHash {
-			if err := s.finishBuildTx(ctx, tx, build, voiceBuildStatusFailed, voiceStatusCodeInternal,
-				"the corpus changed after this build was queued; start a new build", now); err != nil {
-				return err
-			}
-			return nil
+			return s.finishBuildTx(ctx, tx, build, voiceBuildStatusFailed, voiceStatusCodeInternal,
+				"the corpus changed after this build was queued; start a new build", now)
 		}
 		samples, err := loadVoiceSamples(ctx, tx, profileID)
 		if err != nil {
@@ -256,10 +253,7 @@ func (s *VoiceStore) FailBuild(ctx context.Context, buildID ids.UUID, claimedAt 
 		if err != nil {
 			return err
 		}
-		if err := s.finishBuildTx(ctx, tx, build, voiceBuildStatusFailed, statusCode, safeDetail, s.now().UTC()); err != nil {
-			return err
-		}
-		return nil
+		return s.finishBuildTx(ctx, tx, build, voiceBuildStatusFailed, statusCode, safeDetail, s.now().UTC())
 	})
 }
 

@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // openRouterCatalogue is the vendor's own envelope: one entry per model.
@@ -155,7 +154,7 @@ func toRankedModel(m openRouterModel) (AvailableModel, bool) {
 	}
 	score := strconv.FormatFloat(*m.Benchmarks.ArtificialAnalysis.IntelligenceIndex, 'f', 1, 64)
 	return AvailableModel{
-		Info:          model.Info{ID: m.ID, DisplayName: m.Name},
+		ID: m.ID, DisplayName: m.Name,
 		ContextLength: m.ContextLength,
 		InputPerMtok:  &inputPerMtok,
 		OutputPerMtok: &outputPerMtok,
@@ -169,7 +168,7 @@ func toRankedModel(m openRouterModel) (AvailableModel, bool) {
 // vendor named", and a price is only one of the facts about it.
 func toFullModel(m openRouterModel) AvailableModel {
 	out := AvailableModel{
-		Info:          model.Info{ID: m.ID, DisplayName: m.Name},
+		ID: m.ID, DisplayName: m.Name,
 		ContextLength: m.ContextLength,
 	}
 	if v, ok := tokenPriceToUsdPerMTok(m.Pricing.Prompt); ok {

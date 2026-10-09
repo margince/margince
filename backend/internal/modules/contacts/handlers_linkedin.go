@@ -171,8 +171,7 @@ func (h Handlers) SaveMyLinkedInAccount(w http.ResponseWriter, r *http.Request) 
 		Connected:  body.Connected != nil && *body.Connected,
 	})
 	if err != nil {
-		var input *DedupeInputError
-		if errors.As(err, &input) {
+		if input, ok := errors.AsType[*DedupeInputError](err); ok {
 			httperr.Write(w, r, httperr.Validation(input.Field, "invalid_profile_url", input.Msg))
 			return
 		}

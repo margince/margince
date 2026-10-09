@@ -224,7 +224,7 @@ func retirableTables(t *testing.T) map[string]bool {
 				return err
 			}
 			current := ""
-			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
+			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					current = m[1]
 					continue

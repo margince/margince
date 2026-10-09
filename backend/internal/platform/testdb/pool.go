@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"os"
 	"strconv"
@@ -111,9 +112,7 @@ const PoolMaxConnsEnv = "MARGINCE_TEST_POOL_MAX_CONNS"
 // limit nothing enforces, which reads exactly like a bounded lane.
 func poolParams() (map[string]string, error) {
 	params := make(map[string]string, len(testPoolParams)+1)
-	for k, v := range testPoolParams {
-		params[k] = v
-	}
+	maps.Copy(params, testPoolParams)
 	raw, ok := os.LookupEnv(PoolMaxConnsEnv)
 	if !ok || raw == "" {
 		return params, nil

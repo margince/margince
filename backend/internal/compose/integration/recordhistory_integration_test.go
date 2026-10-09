@@ -365,7 +365,7 @@ func TestRecordHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 	leadID := seedLead(t, e, "Selma Subject", twinEmail, nil)
 
 	activity, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Subject: StrPtr("Call with Selma"), Source: "manual",
+		Kind: "note", Subject: new("Call with Selma"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 	})
 	if err != nil {
@@ -432,8 +432,7 @@ func TestRecordHistoryMalformedCursorIsAClientFault(t *testing.T) {
 	_, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
 		EntityType: "contact", EntityID: contactID, Cursor: &bad,
 	})
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 		t.Fatalf("err = %v, want *storekit.MalformedCursorError untouched", err)
 	}
 }

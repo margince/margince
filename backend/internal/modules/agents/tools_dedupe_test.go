@@ -65,8 +65,7 @@ func TestDecideDuplicateRefusesADecisionItDoesNotKnow(t *testing.T) {
 	var dismissed ids.UUID
 	_, err := decide(t, stubDuplicateQueue{dismissed: &dismissed},
 		`{"candidate_id":"`+id.String()+`","decision":"merge"}`)
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("decision merge = %v, want BadArgsError: merging is merge_records, not this verb", err)
 	}
 	if !dismissed.IsZero() {

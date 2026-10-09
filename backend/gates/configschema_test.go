@@ -121,7 +121,7 @@ func TestTheSchemaAcceptsEveryFieldTheConfigDeclares(t *testing.T) {
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		t.Fatalf("parse schema: %v", err)
 	}
-	missing := missingFields(reflect.TypeOf(deployconfig.Config{}), doc, "")
+	missing := missingFields(reflect.TypeFor[deployconfig.Config](), doc, "")
 	for _, m := range missing {
 		t.Errorf("margince.yaml accepts %s and the schema does not — an editor would flag a key the server reads", m)
 	}
@@ -133,8 +133,7 @@ func TestTheSchemaAcceptsEveryFieldTheConfigDeclares(t *testing.T) {
 func missingFields(t reflect.Type, node map[string]any, path string) []string {
 	props, _ := node["properties"].(map[string]any)
 	var missing []string
-	for i := range t.NumField() {
-		f := t.Field(i)
+	for f := range t.Fields() {
 		name, ok := schemaFieldName(f)
 		if !ok {
 			continue
@@ -152,7 +151,7 @@ func missingFields(t reflect.Type, node map[string]any, path string) []string {
 		if inner.Kind() == reflect.Pointer {
 			inner = inner.Elem()
 		}
-		if inner.Kind() == reflect.Struct && inner != reflect.TypeOf(deployconfig.Secret{}) {
+		if inner.Kind() == reflect.Struct && inner != reflect.TypeFor[deployconfig.Secret]() {
 			missing = append(missing, missingFields(inner, child, here)...)
 		}
 	}

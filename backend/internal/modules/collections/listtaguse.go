@@ -10,6 +10,7 @@ package collections
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -77,10 +78,8 @@ func tagIDsNamed(p storekit.Predicate, tagFields map[string]bool) []ids.UUID {
 		if err != nil {
 			return
 		}
-		for _, seen := range out {
-			if seen == id {
-				return
-			}
+		if slices.Contains(out, id) {
+			return
 		}
 		out = append(out, id)
 	}

@@ -155,7 +155,7 @@ func TestASheetModelTheCatalogueDoesNotNameIsUnlisted(t *testing.T) {
 func TestTheBrokerKeepsAHandSetPriceToo(t *testing.T) {
 	src := PriceSources{
 		Routing: RoutingConfig{Tiers: map[Tier]ProviderConfig{"premium": openRouterBinding("a/bound")}},
-		Broker:  AvailableModels{Models: []AvailableModel{{Info: model.Info{ID: "a/bound"}, InputPerMtok: ptr("5"), OutputPerMtok: ptr("25")}}},
+		Broker:  AvailableModels{Models: []AvailableModel{{ID: "a/bound", InputPerMtok: new("5"), OutputPerMtok: new("25")}}},
 	}
 	plan := planPriceSync(src, []ModelRateRow{sheetRow(providerOpenAICompatible, "a/bound", "4", RateSourceManual)})
 	if len(plan.writes) != 0 || plan.lines[providerOpenAICompatible].Kept != 1 {
@@ -180,8 +180,6 @@ func TestTheReportSaysWhatTheSyncDidForEachVendor(t *testing.T) {
 		}
 	}
 }
-
-func ptr(s string) *string { return &s }
 
 // A keyed vendor with nothing on its sheet and nothing listed has nothing to
 // price; "set by hand" (not_available) would be false for a vendor models.dev prices.

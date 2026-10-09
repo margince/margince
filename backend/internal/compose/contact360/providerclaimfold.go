@@ -184,14 +184,14 @@ func foldEmails(c storedClaim, out *crmcontracts.ContactProviderProfile) error {
 		}
 		switch {
 		case a.EmailType != nil:
-			email.EmailType = providerPtr(crmcontracts.ContactProviderEmailEmailType(*a.EmailType))
-			email.EmailTypeSource = providerPtr(crmcontracts.ContactProviderEmailEmailTypeSourceProvider)
+			email.EmailType = new(crmcontracts.ContactProviderEmailEmailType(*a.EmailType))
+			email.EmailTypeSource = new(crmcontracts.ContactProviderEmailEmailTypeSourceProvider)
 		case requested:
 			// Labeled from what we ASKED for, and marked as such: the
 			// professional cascade returned it, so it is professional by
 			// request rather than by the provider's word.
-			email.EmailType = providerPtr(crmcontracts.ContactProviderEmailEmailTypeContactProviderEmailEmailTypeProfessional)
-			email.EmailTypeSource = providerPtr(crmcontracts.ContactProviderEmailEmailTypeSourceRequestedCascade)
+			email.EmailType = new(crmcontracts.ContactProviderEmailEmailTypeContactProviderEmailEmailTypeProfessional)
+			email.EmailTypeSource = new(crmcontracts.ContactProviderEmailEmailTypeSourceRequestedCascade)
 		}
 		out.Emails = append(out.Emails, email)
 	}
@@ -218,7 +218,7 @@ func foldPhones(c storedClaim, out *crmcontracts.ContactProviderProfile) error {
 		if confidence != nil && statableConfidence(*confidence) {
 			// The contract carries a float32 because a confidence is a band,
 			// not a measurement; the extra precision would imply one.
-			phone.Confidence = providerPtr(float32(*confidence))
+			phone.Confidence = new(float32(*confidence))
 		}
 		out.MobilePhones = append(out.MobilePhones, phone)
 	}
@@ -369,9 +369,3 @@ func emptyToNil(s string) *string {
 	}
 	return &s
 }
-
-// providerPtr is this file's own pointer helper. Named rather than reusing
-// the package's ptr(): that one is sectionstimeline.go's, and two files
-// sharing an unexported one-liner is how a later split silently breaks one of
-// them.
-func providerPtr[T any](v T) *T { return &v }

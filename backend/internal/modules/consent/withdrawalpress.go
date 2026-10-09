@@ -13,6 +13,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -68,7 +69,7 @@ const sourcePublicLink = "public_link"
 // indistinguishable to whoever holds the link.
 func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref WithdrawalRef) (bool, error) {
 	if !ref.ContactID.IsZero() {
-		return false, fmt.Errorf("consent: a contact's link withdraws their purposes rather than " +
+		return false, errors.New("consent: a contact's link withdraws their purposes rather than " +
 			"recording an address stop")
 	}
 	if ref.LeadID.IsZero() && ref.Address == "" {

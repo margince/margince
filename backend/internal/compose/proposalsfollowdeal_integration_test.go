@@ -354,9 +354,9 @@ func TestATranscriptReadWhileTheDealChangesHandsIsFiledForTheNewOwner(t *testing
 	deal := e.SeedDeal(t, "Handed over mid-reading", e.pipeline, e.open, &e.Rep1)
 	meeting := e.logTranscript(t, "Rollout call", deal)
 	brain := oneShotBrain{
-		cannedBrain: cannedBrain{reply: groundedReply(t, 3, 0.95)},
-		once:        &sync.Once{},
-		during:      func() { e.reassign(t, deal, e.Rep2) },
+		reply:  groundedReply(t, 3, 0.95),
+		once:   &sync.Once{},
+		during: func() { e.reassign(t, deal, e.Rep2) },
 	}
 
 	card := e.readTranscriptFor(t, e.Rep1, meeting, brain)

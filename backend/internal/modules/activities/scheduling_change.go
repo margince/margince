@@ -91,7 +91,7 @@ func (s *Store) DeliverInvitations(ctx context.Context) error {
 		return apperrors.ErrPermissionDenied
 	}
 	var faults []error
-	for n := 0; n < 10; n++ {
+	for range 10 {
 		row, found, err := s.claimInvitation(ctx)
 		if err != nil {
 			return err

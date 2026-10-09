@@ -34,14 +34,14 @@ import (
 // declares its fields. It is a type binding, not a field list: nothing about
 // WHICH fields are askable is decided here.
 var contractRecords = map[string]reflect.Type{
-	entityContact:       reflect.TypeOf(crmcontracts.Contact{}),
-	entityCompany:       reflect.TypeOf(crmcontracts.Company{}),
-	entityDeal:          reflect.TypeOf(crmcontracts.Deal{}),
-	entityLead:          reflect.TypeOf(crmcontracts.Lead{}),
-	entityProject:       reflect.TypeOf(crmcontracts.Project{}),
-	entityActivity:      reflect.TypeOf(crmcontracts.Activity{}),
-	entityProduct:       reflect.TypeOf(crmcontracts.Product{}),
-	entityOfferTemplate: reflect.TypeOf(crmcontracts.OfferTemplate{}),
+	entityContact:       reflect.TypeFor[crmcontracts.Contact](),
+	entityCompany:       reflect.TypeFor[crmcontracts.Company](),
+	entityDeal:          reflect.TypeFor[crmcontracts.Deal](),
+	entityLead:          reflect.TypeFor[crmcontracts.Lead](),
+	entityProject:       reflect.TypeFor[crmcontracts.Project](),
+	entityActivity:      reflect.TypeFor[crmcontracts.Activity](),
+	entityProduct:       reflect.TypeFor[crmcontracts.Product](),
+	entityOfferTemplate: reflect.TypeFor[crmcontracts.OfferTemplate](),
 }
 
 // geoStructs names the contract types that carry a place rather than a value.
@@ -50,16 +50,16 @@ var contractRecords = map[string]reflect.Type{
 // contribute — so `address.city` matches exactly while `address` is the thing
 // a radius would be measured from.
 var geoStructs = map[reflect.Type]bool{
-	reflect.TypeOf(crmcontracts.Address{}): true,
+	reflect.TypeFor[crmcontracts.Address](): true,
 }
 
 // Scalar contract types that are values rather than objects, recognised by
 // identity because their Go kinds (struct, array) would otherwise send the
 // walk recursing into their internals.
 var (
-	timeType = reflect.TypeOf(time.Time{})
-	dateType = reflect.TypeOf(openapi_types.Date{})
-	uuidType = reflect.TypeOf(openapi_types.UUID{})
+	timeType = reflect.TypeFor[time.Time]()
+	dateType = reflect.TypeFor[openapi_types.Date]()
+	uuidType = reflect.TypeFor[openapi_types.UUID]()
 )
 
 // walkedContracts memoizes the reflection walk: a Go type cannot change at
@@ -95,8 +95,7 @@ func contractFields(t reflect.Type) []Field {
 // the validator could not spell.
 func walkContractFields(t reflect.Type) []Field {
 	var fields []Field
-	for i := range t.NumField() {
-		member := t.Field(i)
+	for member := range t.Fields() {
 		name, ok := wireName(member)
 		if !ok {
 			continue
@@ -126,8 +125,7 @@ func walkContractFields(t reflect.Type) []Field {
 // path syntax.
 func nestedFields(prefix string, t reflect.Type) []Field {
 	var fields []Field
-	for i := range t.NumField() {
-		member := t.Field(i)
+	for member := range t.Fields() {
 		name, ok := wireName(member)
 		if !ok {
 			continue

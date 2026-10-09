@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -42,7 +41,7 @@ func RecoverPages[T any](ctx context.Context, transaction func(context.Context, 
 			for _, row := range rows {
 				next := id(row)
 				if bytes.Compare(next[:], after[:]) <= 0 {
-					return fmt.Errorf("recovery page did not advance its cursor")
+					return errors.New("recovery page did not advance its cursor")
 				}
 				if err := pgx.BeginFunc(ctx, tx, func(savepoint pgx.Tx) error { return resume(principal.WithCorrelationID(ctx, next), savepoint, row) }); err != nil {
 					if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {

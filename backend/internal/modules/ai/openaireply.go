@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -66,7 +67,7 @@ func openaiTerminalStatus(ctx context.Context, out openaiResponse) error {
 		}
 		return fmt.Errorf("ai: openai: response incomplete: %s", safeProviderText(ctx, out.IncompleteDetails.Reason))
 	case "":
-		return fmt.Errorf("ai: openai: response carries no terminal status")
+		return errors.New("ai: openai: response carries no terminal status")
 	default:
 		return fmt.Errorf("ai: openai: response ended with status %q", safeProviderText(ctx, out.Status))
 	}

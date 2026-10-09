@@ -281,12 +281,10 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		// is one bad row, not a failed run: skip it with the reason and let the
 		// rest of the file land. Unhandled, this error aborts the whole
 		// migration, which is the wrong answer to a typo in a spreadsheet.
-		var dup *contacts.DuplicateEmailError
-		if errors.As(err, &dup) {
+		if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
 			return migration.EnsureResult{Skipped: true, SkipReason: skipReasonDuplicateEmail}, nil
 		}
-		var takenDomain *contacts.DuplicateDomainError
-		if errors.As(err, &takenDomain) {
+		if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
 			// The company half of the same case: a corrected file moving a domain
 			// onto a company that is not its owner.
 			return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
@@ -450,8 +448,7 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migr
 		}
 		return ids.UUID(company.Id), nil
 	})
-	var dup *contacts.DuplicateDomainError
-	if errors.As(err, &dup) {
+	if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
 		// A domain names ONE company across the estate, so a row claiming one
 		// another company already holds is refused by the store — the same shape
 		// a contact's claimed email has. One bad row is a skip with a reason, not

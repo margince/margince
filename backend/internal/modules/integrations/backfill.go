@@ -177,10 +177,7 @@ func (s *Store) sweepBudget(ctx context.Context, tx pgx.Tx, name string) (int, e
 		   AND created_at >= date_trunc('day', now() AT TIME ZONE 'UTC')`, name).Scan(&spent); err != nil {
 		return 0, fmt.Errorf("integrations: counting what today has already set in motion: %w", err)
 	}
-	remaining := *limit - spent
-	if remaining < 0 {
-		remaining = 0
-	}
+	remaining := max(*limit-spent, 0)
 	if remaining > sweepTickBudget {
 		return sweepTickBudget, nil
 	}

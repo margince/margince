@@ -197,8 +197,7 @@ func TestAMalformedCursorIsAClientFault(t *testing.T) {
 	if from != nil {
 		t.Errorf("a malformed cursor decoded to %+v", from)
 	}
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 		t.Fatalf("decoding a malformed cursor gave %v, want storekit's malformed-cursor fault", err)
 	}
 }
@@ -222,8 +221,7 @@ func TestACursorThatNamesNoRowIsAClientFaultToo(t *testing.T) {
 			if from != nil {
 				t.Errorf("%s decoded to a resume point %+v", name, from)
 			}
-			var malformed *storekit.MalformedCursorError
-			if !errors.As(err, &malformed) {
+			if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 				t.Fatalf("%s gave %v, want storekit's malformed-cursor fault", name, err)
 			}
 		})

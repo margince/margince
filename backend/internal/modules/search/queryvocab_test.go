@@ -160,8 +160,7 @@ func TestEveryDerivedRelationNameIsResolvableByTheValidatorsNarrowing(t *testing
 // contract type without using the production walk.
 func independentlyDerivedScalars(t reflect.Type) []string {
 	var names []string
-	for i := range t.NumField() {
-		member := t.Field(i)
+	for member := range t.Fields() {
 		tag := member.Tag.Get("json")
 		name, _, _ := strings.Cut(tag, ",")
 		if !member.IsExported() || name == "" || name == "-" {
@@ -178,8 +177,7 @@ func independentlyDerivedScalars(t reflect.Type) []string {
 		if inner.Kind() != reflect.Struct {
 			continue
 		}
-		for j := range inner.NumField() {
-			leaf := inner.Field(j)
+		for leaf := range inner.Fields() {
 			leafName, _, _ := strings.Cut(leaf.Tag.Get("json"), ",")
 			if !leaf.IsExported() || leafName == "" || leafName == "-" {
 				continue

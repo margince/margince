@@ -103,7 +103,7 @@ func NextDue(rule crmcontracts.ReportingScheduleInput, timezone string, after ti
 	}
 	local := after.In(zone)
 	day := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, zone)
-	for i := 0; i < 63; i++ {
+	for i := range 63 {
 		candidateDay := day.AddDate(0, 0, i)
 		if !scheduledDay(rule, candidateDay) {
 			continue

@@ -342,7 +342,7 @@ func twinnedOperations(served *agents.Registry) map[string]string {
 		if !registered || !served.Stageable(pol.Tool) {
 			continue
 		}
-		for _, named := range strings.Split(spec.OpenAPIOp, "/") {
+		for named := range strings.SplitSeq(spec.OpenAPIOp, "/") {
 			if named == op {
 				twins[op] = pol.Tool
 			}
@@ -518,7 +518,7 @@ func (bothDoorsTags) RecordTagTypes() []string { return []string{"contact"} }
 func (bothDoorsTags) TaggableTypes() []string { return []string{"contact"} }
 
 func (bothDoorsTags) GetTag(_ context.Context, tagID ids.UUID) (agents.TagDetail, error) {
-	return agents.TagDetail{Tag: agents.Tag{TagID: tagID, Name: "tag-" + tagID.String()}}, nil
+	return agents.TagDetail{TagID: tagID, Name: "tag-" + tagID.String()}, nil
 }
 
 // bothDoorsImports answers a run in the one state a commit accepts, so the

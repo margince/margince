@@ -217,8 +217,8 @@ func importAlias(file *ast.File, path string) string {
 			}
 			return spec.Name.Name
 		}
-		if i := strings.LastIndex(path, "/"); i >= 0 {
-			return path[i+1:]
+		if _, after, ok := strings.CutLast(path, "/"); ok {
+			return after
 		}
 		return path
 	}

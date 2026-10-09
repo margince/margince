@@ -44,7 +44,7 @@ func TestADeclaredImporterNamesTheAuthorOnEveryRecordWire(t *testing.T) {
 	}
 	system := "mirror:hubspot"
 	status, activity := postActivity(importer, t, e, crmcontracts.CreateActivityRequest{
-		Kind: "email", Subject: strPtrIT("Betreff"), SourceSystem: &system, SourceId: strPtrIT("emails:950"),
+		Kind: "email", Subject: new("Betreff"), SourceSystem: &system, SourceId: new("emails:950"),
 		SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	if status != http.StatusCreated {
@@ -52,7 +52,7 @@ func TestADeclaredImporterNamesTheAuthorOnEveryRecordWire(t *testing.T) {
 	}
 	landed["activity"] = ids.UUID(activity.Id).String()
 	status, lead := postLead(importer, t, e, crmcontracts.CreateLeadRequest{
-		FullName: strPtrIT("Imported Lead"), SourceSystem: &system, SourceId: strPtrIT("leads:950"),
+		FullName: new("Imported Lead"), SourceSystem: &system, SourceId: new("leads:950"),
 		Source: "hubspot_import", SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	if status != http.StatusCreated {
@@ -130,7 +130,7 @@ func TestErasingTheSubjectClearsTheAuthorTheImporterWrote(t *testing.T) {
 	}
 	leadEmail := address
 	if status, _ := postLead(importer, t, e, crmcontracts.CreateLeadRequest{
-		FullName: strPtrIT("Erased Subject"), Email: &leadEmail, SourceSystem: &system, SourceId: strPtrIT("leads:960"),
+		FullName: new("Erased Subject"), Email: &leadEmail, SourceSystem: &system, SourceId: new("leads:960"),
 		Source: "hubspot_import", SourceAuthorName: &name,
 	}); status != http.StatusCreated {
 		t.Fatalf("the lead twin answered %d, want 201", status)
@@ -144,7 +144,7 @@ func TestErasingTheSubjectClearsTheAuthorTheImporterWrote(t *testing.T) {
 		EntityType crmcontracts.CreateActivityRequestLinksEntityType `json:"entity_type"`
 	}{{EntityId: openapi_types.UUID(subject), EntityType: crmcontracts.CreateActivityRequestLinksEntityTypeContact}}
 	status, note := postActivity(importer, t, e, crmcontracts.CreateActivityRequest{
-		Kind: "note", Body: strPtrIT("about the subject"), SourceSystem: &system, SourceId: strPtrIT("notes:960"),
+		Kind: "note", Body: new("about the subject"), SourceSystem: &system, SourceId: new("notes:960"),
 		SourceAuthorName: &name, Links: &links,
 	})
 	if status != http.StatusCreated {

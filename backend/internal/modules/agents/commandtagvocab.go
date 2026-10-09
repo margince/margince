@@ -18,6 +18,7 @@ package agents
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -102,21 +103,21 @@ func (r *mergeTagsResolver) Subject(ctx context.Context, cmd MergeTagsCommand) (
 // approval would be spent reaching that refusal with the card gone.
 func (r *mergeTagsResolver) Guards(ctx context.Context, cmd MergeTagsCommand) error {
 	if cmd.SourceID == cmd.TargetID {
-		return &BadArgsError{Cause: fmt.Errorf("a tag cannot be folded into itself")}
+		return &BadArgsError{Cause: errors.New("a tag cannot be folded into itself")}
 	}
 	source, err := r.tags.GetTag(ctx, cmd.SourceID)
 	if err != nil {
 		return err
 	}
 	if source.Archived {
-		return &BadArgsError{Cause: fmt.Errorf("the word being folded is already retired")}
+		return &BadArgsError{Cause: errors.New("the word being folded is already retired")}
 	}
 	target, err := r.tags.GetTag(ctx, cmd.TargetID)
 	if err != nil {
 		return err
 	}
 	if target.Archived {
-		return &BadArgsError{Cause: fmt.Errorf("the surviving word is retired, so it cannot take the records")}
+		return &BadArgsError{Cause: errors.New("the surviving word is retired, so it cannot take the records")}
 	}
 	return nil
 }

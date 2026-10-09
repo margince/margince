@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -84,10 +85,8 @@ func refuseRecursion(definitions map[string]json.RawMessage) error {
 			return false
 		}
 		visiting[pointer] = true
-		for _, next := range edges[pointer] {
-			if reaches(next) {
-				return true
-			}
+		if slices.ContainsFunc(edges[pointer], reaches) {
+			return true
 		}
 		visiting[pointer], done[pointer] = false, true
 		return false

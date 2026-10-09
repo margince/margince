@@ -519,8 +519,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 	if _, _, err := e.Contacts.ConfirmCompanySiteRead(human, base, engine.stageOnboardingContacts); err == nil {
 		t.Fatal("refresh committed without resolving its human conflicts")
 	} else {
-		var invalid *contacts.InvalidSiteReadResolutionError
-		if !errors.As(err, &invalid) {
+		if _, ok := errors.AsType[*contacts.InvalidSiteReadResolutionError](err); !ok {
 			t.Fatalf("unresolved refresh = %v, want InvalidSiteReadResolutionError", err)
 		}
 	}

@@ -28,7 +28,7 @@ import (
 
 // normalizedPattern is one regular expression as both dialects can state it.
 func normalizedPattern(body string, insensitive bool) string {
-	if trimmed := strings.TrimPrefix(body, "(?i)"); trimmed != body {
+	if trimmed, ok := strings.CutPrefix(body, "(?i)"); ok {
 		body, insensitive = trimmed, true
 	}
 	return fmt.Sprintf("i=%t %s", insensitive, body)

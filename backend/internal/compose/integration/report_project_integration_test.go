@@ -29,7 +29,7 @@ func (e *SearchEnv) seedProjects(t *testing.T, phase string, owner *ids.UUID, n 
 	t.Helper()
 	companyID = e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Project Company', 'manual', 'human:x')`)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		e.SeedID(t, `INSERT INTO project (id, name, company_id, owner_id, phase, source, captured_by)
 			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`,
 			fmt.Sprintf("%s Rollout %d", phase, i), companyID, owner, phase)

@@ -65,7 +65,7 @@ func carriesOperators(query string) bool {
 	if strings.Contains(query, `"`) {
 		return true
 	}
-	for _, field := range strings.Fields(query) {
+	for field := range strings.FieldsSeq(query) {
 		if strings.HasPrefix(field, "-") || strings.EqualFold(field, "or") {
 			return true
 		}

@@ -529,7 +529,7 @@ func TestABccOnlyMessageOmitsTheToHeaderEntirely(t *testing.T) {
 	msg.Bcc = []string{"one@surfe.test", "two@surfe.test"}
 
 	raw := Build("rep@gradion.test", msg)
-	for _, line := range strings.Split(raw, "\r\n") {
+	for line := range strings.SplitSeq(raw, "\r\n") {
 		if strings.HasPrefix(line, "To:") {
 			t.Fatalf("an empty To header was written: %q", line)
 		}

@@ -18,6 +18,7 @@ package gates
 // here instead of shipping a silent leak.
 
 import (
+	"maps"
 	"regexp"
 	"sort"
 	"strings"
@@ -595,9 +596,7 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	// text, for the reason assembledSweepTargets gives.
 	assembled := map[string]string{}
 	for _, path := range retentionSweepFiles {
-		for table, fragment := range assembledSweepTargets(t, path) {
-			assembled[table] = fragment
-		}
+		maps.Copy(assembled, assembledSweepTargets(t, path))
 		for _, lit := range sqlLiterals(t, path) {
 			// Before the split, whether the split can be trusted. A quoting
 			// form the scan cannot track leaves it inverted, and an inverted

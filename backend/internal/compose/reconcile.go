@@ -381,7 +381,7 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		}
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: follow-up effect without a deciding principal")
+			return errors.New("compose: follow-up effect without a deciding principal")
 		}
 		execCtx := principal.WithActor(ctx, principal.Principal{
 			Type:       principal.PrincipalSystem,

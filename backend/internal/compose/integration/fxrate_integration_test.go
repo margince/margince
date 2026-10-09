@@ -85,8 +85,7 @@ func TestFxRateRejectsPastBaseAndNonPositive(t *testing.T) {
 
 	assertInvalid := func(t *testing.T, err error) {
 		t.Helper()
-		var v *deals.FxRateValidationError
-		if !errors.As(err, &v) {
+		if _, ok := errors.AsType[*deals.FxRateValidationError](err); !ok {
 			t.Fatalf("expected FxRateValidationError, got %v", err)
 		}
 	}

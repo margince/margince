@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -199,7 +200,7 @@ func verdictPatch(
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return nil, fmt.Errorf("contacts: a verdict with no principal bound cannot say who stands behind it")
+		return nil, errors.New("contacts: a verdict with no principal bound cannot say who stands behind it")
 	}
 	if actor.Type == principal.PrincipalAgent {
 		// Nothing was verified, so neither verified column is written: a name

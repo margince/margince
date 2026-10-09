@@ -58,15 +58,13 @@ func cardFacts(t *testing.T) facts {
 		timeline: []crmcontracts.Activity{{
 			Id:         openapi_types.UUID(ids.NewV7()),
 			Kind:       "email",
-			Subject:    ptr("Angebot"),
+			Subject:    new("Angebot"),
 			OccurredAt: cardClock().Add(-48 * time.Hour),
 		}},
 		now:  cardClock(),
 		lang: "de",
 	}
 }
-
-func ptr[T any](v T) *T { return &v }
 
 func TestAWiredLaneThatDidNotAnswerIsReportedSoItsFallbackIsNotCached(t *testing.T) {
 	lane := &refusingLane{}

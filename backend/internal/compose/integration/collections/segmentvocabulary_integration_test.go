@@ -213,7 +213,7 @@ func TestANumberCustomFieldFiltersOnEqAndGt(t *testing.T) {
 func TestACurrencyCustomFieldFiltersOnEqAndRefusesAFractionalOperand(t *testing.T) {
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{
-		Label: "Lifetime Value", Type: customfieldsmod.TypeCurrency, Currency: integration.StrPtr("USD"),
+		Label: "Lifetime Value", Type: customfieldsmod.TypeCurrency, Currency: new("USD"),
 	})
 	big, small := f.seedTwoContacts(t, "LTV")
 	f.setField(t, big, column, float64(500000))
@@ -653,11 +653,11 @@ func (f fixture) seedTaggablePair(t *testing.T, entity string, pipeline ids.Pipe
 	case "deal":
 		return f.e.SeedDeal(t, "Tagged Deal", pipeline, stage, nil), f.e.SeedDeal(t, "Plain Deal", pipeline, stage, nil)
 	default: // lead
-		a, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: integration.StrPtr("Tagged Lead"), Source: "manual"})
+		a, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: new("Tagged Lead"), Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: integration.StrPtr("Plain Lead"), Source: "manual"})
+		b, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: new("Plain Lead"), Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -732,8 +732,7 @@ func TestACatalogueReadFailureIsNeverMisreportedAsAFilterMistake(t *testing.T) {
 	if err == nil {
 		t.Fatal("a canceled catalogue read returned no error")
 	}
-	var pred *storekit.PredicateError
-	if errors.As(err, &pred) {
+	if pred, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		t.Fatalf("a catalogue failure was dressed up as a filter validation error: %v", pred)
 	}
 }
@@ -792,9 +791,9 @@ func TestADealFilterReachesTheCustomersIndustry(t *testing.T) {
 	manufacturing, services := "manufacturing", "services"
 
 	inManufacturing := f.dealForCustomer(t, "Factory renewal", pipeline, open,
-		companyPtr(f.customerCompany(t, "Vulcan Works", &manufacturing)))
+		new(f.customerCompany(t, "Vulcan Works", &manufacturing)))
 	f.dealForCustomer(t, "Agency retainer", pipeline, open,
-		companyPtr(f.customerCompany(t, "Bright Consulting", &services)))
+		new(f.customerCompany(t, "Bright Consulting", &services)))
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
 		Name: "manufacturing pipeline", EntityType: "deal", ListType: "dynamic",
@@ -819,10 +818,10 @@ func TestAnUnknownCustomerIndustryCoversBothWaysItCanBeUnknown(t *testing.T) {
 	known := "manufacturing"
 
 	customerWithNoIndustry := f.dealForCustomer(t, "Unclassified account", pipeline, open,
-		companyPtr(f.customerCompany(t, "Quiet Holdings", nil)))
+		new(f.customerCompany(t, "Quiet Holdings", nil)))
 	noCustomerAtAll := f.dealForCustomer(t, "Inbound, unattributed", pipeline, open, nil)
 	classified := f.dealForCustomer(t, "Factory renewal", pipeline, open,
-		companyPtr(f.customerCompany(t, "Vulcan Works", &known)))
+		new(f.customerCompany(t, "Vulcan Works", &known)))
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
 		Name: "customer industry unknown", EntityType: "deal", ListType: "dynamic",
@@ -859,7 +858,7 @@ func TestArchivingTheCustomerLeavesItsDealsInTheIndustryFilter(t *testing.T) {
 	pipeline, open, _ := integration.DealFixture(t, f.e)
 	manufacturing := "manufacturing"
 	company := f.customerCompany(t, "Vulcan Works", &manufacturing)
-	deal := f.dealForCustomer(t, "Factory renewal", pipeline, open, companyPtr(company))
+	deal := f.dealForCustomer(t, "Factory renewal", pipeline, open, new(company))
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
 		Name: "manufacturing pipeline, archived customer", EntityType: "deal", ListType: "dynamic",
@@ -877,5 +876,3 @@ func TestArchivingTheCustomerLeavesItsDealsInTheIndustryFilter(t *testing.T) {
 	}
 	assertSoleMember(t, f, list.ID, deal)
 }
-
-func companyPtr(id ids.CompanyID) *ids.CompanyID { return &id }

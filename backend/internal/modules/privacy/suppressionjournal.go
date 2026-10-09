@@ -73,7 +73,7 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 		// A deployment with no object store has nowhere to put the list, and
 		// saying so is better than reporting an export that did not happen:
 		// the whole value of this is that somebody can rely on it having run.
-		return 0, fmt.Errorf("privacy: exporting the suppression list needs an object store")
+		return 0, errors.New("privacy: exporting the suppression list needs an object store")
 	}
 	type entry struct{ kind, hash, when string }
 	var entries []entry

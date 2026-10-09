@@ -346,7 +346,7 @@ func sqlConstants(t *testing.T, dirs ...string) map[string]string {
 	// literals; the second renders the rest against them, so a value whose
 	// WHERE clause is assembled still yields its readable SET clause instead of
 	// the whole declaration going dark.
-	for pass := 0; pass < 2; pass++ {
+	for pass := range 2 {
 		for _, d := range declared {
 			text := renderSQL(d.value, out)
 			if pass == 0 && strings.Contains(text, unresolved) {

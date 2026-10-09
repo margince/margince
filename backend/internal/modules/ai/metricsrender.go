@@ -20,6 +20,7 @@ package ai
 
 import (
 	"io"
+	"maps"
 	"sort"
 
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -110,15 +111,9 @@ func (m *callMetrics) snapshot() metricsSnapshot {
 		contextBytes:  copyTaskCounters(m.contextBytes),
 		contextTokens: copyTaskCounters(m.contextTokens),
 	}
-	for k, v := range m.errors {
-		snap.errors[k] = v
-	}
-	for k, v := range m.finish {
-		snap.finish[k] = v
-	}
-	for k, v := range m.tokens {
-		snap.tokens[k] = v
-	}
+	maps.Copy(snap.errors, m.errors)
+	maps.Copy(snap.finish, m.finish)
+	maps.Copy(snap.tokens, m.tokens)
 	for k, v := range m.latency {
 		snap.latency[k] = v.Snapshot()
 	}
@@ -127,9 +122,7 @@ func (m *callMetrics) snapshot() metricsSnapshot {
 
 func copyRouteCounters(source map[routeKey]uint64) map[routeKey]uint64 {
 	out := make(map[routeKey]uint64, len(source))
-	for k, v := range source {
-		out[k] = v
-	}
+	maps.Copy(out, source)
 	return out
 }
 

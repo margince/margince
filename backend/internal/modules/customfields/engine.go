@@ -14,6 +14,7 @@
 package customfields
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -319,7 +320,7 @@ func quoteIdentifier(name string) string {
 // which strips NULs; a plain string literal has no such built-in escape.
 func quoteLiteral(s string) (string, error) {
 	if strings.Contains(s, "\x00") {
-		return "", fmt.Errorf("customfields: option literal contains a NUL byte")
+		return "", errors.New("customfields: option literal contains a NUL byte")
 	}
 	s = strings.ReplaceAll(s, `'`, `''`)
 	if strings.Contains(s, `\`) {
@@ -380,7 +381,7 @@ func typedCheckConstraintClause(columnName, fieldType string, options []string) 
 	quotedOpts := make([]string, len(options))
 	for i, o := range options {
 		if !validOptionText(o) {
-			return "", "", fmt.Errorf("customfields: picklist option contains a NUL byte or invalid UTF-8")
+			return "", "", errors.New("customfields: picklist option contains a NUL byte or invalid UTF-8")
 		}
 		lit, err := quoteLiteral(o)
 		if err != nil {

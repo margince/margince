@@ -72,10 +72,7 @@ func boundRunes(s string, n int) string {
 		return s
 	}
 	const ellipsis = "…"
-	cut := n - len(ellipsis)
-	if cut < 0 {
-		cut = 0
-	}
+	cut := max(n-len(ellipsis), 0)
 	for cut > 0 && !utf8.RuneStart(s[cut]) {
 		cut--
 	}

@@ -55,7 +55,7 @@ func TestReportingExpiredWorkerCannotReplaceTheSuccessfulRetry(t *testing.T) {
 	var instant atomic.Int64
 	instant.Store(f.at.UnixNano())
 	now := func() time.Time { return time.Unix(0, instant.Load()).UTC() }
-	authority := &heldPublicationAuthority{reportingAuthority: reportingAuthority{users: identity.NewService(f.env.Pool)}, entered: make(chan struct{}), release: make(chan struct{})}
+	authority := &heldPublicationAuthority{users: identity.NewService(f.env.Pool), entered: make(chan struct{}), release: make(chan struct{})}
 	db := InstallationDB(f.env.Pool)
 	stalled := reporting.NewService(db, metricEvaluator{forecast: forecasting.NewStore(db)}, authority, reportingCalendar, now)
 	worker := newReportingService(f.env.Pool, now)

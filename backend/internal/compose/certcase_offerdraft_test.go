@@ -95,8 +95,6 @@ func offerDraftSupportExpected(t *testing.T) json.RawMessage {
 	})
 }
 
-func offerDraftMinor(minor int64) *int64 { return &minor }
-
 // draftedLine renders one candidate as the prompt demands it, plus whichever of
 // the two optional price fields a caller puts on it.
 func draftedLine(description, evidence, sourceID string, priceFields ...string) string {
@@ -141,7 +139,7 @@ func cannedReply(text string) func(model.Request) string {
 // carries — the one place this call's ids are written down.
 func catalogIDFor(t *testing.T, req model.Request, name string) string {
 	t.Helper()
-	for _, line := range strings.Split(req.Messages[0].Content, "\n") {
+	for line := range strings.SplitSeq(req.Messages[0].Content, "\n") {
 		if !strings.Contains(line, "] "+name+" @") {
 			continue
 		}
@@ -261,7 +259,7 @@ func TestOfferDraftCaseJudgesALineNetAsQuantityTimesUnitPrice(t *testing.T) {
 	f := offerDraftDealFixture()
 	f.ContextItems[0].Snippet = "They agreed to 10 hours at 150.00 EUR per hour, 1500.00 EUR in total."
 	expected := offerDraftExpectation(t, map[string]offerDraftExpectedLine{
-		offerDraftKickoffSource: {LineNetMinor: offerDraftMinor(150000), PriceGrounded: true},
+		offerDraftKickoffSource: {LineNetMinor: new(int64(150000)), PriceGrounded: true},
 	})
 	hoursLine := func(quantity, price string) string {
 		line := draftedLine("Onboarding", f.ContextItems[0].Snippet, offerDraftKickoffSource,

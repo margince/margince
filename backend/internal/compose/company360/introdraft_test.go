@@ -188,7 +188,7 @@ func TestTheModelCallFencesEveryFactItIsGiven(t *testing.T) {
 // between two markers.
 func outsideEveryIntroSpan(content, marker, needle string) bool {
 	inside := false
-	for _, part := range strings.Split(content, marker) {
+	for part := range strings.SplitSeq(content, marker) {
 		if !inside && strings.Contains(part, needle) {
 			return true
 		}

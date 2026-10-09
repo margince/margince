@@ -20,6 +20,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -194,7 +195,7 @@ func (t bulkUpdateRecords) Handle(ctx context.Context, in json.RawMessage) (json
 	switch args.Mode {
 	case bulkModePreview, bulkModeExecute:
 		if args.BatchID != nil {
-			return nil, &BadArgsError{Cause: fmt.Errorf("batch_id belongs to undo_preview and undo")}
+			return nil, &BadArgsError{Cause: errors.New("batch_id belongs to undo_preview and undo")}
 		}
 		if args.RecordType == "" || args.Verb == "" || len(args.Items) == 0 {
 			return nil, &BadArgsError{Cause: fmt.Errorf("%s needs record_type, verb and items", args.Mode)}
@@ -203,7 +204,7 @@ func (t bulkUpdateRecords) Handle(ctx context.Context, in json.RawMessage) (json
 			return t.changer.ExecuteBulkChange(ctx, cmd)
 		}
 		if cmd.ConfirmToken != "" {
-			return nil, &BadArgsError{Cause: fmt.Errorf("confirm_token belongs to execute; a preview mints one")}
+			return nil, &BadArgsError{Cause: errors.New("confirm_token belongs to execute; a preview mints one")}
 		}
 		return t.changer.PreviewBulkChange(ctx, cmd)
 	case bulkModeUndoPreview, bulkModeUndo:
@@ -227,7 +228,7 @@ func (t bulkUpdateRecords) undo(ctx context.Context, args bulkUpdateRecordsArgs)
 		return t.changer.UndoBulkChange(ctx, *args.BatchID, args.ConfirmToken)
 	}
 	if args.ConfirmToken != "" {
-		return nil, &BadArgsError{Cause: fmt.Errorf("confirm_token belongs to undo; undo_preview mints one")}
+		return nil, &BadArgsError{Cause: errors.New("confirm_token belongs to undo; undo_preview mints one")}
 	}
 	return t.changer.PreviewBulkUndo(ctx, *args.BatchID)
 }

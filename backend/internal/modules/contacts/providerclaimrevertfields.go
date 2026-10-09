@@ -12,6 +12,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -161,7 +162,7 @@ func archiveChildRow(ctx context.Context, tx pgx.Tx, f appliedField) (bool, erro
 // installation bought — so the row stops being current and stops being read.
 func archiveEmploymentEdge(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) {
 	if f.rowID == nil {
-		return false, fmt.Errorf("contacts: a bought employment was recorded without its row")
+		return false, errors.New("contacts: a bought employment was recorded without its row")
 	}
 	tag, err := tx.Exec(ctx, revertEmploymentSQL, f.ledgerID)
 	if err != nil {

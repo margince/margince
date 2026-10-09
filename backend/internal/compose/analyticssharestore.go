@@ -106,7 +106,7 @@ func (s *AnalyticsShareStore) Issue(
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return Share{}, "", fmt.Errorf("compose: issuing a share without an actor")
+		return Share{}, "", errors.New("compose: issuing a share without an actor")
 	}
 	expires, err := s.cappedExpiry(in.ExpiresAt)
 	if err != nil {

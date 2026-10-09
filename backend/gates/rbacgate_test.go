@@ -44,6 +44,7 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -583,9 +584,7 @@ type gatePkg map[string]map[string]*gateFnInfo
 // where this gate stays optimistic and why.
 func (p gatePkg) visibleTo(recv string) map[string]*gateFnInfo {
 	fns := make(map[string]*gateFnInfo, len(p[""])+len(p[recv]))
-	for name, info := range p[""] {
-		fns[name] = info
-	}
+	maps.Copy(fns, p[""])
 	for name, info := range p[recv] {
 		if pkgLevel, both := fns[name]; both {
 			fns[name] = mergeGateFnInfo(pkgLevel, info)

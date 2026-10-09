@@ -434,8 +434,7 @@ func TestSegmentEngineReportsACatalogFailureAsItsOwn(t *testing.T) {
 	if !errors.Is(err, boom) {
 		t.Fatalf("err = %v, want the catalog's own error", err)
 	}
-	var perr *storekit.PredicateError
-	if errors.As(err, &perr) {
+	if _, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		t.Error("a catalog failure was dressed up as a predicate validation error")
 	}
 }

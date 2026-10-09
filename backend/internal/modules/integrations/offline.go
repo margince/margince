@@ -6,6 +6,7 @@ package integrations
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -162,9 +163,9 @@ func (p *OfflineProvider) VerifyCredential(ctx context.Context, cred provider.Cr
 	p.calls.Add(1)
 	switch string(cred) {
 	case "invalid":
-		return provider.Credits{}, fmt.Errorf("offline provider: the credential was refused")
+		return provider.Credits{}, errors.New("offline provider: the credential was refused")
 	case "":
-		return provider.Credits{}, fmt.Errorf("offline provider: no credential presented")
+		return provider.Credits{}, errors.New("offline provider: no credential presented")
 	}
 	return p.balances(), nil
 }

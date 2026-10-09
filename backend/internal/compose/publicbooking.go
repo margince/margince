@@ -65,7 +65,7 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 			if proposal {
 				prefix = "/v1/public/proposal/"
 			}
-			slug := strings.SplitN(strings.TrimPrefix(r.URL.Path, prefix), "/", 2)[0]
+			slug, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, prefix), "/")
 			if slug == "" {
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return

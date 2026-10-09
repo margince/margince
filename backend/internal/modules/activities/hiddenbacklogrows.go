@@ -15,6 +15,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -71,7 +72,7 @@ func relaxationFor(rule HiddenRule, reader ids.UUID) (waitingRelaxation, bool) {
 // A refusal rather than an empty list: "no rows behind that rule" and "there is
 // no such rule" are different answers, and returning the first for the second
 // would let a typo read as a clean queue.
-var ErrUnknownHiddenRule = fmt.Errorf("activities: unknown hiding rule")
+var ErrUnknownHiddenRule = errors.New("activities: unknown hiding rule")
 
 // HiddenWaitingRows lists the threads one rule is holding back.
 //

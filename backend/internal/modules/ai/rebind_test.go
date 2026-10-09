@@ -135,9 +135,7 @@ func TestConcurrentReadsNeverSeeAHalfAppliedRebind(t *testing.T) {
 	var wg sync.WaitGroup
 	stop := make(chan struct{})
 	for range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for {
 				select {
 				case <-stop:
@@ -156,7 +154,7 @@ func TestConcurrentReadsNeverSeeAHalfAppliedRebind(t *testing.T) {
 					return
 				}
 			}
-		}()
+		})
 	}
 	for i := range 200 {
 		cfg := second

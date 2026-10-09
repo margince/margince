@@ -12,6 +12,7 @@ package main
 // cases rather than as prose so a decoder that regresses on one says so.
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -84,10 +85,8 @@ func TestTheShapesTheHandParserCouldNotRead(t *testing.T) {
 	}} {
 		t.Run(c.name, func(t *testing.T) {
 			got := paths(decode(t, c.policy))
-			for _, p := range got {
-				if p == c.want {
-					return
-				}
+			if slices.Contains(got, c.want) {
+				return
 			}
 			t.Errorf("the decoder read %v and not %q — an exemption it cannot see owes no plant, "+
 				"and the coverage ledger cannot tell that apart from full coverage", got, c.want)

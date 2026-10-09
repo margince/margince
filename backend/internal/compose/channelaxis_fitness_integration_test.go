@@ -47,10 +47,10 @@ func contractEnums(raw string) [][]string {
 	}
 	for _, m := range contractBlockEnumRe.FindAllStringSubmatch(raw, -1) {
 		var members []string
-		for _, line := range strings.Split(m[1], "\n") {
+		for line := range strings.SplitSeq(m[1], "\n") {
 			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "-") {
-				members = append(members, strings.TrimSpace(strings.TrimPrefix(line, "-")))
+			if after, ok := strings.CutPrefix(line, "-"); ok {
+				members = append(members, strings.TrimSpace(after))
 			}
 		}
 		out = append(out, members)

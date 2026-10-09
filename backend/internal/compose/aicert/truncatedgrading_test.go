@@ -289,8 +289,8 @@ func TestARejectedCandidateAbortsTheTaskWithNoRecord(t *testing.T) {
 // it would void a set whose served runs were all one model.
 func TestARunWithNoAnswerNeitherSetsNorBreaksTheServedIdentity(t *testing.T) {
 	t.Parallel()
-	withheld := runOutcome{RunResult: RunResult{Withheld: "SAFETY"}, Provider: "gemini", ServedModel: "gemini-flash"}
-	abandoned := runOutcome{RunResult: RunResult{Abandoned: true}, Provider: "gemini", ServedModel: "gemini-flash"}
+	withheld := runOutcome{Withheld: "SAFETY", Provider: "gemini", ServedModel: "gemini-flash"}
+	abandoned := runOutcome{Abandoned: true, Provider: "gemini", ServedModel: "gemini-flash"}
 	served := runOutcome{Provider: "gemini", ServedModel: "gemini-flash-001"}
 	for name, tc := range map[string]struct {
 		order []runOutcome

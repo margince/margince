@@ -107,7 +107,7 @@ func (d documentSeam) MaxBytes(context.Context) int64 {
 // storage key is never on the contract row to begin with.
 func attachedDocument(att crmcontracts.Attachment) agents.AttachedDocument {
 	return agents.AttachedDocument{
-		RecordLink:   agents.RecordLink{EntityType: string(att.EntityType), EntityID: ids.UUID(att.EntityId)},
+		EntityType: string(att.EntityType), EntityID: ids.UUID(att.EntityId),
 		AttachmentID: ids.UUID(att.Id),
 		Filename:     att.Filename,
 		ContentType:  orZero(att.ContentType),

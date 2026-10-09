@@ -177,11 +177,11 @@ func quarantineSuspect(displayName, domain string) bool {
 		return true
 	}
 	name := strings.ToLower(displayName)
-	at := strings.Index(name, "@")
-	if at < 0 {
+	_, after, ok := strings.Cut(name, "@")
+	if !ok {
 		return false
 	}
-	embedded := name[at+1:]
+	embedded := after
 	if end := strings.IndexAny(embedded, " >,;"); end >= 0 {
 		embedded = embedded[:end]
 	}

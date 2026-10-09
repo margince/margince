@@ -297,7 +297,7 @@ func TestARetriedStagingFailureRaisesOnlyOneNotice(t *testing.T) {
 	activity := ids.NewV7()
 	entry := contacts.VCardEntry{FullName: "A Broken Card"}
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if err := worker.recordStagingFailure(e.Admin(), activity, entry); err != nil {
 			t.Fatalf("attempt %d: recording a staging failure: %v", i+1, err)
 		}

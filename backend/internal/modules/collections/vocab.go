@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -368,9 +369,7 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 	// into every later request.
 	merged := core
 	merged.Fields = make(map[string]storekit.Field, len(core.Fields))
-	for name, field := range core.Fields {
-		merged.Fields[name] = field
-	}
+	maps.Copy(merged.Fields, core.Fields)
 	s.bindDealAmount(resource, merged.Fields)
 	if s.catalog == nil {
 		withholdFromCaller(ctx, resource, merged.Fields)

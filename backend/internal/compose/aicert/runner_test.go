@@ -341,9 +341,9 @@ func TestCertifyTaskCertifiesAPoolWithTwoScatteredMisses(t *testing.T) {
 	answers := make([]string, 0, scenarioCount*3)
 	scores := make([]string, 0, scenarioCount*3)
 	scenarios := make([]Scenario, 0, scenarioCount)
-	for i := 0; i < scenarioCount; i++ {
+	for i := range scenarioCount {
 		scenarios = append(scenarios, testScenario(fmt.Sprintf("case_%02d", i), wideBands))
-		for run := 0; run < 3; run++ {
+		for run := range 3 {
 			answer := "the widget is blue"
 			if run == 0 && i < 2 {
 				answer = "it is blue"

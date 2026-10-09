@@ -25,7 +25,7 @@ func (s *Service) Sweep(ctx context.Context) error {
 	if err := s.materializeDue(ctx); err != nil {
 		return err
 	}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < time.Minute {
 			return nil
 		}

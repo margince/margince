@@ -99,8 +99,7 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 	}
 	effect, err := h.Plan(ctx, ev)
 	if err != nil {
-		var declined declinedFiring
-		if errors.As(err, &declined) {
+		if declined, ok := errors.AsType[declinedFiring](err); ok {
 			// A matched trigger whose Plan found nothing to act on (e.g. a
 			// stage_change_notify on an ownerless deal — no recipient to name).
 			// This is a skip, not a failure: nothing went wrong and a

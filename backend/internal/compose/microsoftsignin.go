@@ -159,7 +159,7 @@ func (cfg MicrosoftSignInConfig) envClient() signInClient {
 func tenantsOf(raw string) []string {
 	seen := map[string]bool{}
 	var out []string
-	for _, raw := range strings.Split(raw, ",") {
+	for raw := range strings.SplitSeq(raw, ",") {
 		id := strings.ToLower(strings.TrimSpace(raw))
 		if id == "" || seen[id] {
 			continue
@@ -194,10 +194,8 @@ func routingAuthorityFor(ids []string) string {
 		}
 		return ids[0]
 	}
-	for _, id := range ids {
-		if id == microsoftConsumerTenant {
-			return microsoftCommonAuthority
-		}
+	if slices.Contains(ids, microsoftConsumerTenant) {
+		return microsoftCommonAuthority
 	}
 	return microsoftWorkAuthority
 }

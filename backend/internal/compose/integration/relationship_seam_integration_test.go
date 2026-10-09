@@ -164,8 +164,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	// new record type inherits it or it does not hold.
 	_, err = registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","id":%q,"fields":{"role":"vp_sales"}}`, edgeID)))
-	var overwrite *workflow.StagedApprovalError
-	if !errors.As(err, &overwrite) {
+	if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
 		t.Errorf("overwriting a human-written role answered %v, want a staged approval", err)
 	}
 
@@ -513,7 +512,7 @@ func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
 	// And the edge is absent from the contact-filtered LIST, which is how a list
 	// hides: by omission, not by refusing.
 	edges, _, err := e.Contacts.ListRelationships(stranger, contacts.ListRelationshipsInput{
-		ContactID: idPtr(ids.From[ids.ContactKind](ids.UUID(mine.Id))),
+		ContactID: new(ids.From[ids.ContactKind](ids.UUID(mine.Id))),
 	})
 	if err != nil {
 		t.Fatalf("listing the stranger's own contact's edges: %v", err)
@@ -524,6 +523,3 @@ func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
 			len(edges))
 	}
 }
-
-// idPtr takes the address of a typed id for the optional filter fields.
-func idPtr[K ids.EntityKind](id ids.ID[K]) *ids.ID[K] { return &id }

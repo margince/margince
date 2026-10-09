@@ -16,6 +16,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -208,7 +209,7 @@ func assertEraseTombstoneShape(t *testing.T, e *Env, contactID ids.UUID) {
 			return err
 		}
 		if leaked {
-			return fmt.Errorf("an erase tombstone re-stores a scrubbed custom-field value")
+			return errors.New("an erase tombstone re-stores a scrubbed custom-field value")
 		}
 		return nil
 	})

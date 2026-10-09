@@ -27,6 +27,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -247,7 +248,7 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 		}
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: lifecycle accept without a deciding principal")
+			return errors.New("compose: lifecycle accept without a deciding principal")
 		}
 		// The write carries the machine provenance — the stage came from the
 		// account's correspondence, not from someone typing it — while the

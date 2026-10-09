@@ -643,9 +643,9 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"RecordIdentityTx": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
 	}
-	rt := reflect.TypeOf(&RunStore{})
-	for i := range rt.NumMethod() {
-		name := rt.Method(i).Name
+	rt := reflect.TypeFor[*RunStore]()
+	for method := range rt.Methods() {
+		name := method.Name
 		if !checked[name] {
 			t.Errorf("RunStore.%s is an exported entry point with no line in the ungranted-role table", name)
 		}

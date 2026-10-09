@@ -22,6 +22,7 @@ package attention
 
 import (
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -214,14 +215,14 @@ func lanesOf(t *testing.T, day crmcontracts.Attention) map[string][]crmcontracts
 		name := structure.Field(at).Name
 		switch field.Kind() {
 		case reflect.Slice:
-			if items, ok := field.Interface().([]crmcontracts.AttentionItem); ok {
+			if items, ok := reflect.TypeAssert[[]crmcontracts.AttentionItem](field); ok {
 				out[name] = items
 			}
 		case reflect.Pointer:
 			if field.IsNil() {
 				continue
 			}
-			if items, ok := field.Elem().Interface().([]crmcontracts.AttentionItem); ok {
+			if items, ok := reflect.TypeAssert[[]crmcontracts.AttentionItem](field.Elem()); ok {
 				out[name] = items
 			}
 		}
@@ -230,12 +231,7 @@ func lanesOf(t *testing.T, day crmcontracts.Attention) map[string][]crmcontracts
 }
 
 func slicesContain(in []crmcontracts.AttentionItemActions, want crmcontracts.AttentionItemActions) bool {
-	for _, one := range in {
-		if one == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(in, want)
 }
 
 // TestTheCensusDescribesEverySourceTheQueueClassifies keeps the table honest in

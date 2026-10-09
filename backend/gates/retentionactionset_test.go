@@ -49,7 +49,7 @@ func retentionActionCheck(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("reading the schema head: %v", err)
 	}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		if !strings.HasPrefix(line, constraint) {
 			continue
 		}

@@ -66,7 +66,7 @@ func (e *forecastEnv) reportReaderCtx() context.Context {
 func TestAGenericQueryCompilesToValidSQLAndCounts(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 7; i++ {
+	for range 7 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 
@@ -106,10 +106,10 @@ func TestASmallGroupIsWithheldAndSoIsItsComplement(t *testing.T) {
 	// Six deals owned by one rep, two by another. Grouped by owner, the second
 	// group is under the floor — and withholding it alone would leave it as
 	// the total minus the first.
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &big, nil)
 	}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &small, nil)
 	}
 
@@ -183,10 +183,10 @@ func TestAFilterThatSeparatesOutTooFewRecordsIsRefused(t *testing.T) {
 	// Six deals for one rep, two for another. Each ungrouped answer covers a
 	// group of eight or six, comfortably above the floor — so neither is
 	// withheld, and their difference is the second rep's exact figure.
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &big, nil)
 	}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &small, nil)
 	}
 	ctx := e.reportReaderCtx()
@@ -238,7 +238,7 @@ func TestAFilterThatSeparatesOutEnoughIsStillAnswered(t *testing.T) {
 	// Six and six. Filtering either out excludes six, which clears the floor,
 	// so the question is ordinary and must still be answered — a guard that
 	// refused this would refuse most real filtering.
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
 		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
 	}
@@ -264,7 +264,7 @@ func TestAWithheldGroupKeepsNoKeysEither(t *testing.T) {
 	// One deal per owner: every group is of size one, so every group is under
 	// the floor. Keeping the keys would make this a paginated dump of who owns
 	// deals, with the counts blanked and the identities handed over.
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		owner := ids.NewV7()
 		if _, err := e.owner.Exec(context.Background(),
 			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Owner')`,
@@ -316,7 +316,7 @@ func (e *forecastEnv) explainCell(
 func TestACellOpensToTheRecordsItWasComputedFrom(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.reportReaderCtx()
@@ -359,10 +359,10 @@ func TestAWithheldCellExplainsToWithheldRatherThanToNothing(t *testing.T) {
 	// Two deals for one rep. Under the floor, so the answer withholds the
 	// group — and opening it record by record would be that same disclosure at
 	// a slower pace.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount, nil)
 	}
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.reportReaderCtx()
@@ -392,7 +392,7 @@ func TestAWithheldCellExplainsToWithheldRatherThanToNothing(t *testing.T) {
 func TestAnExplanationCannotOutSeeTheNumberItExplains(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
 		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
 	}
@@ -448,7 +448,7 @@ func (e *forecastEnv) ownLensRepCtx(user ids.UUID) context.Context {
 func TestATypedQueryAnswersTheAskersOwnPopulation(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 7; i++ {
+	for range 7 {
 		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
 		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
 	}
@@ -478,7 +478,7 @@ func TestATypedQueryAnswersTheAskersOwnPopulation(t *testing.T) {
 func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 7; i++ {
+	for range 7 {
 		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
 	}
 
@@ -504,7 +504,7 @@ func TestATypedQueryNamingAColleagueExcludesAnUnownedRow(t *testing.T) {
 	amount := int64(100_000)
 	// Five of Rep3's own, clearing analyticsquery.DefaultFloor, plus one
 	// unowned deal that must not be counted as Rep3's.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		e.seedOpenDeal(t, "Rep3's own", 20, &e.Rep3, &amount, nil)
 	}
 	e.seedOpenDeal(t, "Unowned", 20, nil, &amount, nil)
@@ -535,7 +535,7 @@ func TestATypedQueryNamingATeamExcludesAnUnownedRow(t *testing.T) {
 	amount := int64(100_000)
 	// Five of Team1's own (Rep1), clearing analyticsquery.DefaultFloor, plus
 	// one unowned deal that must not be counted as Team1's.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		e.seedOpenDeal(t, "Rep1's own", 20, &e.Rep1, &amount, nil)
 	}
 	e.seedOpenDeal(t, "Unowned", 20, nil, &amount, nil)
@@ -588,7 +588,7 @@ func (e *forecastEnv) wideLensCtx(user ids.UUID) context.Context {
 func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 7; i++ {
+	for range 7 {
 		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
 		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
 	}

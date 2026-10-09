@@ -149,8 +149,7 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 		Resolutions:      siteReadResolutions(req.Resolutions),
 	}, e.stageOnboardingContacts)
 	if err != nil {
-		var invalid *contacts.InvalidSiteReadResolutionError
-		if errors.As(err, &invalid) {
+		if invalid, ok := errors.AsType[*contacts.InvalidSiteReadResolutionError](err); ok {
 			httperr.Write(w, r, httperr.Validation("resolutions", "invalid", invalid.Reason))
 			return
 		}

@@ -13,6 +13,7 @@ package company360
 // gap between them is a real seat and not a hypothetical one.
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -29,9 +30,7 @@ var company360LogReaderPerms = withActivityReadOnly(integration.AccountRepPerms)
 func withActivityReadOnly(base principal.Permissions) principal.Permissions {
 	narrowed := base
 	narrowed.Objects = make(map[string]principal.ObjectGrant, len(base.Objects))
-	for object, grant := range base.Objects {
-		narrowed.Objects[object] = grant
-	}
+	maps.Copy(narrowed.Objects, base.Objects)
 	narrowed.Objects["activity"] = principal.ObjectGrant{Read: true}
 	return narrowed
 }

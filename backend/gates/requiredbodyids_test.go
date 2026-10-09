@@ -214,11 +214,11 @@ func jsonFieldName(field *ast.Field) string {
 	}
 	tag := strings.Trim(field.Tag.Value, "`")
 	marker := `json:"`
-	start := strings.Index(tag, marker)
-	if start < 0 {
+	_, after, ok := strings.Cut(tag, marker)
+	if !ok {
 		return ""
 	}
-	rest := tag[start+len(marker):]
+	rest := after
 	value := rest[:strings.IndexByte(rest, '"')]
 	name, _, _ := strings.Cut(value, ",")
 	if name == "-" {

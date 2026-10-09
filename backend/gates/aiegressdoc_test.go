@@ -88,7 +88,7 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 // rowFor finds the table row whose FIRST cell names this task.
 func rowFor(page, task string) (string, bool) {
 	want := "| `" + task + "` |"
-	for _, line := range strings.Split(page, "\n") {
+	for line := range strings.SplitSeq(page, "\n") {
 		if strings.HasPrefix(line, want) {
 			return line, true
 		}

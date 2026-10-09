@@ -34,8 +34,7 @@ import (
 func requiredIDFields(t reflect.Type) []string {
 	uuidType := reflect.TypeFor[openapi_types.UUID]()
 	var names []string
-	for i := range t.NumField() {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		if field.Type != uuidType {
 			continue
 		}
@@ -53,8 +52,7 @@ func requiredIDFields(t reflect.Type) []string {
 func completeBody(t *testing.T, shape reflect.Type, omit string) map[string]any {
 	t.Helper()
 	body := map[string]any{}
-	for i := range shape.NumField() {
-		field := shape.Field(i)
+	for field := range shape.Fields() {
 		name, opts, _ := strings.Cut(field.Tag.Get("json"), ",")
 		if name == "" || name == "-" || strings.Contains(opts, "omitempty") || name == omit {
 			continue

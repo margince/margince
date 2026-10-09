@@ -35,6 +35,7 @@ package usecases
 import (
 	"encoding/json"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -145,10 +146,8 @@ func advertisesOperator(t *testing.T, document json.RawMessage, target, field, o
 			if catalogued.Name != field {
 				continue
 			}
-			for _, op := range catalogued.Ops {
-				if op == operator {
-					return true
-				}
+			if slices.Contains(catalogued.Ops, operator) {
+				return true
 			}
 		}
 	}

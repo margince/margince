@@ -262,10 +262,9 @@ func TestAuditLogIsAppendOnly(t *testing.T) {
 			_, err := tx.Exec(ctx, stmt, id)
 			return err
 		})
-		var pgErr *pgconn.PgError
 		if err == nil {
 			t.Errorf("%q succeeded; audit_log must be append-only", stmt)
-		} else if !errors.As(err, &pgErr) {
+		} else if _, ok := errors.AsType[*pgconn.PgError](err); !ok {
 			t.Errorf("%q failed with %v, want a loud database error", stmt, err)
 		}
 	}

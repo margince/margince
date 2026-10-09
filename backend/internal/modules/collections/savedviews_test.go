@@ -167,8 +167,7 @@ func TestAnUndecodableTreeAnswersASentinelWithNoWireField(t *testing.T) {
 	if !errors.Is(err, errNotAFilterTree) {
 		t.Fatalf("err = %v, want errNotAFilterTree", err)
 	}
-	var bad *BadInputError
-	if errors.As(err, &bad) {
+	if bad, ok := errors.AsType[*BadInputError](err); ok {
 		t.Errorf("the decoder named a wire field (%q) it cannot know", bad.Field)
 	}
 }
@@ -228,8 +227,7 @@ func TestACatalogueFailureIsNotDressedAsAFieldFault(t *testing.T) {
 	if !errors.Is(err, boom) {
 		t.Fatalf("err = %v, want the catalogue's own error", err)
 	}
-	var bad *BadInputError
-	if errors.As(err, &bad) {
+	if bad, ok := errors.AsType[*BadInputError](err); ok {
 		t.Errorf("a failed catalogue read was reported as a bad %q", bad.Field)
 	}
 }
