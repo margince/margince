@@ -19,7 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/dealvalue"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -155,7 +155,7 @@ func forecastWonInWindow(
 	// window's own close, so the series compares money on one scale. A median of
 	// totals converted at four different historical rates is a median of four
 	// different currencies wearing one symbol.
-	baseValue := dealvalue.BaseValueSQL(
+	baseValue := deals.BaseValueSQL(
 		fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d")
 
 	// The conversion series is a sum of won deals, so a masked figure must not

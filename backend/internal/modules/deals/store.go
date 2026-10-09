@@ -90,6 +90,11 @@ type Installation struct {
 	BaseCurrency InstallationValue
 	// Timezone is the IANA zone a "today" is computed in.
 	Timezone InstallationValue
+	// BaseCurrencyApplied and TimezoneApplied answer the same two values
+	// without the installation_settings gate, for a read that only orders by
+	// them (the deal list's Value sort).
+	BaseCurrencyApplied InstallationValue
+	TimezoneApplied     InstallationValue
 	// StampCorrespondence shields the correspondence a concluded deal turns
 	// into a Handelsbrief (A165/ADR-0114). It rides here rather than on a
 	// WithX setter because every construction site already passes this struct,
@@ -138,7 +143,8 @@ func NewStore(db *database.DB, inst Installation) *Store {
 func (i Installation) orRefusing() Installation {
 	for name, f := range map[string]*InstallationValue{
 		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency, "Timezone": &i.Timezone,
-		"IssuerLegalName": &i.IssuerLegalName,
+		"IssuerLegalName": &i.IssuerLegalName, "BaseCurrencyApplied": &i.BaseCurrencyApplied,
+		"TimezoneApplied": &i.TimezoneApplied,
 	} {
 		if *f == nil {
 			*f = refusing(name)

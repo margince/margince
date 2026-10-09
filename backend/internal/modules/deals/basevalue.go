@@ -1,28 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package dealvalue renders one deal's money in the installation's base
-// currency, as SQL.
-//
-// It is its own package so that compose and compose/briefs call one function.
-// compose imports briefs, so the expression cannot live in compose itself.
-//
-// Three cases, and they are not interchangeable. A deal already in the base
-// currency needs no rate. A closed deal carries the rate it closed at, frozen on
-// the row. Re-converting it at today's rate would rewrite history every time a
-// rate sheet was corrected. An open deal takes the latest daily rate on or
-// before the as-of date.
-//
-// A missing rate yields NULL and never a rate of 1. A guessed number looks like
-// pipeline and sums into a headline. Nothing downstream can tell it from money
-// somebody actually expects.
-package dealvalue
+package deals
 
 import "fmt"
 
-// BaseValueSQL renders the expression for the deal under alias. asOfSQL and
-// baseSQL are SQL expressions, a bind position or a report-engine token, so the
-// caller keeps sole ownership of its argument slice.
+// BaseValueSQL renders the deal under alias in the installation's base
+// currency. A closed deal reads the amount frozen at close, so a corrected rate
+// sheet never rewrites it. An open deal takes the latest rate on or before the
+// as-of date. A missing rate yields NULL, never a guessed rate of 1.
+//
+// asOfSQL and baseSQL are SQL expressions, a bind position or a report-engine
+// token, so the caller keeps sole ownership of its argument slice.
 //
 // alias is interpolated into SQL, so it is a compile-time literal from the
 // caller and never a name off a request.

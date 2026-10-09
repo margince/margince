@@ -182,11 +182,10 @@ func (s *Store) bindDealAmount(resource string, fields map[string]storekit.Field
 }
 
 // maskedAs names the masks a filter field answers to where they are not the
-// field's own name. The base amount is converted from the deal's own amount
-// AND its currency, so a mask on either withholds it: comparing it against the
-// nominal amount a reader can see would give the masked currency away.
+// field's own name. The deal amount compares the base value, so it answers to
+// the masks fieldmask.DealBaseValueInputs names.
 var maskedAs = map[string]map[string][]string{
-	typeDeal: {amountField: {fieldmask.DealAmountMinor, fieldmask.DealCurrency}},
+	typeDeal: {amountField: fieldmask.DealBaseValueInputs()},
 }
 
 // withholdFromCaller stamps every field this caller may not filter by. A masked

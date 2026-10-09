@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/dealvalue"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -167,7 +166,7 @@ func reportingFactValue(ctx context.Context, frame crmcontracts.ReportingContext
 	}
 	if spec.money {
 		if value == "" {
-			value = dealvalue.BaseValueSQL(b.add(frame.EvaluatedAt), b.add(frame.Currency), "t")
+			value = deals.BaseValueSQL(b.add(frame.EvaluatedAt), b.add(frame.Currency), "t")
 		}
 		var err error
 		value, err = auth.MaskedExpressionSQL(ctx, string(recordTypeDeal), "amount_minor", "t", value, b.arg)

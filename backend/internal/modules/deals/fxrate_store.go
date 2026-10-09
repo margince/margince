@@ -66,7 +66,14 @@ func fxInvalid(field, code, message string) error {
 // transaction, so a write that waited for the pool across the local day boundary
 // judges the day it commits.
 func (s *Store) effectiveToday(ctx context.Context, tx pgx.Tx) (time.Time, error) {
-	tzName, err := s.installation.Timezone(ctx, tx)
+	return s.todayIn(ctx, tx, s.installation.Timezone)
+}
+
+// todayIn is the store clock's calendar day in the zone zoneOf answers. The
+// rate sheet and the Value sort both judge "today" through it. So the rate in
+// force on the sheet is the rate the list converts at.
+func (s *Store) todayIn(ctx context.Context, tx pgx.Tx, zoneOf InstallationValue) (time.Time, error) {
+	tzName, err := zoneOf(ctx, tx)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
 	}

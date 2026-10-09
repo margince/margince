@@ -141,6 +141,8 @@ const dealNameColumn = "name"
 //
 // Three of the eight are not columns of `deal` at all: a stage and the two
 // companies are references, so each carries the expression that orders it.
+// Value's expression needs the base currency and today's date, so
+// dealListVocabulary adds it per request.
 var dealListFields = map[string]storekit.SortField{
 	"created_at":            storekit.Column(storekit.KindTimestamp),
 	"updated_at":            storekit.Column(storekit.KindTimestamp),
@@ -186,20 +188,26 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	pre, where, err := dealListQuery(ctx, in, active)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	return storekit.RunListPage(ctx, s, pre, dealTable, dealColumns, active, where, scanDealPage,
-		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Deal) error {
-			if err := finishDealPage(ctx, tx, page); err != nil {
-				return err
-			}
-			return storekit.AttachRowTags(ctx, tx, dealTaggableType, page,
-				func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
-				func(d *crmcontracts.Deal, tags []storekit.RowTag) { d.Tags = wireRowTags(tags) })
-		})
+	var out []crmcontracts.Deal
+	var page storekit.Page
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		pre, where, err := s.dealListQuery(ctx, tx, in, active)
+		if err != nil {
+			return err
+		}
+		out, page, err = storekit.RunListPageTx(ctx, tx, pre, dealTable, dealColumns, active, where, scanDealPage,
+			func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
+			func(tx pgx.Tx, page []crmcontracts.Deal) error {
+				if err := finishDealPage(ctx, tx, page); err != nil {
+					return err
+				}
+				return storekit.AttachRowTags(ctx, tx, dealTaggableType, page,
+					func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
+					func(d *crmcontracts.Deal, tags []storekit.RowTag) { d.Tags = wireRowTags(tags) })
+			})
+		return err
+	})
+	return out, page, err
 }
 
 // ListDealsTx is ListDeals inside a caller-opened transaction — the composite
@@ -211,7 +219,7 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	pre, where, err := dealListQuery(ctx, in, active.cols)
+	pre, where, err := s.dealListQuery(ctx, tx, in, active.cols)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -221,12 +229,21 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 }
 
 // dealListQuery is the half of a deal list both entry points share: the sort
-// refusal, the shared prelude and the deal's own filters.
-func dealListQuery(ctx context.Context, in ListDealsInput, active []fieldcatalog.Column) (*storekit.ListPrelude, []string, error) {
+// refusal, the shared prelude and the deal's own filters. The valuation is
+// read in the list's own transaction, and only when the request sorts by Value.
+func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput, active []fieldcatalog.Column) (*storekit.ListPrelude, []string, error) {
 	if err := refuseMaskedSort(ctx, in.Sort); err != nil {
 		return nil, nil, err
 	}
-	pre, err := storekit.BuildListPrelude(ctx, "deal", dealListFields, active,
+	vocab := dealListFields
+	if sortsByValue(in.Sort) {
+		valuation, err := s.valuationTx(ctx, tx)
+		if err != nil {
+			return nil, nil, err
+		}
+		vocab = dealListVocabulary(valuation)
+	}
+	pre, err := storekit.BuildListPrelude(ctx, "deal", vocab, active,
 		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
 	if err != nil {
 		return nil, nil, err
