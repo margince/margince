@@ -23,8 +23,8 @@ const signatureLogoEdge = 300
 // photo-like logo can pass it at 300px, so it is refitted smaller until it fits.
 const signatureLogoMaxBytes = 48 << 10
 
-// signatureLogoEdges are the edges tried in turn; the last one is sent even
-// when it is still over the cap, since a smaller logo is no longer legible.
+// signatureLogoEdges are the edges tried in turn. The last one is sent even
+// over the cap, because a smaller logo is no longer legible.
 var signatureLogoEdges = []int{signatureLogoEdge, 200, 150}
 
 // signatureLogoReadLimit bounds the stored logo read before resizing.
