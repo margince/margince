@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -33,7 +34,7 @@ func agentContract(src []byte, tables []string) ([]byte, []byte, int, error) {
 	paths, _ := oasnode.Lookup(root, "paths")
 	ops, tags := keepAgentOperations(root, paths)
 	if len(ops) == 0 {
-		return nil, nil, 0, fmt.Errorf("no operation is open to agents, so the walk no longer reaches the operations")
+		return nil, nil, 0, errors.New("no operation is open to agents, so the walk no longer reaches the operations")
 	}
 	if security, ok := oasnode.Lookup(root, "security"); ok {
 		passportOnly(security)

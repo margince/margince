@@ -23,6 +23,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /contacts/{id}/consent/guard` | getContactConsentGuard | May we write to this contact right now — per purpose and channel, with the reason. | any | at once |
 | `GET /contacts/{id}/access` | getContactAccess | Who can open this contact and who can change it, and why. | any | at once |
 | `GET /contacts/{id}/strength` | getContactStrength | Relationship strength for a contact (deterministic recency × frequency × reciprocity). | any | at once |
+| `GET /email-signature-template` | getEmailSignatureTemplate | The workspace's signature template. | any | at once |
 | `POST /dedupe/candidates/{id}/disposition` | disposeDedupeCandidate | Decide one pair — merge through the owner's verb, or dismiss forever. | Change records | at once |
 | `POST /dedupe/candidates/{id}/undo` | undoDedupeDisposition | Re-open a disposed pair. | Change records | at once |
 | `GET /contacts/{id}/network` | getContactNetwork | Who on our team knows this contact, and how well. | any | at once |

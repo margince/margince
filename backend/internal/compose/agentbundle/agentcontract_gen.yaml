@@ -3187,6 +3187,23 @@ paths:
               schema: {$ref: '#/components/schemas/FollowUpSettings'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /email-signature-template:
+    get:
+      tags: [Contacts]
+      operationId: getEmailSignatureTemplate
+      summary: The workspace's signature template.
+      description: |-
+        The layout every member's mail signs with when it is set, filled in with each member's
+        own name, title and phone. Read by a seat that may read installation settings; changed
+        by admin/ops. Governed by the `installation_settings` RBAC object.
+      responses:
+        '200':
+          description: The template.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EmailSignatureTemplate'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /leads/settings:
     get:
       tags: [Leads]
@@ -10715,6 +10732,19 @@ components:
           items:
             type: string
             enum: [stakeholders, our_side, risks]
+    EmailSignatureTemplate:
+      type: object
+      required: [template]
+      properties:
+        template:
+          type: string
+          maxLength: 4000
+          description: |-
+            The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+            `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
+            mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+            and spans with a colour and a pixel size, and drops everything else. Empty means
+            none: each member signs with their own plain-text signature.
     CompanyGraphEdge:
       type: object
       description: |-

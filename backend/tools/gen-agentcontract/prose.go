@@ -5,6 +5,7 @@ package main
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -177,12 +178,7 @@ func (p prose) carriesNote(node *yaml.Node) bool {
 	if node.Kind == yaml.ScalarNode {
 		return p.isDeveloperNote(node.Value)
 	}
-	for _, child := range node.Content {
-		if p.carriesNote(child) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(node.Content, p.carriesNote)
 }
 
 // firstSentence stands in for a summary that was a developer note.

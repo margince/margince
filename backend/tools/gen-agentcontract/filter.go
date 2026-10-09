@@ -4,6 +4,8 @@
 package main
 
 import (
+	"slices"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/tools/internal/oasnode"
@@ -80,12 +82,7 @@ func passportCallable(op, globalSecurity *yaml.Node) bool {
 	if security == nil {
 		return false
 	}
-	for _, requirement := range security.Content {
-		if isPassportRequirement(requirement) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(security.Content, isPassportRequirement)
 }
 
 // isPassportRequirement reports whether a passport alone satisfies one
