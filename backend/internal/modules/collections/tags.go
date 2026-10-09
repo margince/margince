@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type tagRow struct {
@@ -345,7 +346,7 @@ func NormalizeTagName(name string) string {
 // name and an over-long one are the caller's to fix, so both name the field.
 func ValidateTagName(name string) (string, error) {
 	normalized := NormalizeTagName(name)
-	if normalized == "" {
+	if !values.HasVisibleText(normalized) {
 		return "", &BadInputError{Field: "name", Reason: "must not be empty"}
 	}
 	if utf8.RuneCountInString(normalized) > maxTagNameRunes {

@@ -47,8 +47,9 @@ what *it* is buying. Its **Partner** tab shows what it has *brought you*.
 
 ## 1. Make a company a partner
 
-Open the company, go to its **Partner** tab, and choose **Make this a
-partner**.
+Open the company and choose **More actions** → **Set up partner program**. The
+action opens the **Partner** tab before the company is a partner, on the
+**Make this a partner** form.
 
 Two fields matter to begin with:
 

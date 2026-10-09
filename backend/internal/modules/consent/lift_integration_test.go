@@ -399,8 +399,8 @@ func TestALiftSaysWhatStillStands(t *testing.T) {
 			derefUUID(payload.SuppressionId), liftable)
 	}
 	if payload.RemainingSuppressions == nil || *payload.RemainingSuppressions != 1 {
-		t.Errorf("remaining_suppressions = %d, want 1: the subject's own objection still stands",
-			payload.RemainingSuppressions)
+		t.Errorf("remaining_suppressions = %s, want 1: the subject's own objection still stands",
+			derefInt(payload.RemainingSuppressions))
 	}
 	if payload.StillSuppressed == nil || !*payload.StillSuppressed {
 		t.Error("still_suppressed = false while the subject's objection is live — " +

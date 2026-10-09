@@ -1,19 +1,21 @@
 <!-- prose:plain -->
 # Self-hosting models with vLLM: what we measured
 
-**Tested 2026-09-24** on the same machine as
-[ollama-self-hosting.md](ollama-self-hosting.md) (`Mac mini M4`, 24 GB of memory
-shared by CPU and GPU, about 17.8 GiB of it usable by the GPU). We used **vLLM
-0.30.0** through the Apple plugin **`vllm-metal` `0.30.0.dev20260924`**, and the
-certification lane of this tree. Every number is a measure from that night. vLLM
-ships a release about every two weeks: measure again before you trust a number
-here.
+**A dated measurement, from 2026-09-24.** It records what vLLM did on the same
+machine as [ollama-self-hosting.md](ollama-self-hosting.md): a `Mac mini M4`. It
+has 24 GB of memory shared by CPU and GPU, about 17.8 GiB of it usable by the GPU. We
+used **vLLM 0.30.0** through the Apple plugin **`vllm-metal`
+`0.30.0.dev20260924`**, and the certification lane of this tree. Every number is
+a measure from that night. vLLM ships a release about every two weeks: measure
+again before you trust a number here.
 
-See also:
+The current facts live elsewhere:
 
-- [certify-an-ai-model.md](../how-to/certify-an-ai-model.md) for how to run the lane;
-- [configuration.md](configuration.md) for the `vllm` binding;
-- [system-requirements.md](system-requirements.md) for the size of a GPU host.
+- [ai-certification.md](../reference/ai-certification.md): the committed report on what is ready today;
+- [enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md#serve-the-model-with-vllm-instead): the steps to start vLLM and bind a stack to it;
+- [certify-an-ai-model.md](../how-to/certify-an-ai-model.md): how to run the lane;
+- [configuration.md](../reference/configuration.md): the `vllm` binding;
+- [system-requirements.md](../reference/system-requirements.md): the size of a GPU host.
 
 ## The short answer
 
@@ -33,92 +35,25 @@ The Mistral models cannot replace either here. Mistral Nemo `12B` and
 Ministral `8B` score below `Qwen3-14B` on every task but `enrich`, where all five
 tie.
 
-For any model you serve, start vLLM with the flags in section 1. Without them, Qwen3
+For any model you serve, start vLLM with the flags in
+[enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md#serve-the-model-with-vllm-instead). Without them, Qwen3
 and Gemma 4 think before every answer, and a short output budget comes back with
 no answer at all. And the prompt of the agent loop does not fit.
 
-## 1. Start the server
+## 1. The server
 
-The `vllm` binding sends a plain request in the OpenAI wire format: no key, no
-switches for one model. All that depends on which model you serve is the job of
-the server, and belongs on its command line:
-
-```bash
-vllm serve <model> \
-  --max-model-len 40960 \
-  --default-chat-template-kwargs '{"enable_thinking": false}' \
-  --reasoning-parser <parser> \
-  --enable-prompt-tokens-details
-```
-
-| flag | why |
-|---|---|
-| `--max-model-len 40960` | The agent loop plans its prompt against a window of 32,768 tokens and asks for output on top. A server started with less refuses those calls with a 400 (`max_tokens=… cannot be greater than max_model_len`). 40,960 is what the Ollama adapter asks for, so the two serve the same prompts. |
-| `--default-chat-template-kwargs '{"enable_thinking": false}'` | Qwen3 and Gemma 4 think by default. Measured on `Qwen3-14B` with a budget of 300 tokens and a JSON schema: 299 tokens of thinking, 29 seconds, and no answer (`content: null`, `finish_reason: length`). With this flag: the answer in 22 tokens and 2.4 seconds. A template that has no such value (`gpt-oss`, Mistral, Gemma 3) does not use it. |
-| `--reasoning-parser <parser>` | `qwen3`, `gemma4`, `openai_gptoss`, … Moves any thinking out of the answer into its own field. Without it, the thinking stays in the text that the product parses as JSON. Leave it out for a model that does not think. |
-| `--enable-prompt-tokens-details` | Reports cached prompt tokens, which the product records per call. Without it the count is always 0. |
-
-The binding in the routing config then needs only the model id and, if it is not
-`http://localhost:8000`, the host root (no `/v1`). The id is the name the server
-answers to: what `vllm serve` was given, unless `--served-model-name` renames it.
-A server on another host carries every prompt and answer over the network. Start
-it with `--ssl-certfile` and `--ssl-keyfile` (or put it behind a TLS proxy), and
-bind it by `https`:
-
-```yaml
-providers:
-  vllm: { base_url: https://gpu-box.internal:8000 }
-tiers:
-  local_small: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit" }
-```
-
-Two more things the server decides, and the product cannot see:
-
-- **Sampling.** The product sends no `temperature`, so every call gets the
-  defaults of the server. The server takes them from the
-  `generation_config.json` of the model when the repository has one. It then logs `Default vLLM sampling parameters have been overridden`. Else it samples at `temperature` 1.0 with no
-  `top_k`. Many MLX builds ship with no such file.
-  - Of the ones we served, `mlx-community/Qwen3-14B-4bit`,
-    `Mistral-Nemo-Instruct-2407-4bit` and `Ministral-8B-Instruct-2410-4bit` have
-    none. The Gemma 3 file has no sampling values in it.
-  - Qwen3 then gives far more random output than its model card asks for. Set
-    the values of the card with
-    `--override-generation-config '{"temperature": 0.7, "top_p": 0.8, "top_k": 20}'`
-    (Qwen3 with no thinking); section 4 shows what it changes.
-- **Memory.** vLLM takes `--gpu-memory-utilization` (0.92 by default) of the
-  machine at start. It fills what the model files leave with the `KV` cache.
-  Nothing else that needs the GPU fits next to it (a second model, an embedding
-  server, a local judge) unless you lower that number.
-
-**You cannot set `gpt-oss` thinking on the server.** A `reasoning_effort` level
-sets its thinking. vLLM takes that only per request, and has no server default
-for it; `enable_thinking` does not reach it. Served as above, it thinks at
-`medium`: 188 tokens and 14 seconds on the request above, against 96 tokens and 3
-seconds at `low`. The answers were correct both ways. `reasoning_effort: "none"`
-is refused with a 400.
-
-**Never publish the port.** The `vllm` binding sends no key, so only the hosts of
-the product may reach the server: the local machine or a private network. The
-`sovereign` profile checks only that `base_url` names such a host. It does not
-stop other hosts from reaching the server, so the network around it must do
-that. The own `--api-key` of
-vLLM guards only the `/v1`, `/v2`, `/inference` and `/cohere` routes; `/metrics`
-and `/health` stay open.
+Every run below used the server flags and sampling in
+[enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md#serve-the-model-with-vllm-instead), where each flag
+carries its reason. The measures behind those reasons come from this night.
 
 ## 2. On a Mac: vllm-metal
 
 vLLM runs on Apple chips through the
 [vllm-metal](https://github.com/vllm-project/vllm-metal) plugin, which serves MLX
-model files on the GPU:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/vllm-project/vllm-metal/main/install.sh | bash
-source ~/.venv-vllm-metal/bin/activate
-```
-
-It installs vLLM next to the plugin, in its own Python `venv` (Python 3.12,
-`arm64`). Serve MLX builds (`mlx-community/...-4bit`): a GGUF file from Ollama
-does not load.
+model files on the GPU. The install steps are in
+[enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md#serve-the-model-with-vllm-instead).
+It serves MLX builds (`mlx-community/...-4bit`): a GGUF file from Ollama does not
+load.
 
 What we found when we served the models below with it:
 
@@ -154,7 +89,8 @@ profile, and are not committed. The run of the preset itself (section 5) is
 `sovereign` and committed. A certification run holds only the candidate to the
 profile. The judge gets the corpus and nothing from an installation, so it may be
 the default cloud one. No local judge would fit next to a vLLM server on 24 GB
-(see `Memory` in section 1).
+(see **Memory** in
+[enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md#serve-the-model-with-vllm-instead)).
 
 A word of care on the numbers: three runs per scenario, one machine, one
 quantization. A change of about 0.15 in pass rate on 15 runs is within the noise.
@@ -297,7 +233,7 @@ holds every request in the certification corpus to roles that take turns.
 ## 7. What we did not test
 
 - **vLLM on an NVIDIA GPU**, which is where most vLLM installations run. The wire
-  findings in section 1 (thinking defaults, the error shape, `max_model_len`)
+  server findings (thinking defaults, the error shape, `max_model_len`)
   belong to vLLM and hold there. The speeds and the two Gemma failures in section
   2 belong to `vllm-metal` on this Mac, and may not.
 - **Gemma 4 at all**, because of the `vllm-metal` error above.

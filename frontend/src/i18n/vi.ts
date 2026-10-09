@@ -4201,6 +4201,7 @@ export const vi = {
   "evidence.correctedValue": "Giá trị đã sửa",
   "evidence.confirmedAt": "Được một người xác nhận {when}",
   "evidence.humanSet": "Do một người đặt",
+  "evidence.agentSet": "Do một agent đặt",
   "acctCoverage.open": "So sánh mức phủ",
   "acctCoverage.title": "Ai đang phủ tài khoản này",
   "acctCoverage.contact": "Liên hệ",
