@@ -35,6 +35,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // summaryFieldLimit bounds how many body fields a summary enumerates. A
@@ -259,17 +260,5 @@ func summaryValue(said approvalSummaryCopy, raw json.RawMessage) string {
 }
 
 func truncateValue(s string) string {
-	if len(s) <= summaryValueLimit {
-		return s
-	}
-	cut := summaryValueLimit
-	for cut > 0 && !isRuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
+	return textcut.BytesMarked(s, summaryValueLimit, "…")
 }
-
-// isRuneStart reports whether b begins a UTF-8 rune (a continuation byte is
-// 10xxxxxx). Cutting mid-rune would put an invalid sequence in front of a
-// human, which the summary sanitizer would then drop as noise.
-func isRuneStart(b byte) bool { return b&0xC0 != 0x80 }

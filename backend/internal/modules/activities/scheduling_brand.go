@@ -7,8 +7,10 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // SchedulingBrand exposes only the installation's public company identity.
@@ -51,8 +53,8 @@ func (s *Store) brandSchedulingProfile(ctx context.Context, profile crmcontracts
 // Public profiles keep their contract bound while account and company names may be longer.
 func schedulingDisplayName(name string) string {
 	name = strings.TrimSpace(name)
-	if characters := []rune(name); len(characters) > 200 {
-		return string(characters[:199]) + "…"
+	if utf8.RuneCountInString(name) > 200 {
+		return textcut.Runes(name, 199) + "…"
 	}
 	return name
 }

@@ -299,14 +299,6 @@ func validateReplyDraft(draft replyDraft) error {
 	return nil
 }
 
-func boundedRunes(value string, maxRunes int) string {
-	runes := []rune(value)
-	if len(runes) <= maxRunes {
-		return value
-	}
-	return string(runes[:maxRunes])
-}
-
 func stringValue(value *string) string {
 	if value == nil {
 		return ""

@@ -24,6 +24,8 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The bounds this reader answers within. All three exist because the input is
@@ -126,7 +128,7 @@ func collectLDClaims(doc any, seen map[string]bool, into []string) []string {
 				continue
 			}
 			seen[claim] = true
-			into = append(into, truncateRunes(claim, headTextRunes))
+			into = append(into, textcut.Runes(claim, headTextRunes))
 			if len(into) >= ldMaxClaims {
 				return true
 			}
