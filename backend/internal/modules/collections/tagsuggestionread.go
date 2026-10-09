@@ -124,7 +124,7 @@ func recordArm(ctx context.Context, granted bool, table, alias string, arg func(
 	if err != nil || clause != "" {
 		return clause, err
 	}
-	return "true", nil
+	return predicateAlways, nil
 }
 
 func scanTagSuggestion(row pgx.Row) (TagSuggestion, error) {

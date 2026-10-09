@@ -29,6 +29,10 @@ func (s *Store) ListLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]s
 	return s.labelsOf(ctx, listObject, want, true)
 }
 
+// predicateAlways stands in for an absent scope clause, because an empty string
+// interpolated into a `WHERE` is a syntax error rather than "no restriction".
+const predicateAlways = "true"
+
 // labelsOf is safe to format because object is a constant from the callers
 // above. The object name is also the table name for both kinds.
 func (s *Store) labelsOf(ctx context.Context, object string, want []ids.UUID, rowScoped bool) (map[ids.UUID]string, error) {
@@ -50,7 +54,7 @@ func (s *Store) labelsOf(ctx context.Context, object string, want []ids.UUID, ro
 		}
 	}
 	if scope == "" {
-		scope = "true"
+		scope = predicateAlways
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		found, err := storekit.LabelsByID(ctx, tx, fmt.Sprintf(`
