@@ -10,7 +10,7 @@ const EMBEDDED_LOGO_SRC = 'src="cid:signature-logo@margince"';
  * A rendered signature, as the recipient's mail client draws it.
  *
  * The markup is the server's own: the send path sanitized it, and this shows
- * exactly that. It still renders in a sandboxed frame with no permissions, so
+ * that markup. It still renders in a sandboxed frame with no permissions, so
  * nothing in it can run or reach this page. The embedded logo is swapped for
  * the workspace logo's bytes, since the frame can neither resolve the message's
  * content id nor send this session's cookie.
@@ -42,7 +42,7 @@ function useLogoDataUrl(wanted: boolean): string | undefined {
     queryKey: ["signature-logo", logoUrl],
     enabled: wanted && logoUrl !== undefined,
     queryFn: async () => {
-      // contract-fetch:allow image bytes — the generated client decodes JSON only, and this reads the logo's binary body
+      // contract-fetch:allow image bytes: the generated client decodes JSON only, and this reads the logo's binary body
       const response = await fetch(logoUrl ?? "", {
         credentials: "same-origin",
       });

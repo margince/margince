@@ -78,9 +78,9 @@ func TestASendSignsOffTheWayTheComposerPreviewSays(t *testing.T) {
 	}
 }
 
-// A workspace template signs every member's mail in their own values, as
-// markup in the HTML part and as lines in the text part, over their own
-// plain-text signature. A plain send gains the HTML part that carries it.
+// A workspace template signs every member's mail in their own values, over
+// their own plain-text signature. It lands as markup in the HTML part and as
+// lines in the text part. A plain send gains the HTML part that carries it.
 func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
 	e := integration.Setup(t)
 	anchorID, recipient := seedTransactionalReply(t, e)

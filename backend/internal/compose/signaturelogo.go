@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// signatureLogoEdge is the widest edge of the logo a signature embeds: twice
-// the 150px it is shown at, so it stays sharp on a dense screen.
+// signatureLogoEdge is the widest edge of the logo a signature embeds. It is
+// twice the 150px the logo is shown at, so it stays sharp on a dense screen.
 const signatureLogoEdge = 300
 
 // signatureLogoReadLimit bounds the stored logo read before resizing.

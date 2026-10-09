@@ -22,10 +22,10 @@ type Draft = { body: string; title: string; phone: string };
 
 // The sign-off appended below every message this member sends, as one row.
 //
-// It lives beside identity rather than under the composer because it is who
-// the sender IS, not something about one mail. When the workspace has a
+// It lives beside identity rather than under the composer: it describes the
+// sender, not one mail. When the workspace has a
 // signature template, the member fills in their title and phone and the
-// template signs their mail; otherwise they write their own plain text.
+// template signs their mail. Otherwise they write their own plain text.
 export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   const titleId = useId();
