@@ -114,4 +114,31 @@ describe("a search box the reader is leaving", () => {
 
     expect(globalThis.location.hash).toBe("#/companies?q=brandt");
   });
+
+  it("drops a word whose timer fires before Back's render reaches the box", async () => {
+    // The reader emptied the box on one view of the list and pressed Back to
+    // another before it settled. The listener hears `popstate` at once. The
+    // render that would cancel the timer is a task away, and on a loaded
+    // machine the timer can run first.
+    globalThis.history.replaceState(null, "", "#/companies?q=acme&sort=name");
+    vi.useFakeTimers();
+    renderList();
+    fireEvent.change(screen.getByPlaceholderText("Search"), {
+      target: { value: "" },
+    });
+
+    backLandsOn("#/companies?q=brandt&sort=name");
+    // Outside act(), because act() renders before it returns, and a loaded
+    // browser does not promise that order.
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", false);
+    try {
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    await act(async () => {});
+
+    expect(globalThis.location.hash).toBe("#/companies?q=brandt&sort=name");
+  });
 });

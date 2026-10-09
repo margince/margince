@@ -119,6 +119,9 @@ type joinTable struct {
 // neither, which is what fails the gate. The reason is the point: a bare
 // exclusion list would read as "handled" and this reads as "decided".
 var notAnEdge = map[string]string{
+	"record_grant": "contact_id, company_id, deal_id, lead_id and project_id are generated from one " +
+		"record_type and record_id pair, and the record_grant_record_shape CHECK admits exactly one. A " +
+		"grant shares ONE record with a colleague or team, so it relates no two records and no hop traverses it",
 	"tag_suggestion": "contact_id and company_id are alternative SUBJECTS of one proposal, and the " +
 		"tag_suggestion_one_record CHECK admits exactly one. A suggestion is a proposal waiting " +
 		"for a decision, not a relationship between records, so no hop traverses it",

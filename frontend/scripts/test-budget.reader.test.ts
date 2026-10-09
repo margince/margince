@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ASYNC_UTIL_TIMEOUT_MS } from "../vitest.budget";
 import { budgetsIn } from "./test-budget";
 
 // The reader's own tests. test-budget.test.ts holds the TREE against the
@@ -35,9 +36,16 @@ describe("the waiter-budget reader", () => {
     const [probe] = read(
       `it("x", async () => { await screen.findByText("a"); });`,
     );
-    expect(probe?.waiterBudgetMs).toBe(1_000);
+    expect(probe?.waiterBudgetMs).toBe(ASYNC_UTIL_TIMEOUT_MS);
     expect(probe?.ceilingMs).toBe(GLOBAL);
     expect(probe?.ceilingIsStated).toBe(false);
+  });
+
+  it("takes the default budget for a timeout stated as undefined", () => {
+    const [probe] = read(
+      `it("x", async () => { await waitFor(() => {}, { timeout: undefined }); });`,
+    );
+    expect(probe?.waiterBudgetMs).toBe(ASYNC_UTIL_TIMEOUT_MS);
   });
 
   it("sums the waiters a test runs in sequence", () => {
@@ -48,7 +56,7 @@ describe("the waiter-budget reader", () => {
          await screen.findAllByRole("row");
        });`,
     );
-    expect(probe?.waiterBudgetMs).toBe(6_000);
+    expect(probe?.waiterBudgetMs).toBe(4_000 + ASYNC_UTIL_TIMEOUT_MS * 2);
   });
 
   it("sees it.each, it.only and it.concurrent, which are tests like any other", () => {
@@ -66,7 +74,9 @@ describe("the waiter-budget reader", () => {
       "concurrent",
       "tagged",
     ]);
-    expect(found.every((probe) => probe.waiterBudgetMs === 1_000)).toBe(true);
+    expect(
+      found.every((probe) => probe.waiterBudgetMs === ASYNC_UTIL_TIMEOUT_MS),
+    ).toBe(true);
   });
 
   it("reads the ceiling from either form vitest accepts", () => {
@@ -116,7 +126,7 @@ describe("the waiter-budget reader", () => {
       `function loop() { return loop(); }
        it("x", async () => { await loop(); await screen.findByText("a"); });`,
     );
-    expect(probe?.waiterBudgetMs).toBe(1_000);
+    expect(probe?.waiterBudgetMs).toBe(ASYNC_UTIL_TIMEOUT_MS);
   });
 
   it("folds arithmetic over the constants a file declares", () => {

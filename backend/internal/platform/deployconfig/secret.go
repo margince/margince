@@ -118,6 +118,10 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 		*s = Secret{}
 		return nil
 	}
+	if raw == SecretRemoved {
+		return fmt.Errorf("deployconfig: line %d declares %s, which only email.smtp.password accepts — "+
+			"to leave this credential unset, delete the key", node.Line, SecretRemoved)
+	}
 	m := secretRef.FindStringSubmatch(raw)
 	if m == nil {
 		// The value is NOT echoed back. Reporting what was written would put
@@ -148,7 +152,19 @@ func (s Secret) withField(path string) Secret { s.field = path; return s }
 // rule), and the caller decides required-ness — this reports the empty string
 // and no error for a reference that is simply unset, because "the operator has
 // not configured optional thing X" is not a failure at this layer.
+//
+// A source holding the removal sentinel is refused. It could read as a
+// password of that spelling or as a removal, and a removal belongs in the file.
 func (s Secret) Resolve(lookup config.Lookup) (string, error) {
+	value, err := s.fetch(lookup)
+	if err == nil && value == SecretRemoved {
+		return "", fmt.Errorf("deployconfig: %s resolves to %s, which declares a credential absent rather than being one — "+
+			"only email.smtp.password takes it, written in margince.yaml itself", s.name(), SecretRemoved)
+	}
+	return value, err
+}
+
+func (s Secret) fetch(lookup config.Lookup) (string, error) {
 	switch s.kind {
 	case "":
 		return "", nil

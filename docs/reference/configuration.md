@@ -32,7 +32,7 @@ The api and the worker follow the same rules, and each reads only the values it 
 | Setting an admin changes | value saved in the database → default | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
 | Seed in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | Used when the company is created, and again by a data reset. |
 | AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
-| SMTP password | `email.smtp.password` reference → the copy sealed in the vault | The relay is used with no password. |
+| SMTP password | `email.smtp.password` reference → the copy sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
 | License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
 
 **Posture.** `MARGINCE_ENV` picks the overlay; how the two files merge is in
@@ -912,12 +912,33 @@ read. A `${env:…}` that is unset is a named source that gave nothing, which is
 Remove the whole `license:` block, or the `password:` line from `email.smtp`. Then the variable or
 the file can go too.
 
-**There is no unseal.** You can change a credential, but not remove it. To delete
-`email.smtp.password` does not switch the installation to a relay with no password. The sealed copy
-keeps answering, because "declared nothing" and "declared that it needs nothing" are the same input
-to the resolver. Nothing in the product deletes either ref today. If you need a relay that takes no
-credential, say so on [issue #2162](https://github.com/margince/margince/issues/2162), which tracks
-the supported way to do it.
+**Remove the relay password with `${none}`.** To delete the `password:` line does not switch the
+installation to a relay with no password: the sealed copy keeps answering. Write the line as
+`password: ${none}` instead. That is the case for a relay that takes no credential, and for a relay
+password that is no longer secret. On the next boot, the api and the worker each do three things:
+
+- They delete the sealed copy from the vault, and then the record of where it was. This happens
+  even when `email.enabled` is false.
+- With mail on, they send with no login, even if `username:` is still set.
+- They log this line once, on the boot that removed it:
+
+```
+removed a sealed deployment credential on this boot; the deployment declares it absent
+  credential_name="the outbound-mail password" declared_at=email.smtp.password
+```
+
+Keep `${none}` in the file for as long as the relay takes no password. A later boot that finds
+nothing sealed does nothing and logs nothing. If the delete fails, the boot logs an error, sends
+without a password anyway, and tries again on the next boot.
+
+`${none}` is not a password. Each secret field refuses a literal value, so it cannot be one.
+`email.smtp.password` is the only field that takes it. `license.token` and
+`bootstrap_admin.password` refuse it at boot, and so does `email.smtp.password` next to
+`password_file`. A variable or file that holds the text `${none}` is refused as well, so that a
+removal is always written in `margince.yaml` itself.
+
+Copies sealed before a change of password are not deleted by `${none}`. Margince keeps them on
+purpose (see below), and nothing points to them.
 
 This does not matter for the license. An installation that removes its license has stopped paying,
 and a production boot refuses a missing license in any case.

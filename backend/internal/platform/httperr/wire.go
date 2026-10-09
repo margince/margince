@@ -144,6 +144,9 @@ func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(
 	if dec.More() {
 		return Validation("body", "malformed_json", "trailing content after the JSON value")
 	}
+	if outOfRange := datasource.RejectOutOfRangeTimes(into); outOfRange != nil {
+		return Validation(outOfRange.Field, "out_of_range", outOfRange.Error())
+	}
 	stashPresentFields(r, raw)
 	return nil
 }
@@ -261,11 +264,25 @@ func WriteJSON(w http.ResponseWriter, status int, body any) {
 	}
 	// A list with no rows is `[]`, never `null` — see withEmptyLists for why
 	// that is a contract question rather than a cosmetic one.
-	body = withEmptyLists(body)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	//craft:ignore swallowed-errors WriteHeader already committed the response — nothing can report an encode failure to the client anymore
-	_ = json.NewEncoder(w).Encode(body)
+	if err := writeEncoded(w, status, "application/json", withEmptyLists(body)); err != nil {
+		slog.Error("encoding a JSON response", "status", status, "err", err)
+		DropSuccessHeaders(w.Header())
+		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: codeInternal})
+	}
+}
+
+// successHeaders describe a body that a failure replaces. Headers the chassis
+// set for every response (security, CORS, cache policy) are not among them.
+var successHeaders = []string{
+	"Location", "Content-Location", "ETag", "Last-Modified", "Content-Disposition", "Content-Length",
+}
+
+// DropSuccessHeaders removes what a handler set for the success it was about
+// to send, before a failure is answered in its place.
+func DropSuccessHeaders(header http.Header) {
+	for _, name := range successHeaders {
+		header.Del(name)
+	}
 }
 
 // CustomFieldFilters collects a list request's cf_* query parameters —

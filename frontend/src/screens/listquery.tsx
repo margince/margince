@@ -821,6 +821,11 @@ export function ListTable<Row>({
   // What this box last put on the wire, so a `q` that moved for any OTHER
   // reason can be told apart from this box's own debounce landing.
   const committed = useRef(query.q);
+  // The box's word as of the last write to it, ahead of any render. The timer
+  // reads this when it fires, not the word it was armed with. Back reaches this
+  // ref at `popstate`; the render that cancels the timer comes a task later,
+  // and a loaded browser can run the timer first.
+  const typed = useRef(query.q);
   // Which view tab is lit is READ from the query rather than remembered: a tab
   // is a claim about what the list is showing, and a reader who then edits a
   // filter or a sort is no longer looking at that preset. Stored, the highlight
@@ -907,6 +912,7 @@ export function ListTable<Row>({
   useEffect(() => {
     if (query.q !== committed.current) {
       committed.current = query.q;
+      typed.current = query.q;
       setLocalSearch(query.q);
     }
   }, [query.q]);
@@ -925,6 +931,7 @@ export function ListTable<Row>({
     const abandonPendingSearch = () => {
       const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
       committed.current = live;
+      typed.current = live;
       setLocalSearch(live);
     };
     globalThis.addEventListener("popstate", abandonPendingSearch);
@@ -942,12 +949,14 @@ export function ListTable<Row>({
       return;
     }
     const timer = setTimeout(() => {
-      committed.current = localSearch;
+      const word = typed.current;
+      if (word === committed.current) {
+        return;
+      }
+      committed.current = word;
       // Functional, so a sort, filter or archive toggle set while the timer
       // waited survives instead of being reverted by a stale `query`.
-      setQuery((prev) =>
-        prev.q === localSearch ? prev : { ...prev, q: localSearch },
-      );
+      setQuery((prev) => (prev.q === word ? prev : { ...prev, q: word }));
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [localSearch, setQuery, searchable]);
@@ -980,6 +989,7 @@ export function ListTable<Row>({
     }
     // At once, so a word still settling cannot land on the tab just picked.
     committed.current = picked.q;
+    typed.current = picked.q;
     setLocalSearch(picked.q);
     setQuery((prev) => ({
       ...prev,
@@ -1012,7 +1022,13 @@ export function ListTable<Row>({
       saveView={saveView}
       search={
         searchable
-          ? { value: localSearch, onChange: setLocalSearch }
+          ? {
+              value: localSearch,
+              onChange: (next) => {
+                typed.current = next;
+                setLocalSearch(next);
+              },
+            }
           : undefined
       }
       sort={{

@@ -7,6 +7,10 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ASYNC_UTIL_TIMEOUT_MS,
+  SLOWEST_MEASURED_TEST_MS,
+} from "../vitest.budget";
 import { meFixture } from "./app/mefixture";
 import { memoryStorage, renderApp } from "./testing/appharness";
 
@@ -14,6 +18,12 @@ import { memoryStorage, renderApp } from "./testing/appharness";
 // address without its query; a guard wired in the test would prove only itself.
 
 const SETTLE_MS = 10_000;
+
+// Two settles, four default waiters and the suite's allowance for the work
+// between them: the sum the leave-after-commit case may spend.
+const LEAVE_AFTER_COMMIT_TEST_MS =
+  SETTLE_MS * 2 + ASYNC_UTIL_TIMEOUT_MS * 4 + SLOWEST_MEASURED_TEST_MS;
+
 const RUN_PAGE = "#/settings/import/run";
 
 const run = {
@@ -210,7 +220,7 @@ describe("the CSV import page in the shell", () => {
       ).toBeInTheDocument();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     },
-    SETTLE_MS * 3,
+    LEAVE_AFTER_COMMIT_TEST_MS,
   );
 
   it(

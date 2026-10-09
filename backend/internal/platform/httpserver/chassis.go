@@ -8,6 +8,7 @@
 package httpserver
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -187,10 +188,15 @@ func Correlate(next http.Handler) http.Handler {
 // opaque 500 instead of killing the connection (and taking pre-Go-1.21
 // servers down with it). The panic value and stack are logged — the one
 // place observability matters most must never be a silent 500.
+// http.ErrAbortHandler passes through, so net/http drops a connection whose
+// body has begun; answering it here would end that stream cleanly.
 func RecoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
+				if aborted, isErr := rec.(error); isErr && errors.Is(aborted, http.ErrAbortHandler) {
+					panic(rec)
+				}
 				log.ErrorContext(r.Context(), "handler panic",
 					"panic", rec, "method", r.Method, "path", capabilitypath.Redact(r.URL.Path),
 					"stack", string(debug.Stack()))

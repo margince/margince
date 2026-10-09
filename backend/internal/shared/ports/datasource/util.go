@@ -128,6 +128,9 @@ func StrictDecode(raw json.RawMessage, into any) error {
 		}
 		return &FieldDecodeError{Cause: err}
 	}
+	if outOfRange := RejectOutOfRangeTimes(into); outOfRange != nil {
+		return &FieldDecodeError{Cause: outOfRange}
+	}
 	return nil
 }
 

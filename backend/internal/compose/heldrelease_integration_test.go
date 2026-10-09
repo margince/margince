@@ -24,6 +24,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -481,4 +482,66 @@ func TestThePreflightRecordsNothing(t *testing.T) {
 		t.Errorf("the preflight stamped %d qualifying events, want 0 — a basis is the ground a SEND relies on, and nothing has been sent",
 			n-beforeBasis)
 	}
+}
+
+// A rejected draft answers that it is decided, not that the mailbox is wrong.
+//
+// The kind's precheck asks whether the release COULD run. It ran before
+// anybody asked whether this card was still open.
+//
+// So a stale second click on a rejected draft sent somebody to fix a mailbox.
+// On an estate with no send-capable mailbox, that mailbox was not the problem.
+//
+// The estate here has no sendable mailbox. That is what puts the precheck's
+// refusal in front of the decision's.
+//
+// With a mailbox that can transmit, the precheck passes and the refusal inside
+// the transaction answers anyway. So this case cannot be written without
+// taking the mailbox away.
+func TestApprovingARejectedDraftSaysItIsDecided(t *testing.T) {
+	e := integration.Setup(t)
+	svc := releaseServiceWithoutASendableMailbox(t, e)
+	f := seedHeldDraft(t, e, svc)
+
+	if _, err := svc.Decide(decider(e), f.approval, false, nil); err != nil {
+		t.Fatalf("rejecting the draft → %v, want ok", err)
+	}
+
+	// The second click, as a stale card sends it.
+	_, err := svc.Decide(decider(e), f.approval, true, nil)
+	if err == nil {
+		t.Fatal("approving a rejected draft succeeded")
+	}
+	var decided *approvals.AlreadyDecidedError
+	if !errors.As(err, &decided) {
+		t.Fatalf("approving a rejected draft answered %v, want it to name the decision", err)
+	}
+	if decided.Status != "rejected" {
+		t.Errorf("the refusal names status %q, want rejected", decided.Status)
+	}
+	// Nothing was sent, which is the half the mailbox complaint used to hide.
+	if n := e.WsCount(t, `SELECT count(*) FROM comms_outbound`); n != 0 {
+		t.Errorf("comms_outbound rows after a rejected draft = %d, want 0", n)
+	}
+}
+
+// noSendableMailbox is an estate whose mailboxes cannot transmit: the authority
+// answers with no provider, which is what MailboxNotSendCapableError reports.
+type noSendableMailbox struct{}
+
+func (noSendableMailbox) SendCapable(context.Context, string) (bool, error) { return false, nil }
+
+func (noSendableMailbox) SendableMailProvider(context.Context) (string, error) { return "", nil }
+
+// releaseServiceWithoutASendableMailbox is releaseService with the send
+// pre-flight failing, so the precheck refuses before the decision is read.
+func releaseServiceWithoutASendableMailbox(t *testing.T, e *integration.Env) *approvals.Service {
+	t.Helper()
+	send := SendPath{PublicBaseURL: "https://crm.example.test"}
+	store := sendStore(e.Pool, send).WithSendAuthority(noSendableMailbox{})
+	gate := consentGateFor(e.Pool)
+	svc := approvals.NewService(e.DB())
+	svc.WithEffect(automation.HeldDraftKind, heldDraftReleaseEffect(svc, store, gate, send.Delivery))
+	svc.WithPrecheck(automation.HeldDraftKind, heldDraftPrecheck(store, gate, send.Delivery))
+	return svc
 }

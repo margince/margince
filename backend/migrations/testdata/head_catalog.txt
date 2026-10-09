@@ -935,6 +935,9 @@ public.analytics_share.analytics_share_kind_check CHECK ((kind = ANY (ARRAY['liv
 public.analytics_share.analytics_share_pkey PRIMARY KEY (id)
 public.analytics_share.analytics_share_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.analytics_share.analytics_share_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
+public.analytics_share.analytics_share_scope_shape CHECK (((scope_id IS NULL) OR (num_nonnulls(scope_team_id, scope_user_id) = 1)))
+public.analytics_share.analytics_share_scope_team_id_fkey FOREIGN KEY (scope_team_id) REFERENCES team(id) ON DELETE CASCADE NOT VALID
+public.analytics_share.analytics_share_scope_user_id_fkey FOREIGN KEY (scope_user_id) REFERENCES app_user(id) ON DELETE CASCADE NOT VALID
 public.analytics_share.analytics_share_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
 public.analytics_share.analytics_share_snapshot_matches_kind CHECK (((kind = 'snapshot'::text) = (snapshot_id IS NOT NULL)))
 public.analytics_share.analytics_share_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -947,6 +950,16 @@ public.analytics_share.kind text NOT NULL gen=- def=-
 public.analytics_share.revoked_at timestamp with time zone gen=- def=-
 public.analytics_share.scope_id uuid gen=- def=-
 public.analytics_share.scope_kind text NOT NULL gen=- def=-
+public.analytics_share.scope_team_id uuid gen=s def=
+CASE
+    WHEN (scope_kind = 'team'::text) THEN scope_id
+    ELSE NULL::uuid
+END
+public.analytics_share.scope_user_id uuid gen=s def=
+CASE
+    WHEN (scope_kind = 'owner'::text) THEN scope_id
+    ELSE NULL::uuid
+END
 public.analytics_share.snapshot_id uuid gen=- def=-
 public.analytics_share.target text NOT NULL gen=- def=-
 public.analytics_share.token_hash text NOT NULL gen=- def=-
@@ -4223,6 +4236,8 @@ public.idx_alink_deal CREATE INDEX idx_alink_deal ON public.activity_link USING 
 public.idx_alink_lead CREATE INDEX idx_alink_lead ON public.activity_link USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.idx_alink_project CREATE INDEX idx_alink_project ON public.activity_link USING btree (project_id) WHERE (project_id IS NOT NULL)
 public.idx_analytics_share_creator CREATE INDEX idx_analytics_share_creator ON public.analytics_share USING btree (created_by, created_at DESC)
+public.idx_analytics_share_scope_team CREATE INDEX idx_analytics_share_scope_team ON public.analytics_share USING btree (scope_team_id) WHERE (scope_team_id IS NOT NULL)
+public.idx_analytics_share_scope_user CREATE INDEX idx_analytics_share_scope_user ON public.analytics_share USING btree (scope_user_id) WHERE (scope_user_id IS NOT NULL)
 public.idx_analytics_share_snapshot CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
@@ -4449,6 +4464,11 @@ public.idx_record_assignment_deal CREATE INDEX idx_record_assignment_deal ON pub
 public.idx_record_assignment_project CREATE INDEX idx_record_assignment_project ON public.record_assignment USING btree (project_id)
 public.idx_record_assignment_team CREATE INDEX idx_record_assignment_team ON public.record_assignment USING btree (team_id) WHERE ((team_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_record_assignment_user CREATE INDEX idx_record_assignment_user ON public.record_assignment USING btree (user_id) WHERE ((user_id IS NOT NULL) AND (archived_at IS NULL))
+public.idx_record_grant_company CREATE INDEX idx_record_grant_company ON public.record_grant USING btree (company_id) WHERE (company_id IS NOT NULL)
+public.idx_record_grant_contact CREATE INDEX idx_record_grant_contact ON public.record_grant USING btree (contact_id) WHERE (contact_id IS NOT NULL)
+public.idx_record_grant_deal CREATE INDEX idx_record_grant_deal ON public.record_grant USING btree (deal_id) WHERE (deal_id IS NOT NULL)
+public.idx_record_grant_lead CREATE INDEX idx_record_grant_lead ON public.record_grant USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.idx_record_grant_project CREATE INDEX idx_record_grant_project ON public.record_grant USING btree (project_id) WHERE (project_id IS NOT NULL)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
 public.idx_rel_employer_contacts CREATE INDEX idx_rel_employer_contacts ON public.relationship USING btree (company_id, contact_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
 public.idx_rel_history_company CREATE INDEX idx_rel_history_company ON public.relationship USING btree (company_id)
@@ -5842,14 +5862,45 @@ public.record_assignment.version bigint NOT NULL gen=- def=1
 public.record_assignment_pkey CREATE UNIQUE INDEX record_assignment_pkey ON public.record_assignment USING btree (id)
 public.record_grant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.record_grant.access text NOT NULL gen=- def=-
+public.record_grant.company_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'company'::text) THEN record_id
+    ELSE NULL::uuid
+END
+public.record_grant.contact_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'contact'::text) THEN record_id
+    ELSE NULL::uuid
+END
 public.record_grant.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.record_grant.deal_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'deal'::text) THEN record_id
+    ELSE NULL::uuid
+END
 public.record_grant.expires_at timestamp with time zone gen=- def=-
 public.record_grant.granted_by uuid NOT NULL gen=- def=-
 public.record_grant.id uuid NOT NULL gen=- def=uuidv7()
+public.record_grant.lead_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'lead'::text) THEN record_id
+    ELSE NULL::uuid
+END
+public.record_grant.project_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'project'::text) THEN record_id
+    ELSE NULL::uuid
+END
 public.record_grant.reason text gen=- def=-
 public.record_grant.record_grant_access_check CHECK ((access = ANY (ARRAY['read'::text, 'write'::text])))
+public.record_grant.record_grant_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE NOT VALID
+public.record_grant.record_grant_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE NOT VALID
+public.record_grant.record_grant_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE NOT VALID
 public.record_grant.record_grant_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.record_grant.record_grant_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE NOT VALID
 public.record_grant.record_grant_pkey PRIMARY KEY (id)
+public.record_grant.record_grant_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE NOT VALID
+public.record_grant.record_grant_record_shape CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = 1))
 public.record_grant.record_grant_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.record_grant.record_grant_subject_type_check CHECK ((subject_type = ANY (ARRAY['user'::text, 'team'::text])))
 public.record_grant.record_grant_unique UNIQUE (record_type, record_id, subject_type, subject_id)

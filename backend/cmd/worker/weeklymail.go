@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/mailer"
 )
 
 // weeklyMailConfig resolves the weekly retrospective's outbound channel.
@@ -51,7 +50,7 @@ func weeklyMailConfig(
 	if !deployCfg.Email.Enabled {
 		return compose.WeeklyMailConfig{}
 	}
-	password, err := compose.SealedSMTPPassword(ctx, pool, vault, deployCfg, config.FromOS, logger)
+	relay, err := compose.OperatorMailer(ctx, pool, vault, deployCfg, config.FromOS, logger)
 	if err != nil {
 		logger.WarnContext(ctx, "no weekly mail: the relay credential could not be resolved",
 			"cause", err)
@@ -64,13 +63,7 @@ func weeklyMailConfig(
 		logger.WarnContext(ctx, "the weekly mail carries no link to Home: this worker has no --public-base-url")
 	}
 	return compose.WeeklyMailConfig{
-		Mailer: mailer.SMTP{
-			Host:        deployCfg.Email.SMTP.Host,
-			Port:        deployCfg.Email.SMTP.Port,
-			Username:    deployCfg.Email.SMTP.Username,
-			Password:    password,
-			FromAddress: deployCfg.Email.FromAddress,
-		},
+		Mailer:        relay,
 		PublicBaseURL: cfg.publicBaseURL,
 	}
 }
