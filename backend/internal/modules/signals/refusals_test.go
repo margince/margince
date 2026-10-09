@@ -14,8 +14,8 @@ import (
 )
 
 // Every refusal this module's store returns reaches the wire as a 422 that
-// names the field and the contract code, even wrapped, because the error
-// carries its own verdict rather than relying on a handler-side mapping.
+// names the field and the contract code, even when wrapped. The error carries
+// its own verdict, so no handler-side list has to name it.
 func TestEverySignalRefusalAnswers422NamingItsField(t *testing.T) {
 	refusals := []struct {
 		err         error
