@@ -24,6 +24,9 @@ import (
 // refusal nothing recognises and nothing reports.
 const codeRequired = "required"
 
+// codeInvalidEnum is the house code for a value outside a contract picklist.
+const codeInvalidEnum = "invalid_enum"
+
 // RequiredFieldError maps to 422 on both surfaces.
 type RequiredFieldError struct{ Field string }
 
@@ -32,6 +35,19 @@ func (e *RequiredFieldError) Error() string { return e.Field + " is required" }
 // FieldFault names the missing required field, on every surface.
 func (e *RequiredFieldError) FieldFault() (field, code, message string) {
 	return e.Field, codeRequired, e.Error()
+}
+
+// InvalidKindError maps to 422. It names the field the caller can correct,
+// which the generic constraint net cannot: a constraint name is schema.
+type InvalidKindError struct{ Kind string }
+
+func (e *InvalidKindError) Error() string {
+	return "activity kind " + e.Kind + " is not a kind this timeline carries"
+}
+
+// FieldFault refuses a kind outside the contract's list.
+func (e *InvalidKindError) FieldFault() (field, code, message string) {
+	return fieldKind, codeInvalidEnum, e.Error()
 }
 
 // ReservedMailIdentityError refuses a client write into the mail identity.
@@ -279,7 +295,18 @@ func refuseReservedProvenance(req crmcontracts.CreateActivityRequest, adm proven
 
 func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmission) (LogActivityInput, error) {
 	if req.Kind == "" {
-		return LogActivityInput{}, &RequiredFieldError{Field: "kind"}
+		return LogActivityInput{}, &RequiredFieldError{Field: fieldKind}
+	}
+	// A kind outside the contract's list is a picklist mistake, and it is
+	// refused here rather than by activity_kind_fkey.
+	//
+	// The database answers an unknown kind with a foreign-key violation, and
+	// the transport's net reads one as a missing record.
+	//
+	// So a caller who mistyped the kind was told to send an id of the right
+	// kind.
+	if !req.Kind.Valid() {
+		return LogActivityInput{}, &InvalidKindError{Kind: string(req.Kind)}
 	}
 	if err := refuseReservedProvenance(req, adm); err != nil {
 		return LogActivityInput{}, err
