@@ -3,10 +3,10 @@
 
 package compose
 
-// GET /agent-bundle, the Margince skill an AI tool installs, and the one answer
-// to where a passport calls this API. The ZIP and the Settings card both read
-// that address from agentAPIOrigin.baseFor, so the snippet a human copies and
-// the openapi.yaml the agent reads cannot name two different hosts.
+// GET /agent-bundle, the Margince skill an AI tool installs. It also holds the
+// one answer to where a passport calls this API. The ZIP and the Settings card
+// both read that address from agentAPIOrigin.baseFor. So the snippet a human
+// copies and the openapi.yaml an agent reads name one host.
 
 import (
 	"log/slog"
@@ -30,8 +30,8 @@ func (o agentAPIOrigin) baseFor(r *http.Request) string {
 	return apiV1Base(base)
 }
 
-// apiOrigin is where the API is served: its own base when it has one, else the
-// public one, which serves the API too on a same-origin deployment.
+// apiOrigin is where the API is served: its own base when it has one. Else it is
+// the public one, which serves the API too on a same-origin deployment.
 func apiOrigin(apiBaseURL, publicBaseURL string) string {
 	if apiBaseURL != "" {
 		return apiBaseURL
@@ -41,9 +41,9 @@ func apiOrigin(apiBaseURL, publicBaseURL string) string {
 
 // requestOrigin is the scheme and host this request arrived on.
 func requestOrigin(r *http.Request) string {
-	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
+	scheme := schemeHTTP
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == schemeHTTPS {
+		scheme = schemeHTTPS
 	}
 	return scheme + "://" + r.Host
 }
@@ -58,9 +58,8 @@ func newAgentBundleHandlers(origin agentAPIOrigin, log *slog.Logger) agentBundle
 	return agentBundleHandlers{origin: origin, builder: &agentbundle.Builder{}, log: log}
 }
 
-// DownloadAgentSkillBundle answers the skill ZIP. Human-only here as well as at
-// the gate: an agent has no use for it, and the route is not one to rest on
-// pattern resolution alone.
+// DownloadAgentSkillBundle answers the skill ZIP. It is human-only here as well
+// as at the gate, so the refusal does not rest on route resolution alone.
 func (h agentBundleHandlers) DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request) {
 	if err := auth.RequireHuman(r.Context()); err != nil {
 		httperr.Write(w, r, err)
@@ -73,7 +72,7 @@ func (h agentBundleHandlers) DownloadAgentSkillBundle(w http.ResponseWriter, r *
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.Download{ContentType: "application/zip", Filename: "margince-skill.zip", Size: int64(len(archive))}.WriteHeaders(w)
-	if _, err := w.Write(archive); err != nil {
+	if _, err := w.Write(archive); err != nil { // #nosec G705 -- a ZIP attachment, never rendered as a page
 		h.log.WarnContext(r.Context(), "agent bundle: the client's download is truncated", "err", err)
 	}
 }

@@ -111,7 +111,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	srv.authHandlers = srv.WithFirstRunFn(srv.firstRunAnswer(identitySvc))
 	// After the option loop, because the two bases arrive by two options in
 	// either order.
-	agentOrigin := agentAPIOrigin{api: srv.apiBaseURL, public: srv.send.PublicBaseURL}
+	agentOrigin := agentAPIOrigin{api: srv.origin.api, public: srv.send.PublicBaseURL}
 	srv.agentBundleHandlers = newAgentBundleHandlers(agentOrigin, log)
 	srv.authHandlers = srv.WithAgentAPIBase(agentOrigin.baseFor)
 	// After the option loop, so /me's answer and the endpoints' gate resolve one

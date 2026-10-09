@@ -5,9 +5,8 @@
 
 package integration
 
-// The skill download through the real router: a signed-in human gets the ZIP,
-// a passport is refused it, and the ZIP and the Settings card's passport list
-// name one API address.
+// The skill download through the real router. A signed-in human gets the ZIP
+// and a passport is refused it. The ZIP and the passport list name one address.
 
 import (
 	"archive/zip"
@@ -71,7 +70,7 @@ func getAgentBundle(t *testing.T, e *apptest.AppEnv, headers map[string]string) 
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := e.Client.Do(req)
+	resp, err := e.Client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below
 	if err != nil {
 		t.Fatalf("GET /v1/agent-bundle: %v", err)
 	}

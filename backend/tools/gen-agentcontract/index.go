@@ -15,9 +15,9 @@ import (
 // untagged heads the operations that declare no tag.
 const untagged = "Other"
 
-// renderIndex lists every kept operation on one table row, grouped under its
-// first tag in the order the contract declares its tags, so an agent can pick
-// a call without reading the whole contract.
+// renderIndex lists every kept operation on one table row, under its first tag.
+// Tags come in the contract's order. An agent picks a call here without
+// reading the whole contract.
 func renderIndex(root *yaml.Node, ops []operation) []byte {
 	var order []string
 	if tags, ok := oasnode.Lookup(root, "tags"); ok {

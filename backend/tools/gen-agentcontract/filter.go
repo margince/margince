@@ -64,9 +64,9 @@ func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool, 
 	return kept, tags, schemes
 }
 
-// passportCallable reports whether a passport may call the operation at all:
-// the agent gate does not refuse its class, and its effective security, its
-// own or else the document's, accepts a passport.
+// passportCallable reports whether a passport may call the operation at all.
+// The agent gate must not refuse its class. Its security, its own or else the
+// document's, must accept a passport.
 func passportCallable(op, globalSecurity *yaml.Node) bool {
 	if refusedToAgents[agentAccess(op)] {
 		return false

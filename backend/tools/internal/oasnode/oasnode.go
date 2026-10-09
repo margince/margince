@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package oasnode reads an OpenAPI document as a yaml.Node tree, for the
-// generators that cut part of the contract out and so must agree on what an
+// Package oasnode reads an OpenAPI document as a yaml.Node tree. The generators
+// that cut part of the contract out share it, so they agree on what an
 // operation is and what a $ref points at.
 package oasnode
 
 import "gopkg.in/yaml.v3"
 
 // HTTPMethods maps every operation key a path item may carry onto the method
-// a router registers. A generator that missed one would quietly leave that
-// operation out of whatever it derives.
+// a router registers. A generator that missed one would leave that operation
+// out of whatever it derives.
 var HTTPMethods = map[string]string{
 	"get": "GET", "head": "HEAD", "options": "OPTIONS", "trace": "TRACE",
 	"post": "POST", "put": "PUT", "patch": "PATCH", "delete": "DELETE",

@@ -142,6 +142,7 @@ func passportOperations(t *testing.T) ([]passportOperation, []map[string][]strin
 				continue
 			}
 			method := strings.ToUpper(key)
+			//nolint:tagliatelle // OpenAPI's own field name is camelCase.
 			var op struct {
 				ID       string                 `yaml:"operationId"`
 				Security *[]map[string][]string `yaml:"security"`
@@ -221,13 +222,11 @@ func operationIDsIn(t *testing.T, spec string) map[string]bool {
 			if !present {
 				continue
 			}
-			var op struct {
-				ID string `yaml:"operationId"`
-			}
+			var op contractOperation
 			if err := node.Decode(&op); err != nil {
 				t.Fatalf("%s %s: %v", method, path, err)
 			}
-			ids[op.ID] = true
+			ids[op.OperationID] = true
 		}
 	}
 	if len(ids) == 0 {

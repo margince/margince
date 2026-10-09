@@ -166,8 +166,8 @@ func TestTheEmbeddedFilesCarryNoDeveloperNote(t *testing.T) {
 			}
 		}
 	}
-	// A table name is a wire name too (a field, an enum value), so only prose
-	// is held to it: every description and summary, and the index's rows.
+	// A table name is a wire name too (a field, an enum value). So only prose is
+	// held to it: every description and summary, and the index's rows.
 	for _, text := range append(proseOf(t, contract), strings.Split(string(index), "\n")...) {
 		if m := tables.FindString(text); m != "" {
 			t.Errorf("names the storage table %q: %s", m, text)

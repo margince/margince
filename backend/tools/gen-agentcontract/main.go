@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Command gen-agentcontract cuts the agent-facing contract out of api/crm.yaml:
-// every operation a passport may call, with only the components those
-// operations reach, and an index of those operations. Both are files of the
+// Command gen-agentcontract cuts the agent-facing contract out of api/crm.yaml.
+// It keeps every operation a passport may call and the components those
+// operations reach, and writes an index of those operations. Both are files of the
 // downloadable agent skill, embedded by the package that serves it.
 //
 // An operation is kept when the agent gate does not refuse its class

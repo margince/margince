@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package agentbundle builds the Margince skill an AI tool installs to call the
-// API with a passport: a ZIP of one folder holding the two guides, the
-// operation index and the agent contract, all naming this install's API
-// address. The contract and the index are generated from api/crm.yaml by
-// tools/gen-agentcontract (make gen).
+// API with a passport. It is a ZIP of one folder: two guides, the operation
+// index and the agent contract, all naming this install's API address.
+// tools/gen-agentcontract generates the contract and the index (make gen).
 package agentbundle
 
 import (
@@ -33,9 +32,9 @@ var (
 
 var guideTemplates = template.Must(template.ParseFS(guides, "*.md.tmpl"))
 
-// Builder builds the ZIP for one API base URL at a time, and keeps the last
-// one: an install answers one configured base, so a rebuild is rare, and
-// keeping more would let a caller grow the cache by varying the request host.
+// Builder builds the ZIP for one API base URL at a time and keeps the last one.
+// An install answers one configured base, so a rebuild is rare. Keeping more
+// would let a caller grow the cache by varying the request host.
 type Builder struct {
 	mu      sync.Mutex
 	base    string

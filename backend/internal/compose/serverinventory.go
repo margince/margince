@@ -323,9 +323,6 @@ type Server struct {
 	// than assembled on arrival because options compose in any order, so no one
 	// of them can assume the others have run.
 	controllerRelay comms.ControllerRelay
-	// apiBaseURL is the API's own external base, set by WithAPIBaseURL only
-	// where the API and the SPA are different origins.
-	apiBaseURL      string
 	confirmLinkBase string
 	confirmRunner   *jobs.Runner
 

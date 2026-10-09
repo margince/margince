@@ -13,7 +13,7 @@ import (
 )
 
 // fixture is a small contract with one of each case. The anchor &shared is
-// defined inside the human-only operation and aliased from a kept one, and the
+// defined inside the human-only operation and aliased from a kept one. The
 // anchor name &reused is defined twice, as crm.yaml does.
 const fixture = `openapi: 3.1.0
 info: { title: Fixture, version: '1' }
