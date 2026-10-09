@@ -14,9 +14,9 @@ import {
 import { routeHash } from "../app/router";
 import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
+import { INTL_LOCALE } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import {
   isVersionSkew,
   ProblemError,
@@ -224,6 +224,7 @@ function UnitCard({
   canManage: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   // Two sources say which units exist and they can disagree. The inventory
   // above is what /extensions answered — what the RUNNING BINARY composed —
   // while `#/ext/<name>` can only resolve what the SPA's generated registry
@@ -258,6 +259,10 @@ function UnitCard({
       descriptor.verbs.length > 0)
       ? descriptor
       : null;
+  const unread = unit.rbac_objects.filter((object) =>
+    roles.every((role) => !grantOf(role, object).read),
+  );
+  const badges = roleBadges(roles, t);
   return (
     <Panel
       className="ext-unit"
@@ -283,86 +288,93 @@ function UnitCard({
         </div>
       }
     >
-      <PanelBody>
-        {/* A whole sentence, so it stays in the body where the heading row holds
-            only the link it stands in for. */}
-        {/* What this unit is for, from its own declaration. It reads before
-            everything else because it is what an operator deciding whether to
-            grant the switches below is actually missing: the unit name alone
-            leaves "de" meaning nothing. */}
+      <PanelBody className="ext-unit-body">
         <p className="t-caption">{unit.description}</p>
-        {/* Said, not silently omitted, and only where the two registries
-            DISAGREE: a unit the running binary composed whose descriptor this
-            bundle does not carry is a version skew an operator has to be able
-            to tell apart from a unit that simply has no page. A unit with a
-            descriptor and nothing to show is neither, and says nothing. */}
+        {/* Said only where the two registries disagree: a unit the running
+            binary composed whose descriptor this bundle does not carry is a
+            version skew, not a unit that simply has no page. */}
         {descriptor ? null : (
-          <p className="ext-note ext-unit-nopage">
+          <p className="ext-unit-nopage">
             <Info aria-hidden size={15} />
             {t("extAccess.noPage", { name: unit.name })}
           </p>
         )}
-        {/* One row per registered object, so the thing an operator DECIDES —
-            who may do what with this object — sits where every other decision
-            in settings sits. The two section headings this replaces named the
-            halves of the card; the rows name themselves, and the inventory the
-            first heading introduced is reference rather than a decision, so it
-            reads last and closed. */}
-        <SettingList>
-          {/* The seat ceiling, stated in the card that HOLDS the controls it
-              governs rather than one card up. Once per unit, not once per
-              toggle: every switch below also carries it as its `reason`, which
-              is what puts it in the accessibility tree beside the control. */}
-          {!canManage && unit.rbac_objects.length > 0 ? (
-            // The wrapper carries the air: a notice owns no layout of its own.
-            <div className="ext-readonly">
-              <Callout kind="standing" title={t("extAccess.readOnlyTitle")}>
-                {t("extAccess.readOnly")}
-              </Callout>
-            </div>
-          ) : null}
-          {unit.rbac_objects.length === 0 ? (
-            <p className="ext-note">{t("extAccess.noObjects")}</p>
-          ) : (
-            unit.rbac_objects.map((object) => (
-              <SettingRow
-                key={object}
-                testId={`ext-object-${object}`}
-                // A toggle matrix IS the subject of its row, not an answer that
-                // fits beside the question, so it takes the full width below
-                // the naming instead of the right column.
-                layout="stack"
-                label={t("extAccess.matrixCaption", { object })}
-                // The function form, because the row's label is now the
-                // matrix's accessible NAME: a `<caption>` here would print the
-                // same sentence twice, once as the row's naming and once inside
-                // the grid it names.
-                control={(control) => (
-                  <ObjectMatrix
-                    object={object}
-                    roles={roles}
-                    canManage={canManage}
-                    labelledBy={control["aria-labelledby"]}
-                  />
-                )}
-              />
-            ))
-          )}
-          {/* What the unit brought, as the card's reference half: an operator
-              opens this to check that the object they are granting is the one
-              the route they care about is gated on, not to decide anything.
-              A unit that brought NOTHING has no reference half — three rows
-              each reading "None" is a section that costs a reader an expand to
-              learn what the sentence above it already said. */}
-          {brings > 0 ? (
-            <Disclosure summary={t("extAccess.brings.heading")}>
-              <UnitBrings unit={unit} />
-            </Disclosure>
-          ) : null}
-        </SettingList>
+        {unit.rbac_objects.length === 0 ? (
+          <p>{t("extAccess.noObjects")}</p>
+        ) : null}
+        {/* Every switch below also carries this as its `reason`, which is what
+            puts it in the accessibility tree beside the control. */}
+        {!canManage && unit.rbac_objects.length > 0 ? (
+          <Callout kind="standing" title={t("extAccess.readOnlyTitle")}>
+            {t("extAccess.readOnly")}
+          </Callout>
+        ) : null}
+        {/* Spoken although standing: it appears and disappears as the last
+            read grant is toggled, and the change is the news. */}
+        {unread.length > 0 ? (
+          <Callout
+            tone="warning"
+            kind="standing"
+            live="status"
+            title={t("extAccess.nobodyReadsTitle")}
+          >
+            {t("extAccess.nobodyReads", {
+              object: new Intl.ListFormat(INTL_LOCALE[locale], {
+                style: "long",
+                type: "conjunction",
+              }).format(unread.map((object) => objectLabel(unit.name, object))),
+            })}
+          </Callout>
+        ) : null}
       </PanelBody>
+      {unit.rbac_objects.map((object) => (
+        <ObjectMatrix
+          key={object}
+          object={object}
+          label={objectLabel(unit.name, object)}
+          roles={roles}
+          badges={badges}
+          canManage={canManage}
+        />
+      ))}
+      {/* Reference, not a decision: an operator opens it to check which
+          object gates the route they care about. */}
+      {brings > 0 ? (
+        <Disclosure summary={t("extAccess.brings.heading")}>
+          <PanelBody>
+            <UnitBrings unit={unit} />
+          </PanelBody>
+        </Disclosure>
+      ) : null}
     </Panel>
   );
+}
+
+// Not translated: the contract carries no label for an extension's object, so
+// its key, less the unit's own prefix, is the only name there is.
+export function objectLabel(unit: string, object: string): string {
+  const prefix = `ext_${unit}_`;
+  const bare = object.startsWith(prefix)
+    ? object.slice(prefix.length)
+    : object.replace(/^ext_/, "");
+  const words = (bare || unit).replaceAll("_", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+// Built-in and custom roles told apart only where both kinds stand in the grid,
+// and only on the fewer of the two, so the mark says what differs.
+function roleBadges(
+  roles: readonly ExtensionRole[],
+  t: ReturnType<typeof useT>,
+): ReadonlyMap<string, string> {
+  const custom = roles.filter((role) => !role.is_system);
+  if (custom.length === 0 || custom.length === roles.length) {
+    return new Map();
+  }
+  const markCustom = custom.length * 2 <= roles.length;
+  const marked = markCustom ? custom : roles.filter((role) => role.is_system);
+  const word = t(markCustom ? "extAccess.customRole" : "extAccess.systemRole");
+  return new Map(marked.map((role) => [role.key, word]));
 }
 
 function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
@@ -438,110 +450,82 @@ function BringsRow({
   );
 }
 
-/**
- * One object's role × CRUD matrix: the shared grant grid with a row per role.
- * Its name is the stacked row's own label rather than a `<caption>`, which
- * would repeat the sentence drawn directly above it.
- */
+// One object's role × CRUD matrix, named by the group head above it and
+// standing straight in the unit's pane.
 function ObjectMatrix({
   object,
+  label,
   roles,
+  badges,
   canManage,
-  labelledBy,
 }: Readonly<{
   object: string;
+  label: string;
   roles: readonly ExtensionRole[];
+  badges: ReadonlyMap<string, string>;
   canManage: boolean;
-  /** The id of the row's label, which is this grid's accessible name. */
-  labelledBy: string;
 }>) {
   const t = useT();
   const setGrant = useSetRoleGrant();
-  // The same reading of a 409 the record edit form makes, through the same
-  // helper: only a ProblemError carries a server code, so a rejected fetch can
-  // never be mistaken for a concurrent edit.
+  // Only a ProblemError carries a server code, so a rejected fetch can never be
+  // mistaken for a concurrent edit.
   const skew =
     setGrant.error instanceof ProblemError &&
     isVersionSkew(setGrant.error.problem);
-  // The whole point of the screen: an object no role can read is an extension
-  // whose every screen renders "you do not hold access", and that is invisible
-  // from anywhere else in the product. Said plainly, next to the toggles that
-  // fix it.
-  const nobodyReads = roles.every((role) => !grantOf(role, object).read);
   const rows = roles.map((role): GrantMatrixRow => {
     const grant = grantOf(role, object);
     return {
       key: role.key,
       name: role.name,
-      note: role.is_system ? t("extAccess.systemRole") : undefined,
+      badge: badges.get(role.key),
       grant,
       cellLabel: (action) =>
         t("extAccess.cell", {
           role: role.name,
           action: t(`extAccess.action.${action}`),
-          object,
+          object: label,
         }),
-      // Scoped to the role whose grant is being written: the write carries the
-      // role's WHOLE grant record, so every action in that row is in flight,
-      // and no other row is.
+      // The write carries the role's whole grant record, so every action in
+      // that row is in flight, and no other row is.
       pending: setGrant.isPending && setGrant.variables?.roleKey === role.key,
       onChange: (action, next) =>
         setGrant.mutate({
           roleKey: role.key,
           object,
           grant: { ...grant, [action]: next },
-          // The version of the role THIS cell was read from, not one fetched
-          // at write time: the server compares against what the operator saw.
+          // The version this cell was read from: the server compares against
+          // what the operator saw.
           version: role.version,
         }),
     };
   });
 
   return (
-    // `.settingrow-measure` is the stacked row's own contract for a control
-    // that owns its width: without its `min-width: 0` the grid's scroll box
-    // would grow to the grid's full width and push the card sideways.
-    <div className="settingrow-measure ext-object">
+    <>
+      <PanelGroupHead title={label} level="h3" />
       <GrantMatrix
         rowHeader={t("extAccess.roleColumn")}
         rows={rows}
         canManage={canManage}
         readOnlyReason={t("extAccess.readOnly")}
-        labelledBy={labelledBy}
-        scrollLabel={object}
+        scrollLabel={label}
+        bleed
       />
-      {nobodyReads ? (
-        // `warning` is exactly the claim: nothing is broken, and something will go
-        // wrong if nobody acts — every screen this unit ships renders "you do
-        // not hold access" until a read grant exists. Standing, and yet spoken
-        // deliberately: the sentence appears and disappears as the last read
-        // grant is toggled, and a change nobody is told about is the silence
-        // this screen exists to break.
-        <Callout
-          tone="warning"
-          kind="standing"
-          live="status"
-          title={t("extAccess.nobodyReadsTitle")}
-        >
-          {t("extAccess.nobodyReads", { object })}
-        </Callout>
-      ) : null}
       {setGrant.isError ? (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("extAccess.grantFailed")}
-        >
-          {/* A version skew is not a failure to phrase generically: the
-              operator's flip did not apply, someone else's did, and the matrix
-              above has just been repainted with theirs. Saying "couldn't save"
-              there would leave them staring at a grid that silently changed
-              under them. Every other refusal keeps the server's own words. */}
-          {skew
-            ? t("extAccess.versionSkew")
-            : problemMessageOf(setGrant.error, t)}
-        </Callout>
+        <PanelBody>
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("extAccess.grantFailed")}
+          >
+            {/* A skew means someone else's flip applied and the grid was just
+                repainted with it, which a generic refusal would hide. */}
+            {skew
+              ? t("extAccess.versionSkew")
+              : problemMessageOf(setGrant.error, t)}
+          </Callout>
+        </PanelBody>
       ) : null}
-    </div>
+    </>
   );
 }

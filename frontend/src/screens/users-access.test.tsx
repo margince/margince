@@ -31,7 +31,12 @@ type Preview = {
   field_masks?: { object: string; field: string; condition: string }[];
 };
 
-type Team = { id: string; name: string; member_count?: number };
+type Team = {
+  id: string;
+  name: string;
+  member_count?: number;
+  parent_team_id?: string;
+};
 // The roster row the membership editor reads. `team_ids` is the admin-only
 // field the server populates, and a fixture that omits it models a NON-admin
 // read — which is a different case, not a lighter one.
@@ -275,6 +280,18 @@ describe("AccessPreviewPanel", () => {
   });
 });
 
+// Archiving sits in the row's menu; the menu is named for the team it acts on.
+async function archiveVia(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", {
+      name: en["users.teamRowActions"].replace("{name}", "Nord"),
+    }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: en["users.teamArchive"] }),
+  );
+}
+
 describe("TeamsCard", () => {
   it("counts a team of one in the singular", async () => {
     const { fetchMock } = backend({
@@ -295,6 +312,25 @@ describe("TeamsCard", () => {
     expect(screen.getByText("4 members")).toBeTruthy();
   });
 
+  it("names a team's parent under its name", async () => {
+    const { fetchMock } = backend({
+      teams: [
+        { id: "t-1", name: "Nord", member_count: 1 },
+        { id: "t-2", name: "Hamburg", member_count: 0, parent_team_id: "t-1" },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    expect(
+      await screen.findByText(en["users.teamParent"].replace("{name}", "Nord")),
+    ).toBeTruthy();
+  });
+
   it("reads as empty rather than as a failed read when no team exists", async () => {
     const { fetchMock } = backend({ teams: [] });
     vi.stubGlobal("fetch", fetchMock);
@@ -307,7 +343,7 @@ describe("TeamsCard", () => {
     expect(await screen.findByText(en["users.noTeamsYet"])).toBeTruthy();
   });
 
-  it("archives the team the verb names", async () => {
+  it("archives the team the menu names", async () => {
     const user = userEvent.setup();
     const { fetchMock, calls } = backend({
       teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
@@ -319,12 +355,7 @@ describe("TeamsCard", () => {
       </Providers>,
     );
 
-    await screen.findByText("Nord");
-    await user.click(
-      screen.getByRole("button", {
-        name: en["users.archiveTeam"].replace("{name}", "Nord"),
-      }),
-    );
+    await archiveVia(user);
 
     await waitFor(() =>
       expect(calls.some((call) => call.method === "PATCH")).toBe(true),
@@ -334,9 +365,6 @@ describe("TeamsCard", () => {
     expect(patch?.body).toEqual({ archived: true });
   });
 
-  // A team is the one archive in this product with a way back, so it is the one
-  // place the word Undo means what it says. Both arms are pinned: the restore
-  // that lands, and the one the server refuses.
   it("puts an archived team back through the Undo the confirmation carries", async () => {
     const user = userEvent.setup();
     const { fetchMock, calls } = backend({
@@ -349,16 +377,10 @@ describe("TeamsCard", () => {
       </Providers>,
     );
 
-    await screen.findByText("Nord");
-    await user.click(
-      screen.getByRole("button", {
-        name: en["users.archiveTeam"].replace("{name}", "Nord"),
-      }),
-    );
+    await archiveVia(user);
 
     const said = await screen.findByRole("status");
-    // The NAME, not a uuid: the archive invalidated ["teams"], so by the time
-    // this is read the row it came from may already be gone from the roster.
+    // The name, not a uuid: the refetch may have taken the row away already.
     expect(said).toHaveTextContent(
       en["users.teamArchived"].replace("{name}", "Nord"),
     );
@@ -378,9 +400,6 @@ describe("TeamsCard", () => {
   });
 
   it("says so when the restore is refused, rather than letting it fail quietly", async () => {
-    // The message the Undo was offered from is consumed by the press, so a
-    // silent refusal leaves the reader watching a confirmation disappear and
-    // believing the team came back.
     const user = userEvent.setup();
     const { fetchMock } = backend({
       teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
@@ -395,12 +414,7 @@ describe("TeamsCard", () => {
       </Providers>,
     );
 
-    await screen.findByText("Nord");
-    await user.click(
-      screen.getByRole("button", {
-        name: en["users.archiveTeam"].replace("{name}", "Nord"),
-      }),
-    );
+    await archiveVia(user);
     await user.click(
       within(await screen.findByRole("status")).getByRole("button", {
         name: en["common.undo"],
@@ -408,6 +422,48 @@ describe("TeamsCard", () => {
     );
 
     expect(await screen.findByText("the team was merged")).toBeTruthy();
+  });
+
+  it("renames a team through the dialog its menu opens, starting from the current name", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["users.teamRowActions"].replace("{name}", "Nord"),
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["users.teamRename"] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const field = within(dialog).getByLabelText(en["users.teamNameLabel"], {
+      exact: false,
+    });
+    expect(field).toHaveValue("Nord");
+    const save = within(dialog).getByRole("button", {
+      name: en["users.teamRenameSave"],
+    });
+    // The unchanged name is no rename.
+    expect(save).toBeDisabled();
+    await user.clear(field);
+    await user.type(field, " Nordost ");
+    await user.click(save);
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "PATCH")).toBe(true),
+    );
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(patch?.path).toBe("/v1/teams/t-1");
+    expect(patch?.body).toEqual({ name: "Nordost" });
   });
 
   it("creates a team through the dialog its title verb opens, trimming the name", async () => {
@@ -428,8 +484,6 @@ describe("TeamsCard", () => {
     const submit = within(dialog).getByRole("button", {
       name: en["users.createTeam"],
     }) as HTMLButtonElement;
-    // Nothing typed is nothing to create: the submit is inert until the field
-    // holds a name.
     expect(submit.disabled).toBe(true);
     await user.type(
       within(dialog).getByLabelText(en["users.teamNameLabel"], {
@@ -442,20 +496,13 @@ describe("TeamsCard", () => {
     await waitFor(() =>
       expect(calls.some((call) => call.method === "POST")).toBe(true),
     );
-    // Trimmed, because a team named with a trailing space is a team nobody can
-    // find by typing its name.
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       name: "Nord",
     });
-    // The dialog closes on the write that landed.
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
 
-// Membership was fixed at invite until now: the two endpoints that change it
-// existed server-side and nothing in the product reached them. These pin both
-// directions, because a toggle that only ever adds looks identical to a working
-// one until somebody tries to remove.
 describe("TeamsCard membership", () => {
   const ROSTER: RosterUser[] = [
     {
@@ -474,158 +521,168 @@ describe("TeamsCard membership", () => {
       is_agent: false,
       team_ids: [],
     },
+    // Seats the server refuses on the way in are never offered.
+    {
+      id: "u-agent",
+      email: "agent@acme.test",
+      display_name: "Cy Agent",
+      status: "active",
+      is_agent: true,
+      team_ids: [],
+    },
   ];
+  const NORD = [{ id: "t-1", name: "Nord", member_count: 1 }];
 
   async function openTeam() {
     const user = userEvent.setup();
-    await screen.findByText("Nord");
-    await user.click(screen.getByText("Nord"));
-    return user;
+    await user.click(await screen.findByRole("button", { name: "Nord" }));
+    return { user, dialog: await screen.findByRole("dialog") };
   }
 
-  it("ticks the users already in the team and leaves the others clear", async () => {
-    const { fetchMock } = backend({
-      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
-      users: ROSTER,
-    });
+  function mount(opts: Parameters<typeof backend>[0]) {
+    const { fetchMock, calls } = backend(opts);
     vi.stubGlobal("fetch", fetchMock);
     render(
       <Providers>
         <TeamsCard />
       </Providers>,
     );
-    await openTeam();
+    return calls;
+  }
 
-    expect(
-      (
-        await screen.findByRole("checkbox", { name: "Ada Inside" })
-      ).getAttribute("checked") !== null ||
-        (
-          screen.getByRole("checkbox", {
-            name: "Ada Inside",
-          }) as HTMLInputElement
-        ).checked,
-    ).toBe(true);
-    expect(
-      (screen.getByRole("checkbox", { name: "Bo Outside" }) as HTMLInputElement)
-        .checked,
-    ).toBe(false);
+  it("lists the team's members in a dialog titled with its name", async () => {
+    mount({ teams: NORD, users: ROSTER });
+    const { dialog } = await openTeam();
+
+    expect(within(dialog).getByRole("heading", { name: "Nord" })).toBeTruthy();
+    const list = within(dialog).getByRole("list", {
+      name: en["users.teamMembersLabel"],
+    });
+    expect(within(list).getByText("Ada Inside")).toBeTruthy();
+    expect(within(list).queryByText("Bo Outside")).toBeNull();
   });
 
-  it("adds a user to the team the row names", async () => {
-    const { fetchMock, calls } = backend({
-      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
-      users: ROSTER,
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <Providers>
-        <TeamsCard />
-      </Providers>,
-    );
-    const user = await openTeam();
+  it("offers only the active people not yet on the team", async () => {
+    mount({ teams: NORD, users: ROSTER });
+    const { user, dialog } = await openTeam();
 
     await user.click(
-      await screen.findByRole("checkbox", { name: "Bo Outside" }),
+      within(dialog).getByRole("combobox", { name: en["users.teamAddMember"] }),
+    );
+    const offered = within(screen.getByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).toHaveLength(1);
+    expect(offered[0]).toContain("Bo Outside");
+  });
+
+  it("adds the person picked to the team the dialog names", async () => {
+    const calls = mount({ teams: NORD, users: ROSTER });
+    const { user, dialog } = await openTeam();
+
+    await user.type(
+      within(dialog).getByRole("combobox", { name: en["users.teamAddMember"] }),
+      "Bo",
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: /Bo Outside/,
+      }),
     );
 
     await waitFor(() =>
       expect(calls.some((call) => call.method === "PUT")).toBe(true),
     );
-    const put = calls.find((call) => call.method === "PUT");
-    expect(put?.path).toBe("/v1/teams/t-1/members/u-out");
+    expect(calls.find((call) => call.method === "PUT")?.path).toBe(
+      "/v1/teams/t-1/members/u-out",
+    );
   });
 
-  it("removes a user the team already holds", async () => {
-    const { fetchMock, calls } = backend({
-      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
-      users: ROSTER,
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <Providers>
-        <TeamsCard />
-      </Providers>,
-    );
-    const user = await openTeam();
+  it("removes the member whose verb is pressed", async () => {
+    const calls = mount({ teams: NORD, users: ROSTER });
+    const { user, dialog } = await openTeam();
 
     await user.click(
-      await screen.findByRole("checkbox", { name: "Ada Inside" }),
+      within(dialog).getByRole("button", {
+        name: en["users.teamRemoveMember"]
+          .replace("{name}", "Ada Inside")
+          .replace("{team}", "Nord"),
+      }),
     );
 
     await waitFor(() =>
       expect(calls.some((call) => call.method === "DELETE")).toBe(true),
     );
-    const gone = calls.find((call) => call.method === "DELETE");
-    expect(gone?.path).toBe("/v1/teams/t-1/members/u-in");
+    expect(calls.find((call) => call.method === "DELETE")?.path).toBe(
+      "/v1/teams/t-1/members/u-in",
+    );
   });
 
-  it("says a refused membership write did not land", async () => {
-    const { fetchMock } = backend({
-      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+  it("says a refused membership write did not land and keeps the dialog as it was", async () => {
+    mount({
+      teams: NORD,
       users: ROSTER,
-      refuse: (call) => call.method === "PUT",
+      refuse: (call) => call.method === "DELETE",
     });
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <Providers>
-        <TeamsCard />
-      </Providers>,
-    );
-    const user = await openTeam();
+    const { user, dialog } = await openTeam();
 
     await user.click(
-      await screen.findByRole("checkbox", { name: "Bo Outside" }),
+      within(dialog).getByRole("button", {
+        name: en["users.teamRemoveMember"]
+          .replace("{name}", "Ada Inside")
+          .replace("{team}", "Nord"),
+      }),
     );
 
-    expect(await screen.findByText("the team was merged")).toBeTruthy();
+    expect(await within(dialog).findByText("the team was merged")).toBeTruthy();
+    expect(within(dialog).getByText(en["users.teamNotChanged"])).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(within(dialog).getByText("Ada Inside")).toBeTruthy();
   });
 
-  // Team membership is admin surface, so a non-admin gets no membership
-  // control and no membership LIST: the roster handler only sends `team_ids`
-  // to a caller holding `user_admin:read` (`WithRoles: mayManage`), so a
-  // read-only render built
-  // from an ops seat's own roster read would show nobody as a member of
-  // anything — a false statement, not an honest withholding. The card states
-  // why once, and the disclosure body says the same thing rather than
-  // fabricate a list.
-  // The reader one admin check could not express: they hold the roster read
-  // that CARRIES membership and neither team verb. The list is the answer they
-  // came for, so it renders — and every box is disabled rather than gone,
-  // because removing them would withhold the reading along with the writing.
-  it("shows membership read-only to a seat holding the roster read and no team verb", async () => {
-    const { fetchMock } = backend({
-      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+  it("closes on Escape and gives focus back to the name that opened it", async () => {
+    mount({ teams: NORD, users: ROSTER });
+    const { user } = await openTeam();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Nord" }),
+    );
+  });
+
+  it("shows membership without its verbs to a seat holding the roster read and no team verb", async () => {
+    mount({
+      teams: NORD,
       users: ROSTER,
       me: ["custom"],
       allow: {
         user_admin: { read: true, create: false, update: false, delete: false },
       },
     });
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <Providers>
-        <TeamsCard />
-      </Providers>,
-    );
-    await openTeam();
+    const { dialog } = await openTeam();
 
-    // The positive control first: a box only a resolved snapshot draws. Without
-    // it the assertions below would run against the loading render, where every
-    // predicate reads false and nothing is drawn at all.
-    const boxes = await screen.findAllByRole("checkbox");
-    expect(boxes.length).toBeGreaterThan(0);
-    for (const box of boxes) {
-      expect(box).toBeDisabled();
-    }
+    expect(within(dialog).getByText("Ada Inside")).toBeTruthy();
+    expect(
+      within(dialog).getByText(en["users.teamMembersReadOnly"]),
+    ).toBeTruthy();
+    expect(within(dialog).queryByRole("combobox")).toBeNull();
+    expect(
+      within(dialog).queryByRole("button", { name: /Ada Inside/ }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: en["users.teamRowActions"].replace("{name}", "Nord"),
+      }),
+    ).toBeNull();
   });
 
-  // Only an admin changes who is on a team (identity/teams.go). A seat holding
-  // the team write without the admin role reads membership and cannot change
-  // it or archive the team, since the server would refuse both.
-  it("shows membership read-only to a team_admin holder who is not an admin", async () => {
-    const { fetchMock } = backend({
-      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+  // Only an admin changes who is on a team or archives it (identity/teams.go);
+  // renaming needs the team write alone.
+  it("offers a team_admin holder who is not an admin the rename and nothing else", async () => {
+    mount({
+      teams: NORD,
       users: ROSTER,
       me: ["custom"],
       allow: {
@@ -633,56 +690,45 @@ describe("TeamsCard membership", () => {
         user_admin: { read: true, create: false, update: false, delete: false },
       },
     });
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <Providers>
-        <TeamsCard />
-      </Providers>,
-    );
-    await openTeam();
+    const { user, dialog } = await openTeam();
 
-    const boxes = await screen.findAllByRole("checkbox");
-    expect(boxes.length).toBeGreaterThan(0);
-    for (const box of boxes) {
-      expect(box).toBeDisabled();
-    }
-    expect(screen.queryByRole("button", { name: /archive/i })).toBeNull();
+    expect(within(dialog).queryByRole("combobox")).toBeNull();
+    await user.keyboard("{Escape}");
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["users.teamRowActions"].replace("{name}", "Nord"),
+      }),
+    );
+    expect(
+      screen.getByRole("button", { name: en["users.teamRename"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["users.teamArchive"] }),
+    ).toBeNull();
   });
 
   it("withholds membership entirely from a seat that may not read or change it", async () => {
-    const { fetchMock, calls } = backend({
-      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+    const calls = mount({
+      teams: NORD,
       users: ROSTER,
-      // Ops, spelled as what ops HOLDS: neither `team_admin` nor `user_admin`
-      // is seeded to it. The role name alone used to carry this case; it says
-      // the grants now, which is what the card reads.
       me: ["ops"],
       allow: {},
     });
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <Providers>
-        <TeamsCard />
-      </Providers>,
-    );
-    await openTeam();
 
     expect(
       await screen.findByText(
-        `${en["users.teamsSub"]} ${en["users.teamsAdminOnly"]}`,
+        `${en["users.teamsSub"]} ${en["users.teamsAdminOnly"]} ${en["users.teamMembersAdminOnly"]}`,
       ),
     ).toBeTruthy();
-    expect(screen.getByText(en["users.teamMembersAdminOnly"])).toBeTruthy();
+    expect(screen.getByText("Nord")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Nord" })).toBeNull();
     expect(screen.queryByText("Ada Inside")).toBeNull();
-    expect(screen.queryByText("Bo Outside")).toBeNull();
-    expect(screen.queryByRole("checkbox")).toBeNull();
-    expect(screen.queryByRole("button", { name: /archive/i })).toBeNull();
-
-    // No membership read fires either: there is nothing in it this seat
-    // would be shown, so there is nothing to walk the roster for.
+    expect(
+      screen.queryByRole("button", {
+        name: en["users.teamRowActions"].replace("{name}", "Nord"),
+      }),
+    ).toBeNull();
+    // Nothing in the user roster would be shown, so it is never walked.
     expect(calls.some((call) => call.path.endsWith("/users"))).toBe(false);
-    expect(calls.some((call) => call.method === "PUT")).toBe(false);
-    expect(calls.some((call) => call.method === "DELETE")).toBe(false);
-    expect(calls.some((call) => call.method === "PATCH")).toBe(false);
   });
 });

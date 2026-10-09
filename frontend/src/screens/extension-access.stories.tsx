@@ -13,14 +13,12 @@ import {
 
 // The role × CRUD matrix: what each composed unit brought into the installation
 // and which roles may reach it. Until somebody grants one, an enabled unit
-// renders "you do not hold access" for every seat — which is why this surface
+// renders "you do not hold access" for every seat, which is why this surface
 // exists and why its withheld state is worth looking at.
 //
-// Each registered object is one stacked `SettingRow` — a toggle matrix is the
-// subject of its row, never an answer that fits beside the question — and what
-// the unit BROUGHT (its objects, routes and jobs) reads last, behind a closed
-// disclosure: it is reference an operator opens to check which object gates the
-// route they care about, not a decision.
+// Each registered object is a group in the unit's pane, its matrix standing
+// straight in the pane with the role column pinned; what the unit brought
+// reads last, behind a closed disclosure.
 const YOGI = {
   name: "yogi",
   version: "0.4.1",
@@ -42,6 +40,31 @@ const ROLES = [
   { key: "rep", name: "Rep", is_system: true, version: 3 },
 ];
 
+const OPENCHANNEL = {
+  name: "openchannel",
+  version: "1.0.0",
+  description:
+    "An anonymous, signed endpoint an outside party can post to, with its own records.",
+  rbac_objects: [
+    "ext_openchannel_endpoint",
+    "ext_openchannel_inbound",
+    "ext_openchannel_outbound",
+  ],
+  routes: [{ path: "/ext/openchannel/endpoint", method: "GET" }],
+  jobs: ["drain"],
+};
+
+const MIXED_ROLES = [
+  ...ROLES,
+  { key: "ops", name: "Ops / Integrations", is_system: true, version: 3 },
+  {
+    key: "partner",
+    name: "Regional partner channel coordinator for DACH and Benelux",
+    is_system: false,
+    version: 1,
+  },
+];
+
 const NONE = { create: false, read: false, update: false, delete: false };
 const READ = { ...NONE, read: true };
 
@@ -50,6 +73,7 @@ function story(
   roles: string[],
   objects: Record<string, unknown> = {},
   seat: "full" | "read" = "full",
+  roleRows: readonly Record<string, unknown>[] = ROLES,
 ) {
   return () => {
     installFetchStub({
@@ -69,7 +93,7 @@ function story(
       // was the matrix.
       "GET /roles": () =>
         jsonResponse({
-          roles: ROLES.map((role) => ({ ...role, objects })),
+          roles: roleRows.map((role) => ({ ...role, objects })),
         }),
     });
     return (
@@ -114,16 +138,9 @@ export const ReadSeat: Story = {
   render: story([YOGI], ["admin"], { ext_yogi_briefing: READ }, "read"),
 };
 
-// The inventory and the matrix in dark. Three things here are drawn from tokens
-// that mean "one step off the card ground", and dark is where a step that small
-// either survives or collapses: a soft `Badge` fills an RBAC object and a route
-// with --bgChip inside a card, the matrix separates every role row with a single
-// --borderSubtle hairline, and the `SettingList` now rules between one object's
-// grid and the next with the same hairline — two rules of the same weight, one
-// inside a grid and one between two of them, which either read as a hierarchy or
-// as a wall. The Switch tracks in the cells are the fourth — an off track and an
-// on track have to stay two different things when the whole palette darkens
-// under them.
+// The inventory and the matrix in dark, where a step of one token off the
+// pane either survives or collapses: the soft badges, the row hairlines, the
+// pinned column's opaque ground and the off and on switch tracks.
 export const UnitsWithGrantsDark: Story = {
   globals: { theme: "dark" },
   render: story([YOGI, DE], ["admin"], { ext_yogi_briefing: READ }),
@@ -150,4 +167,16 @@ export const UnitsWithGrantsPhone: Story = {
       await expect(scroller.contains(hidden.offsetParent)).toBe(true);
     }
   },
+};
+
+// Three objects nobody reads yet: one warning for the unit, naming all three,
+// and the one custom role marked among the built-in ones.
+export const ThreeObjectsOneCustomRole: Story = {
+  render: story([OPENCHANNEL], ["admin"], {}, "full", MIXED_ROLES),
+};
+
+export const ThreeObjectsOneCustomRolePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story([OPENCHANNEL], ["admin"], {}, "full", MIXED_ROLES),
 };
