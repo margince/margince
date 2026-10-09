@@ -5,19 +5,9 @@
 
 package compose
 
-// What a lead COUNT may reach, against what the asker's own list shows them.
-//
-// leads-by-status declares measureEveryReadableRow, so no population narrowing
-// is applied when the caller names no scope — and the lead scope clause the
-// engine binds renders EMPTY, because lead is an identity table every seat
-// reads whole. Read quickly, that pair looks like a count escaping a row scope.
-//
-// It is not, and this is the test that settles it rather than a sentence in the
-// spec: the same caller's own list is not narrowed either, so the count reaches
-// exactly the leads they could already open one by one. The property worth
-// holding is that the two AGREE — if a future change narrows the list without
-// narrowing the count, the count starts disclosing a population the list
-// withholds, which is the defect this is mistaken for.
+// A lead count may reach no lead the asker's own list withholds. Lead is an
+// identity table, so the scope clause renders empty and the list is not
+// narrowed either. If the list is ever narrowed alone, the count leaks.
 
 import (
 	"context"
@@ -29,9 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// teamLensManagerCtx is a team lead reading leads: the lens whose default
-// population is ScopeKindManagedTeams — themselves plus their own team — which
-// is the resolution under test, so no scope is ever named on the query.
+// teamLensManagerCtx is a team lead reading leads. The lens defaults to
+// ScopeKindManagedTeams (themselves plus their team), so the query names no
+// scope.
 func (e *forecastEnv) teamLensManagerCtx(user ids.UUID, teams []ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	return principal.WithActor(ctx, principal.Principal{
@@ -49,8 +39,8 @@ func (e *forecastEnv) teamLensManagerCtx(user ids.UUID, teams []ids.UUID) contex
 func TestALeadCountNeverExceedsTheCallersOwnList(t *testing.T) {
 	e := setupForecast(t)
 
-	// The manager's own, and a colleague's who is on NO team at all — the case
-	// a reader expects a team lens to withhold.
+	// The manager's own, and a colleague's who is on no team: the case a reader
+	// expects a team lens to withhold.
 	stranger := e.seedID(t, `INSERT INTO app_user (id, email, display_name)
 		VALUES ($1, 'off-team@example.test', 'Off Team')`)
 	for i := 0; i < 7; i++ {
