@@ -67,6 +67,7 @@ var mailLabelPairs = []struct {
 	{"brief.weekly.partialFrom", func(c mailcopy.Copy) string { return c.WeeklyPartialFrom }},
 	{"brief.weekly.partialValue", func(c mailcopy.Copy) string { return c.WeeklyPartialValue }},
 	{"brief.week.beforeHistory", func(c mailcopy.Copy) string { return c.WeeklyBeforeHistory }},
+	{"reporting.unavailable", func(c mailcopy.Copy) string { return c.WeeklyUnavailable }},
 }
 
 // mailLabelLanguages reads the languages the contract admits, so adding a

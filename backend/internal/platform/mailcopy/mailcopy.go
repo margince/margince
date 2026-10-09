@@ -191,6 +191,8 @@ type Copy struct {
 	WeeklyPartialFrom   string
 	WeeklyPartialValue  string
 	WeeklyBeforeHistory string
+	// WeeklyUnavailable stands where Won would be when its bookings were not read.
+	WeeklyUnavailable string
 
 	// The two links the installation sends as ITSELF rather than on a rep's
 	// behalf: the confirm-details link and the double-opt-in link.

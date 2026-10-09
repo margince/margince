@@ -43,6 +43,10 @@ func weeklyCoverageLines(line writeLine) {
 		"This week falls before the first records, so it has no figures to report.",
 		"Diese Woche liegt vor den ersten Datensätzen und hat daher keine Zahlen.",
 		"Tuần này nằm trước các bản ghi đầu tiên nên không có số liệu để báo cáo.")
+	line(func(c *Copy) *string { return &c.WeeklyUnavailable },
+		"Unavailable",
+		"Nicht verfügbar",
+		"Không có dữ liệu")
 }
 
 // weeklyFigureLines are the counted outcomes: what was delivered, won, lost,

@@ -3,14 +3,16 @@
 
 package weekly
 
-// What the weekly message says about a figure its source never measured.
+// What the weekly message says about a figure its source never measured, or
+// could not read.
 //
-// The review freezes each figure family's coverage, and the Home panel reads
-// it in frontend/src/screens/brief.numeric.ts. The two cannot share code across
-// the wire, so this file mirrors that one rule for rule; the labels themselves
-// are the panel's, held equal by backend/gates/mailcopy_test.go.
+// The review freezes each figure family's coverage and the bookings coverage
+// behind Won, and the Home panel reads both in brief.numeric.ts. The two cannot
+// share code across the wire, so this file mirrors figureState for the figures
+// the mail prints; the labels are the panel's, held by the mailcopy gate.
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -21,9 +23,11 @@ import (
 // mailFigures reads the frozen coverage once for the rows that print it. set is
 // never nil: a review without coverage holds an empty one.
 type mailFigures struct {
-	set   *crmcontracts.WeeklyFigureCoverageSet
-	zone  *time.Location
-	words mailcopy.Copy
+	set *crmcontracts.WeeklyFigureCoverageSet
+	// bookings is the coverage Won was measured under; nil on a legacy review.
+	bookings *crmcontracts.ReportingCoverage
+	zone     *time.Location
+	words    mailcopy.Copy
 }
 
 // figuresOf reads a review frozen before figures carried coverage as fully
@@ -36,6 +40,7 @@ func figuresOf(review Review, words mailcopy.Copy) mailFigures {
 	if review.NumericSummary.FigureCoverage != nil {
 		out.set = review.NumericSummary.FigureCoverage
 	}
+	out.bookings = &review.NumericSummary.BookingsCoverage
 	// The zone was valid when the engine froze it; a build without that zone's
 	// data writes the date in UTC and says so rather than shifting it silently.
 	if zone, err := time.LoadLocation(review.NumericSummary.Timezone); err == nil {
@@ -65,6 +70,29 @@ func (f mailFigures) value(coverage *crmcontracts.WeeklyFigureCoverage, count st
 		return count + " · " + strings.ReplaceAll(f.words.WeeklyPartialFrom, "{date}", f.date(*since))
 	}
 	return count
+}
+
+// won prints the Won count under the bookings coverage it was measured with,
+// before the deals family qualifies the row. A read that could not see the
+// bookings names no count; a partial one marks the count itself, having no
+// start date to give.
+func (f mailFigures) won(count string) string {
+	if f.bookings == nil {
+		return count
+	}
+	switch {
+	case f.bookings.Withheld || !slices.Contains(readableBookings, f.bookings.Status):
+		return f.words.WeeklyUnavailable
+	case f.bookings.Status == crmcontracts.ReportingStatusPartial &&
+		(f.set.Deals == nil || f.set.Deals.Status != crmcontracts.WeeklyFigureCoverageStatusPartial):
+		return strings.ReplaceAll(f.words.WeeklyPartialValue, "{value}", count)
+	}
+	return count
+}
+
+// readableBookings are the statuses the panel counts as a reading of Won.
+var readableBookings = []crmcontracts.ReportingStatus{
+	crmcontracts.ReportingStatusOk, crmcontracts.ReportingStatusNoData, crmcontracts.ReportingStatusPartial,
 }
 
 // beforeHistory is the panel's beforeRecordedHistory: every family the review

@@ -24,9 +24,14 @@ func coverageOf(status crmcontracts.WeeklyFigureCoverageStatus, since *time.Time
 // a date read without the zone lands on the wrong day.
 func coveredFixture(set crmcontracts.WeeklyFigureCoverageSet) Review {
 	review := mailFixture()
-	review.NumericSummary = &crmcontracts.WeeklyNumericSummary{Timezone: "Europe/Berlin", FigureCoverage: &set}
+	review.NumericSummary = &crmcontracts.WeeklyNumericSummary{
+		Timezone: "Europe/Berlin", BookingsCoverage: readBookings, FigureCoverage: &set,
+	}
 	return review
 }
+
+// readBookings is a bookings read that saw everything, so Won is a measurement.
+var readBookings = crmcontracts.ReportingCoverage{Status: crmcontracts.ReportingStatusOk}
 
 func everyFamilyNotRecorded(since time.Time) crmcontracts.WeeklyFigureCoverageSet {
 	notRecorded := coverageOf(crmcontracts.WeeklyFigureCoverageStatusNotRecorded, &since)
@@ -103,7 +108,7 @@ func TestAPartialWeekKeepsItsCountAndSaysWhenCountingBegan(t *testing.T) {
 
 func TestAReviewFrozenBeforeCoverageReadsAsItAlwaysDid(t *testing.T) {
 	review := mailFixture()
-	review.NumericSummary = &crmcontracts.WeeklyNumericSummary{Timezone: "Europe/Berlin"}
+	review.NumericSummary = &crmcontracts.WeeklyNumericSummary{Timezone: "Europe/Berlin", BookingsCoverage: readBookings}
 
 	if got, want := MailBody(review, "", english), MailBody(mailFixture(), "", english); got != want {
 		t.Errorf("a review with no coverage renders differently:\n%s\nwant:\n%s", got, want)
@@ -120,5 +125,47 @@ func TestTheCoverageWordsAreTheInstallationsLanguage(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("the German message does not say %q:\n%s", want, body)
 		}
+	}
+}
+
+func TestWonReadsUnavailableWhenItsBookingsWereNotRead(t *testing.T) {
+	for name, bookings := range map[string]crmcontracts.ReportingCoverage{
+		"withheld":    {Status: crmcontracts.ReportingStatusOk, Withheld: true},
+		"unsupported": {Status: crmcontracts.ReportingStatusUnsupported},
+	} {
+		t.Run(name, func(t *testing.T) {
+			review := coveredFixture(crmcontracts.WeeklyFigureCoverageSet{})
+			review.NumericSummary.BookingsCoverage = bookings
+
+			body := MailBody(review, "", english)
+
+			if row := rowOf(body, "Won · Lost · Moved:"); !strings.HasSuffix(row, " Unavailable · 1 · 3") {
+				t.Errorf("Won prints a count its bookings read never saw: %q", row)
+			}
+		})
+	}
+}
+
+// A partial bookings read marks Won itself; lost and moved, counted from the
+// deals alone, stay as they are.
+func TestAPartialBookingsReadMarksWonAlone(t *testing.T) {
+	review := coveredFixture(crmcontracts.WeeklyFigureCoverageSet{})
+	review.NumericSummary.BookingsCoverage = crmcontracts.ReportingCoverage{Status: crmcontracts.ReportingStatusPartial}
+
+	body := MailBody(review, "", english)
+
+	if row := rowOf(body, "Won · Lost · Moved:"); !strings.HasSuffix(row, " 1 (partial) · 1 · 3") {
+		t.Errorf("a partial bookings read did not mark Won: %q", row)
+	}
+}
+
+// A deals family that has not begun outranks the bookings read, as on the panel:
+// the week predating the source is why nothing could be read.
+func TestNotRecordedOutranksUnavailable(t *testing.T) {
+	review := coveredFixture(everyFamilyNotRecorded(firstRecord))
+	review.NumericSummary.BookingsCoverage = crmcontracts.ReportingCoverage{Status: crmcontracts.ReportingStatusUnavailable}
+
+	if row := rowOf(MailBody(review, "", english), "Won · Lost · Moved:"); strings.Contains(row, "Unavailable") {
+		t.Errorf("an unrecorded week reads as unavailable: %q", row)
 	}
 }

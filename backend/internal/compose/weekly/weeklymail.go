@@ -91,7 +91,7 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 		{
 			words.WeeklyDealsWon + " · " + words.WeeklyDealsLost + " · " + words.WeeklyMoved,
 			figures.value(figures.set.Deals,
-				strconv.Itoa(c.DealsWon)+" · "+strconv.Itoa(c.DealsLost)+" · "+strconv.Itoa(c.DealsMoved)),
+				figures.won(strconv.Itoa(c.DealsWon))+" · "+strconv.Itoa(c.DealsLost)+" · "+strconv.Itoa(c.DealsMoved)),
 		},
 		{words.WeeklyDecided, strconv.Itoa(c.ProposalsAccepted) + " " + words.WeeklyYes +
 			" · " + strconv.Itoa(c.ProposalsRejected) + " " + words.WeeklyNo},
