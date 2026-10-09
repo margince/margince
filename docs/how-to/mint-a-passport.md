@@ -58,8 +58,9 @@ curl http://localhost:8080/v1/agent-bundle \
 Only a session can download it; a passport is refused. The ZIP holds one folder, `margince/`, with four files:
 
 - `README.md`: how to save the passport and install the skill in each tool.
-- `SKILL.md`: the rules the tool follows, and where it looks for the passport: `MARGINCE_PASSPORT`,
-  then the macOS Keychain, then 1Password.
+- `SKILL.md`: the rules the tool follows. The tool reads the passport from `MARGINCE_PASSPORT` only.
+  You may keep the passport in the macOS Keychain or 1Password and set `MARGINCE_PASSPORT` from there,
+  as `README.md` shows.
 - `INDEX.md`: one row per operation a passport can call.
 - `openapi.yaml`: those operations in full, cut from `backend/api/crm.yaml`.
 

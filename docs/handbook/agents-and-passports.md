@@ -38,8 +38,8 @@ To use a passport in an AI tool such as Claude, Codex or Gemini, download the Ma
 2. Open `margince-skill.zip`. It holds one folder, `margince`.
 3. For Claude Code, move the folder to `~/.claude/skills/margince`. For Claude Desktop, add the zip file as a skill in the app's settings.
 4. For Codex or Gemini, follow the `README.md` in the folder. You move the folder, then add one line to your `AGENTS.md` or `GEMINI.md`.
-5. Save your passport under the name `MARGINCE_PASSPORT`, for example in your Keychain or 1Password. The `README.md` shows how.
-Never paste your passport into a chat with the AI tool. The skill tells the tool where to look for it. No passport is in the download, so one download works for all your passports.
+5. Before you start the AI tool, set `MARGINCE_PASSPORT` to your passport, the only place the tool reads it from. The `README.md` shows how, also from your Keychain or 1Password.
+Never paste your passport into a chat with the AI tool. The skill tells the tool where to find it. No passport is in the download, so one download works for all your passports.
 Also called: Claude skill, add Margince to Claude, Codex, Gemini, AI tool setup.
 
 ### How do I call Margince from my own code?
