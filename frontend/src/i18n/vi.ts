@@ -2411,7 +2411,6 @@ export const vi = {
   "co.signals.openProject": "Mở dự án",
   "co.signals.openSource": "Đọc thông báo",
   "chronology.label": "Hiện gì trên timeline",
-  "chronology.activities": "Hoạt động",
   "chronology.changes": "Thay đổi",
   "filter.label": "Thu hẹp danh sách",
   "chronology.all": "Tất cả",
@@ -2421,9 +2420,6 @@ export const vi = {
   "convo.waitingOnThem": "Chờ họ trả lời",
   "chronology.changesEmpty":
     "Chưa trường nào của bản ghi này thay đổi kể từ khi được tạo.",
-  "chronology.allEmpty": "Chưa có gì xảy ra trên bản ghi này.",
-  "chronology.truncated":
-    "Các mục cũ hơn không hiện ở đây — cả hai loại đều nhiều hơn mức màn hình này sắp xếp nổi. Hãy chọn Hoạt động hoặc Thay đổi để đọc ngược xa hơn.",
   "chronology.truncatedActivities":
     "Ở đây có nhiều hoạt động hơn sức chứa. Chỉ những hoạt động mới nhất được liệt kê.",
   "timeline.sentTo": "Gửi {who}",

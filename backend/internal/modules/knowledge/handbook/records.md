@@ -247,8 +247,8 @@ Also called: delete a company, remove a company, delete a contact, remove perman
 Margince has no notes of their own: a note is an activity. The kinds of activity are **email, call, meeting, note, task, message.**
 
 ### Where can I see everything that happened with a customer?
-To see everything that happened with a contact or company in Margince, open the record's **History** tab. It is one timeline of emails, meetings, calls, notes, tasks, messages and field changes.
-1. Under **Timeline filter**, pick **All**, **Threads** (email conversations), **Activities** or **Changes**.
+To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
+1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
 2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
 A company's History also holds what reached it through its deals and the contacts who work there.
 Also called: timeline, activity log, customer history, interaction history.

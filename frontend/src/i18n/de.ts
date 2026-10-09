@@ -2433,7 +2433,6 @@ export const de = {
   "co.signals.openProject": "Projekt öffnen",
   "co.signals.openSource": "Meldung lesen",
   "chronology.label": "Verlaufsfilter",
-  "chronology.activities": "Aktivitäten",
   "chronology.changes": "Änderungen",
   "filter.label": "Filter",
   "chronology.all": "Alles",
@@ -2443,9 +2442,6 @@ export const de = {
   "convo.waitingOnThem": "Wartet auf Antwort der Gegenseite",
   "chronology.changesEmpty":
     "Seit dem Anlegen dieses Datensatzes wurde kein Feld geändert.",
-  "chronology.allEmpty": "Noch keine Aktivität zu diesem Datensatz.",
-  "chronology.truncated":
-    "Ältere Einträge werden nicht angezeigt, weil es zu viele sind, um sie gemeinsam zu sortieren. Wähle Aktivitäten oder Änderungen, um weiter zurückzublicken.",
   "chronology.truncatedActivities":
     "Nur die neuesten Aktivitäten werden angezeigt.",
   "timeline.sentTo": "Gesendet an {who}",
