@@ -4,7 +4,6 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import {
-  Badge,
   Button,
   EmptyState,
   Field,
@@ -12,8 +11,9 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
+import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { DataTable } from "../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -207,32 +207,38 @@ export function RestrictedRecordsCard() {
     );
   }
 
-  const columns = [
+  const kindOf = (row: RestrictedRecord) =>
+    KIND_LABEL[row.kind] ? t(KIND_LABEL[row.kind]) : humanizeToken(row.kind);
+  const columns: DataTableColumn<RestrictedRecord>[] = [
     {
-      key: "kind",
+      key: "record",
       header: t("restricted.kind"),
-      render: (row: RestrictedRecord) => (
-        <Badge>
-          {KIND_LABEL[row.kind]
-            ? t(KIND_LABEL[row.kind])
-            : humanizeToken(row.kind)}
-        </Badge>
-      ),
-    },
-    {
-      key: "occurred",
-      header: t("restricted.occurred"),
-      render: (row: RestrictedRecord) =>
-        formatDate(row.occurred_at, locale, tz),
+      render: (row) => {
+        const removed = (row.redacted_fields ?? []).length;
+        return (
+          <CellStack>
+            <span>{kindOf(row)}</span>
+            <span className="t-caption">
+              {formatDate(row.occurred_at, locale, tz)}
+            </span>
+            <span className="t-caption">
+              {removed === 0
+                ? t("restricted.nothingRedacted")
+                : plural("restricted.redactedCount", removed, {
+                    count: formatNumber(removed, locale),
+                  })}
+            </span>
+          </CellStack>
+        );
+      },
     },
     {
       key: "deals",
       header: t("restricted.deals"),
-      // A project qualifies its correspondence on its own — no deal required
-      // — so a row held by a project alone has an empty `deals` and a name in
-      // `projects`; neither list is a summary of the other (crm.yaml). Both
-      // name the qualifying transaction, so both belong under one heading.
-      render: (row: RestrictedRecord) => {
+      grow: true,
+      // A project qualifies its correspondence on its own, so a row held by a
+      // project alone has an empty `deals`; both name the qualifying transaction.
+      render: (row) => {
         const qualifying = [
           ...row.deals.map((deal) => deal.name),
           ...(row.projects ?? []).map((project) => project.name),
@@ -245,90 +251,87 @@ export function RestrictedRecordsCard() {
     {
       key: "reason",
       header: t("restricted.reason"),
-      render: (row: RestrictedRecord) => {
+      render: (row) => {
         const { cls, basis } = splitReason(row.reason);
         return (
-          <span className="retention-scope">
+          <CellStack>
             <span>
               {CLASS_LABEL[cls] ? t(CLASS_LABEL[cls]) : humanizeToken(cls)}
             </span>
             <span className="t-caption">{basis}</span>
-          </span>
+          </CellStack>
         );
       },
     },
     {
       key: "until",
       header: t("restricted.until"),
-      render: (row: RestrictedRecord) =>
-        formatDate(row.restricted_until, locale, tz),
-    },
-    {
-      key: "redacted",
-      header: t("restricted.redacted"),
-      render: (row: RestrictedRecord) =>
-        (row.redacted_fields ?? []).length === 0
-          ? t("restricted.nothingRedacted")
-          : plural(
-              "restricted.redactedCount",
-              (row.redacted_fields ?? []).length,
-              {
-                count: formatNumber((row.redacted_fields ?? []).length, locale),
-              },
-            ),
+      render: (row) => (
+        <CellStack>
+          <span>{formatDate(row.restricted_until, locale, tz)}</span>
+          <span className="t-caption">
+            {t("restricted.since", {
+              date: formatDate(row.restricted_at, locale, tz),
+            })}
+          </span>
+        </CellStack>
+      ),
     },
   ];
   if (canDecide) {
     columns.push({
-      key: "decide",
-      header: t("restricted.decide"),
-      render: (row: RestrictedRecord) => (
-        <Button
-          variant="danger"
-          onClick={() => setReleasing({ activityId: row.activity_id })}
-        >
-          {t("restricted.release.action")}
-        </Button>
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      fold: "end",
+      align: "end",
+      // Not the danger tone: the irreversible act is the dialog's confirm, and
+      // a red verb on every row out-shouts the table it sits in.
+      render: (row) => (
+        <span className="cell-actions">
+          <Button
+            aria-label={t("restricted.release.actionNamed", {
+              kind: kindOf(row),
+              date: formatDate(row.occurred_at, locale, tz),
+            })}
+            aria-haspopup="dialog"
+            onClick={() => setReleasing({ activityId: row.activity_id })}
+          >
+            {t("restricted.release.action")}
+          </Button>
+        </span>
       ),
     });
   }
 
+  const held = records.data?.data ?? [];
   return (
     <Panel title={t("restricted.title")}>
       <PanelBody>
         <PanelIntro>{t("restricted.sub")}</PanelIntro>
-        <CardBoundary>
-          <SettingList>
-            {/* The table is the SUBJECT of this card rather than an answer to a
-                question beside it, so it takes the full width under its naming
-                — never the right column, and never a dialog. */}
-            <SettingRow
-              label={t("restricted.heldLabel")}
-              layout="stack"
-              control={
-                <QueryStates
-                  query={records}
-                  pendingLabel={t("restricted.title")}
-                >
-                  {records.data &&
-                    (records.data.data.length === 0 ? (
-                      <EmptyState>{t("restricted.empty")}</EmptyState>
-                    ) : (
-                      <DataTable
-                        label={t("restricted.heldLabel")}
-                        columns={columns}
-                        rows={records.data.data}
-                        rowKey={(row) => row.activity_id}
-                      />
-                    ))}
-                </QueryStates>
-              }
-            />
-            {/* One input and the verb that submits it, so it stays a row: the
-                second half of the decision — the reason, and the warning it is
-                typed against — is the confirm dialog behind it. Absent without
-                the decide grant, exactly as the row-level Release column is. */}
-            {canDecide && (
+      </PanelBody>
+      <CardBoundary>
+        {records.isSuccess && held.length > 0 ? (
+          <DataTable
+            label={t("restricted.heldLabel")}
+            bleed
+            fold
+            columns={columns}
+            rows={held}
+            rowKey={(row) => row.activity_id}
+          />
+        ) : (
+          <PanelBody>
+            <QueryStates query={records} pendingLabel={t("restricted.title")}>
+              <EmptyState>{t("restricted.empty")}</EmptyState>
+            </QueryStates>
+          </PanelBody>
+        )}
+        {/* One input and its verb, so a row; the reason and its warning are the
+            confirm dialog behind it. In a body, whose seam parts it from the table. */}
+        {canDecide && (
+          <PanelBody>
+            <SettingList>
               <SettingRow
                 label={t("restricted.pin.action")}
                 description={t("restricted.pin.idHint")}
@@ -342,9 +345,8 @@ export function RestrictedRecordsCard() {
                   >
                     <TextInput
                       {...control}
-                      // The row already describes the field; a malformed id adds
-                      // the refusal to that description rather than replacing
-                      // it, so a reader hears the rule and how they broke it.
+                      // A malformed id adds the refusal to the row's description,
+                      // so a reader hears the rule and how they broke it.
                       aria-describedby={
                         [
                           control["aria-describedby"],
@@ -358,9 +360,6 @@ export function RestrictedRecordsCard() {
                       onChange={(event) => setPinId(event.target.value)}
                       placeholder={t("restricted.pin.idPlaceholder")}
                     />
-                    {/* The short verb, because the row's label already says
-                        what the form does: the button carried the same three
-                        words a hand to the left of it. */}
                     <Button type="submit" disabled={!pinIdIsWellFormed}>
                       {t("restricted.pin.submit")}
                     </Button>
@@ -373,23 +372,23 @@ export function RestrictedRecordsCard() {
                   </form>
                 )}
               />
-            )}
-          </SettingList>
-          <OverrideModal
-            target={releasing}
-            kind="release"
-            onClose={() => setReleasing(null)}
-          />
-          <OverrideModal
-            target={pinning}
-            kind="pin"
-            onClose={() => {
-              setPinning(null);
-              setPinId("");
-            }}
-          />
-        </CardBoundary>
-      </PanelBody>
+            </SettingList>
+          </PanelBody>
+        )}
+        <OverrideModal
+          target={releasing}
+          kind="release"
+          onClose={() => setReleasing(null)}
+        />
+        <OverrideModal
+          target={pinning}
+          kind="pin"
+          onClose={() => {
+            setPinning(null);
+            setPinId("");
+          }}
+        />
+      </CardBoundary>
     </Panel>
   );
 }

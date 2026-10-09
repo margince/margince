@@ -12,15 +12,18 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
+import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { CellStrip } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import {
   problemMessageOf,
   QueryGate,
@@ -30,9 +33,10 @@ import {
 } from "./common";
 import {
   actionLabelKey,
-  effectLabelKey,
+  actionTone,
+  effectBadge,
   effectReasonKey,
-  effectTone,
+  keepFor,
   parseRetainDays,
   policyEffect,
   RETENTION_ACTIONS,
@@ -46,35 +50,12 @@ import {
 import { RetentionPolicyForm } from "./retentionpolicyform";
 import "./retention.css";
 
-// Settings → Privacy → Retention (GCS-WIRE-1..5): the storage-limitation
-// ladder an admin now owns, and the retain-only posture that overrides its
-// destructive half.
-//
-// The one thing this screen exists to say: an ENABLED policy can be inert.
-// While the posture is on, an `anonymize` or `erase` rule stays exactly as
-// authored and does nothing — so every row states what it is doing tonight,
-// and why, on the row itself rather than in the nightly job's log.
+// The storage-limitation ladder and the retain-only posture that overrides its
+// destructive half: an enabled policy can be inert, so a row not acting says so.
 
-// The scope's own wire spelling. Kept beside the translated label because it is
-// what the audit log, the ops runbook and a support conversation all name the
-// policy by — the words are for reading, the identifier is for matching.
-function ScopeCell({ policy }: Readonly<{ policy: RetentionPolicy }>) {
-  const t = useT();
-  return (
-    <span className="retention-scope">
-      <span>{t(scopeLabelKey(policy.scope))}</span>
-      <span className="t-caption">{policy.scope}</span>
-    </span>
-  );
-}
-
-// A row's two writes are one PATCH on one policy, so they stay one mutation —
-// one pending state, one refusal. Where they part company is what a success
-// means for the open editor, and `intent` is how the write says which of the two
-// it is: inferring it from whichever fields the body happens to carry would make
-// a future body field silently change what the panel does.
+// A row's two writes are one PATCH on one policy, so they stay one mutation;
+// `intent` says which of the two it is, because only a save closes the editor.
 type PolicyWrite = Readonly<{
-  /** `switch` is the Enabled flip; `save` commits the edited window and basis. */
   intent: "save" | "switch";
   body: Readonly<{
     retain_days?: number;
@@ -84,33 +65,27 @@ type PolicyWrite = Readonly<{
   }>;
 }>;
 
-// One stored policy as ONE settings row: what it does tonight on the left, the
-// window and the action it does it with on the right, and Edit as the verb that
-// changes them. The editable window, action, basis and on/off switch are three
-// inputs committed together, so they belong behind that verb in a dialog rather
-// than in a panel that unfolds under the row — which is what kept the ladder
-// from reading as a ladder. `scope` is deliberately not editable: a different
-// scope is a different policy, which is also why the contract's patch body has
-// no scope field.
-function PolicyRow({
+// Mounted once per opening (keyed on the session), so the fields always start
+// from the policy as it now stands rather than from an abandoned draft.
+function PolicyEditorBody({
   policy,
-  canEdit,
+  titleId,
   canDelete,
+  onClose,
   onDelete,
 }: Readonly<{
   policy: RetentionPolicy;
-  canEdit: boolean;
+  titleId: string;
   canDelete: boolean;
+  onClose: () => void;
   onDelete: () => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const editorTitleId = useId();
-  const [editing, setEditing] = useState(false);
   const [retainDays, setRetainDays] = useState(String(policy.retain_days));
   const [action, setAction] = useState<RetentionAction>(policy.action);
   const [lawfulBasis, setLawfulBasis] = useState(policy.lawful_basis ?? "");
+  const days = parseRetainDays(retainDays);
 
   const patch = useMutation({
     mutationFn: async ({ body }: PolicyWrite) => {
@@ -125,182 +100,153 @@ function PolicyRow({
     },
     onSuccess: (_data, write) => {
       queryClient.invalidateQueries({ queryKey: RETENTION_POLICIES_KEY });
-      // Committing the edits is what the panel was opened for, so a save closes
-      // it. The switch is a write in its own right and leaves the panel exactly
-      // as it was: closing it there would unmount the window, action and basis
-      // fields the operator may be mid-edit on — and the switch they just
-      // flipped along with them, dropping focus to the document body.
+      // The switch leaves the editor open: closing it would drop the fields
+      // the operator may be mid-edit on, and focus with them.
       if (write.intent === "save") {
-        setEditing(false);
+        onClose();
       }
     },
   });
 
-  const effect = policyEffect(policy);
-  const reasonKey = effectReasonKey(effect);
-  const days = parseRetainDays(retainDays);
-
-  // Opening the panel re-seeds the three fields from the policy as it now
-  // stands. They are local state that outlives a close — the row is keyed on
-  // policy.id, so it is never remounted — so without this a draft typed before
-  // somebody else moved the window would reappear over a summary that
-  // contradicts it, and Save would send the older number.
-  function toggleEditor() {
-    if (!editing) {
-      setRetainDays(String(policy.retain_days));
-      setAction(policy.action);
-      setLawfulBasis(policy.lawful_basis ?? "");
-    }
-    setEditing(!editing);
-  }
-
   return (
     <>
-      <SettingRow
-        testId={`retention-row-${policy.scope}`}
-        label={<ScopeCell policy={policy} />}
-        // Why a row is not acting, in full, unconditionally — not behind the
-        // Edit verb and not only for an operator who holds the write grant. A
-        // reader who cannot change the posture still has to be able to tell a
-        // suppressed rule from a working one.
-        description={reasonKey ? t(reasonKey) : undefined}
-        // What the policy does tonight, at the one x every answer on this page
-        // sits at: the window, the action it takes at the end of it, and
-        // whether the posture is letting it happen.
-        value={
-          <span className="retention-answer">
-            <span>
-              {t("retention.windowDays", {
-                days: formatNumber(policy.retain_days, locale),
-              })}
-            </span>
-            <Badge>{t(actionLabelKey(policy.action))}</Badge>
-            <Badge tone={effectTone(effect)}>{t(effectLabelKey(effect))}</Badge>
-          </span>
-        }
-        control={
-          canEdit ? (
-            <Button onClick={toggleEditor}>{t("retention.edit")}</Button>
-          ) : null
-        }
-      />
-      <Modal
-        open={editing}
-        onClose={toggleEditor}
-        labelledBy={editorTitleId}
-        intent="form"
-      >
-        {/* The scope names WHICH policy is open, because the dialog covers the
-            row that would otherwise have said. */}
-        <Heading size="large" id={editorTitleId} className="t-h2 modal-title">
-          {t(scopeLabelKey(policy.scope))}
-        </Heading>
-        <div className="form-stack">
-          <Field
-            label={t("retention.window")}
-            hint={
-              days === null && retainDays.trim() !== ""
-                ? t("retention.windowInvalid")
-                : undefined
-            }
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                inputMode="numeric"
-                value={retainDays}
-                onChange={(event) => setRetainDays(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("retention.action")}>
-            {(control) => (
-              <Select
-                {...control}
-                options={RETENTION_ACTIONS.map((value) => ({
-                  value,
-                  label: t(actionLabelKey(value)),
-                }))}
-                value={action}
-                onChange={(value) => {
-                  const picked = RETENTION_ACTIONS.find(
-                    (candidate) => candidate === value,
-                  );
-                  if (picked) {
-                    setAction(picked);
-                  }
-                }}
-              />
-            )}
-          </Field>
-          <Field label={t("retention.lawfulBasis")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={lawfulBasis}
-                onChange={(event) => setLawfulBasis(event.target.value)}
-              />
-            )}
-          </Field>
-          {/* A Switch because flipping it IS the pause, with no Save after it.
-              `pending`, not `disabled`: the only refusal here is a write in
-              flight, which ends on its own and needs no `reason`. */}
-          <Switch
-            label={t("retention.enabled")}
-            checked={policy.enabled}
-            // `intent` is already on the write for exactly this reason: one
-            // `patch` serves this switch and the row's save form, so without it
-            // a saved edit made the pause switch announce a flip nobody made.
-            pending={patch.isPending && patch.variables?.intent === "switch"}
-            onChange={(next) =>
-              patch.mutate({ intent: "switch", body: { enabled: next } })
-            }
-          />
-          <ErrorLine error={patch.error} />
-        </div>
-        <div className="actions">
-          {/* The confirm REPLACES this dialog rather than stacking on it: two
-              dialogs trap focus in the wrong one and share one Escape key. */}
-          {canDelete && (
-            <span className="actions-lead">
-              <Button
-                variant="danger"
-                onClick={() => {
-                  setEditing(false);
-                  onDelete();
-                }}
-              >
-                {t("retention.delete")}
-              </Button>
-            </span>
+      {/* The scope names which policy is open: the dialog covers its row. */}
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
+        {t(scopeLabelKey(policy.scope))}
+      </Heading>
+      <div className="form-stack">
+        <Field
+          label={t("retention.window")}
+          hint={
+            days === null && retainDays.trim() !== ""
+              ? t("retention.windowInvalid")
+              : undefined
+          }
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              inputMode="numeric"
+              value={retainDays}
+              onChange={(event) => setRetainDays(event.target.value)}
+            />
           )}
-          <span className="actions-pair">
-            <Button onClick={toggleEditor}>{t("deals.cancel")}</Button>
-            <Button
-              variant="primary"
-              disabled={days === null || patch.isPending}
-              onClick={() =>
-                days !== null &&
-                patch.mutate({
-                  intent: "save",
-                  body: {
-                    retain_days: days,
-                    action,
-                    lawful_basis: lawfulBasis.trim() || null,
-                  },
-                })
-              }
-            >
-              {t("retention.save")}
+        </Field>
+        <Field label={t("retention.action")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={RETENTION_ACTIONS.map((value) => ({
+                value,
+                label: t(actionLabelKey(value)),
+              }))}
+              value={action}
+              onChange={(value) => {
+                const picked = RETENTION_ACTIONS.find(
+                  (candidate) => candidate === value,
+                );
+                if (picked) {
+                  setAction(picked);
+                }
+              }}
+            />
+          )}
+        </Field>
+        <Field label={t("retention.lawfulBasis")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={lawfulBasis}
+              onChange={(event) => setLawfulBasis(event.target.value)}
+            />
+          )}
+        </Field>
+        {/* Flipping it is the pause, with no Save after it. */}
+        <Switch
+          label={t("retention.enabled")}
+          checked={policy.enabled}
+          pending={patch.isPending && patch.variables?.intent === "switch"}
+          onChange={(next) =>
+            patch.mutate({ intent: "switch", body: { enabled: next } })
+          }
+        />
+        <ErrorLine error={patch.error} />
+      </div>
+      <div className="actions">
+        {/* The confirm replaces this dialog: two dialogs trap focus in the
+            wrong one and share one Escape key. */}
+        {canDelete && (
+          <span className="actions-lead">
+            <Button variant="danger" onClick={onDelete}>
+              {t("retention.delete")}
             </Button>
           </span>
-        </div>
-      </Modal>
+        )}
+        <span className="actions-pair">
+          <Button onClick={onClose}>{t("deals.cancel")}</Button>
+          <Button
+            variant="primary"
+            disabled={days === null || patch.isPending}
+            onClick={() =>
+              days !== null &&
+              patch.mutate({
+                intent: "save",
+                body: {
+                  retain_days: days,
+                  action,
+                  lawful_basis: lawfulBasis.trim() || null,
+                },
+              })
+            }
+          >
+            {t("retention.save")}
+          </Button>
+        </span>
+      </div>
     </>
   );
 }
 
-// Deleting a policy is not the way to pause one — it drops the rule entirely,
+type EditorState = Readonly<{ id: string; open: boolean; session: number }>;
+
+function PolicyEditor({
+  editor,
+  policies,
+  canDelete,
+  onClose,
+  onDelete,
+}: Readonly<{
+  editor: EditorState | null;
+  policies: readonly RetentionPolicy[];
+  canDelete: boolean;
+  onClose: () => void;
+  onDelete: (policy: RetentionPolicy) => void;
+}>) {
+  const titleId = useId();
+  // Read from the live list, so the Enabled switch shows what the server holds.
+  const policy = policies.find((each) => each.id === editor?.id) ?? null;
+  return (
+    <Modal
+      open={editor?.open === true && policy !== null}
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="form"
+    >
+      {policy && editor && (
+        <PolicyEditorBody
+          key={editor.session}
+          policy={policy}
+          titleId={titleId}
+          canDelete={canDelete}
+          onClose={onClose}
+          onDelete={() => onDelete(policy)}
+        />
+      )}
+    </Modal>
+  );
+}
+
+// Deleting a policy is not the way to pause one: it drops the rule entirely,
 // so records in that scope stop ageing out. The body says so and points at the
 // Enabled switch, because that is what the operator usually meant.
 function DeletePolicyModal({
@@ -310,10 +256,6 @@ function DeletePolicyModal({
   const t = useT();
   const queryClient = useQueryClient();
 
-  // The staged policy arrives as the mutation's variable, never through this
-  // closure: react-query re-arms a mutation's options in a passive effect, so a
-  // confirm landing between the commit that stages a row and that effect would
-  // otherwise read a stale (null) policy and delete nothing.
   const remove = useMutation({
     mutationFn: async (target: RetentionPolicy) => {
       const { error } = await api.DELETE("/retention-policies/{id}", {
@@ -354,12 +296,8 @@ function DeletePolicyModal({
   );
 }
 
-// The posture, and its consequence in the words that matter: with it on the
-// installation destroys nothing, and archiving still runs because an archived
-// record is kept. Disabled (never hidden) without the update grant — every
-// reader of this screen needs to know which posture is in force, and the
-// control's `reason` is what tells them why it is theirs to read and not to
-// change.
+// Refused, never hidden, without the update grant: every reader needs to know
+// which posture is in force, and `reason` says why they cannot change it.
 function PostureToggle({
   retainOnly,
   canManage,
@@ -379,26 +317,17 @@ function PostureToggle({
     },
     onSuccess: (data) => {
       queryClient.setQueryData(RETENTION_SETTINGS_KEY, data);
-      // Every row's `suppressed_by_posture` is derived from the posture the
-      // server just wrote, so the list is stale the moment this lands.
+      // Every row's `suppressed_by_posture` derives from the posture just written.
       queryClient.invalidateQueries({ queryKey: RETENTION_POLICIES_KEY });
     },
   });
 
   return (
     <div className="retention-posture">
+      {/* The row draws the naming, so the switch carries the same words hidden. */}
       <Switch
-        // The row draws the naming — the name and what the posture does — so
-        // the switch carries the same words hidden and no `hint` of its own: it
-        // owns its accessible name by design, and a hint here would draw the
-        // row's own description a second time in the answer column.
         label={t("retention.retainOnly")}
         labelHidden
-        // Two reasons this control can be unavailable, and only one of them is
-        // worth words: a reader who may never change the posture needs to know
-        // why, where a write already in flight explains itself by finishing.
-        // On the control rather than beside it, so `aria-describedby` carries
-        // the explanation to a reader who never sees the paragraph.
         reason={canManage ? undefined : t("retention.adminOnly")}
         checked={retainOnly}
         disabled={!canManage}
@@ -413,17 +342,13 @@ function PostureToggle({
 export function RetentionCard() {
   const t = useT();
   const me = useMe();
-  // Reading the ladder and authoring it are separate grants, and the card gates
-  // each affordance on the one it actually needs — a role granted read without
-  // update gets a card that tells the truth rather than buttons that 403.
   const canRead = useCan("retention_policy", "read");
   const canManage = useCanWrite("retention_policy", "update");
   const canCreate = useCanWrite("retention_policy", "create");
   const canDelete = useCanWrite("retention_policy", "delete");
   const addTitleId = useId();
   const [adding, setAdding] = useState(false);
-  // Which policy is staged for deletion, so ONE modal lives at the card root
-  // rather than one per row (share.tsx's revokingId shape).
+  const [editor, setEditor] = useState<EditorState | null>(null);
   const [deleting, setDeleting] = useState<RetentionPolicy | null>(null);
 
   const settings = useQuery({
@@ -450,19 +375,8 @@ export function RetentionCard() {
     },
   });
 
-  // After every hook, so the hook call order stays unconditional.
-  //
-  // Withheld, not absent: a permission is what denies this, so the card keeps
-  // its place and says so. It shares the Privacy & retention page with the consent
-  // registry an ops seat comes here for, and beside a subject queue that
-  // explains its own emptiness — a card that simply vanished would leave that
-  // reader to conclude this installation keeps everything forever.
-  //
-  // No request either, and that half stands: both queries are `enabled: canRead`
-  // because the answer is already known, and asking the server for a 403 in
-  // order to render it would turn a settled denial into a failure with a Retry
-  // that cannot succeed. Gated on the /me probe itself so the notice waits for
-  // the grants rather than flashing while they are in flight.
+  // Withheld, not absent, and no request: a vanished card reads as "keeps
+  // everything", and a known 403 offers a Retry that cannot succeed.
   if (!canRead) {
     return (
       <Panel title={t("retention.title")}>
@@ -476,20 +390,17 @@ export function RetentionCard() {
     );
   }
 
-  // No bottom margin of its own: `.settings-stack` owns the gap between cards.
+  // Sorted by the authorable enum's order, so the ladder reads the same on
+  // every visit and after every edit.
+  const rows = [...(policies.data?.data ?? [])].sort(
+    (left, right) =>
+      RETENTION_SCOPES.indexOf(left.scope) -
+      RETENTION_SCOPES.indexOf(right.scope),
+  );
+
   return (
     <Panel
       title={t("retention.title")}
-      // The card's one create verb rides in the header rather than in a row of
-      // its own. A row states a setting and its answer; authoring a policy is
-      // neither, and the row it used to sit in had the button's own words for a
-      // LABEL — "Add policy" twice, a hand apart. `titleAction` is the slot for
-      // exactly this (panel.tsx), and it keeps the verb above a ladder that
-      // grows instead of below the last rung.
-      //
-      // Absent without the create grant, exactly as each row's Edit verb is:
-      // the posture switch already states this reader's read-only standing
-      // once, and withholding it a second time per row is noise.
       titleAction={
         canCreate ? (
           <Button onClick={() => setAdding(true)}>
@@ -500,126 +411,171 @@ export function RetentionCard() {
     >
       <PanelBody>
         <PanelIntro>{t("retention.sub")}</PanelIntro>
-        <CardBoundary>
-          {/* The posture FIRST, then the rules that read it — a reader auditing
-              the ladder needs the override before the rows it overrides, or
-              every row is read twice. */}
-          <SettingList>
-            {/* One switch, so it answers its row from the right column like
-                every other single control on this page. The sentence that says
-                what the posture DOES is the row's description, in the naming
-                column where a sentence has the width to be one — it was under
-                the switch before, which made the only control on the card the
-                only one not at the answer column's x. */}
-            <SettingRow
-              label={t("retention.retainOnly")}
-              description={t("retention.retainOnlyHelp")}
-              control={
-                settings.isPending ? (
-                  // Switch-shaped, because that is what is arriving: a
-                  // percentage bar in the answer column has no width to be a
-                  // percentage of.
-                  <Skeleton width={40} height={22} />
-                ) : settings.isError ? (
-                  <ErrorLine error={settings.error} />
-                ) : (
-                  <PostureToggle
-                    retainOnly={settings.data.retain_only}
-                    canManage={canManage}
-                  />
-                )
-              }
-            />
-
-            <PolicyList
-              query={policies}
-              canEdit={canManage}
-              canDelete={canDelete}
-              onDelete={setDeleting}
-            />
-          </SettingList>
-
-          {/* Authoring a policy is four inputs committed together, so the
-              header's verb opens a dialog and the ladder above stays a list of
-              answers. */}
-          <Modal
-            open={adding}
-            onClose={() => setAdding(false)}
-            labelledBy={addTitleId}
-            intent="form"
-          >
-            <Heading size="large" id={addTitleId} className="t-h2 modal-title">
-              {t("retention.addPolicy")}
-            </Heading>
-            <RetentionPolicyForm onDone={() => setAdding(false)} />
-          </Modal>
-
-          <DeletePolicyModal
-            policy={deleting}
-            onClose={() => setDeleting(null)}
-          />
-        </CardBoundary>
       </PanelBody>
+      <CardBoundary>
+        {/* The posture first: a reader auditing the ladder needs the override
+            before the rows it overrides. */}
+        <SettingList bleed="settings">
+          <SettingRow
+            label={t("retention.retainOnly")}
+            description={t("retention.retainOnlyHelp")}
+            control={
+              settings.isPending ? (
+                <Skeleton width={40} height={22} />
+              ) : settings.isError ? (
+                <ErrorLine error={settings.error} />
+              ) : (
+                <PostureToggle
+                  retainOnly={settings.data.retain_only}
+                  canManage={canManage}
+                />
+              )
+            }
+          />
+        </SettingList>
+        {policies.isSuccess && rows.length > 0 ? (
+          <PolicyTable
+            rows={rows}
+            canEdit={canManage}
+            onEdit={(policy) =>
+              setEditor((current) => ({
+                id: policy.id,
+                open: true,
+                session: (current?.session ?? 0) + 1,
+              }))
+            }
+          />
+        ) : (
+          <PanelBody>
+            <QueryStates query={policies} pendingLabel={t("retention.title")}>
+              <EmptyState>{t("retention.empty")}</EmptyState>
+            </QueryStates>
+          </PanelBody>
+        )}
+        <PolicyEditor
+          editor={editor}
+          policies={rows}
+          canDelete={canDelete}
+          onClose={() =>
+            setEditor((current) => current && { ...current, open: false })
+          }
+          onDelete={(policy) => {
+            setEditor((current) => current && { ...current, open: false });
+            setDeleting(policy);
+          }}
+        />
+        <Modal
+          open={adding}
+          onClose={() => setAdding(false)}
+          labelledBy={addTitleId}
+          intent="form"
+        >
+          <Heading size="large" id={addTitleId} className="t-h2 modal-title">
+            {t("retention.addPolicy")}
+          </Heading>
+          <RetentionPolicyForm onDone={() => setAdding(false)} />
+        </Modal>
+        <DeletePolicyModal
+          policy={deleting}
+          onClose={() => setDeleting(null)}
+        />
+      </CardBoundary>
     </Panel>
   );
 }
 
-// The list's own honest state matrix. Split out so RetentionCard reads as the
-// composition it is; the posture block above it has its own states because a
-// posture that failed to load must not hide a policy list that did.
-function PolicyList({
-  query,
+function PolicyTable({
+  rows,
   canEdit,
-  canDelete,
-  onDelete,
+  onEdit,
 }: Readonly<{
-  query: Readonly<{
-    isPending: boolean;
-    isError: boolean;
-    error: unknown;
-    data?: Readonly<{ data: RetentionPolicy[] }>;
-    refetch: () => unknown;
-  }>;
+  rows: readonly RetentionPolicy[];
   canEdit: boolean;
-  canDelete: boolean;
-  onDelete: (policy: RetentionPolicy) => void;
+  onEdit: (policy: RetentionPolicy) => void;
 }>) {
   const t = useT();
-  let body: ReactNode = null;
-  if (query.data) {
-    // Sorted by the authorable enum's order, not by the server's row order: the
-    // ladder reads the same on every visit and after every edit.
-    const rows = [...query.data.data].sort(
-      (left, right) =>
-        RETENTION_SCOPES.indexOf(left.scope) -
-        RETENTION_SCOPES.indexOf(right.scope),
-    );
-    // The rows are handed to the enclosing SettingList as its own children
-    // rather than being wrapped in a list of their own: the hairline between
-    // two decisions belongs to the card that holds both, and a <ul> here put
-    // the ladder on a second rhythm from the posture above it.
-    body =
-      rows.length === 0 ? (
-        <EmptyState>{t("retention.empty")}</EmptyState>
-      ) : (
-        rows.map((policy) => (
-          <PolicyRow
-            key={policy.id}
-            policy={policy}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            onDelete={() => onDelete(policy)}
-          />
-        ))
-      );
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const columns: DataTableColumn<RetentionPolicy>[] = [
+    {
+      key: "scope",
+      header: t("retention.colScope"),
+      grow: true,
+      render: (policy) => <ScopeCell policy={policy} />,
+    },
+    {
+      key: "keep",
+      header: t("retention.colKeep"),
+      align: "end",
+      render: (policy) => {
+        const window = keepFor(policy.retain_days);
+        return plural(window.unit, window.count, {
+          count: formatNumber(window.count, locale),
+        });
+      },
+    },
+    {
+      key: "then",
+      header: t("retention.colThen"),
+      render: (policy) => {
+        const status = effectBadge(policyEffect(policy));
+        return (
+          <CellStrip>
+            <Badge tone={actionTone(policy.action)}>
+              {t(actionLabelKey(policy.action))}
+            </Badge>
+            {status && <Badge tone={status.tone}>{t(status.key)}</Badge>}
+          </CellStrip>
+        );
+      },
+    },
+  ];
+  if (canEdit) {
+    columns.push({
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      fold: "end",
+      align: "end",
+      render: (policy) => (
+        <span className="cell-actions">
+          <Button
+            aria-label={t("retention.editScope", {
+              scope: t(scopeLabelKey(policy.scope)),
+            })}
+            aria-haspopup="dialog"
+            onClick={() => onEdit(policy)}
+          >
+            {t("retention.edit")}
+          </Button>
+        </span>
+      ),
+    });
   }
-  // The shared spelling of the loading and failure rungs, rather than a third
-  // hand-rolled copy: the skeleton announces itself as busy, and the failure is
-  // an assertive live region carrying the server's own explanation beside the
-  // retry. The hand-rolled version said neither out loud.
   return (
-    <QueryStates query={query} pendingLabel={t("retention.title")}>
-      {body}
-    </QueryStates>
+    <DataTable
+      label={t("retention.title")}
+      bleed
+      fold
+      columns={columns}
+      rows={[...rows]}
+      rowKey={(policy) => policy.id}
+    />
+  );
+}
+
+// A disabled rule says it is kept and inert, so it never reads as deleted.
+function ScopeCell({ policy }: Readonly<{ policy: RetentionPolicy }>) {
+  const t = useT();
+  const reasonKey = effectReasonKey(policyEffect(policy));
+  const name: ReactNode = <span>{t(scopeLabelKey(policy.scope))}</span>;
+  if (!reasonKey) {
+    return name;
+  }
+  return (
+    <CellStack>
+      {name}
+      <span className="t-caption">{t(reasonKey)}</span>
+    </CellStack>
   );
 }

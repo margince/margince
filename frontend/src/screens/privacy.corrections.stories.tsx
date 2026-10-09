@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ConfirmSubmissionsPanel } from "./privacy.corrections";
 import {
@@ -36,7 +36,7 @@ const MISSPELT_NAME: ConfirmSubmission = {
   id: "01a05500-0000-7000-8000-0000000000c1",
   contact_id: "01a05500-0000-7000-8000-0000000000aa",
   kind: "correction",
-  field: "family_name",
+  field: "full_name",
   current_value: "Schmitt",
   proposed_value: "Schmidt",
   contact_name: "Anna Schmidt",
@@ -106,7 +106,9 @@ export const DecidingOne: Story = {
     // Every waiting row carries the verb, so the press names WHICH one: the
     // correction, because the pair of answers it opens is the subject here and
     // the removal's read differently. A bare role lookup finds two and rejects.
-    const decide = await canvas.findAllByRole("button", { name: "Decide" });
+    const decide = await canvas.findAllByRole("button", {
+      name: /^Decide on request from/,
+    });
     await userEvent.click(decide[0]);
   },
 };
@@ -119,7 +121,7 @@ export const ReadSeatDecidesNothing: Story = {
   render: panel([MISSPELT_NAME, ASKED_TO_BE_REMOVED], {}, "read"),
 };
 
-/** Nothing waiting — the honest empty state, not a blank panel. */
+/** Nothing waiting: one sentence in the panel, as every privacy panel says it. */
 export const NothingWaiting: Story = { render: panel([]) };
 
 /**
@@ -141,4 +143,63 @@ export const TheQueueCouldNotBeRead: Story = {
         500,
       ),
   }),
+};
+
+const LONG_TITLE: ConfirmSubmission = {
+  id: "01a05500-0000-7000-8000-0000000000c3",
+  contact_id: "01a05500-0000-7000-8000-0000000000cc",
+  kind: "correction",
+  field: "title",
+  current_value: "Procurement",
+  proposed_value:
+    "Head of Procurement and Supplier Relationship Management, DACH and Benelux",
+  contact_name: "Maximiliane Lüdenscheidt-Hohenberg von Schwarzenfeld",
+  submitted_at: "2026-08-03T09:00:00Z",
+};
+
+/** Long names and long proposals wrap inside their cells. */
+export const LongContent: Story = {
+  render: panel([MISSPELT_NAME, LONG_TITLE, ASKED_TO_BE_REMOVED]),
+};
+
+/** At phone width each row folds: the contact and the verb, then the rest. */
+export const QueuePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: panel([MISSPELT_NAME, LONG_TITLE, ASKED_TO_BE_REMOVED]),
+};
+
+/** The read in flight. */
+export const Loading: Story = {
+  render: panel([], {
+    "GET /confirm-submissions": () => new Promise<Response>(() => undefined),
+  }),
+};
+
+/** A refused decision keeps the dialog open over the server's words. */
+export const DecisionRefused: Story = {
+  render: panel([MISSPELT_NAME], {
+    [`POST /confirm-submissions/${MISSPELT_NAME.id}/resolve`]: () =>
+      jsonResponse(
+        {
+          type: "https://errors.gradion.com/permission_denied",
+          title: "Forbidden",
+          status: 403,
+          code: "permission_denied",
+          detail: "This seat may not change the contact.",
+        },
+        403,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /^Decide on request from/ }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(
+      dialog.getByRole("button", { name: /accept and update/i }),
+    );
+    await dialog.findByRole("alert");
+  },
 };

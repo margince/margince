@@ -1,12 +1,7 @@
-/* The retention section of the privacy tab: the posture row, the policy ladder
- * and the dialog each policy is edited in. Layout + token colours only
- * (ds-purity) — every control, and the row language itself, comes from the
- * design system. */
+/* The retention and restricted-records panels of the privacy page: layout and
+ * token colours only; every control comes from the design system. */
 
-/* The posture switch and, when a flip is refused, the sentence saying so. Both
- * sit in the row's ANSWER column now, so they stack against its right edge
- * rather than starting a second column of their own — a refusal that began at
- * the switch's left would hang off the one x every answer on this page shares. */
+/* The posture switch and its refusal stack against the answer column's edge. */
 .retention-posture {
   display: flex;
   flex-direction: column;
@@ -19,29 +14,7 @@
   text-align: right;
 }
 
-/* The words and the wire identifier stack, so a wide row stays one line per
- * policy instead of pushing the badges off the end. */
-.retention-scope {
-  display: flex;
-  flex-direction: column;
-}
-
-/* What a policy does tonight, as the row's ANSWER: the window, the action and
- * the effect on one line in the right column, wrapping there rather than
- * widening the row past the card. `justify-content: flex-end` so a wrapped
- * second line stays on the answer column's own edge instead of drifting back
- * towards the naming it belongs beside. */
-.retention-answer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-/* The pin form in the row under the restricted-records table: an id and the
-   verb that submits it on one line, wrapping rather than overflowing — the row
-   owns the naming and the hint, so nothing here draws a label. */
+/* The pin form: an id and its verb on one line, wrapping rather than overflowing. */
 .restricted-pin {
   display: flex;
   align-items: center;

@@ -4,9 +4,11 @@ import type { RetentionAction, RetentionScope } from "./retention.logic";
 import {
   ACTION_LABEL_KEYS,
   actionLabelKey,
+  actionTone,
+  effectBadge,
   effectReasonKey,
-  effectTone,
   isDuplicateScope,
+  keepFor,
   parseRetainDays,
   policyEffect,
   RETENTION_ACTIONS,
@@ -49,13 +51,33 @@ describe("policyEffect", () => {
     );
   });
 
-  it("only the states that are not acting carry a reason and a tone", () => {
+  it("a status badge only where a row is not acting, and a sentence only where it is off", () => {
     expect(effectReasonKey("acting")).toBeNull();
-    expect(effectReasonKey("suppressed")).toBe("retention.suppressedWhy");
+    expect(effectReasonKey("suppressed")).toBeNull();
     expect(effectReasonKey("disabled")).toBe("retention.disabledWhy");
-    expect(effectTone("acting")).toBe("success");
-    expect(effectTone("suppressed")).toBe("warning");
-    expect(effectTone("disabled")).toBeUndefined();
+    expect(effectBadge("acting")).toBeNull();
+    expect(effectBadge("suppressed")).toEqual({
+      key: "retention.effectSuppressed",
+      tone: "warning",
+    });
+    expect(effectBadge("disabled")).toEqual({
+      key: "retention.effectDisabled",
+    });
+  });
+
+  it("tones an action by what it destroys", () => {
+    expect(actionTone("archive")).toBeUndefined();
+    expect(actionTone("anonymize")).toBe("warning");
+    expect(actionTone("erase")).toBe("danger");
+  });
+});
+
+describe("a window as the reader counts it", () => {
+  it("reads whole years as years and anything else as days", () => {
+    expect(keepFor(730)).toEqual({ unit: "retention.keepYears", count: 2 });
+    expect(keepFor(365)).toEqual({ unit: "retention.keepYears", count: 1 });
+    expect(keepFor(90)).toEqual({ unit: "retention.keepDays", count: 90 });
+    expect(keepFor(400)).toEqual({ unit: "retention.keepDays", count: 400 });
   });
 });
 
