@@ -244,8 +244,7 @@ func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
 	assertSameRefusal(t, storeOpened, probe.err)
 	// Both name the same fault, and it is the money pair rather than whatever
 	// else could have refused this input.
-	var pair *deals.AmountCurrencyPairError
-	if !errors.As(probe.err, &pair) {
+	if _, ok := errors.AsType[*deals.AmountCurrencyPairError](probe.err); !ok {
 		t.Errorf("the caller-opened create refused with %v, want the money-pair fault", probe.err)
 	}
 	if probe.rows != 0 {
@@ -266,8 +265,7 @@ func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)
-	var unpaired *deals.PartnerAttributionUnpairedError
-	if !errors.As(probe.err, &unpaired) {
+	if _, ok := errors.AsType[*deals.PartnerAttributionUnpairedError](probe.err); !ok {
 		t.Errorf("the caller-opened create refused with %v, want the partner-pair fault", probe.err)
 	}
 	if probe.rows != 0 {

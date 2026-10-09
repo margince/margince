@@ -126,7 +126,7 @@ func stripSharedPrefixBlocks(pages []crawlPage) ([]crawlPage, []string) {
 	// one menu and leaves the other locales carrying theirs, so the search
 	// repeats on what remains until nothing more qualifies.
 	var blocks []string
-	for round := 0; round < boilerplateMaxRounds; round++ {
+	for range boilerplateMaxRounds {
 		block := stripOneSharedBlock(out)
 		if block == "" {
 			break

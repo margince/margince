@@ -349,8 +349,8 @@ func TestPromotingALeadRunsTheFullContactLadder(t *testing.T) {
 	// A different address, so the exact tier stays silent; the name is what
 	// collides.
 	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{
-		FullName: ptr("Jonathan Meier"),
-		Email:    ptr("jonathan.meier@acme.test"),
+		FullName: new("Jonathan Meier"),
+		Email:    new("jonathan.meier@acme.test"),
 		Source:   "manual",
 	})
 	if err != nil {
@@ -397,7 +397,7 @@ func TestPromotingALeadStillMergesOnAClaimedAddress(t *testing.T) {
 		t.Fatal(err)
 	}
 	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{
-		FullName: ptr("Dana Fischer"), Email: ptr("dana@globex.test"), Source: "manual",
+		FullName: new("Dana Fischer"), Email: new("dana@globex.test"), Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -422,9 +422,9 @@ func TestASecondLeadCannotClaimALinkedInProfile(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.asLeadOwner()
 	first, _, err := e.store.CreateLead(ctx, CreateLeadInput{
-		FullName:    ptr("Vera Vogel"),
-		Email:       ptr("vera@vogel.test"),
-		LinkedInURL: ptr("https://www.linkedin.com/in/vera-vogel"),
+		FullName:    new("Vera Vogel"),
+		Email:       new("vera@vogel.test"),
+		LinkedInURL: new("https://www.linkedin.com/in/vera-vogel"),
 		Source:      "manual",
 	})
 	if err != nil {
@@ -434,9 +434,9 @@ func TestASecondLeadCannotClaimALinkedInProfile(t *testing.T) {
 	// A different address, and the same profile written with the other scheme,
 	// an explicit port and a fragment — all noise the key normalizes away.
 	_, _, err = e.store.CreateLead(ctx, CreateLeadInput{
-		FullName:    ptr("V. Vogel"),
-		Email:       ptr("v.vogel@other.test"),
-		LinkedInURL: ptr("http://www.linkedin.com:443/in/vera-vogel#about"),
+		FullName:    new("V. Vogel"),
+		Email:       new("v.vogel@other.test"),
+		LinkedInURL: new("http://www.linkedin.com:443/in/vera-vogel#about"),
 		Source:      "manual",
 	})
 	var dup *DuplicateLeadLinkedInError

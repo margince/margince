@@ -6,6 +6,7 @@ package filterpropose
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -117,8 +118,7 @@ func admit(
 	// The real compiler, over this one leaf: what it refuses here the preview
 	// and the saved list would refuse too.
 	if _, err := storekit.CompilePredicate(leaf, engine, func(any) int { return 1 }); err != nil {
-		var refused *storekit.PredicateError
-		if errors.As(err, &refused) {
+		if refused, ok := errors.AsType[*storekit.PredicateError](err); ok {
 			return drop(CodeValueNotAllowed, refused.Message)
 		}
 		return drop(CodeValueNotAllowed, err.Error())
@@ -132,12 +132,7 @@ func admit(
 }
 
 func offers(ops []string, op string) bool {
-	for _, offered := range ops {
-		if offered == op {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ops, op)
 }
 
 // operand reads the clause's value slot the field's type and operator call for.

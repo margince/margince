@@ -101,7 +101,7 @@ func TestAWorkspaceCompanyCanBeMadePrivate(t *testing.T) {
 	}
 
 	if _, err := e.store.UpdateCompany(e.as(e.owner, principal.RowScopeOwn), published,
-		UpdateCompanyInput{Visibility: visibility("owner")}); err != nil {
+		UpdateCompanyInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("making a published company private: %v", err)
 	}
 
@@ -123,7 +123,7 @@ func TestACapturedCompanyCanBePublished(t *testing.T) {
 	}
 
 	if _, err := e.store.UpdateCompany(e.as(e.owner, principal.RowScopeOwn), captured,
-		UpdateCompanyInput{Visibility: visibility("workspace")}); err != nil {
+		UpdateCompanyInput{Visibility: new("workspace")}); err != nil {
 		t.Fatalf("publishing a captured company: %v", err)
 	}
 
@@ -149,7 +149,7 @@ func TestNarrowingACompanyKeepsItsOwnOwner(t *testing.T) {
 	published := e.captureCompany(t, "workspace")
 
 	if _, err := e.store.UpdateCompany(e.as(e.teammate, principal.RowScopeTeam), published,
-		UpdateCompanyInput{Visibility: visibility("owner")}); err != nil {
+		UpdateCompanyInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("narrowing a colleague's company: %v", err)
 	}
 
@@ -181,7 +181,7 @@ func TestNarrowingAnUnownedCompanyIsRefused(t *testing.T) {
 	// An unbounded seat, because the ordinary write gate treats an unowned row
 	// as nobody's to change — this is the caller that can actually reach it.
 	_, err := e.store.UpdateCompany(e.as(e.admin, principal.RowScopeAll), id,
-		UpdateCompanyInput{Visibility: visibility("owner")})
+		UpdateCompanyInput{Visibility: new("owner")})
 	var required *RequiredFieldError
 	if !errors.As(err, &required) {
 		t.Fatalf("narrowing an unowned company: err = %v, want a required-field refusal naming owner_id", err)
@@ -221,7 +221,7 @@ func TestAStaleCompanyVisibilityWriteIsRefused(t *testing.T) {
 
 	// Its owner makes it private in between.
 	if _, err := e.store.UpdateCompany(ctx, published,
-		UpdateCompanyInput{Visibility: visibility("owner")}); err != nil {
+		UpdateCompanyInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("making it private: %v", err)
 	}
 
@@ -266,7 +266,7 @@ func TestCapturePrivacyStillHidesACompanyFromTheNewDoor(t *testing.T) {
 		{"an admin", e.admin, principal.RowScopeAll},
 	} {
 		_, err := e.store.UpdateCompany(e.as(reader.user, reader.scope), captured,
-			UpdateCompanyInput{Visibility: visibility("workspace")})
+			UpdateCompanyInput{Visibility: new("workspace")})
 		if !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("%s publishing somebody else's capture-private company: err = %v, want not found",
 				reader.name, err)
@@ -311,7 +311,7 @@ func TestAuthorizationIsRecheckedUnderTheRowLock(t *testing.T) {
 
 		// The owner closes it, in their own transaction, and commits.
 		if _, err := e.store.UpdateCompany(e.as(e.owner, principal.RowScopeOwn), published,
-			UpdateCompanyInput{Visibility: visibility("owner")}); err != nil {
+			UpdateCompanyInput{Visibility: new("owner")}); err != nil {
 			t.Fatalf("the owner privatizing mid-race: %v", err)
 		}
 

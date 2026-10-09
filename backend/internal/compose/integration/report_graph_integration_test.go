@@ -35,7 +35,7 @@ func (e *SearchEnv) seedDealFixtures(t *testing.T, n int, owner *ids.UUID) {
 	pipelineID := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Sales', true, 0)`)
 	stageID := e.SeedID(t, `INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability) VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, pipelineID)
 	companyID := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Report Company', 'manual', 'human:x')`)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		e.SeedID(t, fmt.Sprintf(`INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, owner_id, amount_minor, currency, source, captured_by)
 			VALUES ($1, 'Deal %d', $2, $3, $4, $5, 100000, 'EUR', 'manual', 'human:x')`, i),
 			pipelineID, stageID, companyID, owner)
@@ -47,7 +47,7 @@ func (e *SearchEnv) seedDealFixtures(t *testing.T, n int, owner *ids.UUID) {
 // the row a contact row scope still hides from everyone but its captor.
 func TestAdHocReportPlanCountsUnderRowScope(t *testing.T) {
 	e := SetupSearch(t)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		e.SeedID(t, fmt.Sprintf(`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 			VALUES ($1, 'Private %d', $2, 'owner', 'manual', 'human:x')`, i), e.Rep3)
 	}
@@ -143,7 +143,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	if stageID == "" {
 		t.Fatalf("no open stage in the seeded pipeline: %+v", pipelines)
 	}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 			"source": "manual",
 			"name":   fmt.Sprintf("Acme Deal %d", i), "pipeline_id": pipelines.Data[0].ID,

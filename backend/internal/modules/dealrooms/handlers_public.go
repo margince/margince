@@ -255,8 +255,8 @@ func (h Handlers) DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Reque
 		size = *file.ByteSize
 	}
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: contentType, Filename: file.Filename, Size: size},
-		Body:     body,
+		ContentType: contentType, Filename: file.Filename, Size: size,
+		Body: body,
 	}, "deal room document "+documentID.String())
 }
 

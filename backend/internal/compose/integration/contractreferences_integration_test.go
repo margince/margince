@@ -18,6 +18,7 @@ package integration
 // had just withheld.
 
 import (
+	"maps"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -101,9 +102,7 @@ func dealIDPtr(deal ids.UUID) *ids.DealID {
 func contractReaderPerms(without ...string) principal.Permissions {
 	perms := AccountRepPerms
 	perms.Objects = make(map[string]principal.ObjectGrant, len(AccountRepPerms.Objects)+1)
-	for object, grant := range AccountRepPerms.Objects {
-		perms.Objects[object] = grant
-	}
+	maps.Copy(perms.Objects, AccountRepPerms.Objects)
 	perms.Objects["contract"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	for _, object := range without {
 		delete(perms.Objects, object)

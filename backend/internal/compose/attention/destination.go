@@ -164,12 +164,6 @@ func DestinationOfSource(source crmcontracts.WorklistItemSource) crmcontracts.Wo
 	return destinationOfSource[source]
 }
 
-// destinationPtr is the wire field's shape: optional, so an older client that
-// never heard of the field keeps working, and always sent by this server.
-func destinationPtr(at crmcontracts.WorklistItemDestination) *crmcontracts.WorklistItemDestination {
-	return &at
-}
-
 // sameDestination says whether these rows may be folded into one.
 //
 // A fold puts one row on the page in place of many, so the group has to belong

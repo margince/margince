@@ -336,7 +336,7 @@ func validCIMD(body []byte, clientID string) (cimdDocument, error) {
 // floor: a client that says nothing gets the shortest life this server offers,
 // never the longest.
 func cimdCacheTTL(cacheControl string) time.Duration {
-	for _, directive := range strings.Split(cacheControl, ",") {
+	for directive := range strings.SplitSeq(cacheControl, ",") {
 		directive = strings.TrimSpace(strings.ToLower(directive))
 		if directive == "no-store" || directive == "no-cache" {
 			return cimdMinCache

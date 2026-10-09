@@ -104,8 +104,7 @@ func TestAttributingADealThatNamesNoPartnerIsRefused(t *testing.T) {
 	if err == nil {
 		t.Fatal("attributing a deal with no partner succeeded; the stored row would breach the pairing CHECK")
 	}
-	var unpaired *deals.PartnerAttributionUnpairedError
-	if !errors.As(err, &unpaired) {
+	if _, ok := errors.AsType[*deals.PartnerAttributionUnpairedError](err); !ok {
 		t.Fatalf("error = %v, want PartnerAttributionUnpairedError", err)
 	}
 }
@@ -180,8 +179,7 @@ func TestForgettingThePartnerWhileClaimingSomethingOfThemIsRefused(t *testing.T)
 		PartnerAttribution: &influenced,
 	})
 
-	var unpaired *deals.PartnerAttributionUnpairedError
-	if !errors.As(err, &unpaired) {
+	if _, ok := errors.AsType[*deals.PartnerAttributionUnpairedError](err); !ok {
 		t.Fatalf("error = %v, want PartnerAttributionUnpairedError — the request forgets the partner the claim describes", err)
 	}
 }

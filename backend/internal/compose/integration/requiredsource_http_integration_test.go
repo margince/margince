@@ -9,6 +9,7 @@ package integration
 // create that leaves it out or sends it blank is refused and names the field.
 
 import (
+	"maps"
 	"net/http"
 	"testing"
 
@@ -34,9 +35,7 @@ func TestACreateWithoutASourceIsRefusedNamingSourceOverHTTP(t *testing.T) {
 		for label, value := range map[string]any{"missing": nil, "empty": "", "spaces": "   "} {
 			t.Run(rec.kind+" "+label, func(t *testing.T) {
 				body := AnyMap{}
-				for k, v := range rec.body {
-					body[k] = v
-				}
+				maps.Copy(body, rec.body)
 				if label != "missing" {
 					body["source"] = value
 				}

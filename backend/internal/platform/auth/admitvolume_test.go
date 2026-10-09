@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -33,12 +34,7 @@ func (s *spentQuota) Read(_ context.Context, c agentvolume.Counter) agentvolume.
 }
 
 func (s *spentQuota) askedFor(c agentvolume.Counter) bool {
-	for _, asked := range s.asked {
-		if asked == c {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s.asked, c)
 }
 
 // over builds a meter that reports one counter crossed and every other with

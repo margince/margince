@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -114,7 +115,7 @@ func tablesWithFrozenRateColumn(t *testing.T) []string {
 func tablesDefiningFrozenRate(sql string) []string {
 	var tables []string
 	subject := ""
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if m := tableStatement.FindStringSubmatch(line); m != nil {
 			subject = m[1]
 		}
@@ -128,12 +129,7 @@ func tablesDefiningFrozenRate(sql string) []string {
 var tableStatement = regexp.MustCompile(`(?i)^\s*(?:CREATE TABLE(?:\s+IF NOT EXISTS)?|ALTER TABLE)\s+([a-z_][a-z0-9_]*)`)
 
 func contains(haystack []string, needle string) bool {
-	for _, s := range haystack {
-		if s == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 // NoArchiveColumn tells storekit to drop the `archived_at IS NULL` predicate.
@@ -205,7 +201,7 @@ func tablesWithArchivedAt(t *testing.T) map[string]bool {
 				return err
 			}
 			subject := ""
-			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
+			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
 				if m := tableStatement.FindStringSubmatch(line); m != nil {
 					subject = m[1]
 				}

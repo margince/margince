@@ -440,5 +440,3 @@ func (s *Service) baselineFor(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 	}
 	return at, true, nil
 }
-
-func ptr[T any](v T) *T { return &v }

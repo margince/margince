@@ -14,6 +14,7 @@
 package gatekit
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -61,9 +62,7 @@ type Waivers[K ~string] struct {
 // what was ratified.
 func Waive[K ~string](entries map[K]string) *Waivers[K] {
 	reasons := make(map[K]string, len(entries))
-	for subject, reason := range entries {
-		reasons[subject] = reason
-	}
+	maps.Copy(reasons, entries)
 	return &Waivers[K]{reasons: reasons, matched: make(map[K]bool, len(entries))}
 }
 
@@ -160,9 +159,7 @@ func (w *Waivers[K]) Reasons() map[K]string {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	out := make(map[K]string, len(w.reasons))
-	for subject, reason := range w.reasons {
-		out[subject] = reason
-	}
+	maps.Copy(out, w.reasons)
 	return out
 }
 

@@ -39,8 +39,8 @@ func TestACityNameResolvesFromTheCompaniesLocatedInIt(t *testing.T) {
 		company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 			DisplayName: row.name, Source: "manual",
 			Address: &crmcontracts.Address{
-				Line1: strPtr("Teststrasse 1"),
-				City:  strPtr(row.city),
+				Line1: new("Teststrasse 1"),
+				City:  new(row.city),
 			},
 		})
 		if err != nil {
@@ -87,7 +87,7 @@ func TestACityLookupFoldsCaseAndRefusesWhatItCannotAnswer(t *testing.T) {
 
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Folded Case Gmbh", Source: "manual",
-		Address: &crmcontracts.Address{Line1: strPtr("Teststrasse 2"), City: strPtr("Düsseldorf")},
+		Address: &crmcontracts.Address{Line1: new("Teststrasse 2"), City: new("Düsseldorf")},
 	})
 	if err != nil {
 		t.Fatalf("seeding: %v", err)
@@ -141,7 +141,7 @@ func TestAStaleCoordinateIsNotAveragedIntoACity(t *testing.T) {
 	locate := func(name, city string, lat, lon float64, status string) {
 		company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 			DisplayName: name, Source: "manual",
-			Address: &crmcontracts.Address{Line1: strPtr("Teststrasse 1"), City: strPtr(city)},
+			Address: &crmcontracts.Address{Line1: new("Teststrasse 1"), City: new(city)},
 		})
 		if err != nil {
 			t.Fatalf("seeding %q: %v", name, err)
@@ -194,7 +194,7 @@ func TestACityNameCoveringTwoPlacesResolvesToNeither(t *testing.T) {
 	} {
 		company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 			DisplayName: row.name, Source: "manual",
-			Address: &crmcontracts.Address{Line1: strPtr("Teststrasse 1"), City: strPtr("Frankfurt")},
+			Address: &crmcontracts.Address{Line1: new("Teststrasse 1"), City: new("Frankfurt")},
 		})
 		if err != nil {
 			t.Fatalf("seeding %q: %v", row.name, err)

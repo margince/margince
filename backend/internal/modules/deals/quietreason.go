@@ -176,10 +176,7 @@ func dayIn(at time.Time, loc *time.Location) time.Time {
 // "5 weeks" says outright.
 func quietFor(since, today time.Time, loc *time.Location) string {
 	zone := orUTC(loc)
-	days := int(dayIn(today, zone).Sub(dayIn(since, zone)).Hours() / 24)
-	if days < 0 {
-		days = 0
-	}
+	days := max(int(dayIn(today, zone).Sub(dayIn(since, zone)).Hours()/24), 0)
 	switch {
 	case days == 0:
 		return "that was today"

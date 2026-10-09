@@ -108,8 +108,7 @@ func TestStagingRefusesATypeTheRoutedExecutorDoesNotArchive(t *testing.T) {
 
 	_, err := tool.StageInfo(context.Background(), archiveArgsJSON(t, "project", ids.NewV7()))
 
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("staging a project against an executor that archives %v answered %v, want the "+
 			"bad-arguments refusal — an approval for it could never be carried out", threeTypes(), err)
 	}
@@ -172,8 +171,7 @@ func TestAV1ProviderStillRefusesAnUnarchivableTypeByName(t *testing.T) {
 
 	_, err := tool.StageInfo(context.Background(), archiveArgsJSON(t, "tag", ids.NewV7()))
 
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("staging a tag answered %v, want the bad-arguments refusal naming the archivable set", err)
 	}
 }

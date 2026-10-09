@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -124,7 +125,7 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 			// up. It is the same malformation the end-of-file case refuses, and
 			// it refuses the same way.
 			if current != nil {
-				return nil, fmt.Errorf("contacts: a vCard begins before the one before it ended")
+				return nil, errors.New("contacts: a vCard begins before the one before it ended")
 			}
 			current = &VCardEntry{}
 		case "END":
@@ -135,7 +136,7 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 			// structure this parser cannot account for as one it can, which is
 			// the same silence one line along.
 			if current == nil {
-				return nil, fmt.Errorf("contacts: a vCard ends without having begun")
+				return nil, errors.New("contacts: a vCard ends without having begun")
 			}
 			out = append(out, *current)
 			current = nil
@@ -146,10 +147,10 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 		}
 	}
 	if current != nil {
-		return nil, fmt.Errorf("contacts: the vCard file ends inside a card")
+		return nil, errors.New("contacts: the vCard file ends inside a card")
 	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("contacts: the file holds no vCard")
+		return nil, errors.New("contacts: the file holds no vCard")
 	}
 	return out, nil
 }

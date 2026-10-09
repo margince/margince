@@ -205,11 +205,11 @@ func (e *coldStartEngine) stage(ctx context.Context, proposal crmcontracts.ColdS
 // the snippet within the pasted text, nil when the snippet cannot be located
 // verbatim (the contract allows null over a fabricated position).
 func runeOffset(text, snippet string) *int {
-	byteIdx := strings.Index(text, snippet)
-	if byteIdx < 0 {
+	before, _, ok := strings.Cut(text, snippet)
+	if !ok {
 		return nil
 	}
-	offset := utf8.RuneCountInString(text[:byteIdx])
+	offset := utf8.RuneCountInString(before)
 	return &offset
 }
 

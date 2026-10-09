@@ -17,8 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func strPtr(s string) *string { return &s }
-
 func TestComposeRecordSummary(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -46,7 +44,7 @@ func TestComposeRecordSummary(t *testing.T) {
 			name:             "agent acting with authority names the human first",
 			actorType:        "agent",
 			actorDisplayName: "Bot",
-			onBehalfOfName:   strPtr("Devin"),
+			onBehalfOfName:   new("Devin"),
 			action:           "archive",
 			want:             "Devin, via an agent, archived the record",
 		},
@@ -81,7 +79,7 @@ func TestComposeRecordSummary(t *testing.T) {
 			name:             "empty onBehalfOfName is treated as absent, not as authority",
 			actorType:        "agent",
 			actorDisplayName: "Bot",
-			onBehalfOfName:   strPtr(""),
+			onBehalfOfName:   new(""),
 			action:           "create",
 			passportBacked:   true,
 			want:             "A machine with no recorded human authority created the record",
@@ -102,7 +100,7 @@ func TestComposeRecordSummary(t *testing.T) {
 			name:             "connector acting with authority names the human first",
 			actorType:        "connector",
 			actorDisplayName: "gmail",
-			onBehalfOfName:   strPtr("Devin"),
+			onBehalfOfName:   new("Devin"),
 			action:           "import",
 			want:             "Devin, via a connector, imported the record",
 		},
@@ -145,10 +143,10 @@ func TestComposeRecordSummary(t *testing.T) {
 			name:             "a delegated write names the client it came through",
 			actorType:        "agent",
 			actorDisplayName: "agent:01a0-…",
-			onBehalfOfName:   strPtr("Demo Admin"),
+			onBehalfOfName:   new("Demo Admin"),
 			action:           "create",
 			passportBacked:   true,
-			agentClientName:  strPtr("Claude"),
+			agentClientName:  new("Claude"),
 			want:             "Demo Admin, via Claude, created the record",
 		},
 		{
@@ -158,7 +156,7 @@ func TestComposeRecordSummary(t *testing.T) {
 			name:             "a hand-minted passport keeps the generic qualifier",
 			actorType:        "agent",
 			actorDisplayName: "agent:01a0-…",
-			onBehalfOfName:   strPtr("Demo Admin"),
+			onBehalfOfName:   new("Demo Admin"),
 			action:           "create",
 			passportBacked:   true,
 			want:             "Demo Admin, via an agent, created the record",
@@ -171,10 +169,10 @@ func TestComposeRecordSummary(t *testing.T) {
 			name:             "a blank client name falls back rather than rendering an empty phrase",
 			actorType:        "agent",
 			actorDisplayName: "agent:01a0-…",
-			onBehalfOfName:   strPtr("Demo Admin"),
+			onBehalfOfName:   new("Demo Admin"),
 			action:           "update",
 			passportBacked:   true,
-			agentClientName:  strPtr(""),
+			agentClientName:  new(""),
 			want:             "Demo Admin, via an agent, updated the record",
 		},
 	}
@@ -302,7 +300,7 @@ func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
 		after: map[string]any{"role": "cto", "is_current_primary": true},
 		edge: &edgeSubject{
 			kind: "employment", otherType: "company",
-			otherID: ids.NewV7(), otherLabel: strPtr("Employer GmbH"),
+			otherID: ids.NewV7(), otherLabel: new("Employer GmbH"),
 		},
 	}
 
@@ -322,7 +320,7 @@ func TestRecordHistoryEntryActorDisplayFallsBackToRawActorID(t *testing.T) {
 	if got := recordHistoryEntry(row, nil).Summary; got != "human:1a2b updated the record" {
 		t.Errorf("unresolved actor summary = %q, want the raw actor_id, never an invented name", got)
 	}
-	row.actorDisplayName = strPtr("Uma Underwriter")
+	row.actorDisplayName = new("Uma Underwriter")
 	if got := recordHistoryEntry(row, nil).Summary; got != "Uma Underwriter updated the record" {
 		t.Errorf("resolved actor summary = %q", got)
 	}

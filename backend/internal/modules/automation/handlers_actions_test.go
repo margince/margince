@@ -248,8 +248,7 @@ func TestApplyActionsDraftEmailCapturesTheDraftInTheAppliedRecord(t *testing.T) 
 	// Drafting composes AND stages, so the firing suspends. The artifact below
 	// must survive that suspension: parking a run is not a reason to lose what
 	// the run produced.
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
+	if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
 		t.Fatalf("ApplyActions err = %v, want a StagedApprovalError — the send waits for a human", err)
 	}
 	if len(applied) != 1 {
@@ -351,8 +350,7 @@ func TestApplyActionsDraftEmailRefusesWithoutAConsentPurpose(t *testing.T) {
 		Executors{Comms: comms, Approvals: approvals},
 		workflow.Effect{Actions: []workflow.Action{action}})
 
-	var missing *MissingConsentPurposeError
-	if !errors.As(err, &missing) {
+	if _, ok := errors.AsType[*MissingConsentPurposeError](err); !ok {
 		t.Fatalf("ApplyActions err = %v, want MissingConsentPurposeError", err)
 	}
 	if len(approvals.calls) != 0 {
@@ -486,8 +484,7 @@ func TestApplyActionsDraftEmailRefusesForAnAutomationWithNoOwner(t *testing.T) {
 		Executors{Comms: comms, Approvals: approvals},
 		workflow.Effect{Actions: []workflow.Action{action}})
 
-	var missing *MissingDraftOwnerError
-	if !errors.As(err, &missing) {
+	if _, ok := errors.AsType[*MissingDraftOwnerError](err); !ok {
 		t.Fatalf("ApplyActions err = %v, want MissingDraftOwnerError", err)
 	}
 	if len(approvals.calls) != 0 {

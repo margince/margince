@@ -90,8 +90,7 @@ func (s *Store) PreviewEmploymentImport(ctx context.Context, contact ids.Contact
 		}
 		episodes, err := readEmploymentEvidence(ctx, tx, contact)
 		if err != nil {
-			var evidenceError *EmploymentImportError
-			if errors.As(err, &evidenceError) {
+			if evidenceError, ok := errors.AsType[*EmploymentImportError](err); ok {
 				out.Warnings = &[]string{evidenceError.Message}
 				return nil
 			}

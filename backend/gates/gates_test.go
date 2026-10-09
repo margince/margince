@@ -103,7 +103,7 @@ func trackedFiles(t *testing.T) []trackedFile {
 		t.Fatalf("listing tracked files: %v (this test must run inside the git worktree)", err)
 	}
 	var files []trackedFile
-	for _, row := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
+	for row := range strings.SplitSeq(strings.TrimRight(string(out), "\x00"), "\x00") {
 		if row == "" {
 			continue
 		}

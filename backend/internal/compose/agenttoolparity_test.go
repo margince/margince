@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -456,23 +457,27 @@ func requiredRecordID(t *testing.T, inputSchema json.RawMessage) (string, bool) 
 
 func joinVerbs(verbs []string) string {
 	out := ""
+	var outSb459 strings.Builder
 	for i, v := range verbs {
 		if i > 0 {
-			out += ", "
+			outSb459.WriteString(", ")
 		}
-		out += v
+		outSb459.WriteString(v)
 	}
+	out += outSb459.String()
 	return out
 }
 
 func joinLines(lines []string) string {
 	out := ""
+	var outSb470 strings.Builder
 	for i, l := range lines {
 		if i > 0 {
-			out += "\n"
+			outSb470.WriteString("\n")
 		}
-		out += l
+		outSb470.WriteString(l)
 	}
+	out += outSb470.String()
 	return out
 }
 

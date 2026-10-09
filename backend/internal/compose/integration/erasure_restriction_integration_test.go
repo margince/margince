@@ -854,7 +854,7 @@ func TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf(t *testing.T) {
 			return err
 		}
 		if !held {
-			return fmt.Errorf("the refused release still lifted the restriction")
+			return errors.New("the refused release still lifted the restriction")
 		}
 		return nil
 	}); err != nil {

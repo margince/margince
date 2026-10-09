@@ -431,7 +431,7 @@ func signatureNamesContact(block string, cand contacts.SignatureCandidate) bool 
 	}) {
 		words[word] = true
 	}
-	for _, token := range strings.Fields(strings.ToLower(cand.FullName)) {
+	for token := range strings.FieldsSeq(strings.ToLower(cand.FullName)) {
 		token = strings.Trim(token, ".,;:()<>\"'")
 		if token != "" && words[token] {
 			return true

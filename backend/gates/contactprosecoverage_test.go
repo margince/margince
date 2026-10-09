@@ -71,7 +71,7 @@ func contactProseTables(t *testing.T) []string {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
 	namesContact, hasProse := map[string]bool{}, map[string]bool{}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		line = strings.TrimSpace(line)
 		if m := contactForeignKeyLine.FindStringSubmatch(line); m != nil {
 			namesContact[m[1]] = true

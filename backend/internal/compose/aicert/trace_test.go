@@ -42,7 +42,7 @@ func readTrace(t *testing.T, path string) []tracedCall {
 		t.Fatalf("read trace %s: %v", path, err)
 	}
 	var out []tracedCall
-	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(raw)), "\n") {
 		if line == "" {
 			continue
 		}

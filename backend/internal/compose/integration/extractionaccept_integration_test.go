@@ -227,7 +227,7 @@ func TestAcceptAttachmentExtractionEditFlipsProvenanceAndCapturedBy(t *testing.T
 	a := setupExtractionAccept(t)
 	ctx := a.As(a.Rep1, []ids.UUID{a.Team1}, AdminPerms)
 
-	edits := map[string]interface{}{"amount_minor": "200000"}
+	edits := map[string]any{"amount_minor": "200000"}
 	resp, err := a.engine.Accept(ctx, ids.UUID(a.att.Id), crmcontracts.AcceptExtractionRequest{
 		ExtractionId: openapi_types.UUID(a.reading),
 		FieldKeys:    []string{"amount_minor", "currency"},
@@ -273,8 +273,7 @@ func TestAcceptAttachmentExtractionRefusesNonDealAttachment(t *testing.T) {
 	_, err := engine.Accept(e.Admin(), ids.UUID(att.Id), crmcontracts.AcceptExtractionRequest{
 		ExtractionId: openapi_types.UUID(reading), FieldKeys: []string{"amount_minor"},
 	})
-	var unsupported *compose.UnsupportedEntityTypeError
-	if !errors.As(err, &unsupported) {
+	if _, ok := errors.AsType[*compose.UnsupportedEntityTypeError](err); !ok {
 		t.Fatalf("err = %v, want UnsupportedEntityTypeError (only a deal-scoped attachment has a deal to write)", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'attachment_extraction_accept'`); n != 0 {
@@ -363,7 +362,7 @@ func TestAcceptAttachmentExtractionEditedAcceptRequiresActivityGrant(t *testing.
 	// field's note is the human's own activity write, so the gate refuses
 	// BEFORE the deal write — never after it committed.
 	ctx := a.As(a.Rep1, []ids.UUID{a.Team1}, RepPerms)
-	edits := map[string]interface{}{"amount_minor": "200000"}
+	edits := map[string]any{"amount_minor": "200000"}
 	_, err := a.engine.Accept(ctx, ids.UUID(a.att.Id), crmcontracts.AcceptExtractionRequest{
 		ExtractionId: openapi_types.UUID(a.reading),
 		FieldKeys:    []string{"amount_minor"},
@@ -454,13 +453,13 @@ func TestExtractionAcceptDealUpdateAndNotesShareOneTransaction(t *testing.T) {
 	}
 	err = database.WithWorkspaceTx(ctx, a.Pool, func(tx pgx.Tx) error {
 		if _, err := a.Deals.UpdateDealTx(ctx, tx, ids.From[ids.DealKind](a.deal), deals.UpdateDealInput{
-			Name: StrPtr("Rolled Back Name"),
+			Name: new("Rolled Back Name"),
 		}, active); err != nil {
 			return err
 		}
 		if _, _, err := a.Activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 			Kind:   string(crmcontracts.ActivityKindNote),
-			Body:   StrPtr("should never persist past the rollback"),
+			Body:   new("should never persist past the rollback"),
 			Links:  []activities.ActivityLinkInput{{EntityType: acceptDealEntityForTest, EntityID: a.deal}},
 			Source: "atomic_tx_probe",
 		}); err != nil {

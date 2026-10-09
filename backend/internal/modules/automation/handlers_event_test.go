@@ -189,8 +189,7 @@ func TestStageChangeNotifyPlanDeclinesWhenTheDealHasNoOwner(t *testing.T) {
 	if !errors.Is(err, errDealHasNoOwner) {
 		t.Fatalf("Plan err = %v, want errDealHasNoOwner", err)
 	}
-	var declined declinedFiring
-	if !errors.As(err, &declined) {
+	if _, ok := errors.AsType[declinedFiring](err); !ok {
 		t.Fatalf("Plan err = %v, want a declinedFiring skip (not a hard failure)", err)
 	}
 }
@@ -376,8 +375,7 @@ func TestPostMeetingRecapApplyComposesTheDraftDurably(t *testing.T) {
 	result, err := w.Apply(ownedFiring(), workflow.Event{Entity: meeting}, eff, nil)
 	// The recap composes and then holds its send for a human, so the firing
 	// suspends. The draft it produced still has to reach run history.
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
+	if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
 		t.Fatalf("Apply err = %v, want a StagedApprovalError", err)
 	}
 	if len(result.Applied) != 1 {

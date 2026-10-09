@@ -332,8 +332,7 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 		t.Run("a "+destination.entityType+" is relinked with no approval", func(t *testing.T) {
 			if _, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
 				`","entity_type":"`+destination.entityType+`","entity_id":"`+destination.entityID+`"}`); err != nil {
-				var staged *workflow.StagedApprovalError
-				if errors.As(err, &staged) {
+				if staged, ok := errors.AsType[*workflow.StagedApprovalError](err); ok {
 					t.Fatalf("relinking to a %s staged approval %s; a member does this in the app unasked",
 						destination.entityType, staged.ApprovalID)
 				}
@@ -345,8 +344,7 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 	t.Run("a project still stages", func(t *testing.T) {
 		_, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
 			`","entity_type":"project","entity_id":"`+project.ID+`"}`)
-		var staged *workflow.StagedApprovalError
-		if !errors.As(err, &staged) {
+		if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
 			t.Fatalf("relinking to a project → %v, want a staged approval — filing under a project is write-once", err)
 		}
 	})

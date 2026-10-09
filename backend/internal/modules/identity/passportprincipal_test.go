@@ -91,7 +91,7 @@ func TestAnAgentPrincipalCarriesExactlyItsGrantingHumansAuthority(t *testing.T) 
 }
 
 func TestPermissionsGainingAFieldIsNotInheritedByAnAgentUnasked(t *testing.T) {
-	if n := reflect.TypeOf(principal.Permissions{}).NumField(); n != permissionsFieldCount {
+	if n := reflect.TypeFor[principal.Permissions]().NumField(); n != permissionsFieldCount {
 		t.Fatalf("principal.Permissions has %d fields, this gate knows %d — a field was added and "+
 			"AgentIdentity.Principal() now copies it to the agent for free. Decide whether an agent may "+
 			"inherit it, then update permissionsFieldCount to record that the question was asked",

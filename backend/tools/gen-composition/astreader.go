@@ -230,7 +230,7 @@ func embedsMigrations(doc *ast.CommentGroup) bool {
 		if !ok {
 			continue
 		}
-		for _, pattern := range strings.Fields(rest) {
+		for pattern := range strings.FieldsSeq(rest) {
 			if unquoted, err := strconv.Unquote(pattern); err == nil {
 				pattern = unquoted
 			}

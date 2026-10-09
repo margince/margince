@@ -37,6 +37,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -408,9 +409,7 @@ func setReversalField(patch *storekit.Patch, field string, current, wanted json.
 // consumer can tell it from a fresh correction moving the same column.
 func reversalFields(patch *storekit.Patch) map[string]any {
 	fields := map[string]any{"close_date_correction": "reversal"}
-	for field, v := range patch.After() {
-		fields[field] = v
-	}
+	maps.Copy(fields, patch.After())
 	return fields
 }
 

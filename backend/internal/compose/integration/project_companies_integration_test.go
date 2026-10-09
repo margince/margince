@@ -109,8 +109,7 @@ func TestTheLastCompanyCannotBeTakenOffAProject(t *testing.T) {
 	}
 	// One left, so it may not.
 	err := e.Contacts.RemoveProjectCompany(admin, p.ID, companyIDOf(compA))
-	var last *contacts.LastProjectCompanyError
-	if !errors.As(err, &last) {
+	if _, ok := errors.AsType[*contacts.LastProjectCompanyError](err); !ok {
 		t.Fatalf("taking the last company off answered %v, want the refusal", err)
 	}
 
@@ -177,8 +176,7 @@ func TestACompanyWithDealsOnTheProjectCannotBeTakenOff(t *testing.T) {
 	}
 
 	err := e.Contacts.RemoveProjectCompany(admin, p.ID, companyIDOf(compB))
-	var held *contacts.CompanyHasDealsOnProjectError
-	if !errors.As(err, &held) {
+	if _, ok := errors.AsType[*contacts.CompanyHasDealsOnProjectError](err); !ok {
 		t.Fatalf("taking off a company with deals on the project answered %v, want the refusal", err)
 	}
 }

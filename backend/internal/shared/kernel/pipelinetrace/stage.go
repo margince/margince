@@ -19,6 +19,8 @@
 // thing to forget, and three stages had already been forgotten.
 package pipelinetrace
 
+import "slices"
+
 // Stage is one step of the ingress pipeline, in the order a message meets it.
 //
 // The vocabulary is CLOSED and ordered by Registration.Order rather than by
@@ -145,12 +147,7 @@ func OpenDispositionStatuses() []string { return []string{"pending", "unsure"} }
 
 // IsOpenDisposition reports whether a ledger status means the question is open.
 func IsOpenDisposition(status string) bool {
-	for _, open := range OpenDispositionStatuses() {
-		if status == open {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(OpenDispositionStatuses(), status)
 }
 
 // SubjectKind is WHAT a stage's answer is about.

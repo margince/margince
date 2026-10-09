@@ -13,6 +13,7 @@ package integration
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"strings"
 	"testing"
@@ -87,9 +88,7 @@ func mcpBulkDoor(client *apptest.MCPClient) bulkDoor {
 	call := func(t *testing.T, mode string, change AnyMap, retryKey string, out any) string {
 		t.Helper()
 		args := AnyMap{"mode": mode}
-		for k, v := range change {
-			args[k] = v
-		}
+		maps.Copy(args, change)
 		if retryKey != "" {
 			args["idempotency_key"] = retryKey
 		}

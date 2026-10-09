@@ -17,6 +17,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"slices"
 	"strings"
 	"testing"
 
@@ -136,10 +137,5 @@ func scoredKind(t *testing.T, kind string) bool {
 	if !strings.HasPrefix(list, "'") || !strings.HasSuffix(list, "'") {
 		t.Fatalf("the scoring list renders as %q, which is not a quoted SQL list — this gate would judge nothing", list)
 	}
-	for _, got := range strings.Split(strings.Trim(list, "'"), "','") {
-		if got == kind {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(strings.Split(strings.Trim(list, "'"), "','"), kind)
 }

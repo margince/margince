@@ -79,7 +79,7 @@ func ledgerStatusesFromCatalog() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading the head catalog: %w", err)
 	}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		if !strings.Contains(line, statusCheck) {
 			continue
 		}

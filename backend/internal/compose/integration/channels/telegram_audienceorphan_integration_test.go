@@ -90,8 +90,7 @@ func TestNarrowingAChannelMessageToParticipantsIsRefused(t *testing.T) {
 
 	_, err := store.SetAudience(writer, id,
 		activities.SetAudienceInput{Audience: "participants"})
-	var orphaned *activities.OrphanedAudienceError
-	if !errors.As(err, &orphaned) {
+	if _, ok := errors.AsType[*activities.OrphanedAudienceError](err); !ok {
 		t.Fatalf("narrowing a captured channel message to participants answered %v — "+
 			"the refusal has to be the orphan refusal itself, because any other error "+
 			"leaves the row satisfying no arm of the audience gate whenever that other cause goes away", err)

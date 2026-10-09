@@ -53,6 +53,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -83,7 +84,7 @@ func TestMain(m *testing.M) {
 func runSuite(m *testing.M) (code int, err error) {
 	harness := os.Getenv("MARGINCE_TEST_DSN")
 	if harness == "" {
-		return 0, fmt.Errorf("MARGINCE_TEST_DSN is unset — run this package through `make test-it DIR=backend/tools/extmigrategate`")
+		return 0, errors.New("MARGINCE_TEST_DSN is unset — run this package through `make test-it DIR=backend/tools/extmigrategate`")
 	}
 	ctx := context.Background()
 

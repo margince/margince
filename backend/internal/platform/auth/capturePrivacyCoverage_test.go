@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -178,12 +179,7 @@ func visibilityChecksIn(text string) map[string]string {
 }
 
 func slicesContains(tables []string, want string) bool {
-	for _, t := range tables {
-		if t == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(tables, want)
 }
 
 // tableRename matches a rename, old name then new.

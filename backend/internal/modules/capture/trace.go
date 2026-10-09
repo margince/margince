@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -386,7 +387,7 @@ func (in TraceEntry) validate() error {
 	case in.SourceSystem == "" || in.SourceID == "":
 		return fmt.Errorf("capture: a trace entry carries no natural key (outcome %q)", in.Outcome)
 	case in.Outcome == "":
-		return fmt.Errorf("capture: a trace entry names no outcome")
+		return errors.New("capture: a trace entry names no outcome")
 	case in.Stage == "":
 		return fmt.Errorf("capture: a trace entry names no pipeline stage (outcome %q)", in.Outcome)
 	case !pipelinetrace.CanStore(in.Stage):

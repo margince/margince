@@ -7,6 +7,7 @@ package company360
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -147,7 +148,7 @@ func (s *Service) writeProposedSeats(
 	}
 	decider, ok := principal.Actor(ctx)
 	if !ok {
-		return nil, fmt.Errorf("company360: proposing roles without a deciding principal")
+		return nil, errors.New("company360: proposing roles without a deciding principal")
 	}
 	execCtx := principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalSystem,

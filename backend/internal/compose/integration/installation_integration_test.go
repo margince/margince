@@ -66,8 +66,8 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 			ConsentPurposes: []deployconfig.ConsentPurpose{
 				{Key: "newsletter", Label: "Newsletter", DoubleOptIn: true},
 			},
-			StarterAutomations: BoolPtr(false),
-			BookingPage:        BoolPtr(false),
+			StarterAutomations: new(false),
+			BookingPage:        new(false),
 		},
 	}
 	if err := compose.EnsureInstallation(context.Background(), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
@@ -217,7 +217,7 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@spent.test", DisplayName: "Ops", PasswordFile: pwFile,
 		},
-		Seeds: deployconfig.Seeds{StarterAutomations: BoolPtr(false), BookingPage: BoolPtr(false)},
+		Seeds: deployconfig.Seeds{StarterAutomations: new(false), BookingPage: new(false)},
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if err := compose.EnsureInstallation(context.Background(), e.Pool, log, cfg); err != nil {
@@ -246,7 +246,7 @@ func TestFirstBootStillFailsLoudlyOnAnUnreadableSecret(t *testing.T) {
 			Email: "ops@nosecret.test", DisplayName: "Ops",
 			PasswordFile: filepath.Join(t.TempDir(), "never-written"),
 		},
-		Seeds: deployconfig.Seeds{StarterAutomations: BoolPtr(false), BookingPage: BoolPtr(false)},
+		Seeds: deployconfig.Seeds{StarterAutomations: new(false), BookingPage: new(false)},
 	}
 	err := compose.EnsureInstallation(context.Background(), e.Pool,
 		slog.New(slog.NewTextHandler(io.Discard, nil)), cfg)

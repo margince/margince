@@ -150,8 +150,7 @@ func retentionHoldFault(err error) (Fault, bool) {
 			"closes. Do not retry: an administrator holding the retention authority may release it, which is its own audited operation.",
 		InfraCause: err,
 	}
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		if m := retentionHoldUntil.FindStringSubmatch(pgErr.Message); m != nil {
 			fault.Details = map[string]any{"retain_until": m[1]}
 		}

@@ -71,7 +71,7 @@ func noNextStepSuggestion(
 		// read "Set the next step", which hands the reader back their own
 		// problem: a card that has already worked out there is nothing
 		// scheduled, and which deals that is true of, can say what to schedule.
-		Title: ptrString(step.body.Subject),
+		Title: new(step.body.Subject),
 	}
 	// No date: this rule fires on the ABSENCE of a task, and an absence has no
 	// date of its own. Inventing one would make a reading into a deadline — the
@@ -195,8 +195,8 @@ func openDealEvidence(
 		out = append(out, crmcontracts.CompanyBriefEvidence{
 			EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeDeal,
 			EntityId:   openapi_types.UUID(deal.ID),
-			Name:       ptrString(deal.Name),
-			Origin:     ptrString(originOpenDeal),
+			Name:       new(deal.Name),
+			Origin:     new(originOpenDeal),
 		})
 	}
 	return out

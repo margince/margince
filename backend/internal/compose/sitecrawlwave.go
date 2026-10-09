@@ -84,13 +84,11 @@ func (r *crawlRun) fetchWave(ctx context.Context, admitted []admission) []fetchR
 	results := make([]fetchResult, len(admitted))
 	var wg sync.WaitGroup
 	for i, adm := range admitted {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			start := time.Now()
 			page, err := r.crawler.fetchPaced(ctx, r.pacer, adm.url)
 			results[i] = fetchResult{page: page, dur: time.Since(start), err: err}
-		}()
+		})
 	}
 	wg.Wait()
 	return results
@@ -136,7 +134,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		// Only the crawl context can end the whole walk. http.Client reports
 		// its own per-request timeout as context.DeadlineExceeded too; that
 		// page is unreadable, but the other discovery candidates remain valid.
-		r.crawl.Stopped = stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonDeadline)
+		r.crawl.Stopped = new(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonDeadline)
 		return
 	case res.err != nil:
 		r.skip(adm.url, crmcontracts.SiteReadSkipReasonSiteReadSkipReasonUnreadable)
@@ -184,7 +182,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 	// silently exceeding the byte budget the report promises.
 	if r.totalBytes+page.Bytes > r.crawler.maxBytes {
 		r.skip(adm.url, crmcontracts.SiteReadSkipReasonSiteReadSkipReasonByteCap)
-		r.crawl.Stopped = stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonByteCap)
+		r.crawl.Stopped = new(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonByteCap)
 		return
 	}
 

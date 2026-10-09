@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"regexp"
 	"testing"
 
@@ -38,9 +39,7 @@ import (
 func collectionsPerms() principal.Permissions {
 	p := RepPerms
 	obj := map[string]principal.ObjectGrant{}
-	for k, v := range RepPerms.Objects {
-		obj[k] = v
-	}
+	maps.Copy(obj, RepPerms.Objects)
 	full := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	obj["list"] = full
 	obj["saved_view"] = full
@@ -178,7 +177,7 @@ func TestDynamicList_rejectsInvalidDefinition(t *testing.T) {
 
 	// A tree nested past the bounded depth is rejected (422).
 	deep := map[string]any{"field": "owner_id", "op": "eq", "value": e.Rep1.String()}
-	for i := 0; i < storekit.PredicateMaxDepth+1; i++ {
+	for range storekit.PredicateMaxDepth + 1 {
 		deep = map[string]any{"and": []any{deep}}
 	}
 	assertCode("too deep", deep, storekit.CodeFilterTooDeep)

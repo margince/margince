@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -161,7 +162,7 @@ func (p *CompanyNamePromoter) RunWorkspace(ctx context.Context, ws ids.UUID) err
 // could be applied today, was never reached.
 func (p *CompanyNamePromoter) sweepWorkspace(ctx context.Context, ws ids.UUID) error {
 	var cursor ids.CompanyID
-	for page := 0; page < companyNamePromotionMaxPages; page++ {
+	for range companyNamePromotionMaxPages {
 		candidates, err := p.store.CompanyNameCandidates(ctx, cursor, companyNamePromotionPageSize)
 		if err != nil {
 			return err
@@ -382,7 +383,7 @@ func companyNameAcceptEffect(svc *approvals.Service, store *contacts.Store) appr
 		}
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: company-name accept without a deciding principal")
+			return errors.New("compose: company-name accept without a deciding principal")
 		}
 		// The write carries the machine provenance — the name came from a
 		// signature, not from someone typing it — while the human's approval

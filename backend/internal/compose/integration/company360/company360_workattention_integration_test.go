@@ -42,7 +42,7 @@ func TestCompany360_ADealCarriesItsMostOverdueTaskAsTheReason(t *testing.T) {
 	companyID := e.SeedCompany(t, "Overdue Account", nil)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Fleet retrofit", PipelineID: pipeline, StageID: stage,
-		CompanyID: ptrTo(ids.From[ids.CompanyKind](companyID)), Source: "manual",
+		CompanyID: new(ids.From[ids.CompanyKind](companyID)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -73,7 +73,7 @@ func TestCompany360_ADealCarriesNoReasonFromAnotherAccountsTask(t *testing.T) {
 	theirs := e.SeedCompany(t, "Their Account", nil)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Shared name", PipelineID: pipeline, StageID: stage,
-		CompanyID: ptrTo(ids.From[ids.CompanyKind](ours)), Source: "manual",
+		CompanyID: new(ids.From[ids.CompanyKind](ours)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -150,7 +150,7 @@ func TestCompany360_AReaderWithoutTheActivityGrantGetsRowsAndIsToldTheReasonsAre
 	companyID := e.SeedCompany(t, "Blind Account", nil)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Fleet retrofit", PipelineID: pipeline, StageID: stage,
-		CompanyID: ptrTo(ids.From[ids.CompanyKind](companyID)), Source: "manual",
+		CompanyID: new(ids.From[ids.CompanyKind](companyID)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -224,7 +224,7 @@ func recordClaim(
 	t.Helper()
 	subject := "Depot slot"
 	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Direction: ptrTo("inbound"), Source: "manual",
+		Kind: "email", Subject: &subject, Direction: new("inbound"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "contact", EntityID: contactID},
 			{EntityType: "project", EntityID: projectID},
@@ -422,7 +422,7 @@ func TestCompany360_ClosedProjectsOverflowingTheCapDoNotClaimMoreWorkInFlight(t 
 		// schema insists on, and a hand-set phase never produces one.
 		if _, err := e.Projects.AdvanceProjectPhase(e.Admin(),
 			ids.From[ids.ProjectKind](ids.UUID(closed.Id)),
-			projects.AdvanceProjectPhaseInput{ToPhase: "closed", Reason: ptrTo("delivered")},
+			projects.AdvanceProjectPhaseInput{ToPhase: "closed", Reason: new("delivered")},
 		); err != nil {
 			t.Fatalf("closing a project: %v", err)
 		}

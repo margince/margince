@@ -108,8 +108,7 @@ func TestADemotionRefusesWhenAColleagueWorkedOnTheCreatedContact(t *testing.T) {
 
 	_, err = e.Contacts.DemoteLead(e.Admin(), ids.From[ids.LeadKind](leadID), demoteReason,
 		contacts.NotWorkedOnByAColleagueSince(promote.OccurredAt, promote.ID))
-	var touched *contacts.HumanTouchedError
-	if !errors.As(err, &touched) {
+	if _, ok := errors.AsType[*contacts.HumanTouchedError](err); !ok {
 		t.Errorf("the demotion answered %v, want a refusal naming the colleague's work", err)
 	}
 	if isArchived(t, e, "contact", ids.UUID(contact.Id)) {

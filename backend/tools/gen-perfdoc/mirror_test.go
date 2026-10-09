@@ -34,8 +34,8 @@ func assertMirrors(t *testing.T, recorderType string, twin reflect.Type, atLeast
 	t.Helper()
 	recorder := structTags(t, filepath.Join(integrationDir, "perfrecord.go"), recorderType)
 	var renderer []string
-	for i := range twin.NumField() {
-		renderer = append(renderer, twin.Field(i).Tag.Get("json"))
+	for field := range twin.Fields() {
+		renderer = append(renderer, field.Tag.Get("json"))
 	}
 	slices.Sort(recorder)
 	slices.Sort(renderer)

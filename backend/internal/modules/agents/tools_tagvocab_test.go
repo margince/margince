@@ -235,8 +235,7 @@ func TestAMergeIntoItselfIsRefusedBeforeAHumanIsAsked(t *testing.T) {
 	if err == nil {
 		t.Fatal("folding a tag into itself staged an approval, want a refusal before a human is asked")
 	}
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Errorf("the refusal is %T, want a bad-arguments answer the caller can act on", err)
 	}
 }
@@ -268,8 +267,7 @@ func TestAMergeNamingARetiredWordIsRefusedBeforeStaging(t *testing.T) {
 			if err == nil {
 				t.Fatal("the merge staged an approval, want a refusal before a human is asked")
 			}
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Errorf("the refusal is %T, want a bad-arguments answer the caller can act on", err)
 			}
 		})

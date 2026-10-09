@@ -94,12 +94,12 @@ func (s *scriptedBuildBrain) Complete(_ context.Context, req model.Request) (mod
 		// held-out split decides which samples reach the builder, so find it.
 		quoteSample := ""
 		for _, block := range strings.Split(req.Messages[0].Content, spanOpen)[1:] {
-			closing := strings.Index(block, `"`)
-			if closing < 0 {
+			before, _, ok := strings.Cut(block, `"`)
+			if !ok {
 				continue
 			}
 			if strings.Contains(block, s.quote) {
-				quoteSample = block[:closing]
+				quoteSample = before
 				break
 			}
 		}
@@ -169,7 +169,7 @@ func seedVoiceBuild(t *testing.T, quote string, sourceCount int) (*voiceBuildEnv
 		t.Fatal(err)
 	}
 	filler := strings.Repeat("plain honest sentence about the actual work we do. ", 60)
-	for i := 0; i < sourceCount; i++ {
+	for i := range sourceCount {
 		register := "email"
 		if i%2 == 1 {
 			register = "spoken"
@@ -583,7 +583,7 @@ func builtVoiceEnv(t *testing.T, quote string) *voiceBuildEnv {
 func TestReplyDraftCarriesVoiceProvenanceEndToEnd(t *testing.T) {
 	env := builtVoiceEnv(t, "Provenance quote.")
 	activity := seedReplyActivity(t, env)
-	drafter := newReplyDrafter(env.e.Pool, &voicedDraftBrain{scriptedBuildBrain: scriptedBuildBrain{judgeScore: 0.9}}, slog.New(slog.DiscardHandler))
+	drafter := newReplyDrafter(env.e.Pool, &voicedDraftBrain{judgeScore: 0.9}, slog.New(slog.DiscardHandler))
 
 	draftCtx := env.e.As(env.e.Rep1, []ids.UUID{env.e.Team1}, voiceDraftPerms)
 	result, err := drafter.DraftEmailWithProvenance(draftCtx, activity, "confirm the plan")
@@ -615,7 +615,7 @@ func TestReplyDraftFallsBackAndRecordsRejectionWhenTheFloorHolds(t *testing.T) {
 	env := builtVoiceEnv(t, "Fallback quote.")
 	activity := seedReplyActivity(t, env)
 	drafter := newReplyDrafter(env.e.Pool, &voicedDraftBrain{
-		scriptedBuildBrain: scriptedBuildBrain{judgeScore: 0.9}, alwaysViolate: true,
+		judgeScore: 0.9, alwaysViolate: true,
 	}, slog.New(slog.DiscardHandler))
 
 	draftCtx := env.e.As(env.e.Rep1, []ids.UUID{env.e.Team1}, voiceDraftPerms)

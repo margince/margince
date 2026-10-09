@@ -40,6 +40,7 @@ package gates
 import (
 	"fmt"
 	"go/ast"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -292,10 +293,5 @@ func leadBeforeContact(sequence []string) (string, bool) {
 }
 
 func lockOrderHasTable(sequence []string, want string) bool {
-	for _, table := range sequence {
-		if table == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(sequence, want)
 }

@@ -431,13 +431,11 @@ func TestVoiceConcurrentBuildRequestsConvergeOnOneDurableRow(t *testing.T) {
 	results := make(chan result, callers)
 	var wg sync.WaitGroup
 	for range callers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
 			build, err := voice.CreateBuild(owner, profile.ID, ai.CreateVoiceBuildInput{Reason: "manual"})
 			results <- result{build: build, err: err}
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()

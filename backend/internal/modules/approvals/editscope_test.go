@@ -330,8 +330,7 @@ func TestANonObjectStagedChangeIsRefusedAsAnInvalidEditNotAServerFault(t *testin
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := assertSameCallIdentity(json.RawMessage(tc.staged), json.RawMessage(tc.editedTo))
-			var invalid *InvalidEditError
-			if !errors.As(err, &invalid) {
+			if _, ok := errors.AsType[*InvalidEditError](err); !ok {
 				t.Fatalf("err = %v (%T), want an *InvalidEditError — anything else reaches writeErr as "+
 					"neither refusal type and answers 500", err, err)
 			}

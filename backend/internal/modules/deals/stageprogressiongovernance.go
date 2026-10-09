@@ -128,7 +128,7 @@ func requireTransitionStages(ctx context.Context, tx pgx.Tx, in TransitionRef) e
 		return apperrors.ErrNotFound
 	}
 	if in.FromStageID == in.ToStageID {
-		return fmt.Errorf("deals: a transition from a stage to itself is not a move")
+		return errors.New("deals: a transition from a stage to itself is not a move")
 	}
 	return nil
 }

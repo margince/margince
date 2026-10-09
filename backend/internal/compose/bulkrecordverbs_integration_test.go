@@ -281,8 +281,7 @@ func TestABulkCreateTaskRefusesAnAssigneeWhoCannotHoldWork(t *testing.T) {
 	items := seedBulkContacts(t, e, e.Rep1, 1)
 	nobody := ids.NewV7()
 	_, err := bulkEngineFor(e).Execute(e.Admin(), taskChange(items, &nobody))
-	var refused *auth.AssigneeNotAllowedError
-	if !errors.As(err, &refused) {
+	if _, ok := errors.AsType[*auth.AssigneeNotAllowedError](err); !ok {
 		t.Fatalf("an assignee who is no colleague answered %v, want a refusal before any row", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task' AND subject = 'Call back about the renewal'`); n != 0 {

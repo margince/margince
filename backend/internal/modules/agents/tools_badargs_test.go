@@ -153,8 +153,7 @@ func TestTheUnknownArgumentRefusalIsOurOwnTypedOne(t *testing.T) {
 	// have matched it and written the value.
 	for _, in := range []string{`{"limitt":1}`, `{"LIMIT":1}`} {
 		err := decodeArgs(json.RawMessage(in), &args)
-		var unknown *datasource.UnknownFieldError
-		if !errors.As(err, &unknown) {
+		if _, ok := errors.AsType[*datasource.UnknownFieldError](err); !ok {
 			t.Fatalf("arguments %s → %v, want a datasource.UnknownFieldError the surface may echo verbatim", in, err)
 		}
 	}

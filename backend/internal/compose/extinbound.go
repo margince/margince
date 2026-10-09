@@ -301,8 +301,7 @@ func readInboundBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byt
 	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 			// Over-cap. 413 rather than the opaque 401: the size of a request
 			// is something the sender already knows, so saying so reveals
 			// nothing, and a sender told "too large" fixes it where one told

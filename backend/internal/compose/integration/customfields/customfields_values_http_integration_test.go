@@ -16,6 +16,7 @@ package customfields
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"testing"
 
@@ -205,9 +206,7 @@ func assertSixTypesWireRoundTrip(t *testing.T, e *apptest.AppEnv) {
 		cols["boolean"]:  true,
 	}
 	body := integration.AnyMap{"full_name": "Grace Hopper", "source": "manual"}
-	for col, v := range want {
-		body[col] = v
-	}
+	maps.Copy(body, want)
 	created, id := createWithCF(t, e, "/v1/contacts", body)
 	for col, v := range want {
 		assertWireCF(t, created, col, v)

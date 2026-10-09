@@ -49,7 +49,7 @@ import (
 // Deliberately unclassified: reaching it renders internalFaultAdvice, so a tool
 // that waves a malformed id through to a seam fails this walk instead of being
 // silently credited for the seam's own validation.
-var errSeamReached = fmt.Errorf("seam reached")
+var errSeamReached = errors.New("seam reached")
 
 // seamProbeProvider stands in for the composite provider. Its write verbs run
 // the SAME strict decode the three real providers run (datasource.StrictDecode

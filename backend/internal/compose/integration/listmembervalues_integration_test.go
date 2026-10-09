@@ -94,8 +94,7 @@ func TestAMembersReadByRecordAnswersOnlyMembers(t *testing.T) {
 		t.Fatalf("a members read by record answered %+v, want only %s", page.Data, theirs)
 	}
 	_, err = store.MembersPage(e.Admin(), list.ID, collections.MemberRead{Only: []ids.UUID{theirs}, Cursor: theirs.String()})
-	var bad *collections.BadInputError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*collections.BadInputError](err); !ok {
 		t.Fatalf("a read by record with a cursor answered %v, want a refusal", err)
 	}
 }

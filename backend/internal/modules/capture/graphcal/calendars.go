@@ -6,7 +6,7 @@ package graphcal
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -17,7 +17,7 @@ import (
 func (a *httpAPI) List(ctx context.Context, token string) ([]connector.CalendarOption, error) {
 	next := a.base + "/me/calendars?$select=id,name,canEdit,isDefaultCalendar&$top=100"
 	calendars := []connector.CalendarOption{}
-	for page := 0; page < 20; page++ {
+	for range 20 {
 		var result struct {
 			Next  string `json:"@odata.nextLink"`
 			Items []struct {
@@ -37,9 +37,9 @@ func (a *httpAPI) List(ctx context.Context, token string) ([]connector.CalendarO
 			return calendars, nil
 		}
 		if !strings.HasPrefix(result.Next, a.base+"/") {
-			return nil, fmt.Errorf("calendar: invalid continuation")
+			return nil, errors.New("calendar: invalid continuation")
 		}
 		next = result.Next
 	}
-	return nil, fmt.Errorf("calendar: incomplete calendar list")
+	return nil, errors.New("calendar: incomplete calendar list")
 }

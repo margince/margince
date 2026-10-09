@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strings"
 	"testing"
 	"time"
@@ -62,9 +63,7 @@ func attachCall(t *testing.T, overrides map[string]any) json.RawMessage {
 		"entity_type": "company", "entity_id": ids.NewV7().String(), "filename": "offer.pdf",
 		"content_type": "application/pdf", "content_base64": base64.StdEncoding.EncodeToString([]byte("%PDF-1.7")),
 	}
-	for k, v := range overrides {
-		args[k] = v
-	}
+	maps.Copy(args, overrides)
 	raw, err := json.Marshal(args)
 	if err != nil {
 		t.Fatalf("encoding the call: %v", err)
@@ -88,8 +87,8 @@ func TestAttachDocumentHandsTheStoreTheDecodedFileAndItsRecord(t *testing.T) {
 	}
 	got := docs.attached[0]
 	want := DocumentUpload{
-		RecordLink: RecordLink{EntityType: "company", EntityID: company},
-		Filename:   "Q3 offer.pdf", ContentType: "application/pdf; charset=binary", Content: []byte("%PDF-1.7"),
+		EntityType: "company", EntityID: company,
+		Filename: "Q3 offer.pdf", ContentType: "application/pdf; charset=binary", Content: []byte("%PDF-1.7"),
 	}
 	if got.RecordLink != want.RecordLink || got.Filename != want.Filename ||
 		got.ContentType != want.ContentType || !bytes.Equal(got.Content, want.Content) {
@@ -350,8 +349,7 @@ func TestAttachDocumentReportsARefusedKindAsFinal(t *testing.T) {
 	if !errors.Is(err, errFileKindRefused) {
 		t.Fatalf("err = %v, want the refused-kind sentinel", err)
 	}
-	var fault apperrors.FieldFault
-	if !errors.As(err, &fault) {
+	if _, ok := errors.AsType[apperrors.FieldFault](err); !ok {
 		t.Fatalf("err = %v lost the store's field fault, which the REST door classifies", err)
 	}
 

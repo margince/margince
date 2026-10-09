@@ -35,7 +35,7 @@ func TestEdgeWritersDoNotDeadlockWithEachOtherOrTheRebuild(t *testing.T) {
 
 	var activityIDs []ids.UUID
 	var contacts []ids.ContactID
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		c := v.contact(t, fmt.Sprintf("Crowd %d", i))
 		contacts = append(contacts, c)
 		a := v.interaction(t, v.e.Rep1, c, now.AddDate(0, 0, -i), "inbound", "from")
@@ -87,7 +87,7 @@ func TestEdgeWritersDoNotDeadlockWithEachOtherOrTheRebuild(t *testing.T) {
 		wg.Add(1)
 		go func(write func(int) error) {
 			defer wg.Done()
-			for i := 0; i < rounds; i++ {
+			for i := range rounds {
 				if err := write(i); err != nil {
 					errs <- err
 				}

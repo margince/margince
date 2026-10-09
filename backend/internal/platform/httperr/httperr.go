@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"strconv"
 	"unicode/utf8"
@@ -71,16 +72,14 @@ var mapping = []struct {
 func clientInputValidation(err error) (error, bool) {
 	// The keyset cursor is client input: a token that fails to decode is
 	// the caller's fault, same 422 shape as every other bad query input.
-	var badCursor *storekit.MalformedCursorError
-	if errors.As(err, &badCursor) {
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); ok {
 		return Validation("cursor", "malformed_cursor", "cursor is not a valid page token"), true
 	}
 
 	// A cursor that decodes but was minted under a different sort carries
 	// the contract's dedicated code — the caller re-issues the query
 	// without the cursor (or under the sort it was minted with).
-	var cursorMismatch *storekit.CursorSortMismatchError
-	if errors.As(err, &cursorMismatch) {
+	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); ok {
 		return Validation("cursor", "cursor_param_mismatch",
 			"cursor was minted under a different sort; re-issue the query without the cursor"), true
 	}
@@ -88,20 +87,17 @@ func clientInputValidation(err error) (error, bool) {
 	// The list vocabularies' typed refusals (data-model §13.5): a sort
 	// spec or filter leaf outside the resource's closed vocabulary carries
 	// its own field and machine code — one wire mapping, like the cursor's.
-	var badSort *storekit.SortError
-	if errors.As(err, &badSort) {
+	if badSort, ok := errors.AsType[*storekit.SortError](err); ok {
 		return Validation("sort", badSort.Code, badSort.Message), true
 	}
-	var badPredicate *storekit.PredicateError
-	if errors.As(err, &badPredicate) {
+	if badPredicate, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		return Validation(badPredicate.Field, badPredicate.Code, badPredicate.Message), true
 	}
 
 	// A value object refused to parse: client input in the wrong format,
 	// carrying its own field and machine code — the parse-don't-validate
 	// seam's single wire mapping.
-	var badValue *values.ParseError
-	if errors.As(err, &badValue) {
+	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
 		return Validation(badValue.Field, badValue.Code, badValue.Message), true
 	}
 
@@ -115,8 +111,7 @@ func clientInputValidation(err error) (error, bool) {
 	// native body decode uses, so both paths say one thing about one mistake,
 	// and it ends with what the caller should DO — which a decoder message on
 	// its own never says. Whatever it had to withhold is logged by Write.
-	var badFields *datasource.FieldDecodeError
-	if errors.As(err, &badFields) {
+	if badFields, ok := errors.AsType[*datasource.FieldDecodeError](err); ok {
 		detail, _ := fieldDecodeRefusal(badFields.Cause)
 		return Validation("fields", "invalid_field", detail), true
 	}
@@ -126,8 +121,7 @@ func clientInputValidation(err error) (error, bool) {
 	// naming a type the installation does not serve is a client mistake, which
 	// must never answer 500. The seam's message already carries the known
 	// vocabulary, so it is the actionable half on its own.
-	var unservedEntity *datasource.UnsupportedEntityError
-	if errors.As(err, &unservedEntity) {
+	if unservedEntity, ok := errors.AsType[*datasource.UnsupportedEntityError](err); ok {
 		return Validation("entity_type", "unsupported_entity_type", unservedEntity.Error()), true
 	}
 
@@ -201,8 +195,7 @@ func moduleDeclaredFault(err error) (error, bool) {
 	// The plural first: a type that names several bad inputs has nothing
 	// useful to say as a single field, so asking it for one would discard the
 	// rest of what it knows.
-	var fieldFaults apperrors.FieldFaults
-	if errors.As(err, &fieldFaults) {
+	if fieldFaults, ok := errors.AsType[apperrors.FieldFaults](err); ok {
 		refusals := fieldFaults.FieldFaults()
 		fields := make([]FieldError, 0, len(refusals))
 		for _, r := range refusals {
@@ -223,8 +216,7 @@ func moduleDeclaredFault(err error) (error, bool) {
 		}, true
 	}
 
-	var fieldFault apperrors.FieldFault
-	if errors.As(err, &fieldFault) {
+	if fieldFault, ok := errors.AsType[apperrors.FieldFault](err); ok {
 		field, code, message := fieldFault.FieldFault()
 		return Validation(boundFaultText(field), boundFaultText(code), boundFaultText(message)), true
 	}
@@ -233,8 +225,7 @@ func moduleDeclaredFault(err error) (error, bool) {
 	// surface reports a governed condition as an internal fault — but it
 	// carries NO per-field entry, because inventing one would point the caller
 	// at an input that is not theirs to change.
-	var messageFault apperrors.MessageFault
-	if errors.As(err, &messageFault) {
+	if messageFault, ok := errors.AsType[apperrors.MessageFault](err); ok {
 		code, message := messageFault.MessageFault()
 		return &DetailedError{
 			// 422 is the DEFAULT and not the answer: a refusal that also
@@ -325,8 +316,7 @@ func Classify(err error) (Fault, bool) {
 	// It exists for the tool surface. An agent handed "consent not granted" in
 	// a sentence can do nothing with it; the same refusal naming the review it
 	// opened can hand the question to a human.
-	var referenced apperrors.ReferencedFault
-	if errors.As(err, &referenced) {
+	if referenced, ok := errors.AsType[apperrors.ReferencedFault](err); ok {
 		if fault, ok := Classify(referenced.Unreferenced()); ok {
 			fault.Details = referenced.FaultReference()
 			// AND THE MESSAGE KEEPS THE REFERENCE TOO. Classifying the
@@ -343,8 +333,7 @@ func Classify(err error) (Fault, bool) {
 		}
 	}
 
-	var withDetails *DetailedError
-	if errors.As(err, &withDetails) {
+	if withDetails, ok := errors.AsType[*DetailedError](err); ok {
 		return Fault{
 			Status:  withDetails.Status,
 			Code:    withDetails.Code,
@@ -446,9 +435,7 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 	details := fault.Details
 	if len(fault.Fields) > 0 {
 		merged := make(map[string]any, len(details)+1)
-		for k, v := range details {
-			merged[k] = v
-		}
+		maps.Copy(merged, details)
 		merged[fieldErrorsKey] = fieldDetails(fault.Fields)[fieldErrorsKey]
 		details = merged
 	}

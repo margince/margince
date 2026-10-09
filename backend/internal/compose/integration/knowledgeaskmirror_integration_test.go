@@ -26,6 +26,7 @@ package integration
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/knowledge"
@@ -151,8 +152,10 @@ func describePassages(passages []knowledge.Passage) string {
 		return "(none)"
 	}
 	out := ""
+	var outSb154 strings.Builder
 	for _, p := range passages {
-		out += fmt.Sprintf("%s@%.4f ", p.DocumentName, p.Similarity)
+		fmt.Fprintf(&outSb154, "%s@%.4f ", p.DocumentName, p.Similarity)
 	}
+	out += outSb154.String()
 	return out
 }

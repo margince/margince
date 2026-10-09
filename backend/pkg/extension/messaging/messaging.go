@@ -26,6 +26,7 @@
 package messaging
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -267,7 +268,7 @@ type Instrument struct {
 // Validate refuses an instrument that names nothing.
 func (i Instrument) Validate() error {
 	if strings.TrimSpace(i.Name) == "" {
-		return fmt.Errorf("an instrument carries no name — a commencement date with nothing to commence names no law")
+		return errors.New("an instrument carries no name — a commencement date with nothing to commence names no law")
 	}
 	return nil
 }

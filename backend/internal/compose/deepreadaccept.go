@@ -14,7 +14,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -38,7 +38,7 @@ func deepReadAcceptEffect(svc *approvals.Service, store *contacts.Store) approva
 		// machine provenance the 360 renders as "read from the company's site".
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: deepread effect without a deciding principal")
+			return errors.New("compose: deepread effect without a deciding principal")
 		}
 		execCtx := principal.WithActor(ctx, principal.Principal{
 			Type:       principal.PrincipalSystem,

@@ -263,7 +263,7 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 		return jobs.FaultContext(ctx, err)
 	}
 	wsCtx = capturemetrics.WithRun(wsCtx)
-	for i := 0; i < backfillPagesPerTick; i++ {
+	for range backfillPagesPerTick {
 		done, completed, retryAfter, err := w.registry.RunBackfillStep(wsCtx, bfID)
 		if retryAfter > 0 {
 			// The provider asked us to wait, and the run is still live with its

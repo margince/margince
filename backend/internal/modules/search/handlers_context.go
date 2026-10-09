@@ -111,13 +111,13 @@ func contextItemWire(item retrieval.Item) crmcontracts.ContextItem {
 		},
 	}
 	if item.Summary != "" {
-		out.Summary = ptr(item.Summary)
+		out.Summary = new(item.Summary)
 	}
 	// Both doors answer the same picture. Without this the MCP surface carried
 	// the date and the REST one dropped it, so the same assembled activity read
 	// differently depending on which door asked.
 	if !item.OccurredAt.IsZero() {
-		out.OccurredAt = ptr(item.OccurredAt)
+		out.OccurredAt = new(item.OccurredAt)
 	}
 	if len(item.Evidence) > 0 {
 		ev := make([]crmcontracts.ContextEvidence, 0, len(item.Evidence))

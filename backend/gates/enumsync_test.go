@@ -212,7 +212,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 				current = ""
 				block.Reset()
 			}
-			for _, line := range strings.Split(sql, "\n") {
+			for line := range strings.SplitSeq(sql, "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					flush()
 					current = m[1]
@@ -228,7 +228,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 				}
 			}
 			flush()
-			for _, stmt := range strings.Split(sql, ";") {
+			for stmt := range strings.SplitSeq(sql, ";") {
 				if alter := alterTableStmt.FindStringSubmatch(stmt); alter != nil {
 					recordChecks(sets, alter[1], stmt)
 				}

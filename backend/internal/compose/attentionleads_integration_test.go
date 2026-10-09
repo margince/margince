@@ -63,21 +63,19 @@ func seedLeadTask(t *testing.T, e *integration.Env) {
 	t.Helper()
 	store := contacts.NewStore(e.DB())
 	owner := ids.From[ids.UserKind](e.Rep1)
-	lead, _, err := store.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: leadTestPtr("Selected prospect"), Source: "manual", OwnerID: &owner})
+	lead, _, err := store.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: new("Selected prospect"), Source: "manual", OwnerID: &owner})
 	if err != nil {
 		t.Fatal(err)
 	}
 	due := time.Now().Add(-time.Hour)
 	_, _, err = activities.NewStore(e.DB()).LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "task", Subject: leadTestPtr("Call selected prospect"), DueAt: &due,
+		Kind: "task", Subject: new("Call selected prospect"), DueAt: &due,
 		AssigneeID: &owner, Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: ids.UUID(lead.Id)}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 }
-
-func leadTestPtr(s string) *string { return &s }
 
 func taskTitles(page crmcontracts.Worklist) []string {
 	var titles []string
@@ -99,10 +97,10 @@ func TestBareLeadsDoNotCreateWorkButPlannedLeadTasksRemain(t *testing.T) {
 			store := contacts.NewStore(e.DB())
 			owner := ids.From[ids.UserKind](e.Rep1)
 			for _, source := range []string{"manual", "webform", "import"} {
-				in := contacts.CreateLeadInput{FullName: leadTestPtr("Bare " + source), Source: source, OwnerID: &owner}
+				in := contacts.CreateLeadInput{FullName: new("Bare " + source), Source: source, OwnerID: &owner}
 				if source == "import" {
-					in.SourceSystem = leadTestPtr("mirror:hubspot")
-					in.SourceID = leadTestPtr("leads:100")
+					in.SourceSystem = new("mirror:hubspot")
+					in.SourceID = new("leads:100")
 				}
 				created, _, err := store.CreateLead(e.Admin(), in)
 				if err != nil {
@@ -113,8 +111,8 @@ func TestBareLeadsDoNotCreateWorkButPlannedLeadTasksRemain(t *testing.T) {
 				}
 				due := time.Now().Add(-time.Hour)
 				_, _, err = activities.NewStore(e.DB()).LogActivity(e.Admin(), activities.LogActivityInput{
-					Kind: "task", Subject: leadTestPtr("Automatic SLA escalation"), DueAt: &due, AssigneeID: &owner,
-					SourceSystem: leadTestPtr("lead_sla"), SourceID: leadTestPtr(created.Id.String()),
+					Kind: "task", Subject: new("Automatic SLA escalation"), DueAt: &due, AssigneeID: &owner,
+					SourceSystem: new("lead_sla"), SourceID: new(created.Id.String()),
 					Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: ids.UUID(created.Id)}},
 				})
 				if err != nil {
@@ -159,8 +157,8 @@ func TestImportedLeadCreationDoesNotTriggerIntakeWorkflows(t *testing.T) {
 		`{"owners":["`+e.Rep1.String()+`"]}`)
 	store := contacts.NewStore(e.DB())
 	lead, _, err := store.CreateLead(e.Admin(), contacts.CreateLeadInput{
-		FullName: leadTestPtr("Imported prospect"), Source: "import",
-		SourceSystem: leadTestPtr("mirror:hubspot"), SourceID: leadTestPtr("leads:200"),
+		FullName: new("Imported prospect"), Source: "import",
+		SourceSystem: new("mirror:hubspot"), SourceID: new("leads:200"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -201,8 +199,8 @@ func TestLegacyImportFollowupsStayOutButPlannedTasksAndEditsRemain(t *testing.T)
  VALUES ('route_lead', 'Follow up', '{"event_type":"lead.created"}', '{"kind":"create_task"}', '{}', true)`)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	lead, _, err := contacts.NewStore(e.DB()).CreateLead(e.Admin(), contacts.CreateLeadInput{
-		FullName: leadTestPtr("Imported prospect"), OwnerID: &owner, Source: "import",
-		SourceSystem: leadTestPtr("mirror:hubspot"), SourceID: leadTestPtr("leads:legacy"),
+		FullName: new("Imported prospect"), OwnerID: &owner, Source: "import",
+		SourceSystem: new("mirror:hubspot"), SourceID: new("leads:legacy"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -221,7 +219,7 @@ func TestLegacyImportFollowupsStayOutButPlannedTasksAndEditsRemain(t *testing.T)
 	store := activities.NewStore(e.DB())
 	due := time.Now().Add(-time.Hour)
 	planned, _, err := store.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "task", Subject: leadTestPtr("Follow up with the new lead"), DueAt: &due, AssigneeID: &owner,
+		Kind: "task", Subject: new("Follow up with the new lead"), DueAt: &due, AssigneeID: &owner,
 		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: ids.UUID(lead.Id)}},
 	})
 	if err != nil {
@@ -236,7 +234,7 @@ func TestLegacyImportFollowupsStayOutButPlannedTasksAndEditsRemain(t *testing.T)
 		t.Fatal("legacy tasks were removed rather than filtered")
 	}
 	_, err = store.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](automatic), activities.UpdateActivityInput{
-		Subject: leadTestPtr("Plan confirmed"), DueAt: &due,
+		Subject: new("Plan confirmed"), DueAt: &due,
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -19,6 +19,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -126,12 +127,7 @@ func lineDescriptions(o regeneratedOffer) []string {
 }
 
 func containsDescription(descriptions []string, want string) bool {
-	for _, d := range descriptions {
-		if d == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(descriptions, want)
 }
 
 func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotals(t *testing.T) {

@@ -29,7 +29,7 @@ type pageFetcher interface {
 // TestCountPassagesAgreesWithTheNumbering holds the two together.
 func CountPassages(text string) int {
 	n := 0
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if strings.TrimSpace(line) != "" {
 			n++
 		}
@@ -46,7 +46,7 @@ func CountPassages(text string) int {
 func numberPassages(text string) string {
 	var b strings.Builder
 	n := 0
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

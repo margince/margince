@@ -193,7 +193,7 @@ func TestAMeterFailureReachesTheDecidingHuman(t *testing.T) {
 // as a unit test over the real predicate rather than a paraphrase of it.
 func TestAStepUpIsDecidedByTheLenderAlone(t *testing.T) {
 	lender := ids.New[ids.UserKind]().UUID
-	a := row{Kind: KindVolumeRelease, OnBehalfOf: ptr(ids.From[ids.UserKind](lender))}
+	a := row{Kind: KindVolumeRelease, OnBehalfOf: new(ids.From[ids.UserKind](lender))}
 	// Every object grant there is, held by someone who is not the lender.
 	admin := principal.Principal{
 		UserID: ids.New[ids.UserKind]().UUID,
@@ -234,5 +234,3 @@ func TestAStepUpWithNoLenderIsDecidableByNobody(t *testing.T) {
 		t.Error("a step-up recorded for nobody was decidable by whoever asked")
 	}
 }
-
-func ptr[T any](v T) *T { return &v }

@@ -93,7 +93,7 @@ func TestReportingRestrictedEditionRemovesRatiosAndAllAgeGeometry(t *testing.T) 
 	frame := crmcontracts.ReportingContext{Currency: "EUR", PipelineId: ptrUUID(ids.NewV7())}
 	prior := crmcontracts.ReportingEvaluation{Context: frame, Selection: crmcontracts.ReportingSelection{Blocks: []crmcontracts.ReportingBlockKind{"stage_age"}}, Metrics: []crmcontracts.ReportingMetric{{Id: "stage_age", Value: &value, Coverage: crmcontracts.ReportingCoverage{Status: "ok"}}, {Id: "closed_win_rate", Value: &value, Numerator: &value, Denominator: &value, Coverage: crmcontracts.ReportingCoverage{Status: "ok"}}}}
 	facts := []reporting.Fact{}
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		facts = append(facts, reporting.Fact{Metric: "stage_age", ContextID: "state", StageID: "negotiation", Row: crmcontracts.ReportingEvidenceRow{Value: &value}})
 	}
 	out, err := (metricEvaluator{}).ProjectFrozen(prior, facts)

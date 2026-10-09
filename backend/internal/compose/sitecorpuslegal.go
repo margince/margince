@@ -10,6 +10,7 @@ package compose
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -235,13 +236,8 @@ func removeBrandOnlyLegalAliases(entities []corpusLegalEntity) []corpusLegalEnti
 				if i == j || legalEntityNameKey(richer.Name) == key {
 					continue
 				}
-				for _, token := range strings.Fields(legalEntityNameKey(richer.Name)) {
-					if token == key {
-						dropAlias = true
-						break
-					}
-				}
-				if dropAlias {
+				if slices.Contains(strings.Fields(legalEntityNameKey(richer.Name)), key) {
+					dropAlias = true
 					break
 				}
 			}
@@ -491,7 +487,7 @@ func legalAuthorityPage(rawURL string) bool {
 		return false
 	}
 	depth := 0
-	for _, segment := range strings.Split(parsed.Path, "/") {
+	for segment := range strings.SplitSeq(parsed.Path, "/") {
 		if segment != "" {
 			depth++
 		}

@@ -12,7 +12,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -107,11 +106,9 @@ func (a anchorArgs) validate() error {
 	byName := strings.TrimSpace(a.RecordName) != ""
 	switch {
 	case byID && byName:
-		return &BadArgsError{Cause: fmt.Errorf(
-			"name the record by `record_id` or by `record_name`, not both")}
+		return &BadArgsError{Cause: errors.New("name the record by `record_id` or by `record_name`, not both")}
 	case !byID && !byName:
-		return &BadArgsError{Cause: fmt.Errorf(
-			"name the record by `record_id` or by `record_name`")}
+		return &BadArgsError{Cause: errors.New("name the record by `record_id` or by `record_name`")}
 	default:
 		return nil
 	}

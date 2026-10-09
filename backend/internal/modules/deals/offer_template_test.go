@@ -39,8 +39,7 @@ func TestOfferTemplateUniqueViolation_TranslatesRacingConstraints(t *testing.T) 
 
 	t.Run("name collision", func(t *testing.T) {
 		err := offerTemplateUniqueViolation(wrap("offer_template_name_unique"), "de-DE")
-		var dup *DuplicateTemplateNameError
-		if !errors.As(err, &dup) {
+		if _, ok := errors.AsType[*DuplicateTemplateNameError](err); !ok {
 			t.Fatalf("want *DuplicateTemplateNameError, got %T (%v)", err, err)
 		}
 		if !errors.Is(err, apperrors.ErrConflict) {

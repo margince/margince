@@ -6,7 +6,6 @@ package activities
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -58,7 +57,7 @@ func (s *Store) ReconcileInvitations(ctx context.Context) error {
 	var faults []error
 	for _, row := range rows {
 		if row.Receipt == nil {
-			faults = append(faults, fmt.Errorf("calendar: confirmed invitation has no receipt"))
+			faults = append(faults, errors.New("calendar: confirmed invitation has no receipt"))
 			continue
 		}
 		state, err := s.calendar.Inspect(ctx, row.Host, row.Provider, row.Calendar, row.Receipt.EventID)
@@ -76,7 +75,7 @@ func (s *Store) ReconcileInvitations(ctx context.Context) error {
 
 func (s *Store) reconcileInvitation(ctx context.Context, observed invitationRow, state connector.CalendarState) error {
 	if !state.Canceled && !state.End.After(state.Start) {
-		return fmt.Errorf("calendar: invalid observed interval")
+		return errors.New("calendar: invalid observed interval")
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		if err := storekit.LockWriteIdentity(ctx, tx, "meeting_host", observed.Host.String()); err != nil {

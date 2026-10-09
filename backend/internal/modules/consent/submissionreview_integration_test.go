@@ -349,7 +349,7 @@ func TestAWalkCrossesProposalsThatArrivedInTheSameInstant(t *testing.T) {
 
 	seen := map[ids.UUID]bool{}
 	cursor := ""
-	for pages := 0; pages < 5; pages++ {
+	for pages := range 5 {
 		batch, page, err := e.store.ListSubmissions(reviewerCtx(e), ListSubmissionsInput{
 			Limit: 1, Cursor: cursor,
 		})
@@ -433,8 +433,7 @@ func TestACursorFromSomewhereElseIsRefusedRatherThanAnswered(t *testing.T) {
 	} {
 		_, _, err := e.store.ListSubmissions(reviewerCtx(e),
 			ListSubmissionsInput{Cursor: token})
-		var malformed *storekit.MalformedCursorError
-		if !errors.As(err, &malformed) {
+		if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 			t.Errorf("%s answered %v, want a refusal: an empty page here reads as "+
 				"a queue with nothing left in it", what, err)
 		}

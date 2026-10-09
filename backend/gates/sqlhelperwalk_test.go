@@ -68,11 +68,13 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 			return " " + calleeName(v) + " ", true
 		}
 		text := ""
+		var textSb71 strings.Builder
 		for _, a := range v.Args {
 			if part, ok := flattenSQL(a, seen, owner); ok {
-				text += part
+				textSb71.WriteString(part)
 			}
 		}
+		text += textSb71.String()
 		return " " + text + " ", true
 	case *ast.CompositeLit:
 		// A statement assembled as `strings.Join([]string{…}, " ")` kept its
@@ -82,11 +84,13 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 		// could ever be a finding.
 		seen[n] = true
 		text := ""
+		var textSb85 strings.Builder
 		for _, elt := range v.Elts {
 			if part, ok := flattenSQL(elt, seen, owner); ok {
-				text += part
+				textSb85.WriteString(part)
 			}
 		}
+		text += textSb85.String()
 		return text, true
 	case *ast.FuncLit:
 		// NOT claimed. A callback body is where most of this tree's SQL lives —

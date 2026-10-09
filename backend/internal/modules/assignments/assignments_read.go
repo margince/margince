@@ -87,7 +87,7 @@ func scanAssignmentRow(sc rowScanner) (assignmentRow, error) {
 	case team != nil:
 		r.SubjectKind, r.SubjectID = crmcontracts.AssignmentSubjectKindTeam, *team
 	default:
-		return assignmentRow{}, fmt.Errorf("record_assignment row has no assignee")
+		return assignmentRow{}, errors.New("record_assignment row has no assignee")
 	}
 	return r, nil
 }

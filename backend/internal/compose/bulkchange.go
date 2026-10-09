@@ -432,8 +432,7 @@ func appliedAt(
 // reported as one row's fault.
 func bulkSkipFor(err error) (crmcontracts.BulkSkip, error) {
 	var anchor *contacts.AnchorProtectedError
-	var restore *storekit.RestoreRefusal
-	if errors.As(err, &restore) {
+	if restore, ok := errors.AsType[*storekit.RestoreRefusal](err); ok {
 		return restoreSkip(restore), nil
 	}
 	switch {

@@ -19,6 +19,7 @@ package contacts
 
 import (
 	"context"
+	"maps"
 	"testing"
 	"time"
 
@@ -96,9 +97,7 @@ func (e *dedupeEnv) asRetirer(t *testing.T) context.Context {
 		t.Fatal("the editor context carries no actor")
 	}
 	grants := map[string]principal.ObjectGrant{}
-	for object, grant := range actor.Permissions.Objects {
-		grants[object] = grant
-	}
+	maps.Copy(grants, actor.Permissions.Objects)
 	relationship := grants["relationship"]
 	relationship.Delete = true
 	grants["relationship"] = relationship

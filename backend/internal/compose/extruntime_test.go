@@ -138,9 +138,8 @@ func TestRuntimeIsScopedToTheInvokingUnit(t *testing.T) {
 		t.Fatalf("Runtime is scoped to unit %q, want the invoking unit alpha", call.unit)
 	}
 
-	rt := reflect.TypeOf((*extension.Runtime)(nil)).Elem()
-	for i := range rt.NumMethod() {
-		m := rt.Method(i)
+	rt := reflect.TypeFor[extension.Runtime]()
+	for m := range rt.Methods() {
 		for _, named := range stringParams(m.Type) {
 			if !nameableOnThisSurface.Waived(t, named) {
 				t.Errorf("extension.Runtime.%s takes a %s — a unit name is a string, so this is a parameter "+
@@ -192,8 +191,8 @@ var nameableOnThisSurface = gatekit.Waive(map[string]string{
 // — the exact shape this test exists to refuse — would read as reviewed.
 func stringParams(fn reflect.Type) []string {
 	var named []string
-	for i := range fn.NumIn() {
-		switch in := fn.In(i); in.Kind() {
+	for in := range fn.Ins() {
+		switch in := in; in.Kind() {
 		case reflect.String:
 			named = append(named, in.String())
 		case reflect.Func:

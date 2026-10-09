@@ -5,6 +5,7 @@ package meetingbrief
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -109,10 +110,8 @@ func TestAMomentHoldingAPromiseOutranksNewerChatter(t *testing.T) {
 	}
 	for _, moment := range arc {
 		for _, current := range moment.Threads {
-			for _, id := range current.IDs {
-				if id == activityID {
-					return
-				}
+			if slices.Contains(current.IDs, activityID) {
+				return
 			}
 		}
 	}

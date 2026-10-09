@@ -122,7 +122,7 @@ func TestAConstraintIsValidatedInItsOwnMigration(t *testing.T) {
 // registered fourteen says "NOT VALID" in a comment as well as performing it.
 func withoutSQLComments(sql string) string {
 	var out strings.Builder
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if at := strings.Index(line, "--"); at >= 0 {
 			line = line[:at]
 		}

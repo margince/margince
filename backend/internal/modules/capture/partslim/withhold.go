@@ -94,7 +94,7 @@ func withholdSplice(raw []byte, ordinal int, body []byte) (splice, error) {
 func declaresBase64(upToFieldsEnd []byte) bool {
 	start := bytes.LastIndex(upToFieldsEnd, []byte("\n--"))
 	block := upToFieldsEnd[start+1:]
-	for _, line := range bytes.Split(block, []byte("\n")) {
+	for line := range bytes.SplitSeq(block, []byte("\n")) {
 		name, value, found := bytes.Cut(bytes.TrimSpace(line), []byte(":"))
 		if found && bytes.EqualFold(bytes.TrimSpace(name), []byte("Content-Transfer-Encoding")) {
 			return bytes.EqualFold(bytes.TrimSpace(value), []byte("base64"))
