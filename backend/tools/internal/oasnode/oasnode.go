@@ -46,12 +46,19 @@ func Scalar(node *yaml.Node, key string) string {
 	return value.Value
 }
 
-// Refs collects every $ref value under a node, in document order.
+// Refs collects every $ref value under a node, in document order. The values
+// of a discriminator's mapping are refs too, which a reader follows to a schema.
 func Refs(node *yaml.Node) []string {
 	var refs []string
 	if node.Kind == yaml.MappingNode {
 		if ref := Scalar(node, "$ref"); ref != "" {
 			refs = append(refs, ref)
+		}
+		discriminator, _ := Lookup(node, "discriminator")
+		if mapping, ok := Lookup(discriminator, "mapping"); ok {
+			for i := 1; i < len(mapping.Content); i += 2 {
+				refs = append(refs, mapping.Content[i].Value)
+			}
 		}
 	}
 	for _, child := range node.Content {

@@ -140,6 +140,9 @@ func TestTheEmbeddedContractHasNoAnchorAndEveryRefResolves(t *testing.T) {
 			if n.Kind == yaml.MappingNode && n.Content[i].Value == "$ref" {
 				refs = append(refs, n.Content[i+1].Value)
 			}
+			if n.Kind == yaml.MappingNode && n.Content[i].Value == "discriminator" {
+				refs = append(refs, discriminatorTargets(n.Content[i+1])...)
+			}
 		}
 		for _, child := range n.Content {
 			walk(child)
@@ -165,6 +168,21 @@ func TestTheEmbeddedContractHasNoAnchorAndEveryRefResolves(t *testing.T) {
 			t.Errorf("$ref %q names a component the contract does not carry", ref)
 		}
 	}
+}
+
+// discriminatorTargets are the values of a discriminator's mapping, which point
+// at schemas as a $ref does.
+func discriminatorTargets(discriminator *yaml.Node) []string {
+	var targets []string
+	for i := 0; i+1 < len(discriminator.Content); i += 2 {
+		if discriminator.Content[i].Value != "mapping" {
+			continue
+		}
+		for j := 1; j < len(discriminator.Content[i+1].Content); j += 2 {
+			targets = append(targets, discriminator.Content[i+1].Content[j].Value)
+		}
+	}
+	return targets
 }
 
 // developerNotes are the forms of build notes an agent must never be handed.

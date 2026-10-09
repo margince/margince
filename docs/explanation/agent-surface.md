@@ -124,12 +124,16 @@ which `make gen` runs and `make drift` checks. The cut follows the gate, so the 
 passport can reach:
 
 - An operation stays when its `x-agent-access` is neither `human-only` nor `auth-bootstrap`, and its
-  security admits `bearerAuth`. Any other operation refuses every passport, so listing it would send
-  an agent to a refusal.
-- A description keeps only its text up to the first blank line. Any part of it that reads as a note
-  to the contract's developers is cut. Such a note is a decision label, a spec path, SQL or a storage
-  table name. An agent reads every description as a fact about the API, and those notes are about
-  the build.
+  security admits `bearerAuth` alone. Any other operation refuses every passport, so listing it would
+  send an agent to a refusal. The gate lets an agent change data only through an operation with a
+  tool policy, its `x-mcp-tool`. Every such operation outside those two classes has one, because
+  `backend/tools/gen-agentpolicy` refuses to generate without it.
+- Its security keeps only `bearerAuth`, and so does `components.securitySchemes`, because an agent
+  that reads the skill holds a passport and nothing else.
+- A description keeps only its text up to the first blank line. A sentence that reads as a note to
+  the contract's developers is cut, and so is such a note inside `( )`. Such a note is a decision
+  label, a spec path, an `x-*` key, SQL or a storage table name. An agent reads every description as
+  a fact about the API, and those notes are about the build.
 - What the `x-*` keys say about a call is written into its description in words. That is the
   passport permission it needs, whether it waits for approval, and whether it waits on a model. Then
   every `x-*` key is stripped.

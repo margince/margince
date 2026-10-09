@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/tools/internal/oasnode"
 )
 
-// permissionNames are the passport permissions as the app names them, keyed by
-// the scope x-mcp-tool declares.
+// permissionNames are the passport permissions as the Agent passports card
+// names them, keyed by the scope x-mcp-tool declares; permissionnames_test.go holds the mirror.
 var permissionNames = map[string]string{
 	"read": "Read records", "draft": "Draft messages", "write": "Change records",
 	"send": "Send messages", "enrich": "Buy contact data",
@@ -37,14 +37,15 @@ var aside = regexp.MustCompile(`\s*\([^()]*\)`)
 
 // developerMarkers are the forms of build notes the contract's prose carries
 // for its own developers. They are decision, backlog and requirement labels,
-// specification paths and sections, migration numbers and storage detail. A
-// description holding one is not for an agent. The label forms are the ones
-// backend/gates/followablecitations_test.go refuses in a touched line.
+// specification paths and sections, migration numbers, the x-* keys the cut
+// strips, and storage detail. A description holding one is not for an agent.
+// The label forms are the ones backend/gates/followablecitations_test.go refuses
+// in a touched line.
 var developerMarkers = regexp.MustCompile(strings.Join([]string{
 	`\bADR-\d+`, `features/`, `data-model`, `interfaces\.md`, `(^|[^\w/.-])spec/`, `§`,
 	`\b(B-|S-)?EP?\d{2}(\.\d+[a-z]?)*\b`, `\bUAT-PLAN-\d\b`, `\bOP-\d{1,2}\b`,
 	`\b[A-Z]{2,}(-[A-Z]+)+-[A-Z]?\d+[a-z]?\b`, `\b[A-Z]{4,}-\d{1,2}\b`, `\bmigrations? \d{4}\b`, `founder decision`,
-	`\bIS (NOT )?NULL\b`, `\btsvector\b`, `\b(SELECT|INSERT|UPDATE|DELETE) .*\b(FROM|INTO|SET|WHERE)\b`,
+	`\bx-(mcp-tool|agent-access)\b`, `\bIS (NOT )?NULL\b`, `\btsvector\b`, `\b(SELECT|INSERT|UPDATE|DELETE) .*\b(FROM|INTO|SET|WHERE)\b`,
 }, "|"))
 
 // prose cleans the contract's descriptions for an agent. tables are the
@@ -58,6 +59,9 @@ func newProse(tables []string) prose {
 	return prose{tables: regexp.MustCompile(`\b(` + strings.Join(tables, "|") + `)\b`)}
 }
 
+// sentence is one sentence with the space after it, or a trailing fragment.
+var sentence = regexp.MustCompile(`(?s).*?(?:[.!?](?:\s+|$)|$)`)
+
 // tierMarks are the contract's shorthand for the two tiers, which an agent
 // reads the sentences describeOperation writes for instead.
 var tierMarks = strings.NewReplacer(" 🟢", "", " 🟡", "", "🟢", "", "🟡", "")
@@ -66,8 +70,19 @@ func (p prose) isDeveloperNote(text string) bool {
 	return developerMarkers.MatchString(text) || (p.tables != nil && p.tables.MatchString(text))
 }
 
-// clean trims text to its first paragraph without asides that are developer
-// notes. It returns "" when what is left is a developer note too.
+// withoutNotes drops each sentence of text that is a developer note.
+func (p prose) withoutNotes(text string) string {
+	var kept strings.Builder
+	for _, s := range sentence.FindAllString(text, -1) {
+		if !p.isDeveloperNote(s) {
+			kept.WriteString(s)
+		}
+	}
+	return strings.TrimSpace(kept.String())
+}
+
+// clean trims text to its first paragraph without the asides and sentences
+// that are developer notes. It returns "" when nothing else is left.
 func (p prose) clean(node *yaml.Node) string {
 	text := strings.TrimSpace(node.Value)
 	breakAt := "\n\n"
@@ -81,7 +96,7 @@ func (p prose) clean(node *yaml.Node) string {
 		}
 		return parenthetical
 	})
-	text = strings.TrimSpace(text)
+	text = p.withoutNotes(text)
 	if p.isDeveloperNote(text) {
 		return ""
 	}

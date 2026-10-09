@@ -31,11 +31,13 @@ func agentContract(src []byte, tables []string) ([]byte, []byte, int, error) {
 	flatten(root)
 
 	paths, _ := oasnode.Lookup(root, "paths")
-	ops, tags, schemes := keepAgentOperations(root, paths)
+	ops, tags := keepAgentOperations(root, paths)
 	if len(ops) == 0 {
 		return nil, nil, 0, fmt.Errorf("no operation is open to agents, so the walk no longer reaches the operations")
 	}
-	addSchemeNames(schemes, root)
+	if security, ok := oasnode.Lookup(root, "security"); ok {
+		passportOnly(security)
+	}
 	text := newProse(tables)
 	text.sanitize(root, false)
 	for _, op := range ops {
@@ -44,7 +46,7 @@ func agentContract(src []byte, tables []string) ([]byte, []byte, int, error) {
 	stripExtensions(root)
 
 	components, _ := oasnode.Lookup(root, "components")
-	kept, err := reachableComponents(components, oasnode.Refs(paths), schemes)
+	kept, err := reachableComponents(components, oasnode.Refs(paths))
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -106,17 +108,15 @@ func stripExtensions(n *yaml.Node) {
 }
 
 // reachableComponents follows refs from the kept paths to every component
-// they need, transitively. A ref it cannot resolve is an error: emitted, it
-// would point an agent at a definition the file does not have.
-func reachableComponents(components *yaml.Node, seeds []string, schemes map[string]bool) (map[componentRef]bool, error) {
-	kept := map[componentRef]bool{}
-	for name := range schemes {
-		ref := componentRef{"securitySchemes", name}
-		if _, ok := component(components, ref); !ok {
-			return nil, fmt.Errorf("an operation names security scheme %q, which components.securitySchemes does not declare", name)
-		}
-		kept[ref] = true
+// they need, transitively, beside the passport's security scheme, the only
+// one the kept security names. A ref it cannot resolve is an error: emitted,
+// it would point an agent at a definition the file does not have.
+func reachableComponents(components *yaml.Node, seeds []string) (map[componentRef]bool, error) {
+	scheme := componentRef{"securitySchemes", passportScheme}
+	if _, ok := component(components, scheme); !ok {
+		return nil, fmt.Errorf("components.securitySchemes does not declare %q, the scheme a passport authenticates under", passportScheme)
 	}
+	kept := map[componentRef]bool{scheme: true}
 	queue := seeds
 	for len(queue) > 0 {
 		raw := queue[0]

@@ -21,6 +21,7 @@ servers:
   - url: https://crm.example.com/v1
 security:
   - bearerAuth: []
+  - cookieAuth: []
 tags:
   - name: Contacts
   - name: Identity
@@ -76,6 +77,13 @@ paths:
       security: [ { cookieAuth: [] } ]
       responses:
         '200': { description: ok }
+  /digest/both:
+    get:
+      tags: [Contacts]
+      operationId: getDigestWithBoth
+      security: [ { bearerAuth: [], cookieAuth: [] } ]
+      responses:
+        '200': { description: ok }
   /public/preferences/{token}:
     get:
       tags: [Contacts]
@@ -118,6 +126,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContact
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      description: Returns one contact. Its row lives in contact_note. A note is a contact too.
       parameters:
         - &reused
           name: id
@@ -145,6 +155,11 @@ components:
       type: object
       properties:
         name: { type: string, x-extension: true }
+      discriminator:
+        propertyName: kind
+        mapping:
+          note: '#/components/schemas/Note'
+    Note: { type: object }
     Unreferenced: { type: string }
 `
 
@@ -203,8 +218,24 @@ func TestAnOperationWhoseSecurityRefusesAPassportIsDropped(t *testing.T) {
 	if _, ok := at(root, "paths", "/digest"); ok {
 		t.Error("/digest declares cookieAuth only, so a passport cannot call it, and it is still listed")
 	}
+	if _, ok := at(root, "paths", "/digest/both"); ok {
+		t.Error("/digest/both needs a session cookie beside the passport, which a passport alone cannot satisfy, and it is still listed")
+	}
 	if _, ok := at(root, "paths", "/public/preferences/{token}"); ok {
 		t.Error("/public/preferences/{token} declares security: [], which no passport authenticates, and it is still listed")
+	}
+}
+
+func TestTheKeptSecurityNamesThePassportOnly(t *testing.T) {
+	root, out := generate(t)
+	if strings.Contains(out, "cookieAuth") {
+		t.Errorf("the output names cookieAuth, a scheme the skill's reader cannot use:\n%s", out)
+	}
+	for _, path := range [][]string{{"security"}, {"paths", "/contacts/{id}", "get", "security"}} {
+		security, _ := at(root, path...)
+		if security == nil || len(security.Content) != 1 || !isPassportRequirement(security.Content[0]) {
+			t.Errorf("%s is not the one bearerAuth requirement", strings.Join(path, "."))
+		}
 	}
 }
 
@@ -234,6 +265,15 @@ func TestAnOperationSaysWhatTheGateWillDoWithIt(t *testing.T) {
 	}
 	if _, ok := at(brief, "summary"); ok {
 		t.Error("draftBrief keeps a summary that names storage")
+	}
+}
+
+func TestOnlyTheSentenceNamingStorageIsCut(t *testing.T) {
+	root, _ := generate(t)
+	contact, _ := at(root, "paths", "/contacts/{id}", "get")
+	want := "Returns one contact. A note is a contact too."
+	if got := oasnode.Scalar(contact, "description"); got != want {
+		t.Errorf("getContact description = %q, want %q: the storage sentence goes, the rest stays", got, want)
 	}
 }
 
@@ -297,6 +337,7 @@ func TestATransitivelyReferencedComponentIsKept(t *testing.T) {
 	for _, path := range [][]string{
 		{"components", "schemas", "ContactList"},
 		{"components", "schemas", "Contact"},
+		{"components", "schemas", "Note"},
 		{"components", "parameters", "Cursor"},
 		{"components", "securitySchemes", "bearerAuth"},
 	} {

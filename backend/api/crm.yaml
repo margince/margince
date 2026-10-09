@@ -922,6 +922,7 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /oauth/consent-request:
     get:

@@ -29,13 +29,13 @@ type operation struct {
 }
 
 // keepAgentOperations drops every operation a passport cannot call, and every
-// path left with none. It returns the kept operations in source order, the
-// tags they use and the security schemes they name.
-func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool, map[string]bool) {
+// path left with none. It returns the kept operations in source order and the
+// tags they use. Each kept operation's own security is cut to passportOnly.
+func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool) {
 	var kept []operation
-	tags, schemes := map[string]bool{}, map[string]bool{}
+	tags := map[string]bool{}
 	if paths == nil {
-		return nil, tags, schemes
+		return nil, tags
 	}
 	globalSecurity, _ := oasnode.Lookup(root, "security")
 	keptPaths := paths.Content[:0]
@@ -49,9 +49,11 @@ func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool, 
 				if !passportCallable(value, globalSecurity) {
 					continue
 				}
+				if security, own := oasnode.Lookup(value, "security"); own {
+					passportOnly(security)
+				}
 				kept = append(kept, readOperation(method, path, value))
 				collectNames(tags, value, "tags")
-				addSchemeNames(schemes, value)
 			}
 			keptKeys = append(keptKeys, key, value)
 		}
@@ -61,7 +63,7 @@ func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool, 
 		}
 	}
 	paths.Content = keptPaths
-	return kept, tags, schemes
+	return kept, tags
 }
 
 // passportCallable reports whether a passport may call the operation at all.
@@ -79,11 +81,32 @@ func passportCallable(op, globalSecurity *yaml.Node) bool {
 		return false
 	}
 	for _, requirement := range security.Content {
-		if _, ok := oasnode.Lookup(requirement, passportScheme); ok {
+		if isPassportRequirement(requirement) {
 			return true
 		}
 	}
 	return false
+}
+
+// isPassportRequirement reports whether a passport alone satisfies one
+// security requirement. A requirement naming a second scheme also needs that
+// one, which a passport does not carry.
+func isPassportRequirement(requirement *yaml.Node) bool {
+	_, ok := oasnode.Lookup(requirement, passportScheme)
+	return ok && len(requirement.Content) == 2
+}
+
+// passportOnly cuts a security list to the requirements a passport satisfies.
+// The skill's reader holds a passport and nothing else, so naming the human
+// session would only offer it a scheme it cannot use.
+func passportOnly(security *yaml.Node) {
+	kept := security.Content[:0]
+	for _, requirement := range security.Content {
+		if isPassportRequirement(requirement) {
+			kept = append(kept, requirement)
+		}
+	}
+	security.Content = kept
 }
 
 // agentAccess reads x-agent-access in both spellings: the core contract's
@@ -118,18 +141,5 @@ func collectNames(into map[string]bool, node *yaml.Node, key string) {
 	}
 	for _, item := range seq.Content {
 		into[item.Value] = true
-	}
-}
-
-// addSchemeNames adds the scheme names of node's security requirements.
-func addSchemeNames(into map[string]bool, node *yaml.Node) {
-	requirements, ok := oasnode.Lookup(node, "security")
-	if !ok {
-		return
-	}
-	for _, requirement := range requirements.Content {
-		for i := 0; i < len(requirement.Content); i += 2 {
-			into[requirement.Content[i].Value] = true
-		}
 	}
 }
