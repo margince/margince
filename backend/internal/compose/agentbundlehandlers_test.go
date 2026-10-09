@@ -15,11 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/agentbundle"
 )
 
-// A handler that calls auth.RequireHuman refuses every passport, whatever the
-// contract says. The skill must not list its operation, or an agent is handed
-// a call it can only fail. The generated router calls the operationId with its
-// first letter raised, so the handlers are found by that name across
-// internal/, the stubs aside.
+// A handler that calls auth.RequireHuman, itself or one call down, refuses every
+// passport, so the skill must not list it. The router calls the operationId with its first letter raised.
 func TestTheSkillListsNoOperationWhoseHandlerRequiresAHuman(t *testing.T) {
 	archive, err := (&agentbundle.Builder{}).Build("https://crm.example.test/v1")
 	if err != nil {
@@ -29,49 +26,113 @@ func TestTheSkillListsNoOperationWhoseHandlerRequiresAHuman(t *testing.T) {
 	for id := range operationIDsIn(t, bundledSpec(t, archive)) {
 		listed[strings.ToUpper(id[:1])+id[1:]] = id
 	}
+	methods, err := methodsByDir("..")
+	if err != nil {
+		t.Fatalf("scanning internal/: %v", err)
+	}
 
-	found, humanOnly := map[string]bool{}, map[string]string{}
-	err = filepath.WalkDir("..", func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
-			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "stubs_gen.go") {
+	found := map[string]bool{}
+	for dir, byName := range methods {
+		for name, decls := range byName {
+			if _, isListed := listed[name]; !isListed {
+				continue
+			}
+			for _, handler := range decls {
+				if !isHTTPHandler(handler) {
+					continue
+				}
+				found[name] = true
+				if why := requiresHuman(handler, byName); why != "" {
+					t.Errorf("the skill lists %s, and in %s %s calls auth.RequireHuman, so a passport is always refused",
+						listed[name], dir, why)
+				}
+			}
+		}
+	}
+	if len(found) != len(listed) {
+		missing := map[string]bool{}
+		for name, id := range listed {
+			if !found[name] {
+				missing[id] = true
+			}
+		}
+		t.Fatalf("found a handler for %d of %d listed operations, none for %v; the scan is short, so a pass would prove nothing",
+			len(found), len(listed), sortedIDs(missing))
+	}
+}
+
+// methodsByDir indexes every hand-written method under root by its directory
+// and name. The generated router and its stubs carry every operation's name,
+// so reading them would find a handler where none is written.
+func methodsByDir(root string) (map[string]map[string][]*ast.FuncDecl, error) {
+	methods := map[string]map[string][]*ast.FuncDecl{}
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
 			return walkErr
+		}
+		if d.IsDir() && path == filepath.Join(root, "contracts") {
+			return filepath.SkipDir
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
+			return nil
 		}
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
 		if err != nil {
 			return err
 		}
+		dir := filepath.Dir(path)
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
 			if !ok || fn.Recv == nil || fn.Body == nil {
 				continue
 			}
-			if _, isListed := listed[fn.Name.Name]; !isListed {
-				continue
+			if methods[dir] == nil {
+				methods[dir] = map[string][]*ast.FuncDecl{}
 			}
-			found[fn.Name.Name] = true
-			if callsRequireHuman(fn.Body) {
-				humanOnly[fn.Name.Name] = path
-			}
+			methods[dir][fn.Name.Name] = append(methods[dir][fn.Name.Name], fn)
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("scanning internal/: %v", err)
-	}
+	return methods, err
+}
 
-	missing := map[string]bool{}
-	for name, id := range listed {
-		if !found[name] {
-			missing[id] = true
+// requiresHuman names the handler, or the method of its package it calls, that calls auth.RequireHuman.
+// A parse has no types, so a callee matches any same-named method of the package, and other packages go unread.
+func requiresHuman(handler *ast.FuncDecl, pkgMethods map[string][]*ast.FuncDecl) string {
+	if callsRequireHuman(handler.Body) {
+		return handler.Name.Name
+	}
+	for _, callee := range calledMethodNames(handler.Body) {
+		for _, decl := range pkgMethods[callee] {
+			if decl != handler && callsRequireHuman(decl.Body) {
+				return handler.Name.Name + " → " + callee
+			}
 		}
 	}
-	if len(missing) > 0 {
-		t.Fatalf("found no handler for %v; the scan is short, so a pass would prove nothing", sortedIDs(missing))
+	return ""
+}
+
+// isHTTPHandler tells the handler apart from a store method of the same name.
+func isHTTPHandler(fn *ast.FuncDecl) bool {
+	params := fn.Type.Params.List
+	if len(params) == 0 {
+		return false
 	}
-	for name, path := range humanOnly {
-		t.Errorf("the skill lists %s, and its handler in %s calls auth.RequireHuman, so a passport is always refused",
-			listed[name], path)
-	}
+	sel, ok := params[0].Type.(*ast.SelectorExpr)
+	return ok && sel.Sel.Name == "ResponseWriter"
+}
+
+func calledMethodNames(body *ast.BlockStmt) []string {
+	var names []string
+	ast.Inspect(body, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok {
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+				names = append(names, sel.Sel.Name)
+			}
+		}
+		return true
+	})
+	return names
 }
 
 func callsRequireHuman(body *ast.BlockStmt) bool {
