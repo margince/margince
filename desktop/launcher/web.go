@@ -170,6 +170,7 @@ func spaHandler(root string) http.Handler {
 // into "cannot be examined", which is a broken installation. The caller needs
 // those apart, so the error is returned rather than folded into false.
 func regularFileExists(path string) (bool, error) {
+	//nolint:gosec // G703: the caller joins a path.Clean'd rooted URL path, which cannot climb above the web root
 	info, err := os.Stat(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

@@ -28,6 +28,7 @@ type treeHasher struct {
 func newTreeHasher(root string) *treeHasher { return &treeHasher{root: root} }
 
 func (h *treeHasher) addFile(rel string) error {
+	//nolint:gosec // G703: rel comes from this generator's own walk of the checkout, never from a request
 	content, err := os.ReadFile(filepath.Join(h.root, filepath.FromSlash(rel)))
 	if err != nil {
 		return err
@@ -41,6 +42,7 @@ func (h *treeHasher) addFile(rel string) error {
 // not share a digest, or presence itself would stop being part of the
 // input identity.
 func (h *treeHasher) addFileOrEmpty(rel string) error {
+	//nolint:gosec // G703: rel names a workspace member's go.sum, found by this generator's walk
 	content, err := os.ReadFile(filepath.Join(h.root, filepath.FromSlash(rel)))
 	if os.IsNotExist(err) {
 		h.lines = append(h.lines, rel+"\x00absent")
