@@ -31,14 +31,10 @@ func (h Handlers) ListDataSubjectRequests(w http.ResponseWriter, r *http.Request
 		writeConsentErr(w, r, err)
 		return
 	}
-	labels, err := h.dsrSubjectLabels(r.Context(), requests...)
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
+	subjects := h.dsrSubjectLabels(r.Context(), requests...)
 	data := make([]crmcontracts.DataSubjectRequest, 0, len(requests))
 	for _, d := range requests {
-		data = append(data, wireDSR(d, labels))
+		data = append(data, wireDSR(d, subjects))
 	}
 	info := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
@@ -68,12 +64,7 @@ func (h Handlers) CreateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 
 // writeDSR answers one request, its subject named under the queue's own rule.
 func (h Handlers) writeDSR(w http.ResponseWriter, r *http.Request, status int, d dsrRow) {
-	labels, err := h.dsrSubjectLabels(r.Context(), d)
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, status, wireDSR(d, labels))
+	httperr.WriteJSON(w, status, wireDSR(d, h.dsrSubjectLabels(r.Context(), d)))
 }
 
 func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

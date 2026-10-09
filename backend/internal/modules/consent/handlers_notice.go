@@ -51,11 +51,7 @@ func (h Handlers) ListNoticeCases(w http.ResponseWriter, r *http.Request, params
 		writeConsentErr(w, r, err)
 		return
 	}
-	names, err := h.noticeContactNames(r.Context(), cases...)
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
+	names := h.noticeContactNames(r.Context(), cases...)
 	data := make([]crmcontracts.NoticeCase, 0, len(cases))
 	for _, c := range cases {
 		data = append(data, wireNoticeCase(c, names))
@@ -113,12 +109,7 @@ func (h Handlers) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id cr
 
 // writeNoticeCase answers one case, named under the same rule as the queue.
 func (h Handlers) writeNoticeCase(w http.ResponseWriter, r *http.Request, c NoticeCase) {
-	names, err := h.noticeContactNames(r.Context(), c)
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(c, names))
+	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(c, h.noticeContactNames(r.Context(), c)))
 }
 
 // wireNoticeCase is the one place a case crosses into the contract shape, so a

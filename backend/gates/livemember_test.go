@@ -127,12 +127,13 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // with what, so it is issue margince/margince#2596 rather than a change made
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
-	"internal/modules/dealrooms/preview.go":      "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
-	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
-	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
-	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
-	"internal/modules/identity/userrole.go":      "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
-	"internal/modules/identity/usersessions.go":  "ensureUserExists resolves the admin's named target for a session review; a deactivated member is exactly whose sessions an admin inspects after suspending them, and their live sessions are what the revoke beside it exists to end. archived_at alone, because an archived row is genuinely gone",
+	"internal/modules/consent/noticeacquisition.go": "names the seat that recorded the acquisition a disclosure duty rests on; a deactivated colleague still labels what they recorded, and an archived row is gone, as identity's SeatNames answers",
+	"internal/modules/dealrooms/preview.go":         "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
+	"internal/modules/identity/actoridentity.go":    "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
+	"internal/modules/identity/seatnames.go":        "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
+	"internal/modules/identity/userlocale.go":       "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
+	"internal/modules/identity/userrole.go":         "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
+	"internal/modules/identity/usersessions.go":     "ensureUserExists resolves the admin's named target for a session review; a deactivated member is exactly whose sessions an admin inspects after suspending them, and their live sessions are what the revoke beside it exists to end. archived_at alone, because an archived row is genuinely gone",
 })
 
 // appUserAlias finds what app_user is called in a statement, so a sibling

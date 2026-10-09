@@ -4,6 +4,10 @@
 package consent
 
 import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -60,6 +64,35 @@ func TestANameTheReaderMayNotSeeIsNull(t *testing.T) {
 	var none *NoticeAcquisition
 	if none.Wire() != nil {
 		t.Error("a duty with no evidence put an acquisition on the wire")
+	}
+}
+
+// failingNames stands for a name read that errors after the write committed.
+type failingNames struct{}
+
+func (failingNames) Labels(context.Context, string, []ids.UUID) (map[ids.UUID]string, error) {
+	return nil, errors.New("names unavailable")
+}
+
+func TestAFailedNameReadStillAnswersTheWrite(t *testing.T) {
+	h := Handlers{}.WithRecordNames(failingNames{})
+	subject := ids.NewV7()
+	answers := map[string]func(http.ResponseWriter, *http.Request){
+		"a subject request": func(w http.ResponseWriter, r *http.Request) {
+			h.writeDSR(w, r, http.StatusOK, dsrRow{ID: ids.NewV7(), SubjectRef: subject.String()})
+		},
+		"a disclosure duty": func(w http.ResponseWriter, r *http.Request) {
+			h.writeNoticeCase(w, r, NoticeCase{ID: ids.NewV7(), ContactID: ids.From[ids.ContactKind](subject)})
+		},
+	}
+	for name, answer := range answers {
+		t.Run(name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			answer(w, httptest.NewRequest(http.MethodPatch, "/", nil))
+			if w.Code != http.StatusOK {
+				t.Fatalf("a committed write answered %d %s, want 200: a retry would write it twice", w.Code, w.Body)
+			}
+		})
 	}
 }
 

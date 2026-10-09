@@ -3,9 +3,8 @@
 
 package privacy
 
-// What each audit row is about, by name. The names live in tables this module
-// does not own. Each owning module answers for its rows and their visibility
-// through a port compose fills.
+// Audit rows named through a port compose fills, since the names live in tables
+// this module does not own.
 
 import (
 	"context"
@@ -14,9 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// RecordLabeler names a set of one entity type's records under the reader's
-// grants. A record the reader may not see, or that is gone, is absent, and a
-// type it does not name answers an empty map.
+// RecordLabeler names one type's records under the reader's grants. A hidden or
+// missing record is absent; an unknown type answers an empty map.
 type RecordLabeler interface {
 	Labels(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error)
 }
@@ -27,11 +25,8 @@ func (h Handlers) WithRecordLabeler(labeler RecordLabeler) Handlers {
 	return h
 }
 
-// labelAuditPage asks once per entity type on the page, with that type's
-// distinct ids. The cost follows the types present, not the row count.
-//
-// A type whose read fails keeps null labels and the page still answers. The
-// failure is logged, since the page alone cannot tell lost names from none.
+// labelAuditPage asks once per entity type on the page. A failed read is logged
+// and leaves null labels, since the page alone cannot tell lost names from none.
 func labelAuditPage(ctx context.Context, labeler RecordLabeler, entries []AuditEntry) {
 	if labeler == nil {
 		return

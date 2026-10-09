@@ -142,11 +142,7 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 		}
 		return dsrRow{}, err
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "data_subject_request", id, map[string]any{
-		fieldStatus: current.Status,
-	}, map[string]any{
-		fieldStatus: out.Status, fieldResolution: in.Resolution != nil,
-	}); err != nil {
+	if err := auditDSRUpdate(ctx, tx, current, out, in.Resolution != nil); err != nil {
 		return dsrRow{}, err
 	}
 	return out, nil

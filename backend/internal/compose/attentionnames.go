@@ -3,13 +3,8 @@
 
 package compose
 
-// The attention feed's display-name resolver (attention.Names): one gated
-// single-row read per distinct subject, each through the owning module's own
-// get — so a label is exactly as visible as the record, under the READER's
-// grants, and this seam holds no authority of its own. A refusal
-// (permission denied, or the row-scope not-found that hides existence)
-// costs the label and nothing else: the id still travels, the contract's
-// "Absent when the caller may not read it".
+// Names records for the attention feed, analytics drill-through, audit log and
+// privacy queues: one batched read per type, through the store that owns it.
 
 import (
 	"context"
@@ -44,13 +39,8 @@ var (
 	_ privacy.RecordLabeler = attentionNames{}
 )
 
-// newAttentionNames assembles the resolver over one installation's stores.
-//
-// Every surface that names records reads through it: the attention feed, the
-// analytics drill-through, the audit log and the privacy queues. They share this
-// constructor because a name must resolve identically on each. A second assembly
-// could bind a different store set. The same record would then be named on one
-// surface and withheld on the other, for no reason a reader could see.
+// newAttentionNames is the one assembly every naming surface shares, so a record
+// is named or withheld alike on each.
 func newAttentionNames(db *database.DB) attentionNames {
 	return attentionNames{
 		contacts:    contacts.NewStore(db),

@@ -5,9 +5,8 @@
 
 package compose
 
-// GET /audit-log against real Postgres and the wiring production serves. Every
-// entry names its record when the reader may see that record. It reads null
-// when the record is outside their scope, erased, or of a type nothing names.
+// GET /audit-log over the production wiring. An entry names its record only
+// when the reader may see it, and reads null when hidden, erased or unnamed.
 
 import (
 	"context"

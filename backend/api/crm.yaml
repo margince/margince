@@ -51130,6 +51130,12 @@ components:
             The display name of the contact or lead `subject_ref` names. Absent or null when the
             reference names no record, or names one the caller may not read: a hidden subject and an
             external identifier read the same, so the queue discloses no more than the record would.
+        subject_kind:
+          type: [string, 'null']
+          enum: [null, contact, lead]
+          description: |
+            Which kind of record `subject_label` was read from. Null when nothing resolved: an
+            external identifier, an erased subject, or one the caller may not read.
         status: { type: string, enum: [open, in_progress, fulfilled, rejected] }
         due_at: { type: string, format: date-time, description: 'Statutory deadline (e.g. 30 days).' }
         assignee_id: { type: [string, 'null'], format: uuid }

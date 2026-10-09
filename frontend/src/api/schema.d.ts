@@ -37492,6 +37492,12 @@ export interface components {
              *     external identifier read the same, so the queue discloses no more than the record would.
              */
             subject_label?: string | null;
+            /**
+             * @description Which kind of record `subject_label` was read from. Null when nothing resolved: an
+             *     external identifier, an erased subject, or one the caller may not read.
+             * @enum {string|null}
+             */
+            subject_kind?: null | "contact" | "lead";
             /** @enum {string} */
             status: "open" | "in_progress" | "fulfilled" | "rejected";
             /**

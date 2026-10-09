@@ -10,6 +10,7 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -92,13 +93,44 @@ func TestANullAssigneeHandsTheRequestBack(t *testing.T) {
 	if after := e.read(t, request.ID); after.AssigneeID != nil {
 		t.Fatalf("assignee_id null answered 200 and left %v assigned", *after.AssigneeID)
 	}
-	var audited int
+	var before, after map[string]any
 	if err := e.owner.QueryRow(context.Background(), `
-		SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, request.ID).Scan(&audited); err != nil {
-		t.Fatal(err)
+		SELECT before, after FROM audit_log
+		 WHERE entity_id = $1 AND action = 'update'
+		 ORDER BY occurred_at DESC, id DESC LIMIT 1`, request.ID).Scan(&before, &after); err != nil {
+		t.Fatalf("reading the hand-back's audit row: %v", err)
 	}
-	if audited != 2 {
-		t.Errorf("two patches left %d audit rows, want 2", audited)
+	if before[fieldAssigneeID] != e.user.String() || after[fieldAssigneeID] != nil {
+		t.Errorf("the hand-back audited assignee %v → %v, want %v → null: the row must say who let it go",
+			before[fieldAssigneeID], after[fieldAssigneeID], e.user)
+	}
+	if _, recorded := after[fieldAssigneeID]; !recorded {
+		t.Error("the hand-back's after image omits the assignee instead of recording it as null")
+	}
+}
+
+func TestAFailedNameReadStillAnswersTheWriteAndTheQueue(t *testing.T) {
+	e := setupDSR(t)
+	h := e.handlers().WithRecordNames(failingNames{})
+	created := e.sendDSR(http.MethodPost, `{"kind":"access","subject_ref":"`+e.user.String()+`","due_at":"2026-08-31T00:00:00Z"}`,
+		func(w http.ResponseWriter, r *http.Request) {
+			h.CreateDataSubjectRequest(w, r, crmcontracts.CreateDataSubjectRequestParams{})
+		})
+	if created.Code != http.StatusCreated {
+		t.Fatalf("filing with a failing name read → %d %s, want 201: a 500 invites a duplicate statutory request",
+			created.Code, created.Body)
+	}
+	listed := e.sendDSR(http.MethodGet, "", func(w http.ResponseWriter, r *http.Request) {
+		h.ListDataSubjectRequests(w, r, crmcontracts.ListDataSubjectRequestsParams{})
+	})
+	var page struct {
+		Data []crmcontracts.DataSubjectRequest `json:"data"`
+	}
+	if err := json.Unmarshal(listed.Body.Bytes(), &page); listed.Code != http.StatusOK || err != nil {
+		t.Fatalf("listing with a failing name read → %d %s (%v), want the page", listed.Code, listed.Body, err)
+	}
+	if len(page.Data) != 1 || page.Data[0].SubjectLabel != nil || page.Data[0].SubjectKind != nil {
+		t.Errorf("the queue answered %+v, want the one request with its subject unnamed", page.Data)
 	}
 }
 

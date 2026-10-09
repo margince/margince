@@ -8206,6 +8206,24 @@ func (e DataSubjectRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for DataSubjectRequestSubjectKind.
+const (
+	DataSubjectRequestSubjectKindContact DataSubjectRequestSubjectKind = "contact"
+	DataSubjectRequestSubjectKindLead    DataSubjectRequestSubjectKind = "lead"
+)
+
+// Valid indicates whether the value is a known member of the DataSubjectRequestSubjectKind enum.
+func (e DataSubjectRequestSubjectKind) Valid() bool {
+	switch e {
+	case DataSubjectRequestSubjectKindContact:
+		return true
+	case DataSubjectRequestSubjectKindLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealCommercialMotion.
 const (
 	DealCommercialMotionCrossSell        DealCommercialMotion = "cross_sell"
@@ -32365,6 +32383,10 @@ type DataSubjectRequest struct {
 	Resolution *string                  `json:"resolution,omitempty"`
 	Status     DataSubjectRequestStatus `json:"status"`
 
+	// SubjectKind Which kind of record `subject_label` was read from. Null when nothing resolved: an
+	// external identifier, an erased subject, or one the caller may not read.
+	SubjectKind *DataSubjectRequestSubjectKind `json:"subject_kind,omitempty"`
+
 	// SubjectLabel The display name of the contact or lead `subject_ref` names. Absent or null when the
 	// reference names no record, or names one the caller may not read: a hidden subject and an
 	// external identifier read the same, so the queue discloses no more than the record would.
@@ -32379,6 +32401,10 @@ type DataSubjectRequestKind string
 
 // DataSubjectRequestStatus defines model for DataSubjectRequest.Status.
 type DataSubjectRequestStatus string
+
+// DataSubjectRequestSubjectKind Which kind of record `subject_label` was read from. Null when nothing resolved: an
+// external identifier, an erased subject, or one the caller may not read.
+type DataSubjectRequestSubjectKind string
 
 // DeactivateUserRequest defines model for DeactivateUserRequest.
 type DeactivateUserRequest struct {

@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -27,17 +28,19 @@ type NoticeAcquisition struct {
 }
 
 // acquisitionsFor reads the evidence behind a page of duties in one statement,
-// keyed by acquisition id. A seat name resolves only for a human principal.
+// keyed by acquisition id. A seat name resolves only for a live human seat, as
+// SeatNames answers, so an archived one reads as a former member.
 func acquisitionsFor(ctx context.Context, tx pgx.Tx, acquisitionIDs []ids.UUID) (map[ids.UUID]NoticeAcquisition, error) {
 	out := make(map[ids.UUID]NoticeAcquisition, len(acquisitionIDs))
 	if len(acquisitionIDs) == 0 {
 		return out, nil
 	}
-	rows, err := tx.Query(ctx, `
+	args := []any{acquisitionIDs}
+	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT e.id, e.kind, e.occurred_at, e.captured_at, e.captured_by, u.display_name
 		  FROM contact_acquisition_evidence e
-		  LEFT JOIN app_user u ON e.captured_by = 'human:' || u.id::text
-		 WHERE e.id = ANY($1)`, acquisitionIDs)
+		  LEFT JOIN app_user u ON e.captured_by = 'human:' || u.id::text AND u.archived_at IS NULL
+		 WHERE e.id = ANY($%d)`, len(args)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("consent: reading the acquisition behind these duties: %w", err)
 	}

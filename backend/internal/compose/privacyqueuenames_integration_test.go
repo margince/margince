@@ -21,13 +21,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ownScopeOfficer is Rep1 working the privacy queues with an own-scope CRM
-// view. Contacts read across row scope, so what it may not open is a
-// colleague's capture-private contact.
+// ownScopeOfficer is Rep1 on the privacy queues with an own-scope CRM view, so
+// a colleague's capture-private contact is what it may not open.
 func ownScopeOfficer(e *integration.Env) context.Context {
 	return e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
@@ -96,6 +96,31 @@ func TestTheNoticeQueueNamesOnlyContactsItsReaderMayOpen(t *testing.T) {
 	}
 }
 
+func TestAnArchivedMembersAcquisitionNamesNobody(t *testing.T) {
+	e := integration.Setup(t)
+	duty := homeNotice(t, e, e.Rep3, false, time.Now().Add(72*time.Hour))
+	args := []any{e.Rep3}
+	e.WsExec(t, storekit.SQLf("UPDATE app_user SET archived_at = now() WHERE id = $%d", len(args)), args...)
+
+	h := newConsentHandlers(e.Pool)
+	rows := listOverHTTP[crmcontracts.NoticeCase](e.Admin(), t, func(w http.ResponseWriter, r *http.Request) {
+		h.ListNoticeCases(w, r, crmcontracts.ListNoticeCasesParams{})
+	})
+	for _, row := range rows {
+		if ids.UUID(row.Id) != duty.ID {
+			continue
+		}
+		if row.Acquisition == nil || row.Acquisition.CapturedBy != "human:"+e.Rep3.String() {
+			t.Fatalf("the duty rests on %+v, want the archived seat's principal kept", row.Acquisition)
+		}
+		if row.Acquisition.CapturedByName != nil {
+			t.Errorf("an archived seat is named %q, want null as SeatNames answers", *row.Acquisition.CapturedByName)
+		}
+		return
+	}
+	t.Fatalf("duty %s is not in the queue", duty.ID)
+}
+
 func TestTheNoticeAgendaCarriesTheAcquisitionToTheWorklist(t *testing.T) {
 	e := integration.Setup(t)
 	duty := homeNotice(t, e, e.AdminUser, false, homeReadTime.Add(-time.Hour))
@@ -133,12 +158,16 @@ func TestTheSubjectQueueNamesOnlyRecordsItsReaderMayOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The value is the label the reader may see; nil is withheld or unresolved.
-	refs := map[string]*string{
-		contactAs(e.Rep1, ownName):                                    &ownName,
-		homeNotice(t, e, e.Rep3, true, time.Now()).ContactID.String(): nil,
-		ids.UUID(lead.Id).String():                                    &leadName,
-		"someone@example.test":                                        nil,
+	// A nil label and kind mean withheld or unresolved.
+	type named struct {
+		label *string
+		kind  crmcontracts.DataSubjectRequestSubjectKind
+	}
+	refs := map[string]named{
+		contactAs(e.Rep1, ownName):                                    {&ownName, crmcontracts.DataSubjectRequestSubjectKindContact},
+		homeNotice(t, e, e.Rep3, true, time.Now()).ContactID.String(): {},
+		ids.UUID(lead.Id).String():                                    {&leadName, crmcontracts.DataSubjectRequestSubjectKindLead},
+		"someone@example.test":                                        {},
 	}
 	store := consent.NewStore(e.DB())
 	for ref := range refs {
@@ -158,8 +187,11 @@ func TestTheSubjectQueueNamesOnlyRecordsItsReaderMayOpen(t *testing.T) {
 	}
 	for _, row := range rows {
 		want, got := refs[row.SubjectRef], row.SubjectLabel
-		if (want == nil) != (got == nil) || (want != nil && *want != *got) {
-			t.Errorf("the request about %q is labelled %v, want %v", row.SubjectRef, got, want)
+		if (want.label == nil) != (got == nil) || (want.label != nil && *want.label != *got) {
+			t.Errorf("the request about %q is labelled %v, want %v", row.SubjectRef, got, want.label)
+		}
+		if gotKind := row.SubjectKind; (want.kind == "") != (gotKind == nil) || (gotKind != nil && *gotKind != want.kind) {
+			t.Errorf("the request about %q resolved to kind %v, want %q (empty means null)", row.SubjectRef, gotKind, want.kind)
 		}
 	}
 }

@@ -369,17 +369,23 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 			}
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "data_subject_request", id, map[string]any{
-			fieldStatus: current.Status,
-		}, map[string]any{
-			fieldStatus: out.Status, fieldResolution: in.Resolution != nil || in.ClearResolution,
-		})
-		return err
+		return auditDSRUpdate(ctx, tx, current, out, in.Resolution != nil || in.ClearResolution)
 	})
 	return out, err
 }
 
-func wireDSR(d dsrRow, labels map[ids.UUID]string) crmcontracts.DataSubjectRequest {
+// auditDSRUpdate is the update audit both writers share. The images carry the
+// assignee, so a hand-back says who let the request go.
+func auditDSRUpdate(ctx context.Context, tx pgx.Tx, current, out dsrRow, resolutionTouched bool) error {
+	_, err := storekit.Audit(ctx, tx, "update", "data_subject_request", out.ID, map[string]any{
+		fieldStatus: current.Status, fieldAssigneeID: current.AssigneeID,
+	}, map[string]any{
+		fieldStatus: out.Status, fieldAssigneeID: out.AssigneeID, fieldResolution: resolutionTouched,
+	})
+	return err
+}
+
+func wireDSR(d dsrRow, subjects map[ids.UUID]dsrSubject) crmcontracts.DataSubjectRequest {
 	out := crmcontracts.DataSubjectRequest{
 		Id:         openapi_types.UUID(d.ID),
 		Kind:       crmcontracts.DataSubjectRequestKind(d.Kind),
@@ -393,8 +399,17 @@ func wireDSR(d dsrRow, labels map[ids.UUID]string) crmcontracts.DataSubjectReque
 		assignee := openapi_types.UUID(d.AssigneeID.UUID)
 		out.AssigneeId = &assignee
 	}
-	if subject, ok := resolveDSRSubject(d); ok {
-		out.SubjectLabel = labelOf(labels, subject)
+	subjectID, ok := resolveDSRSubject(d)
+	if !ok {
+		return out
+	}
+	if subject, resolved := subjects[subjectID]; resolved {
+		kind := subject.kind
+		out.SubjectKind = &kind
+		if subject.label != "" {
+			label := subject.label
+			out.SubjectLabel = &label
+		}
 	}
 	return out
 }
