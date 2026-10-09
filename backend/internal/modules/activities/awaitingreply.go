@@ -123,58 +123,72 @@ func mayReadAll(ctx context.Context, objects ...string) (bool, error) {
 	return true, nil
 }
 
+// followUpGates are the gate fragments both follow-up reads compose, under
+// the aliases both statements use.
+type followUpGates struct {
+	content, later, back, links, customer string
+}
+
+func followUpGatesFor(ctx context.Context, arg func(any) int) (followUpGates, error) {
+	var g followUpGates
+	var err error
+	// The row publishes a message's subject and that nobody answered, both
+	// derived from the thread, so it takes the content gate.
+	if g.content, err = auth.ActivityContentClause(ctx, "a", arg); err != nil {
+		return g, err
+	}
+	// A later message the reader may not see must not decide anything.
+	if g.later, err = auth.ActivityContentClause(ctx, "later", arg); err != nil {
+		return g, err
+	}
+	if g.back, err = auth.ActivityContentClause(ctx, "back", arg); err != nil {
+		return g, err
+	}
+	if g.links, err = auth.LinkTargetVisibleClause(ctx, "wl", arg); err != nil {
+		return g, err
+	}
+	if g.links == "" {
+		g.links = scopeUnbounded
+	}
+	g.customer, err = customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	return g, err
+}
+
+// scanFollowUps reads the rows both follow-up statements select.
+func scanFollowUps(rows pgx.Rows, what string) ([]AwaitingReply, error) {
+	defer rows.Close()
+	var out []AwaitingReply
+	for rows.Next() {
+		var r AwaitingReply
+		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID); err != nil {
+			return nil, fmt.Errorf("activities: reading %s: %w", what, err)
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 func (s *Store) queryAwaitingReplies(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, windowDays int, readerAddresses []string,
 ) ([]AwaitingReply, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	instant := arg(asOf)
-	// The content gate: the row publishes the message's subject and that
-	// nobody answered, which are both derived from the thread.
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
-	if err != nil {
-		return nil, err
-	}
-	// A reply the reader may not see must not decide anything either way.
-	laterContent, err := auth.ActivityContentClause(ctx, "later", arg)
-	if err != nil {
-		return nil, err
-	}
-	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
-	if err != nil {
-		return nil, err
-	}
-	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
-	if err != nil {
-		return nil, err
-	}
-	if linkVisible == "" {
-		linkVisible = scopeUnbounded
-	}
-	customer, err := customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	g, err := followUpGatesFor(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
 	reader := arg(readerOrNobody(ctx))
 	rows, err := tx.Query(ctx, fmt.Sprintf(awaitingRepliesSQL,
-		instant, content, linkVisible, arg(readerAddresses), arg(windowDays),
-		AwaitingReplyLookbackDays, laterContent, relstrength.InteractionCountsSQL("later"),
-		reader, messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
-		customer, AwaitingReplyScanCap,
+		instant, g.content, g.links, arg(readerAddresses), arg(windowDays),
+		AwaitingReplyLookbackDays, g.later, relstrength.InteractionCountsSQL("later"),
+		reader, messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), g.back),
+		g.customer, AwaitingReplyScanCap,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading replies the reader is waiting for: %w", err)
 	}
-	defer rows.Close()
-	var out []AwaitingReply
-	for rows.Next() {
-		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID); err != nil {
-			return nil, fmt.Errorf("activities: reading a reply the reader is waiting for: %w", err)
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+	return scanFollowUps(rows, "a reply the reader is waiting for")
 }
 
 // awaitingRepliesSQL: every rule sits before the cap.
