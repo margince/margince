@@ -29,51 +29,6 @@ const (
 	columnLastName  = "last_name"
 )
 
-// displayNameSetByHumanTx answers whether a human typed this contact's display
-// name, either when the record was made or at any time since.
-//
-// Two questions, because a name can be typed at two moments and only one of them
-// leaves an update behind.
-//
-// WHO MINTED THE ROW: contact.captured_by, whose prefix is the principal type
-// that created it — human, connector or agent. A contact somebody added by hand,
-// imported from a vCard or typed into quick capture carries `human:`, and the
-// name it was born with is that contact's. Everything a connector or an agent
-// minted carries the machine, and those are the rows this fill exists to
-// improve. captured_by is stamped once at create and never moves, which is
-// exactly right for a question about the create and wrong for anything else.
-//
-// WHO CHANGED IT SINCE: a human audit row whose action is 'update' and whose
-// image names full_name. It has to be an update rather than any human row,
-// because a capture runs under the SEAT whose mailbox it is — a rep's sync acts
-// on their behalf, so the create it writes reads actor_type 'human' too, while
-// the name on it came from a mail header rather than from that contact typing.
-// Counting those would read every connector-minted contact as human-named and
-// refuse to improve any of them, which is this whole function inverted.
-//
-// field_provenance is the mechanism this eventually belongs in, and it is
-// already wired for other fields — but no writer has ever stamped a name column,
-// so it is empty for every contact that exists today. A guard reading it would
-// report "no human" for a name a human typed last week.
-//
-// Whatever they set it to. Somebody who set the display name expressed an intent
-// about that field, and one who set it back to what it already said expressed
-// the same intent as one who changed it.
-func displayNameSetByHumanTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (bool, error) {
-	var byHuman bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM contact
-		                WHERE id = $2 AND captured_by LIKE 'human:%')
-		    OR EXISTS (SELECT 1 FROM audit_log
-		                WHERE entity_type = $1 AND entity_id = $2
-		                  AND actor_type = 'human' AND action = 'update'
-		                  AND (after ? $3 OR before ? $3))`,
-		entityContact, contactID.UUID, fieldFullName).Scan(&byHuman); err != nil {
-		return false, fmt.Errorf("contacts: reading who named contact %s: %w", contactID, err)
-	}
-	return byHuman, nil
-}
-
 // fillMissingContactName completes a contact the ladder landed on by exact
 // address, and completes ONLY what is missing.
 //
@@ -116,9 +71,8 @@ func completeContactName(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	// named. The predicate is also the concurrency guard: a writer who filled
 	// either half between the dedupe read and this write keeps it, because
 	// Postgres re-checks the predicate after waiting on their lock.
-	// full_name moves WITH the split columns unless a contact set it. When we
-	// learn somebody's name we display it — that is the whole rule, and the only
-	// thing that outranks it is a human having typed a name already.
+	// full_name moves with the split columns only while it is capture's own
+	// guess. A name a human, an agent, an import or an API caller chose stays.
 	//
 	// It used to move only where full_name still equalled one of the two parts
 	// exactly. That reached a record displaying "Lars" beside columns saying Lars
@@ -126,8 +80,8 @@ func completeContactName(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	// the ones a calendar organizer typed into their own address book — "Bw" for
 	// Björn Welter, "Juan" for Judith Andresen, "Chris" for Christoph Erler.
 	// None of them share a character with the name we later learned, so no test
-	// on the SHAPE of the string can find them. Who wrote it is the question, and
-	// the audit log answers it.
+	// on the SHAPE of the string can find them. Who wrote it is the question,
+	// and displayNameIsCapturesGuessTx answers it.
 	//
 	// The row is LOCKED before it is read, so the value recorded as the before is
 	// the same one the write replaces. Read without the lock — as a sub-select in
@@ -145,7 +99,7 @@ func completeContactName(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	if err != nil {
 		return false, fmt.Errorf("contacts: reading the name contact %s carries: %w", contactID, err)
 	}
-	humanNamed, err := displayNameSetByHumanTx(ctx, tx, contactID)
+	guessed, err := displayNameIsCapturesGuessTx(ctx, tx, contactID)
 	if err != nil {
 		return false, err
 	}
@@ -154,11 +108,11 @@ func completeContactName(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		UPDATE contact
 		   SET first_name = $2,
 		       last_name  = $3,
-		       full_name  = CASE WHEN $5 THEN full_name ELSE $4 END
+		       full_name  = CASE WHEN $5 THEN $4 ELSE full_name END
 		 WHERE id = $1
 		   AND first_name IS NULL AND last_name IS NULL
 		RETURNING full_name`,
-		contactID, parsed.First, parsed.Last, parsed.Full, humanNamed).Scan(&fullName)
+		contactID, parsed.First, parsed.Last, parsed.Full, guessed).Scan(&fullName)
 	// No row is the guard doing its job, not a failure: the row already
 	// carried a name, and it is not this call's to replace.
 	if errors.Is(err, pgx.ErrNoRows) {
