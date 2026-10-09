@@ -26,7 +26,7 @@ func TestClearingAnAnswerIsRefusedWhereTheRequestEndsClosed(t *testing.T) {
 		{
 			"closing while clearing has no answer",
 			dsrRow{Status: "open", Resolution: &answer},
-			UpdateDSRInput{Status: strptrUnit("rejected"), ClearResolution: true},
+			UpdateDSRInput{Status: new("rejected"), ClearResolution: true},
 			true,
 		},
 		{
@@ -95,5 +95,3 @@ func TestAFailedNameReadStillAnswersTheWrite(t *testing.T) {
 		})
 	}
 }
-
-func strptrUnit(s string) *string { return &s }
