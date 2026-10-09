@@ -25,7 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/dealvalue"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -125,7 +125,7 @@ func TestTheForecastReadsTheSharedExpression(t *testing.T) {
 	var fromExpr int64
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT `+
-			compose.BaseValueSQL("$1", "'EUR'", "d")+
+			dealvalue.BaseValueSQL("$1", "'EUR'", "d")+
 			` FROM deal d WHERE d.currency = 'VND'`,
 			time.Now().UTC()).Scan(&fromExpr)
 	})
