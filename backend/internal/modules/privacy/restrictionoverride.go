@@ -166,7 +166,7 @@ func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason Sta
 		if err != nil {
 			return err
 		}
-		if err := pinnedRecordLeavesDerivedCopies(ctx, tx, activityID); err != nil {
+		if err := pinnedRecordLeavesDerivedCopies(ctx, tx, activityID, decision.reason); err != nil {
 			return err
 		}
 		class := retentionClassCorrespondence
@@ -215,12 +215,16 @@ func pinRefusalFor(ctx context.Context, tx pgx.Tx, activityID ids.UUID, refusal 
 // could still reach a pinned record's body through. The body itself stays —
 // that is what the obligation keeps — but a restricted record must not survive
 // in a projection (A165 §2), and a vector is the body in another shape.
-func pinnedRecordLeavesDerivedCopies(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
+// A deal's stage evidence quoting the body is such a copy too.
+func pinnedRecordLeavesDerivedCopies(ctx context.Context, tx pgx.Tx, activityID ids.UUID, reason string) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = $1`, activityID); err != nil {
 		return err
 	}
-	return purgeTranscriptReadings(ctx, tx, []ids.UUID{activityID})
+	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{activityID}); err != nil {
+		return err
+	}
+	return redactEvidenceQuoting(ctx, tx, []ids.UUID{activityID}, reason, "controller_pin")
 }
 
 // recordPinEvidence writes the controller's finding of fact BEFORE the

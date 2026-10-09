@@ -116,6 +116,9 @@ func (s *Store) RecordStageEvidence(
 		if err := refuseUnsettleableCriterion(ctx, tx, in); err != nil {
 			return err
 		}
+		if err := withholdQuotationOfGoneText(ctx, tx, &in); err != nil {
+			return err
+		}
 		id, written, err := insertEvidence(ctx, tx, in)
 		if err != nil {
 			return err
@@ -221,6 +224,34 @@ func (s *Store) ListStageEvidence(
 		return err
 	})
 	return out, err
+}
+
+// withholdQuotationOfGoneText drops the snippet when the activity it quotes no
+// longer has readable text: erased, emptied by retention, or restricted.
+//
+// A model reading runs outside any transaction, so an erasure can commit while
+// the call is out. Every engine that empties an activity takes this lock.
+// An erasure that came first has already emptied the body this reads. One
+// that comes second waits, then clears the snippet this wrote. The claim
+// itself still lands.
+func withholdQuotationOfGoneText(ctx context.Context, tx pgx.Tx, in *EvidenceInput) error {
+	if in.SourceType != SourceActivity || in.Snippet == nil {
+		return nil
+	}
+	if err := storekit.LockTranscriptBody(ctx, tx, []ids.UUID{in.SourceID}); err != nil {
+		return err
+	}
+	var readable bool
+	err := tx.QueryRow(ctx, `
+		SELECT body IS NOT NULL AND restricted_at IS NULL FROM activity WHERE id = $1`,
+		in.SourceID).Scan(&readable)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("reading whether the quoted activity still has its text: %w", err)
+	}
+	if !readable {
+		in.Snippet = nil
+	}
+	return nil
 }
 
 // insertEvidence writes the row, answering whether THIS call wrote it.

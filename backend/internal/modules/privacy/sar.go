@@ -140,6 +140,11 @@ type SARPackage struct {
 	// decision can be an outstanding obligation TO them, which is a thing held
 	// about somebody that they would have no other way to discover.
 	RequestSettlements []map[string]any `json:"request_settlements"`
+	// StageEvidence is what a model or a record concluded about a deal from the
+	// subject's messages. It carries the quoted words, whether they agreed or
+	// proposed, and how sure the writer was. Owed on ReplyJudgements' ground, because it
+	// is a conclusion drawn from what they wrote.
+	StageEvidence []map[string]any `json:"stage_evidence"`
 	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
 	// is what one colleague wrote ABOUT them, and the decision is one colleagues

@@ -62,6 +62,10 @@ var erasureColumnBaseline = map[string][]string{
 	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
 	// Closed publication access class (private/team/workspace), never subject-authored content.
 	"report_edition": {"publication_audience"},
+	// The evidence ledger's closed vocabularies: source kind, author side,
+	// commitment and writer. The snippet is the column that quotes the subject,
+	// and the redaction clears it.
+	"deal_stage_evidence": {"source_type", "author_side", "commitment", "extracted_by"},
 	// A decision's own vocabulary: what kind of message it was, what the engine
 	// and the old gate each answered, and which rollout mode was in force. Every
 	// value is drawn from a closed set this repository defines — none of it is
