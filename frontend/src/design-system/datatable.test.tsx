@@ -230,7 +230,7 @@ it("titles a fold by its first unplaced column when none names one", () => {
 });
 
 // A folded row is laid out as flex, which strips a native row's role in
-// Safari, so the roles are spelled; every cell keeps a heading at its column,
+// Safari, so the roles are spelled. Every cell keeps a heading at its column,
 // an empty one included, so "Role, Admin" is what a reader hears.
 it("keeps every folded cell under the heading that names it", () => {
   renderMembers(true);

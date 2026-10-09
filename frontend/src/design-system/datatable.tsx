@@ -102,9 +102,9 @@ export type DataTableColumn<Row> = Readonly<{
   // figures it shows. Every other column sizes to its content, so the one that
   // grows is named rather than left to the browser's guess.
   grow?: boolean;
-  // Where the cell goes when a `fold` table folds. Line one holds the title
-  // (the first column with no `fold`, unless one says "title") and every "end"
-  // column at the trailing edge; line two runs the rest as a quiet caption.
+  // Where the cell goes when a `fold` table folds. Line one holds the title and
+  // every "end" column at the trailing edge. The title is the first column with
+  // no `fold`, unless one says "title". Line two runs the rest as a caption.
   // "hide" leaves sight but is still read, so it must not hold a control.
   fold?: "title" | "end" | "hide";
 }>;

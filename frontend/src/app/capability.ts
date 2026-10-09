@@ -251,8 +251,9 @@ export function useHoldsAdminRole(): boolean {
   return holdsAdminRole(useMe().data?.roles);
 }
 
-// The roster asks it of a target member to name the last-admin lock, which `allowed_actions`
-// withholds without a reason; it retires once the roster carries that reason.
+// The roster asks it of a target member to name the last-admin lock.
+// `allowed_actions` withholds that lock without a reason; it retires once the
+// roster carries one.
 export function holdsAdminRole(roles: readonly string[] | undefined): boolean {
   return (roles ?? []).includes("admin");
 }

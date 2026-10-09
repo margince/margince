@@ -31,10 +31,8 @@ import { LicenseHolderCard } from "./licenseholder";
 // the reading says "no limit" instead of a number: a meter filled against a
 // limit nobody set would invent the limit.
 //
-// ONE reading, because used against granted is ONE fact. It was two slots and a
-// bar beneath them, which is that fact spelled three times — a reader had to
-// work out that the second figure was the first one's denominator and that the
-// bar was both of them again.
+// One reading, because used against granted is one fact. As two figures, a
+// reader must work out which one is the other's denominator.
 //
 // Over the limit is REPORTED, never enforced. The workspace keeps working — P7's
 // warning-then-grace, not a silent mid-month lockout — so the notice says what is

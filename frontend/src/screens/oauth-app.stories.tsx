@@ -172,7 +172,7 @@ export const MicrosoftAnyCompany: Story = {
   ),
 };
 
-// An installation behind a long host: each address stays on one line, cut at
+// An installation behind a long host. Each address stays on one line, cut at
 // the cell's edge, and on a phone runs under its purpose with Copy beside it.
 const LONG_URIS = URIS.map((uri) => ({
   ...uri,

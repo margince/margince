@@ -119,8 +119,8 @@ export function RolesSettings() {
 
 type RosterWalk = NonNullable<ReturnType<typeof useRosterWalk>["data"]>;
 
-// Undefined when the roster cannot say: role keys ride only for a member admin,
-// and a walk that stopped short would count low while reading as whole.
+// Undefined when the roster cannot say. Role keys ride only for a member
+// admin, and a walk that stopped short would count low while reading as whole.
 export function memberCounts(
   roster: RosterWalk | undefined,
 ): ReadonlyMap<string, number> | undefined {
@@ -142,8 +142,8 @@ export function memberCounts(
   return counts;
 }
 
-// Custom roles first: they are the ones an admin made and comes back to edit,
-// and the type badge on every row already names the split a group head would.
+// Custom roles first: they are the ones an admin made and comes back to edit.
+// The type badge on every row already names the split a group head would.
 function customFirst(roles: readonly Role[]): Role[] {
   return [...roles].sort((a, b) => Number(a.is_system) - Number(b.is_system));
 }

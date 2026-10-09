@@ -92,8 +92,9 @@ function soleActiveAdmin(member: User, roster: readonly User[]): boolean {
   );
 }
 
-// The role column: the agent seat holds no role, so it reads a sentence; every
-// other member gets the one picker, refused in place when this reader may not use it.
+// The role column. The agent seat holds no role, so it reads a sentence. Every
+// other member gets the one picker, refused in place when this reader may not
+// use it.
 export function MemberRole({
   member,
   roles,

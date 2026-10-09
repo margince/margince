@@ -165,8 +165,8 @@ const meta: Meta<typeof UsersAdminCard> = {
 export default meta;
 type Story = StoryObj<typeof UsersAdminCard>;
 
-// Every status a seat can be in, the agent seat, and Lars as the one admin:
-// his picker is the same control, refused with the reason beside it.
+// Every status a seat can be in, the agent seat, and Lars as the one admin.
+// His picker is the same control, refused with the reason beside it.
 export const Roster: Story = { render: story(roster(ROSTER), ADMIN, true) };
 
 // Under 36rem the table folds: member with its status and the menu on line
@@ -198,8 +198,9 @@ export const Failed: Story = {
   ),
 };
 
-// A delegated administrator: last activity and the role change are withheld on
-// members they do not outrank, and read as not available and outside their access.
+// A delegated administrator. Last activity and the role change are withheld
+// on members they do not outrank, and read as not available and outside their
+// access.
 export const Delegated: Story = {
   render: story(
     roster(

@@ -14,7 +14,7 @@ import "./oauth-redirects.css";
 // The callback addresses a vendor OAuth app must carry, one per flow this
 // installation serves: in a vendor's settings panel and on the first-run step.
 
-// A switch, not a computed key: the catalog is a closed union of keys, and an
+// A switch, not a computed key: the catalog is a closed union of keys. An
 // unknown purpose shows its raw enum, so every contract purpose needs an arm.
 function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
   switch (purpose) {
@@ -80,7 +80,7 @@ function RedirectCopy({
   );
 }
 
-// The URLs come from the response and are never built here: a second spelling
+// The URLs come from the response and are never built here. A second spelling
 // in the client is how they stop matching what the vendor receives.
 export function RedirectUriTable({
   uris,

@@ -1180,8 +1180,8 @@ export { Modal } from "./modal";
 export { useScrollRegion } from "./scrollregion";
 
 /**
- * The box a table too wide for its column scrolls sideways INSIDE: the one
- * spelling of `.table-scroll`, so the overflow is a property of the TABLE
+ * The box a table too wide for its column scrolls sideways in. It is the one
+ * spelling of `.table-scroll`, so the overflow is a property of the table
  * rather than a knob each page answers for.
  *
  * Reachability is `useScrollRegion`'s (scrollregion.ts): the tab stop and the
