@@ -14300,6 +14300,12 @@ components:
         name: {type: string, maxLength: 64}
         color: {type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null]}
         description: {type: [string, 'null']}
+        suggestible:
+          type: boolean
+          description: |-
+            Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+            carries a description of what interest looks like, and that description is what
+            the suggestion is matched against. Only Admin and Ops set it.
         version: {type: integer, format: int64}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
@@ -14361,6 +14367,12 @@ components:
         name: {type: string, maxLength: 64}
         color: {type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null]}
         description: {type: [string, 'null']}
+        suggestible:
+          type: boolean
+          description: |-
+            Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+            carries a description of what interest looks like, and that description is what
+            the suggestion is matched against. Only Admin and Ops set it.
         version: {type: integer, format: int64}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
@@ -14386,6 +14398,9 @@ components:
         name: {type: string, maxLength: 64}
         color: {type: string, enum: [teal, amber, rose, slate, sky, violet, lime, orange, none]}
         description: {type: string}
+        suggestible:
+          type: boolean
+          description: Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held.
     MergeTagsRequest:
       type: object
       required: [into_tag_id]
