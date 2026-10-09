@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // rosterLastActive reads the roster through the handler as caller and answers
@@ -122,5 +123,31 @@ func TestADelegatedAdministratorSeesNoAdminsActivity(t *testing.T) {
 	}
 	if row.LastActiveAt != nil {
 		t.Errorf("the delegate read an admin's last activity on the single-member read: %v", row.LastActiveAt)
+	}
+}
+
+// A delegate with a write verb and no read gets the member without the activity, as
+// ListUserSessions refuses them. Adding read shows it.
+func TestAWriteOnlyDelegateNeverSeesAMembersActivity(t *testing.T) {
+	e := setupRevocationEnv(t, "last-active-write-only")
+	last := signedOutAt(t, e)
+	deleter := deleteOnlyMemberAdmin(t, e)
+
+	row, err := e.svc.GetUser(e.wsCtx(deleter), deleter, e.member.UserID)
+	if err != nil {
+		t.Fatalf("the write-only delegate's single-member read: %v", err)
+	}
+	if row.LastActiveAt != nil {
+		t.Errorf("a delegate without user_admin read saw the member's last activity: %v", row.LastActiveAt)
+	}
+
+	reader := deleter
+	reader.Permissions.Objects = map[string]principal.ObjectGrant{objectUserAdmin: {Read: true, Delete: true}}
+	row, err = e.svc.GetUser(e.wsCtx(reader), reader, e.member.UserID)
+	if err != nil {
+		t.Fatalf("the reading delegate's single-member read: %v", err)
+	}
+	if row.LastActiveAt == nil || !row.LastActiveAt.Equal(last) {
+		t.Errorf("adding read hid the activity: got %v, want %v", row.LastActiveAt, last)
 	}
 }

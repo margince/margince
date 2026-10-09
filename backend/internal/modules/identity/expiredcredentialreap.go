@@ -62,17 +62,24 @@ func reapDeadCredentials(ctx context.Context, tx pgx.Tx, table string) error {
 	reap := `DELETE FROM ` + table + ` WHERE id IN (SELECT id FROM ` + table +
 		` WHERE ` + dead + ` LIMIT $1)`
 	if table == "session" {
-		reap = keepingLastActivity(reap)
+		reap = ownerFirstSessionReap(dead)
 	}
 	_, err := tx.Exec(ctx, reap, expiredCredentialReapLimit)
 	return err
 }
 
-// keepingLastActivity moves the latest request each member's reaped sessions
-// made onto app_user, in the statement that deletes them. The roster's last
-// activity then outlives the rows.
-func keepingLastActivity(sessionReap string) string {
-	return `WITH reaped AS (` + sessionReap + ` RETURNING user_id, last_seen_at)
+// ownerFirstSessionReap locks owners before sessions, the order every member write takes, and
+// keeps their latest request on app_user. A member another write holds waits for a later reap.
+func ownerFirstSessionReap(dead string) string {
+	return `WITH owners AS (
+	  SELECT u.id FROM app_user u
+	   WHERE EXISTS (SELECT 1 FROM session s WHERE s.user_id = u.id AND (` + dead + `))
+	   ORDER BY u.id LIMIT $1
+	   FOR NO KEY UPDATE SKIP LOCKED),
+	reaped AS (
+	  DELETE FROM session WHERE id IN (
+	    SELECT s.id FROM session s JOIN owners o ON o.id = s.user_id WHERE (` + dead + `) LIMIT $1)
+	  RETURNING user_id, last_seen_at)
 	UPDATE app_user SET last_active_at = r.last_seen_at
 	  FROM (SELECT user_id, max(last_seen_at) AS last_seen_at FROM reaped GROUP BY user_id) r
 	 WHERE app_user.id = r.user_id

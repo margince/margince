@@ -14,12 +14,14 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -151,6 +153,81 @@ func TestTheReapKeepsAMembersLastActivity(t *testing.T) {
 	}
 	if kept := seatLastActive(ctx, t, tx, user); kept == nil || !kept.Equal(last) {
 		t.Errorf("an older reaped session moved the seat's last activity to %v, want %v", kept, last)
+	}
+}
+
+// A reap meeting a member another write holds passes them by instead of waiting.
+// Locking their sessions first and app_user second deadlocked against every member write.
+func TestTheSessionReapPassesAMemberAnotherWriteHolds(t *testing.T) {
+	_, pool := setupIdentityDB(t)
+	ctx := context.Background()
+	seed := beginReapTx(ctx, t, pool)
+	user := seedReapUser(ctx, t, seed)
+	last := time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
+	if _, err := seed.Exec(ctx,
+		`INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at, revoked_at, last_seen_at)
+		 VALUES ($1, 'reap-held', now() + interval '1 day', now() + interval '1 day', now(), $2)`,
+		user, last); err != nil {
+		t.Fatalf("seeding a dead session: %v", err)
+	}
+	commitReapTx(ctx, t, seed)
+
+	// The member write's order: the seat first, as DeactivateUser and ChangePassword take it.
+	holder := beginReapTx(ctx, t, pool)
+	if _, err := holder.Exec(ctx, `SELECT id FROM app_user WHERE id = $1 FOR UPDATE`, user); err != nil {
+		t.Fatalf("locking the seat: %v", err)
+	}
+	reaper := beginReapTx(ctx, t, pool)
+	for _, tx := range []pgx.Tx{holder, reaper} {
+		if _, err := tx.Exec(ctx, `SET LOCAL lock_timeout = '500ms'`); err != nil {
+			t.Fatalf("bounding the lock wait: %v", err)
+		}
+	}
+	if err := reapDeadCredentials(ctx, reaper, "session"); err != nil {
+		t.Fatalf("the reap waited on a seat another write holds: %v", err)
+	}
+	if n := reapCount(ctx, t, reaper, "session"); n != 1 {
+		t.Errorf("the reap removed a held member's session: %d left, want 1", n)
+	}
+	if _, err := holder.Exec(ctx,
+		`UPDATE session SET revoked_at = now() WHERE user_id = $1`, user); err != nil {
+		t.Fatalf("the member write met a session the reap holds: %v", err)
+	}
+	commitReapTx(ctx, t, holder)
+	commitReapTx(ctx, t, reaper)
+
+	drain := beginReapTx(ctx, t, pool)
+	if err := reapDeadCredentials(ctx, drain, "session"); err != nil {
+		t.Fatalf("the later reap: %v", err)
+	}
+	if n := reapCount(ctx, t, drain, "session"); n != 0 {
+		t.Errorf("the later reap left %d sessions of a released member", n)
+	}
+	if kept := seatLastActive(ctx, t, drain, user); kept == nil || !kept.Equal(last) {
+		t.Errorf("the later reap kept last activity %v, want %v", kept, last)
+	}
+	commitReapTx(ctx, t, drain)
+}
+
+// beginReapTx opens a transaction that a failing test still closes, so the pool quiesces.
+func beginReapTx(ctx context.Context, t *testing.T, pool *pgxpool.Pool) pgx.Tx {
+	t.Helper()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	})
+	return tx
+}
+
+func commitReapTx(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("commit: %v", err)
 	}
 }
 
