@@ -128,6 +128,15 @@ func TestMergingACompanyKeepsTheSurvivorsOwnLinkedInAddress(t *testing.T) {
 	if got.LinkedinUrl == nil || *got.LinkedinUrl != survivorsLinkedIn {
 		t.Errorf("survivor LinkedIn = %v, want its own %s", got.LinkedinUrl, survivorsLinkedIn)
 	}
+	// The retired record keeps its own address: the merge frees nothing by
+	// erasing it.
+	retired, err := e.store.GetCompany(ctx, source, storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retired.LinkedinUrl == nil || *retired.LinkedinUrl != retiredLinkedIn {
+		t.Errorf("retired LinkedIn = %v, want %s kept", retired.LinkedinUrl, retiredLinkedIn)
+	}
 }
 
 // An address another live company holds is a conflict, never a 500.

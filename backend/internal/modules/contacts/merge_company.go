@@ -107,6 +107,9 @@ func mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
+	}
 	filled, err := fillCompanySurvivorship(ctx, tx, src, tgt, targetIsPartner, tgtLock)
 	if err != nil {
 		return crmcontracts.Company{}, err
@@ -181,13 +184,8 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 	fillString(p, fieldLegalName, tgt.LegalName, src.LegalName)
 	fillString(p, "description", tgt.Description, src.Description)
 	fillString(p, "industry", tgt.Industry, src.Industry)
-	if tgt.LinkedinUrl == nil && src.LinkedinUrl != nil {
-		// Unique among live companies: freed before the survivor takes it, while the source is still live.
-		if _, err := tx.Exec(ctx, `UPDATE company SET linkedin_url = NULL WHERE id = $1 AND archived_at IS NULL`, ids.UUID(src.Id)); err != nil {
-			return nil, fmt.Errorf("free the retired company's LinkedIn address: %w", err)
-		}
-		p.Set("linkedin_url", nil, *src.LinkedinUrl)
-	}
+	// The source is already archived, which frees its unique slot on the address.
+	fillString(p, "linkedin_url", tgt.LinkedinUrl, src.LinkedinUrl)
 	// The postal address moves as ONE block, on the same rule as the contact
 	// merge (buildSurvivorshipPatch): a survivor with no address at all takes
 	// the retired record's whole address, and a survivor that has one keeps
@@ -213,18 +211,13 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 			return nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
 	}
-	// An inherited description arrives with its author still attached. Without
-	// this the survivor holds a contact's sentence that field_provenance says
-	// nobody wrote, and the next site read of the survivor replaces it — the
-	// merge would quietly strip a human's claim on words it did not change.
-	// The RETIRED record's author is carried across, not the contact running the
-	// merge: a merge moves a value, it does not author one.
-	if _, inherited := p.After()["description"]; inherited {
-		if err := carryDescriptionAuthor(ctx, tx,
-			ids.CompanyID{UUID: ids.UUID(src.Id)},
-			ids.CompanyID{UUID: ids.UUID(tgt.Id)}); err != nil {
-			return nil, err
-		}
+	// An inherited value arrives with its author still attached. Without this
+	// the survivor holds a sentence that field_provenance says nobody wrote, and
+	// the next site read replaces it. The retired record's author is carried,
+	// not the contact running the merge: a merge moves a value, it authors none.
+	if err := carryFieldAuthors(ctx, tx,
+		ids.CompanyID{UUID: ids.UUID(src.Id)}, ids.CompanyID{UUID: ids.UUID(tgt.Id)}, p.After()); err != nil {
+		return nil, err
 	}
 	return p.After(), nil
 }
@@ -233,9 +226,6 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 // write shape — audit row plus company.merged event in the one
 // transaction — then returns the reloaded survivor.
 func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, filled map[string]any, active []fieldcatalog.Column) (crmcontracts.Company, error) {
-	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
-	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", "company", sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
 		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filled})

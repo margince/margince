@@ -77,7 +77,21 @@ var sqlWriteTarget = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+
 // its `DELETE FROM x WHERE company_id = $1` behind, and a census reading table
 // names alone reports that table covered while the merge destroys every row the
 // retired company held.
-var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*\$(?:2|%d)`)
+var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?\$(?:2|%d)`)
+
+// updateSetClause is the assignment list of an UPDATE: what follows `SET`, up
+// to its `WHERE`.
+var updateSetClause = regexp.MustCompile(`(?is)\bUPDATE\b.*?\bSET\b(.*?)(?:\bWHERE\b|$)`)
+
+// setClauseOf returns the text a statement assigns in, and nothing for a
+// DELETE. A DELETE compares columns to the survivor in its subquery, which is
+// a read. Counting it would certify a merge whose UPDATE had been removed.
+func setClauseOf(stmt string) string {
+	if m := updateSetClause.FindStringSubmatch(stmt); m != nil {
+		return m[1]
+	}
+	return ""
+}
 
 // carriesSurvivorIntoInsert matches the INSERT … SELECT $2 form, where the
 // survivor's id arrives positionally as the first selected value rather than as
@@ -188,7 +202,7 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 				continue
 			}
 			table := strings.ToLower(target[1])
-			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(stmt, -1) {
+			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(setClauseOf(stmt), -1) {
 				written[table+"."+strings.ToLower(moved[1])] = true
 			}
 			if insert := carriesSurvivorIntoInsert.FindStringSubmatch(stmt); insert != nil {

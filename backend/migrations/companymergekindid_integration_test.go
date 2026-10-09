@@ -18,8 +18,9 @@ import (
 )
 
 // theKindIDFloor is the count below which the derivation is reading a smaller
-// schema than it thinks: 14 such pairs exist today, 9 of which admit a company.
-const theKindIDFloor = 8
+// schema than it thinks. It is the count measured today, 23 pairs, so a
+// drop means a broken derivation and not a schema that shrank.
+const theKindIDFloor = 23
 
 // kindIDPairsTheMergeLeaves are the pairs the merge does not move,
 // each with the reason moving it would be wrong.
@@ -33,11 +34,17 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"list_live_member.entity_id":                    "a live list's membership is recomputed from the list's definition on every evaluation, so a stale pair is replaced rather than carried",
 	"list_member_event.entity_id":                   "the log of membership changes is history, and it is read for the record it was written against",
 	"webhook_delivery.entity_id":                    "a delivery log is the history of what was sent about the retired record",
+	"webhook_delivery.event_id":                     "names an outbox event, not a record: its sibling event_type is an event name, so the pair only looks like a kind and id",
+	"ai_call.subject_id":                            "the ledger of one model call is history, written with a label of its subject at the time; moving it would rewrite what the call was about",
+	"ai_task_run.subject_id":                        "a task run is the record of what the assistant did to the retired record, with its own subject label; it stays addressable through merged_into",
+	"report_edition_contribution.source_id":         "a published edition is frozen evidence of what the report counted when it was published; moving a source would change a number already shown",
+	"field_provenance.object_id":                    "carried field by field for exactly the values the survivor inherits, in carryFieldAuthors, through the stamp writer every other path uses",
 })
 
 // TestEveryCompanyKindIDReferenceJoinsTheMerge derives the pairs from the
-// catalog: an entity_id column beside an entity_type column.
-// A closed vocabulary that excludes company drops the pair.
+// catalog: any uuid column ending in _id beside a column of the same stem
+// ending in _type. A closed vocabulary that excludes company drops the pair.
+// An open vocabulary keeps it, so each such pair is decided or waived.
 func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 	defer kindIDPairsTheMergeLeaves.AssertAllMatched(t)
 
@@ -56,8 +63,8 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		JOIN pg_class c ON c.oid = a.attrelid AND c.relkind = 'r'
 		JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
 		JOIN pg_attribute k ON k.attrelid = a.attrelid AND NOT k.attisdropped
-		 AND k.attname = regexp_replace(a.attname, 'entity_id$', 'entity_type')
-		WHERE a.attname ~ 'entity_id$' AND NOT a.attisdropped
+		 AND k.attname = regexp_replace(a.attname, '_id$', '_type')
+		WHERE a.attname ~ '_id$' AND a.atttypid = 'uuid'::regtype AND NOT a.attisdropped
 		  AND NOT EXISTS (
 		    SELECT 1 FROM pg_constraint ck
 		    WHERE ck.conrelid = a.attrelid AND ck.contype = 'c'
