@@ -22,8 +22,8 @@ import (
 )
 
 // waitingSurfaces is what each reader of the waiting statement says about one
-// message: the Worklist lane, the queue's count, the timeline's waiting
-// filter and the owed-verdict backlog.
+// message. The readers are the Worklist lane, the queue's count, the
+// timeline's waiting filter and the owed-verdict backlog.
 type waitingSurfaces struct {
 	lane, timeline, backlog bool
 	count                   int
@@ -88,8 +88,8 @@ func (o *owedEnv) waitingRow(t *testing.T, message ids.UUID) (activities.Waiting
 	return activities.WaitingReply{}, false
 }
 
-// The issue's five steps: the message waits, the contact is archived and every
-// reader drops it, the contact is restored and every reader has it again.
+// The message waits, and every reader drops it once the contact is archived.
+// Every reader has it again once the contact is restored.
 func TestArchivingTheContactTakesTheirMessageOffEveryWaitingReader(t *testing.T) {
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
