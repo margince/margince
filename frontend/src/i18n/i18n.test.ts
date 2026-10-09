@@ -63,6 +63,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiProviderSettings.service.together",
   "aiProviderSettings.service.groq",
   "aiProviderSettings.service.deepseek",
+  "aiProviderSettings.service.langdockEu",
+  "aiProviderSettings.service.langdockUs",
+  "aiProviderSettings.service.googleAiStudio",
+  "aiProviderSettings.service.anthropic",
+  "aiProviderSettings.service.openai",
   // Two signed counts and a slash, with no word to translate. Its spoken
   // form, lists.pulse.label, is translated normally.
   "lists.pulse.chip",
@@ -129,6 +134,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiRouting.baseUrl.placeholder",
   "aiRouting.baseUrl.placeholder.jev",
   "aiRouting.baseUrl.placeholder.jevCompatible",
+  "aiRouting.baseUrl.placeholder.gemini",
+  "aiRouting.baseUrl.placeholder.anthropic",
+  "aiRouting.baseUrl.placeholder.openai",
   // A pattern of placeholders with no words in it, and the EU's own
   // abbreviation, which Vietnamese writes the same way.
   "aiRouting.location.option",

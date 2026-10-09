@@ -31,11 +31,7 @@ func WriteMultipartRefusal(w http.ResponseWriter, r *http.Request, err error, li
 func MultipartRefusal(err error, limit int64) *DetailedError {
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
-		return &DetailedError{
-			Status: http.StatusRequestEntityTooLarge,
-			Code:   "body_too_large",
-			Detail: fmt.Sprintf("the upload exceeds the %s limit", Megabytes(limit)),
-		}
+		return BodyTooLargeRefusal(fmt.Sprintf("the upload exceeds the %s limit", Megabytes(limit)))
 	}
 	return Validation("file", "invalid_multipart",
 		"the request must be sent as multipart/form-data")

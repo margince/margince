@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Copy } from "lucide-react";
+import { Circle, CircleCheck, Copy } from "lucide-react";
 import type { components } from "../api/schema";
 import {
   Badge,
@@ -79,7 +79,7 @@ export function SetupChecklist({
       <ol className="meeting-checklist">
         {steps.map(([ok, key]) => (
           <li key={key} data-done={ok}>
-            {ok ? <CheckCircle2 aria-hidden /> : <Circle aria-hidden />}
+            {ok ? <CircleCheck aria-hidden /> : <Circle aria-hidden />}
             <span>{t(key)}</span>
             <span className="sr-only">
               {t(ok ? "scheduling.stepDone" : "scheduling.stepOpen")}

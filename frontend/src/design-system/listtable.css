@@ -1425,6 +1425,6 @@
 .lt-frow-seg:active,
 .lt-frow-more:active,
 .lt-pager button:active:not(:disabled) {
-  background-color: var(--bgCard);
+  background-color: var(--bgInset);
   transition-duration: var(--dur-tap);
 }

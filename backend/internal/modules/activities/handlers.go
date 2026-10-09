@@ -16,11 +16,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type Handlers struct {
 	store *Store
+	// settings writes the follow-up window; nil refuses both its endpoints.
+	settings *settings.Store
 	// emailDrafter is the compose-owned optional model drafting seam. Nil
 	// preserves the deterministic draft, so an AI outage or unconfigured
 	// deployment never blocks a user from preparing a reply.

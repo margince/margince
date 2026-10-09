@@ -47,8 +47,13 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// only where the wait IS mail (email_summary present) and names a record to
 	// file the answer against.
 	"customer_waiting": {"open", "reply"},
-	"lead_response":    {"open"},
-	"deal_at_risk":     {"open"},
+	// The mirror: `reply` opens the composer on the reader's own unanswered
+	// message, to follow up.
+	"awaiting_reply": {"open", "reply"},
+	// `reply` opens a fresh message to the contact the reader met.
+	"meeting_follow_up": {"open", "reply"},
+	"lead_response":     {"open"},
+	"deal_at_risk":      {"open"},
 	// `complete` settles the claim as done, through POST /claims/{id}/settle.
 	"conversation_claim": {"open", "complete"},
 	"meeting":            {"open"},
@@ -133,7 +138,9 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 		"weekly_commitment": "request-scoped plan lane is read beside Assemble; briefclaims_test exercises the actual worklist path",
 		"customer_waiting": "the waiting lane is a positional seam Assemble does not read; " +
 			"reaching it needs a stub this fixture has no argument slot for",
-		"lead_response": "the same lane shape as customer_waiting, and unreachable for the same reason",
+		"lead_response":     "the same lane shape as customer_waiting, and unreachable for the same reason",
+		"awaiting_reply":    "read beside Assemble like the plan lane; awaitinglane_test exercises its rows",
+		"meeting_follow_up": "read beside Assemble with awaiting_reply; awaitinglane_test exercises its rows",
 	}
 	reached := map[string]bool{}
 	for _, items := range lanes {

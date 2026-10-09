@@ -41,5 +41,6 @@ All AI call figures come from one endpoint. `GET /ai/call-stats` counts the atte
 failures, timeouts, `p50` and `p95`, tokens and cost. Cost is worked out the same way as in the cost report,
 and failure with the same predicate as the health read. `GET /ai/call-stats/flow` shows which step of one task's
 route answered its calls, and why the walk moved past each step. The provider sheets, the tier popover,
-the binding dialog and the task sheet all read these. [tune-ai-requests.md](../how-to/tune-ai-requests.md)
-is how to decide by them.
+the binding dialog and the task sheet all read these.
+
+The handbook page [AI providers](../handbook/ai-providers.md) is how a user decides by them.

@@ -294,13 +294,14 @@
    day the light arms were written and only the first two were overridden. */
 .ob-core-dialog {
   --ob-dialog-ink: var(--railIconActive);
-  --ob-dialog-ink-quiet: var(--railIconHover);
+  --ob-dialog-ink-quiet: var(--obDialogInkQuiet);
   padding: var(--space-8) var(--space-6);
   color: var(--ob-dialog-ink);
   border: 1px solid color-mix(in srgb, var(--railIconActive) 10%, transparent);
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--railActive) 68%, transparent);
-  box-shadow: 0 18px 46px color-mix(in srgb, var(--railBottom) 44%, transparent);
+  background: color-mix(in srgb, var(--obDialogGlass) 68%, transparent);
+  box-shadow: 0 18px 46px
+    color-mix(in srgb, var(--obDialogShadow) 44%, transparent);
   backdrop-filter: blur(12px);
 }
 .ob-manual-progress {
@@ -359,7 +360,7 @@
   --ob-dialog-ink: var(--textPrimary);
   --ob-dialog-ink-quiet: var(--textSecondary);
   border: 1px solid var(--borderSubtle);
-  background: var(--bgCard);
+  background: var(--bgInset);
   box-shadow: var(--shadow-rest);
   backdrop-filter: none;
 }

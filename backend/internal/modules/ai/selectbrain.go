@@ -346,10 +346,11 @@ func ConfigItems() []config.Item {
 // baseURL is carried rather than inferred. openai_compatible fails closed
 // without one — the endpoint belongs to the vendor, not the model — so a broker
 // run supplies it and a native vendor leaves it empty for the provider default.
+// It is rooted here because these lanes never pass through the provider lift.
 func ParseBinding(spec, baseURL string) (ProviderConfig, error) {
 	provider, modelName, found := strings.Cut(spec, ":")
 	if !found || provider == "" || modelName == "" {
 		return ProviderConfig{}, fmt.Errorf("ai: a model binding wants provider:model, got %q", spec)
 	}
-	return ProviderConfig{Provider: provider, Model: modelName, BaseURL: baseURL}, nil
+	return ProviderConfig{Provider: provider, Model: modelName, BaseURL: hostRoot(provider, baseURL)}, nil
 }

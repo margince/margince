@@ -227,6 +227,8 @@ func classifyOutcome(reading Reading, was Contribution, existed bool, now Contri
 		return BucketWon
 	case !existed:
 		return BucketNew
+	case now.InLost && !was.InLost && inReading(reading, was):
+		return BucketLost
 	case now.ExclusionReason == "" && was.ExclusionReason != "":
 		// It became countable again: a price arrived, or a rate did.
 		return BucketAmount

@@ -662,6 +662,8 @@ export const vi = {
     "{count} cơ hội không có giá trị so sánh được nên không được tính.",
   "brief.coverage.source.generic": "Công việc khác",
   "brief.coverage.source.weekly_commitment": "Cam kết tuần",
+  "brief.coverage.source.awaiting_reply": "Việc cần theo dõi",
+  "brief.coverage.source.meeting_follow_up": "Theo dõi sau cuộc họp",
   "brief.coverage.source.batch": "Nhóm công việc",
   "brief.coverage.source.introduction_request": "Yêu cầu giới thiệu",
   "brief.coverage.source.automation_run": "Lỗi tự động hóa",
@@ -739,6 +741,9 @@ export const vi = {
   "brief.plan.open": "Mở kế hoạch tuần",
   "worklist.source.weekly_commitment": "Cam kết trong tuần",
   "worklist.untitled.weekly_commitment": "Cam kết trong tuần",
+  "worklist.source.awaiting_reply": "Theo dõi",
+  "worklist.untitled.awaiting_reply": "Theo dõi",
+  "worklist.untitled.meeting_follow_up": "Cuộc họp",
   "brief.plan.select":
     "Tìm giao dịch, khách hàng tiềm năng, liên hệ, công ty hoặc dự án",
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
@@ -1668,8 +1673,6 @@ export const vi = {
   "co.strip.lastTouch": "Tiếp xúc gần nhất",
   "co.strip.lastTouch.today": "Hôm nay",
   "co.strip.lastTouch.ago": "{count} ngày trước",
-  "co.strip.lastTouch.theirs": "Họ viết gần nhất",
-  "co.strip.lastTouch.ours": "Bạn viết gần nhất",
   "co.strip.lastTouch.never": "Chưa có trao đổi",
   "co.strip.nextMeeting": "Cuộc họp tiếp theo",
   "co.strip.next.none": "Chưa có lịch",
@@ -2822,12 +2825,11 @@ export const vi = {
   "tags.more": "+{count} nữa",
   "tags.showLess": "Thu gọn",
   "tags.removeTag": "Gỡ {name}",
-  "tags.removeTitle": "Gỡ {name} khỏi bản ghi này?",
+  "tags.removed": "Đã gỡ {name} khỏi bản ghi này",
+  "tags.restored": "Đã gắn lại {name} cho bản ghi này",
   "tags.addedBy": "Được thêm bởi {who} · {when}",
   "tags.addedByUndated": "Được thêm bởi {who}",
   "tags.addedOn": "Đã thêm {when}",
-  "tags.visibleWorkspaceWide": "Tên tag hiển thị cho toàn bộ tổ chức.",
-  "tags.removeFromRecord": "Gỡ khỏi bản ghi này",
   "tags.withheld": "Đã ẩn — vai trò của bạn không đọc được từ vựng tag",
   "tags.emptyTitle": "Chưa có tag",
   "tags.emptyBody":
@@ -2936,6 +2938,13 @@ export const vi = {
   "leadReasons.removeTitle": "Xóa lý do này?",
   "leadReasons.removeBody":
     '"{label}" không được khách hàng tiềm năng nào dùng và sẽ biến mất khỏi danh sách.',
+  "followUpSettings.title": "Theo dõi",
+  "followUpSettings.sub":
+    "Khi nào một thư gửi khách hàng hiện lại trên trang chủ để theo dõi.",
+  "followUpSettings.days": "Nhắc sau (ngày)",
+  "followUpSettings.daysHint":
+    "Số ngày một thư đã gửi có thể chưa được trả lời trước khi có lời nhắc theo dõi, từ 1 đến 30.",
+  "followUpSettings.outOfRange": "Nhập số ngày nguyên từ 1 đến 30.",
   "leadHandling.title": "Xử lý khách hàng tiềm năng",
   "leadHandling.sub": "Cách cài đặt này xử lý một khách hàng tiềm năng mới.",
   "leadHandling.firstResponse": "Mục tiêu phản hồi đầu tiên",
@@ -4136,7 +4145,6 @@ export const vi = {
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Cuộc gọi",
   "co.spine.kind.meeting": "Cuộc họp",
-  "co.spine.kind.note": "Ghi chú",
   "co.spine.kind.message": "Tin nhắn",
   "co.spine.andOthers": "{names} và {count} người khác",
   "co.spine.said.to": "{what} gửi {who}",
@@ -9329,6 +9337,16 @@ export const vi = {
     "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.baseUrl.help.gemini":
+    "Host đến phiên bản API, như /v1beta; đường dẫn model được thêm sau đó.",
+  "aiRouting.baseUrl.placeholder.gemini":
+    "https://generativelanguage.googleapis.com/v1beta",
+  "aiRouting.baseUrl.help.openai":
+    "Gốc host; /v1 được thêm vào. Để trống để dùng API của chính OpenAI.",
+  "aiRouting.baseUrl.placeholder.openai": "https://api.openai.com",
+  "aiRouting.baseUrl.help.anthropic":
+    "Gốc host; /v1 được thêm vào. Để trống để dùng API của chính Anthropic.",
+  "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
   "aiRouting.models.askingLocation":
     "Đang hỏi Google những mô hình {location} phục vụ…",
   "aiRouting.models.noKey":
@@ -10823,8 +10841,6 @@ export const vi = {
   "lists.why.inDays_one": "trong {count} ng\u00e0y n\u1eefa",
   "lists.why.inDays_other": "trong {count} ng\u00e0y n\u1eefa",
   "lists.remove": "G\u1ee1 kh\u1ecfi danh s\u00e1ch ch\u1ecdn",
-  "lists.removeTitle":
-    "G\u1ee1 b\u1ea3n ghi n\u00e0y kh\u1ecfi danh s\u00e1ch ch\u1ecdn?",
   "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
   "lists.noteHint":
     "\u0110\u01b0\u1ee3c l\u01b0u c\u00f9ng thay \u0111\u1ed5i \u0111\u1ec3 \u0111\u1ed3ng nghi\u1ec7p bi\u1ebft l\u00fd do.",
@@ -10836,6 +10852,8 @@ export const vi = {
   "lists.record.checkPick": "Ch\u1ecdn m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
   "lists.record.truncated":
     "V\u00e0 c\u00f2n danh s\u00e1ch kh\u00e1c kh\u00f4ng hi\u1ec3n th\u1ecb \u1edf \u0111\u00e2y.",
+  "lists.record.takenOff": "Đã gỡ khỏi {name}",
+  "lists.record.putBack": "Đã thêm lại vào {name}",
   "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
@@ -11528,6 +11546,16 @@ export const vi = {
   "worklist.because.meeting_booked.value": "đã hẹn họp vào {value}",
   "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
+  "worklist.because.you_wrote_last": "bạn viết sau cùng",
+  "worklist.because.no_reply_days": "chưa có phản hồi",
+  "worklist.because.no_reply_days.value_one":
+    "chưa có phản hồi sau {value} ngày",
+  "worklist.because.no_reply_days.value_other":
+    "chưa có phản hồi sau {value} ngày",
+  "worklist.because.met_days_ago": "đã gặp",
+  "worklist.because.met_days_ago.value_one": "đã gặp {value} ngày trước",
+  "worklist.because.met_days_ago.value_other": "đã gặp {value} ngày trước",
+  "worklist.because.nothing_sent_since": "chưa gửi gì từ đó",
   "worklist.because.response_overdue": "quá hạn trả lời",
   "worklist.because.response_due_soon": "sắp đến hạn trả lời",
   "worklist.because.response_due_soon.value": "cần trả lời trước {value}",
@@ -11693,6 +11721,7 @@ export const vi = {
   "worklist.verb.draft_reply": "Đọc và trả lời",
   // Nơi trình soạn thảo thực sự mở ra, động từ là HÀNH ĐỘNG.
   "worklist.verb.draft_reply_now": "Soạn câu trả lời",
+  "worklist.verb.draft_follow_up_now": "Soạn thư theo dõi",
   // Một thư ĐẦU TIÊN, không phải câu trả lời cho thư đã có.
   "worklist.verb.draft_email": "Mở để viết",
   "worklist.verb.draft_email_now": "Soạn email",
@@ -11917,6 +11946,17 @@ export const vi = {
   "aiProviderSettings.service.together": "Together",
   "aiProviderSettings.service.groq": "Groq",
   "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.langdockEu": "Langdock (EU)",
+  "aiProviderSettings.service.langdockUs": "Langdock (US)",
+  "aiProviderSettings.service.langdockGemini.note":
+    "Langdock không cung cấp embedding của Gemini. Nếu tìm kiếm và truy hồi đang dùng Gemini, hãy chuyển chúng sang nhà cung cấp khác trước, nếu không chúng sẽ ngừng hoạt động.",
+  "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
+  "aiProviderSettings.service.openai": "OpenAI",
+  "aiProviderSettings.service.otherOpenai": "Host API OpenAI khác",
+  "aiProviderSettings.service.anthropic": "Anthropic",
+  "aiProviderSettings.service.otherGemini": "Host tương thích Gemini khác",
+  "aiProviderSettings.service.otherAnthropic":
+    "Host tương thích Anthropic khác",
   "aiProviderSettings.service.typesafe": "TypeSafe (mặc định)",
   "aiProviderSettings.service.otherChat": "Dịch vụ tương thích OpenAI khác",
   "aiProviderSettings.service.otherDecisions": "Máy chủ quyết định khác",

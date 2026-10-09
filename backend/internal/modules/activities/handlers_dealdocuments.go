@@ -35,7 +35,7 @@ func (h Handlers) ListDealDocuments(w http.ResponseWriter, r *http.Request,
 	}
 	docs, page, err := h.store.ListDealDocuments(r.Context(), ids.UUID(id), in)
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK,
@@ -46,7 +46,7 @@ func (h Handlers) ListDealDocuments(w http.ResponseWriter, r *http.Request,
 // the file.
 func (h Handlers) HideDealDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, attachmentID openapi_types.UUID) {
 	if err := h.store.HideDealDocument(r.Context(), ids.UUID(id), ids.UUID(attachmentID)); err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -55,7 +55,7 @@ func (h Handlers) HideDealDocument(w http.ResponseWriter, r *http.Request, id cr
 // UnhideDealDocument lists the file on this deal again.
 func (h Handlers) UnhideDealDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, attachmentID openapi_types.UUID) {
 	if err := h.store.UnhideDealDocument(r.Context(), ids.UUID(id), ids.UUID(attachmentID)); err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

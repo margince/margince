@@ -671,6 +671,8 @@ export const de = {
     "{count} Deals ohne Preis · nicht enthalten",
   "brief.coverage.source.generic": "Weitere Arbeit",
   "brief.coverage.source.weekly_commitment": "Wochenzusagen",
+  "brief.coverage.source.awaiting_reply": "Nachfassen",
+  "brief.coverage.source.meeting_follow_up": "Nachfassen nach Terminen",
   "brief.coverage.source.batch": "Gruppierte Arbeit",
   "brief.coverage.source.introduction_request": "Vorstellungsanfragen",
   "brief.coverage.source.automation_run": "Automatisierungsfehler",
@@ -749,6 +751,9 @@ export const de = {
   "brief.plan.open": "Wochenplan öffnen",
   "worklist.source.weekly_commitment": "Wochenzusage",
   "worklist.untitled.weekly_commitment": "Wochenzusage",
+  "worklist.source.awaiting_reply": "Nachfassen",
+  "worklist.untitled.awaiting_reply": "Nachfassen",
+  "worklist.untitled.meeting_follow_up": "Termin",
   "brief.plan.select": "Deal, Lead, Kontakt, Unternehmen oder Projekt suchen",
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
   "brief.forecast.period":
@@ -1697,8 +1702,6 @@ export const de = {
   "co.strip.lastTouch": "Letzter Kontakt",
   "co.strip.lastTouch.today": "Heute",
   "co.strip.lastTouch.ago": "vor {count} T",
-  "co.strip.lastTouch.theirs": "Eingehend",
-  "co.strip.lastTouch.ours": "Ausgehend",
   "co.strip.lastTouch.never": "Keiner",
   "co.strip.nextMeeting": "Nächster Termin",
   "co.strip.next.none": "Kein Termin geplant",
@@ -2852,13 +2855,11 @@ export const de = {
   "tags.more": "+{count} weitere",
   "tags.showLess": "Weniger anzeigen",
   "tags.removeTag": "{name} entfernen",
-  "tags.removeTitle": "{name} von diesem Datensatz entfernen?",
+  "tags.removed": "{name} von diesem Datensatz entfernt",
+  "tags.restored": "{name} wieder an diesem Datensatz",
   "tags.addedBy": "Hinzugefügt von {who} · {when}",
   "tags.addedByUndated": "Hinzugefügt von {who}",
   "tags.addedOn": "Hinzugefügt am {when}",
-  "tags.visibleWorkspaceWide":
-    "Tag-Namen sind im gesamten Unternehmen sichtbar.",
-  "tags.removeFromRecord": "Von diesem Datensatz entfernen",
   "tags.withheld": "Für deine Rolle ausgeblendet",
   "tags.emptyTitle": "Noch keine Tags",
   "tags.emptyBody":
@@ -2967,6 +2968,13 @@ export const de = {
   "leadReasons.removeTitle": "Grund entfernen?",
   "leadReasons.removeBody":
     "„{label}“ wird von keinem Lead verwendet und wird aus der Liste entfernt.",
+  "followUpSettings.title": "Nachfassen",
+  "followUpSettings.sub":
+    "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Startseite des Absenders erscheint.",
+  "followUpSettings.days": "Erinnern nach (Tagen)",
+  "followUpSettings.daysHint":
+    "So viele Tage darf eine gesendete Nachricht unbeantwortet bleiben, bevor der Absender ans Nachfassen erinnert wird, 1 bis 30.",
+  "followUpSettings.outOfRange": "Gib eine ganze Zahl von 1 bis 30 Tagen ein.",
   "leadHandling.title": "Lead-Bearbeitung",
   "leadHandling.sub": "Wie neue Leads bearbeitet werden.",
   "leadHandling.firstResponse": "Zielzeit für die erste Antwort",
@@ -4179,7 +4187,6 @@ export const de = {
   "co.spine.kind.email": "E-Mail",
   "co.spine.kind.call": "Anruf",
   "co.spine.kind.meeting": "Termin",
-  "co.spine.kind.note": "Notiz",
   "co.spine.kind.message": "Nachricht",
   "co.spine.andOthers": "{names} und {count} weitere",
   "co.spine.said.to": "{what} an {who}",
@@ -9425,6 +9432,16 @@ export const de = {
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.baseUrl.help.gemini":
+    "Host bis zur API-Version, etwa /v1beta; Modellpfade werden danach angehängt.",
+  "aiRouting.baseUrl.placeholder.gemini":
+    "https://generativelanguage.googleapis.com/v1beta",
+  "aiRouting.baseUrl.help.openai":
+    "Host-Wurzel; /v1 wird angehängt. Leer nutzt die API von OpenAI selbst.",
+  "aiRouting.baseUrl.placeholder.openai": "https://api.openai.com",
+  "aiRouting.baseUrl.help.anthropic":
+    "Host-Wurzel; /v1 wird angehängt. Leer nutzt die API von Anthropic selbst.",
+  "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
   "aiRouting.models.askingLocation":
     "Google wird gefragt, welche Modelle {location} bedient …",
   "aiRouting.models.noKey":
@@ -10929,7 +10946,6 @@ export const de = {
   "lists.why.inDays_one": "in {count} Tag",
   "lists.why.inDays_other": "in {count} Tagen",
   "lists.remove": "Von der Shortlist entfernen",
-  "lists.removeTitle": "Diesen Datensatz von der Shortlist entfernen?",
   "lists.note": "Warum (optional)",
   "lists.noteHint":
     "Wird mit der \u00c4nderung gespeichert, damit das Team den Grund sieht.",
@@ -10939,6 +10955,8 @@ export const de = {
   "lists.record.check": "Live-Liste pr\u00fcfen",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
   "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
+  "lists.record.takenOff": "Von {name} entfernt",
+  "lists.record.putBack": "Wieder auf {name}",
   "lists.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
   "lists.add": "Hinzuf\u00fcgen",
   "lists.shortlist": "Shortlist",
@@ -11623,6 +11641,15 @@ export const de = {
   "worklist.because.meeting_booked.value": "Termin vereinbart für {value}",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
+  "worklist.because.you_wrote_last": "du hast zuletzt geschrieben",
+  "worklist.because.no_reply_days": "keine Antwort",
+  "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort",
+  "worklist.because.no_reply_days.value_other":
+    "seit {value} Tagen keine Antwort",
+  "worklist.because.met_days_ago": "getroffen",
+  "worklist.because.met_days_ago.value_one": "vor {value} Tag getroffen",
+  "worklist.because.met_days_ago.value_other": "vor {value} Tagen getroffen",
+  "worklist.because.nothing_sent_since": "seitdem nichts geschickt",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
@@ -11816,6 +11843,7 @@ export const de = {
   "worklist.verb.draft_reply": "Lesen und antworten",
   // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.
   "worklist.verb.draft_reply_now": "Antwort entwerfen",
+  "worklist.verb.draft_follow_up_now": "Nachfass-Mail entwerfen",
   // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.
   "worklist.verb.draft_email": "E-Mail schreiben",
   "worklist.verb.draft_email_now": "E-Mail entwerfen",
@@ -12041,6 +12069,17 @@ export const de = {
   "aiProviderSettings.service.together": "Together",
   "aiProviderSettings.service.groq": "Groq",
   "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.langdockEu": "Langdock (EU)",
+  "aiProviderSettings.service.langdockUs": "Langdock (US)",
+  "aiProviderSettings.service.langdockGemini.note":
+    "Langdock bietet keine Gemini-Embeddings. Wenn Suche und Abruf Gemini nutzen, verlege sie zuerst auf einen anderen Anbieter, sonst funktionieren sie nicht mehr.",
+  "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
+  "aiProviderSettings.service.openai": "OpenAI",
+  "aiProviderSettings.service.otherOpenai": "Anderer Host mit OpenAI-API",
+  "aiProviderSettings.service.anthropic": "Anthropic",
+  "aiProviderSettings.service.otherGemini": "Anderer Gemini-kompatibler Host",
+  "aiProviderSettings.service.otherAnthropic":
+    "Anderer Anthropic-kompatibler Host",
   "aiProviderSettings.service.typesafe": "TypeSafe (Standard)",
   "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
   "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",

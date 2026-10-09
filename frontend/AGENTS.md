@@ -6,8 +6,9 @@ all the rest: the branch and PR loop, the license header, the commit rules. The 
 the frontend alone. Gates hold parts of some, and each section says which; what it does not name, no
 gate checks for you.
 
-`craft static` does not scan `*.test.tsx`. So P3 (`tests prove behaviour or they are noise`, no test
-that fails from a real clock) holds here only because the author holds it. One part has a gate:
+`craft static` reads only the comments of a TypeScript file, `*.test.tsx` included. So P3
+(`tests prove behaviour or they are noise`, no test that fails from a real clock) holds here only
+because the author holds it. One part has a gate:
 `make fe-clock-drift` runs all the tests with the clock 200 days later and needs the same result. It
 runs daily on `main` (`scheduled.yml`), not on your PR, because the calendar breaks these tests, not
 a diff. A test file you add today can turn that lane red many days from now. Run it on your machine
@@ -52,8 +53,8 @@ look for one.
 
 ### Indigo is a claim about the source
 
-Indigo (`--ai*`) means an agent is its source. Never use it for looks. `--orbAmber` / `--orbRed` /
-`--orbGrey` mean a result, not a source. The tokens, the edge and text rules, and `ProvenanceTag` are
+Indigo (`--ai*`) means an agent is its source. Never use it for looks. `--orbAmber` / `--orbRed`
+mean a result, not a source. The tokens, the edge and text rules, and `ProvenanceTag` are
 in [the catalog](src/design-system/README.md#indigo-says-a-machine-did-it). `check-ds-purity.sh`
 holds that these values come from tokens; nothing can tell you that the token you use means the wrong
 thing.

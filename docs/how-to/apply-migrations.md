@@ -102,6 +102,15 @@ Schema that only a fork needs goes in `backend/migrations/custom/`. It has its o
 applies after core. Its files are named `YYYYMMDDHHMMSS` and its columns start with `x_`. It stays as it is
 when the fork merges from the main project.
 
+## Migrations that lock a busy table
+
+Some migrations take a lock on a whole table, and every other user of that table waits on it. Such a
+migration sets a short `lock_timeout`, so on a busy installation it fails, and does not wait without end.
+Run it when the app is not busy, and run `migrate up` again if it timed out.
+
+- `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing
+  time. It locks the whole activity table, and waits at most three seconds for that lock.
+
 ## Why no one edits a shipped migration
 
 On the `up` path an applied version never runs again. Only `migrate down` runs a version again, by

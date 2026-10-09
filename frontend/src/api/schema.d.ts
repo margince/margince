@@ -3209,7 +3209,7 @@ export interface paths {
         delete: operations["archiveDeal"];
         options?: never;
         head?: never;
-        /** Update a deal (partial). Closing requires terminal status + lost_reason if lost. */
+        /** Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. */
         patch: operations["updateDeal"];
         trace?: never;
     };
@@ -3235,6 +3235,10 @@ export interface paths {
          *     the same money: moving a won deal back to an open stage clears its close date,
          *     its lost reason and the FX rate frozen at close, and takes revenue out of a
          *     quarter that has already been reported.
+         *
+         *     A move to the stage the deal already holds changes nothing and answers 200 with the
+         *     deal as it stands: a retried call must not close a closed deal again and move its
+         *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          */
         post: operations["advanceDeal"];
         delete?: never;
@@ -6197,6 +6201,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/follow-up-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How long a sent message may go unanswered before the worklist reminds its sender.
+         * @description The workspace's follow-up window: a message a seat sent to a customer that is still
+         *     the last word after this many days comes back on the sender's worklist as a
+         *     follow-up. Read by every role; changed by admin/ops. Governed by the
+         *     `installation_settings` RBAC object.
+         */
+        get: operations["getFollowUpSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change the follow-up window (admin/ops). */
+        patch: operations["updateFollowUpSettings"];
+        trace?: never;
+    };
     "/leads/settings": {
         parameters: {
             query?: never;
@@ -6983,6 +7011,37 @@ export interface paths {
         put?: never;
         /** Take one record off a Shortlist, with an optional note on why. */
         post: operations["removeListMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/members/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back a record the caller took off a Shortlist.
+         * @description Undoes one `removeListMember`, named by the `audit_id` it answered. The member comes back
+         *     as its author left it: the same `added_by`, `created_at` and note, not the restorer and
+         *     now. The gates are the removal's own.
+         *
+         *     Only the caller's own removal can be put back, and only while nothing has changed that
+         *     record's membership since: a removal by somebody else, of another list, or of a record
+         *     the caller can no longer see answers `404`.
+         *
+         *     An agent may not call this: the restore undoes the caller's own removal, made by hand.
+         */
+        post: operations["restoreListMember"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8057,8 +8116,42 @@ export interface paths {
          * @description Undo for applyTag. archiveTag retires a tag from the whole workspace, which is not the
          *     same act and not a way back from a mistaken tagging. Idempotent: removing a tagging that
          *     is not there succeeds, because the caller asked for a state that is already true.
+         *
+         *     A removal that took a tagging off answers `200` with the handle `restoreTagApplication`
+         *     takes to put it back; one that found nothing to remove answers `204`.
          */
         delete: operations["removeTag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/{id}/apply/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back a tag the caller took off a record.
+         * @description Undoes one `removeTag`, named by the `audit_id` it answered. The tagging comes back as it
+         *     was assigned: the same `assigned_by`, `assigned_by_kind` and `assigned_at`, not the
+         *     restorer and now. The gates are the removal's own.
+         *
+         *     Only the caller's own removal can be put back, and only while nothing has changed that
+         *     record's tagging since: a removal by somebody else, of another tag, or from a record the
+         *     caller can no longer see answers `404`.
+         *
+         *     An agent may not call this: the restore undoes the caller's own removal, made by hand.
+         */
+        post: operations["restoreTagApplication"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -15201,7 +15294,10 @@ export interface paths {
         get: operations["getOffer"];
         put?: never;
         post?: never;
-        /** Archive (soft-delete) an offer. */
+        /**
+         * Archive (soft-delete) an offer.
+         * @description An accepted offer prices its deal and is refused 409 `offer_accepted`; archive any other status.
+         */
         delete: operations["archiveOffer"];
         options?: never;
         head?: never;
@@ -15271,7 +15367,8 @@ export interface paths {
          *     rendered or delivered to a counterparty — delivery is a separate capability that does not
          *     exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
          *     with no staging path — this IS the commercial commitment, since a sent revision is never
-         *     mutated in place and its rate to base is fixed from here on.
+         *     mutated in place and its rate to base is fixed from here on. An offer whose `valid_until`
+         *     day has passed is refused 422 `offer_lapsed`; regenerate it with a later date.
          */
         post: operations["sendOffer"];
         delete?: never;
@@ -15297,7 +15394,8 @@ export interface paths {
          * @description sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
          *     accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
          *     `offer.accepted`. Recording the buyer's acceptance is a human attestation — an agent
-         *     principal is rejected outright.
+         *     principal is rejected outright. An offer whose `valid_until` day has passed is refused
+         *     422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
          */
         post: operations["acceptOffer"];
         delete?: never;
@@ -16862,6 +16960,9 @@ export interface paths {
          *     metadata + object key. `captured_by` is server-stamped from the authenticated
          *     principal, never the request. The parent entity must be visible to the caller
          *     (a hidden or cross-tenant entity answers 404, never leaks existence).
+         *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
+         *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
+         *     answers 422 `unsupported_file_type`.
          */
         post: operations["uploadAttachment"];
         delete?: never;
@@ -21623,7 +21724,8 @@ export interface components {
             /**
              * @description Attempts this tier made in the window, each counted once — including one that failed
              *     and handed the call to the next tier, and each same-tier retry. Cache hits are not
-             *     counted.
+             *     counted. Only the attempts of the model the tier is bound to now count, so a tier
+             *     rebound to another model drops the attempts of the one before it.
              */
             calls: number;
             /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached. */
@@ -24899,6 +25001,8 @@ export interface components {
              * @description When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
              */
             last_outbound_at?: string | null;
+            /** @description The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws. */
+            last_contact?: components["schemas"]["Company360LastContact"];
             state_strip?: components["schemas"]["Company360StateStrip"];
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
@@ -25184,6 +25288,14 @@ export interface components {
              */
             baseline_at?: string | null;
             new_activities: number;
+        };
+        Company360LastContact: {
+            /** Format: date-time */
+            at: string;
+            /** @enum {string} */
+            kind: "email" | "call" | "meeting" | "message";
+            /** Format: uuid */
+            activity_id: string;
         };
         /**
          * @description The contact record page in one payload (PO-EXT-3). Every section except `contact` is
@@ -27527,12 +27639,19 @@ export interface components {
             project_id?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
-            /** @enum {string} */
+            /**
+             * @description Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.
+             * @enum {string}
+             */
             status?: "open" | "won" | "lost";
+            /** @description Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage. */
             lost_reason?: string | null;
-            /** @description Native→base rate to FREEZE at close. Required (server may also compute it from the FX table) when transitioning to won with a non-base currency — satisfies the deal_closed_fx CHECK (formulas §6.1). Ignored while open. */
+            /** @description Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal. */
             fx_rate_to_base?: string | null;
-            /** Format: date */
+            /**
+             * Format: date
+             * @description Refused 422 `set_by_advance`; dated by the advance that closes the deal.
+             */
             fx_rate_date?: string | null;
             /** @enum {string|null} */
             forecast_category?: null | "commit" | "best_case" | "pipeline" | "omitted";
@@ -29751,10 +29870,9 @@ export interface components {
              *     moment the API could not be told.
              *
              *     An omitted field is unchanged, like every other field on this patch. Sending
-             *     an explicit `null` is also unchanged rather than a clear: this request maps
-             *     onto the same coalescing update `due_at` and `remind_at` take, which cannot
-             *     tell an absent field from a null one. Recording the wrong outcome is fixed by
-             *     sending the right one.
+             *     an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
+             *     `remind_at` and `assignee_id`, where `null` removes the value. Recording the
+             *     wrong outcome is fixed by sending the right one.
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
@@ -30059,6 +30177,12 @@ export interface components {
             readonly draft_ref?: string | null;
             /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
             readonly voice_degraded?: boolean;
+            /**
+             * @description True when the draft's language could not be determined from the contact's own correspondence, so it is written in the default rather than in theirs.
+             *     The causes are deliberately not distinguished on the wire, and there are more than two: the reader may see none of that contact's mail, the contact may have written nothing readable, the evidence may be too short or mixed to call, or the language may be one the detector does not support. Every one of them means the same thing to a client — the draft is sendable and its language is a fallback rather than a choice.
+             *     A client should say so beside the note, for the same reason voice_degraded is said: a reader fluent only in the default cannot tell a fallback from a choice, and would forward an English note to a customer who writes in German believing the product had checked. Absent reads as false.
+             */
+            readonly language_undetermined?: boolean;
         };
         /**
          * @description One thing the draft was written from, named so the reader can check it rather than
@@ -31505,6 +31629,10 @@ export interface components {
             sort_order?: number;
             active?: boolean;
         };
+        FollowUpSettings: {
+            /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
+            follow_up_after_days: number;
+        };
         LeadSettings: {
             /** @description Whether the first-response target is tracked at all. Off by default. */
             first_response_enabled: boolean;
@@ -32607,6 +32735,14 @@ export interface components {
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
+        };
+        /** @description The way back from taking a tag off a record or a record off a Shortlist. A removal answers it, and the matching restore route takes it back unchanged. */
+        RemovalUndo: {
+            /**
+             * Format: uuid
+             * @description The removal's own history entry, which kept who added the link and when, so the restore puts it back as it was.
+             */
+            audit_id: string;
         };
         TagListResponse: {
             data: components["schemas"]["Tag"][];
@@ -34973,6 +35109,7 @@ export interface components {
             rows: {
                 [key: string]: unknown;
             }[];
+            /** @description Groups that matched. `rows` is capped at the report row limit, so a total above its length means this answer is the top of a longer one rather than all of it. The drill-through's `total_rows` counts source rows for the same reason. */
             total_rows?: number;
             /** @description Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded. */
             excluded_by_permission?: number | null;
@@ -40955,7 +41092,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -41841,7 +41978,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -42371,7 +42508,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -53249,6 +53386,55 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getFollowUpSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The follow-up settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowUpSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateFollowUpSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FollowUpSettings"];
+            };
+        };
+        responses: {
+            /** @description The updated follow-up settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowUpSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getLeadSettings: {
         parameters: {
             query?: never;
@@ -54869,7 +55055,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Removed. */
+            /** @description Removed. The body is the handle `restoreListMember` takes to put the record back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalUndo"];
+                };
+            };
+            /** @description Not sent. A removal answers `200` with its undo handle, and a record that is not on the list answers `404`. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -54879,6 +55074,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalUndo"];
+            };
+        };
+        responses: {
+            /** @description The member, back on the list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMember"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The membership cannot be put back: the record was added to or taken off this list again since, or the list is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -56855,7 +57090,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Removed (or was not applied). */
+            /** @description Removed. The body is the handle that puts the tagging back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalUndo"];
+                };
+            };
+            /** @description The record did not carry the tag; nothing was removed. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -56865,6 +57109,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreTagApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalUndo"];
+            };
+        };
+        responses: {
+            /** @description The tagging, back on the record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Taggable"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The tagging cannot be put back: the tag was applied to or removed from this record again since, or the tag is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -66412,6 +66696,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateOffer: {

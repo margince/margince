@@ -58,7 +58,7 @@
   box-shadow: inset 3px 0 0 0 var(--borderStrong);
   border-color: var(--borderSubtle);
   border-style: solid;
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* The window closed without a decision. The same reading VERDICT_TONE gives
@@ -262,7 +262,7 @@
  */
 .dcard[data-lapsed][data-layout="deck"],
 .dcard[data-urgency="lapsed"][data-layout="deck"] {
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* A lapsed card's bands go neutral with it: the staged tint on the header and

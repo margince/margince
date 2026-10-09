@@ -32,30 +32,29 @@ import {
   DEAL_SEARCH_REACH,
   walkAccountDeals,
 } from "./adddocument.dealsearch";
-import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
+import {
+  ACCEPTED_ATTACHMENT_ATTR,
+  type AttachmentParent,
+  uploadAttachment,
+} from "./attachmentupload";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Adding a document to the record the dialog was opened from — an account's
 // document library, or a contact's.
 //
-// WHY THE PARENT IS A QUESTION AND NOT A DEFAULT. A document filed against the
-// company is a document about the company; one filed against a deal is evidence
-// in that deal, and it is the only kind the extraction panel will offer to read
-// for deal fields, because a deal is the only record the accept can write to.
-// Filing everything against the company would make that reading unreachable.
+// Why the parent is a question and not a default: a document on the company is
+// about the company; one on a deal is evidence in that deal, and the only kind the
+// extraction panel offers to read for deal fields, since a deal is the only record
+// the accept can write to.
 //
-// WHY IT TAKES TWO REQUESTS. The upload endpoint carries the bytes and the
-// parent and nothing else — category and title live behind
-// `PATCH /attachments/{id}/metadata`. So the second call can fail on its own
-// with the file already stored, and this dialog says exactly that rather than
-// reporting a failure the reader would answer by uploading the same file twice.
+// Why it takes two requests: the upload carries the bytes and the parent; category
+// and title go through `PATCH /attachments/{id}/metadata`. That call can fail with
+// the file already stored, and the dialog says so rather than reporting a failure
+// the reader would answer by uploading the same file twice.
 //
-// WHY THE QUESTION IS ONLY ASKED ON AN ACCOUNT. Deals hang off a company, so
-// the account's library can offer its own deals as filing targets and a
-// contact's cannot: nothing on a contact's page names a deal, and a contact is
-// seated on deals at companies they may not even work for. The contact's
-// library therefore files against the contact, with no choice to make, rather
-// than growing a control whose one option is the record you are already on.
+// Why the question is only asked on an account: deals hang off a company, so an
+// account can offer its own deals as filing targets. A contact sits on deals at
+// companies they may not work for, so its library files against the contact.
 
 type Attachment = components["schemas"]["Attachment"];
 type Category = NonNullable<Attachment["category"]>;
@@ -430,6 +429,7 @@ export function AddDocumentDialog({
           emptyLabel={t("docs.add.fileEmpty")}
           file={file}
           onPick={setFile}
+          accept={ACCEPTED_ATTACHMENT_ATTR}
         />
       </div>
       <div className="actions">

@@ -90,16 +90,15 @@ type Service struct {
 	tasks       Tasks
 	receipts    Receipts
 	briefing    Briefing
-	// commitments is OPTIONAL: nil means this feed serves no commitments lane,
-	// and Assemble then leaves the field unset rather than sending an empty
-	// array. The contract makes the lane optional for exactly that reason.
+	// commitments is OPTIONAL: nil means no commitments lane, and Assemble
+	// leaves the field unset rather than sending an empty array.
 	commitments Commitments
 	// atRisk is OPTIONAL for the reason commitments is: absent lane, not empty.
 	atRisk AtRisk
-	// waiting is OPTIONAL like the lanes above it: an installation that does
-	// not read the mail stream cannot say who is waiting, which is different
-	// from saying nobody is.
-	waiting Waiting
+	// waiting and its mirror awaiting are OPTIONAL: without the mail stream
+	// nobody can say who is waiting, which differs from saying nobody is.
+	waiting  Waiting
+	awaiting Awaiting
 	// decay is OPTIONAL for the same reason, and says nothing about atRisk:
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
@@ -204,6 +203,7 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
+	followUps   followUpRead
 	// planCoverage is whose plans a team read looked at; nil under every other scope.
 	planCoverage *crmcontracts.WorklistPlanCoverage
 	// overdueLoad is the team board's COUNTING reader for tasks, beside the

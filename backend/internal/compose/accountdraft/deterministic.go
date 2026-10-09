@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // Draft and Reason are draftcore's. They were declared here and in contactdraft
@@ -105,8 +106,8 @@ func deterministicOpener(in Input) string {
 	if in.Deal != nil {
 		return draftfloor.Fill(lines.Deal, in.Deal.Name)
 	}
-	if len(in.Recent) > 0 && in.Recent[0].Subject != "" {
-		return draftfloor.Fill(lines.Thread, in.Recent[0].Subject)
+	if mail, ok := draftcore.ThreadMail(in.Recent); ok {
+		return draftfloor.Fill(lines.Thread, mailsubject.WithoutReplyPrefix(mail.Subject))
 	}
 	return ""
 }
@@ -136,12 +137,12 @@ func deterministicReasons(in Input) []Reason {
 			EntityID:   in.Deal.ID,
 		})
 	}
-	if in.Commitment == nil && in.Deal == nil && len(in.Recent) > 0 && in.Recent[0].Subject != "" {
+	if mail, ok := draftcore.ThreadMail(in.Recent); ok && in.Commitment == nil && in.Deal == nil {
 		reasons = append(reasons, Reason{
 			Kind:       crmcontracts.AccountDraftReasonKindConversation,
-			Label:      in.Recent[0].Subject,
+			Label:      mail.Subject,
 			EntityType: "activity",
-			EntityID:   in.Recent[0].ID,
+			EntityID:   mail.ID,
 		})
 	}
 	return reasons

@@ -275,3 +275,43 @@ export const RowSlotsInANarrowRail: Story = {
     </div>
   ),
 };
+
+// The compact row a record page puts above its brief: five readings on one
+// line at a work column's width, a long value cut with its full text on the
+// tooltip.
+export const Compact: Story = {
+  render: () => (
+    <div style={{ maxWidth: "52rem" }}>
+      <StatStrip density="compact">
+        <StatCard
+          label="Open deals"
+          value="€240k"
+          detail="1 open"
+          onOpen={() => {}}
+        />
+        <StatCard
+          label="Revenue · 12 mo"
+          value="Not invoiced"
+          detail="Not assessed"
+          onOpen={() => {}}
+        />
+        <StatCard
+          label="Relationship"
+          value="No inbound messages since the last meeting"
+          onOpen={() => {}}
+        />
+        <StatCard
+          label="Last contact"
+          value="6 d"
+          detail="Call · 2 Oct"
+          onOpen={() => {}}
+        />
+        <StatCard
+          label="Next meeting"
+          value="None scheduled"
+          onOpen={() => {}}
+        />
+      </StatStrip>
+    </div>
+  ),
+};

@@ -26,7 +26,7 @@
  * rather than pointing. */
 .token-input.is-disabled {
   cursor: not-allowed;
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* The box shares the frame's row with the tokens and takes what is left, with a

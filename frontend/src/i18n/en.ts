@@ -649,6 +649,8 @@ export const en = {
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
   "brief.coverage.source.generic": "Other work",
   "brief.coverage.source.weekly_commitment": "Weekly commitments",
+  "brief.coverage.source.awaiting_reply": "Follow-ups",
+  "brief.coverage.source.meeting_follow_up": "Follow-ups after meetings",
   "brief.coverage.source.batch": "Grouped work",
   "brief.coverage.source.introduction_request": "Introduction requests",
   "brief.coverage.source.automation_run": "Automation failures",
@@ -726,6 +728,9 @@ export const en = {
   "brief.plan.open": "Open weekly plan",
   "worklist.source.weekly_commitment": "Weekly commitment",
   "worklist.untitled.weekly_commitment": "Weekly commitment",
+  "worklist.source.awaiting_reply": "Follow-up",
+  "worklist.untitled.awaiting_reply": "Follow-up",
+  "worklist.untitled.meeting_follow_up": "Meeting",
   "brief.plan.select": "Find a deal, lead, contact, company or project",
   "brief.plan.period": "Current plan · week of {date}",
   "brief.forecast.period":
@@ -1735,8 +1740,6 @@ export const en = {
   "co.strip.lastTouch": "Last contact",
   "co.strip.lastTouch.today": "Today",
   "co.strip.lastTouch.ago": "{count} d",
-  "co.strip.lastTouch.theirs": "Inbound",
-  "co.strip.lastTouch.ours": "Outbound",
   "co.strip.lastTouch.never": "None",
   // Named for what the card READS. "Next" over a meeting date, on a card whose
   // door opened the task list, let a company with a due task and no meeting
@@ -2912,12 +2915,11 @@ export const en = {
   "tags.more": "+{count} more",
   "tags.showLess": "Show less",
   "tags.removeTag": "Remove {name}",
-  "tags.removeTitle": "Remove {name} from this record?",
+  "tags.removed": "{name} removed from this record",
+  "tags.restored": "{name} is back on this record",
   "tags.addedBy": "Added by {who} · {when}",
   "tags.addedByUndated": "Added by {who}",
   "tags.addedOn": "Added {when}",
-  "tags.visibleWorkspaceWide": "Tag names are visible across the company.",
-  "tags.removeFromRecord": "Remove from this record",
   "tags.withheld": "Hidden for your role",
   "tags.emptyTitle": "No tags yet",
   "tags.emptyBody":
@@ -3026,6 +3028,13 @@ export const en = {
   "leadReasons.removeTitle": "Remove this reason?",
   "leadReasons.removeBody":
     "“{label}” is not used by any lead and is removed from the list.",
+  "followUpSettings.title": "Follow-ups",
+  "followUpSettings.sub":
+    "When a message sent to a customer comes back on the sender’s Home as a follow-up.",
+  "followUpSettings.days": "Remind after (days)",
+  "followUpSettings.daysHint":
+    "Days a sent message can go unanswered before its sender is reminded to follow up, 1 to 30.",
+  "followUpSettings.outOfRange": "Enter a whole number of days from 1 to 30.",
   "leadHandling.title": "Lead handling",
   "leadHandling.sub": "How new leads are handled.",
   "leadHandling.firstResponse": "First-response target",
@@ -4287,7 +4296,6 @@ export const en = {
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Call",
   "co.spine.kind.meeting": "Meeting",
-  "co.spine.kind.note": "Note",
   "co.spine.kind.message": "Message",
   "co.spine.andOthers": "{names} and {count} others",
   "co.spine.said.to": "{what} to {who}",
@@ -9555,6 +9563,16 @@ export const en = {
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.baseUrl.help.gemini":
+    "Host up to the API version, such as /v1beta; model paths are added after it.",
+  "aiRouting.baseUrl.placeholder.gemini":
+    "https://generativelanguage.googleapis.com/v1beta",
+  "aiRouting.baseUrl.help.openai":
+    "Host root; /v1 is added. Blank uses OpenAI’s own API.",
+  "aiRouting.baseUrl.placeholder.openai": "https://api.openai.com",
+  "aiRouting.baseUrl.help.anthropic":
+    "Host root; /v1 is added. Blank uses Anthropic’s own API.",
+  "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
   "aiRouting.models.askingLocation":
     "Asking Google which models {location} serves…",
   "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",
@@ -11062,7 +11080,6 @@ export const en = {
   "lists.why.inDays_one": "in {count} day",
   "lists.why.inDays_other": "in {count} days",
   "lists.remove": "Take off the Shortlist",
-  "lists.removeTitle": "Take this record off the Shortlist?",
   "lists.note": "Why (optional)",
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.record.title": "Lists",
@@ -11071,6 +11088,8 @@ export const en = {
   "lists.record.check": "Check a Live List",
   "lists.record.checkPick": "Pick a Live List",
   "lists.record.truncated": "And more lists not shown here.",
+  "lists.record.takenOff": "Taken off {name}",
+  "lists.record.putBack": "Back on {name}",
   "lists.addToShortlist": "Add to Shortlist",
   "lists.add": "Add",
   "lists.shortlist": "Shortlist",
@@ -11760,6 +11779,14 @@ export const en = {
   "worklist.because.meeting_booked.value": "meeting booked for {value}",
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
+  "worklist.because.you_wrote_last": "you wrote last",
+  "worklist.because.no_reply_days": "no reply",
+  "worklist.because.no_reply_days.value_one": "no reply for {value} day",
+  "worklist.because.no_reply_days.value_other": "no reply for {value} days",
+  "worklist.because.met_days_ago": "met",
+  "worklist.because.met_days_ago.value_one": "met {value} day ago",
+  "worklist.because.met_days_ago.value_other": "met {value} days ago",
+  "worklist.because.nothing_sent_since": "nothing sent since",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",
@@ -11967,6 +11994,7 @@ export const en = {
   // Where the composer actually opens, the verb is the ACT rather than the way
   // to it. The two labels are separate keys because the two clicks differ.
   "worklist.verb.draft_reply_now": "Draft reply",
+  "worklist.verb.draft_follow_up_now": "Draft follow-up",
   // A FIRST message rather than an answer to one. Separate keys because the two
   // are different acts: a row saying "reply" over an opening outreach names a
   // conversation that has not happened yet.
@@ -12176,6 +12204,17 @@ export const en = {
   "aiProviderSettings.service.together": "Together",
   "aiProviderSettings.service.groq": "Groq",
   "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.langdockEu": "Langdock (EU)",
+  "aiProviderSettings.service.langdockUs": "Langdock (US)",
+  "aiProviderSettings.service.langdockGemini.note":
+    "Langdock serves no Gemini embeddings. If search and retrieval use Gemini, move them to another provider first, or they stop working.",
+  "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
+  "aiProviderSettings.service.openai": "OpenAI",
+  "aiProviderSettings.service.otherOpenai": "Other OpenAI API host",
+  "aiProviderSettings.service.anthropic": "Anthropic",
+  "aiProviderSettings.service.otherGemini": "Other Gemini-compatible host",
+  "aiProviderSettings.service.otherAnthropic":
+    "Other Anthropic-compatible host",
   "aiProviderSettings.service.typesafe": "TypeSafe (default)",
   "aiProviderSettings.service.otherChat": "Other OpenAI-compatible service",
   "aiProviderSettings.service.otherDecisions": "Other decision server",

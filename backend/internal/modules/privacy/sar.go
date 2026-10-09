@@ -156,8 +156,9 @@ type SARPackage struct {
 	// ListMemberships is each Shortlist the subject is on, by name, with who
 	// chose them, when and the note on why. ListMembershipHistory is every
 	// time they were added or taken off one, or seen joining or leaving a
-	// Live List. LiveListMemberships is each Live List whose last check held
-	// them, and since when.
+	// Live List; a removal also keeps the note the membership carried.
+	// LiveListMemberships is each Live List whose last check held them, and
+	// since when.
 	ListMemberships       []map[string]any `json:"list_memberships"`
 	ListMembershipHistory []map[string]any `json:"list_membership_history"`
 	LiveListMemberships   []map[string]any `json:"live_list_memberships"`

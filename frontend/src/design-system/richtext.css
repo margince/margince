@@ -171,6 +171,6 @@
    looked live would invite text the returning reference never saw. */
 .richtext.is-disabled .richtext-input,
 .richtext.is-disabled .richtext-foot {
-  background: var(--bgCard);
+  background: var(--bgInset);
   cursor: not-allowed;
 }
