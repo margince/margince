@@ -33157,7 +33157,7 @@ components:
         state: { type: string, enum: [queued, submitting, in_progress, completed, no_match, skipped, submission_unknown, failed, cancelled] }
         skip_reason:
           type: [string, 'null']
-          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, no_identifiers, null]
+          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, no_identifiers, category_in_flight, null]
           description: |
             Why a `skipped` run sent nothing. Null for every other state.
             `duplicate_subject_candidate` means the subject looked like a duplicate of an
@@ -33170,6 +33170,10 @@ components:
             a company, so the provider has nothing to match on; an automatic trigger declines
             rather than spending a call that can only answer "no match". A human pressing the
             button on the contact is still allowed to try.
+            `category_in_flight` means a live run for this contact and provider was already
+            buying at least one of the categories asked for. The request is refused whole
+            rather than narrowed, nothing was reserved, and asking again once that run has
+            finished is admitted.
         connection_version: { type: integer, format: int64, minimum: 1 }
         configuration_snapshot: { $ref: '#/components/schemas/ProviderConfiguration' }
         requested_categories: { type: array, uniqueItems: true, items: { type: string } }

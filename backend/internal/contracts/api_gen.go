@@ -12866,6 +12866,7 @@ func (e ProviderLocationListUnavailable) Valid() bool {
 const (
 	ProviderRunSkipReasonAlreadyFresh              ProviderRunSkipReason = "already_fresh"
 	ProviderRunSkipReasonBudgetExhausted           ProviderRunSkipReason = "budget_exhausted"
+	ProviderRunSkipReasonCategoryInFlight          ProviderRunSkipReason = "category_in_flight"
 	ProviderRunSkipReasonDuplicateSubjectCandidate ProviderRunSkipReason = "duplicate_subject_candidate"
 	ProviderRunSkipReasonLowBalance                ProviderRunSkipReason = "low_balance"
 	ProviderRunSkipReasonNoIdentifiers             ProviderRunSkipReason = "no_identifiers"
@@ -12880,6 +12881,8 @@ func (e ProviderRunSkipReason) Valid() bool {
 	case ProviderRunSkipReasonAlreadyFresh:
 		return true
 	case ProviderRunSkipReasonBudgetExhausted:
+		return true
+	case ProviderRunSkipReasonCategoryInFlight:
 		return true
 	case ProviderRunSkipReasonDuplicateSubjectCandidate:
 		return true
@@ -40152,6 +40155,10 @@ type ProviderRun struct {
 	// a company, so the provider has nothing to match on; an automatic trigger declines
 	// rather than spending a call that can only answer "no match". A human pressing the
 	// button on the contact is still allowed to try.
+	// `category_in_flight` means a live run for this contact and provider was already
+	// buying at least one of the categories asked for. The request is refused whole
+	// rather than narrowed, nothing was reserved, and asking again once that run has
+	// finished is admitted.
 	SkipReason *ProviderRunSkipReason `json:"skip_reason,omitempty"`
 	State      ProviderRunState       `json:"state"`
 
@@ -40179,6 +40186,10 @@ type ProviderRun struct {
 // a company, so the provider has nothing to match on; an automatic trigger declines
 // rather than spending a call that can only answer "no match". A human pressing the
 // button on the contact is still allowed to try.
+// `category_in_flight` means a live run for this contact and provider was already
+// buying at least one of the categories asked for. The request is refused whole
+// rather than narrowed, nothing was reserved, and asking again once that run has
+// finished is admitted.
 type ProviderRunSkipReason string
 
 // ProviderRunState defines model for ProviderRun.State.

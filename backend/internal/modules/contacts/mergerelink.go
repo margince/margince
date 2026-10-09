@@ -364,6 +364,9 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("re-fingerprint the merged-away record's live runs: %w", err)
 	}
+	if err := settleCategoryClaims(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE provider_run SET contact_id = $2 WHERE contact_id = $1`,
 		sourceID.UUID, targetID.UUID); err != nil {

@@ -87,4 +87,9 @@ const (
 	// a different fact from not_eligible: nothing forbids this purchase, there
 	// is simply nothing to ask with. A human pressing the button may still try.
 	SkipNoIdentifiers SkipReason = "no_identifiers"
+	// SkipCategoryInFlight means a live run on this contact is already buying
+	// at least one of the categories asked for. The request is refused whole,
+	// not narrowed to the remainder. Buying less than was asked for, while
+	// answering as though nothing was wrong, is a failure a rep cannot see.
+	SkipCategoryInFlight SkipReason = "category_in_flight"
 )

@@ -371,6 +371,7 @@ var tableOwners = map[string]string{
 	"provider_connection_budget": "internal/modules/integrations",
 	"provider_run":               "internal/modules/integrations",
 	"provider_run_reservation":   "internal/modules/integrations",
+	"provider_run_category":      "internal/modules/integrations",
 	// The purchased VALUES, owned by contacts rather than by integrations
 	// (migration 0219 says so in the DDL): the domain decides what a claim
 	// means and how it renders, while integrations owns the run that bought
