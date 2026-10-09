@@ -15,7 +15,7 @@ import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinetext";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { CompanyDetails } from "./companydetails";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { VatMark } from "./companyvatmark";
@@ -141,9 +141,8 @@ export function SidecarFieldRow({
   const label = labelText ?? (labelKey ? t(labelKey) : field);
   const current = fields.find((one) => one.field === field);
   const save = async (next: string) => {
-    const { error } = await api.PATCH(
-      "/companies/{id}/profile-fields/{field}",
-      {
+    unwrap(
+      await api.PATCH("/companies/{id}/profile-fields/{field}", {
         params: {
           path: { id: companyId, field },
           // A field nobody has stated yet has no row and so no version to pin:
@@ -153,11 +152,8 @@ export function SidecarFieldRow({
           ...(current ? ifMatch(requireVersion(current.version)) : {}),
         },
         body: { value: next.trim() },
-      },
+      }),
     );
-    if (error) {
-      throwProblem(error);
-    }
     // The record read and the profile-fields read both now describe the write
     // that just landed, and the 360 summarises it.
     await Promise.all([

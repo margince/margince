@@ -22,7 +22,7 @@ import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 import "./users-access.css";
 
@@ -53,11 +53,11 @@ function useAccessPreview(role: Role, teamIds: string[]) {
     // set of teams has to spell the same key wherever it is read.
     queryKey: ["access-preview", role, [...teamIds].sort(stable).join(",")],
     queryFn: async (): Promise<AccessPreview> => {
-      const { data, error } = await api.GET("/users/access-preview", {
-        params: { query: { role, team_ids: teamIds } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/users/access-preview", {
+          params: { query: { role, team_ids: teamIds } },
+        }),
+      );
     },
   });
 }
@@ -182,11 +182,12 @@ export function TeamsCard() {
   // the one thing a confirmation must not call a team.
   const restore = useMutation({
     mutationFn: async ({ id }: { id: string; name: string }) => {
-      const { error } = await api.PATCH("/teams/{id}", {
-        params: { path: { id } },
-        body: { archived: false },
-      });
-      if (error) throwProblem(error);
+      unwrap(
+        await api.PATCH("/teams/{id}", {
+          params: { path: { id } },
+          body: { archived: false },
+        }),
+      );
     },
     // An Undo that fails has to say so. The message it was offered from is
     // consumed the moment it is pressed, so a rejected restore would otherwise
@@ -203,11 +204,12 @@ export function TeamsCard() {
   });
   const archive = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.PATCH("/teams/{id}", {
-        params: { path: { id } },
-        body: { archived: true },
-      });
-      if (error) throwProblem(error);
+      unwrap(
+        await api.PATCH("/teams/{id}", {
+          params: { path: { id } },
+          body: { archived: true },
+        }),
+      );
     },
     onSuccess: (_archived, id) => {
       // Read BEFORE the roster refetch lands, which takes the named row away.
@@ -394,10 +396,11 @@ function TeamMembers({
       member: boolean;
     }) => {
       const params = { params: { path: { id: team.id, userId } } };
-      const { error } = member
-        ? await api.PUT("/teams/{id}/members/{userId}", params)
-        : await api.DELETE("/teams/{id}/members/{userId}", params);
-      if (error) throwProblem(error);
+      unwrap(
+        member
+          ? await api.PUT("/teams/{id}/members/{userId}", params)
+          : await api.DELETE("/teams/{id}/members/{userId}", params),
+      );
     },
     onSuccess: () => {
       // Both lists move: the roster carries the memberships, and the team list
@@ -485,9 +488,7 @@ function NewTeamAction() {
   // PREVIOUS name in the window before react-query re-arms its options.
   const create = useMutation({
     mutationFn: async (name: string) => {
-      const { data, error } = await api.POST("/teams", { body: { name } });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.POST("/teams", { body: { name } }));
     },
     onSuccess: () => {
       setDraft("");

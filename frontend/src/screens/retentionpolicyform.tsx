@@ -5,7 +5,7 @@ import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import {
   actionLabelKey,
   isDuplicateScope,
@@ -47,22 +47,19 @@ export function RetentionPolicyForm({
 
   const create = useMutation({
     mutationFn: async (window: number) => {
-      const { data, error } = await api.POST("/retention-policies", {
-        body: {
-          scope,
-          retain_days: window,
-          action,
-          // An omitted basis is null on the wire, not "" — the auditor reading
-          // the row must be able to tell "not stated" from a blank string
-          // somebody saved.
-          lawful_basis: lawfulBasis.trim() || null,
-          enabled,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/retention-policies", {
+          body: {
+            scope,
+            retain_days: window,
+            action,
+            // An omitted basis is null on the wire, not "". The auditor reading the
+            // row must tell "not stated" from a blank string somebody saved.
+            lawful_basis: lawfulBasis.trim() || null,
+            enabled,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: RETENTION_POLICIES_KEY });

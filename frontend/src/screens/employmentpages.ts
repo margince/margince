@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { ENTITY_NAME_KEY, fetchEntityName } from "./entityref";
 
 type View = components["schemas"]["Contact360"];
@@ -15,17 +15,18 @@ export function useEmploymentPages(view: View) {
     enabled: Boolean(view.employments?.page.has_more),
     initialPageParam: view.employments?.page.next_cursor ?? "",
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/relationships", {
-        params: {
-          query: {
-            contact_id: id,
-            kind: "employment",
-            cursor: pageParam,
-            limit: 50,
+      const data = unwrap(
+        await api.GET("/relationships", {
+          params: {
+            query: {
+              contact_id: id,
+              kind: "employment",
+              cursor: pageParam,
+              limit: 50,
+            },
           },
-        },
-      });
-      if (error) throwProblem(error);
+        }),
+      );
       const companies = new Map(
         await Promise.all(
           [

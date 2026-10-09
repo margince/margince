@@ -9,7 +9,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // The company capture-settings card (CAP-WIRE-7, ADR-0072): the
 // captured-company auto-enrich toggle. Every role reads it; only admin/ops
@@ -44,13 +44,11 @@ function useUpdateCaptureSettings() {
     // settings, and a mutation that could only send one would have to grow a
     // second copy of itself the moment a third arrives.
     mutationFn: async (patch: CaptureSettingsPatch) => {
-      const { data, error } = await api.PATCH("/capture/settings", {
-        body: patch,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/capture/settings", {
+          body: patch,
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["capture-settings"], data);

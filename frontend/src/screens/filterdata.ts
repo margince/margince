@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { historyFieldLabelKey } from "./historyfieldlabels";
 import {
   type EncodedPredicate,
@@ -60,13 +60,11 @@ export function useFilterVocabulary(resource: FilterResource, enabled = true) {
     queryKey: vocabularyQueryKey(resource),
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/filters/vocabulary", {
-        params: { query: { resource } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/filters/vocabulary", {
+          params: { query: { resource } },
+        }),
+      );
     },
   });
 }
@@ -103,13 +101,11 @@ export function useFilterPreview(
     // in flight, and the caller shows staleness rather than absence.
     placeholderData: (previous) => previous,
     queryFn: async () => {
-      const { data, error } = await api.POST("/filters/preview", {
-        body: { resource, filter, limit },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/filters/preview", {
+          body: { resource, filter, limit },
+        }),
+      );
     },
   });
 }

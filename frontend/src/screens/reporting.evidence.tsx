@@ -12,7 +12,7 @@ import { Popover } from "../design-system/popover";
 import { Stack } from "../design-system/stack";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { isVersionSkewOf, QueryGate, throwProblem } from "./common";
+import { isVersionSkewOf, QueryGate, throwProblem, unwrap } from "./common";
 import {
   metricLabel,
   type ReportingEvaluation,
@@ -67,9 +67,7 @@ export function ReportingEvidenceDrawer({
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const definition = catalog.data?.metrics.find(

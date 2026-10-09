@@ -8,7 +8,7 @@ import { formatDecimal, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { attemptReasonLabel, tierLabel } from "./ai-decision-labels";
 import { ExportScenarioDialog } from "./aiexport";
-import { QueryStates, throwProblem } from "./common";
+import { QueryStates, unwrap } from "./common";
 
 // A string response is shown verbatim (real newlines); an object is
 // pretty-printed. Either way the .code-block surface wraps and scrolls it.
@@ -36,11 +36,11 @@ export function CallDetailPanel({
   const query = useQuery({
     queryKey: ["ai-call", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/calls/{id}", {
-        params: { path: { id } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/ai/calls/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
   return (

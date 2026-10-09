@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 /**
  * One activity, read whole, under the key a write to it invalidates. Nothing is
@@ -25,13 +25,12 @@ export function useActivity(activityId: string | undefined, enabled = true) {
     gcTime: 0,
     enabled: reading,
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId ?? "" } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/activities/{id}", {
+          params: { path: { id: activityId ?? "" } },
+        }),
+        t,
+      );
     },
   });
   return {

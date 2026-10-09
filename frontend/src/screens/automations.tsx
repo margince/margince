@@ -24,7 +24,7 @@ import {
   problemMessageOf,
   QueryGate,
   type QueryLike,
-  throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import "./automations.css";
@@ -218,17 +218,16 @@ export function AutomationRow({
 
   const patch = useMutation({
     mutationFn: async ({ id, version, body }: AutomationPatch) => {
-      const { data, error } = await api.PATCH("/automations/{id}", {
-        params: {
-          path: { id },
-          header: version === undefined ? {} : { "If-Match": String(version) },
-        },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/automations/{id}", {
+          params: {
+            path: { id },
+            header:
+              version === undefined ? {} : { "If-Match": String(version) },
+          },
+          body,
+        }),
+      );
     },
     onSuccess: () => {
       setEditing(shut);
@@ -373,11 +372,7 @@ export function AutomationsAdmin() {
   const catalog = useQuery({
     queryKey: ["automation-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/automations/catalog");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/automations/catalog"));
     },
   });
 
@@ -391,13 +386,11 @@ export function AutomationsAdmin() {
     queryKey: ["automations"],
     enabled: canViewRuns,
     queryFn: async () => {
-      const { data, error } = await api.GET("/automations", {
-        params: { query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/automations", {
+          params: { query: { limit: 50 } },
+        }),
+      );
     },
   });
 
@@ -407,13 +400,11 @@ export function AutomationsAdmin() {
       name: string;
       params: Record<string, unknown>;
     }) => {
-      const { data, error } = await api.POST("/automations", {
-        body: input,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/automations", {
+          body: input,
+        }),
+      );
     },
     onSuccess: () => {
       setStaged(shut);

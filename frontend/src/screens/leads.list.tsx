@@ -15,7 +15,7 @@ import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useAssignableUserOptions } from "./assigneepicker";
-import { ProblemError, QueryGate, throwProblem, useMe } from "./common";
+import { ProblemError, QueryGate, unwrap, useMe } from "./common";
 import { CreateAction } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { LeadBulkBar } from "./leadbulk";
@@ -47,23 +47,20 @@ async function fetchLeadsPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Lead>> {
-  const { data, error } = await api.GET("/leads", {
-    params: {
-      query: {
-        q: query.q || undefined,
-        sort: query.sort || undefined,
-        include_archived: query.includeArchived || undefined,
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        ...listQueryParams(query.filters),
+  const data = unwrap(
+    await api.GET("/leads", {
+      params: {
+        query: {
+          q: query.q || undefined,
+          sort: query.sort || undefined,
+          include_archived: query.includeArchived || undefined,
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          ...listQueryParams(query.filters),
+        },
       },
-    },
-  });
-  if (error) {
-    // A LIST read's honest-error path only needs a message to render — the
-    // dedupe "view existing" link is a create/update-only concern.
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {
@@ -127,10 +124,12 @@ async function createLead(
     (value): value is string => Boolean(value),
   );
   for (const probe of probes) {
-    const { data: matches, error: probeError } = await api.GET("/leads", {
-      params: { query: { q: probe, limit: 10 } },
-    });
-    if (probeError) throwProblem(probeError, t);
+    const matches = unwrap(
+      await api.GET("/leads", {
+        params: { query: { q: probe, limit: 10 } },
+      }),
+      t,
+    );
     const normalized = probe.toLowerCase().replace(/\/$/, "");
     const existing = matches.data.find(
       (lead) =>
@@ -148,13 +147,12 @@ async function createLead(
       );
     }
   }
-  const { data, error } = await api.POST("/leads", {
-    body: { ...body, ...customFields },
-  });
-  if (error) {
-    throwProblem(error, t);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/leads", {
+      body: { ...body, ...customFields },
+    }),
+    t,
+  );
 }
 
 export function LeadsScreen() {

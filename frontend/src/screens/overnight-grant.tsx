@@ -19,7 +19,7 @@ import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import "./overnight-grant.css";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, unwrap } from "./common";
 
 // The rep's standing answer: may an agent work as them overnight?
 //
@@ -78,10 +78,7 @@ export function useAgentGrants() {
   return useQuery({
     queryKey: GRANTS_KEY,
     queryFn: async () => {
-      const { data, error } = await api.GET("/me/agent-grants");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/me/agent-grants"));
       return data.data;
     },
   });
@@ -95,14 +92,12 @@ export function useSetAgentGrant() {
   const t = useT();
   return useMutation({
     mutationFn: async (granted: boolean) => {
-      const { data, error } = await api.PUT("/me/agent-grants/{spec}", {
-        params: { path: { spec: MORNING_BRIEF } },
-        body: { granted },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/me/agent-grants/{spec}", {
+          params: { path: { spec: MORNING_BRIEF } },
+          body: { granted },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: GRANTS_KEY });

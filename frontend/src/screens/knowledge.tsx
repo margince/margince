@@ -21,6 +21,7 @@ import {
   problemMessageOf,
   QueryGate,
   throwProblem,
+  unwrap,
   WriteRefused,
 } from "./common";
 import {
@@ -80,12 +81,11 @@ function useCreateDocumentSet() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { name: string; topicStatement: string }) => {
-      const { error } = await api.POST("/knowledge/corpora", {
-        body: { name: vars.name, topic_statement: vars.topicStatement },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/knowledge/corpora", {
+          body: { name: vars.name, topic_statement: vars.topicStatement },
+        }),
+      );
     },
     onSuccess: () => client.invalidateQueries({ queryKey: SETS_KEY }),
   });
@@ -95,12 +95,11 @@ function useArchiveDocumentSet() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { id: string }) => {
-      const { error } = await api.DELETE("/knowledge/corpora/{id}", {
-        params: { path: { id: vars.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/knowledge/corpora/{id}", {
+          params: { path: { id: vars.id } },
+        }),
+      );
     },
     onSuccess: () => client.invalidateQueries({ queryKey: SETS_KEY }),
   });
@@ -201,12 +200,11 @@ function useDeleteDocument(corpusId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { id: string }) => {
-      const { error } = await api.DELETE("/knowledge/documents/{id}", {
-        params: { path: { id: vars.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/knowledge/documents/{id}", {
+          params: { path: { id: vars.id } },
+        }),
+      );
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: documentsKey(corpusId) });

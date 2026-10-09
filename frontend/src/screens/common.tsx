@@ -15,6 +15,19 @@ import type { Provenance, SourceAuthor } from "../design-system/trust";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./common.css";
+import {
+  type FieldProblem,
+  isRecord,
+  problemCode,
+  problemFieldErrors,
+} from "./problembody";
+
+export type { FieldProblem } from "./problembody";
+export {
+  problemCode,
+  problemExistingId,
+  problemFieldErrors,
+} from "./problembody";
 
 // Shared screen plumbing: honest loading / error / empty states (§3a screen-
 // state matrix), the ONE refused-write notice, the captured_by → provenance
@@ -180,8 +193,7 @@ export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await api.POST("/auth/logout");
-      if (error) throwProblem(error);
+      unwrap(await api.POST("/auth/logout"));
     },
     onSuccess: async () => {
       // The next 401 at the boundary is this deliberate exit, not an
@@ -616,34 +628,20 @@ export function throwProblem(
   throw new ProblemError(problem, t);
 }
 
-// Pull the collided record's id + code out of a duplicate (409) problem body,
-// or null when absent / not a duplicate / the row isn't caller-visible.
-export function problemExistingId(
-  problem: unknown,
-): { id: string; code: string } | null {
-  if (!problem || typeof problem !== "object") return null;
-  const record = problem as Record<string, unknown>;
-  const code = typeof record.code === "string" ? record.code : null;
-  const details =
-    record.details && typeof record.details === "object"
-      ? (record.details as Record<string, unknown>)
-      : null;
-  const id =
-    details && typeof details.existing_id === "string"
-      ? details.existing_id
-      : null;
-  if (code && id) return { id, code };
-  return null;
-}
+// The data arm of an API call's result: the arm whose error is absent.
+type ApiAnswer<R> = R extends { data: infer D; error?: undefined } ? D : never;
 
-// problemCode pulls the RFC-7807 `code` discriminator out of a problem body,
-// or null when absent — so a caller keys on the specific server condition
-// (e.g. webhooks_not_configured) rather than on the bare HTTP status, which a
-// transient dependency failure can share.
-export function problemCode(problem: unknown): string | null {
-  if (!problem || typeof problem !== "object") return null;
-  const record = problem as Record<string, unknown>;
-  return typeof record.code === "string" ? record.code : null;
+// unwrap answers an API call's data, or throws its problem as throwProblem does.
+export function unwrap<R extends { data?: unknown; error?: unknown }>(
+  result: R,
+  t?: (key: MessageKey) => string,
+): ApiAnswer<R>;
+export function unwrap(
+  result: { data?: unknown; error?: unknown },
+  t?: (key: MessageKey) => string,
+): unknown {
+  if (result.error) throwProblem(result.error, t);
+  return result.data;
 }
 
 // The same discriminator, read off a query/mutation FAILURE rather than a raw
@@ -688,53 +686,6 @@ export function logUnexpectedError(error: unknown): void {
   if (!(error instanceof ProblemError || error instanceof ConnectivityError)) {
     console.error(error);
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-// One assertion a 422 makes about one submitted field. The server states the
-// condition HERE, not at the top level: every validation problem carries the
-// same top-level `code` of "validation_error", so `problemCode` cannot tell
-// two refusals apart and only the field + code pair names the rule that fired.
-export type FieldProblem = Readonly<{
-  field: string;
-  code: string;
-  message: string;
-}>;
-
-// The top-level code every 422 carries — httperr.Validation is the only
-// emitter of the per-field `details.errors[]` shape below.
-const VALIDATION_PROBLEM_CODE = "validation_error";
-
-// Pull `details.errors[]` out of a validation problem body, dropping any entry
-// that is not a complete {field, code, message} — a partial entry cannot be
-// matched on, and inventing empty strings for its holes would let a caller key
-// on a rule the server never asserted.
-//
-// The validation code is required, not incidental: `details` is a free-form
-// RFC-7807 extension every problem may carry, so reading an `errors` array off
-// any body at all would let an unrelated failure that happens to spell one be
-// read as the server asserting a rule about a submitted field.
-export function problemFieldErrors(problem: unknown): FieldProblem[] {
-  if (!isRecord(problem) || problem.code !== VALIDATION_PROBLEM_CODE) return [];
-  if (!isRecord(problem.details)) return [];
-  const errors = problem.details.errors;
-  if (!Array.isArray(errors)) return [];
-  const out: FieldProblem[] = [];
-  for (const entry of errors) {
-    if (!isRecord(entry)) continue;
-    const { field, code, message } = entry;
-    if (
-      typeof field === "string" &&
-      typeof code === "string" &&
-      typeof message === "string"
-    ) {
-      out.push({ field, code, message });
-    }
-  }
-  return out;
 }
 
 // The same per-field assertions read off a query/mutation FAILURE, on the same
@@ -834,13 +785,11 @@ export function useFinanceSummary(companyId: string) {
   return useQuery<components["schemas"]["CompanyFinanceSummary"]>({
     queryKey: ["finance-summary", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/finance-summary", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}/finance-summary", {
+          params: { path: { id: companyId } },
+        }),
+      );
     },
   });
 }

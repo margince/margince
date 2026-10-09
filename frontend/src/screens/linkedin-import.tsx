@@ -12,7 +12,7 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "./common";
 import {
   LINKEDIN_ACCOUNT_KEY,
   useSaveLinkedInAccount,
@@ -82,11 +82,7 @@ function useLinkedInAccount() {
   return useQuery({
     queryKey: LINKEDIN_ACCOUNT_KEY,
     queryFn: async (): Promise<LinkedInAccount> => {
-      const { data, error } = await api.GET("/me/linkedin-account", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/me/linkedin-account", {}));
     },
   });
 }

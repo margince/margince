@@ -11,7 +11,7 @@ import { Switch } from "../design-system/switch";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { problemMessageOf, QueryStates, unwrap } from "./common";
 
 type TransitionPolicy = components["schemas"]["TransitionPolicy"];
 type TransitionRecord = components["schemas"]["StageTransitionRecord"];
@@ -52,12 +52,11 @@ export function StageRulesCard({
     queryKey: ["stage-automation", "policies", pipelineId],
     enabled: pipelineId !== "",
     queryFn: async () => {
-      const { data, error } = await api.GET("/stage-automation/policies/{id}", {
-        params: { path: { id: pipelineId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/stage-automation/policies/{id}", {
+          params: { path: { id: pipelineId } },
+        }),
+      );
       // The whole response, not only the rows: it carries whether this
       // installation permits automation at all, and a rule's mode means nothing
       // without that.
@@ -72,23 +71,20 @@ export function StageRulesCard({
       mode: "propose" | "auto";
       version?: number;
     }) => {
-      const { data, error } = await api.PUT("/stage-automation/policies/{id}", {
-        params: { path: { id: pipelineId } },
-        body: {
-          from_stage_id: next.from,
-          to_stage_id: next.to,
-          mode: next.mode,
-          // The version the row was READ at, so a save cannot silently
-          // overwrite a change somebody else made while this page was open.
-          // Absent on a transition with no rule yet, because there was none
-          // to have read.
-          ...(next.version === undefined ? {} : { if_version: next.version }),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/stage-automation/policies/{id}", {
+          params: { path: { id: pipelineId } },
+          body: {
+            from_stage_id: next.from,
+            to_stage_id: next.to,
+            mode: next.mode,
+            // The version the row was read at, so a save cannot silently overwrite a
+            // change somebody else made while this page was open. Absent on a
+            // transition with no rule yet, because there was none to have read.
+            ...(next.version === undefined ? {} : { if_version: next.version }),
+          },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stage-automation"] });
@@ -249,20 +245,15 @@ function SuspendedRule({
   const queryClient = useQueryClient();
   const resume = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST(
-        "/stage-automation/policies/{id}/resume",
-        {
+      return unwrap(
+        await api.POST("/stage-automation/policies/{id}/resume", {
           params: { path: { id: pipelineId } },
           body: {
             from_stage_id: rule.from_stage_id,
             to_stage_id: rule.to_stage_id,
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: () => {
       setAsking(false);

@@ -12,7 +12,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingComparison } from "./reporting.comparison";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -63,31 +63,34 @@ export function ReportingReportDetail({
     mutationFn: async (action: ReportAction) => {
       switch (action.kind) {
         case "duplicate": {
-          const { data, error } = await api.POST("/analytics/reports", {
-            body: {
-              name: (action.name ?? action.report.name).slice(0, 160),
-              audience: "private",
-              selection: action.report.selection,
-            },
-          });
-          if (error) throwProblem(error);
+          const data = unwrap(
+            await api.POST("/analytics/reports", {
+              body: {
+                name: (action.name ?? action.report.name).slice(0, 160),
+                audience: "private",
+                selection: action.report.selection,
+              },
+            }),
+          );
           return { reportId: data.id };
         }
         case "archive": {
-          const { error } = await api.DELETE("/analytics/reports/{id}", {
-            params: { path: { id: action.report.id } },
-          });
-          if (error) throwProblem(error);
+          unwrap(
+            await api.DELETE("/analytics/reports/{id}", {
+              params: { path: { id: action.report.id } },
+            }),
+          );
           return {};
         }
         case "freeze": {
-          const { error } = await api.POST("/analytics/reports/{id}/editions", {
-            params: {
-              path: { id: action.report.id },
-              header: { "Idempotency-Key": action.key },
-            },
-          });
-          if (error) throwProblem(error);
+          unwrap(
+            await api.POST("/analytics/reports/{id}/editions", {
+              params: {
+                path: { id: action.report.id },
+                header: { "Idempotency-Key": action.key },
+              },
+            }),
+          );
           return { reportId: action.report.id };
         }
       }

@@ -13,7 +13,13 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemCode, problemMessageOf, throwProblem, useMe } from "./common";
+import {
+  problemCode,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+  useMe,
+} from "./common";
 import { statusLabel, statusTone } from "./connector-status";
 import { ConnectionIdentity } from "./connectors.identity";
 import { TelegramConnectForm } from "./telegram-connect-form";
@@ -152,12 +158,11 @@ export function TelegramConnectorsPanel() {
 
   const disconnect = useMutation({
     mutationFn: async (connection: ChannelConnection) => {
-      const { error } = await api.DELETE("/channel-connections/{id}", {
-        params: { path: { id: connection.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/channel-connections/{id}", {
+          params: { path: { id: connection.id } },
+        }),
+      );
     },
     onSuccess: () => {
       setDisconnecting(null);

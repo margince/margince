@@ -28,7 +28,7 @@ import {
   type SetDecision,
   useSetBlockedDomain,
 } from "./blocked-domains-decision";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // The domains this installation refuses a company (ADR-0072). A vendor the
 // business merely USES has a real corporate website, so every piece of evidence
@@ -91,14 +91,11 @@ function useReopenDomain() {
     // committed render, so what it sends cannot be older than the row the
     // operator pressed.
     mutationFn: async (domain: string) => {
-      const { data, error } = await api.POST(
-        "/capture/blocked-domains/{domain}/reopen",
-        { params: { path: { domain } } },
+      return unwrap(
+        await api.POST("/capture/blocked-domains/{domain}/reopen", {
+          params: { path: { domain } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["blocked-domains"] });

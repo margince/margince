@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./rates.css";
 
 /** The sheet this product re-reads from its source through an approval. */
@@ -34,10 +34,7 @@ export function RefreshFromSources({ path }: Readonly<{ path: RefreshPath }>) {
     // previous render's closure — and `mutation-variable-coverage.test.ts`
     // walks the TSX for exactly this shape.
     mutationFn: async (target: RefreshPath) => {
-      const { error } = await api.POST(target);
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(await api.POST(target));
     },
   });
   return (

@@ -15,7 +15,7 @@ import {
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 
 type InputCheck = components["schemas"]["InputCheck"];
@@ -84,13 +84,7 @@ export function useInputChecks(enabled = true) {
     enabled,
     queryKey: ["input-checks"],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/forecast/assurance/exceptions",
-        {},
-      );
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/forecast/assurance/exceptions", {}));
       return data.data;
     },
   });
@@ -357,9 +351,8 @@ function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, answer }: Resolution) => {
-      const { error } = await api.POST(
-        "/forecast/assurance/exceptions/{id}/resolve",
-        {
+      unwrap(
+        await api.POST("/forecast/assurance/exceptions/{id}/resolve", {
           params: { path: { id } },
           body: {
             outcome: answer.outcome,
@@ -367,11 +360,8 @@ function useResolveCheck(onResolved: (id: string) => void) {
             remind_at: answer.remindAt,
             expires_at: answer.expiresAt,
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: async (_data, { id }) => {
       // Both lists move: the finding leaves this one, and the run's readiness

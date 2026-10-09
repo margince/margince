@@ -17,7 +17,7 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { LoadMoreButton, problemMessageOf, throwProblem } from "./common";
+import { LoadMoreButton, problemMessageOf, unwrap } from "./common";
 
 type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
 
@@ -65,13 +65,13 @@ export function ConfirmSubmissionsPanel() {
     queryKey: ["confirm-submissions"],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/confirm-submissions", {
-        params: { query: { resolved: false, cursor: pageParam ?? undefined } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/confirm-submissions", {
+          params: {
+            query: { resolved: false, cursor: pageParam ?? undefined },
+          },
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
@@ -85,20 +85,15 @@ export function ConfirmSubmissionsPanel() {
       resolution: "accepted" | "rejected";
       note: string;
     }) => {
-      const { data, error } = await api.POST(
-        "/confirm-submissions/{id}/resolve",
-        {
+      return unwrap(
+        await api.POST("/confirm-submissions/{id}/resolve", {
           params: { path: { id: command.id } },
           body: {
             resolution: command.resolution,
             note: command.note || undefined,
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: async () => {
       setDecidingId(null);

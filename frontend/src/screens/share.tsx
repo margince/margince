@@ -35,6 +35,7 @@ import {
   problemMessageOf,
   QueryGate,
   throwProblem,
+  unwrap,
 } from "./common";
 import {
   EntityRef,
@@ -214,18 +215,17 @@ async function fetchGrants(
   recordType: RecordType,
   recordId: string,
 ): Promise<RecordGrant[]> {
-  const { data, error } = await api.GET("/record-grants", {
-    params: {
-      query: {
-        record_type: recordType,
-        record_id: recordId,
-        limit: 100,
+  const data = unwrap(
+    await api.GET("/record-grants", {
+      params: {
+        query: {
+          record_type: recordType,
+          record_id: recordId,
+          limit: 100,
+        },
       },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+    }),
+  );
   return data.data;
 }
 

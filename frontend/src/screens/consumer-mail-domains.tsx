@@ -29,7 +29,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import "./consumer-mail-domains.css";
 
 // This installation's own consumer-mail list (CAP-PARAM-5). Mail from a consumer
@@ -91,13 +91,11 @@ function useAddConsumerMailDomain() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (entry: { domain: string; kind: Kind }) => {
-      const { data, error } = await api.POST("/capture/consumer-mail-domains", {
-        body: entry,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/capture/consumer-mail-domains", {
+          body: entry,
+        }),
+      );
     },
     onSuccess: (_written, added) => {
       void queryClient.invalidateQueries({
@@ -114,13 +112,11 @@ function useRemoveConsumerMailDomain() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE(
-        "/capture/consumer-mail-domains/{id}",
-        { params: { path: { id } } },
+      unwrap(
+        await api.DELETE("/capture/consumer-mail-domains/{id}", {
+          params: { path: { id } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({

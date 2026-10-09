@@ -15,7 +15,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack } from "./booking-common";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import "./booking-profile.css";
 
@@ -75,11 +75,11 @@ function ProfileForm({
     ) => {
       const latest = await api.GET("/scheduling/profile");
       if (latest.error) throwProblem(latest.error);
-      const { data, error } = await api.PUT("/scheduling/profile", {
-        body: { ...latest.data, ...value },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.PUT("/scheduling/profile", {
+          body: { ...latest.data, ...value },
+        }),
+      );
     },
     onSuccess: (value) => client.setQueryData(["scheduling-profile"], value),
   });

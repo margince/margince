@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { type ListedRecordType, RECORD_LIST_KEY } from "./recordlistkeys";
 
 /** The record kinds the claim endpoint accepts. */
@@ -23,15 +23,14 @@ export function useClaimRecord(
 ) {
   const queryClient = useQueryClient();
   return async () => {
-    const { error } = await api.POST("/records/{record_type}/{id}/claim", {
-      params: {
-        path: { record_type: recordType, id },
-        ...ifMatch(requireVersion(version)),
-      },
-    });
-    if (error) {
-      throwProblem(error);
-    }
+    unwrap(
+      await api.POST("/records/{record_type}/{id}/claim", {
+        params: {
+          path: { record_type: recordType, id },
+          ...ifMatch(requireVersion(version)),
+        },
+      }),
+    );
     await queryClient.invalidateQueries({
       queryKey: [RECORD_LIST_KEY[recordType]],
     });

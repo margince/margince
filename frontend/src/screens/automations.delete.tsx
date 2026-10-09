@@ -8,7 +8,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 
 type Automation = components["schemas"]["Automation"];
 
@@ -29,12 +29,11 @@ export function DeleteAutomationAction({
 
   const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE("/automations/{id}", {
-        params: { path: { id: automation.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/automations/{id}", {
+          params: { path: { id: automation.id } },
+        }),
+      );
     },
     onSuccess: () => {
       setAsking(false);

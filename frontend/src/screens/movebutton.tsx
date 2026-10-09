@@ -26,7 +26,7 @@ import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
@@ -98,13 +98,12 @@ export function MoveButton({
     // The arguments ARE the task body the server prepared; the click sends
     // them as they came rather than re-deriving them from render state.
     mutationFn: async (body: Record<string, unknown>) => {
-      const { data, error } = await api.POST("/tasks", {
-        body: body as components["schemas"]["CreateTaskRequest"],
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/tasks", {
+          body: body as components["schemas"]["CreateTaskRequest"],
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       if (dealId) {

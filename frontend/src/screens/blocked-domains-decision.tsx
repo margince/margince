@@ -12,7 +12,7 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 
 // RECORDING a decision about a domain: the form, what it refuses to send, and
 // the write itself.
@@ -71,13 +71,11 @@ function useSetBlockedDomain() {
     // handler belongs to the committed render, so what it passes cannot be
     // older than the control the operator pressed.
     mutationFn: async (decision: Decision) => {
-      const { data, error } = await api.PUT("/capture/blocked-domains", {
-        body: decision,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/capture/blocked-domains", {
+          body: decision,
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["blocked-domains"] });

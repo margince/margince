@@ -11,7 +11,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
+import { isVersionSkewOf, problemMessageOf, unwrap } from "./common";
 import "./common.css";
 
 // Moving one commission entry through the ledger's lifecycle.
@@ -82,24 +82,22 @@ async function decide(
   decision: Decision,
   reason: string,
 ): Promise<CommissionEntry> {
-  const { data, error } = await api.POST("/commissions/{id}/decide", {
-    params: {
-      path: { id: entry.id },
-      // The entry carries its own version, so two contacts deciding the same
-      // row at once get a 409 rather than the second one silently winning.
-      ...ifMatch(entry.version ?? 0),
-    },
-    body: {
-      decision,
-      // Only void takes a reason, and the server requires it. Sending an
-      // empty string on the other two would be a value nobody asked for.
-      ...(decision === "void" ? { reason } : {}),
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/commissions/{id}/decide", {
+      params: {
+        path: { id: entry.id },
+        // The entry carries its own version, so two contacts deciding the same
+        // row at once get a 409 rather than the second one silently winning.
+        ...ifMatch(entry.version ?? 0),
+      },
+      body: {
+        decision,
+        // Only void takes a reason, and the server requires it. Sending an
+        // empty string on the other two would be a value nobody asked for.
+        ...(decision === "void" ? { reason } : {}),
+      },
+    }),
+  );
 }
 
 /**

@@ -40,7 +40,13 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useClaimRecord } from "./claimrecord";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import {
+  problemMessageOf,
+  QueryGate,
+  throwProblem,
+  unwrap,
+  useMe,
+} from "./common";
 import type { CreateField } from "./create";
 import { EntityRef, useEntityName } from "./entityref";
 import { useRecordHistory } from "./history";
@@ -213,13 +219,11 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   const explain = useQuery({
     queryKey: leadScoreKey(id),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}/score", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}/score", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 
@@ -586,14 +590,12 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
         // sentence for whoever reads this file, not for whoever is refused.
         throwProblem({ detail: t("lead.terminalReadOnly") });
       }
-      const { data, error } = await api.PATCH("/leads/{id}", {
-        params: { path: { id }, ...ifMatch(requireVersion(version)) },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/leads/{id}", {
+          params: { path: { id }, ...ifMatch(requireVersion(version)) },
+          body,
+        }),
+      );
     },
     onSuccess: onChanged,
   });
@@ -816,14 +818,13 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
   const [reason, setReason] = useState("");
   const demote = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/leads/{id}/demote", {
-        params: { path: { id } },
-        body: { reason: reason.trim() },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/leads/{id}/demote", {
+          params: { path: { id } },
+          body: { reason: reason.trim() },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const key of leadWriteKeys(id)) {
@@ -1516,13 +1517,11 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const leadQuery = useQuery({
     queryKey: leadKey(id),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 

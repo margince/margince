@@ -24,7 +24,7 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
 // contact reads, an address they forward from.
@@ -64,13 +64,11 @@ function useAddIdentity() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: { kind: Kind; value: string }) => {
-      const { data, error } = await api.POST("/capture/owner-identities", {
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/capture/owner-identities", {
+          body,
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
@@ -85,12 +83,11 @@ function useRemoveIdentity() {
     // The id is a VARIABLE, so the press belongs to the render the reader saw
     // (frontend/AGENTS.md, mutation-variable-coverage).
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/capture/owner-identities/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/capture/owner-identities/{id}", {
+          params: { path: { id } },
+        }),
+      );
       return id;
     },
     onSuccess: () => {

@@ -15,7 +15,7 @@ import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { dealRecordKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "./common";
 import type { CreateField } from "./create";
 import { useEntityName } from "./entityref";
 import type { Project } from "./projects.form";
@@ -55,17 +55,16 @@ function useProjectPage(
   const projects = useQuery({
     queryKey: ["projects", "open", companyId ?? "all"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/projects", {
-        params: {
-          query: {
-            ...(companyId ? { company_id: companyId } : {}),
-            limit: 200,
+      const data = unwrap(
+        await api.GET("/projects", {
+          params: {
+            query: {
+              ...(companyId ? { company_id: companyId } : {}),
+              limit: 200,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+        }),
+      );
       return data.data;
     },
     enabled,
@@ -171,16 +170,15 @@ export async function resolveDealProject(
   if (!companyId) {
     throw new Error(t("deal.projectNeedsCompany"));
   }
-  const { data, error } = await api.POST("/projects", {
-    body: {
-      name: values.new_project_name?.trim() ?? "",
-      company_id: companyId,
-      source: "manual",
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.POST("/projects", {
+      body: {
+        name: values.new_project_name?.trim() ?? "",
+        company_id: companyId,
+        source: "manual",
+      },
+    }),
+  );
   return data.id;
 }
 

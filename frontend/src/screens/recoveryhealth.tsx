@@ -12,7 +12,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/recovery-health: when the restore procedure was last rehearsed,
@@ -209,10 +209,7 @@ export function RecoveryHealthCard() {
     queryKey: ["recovery-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/admin/recovery-health");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/admin/recovery-health"));
       if (!isRecoveryHealth(data)) {
         throw new Error("malformed recovery-health response");
       }

@@ -13,7 +13,7 @@ import {
   OPEN_SHARES_KEY,
   SharedLinksButton,
 } from "./analytics.sharelist";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 
 // Sharing a forecast view.
 //
@@ -115,24 +115,20 @@ function ShareDialog({
       if (!named || (input.kind === "snapshot" && !input.snapshotId)) {
         throw new Error("Choose a supported population and captured snapshot.");
       }
-      const { data, error } = await api.POST("/forecast/shares", {
-        body: {
-          kind: input.kind,
-          target: input.target,
-          // The population the issuer was reading, not the installation. Fixed
-          // to the workspace, this shared a wider set than the screen showed —
-          // and a share is exactly where that matters, because the recipient
-          // never sees the screen it was issued from.
-          ...named,
-          ...(input.kind === "snapshot" && input.snapshotId
-            ? { snapshot_id: input.snapshotId }
-            : {}),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/forecast/shares", {
+          body: {
+            kind: input.kind,
+            target: input.target,
+            // The population the issuer was reading, not the whole workspace. The
+            // recipient never sees the issuing screen, so a wider set would mislead.
+            ...named,
+            ...(input.kind === "snapshot" && input.snapshotId
+              ? { snapshot_id: input.snapshotId }
+              : {}),
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       setIssued({

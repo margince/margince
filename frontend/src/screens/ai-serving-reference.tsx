@@ -8,7 +8,7 @@ import { Badge, Disclosure } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { type Source, summarize } from "./ai-request-summary";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./ai-settings.css";
 
 // What the serving editor reads beside the text: every field the served schema
@@ -21,9 +21,7 @@ function useRoutingSchema() {
     queryKey: ["ai-routing-schema"],
     staleTime: Infinity,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/routing/schema");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/ai/routing/schema"));
     },
   });
 }

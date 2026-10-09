@@ -16,7 +16,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { undoAction, useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
 import "./users-admin.css";
 import { useCan, useCanWrite } from "../app/capability";
 import { type AssignableRole, useAssignableRoles } from "./roles.queries";
@@ -41,12 +41,11 @@ function useMembers() {
   return useQuery({
     queryKey: ["users-admin"],
     queryFn: async (): Promise<User[]> => {
-      const { data, error } = await api.GET("/users", {
-        params: { query: { include_inactive: true } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/users", {
+          params: { query: { include_inactive: true } },
+        }),
+      );
       return data.data;
     },
   });
@@ -399,13 +398,12 @@ function MemberRow({
 
   const setRole = useMutation({
     mutationFn: async (role: Role) => {
-      const { error: err } = await api.PATCH("/users/{id}/role", {
-        params: { path: { id: member.id } },
-        body: { role },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(
+        await api.PATCH("/users/{id}/role", {
+          params: { path: { id: member.id } },
+          body: { role },
+        }),
+      );
     },
     onSuccess: async () => {
       await refresh();
@@ -420,12 +418,11 @@ function MemberRow({
 
   const deactivate = useMutation({
     mutationFn: async () => {
-      const { error: err } = await api.POST("/users/{id}/deactivate", {
-        params: { path: { id: member.id } },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(
+        await api.POST("/users/{id}/deactivate", {
+          params: { path: { id: member.id } },
+        }),
+      );
     },
     onSuccess: async () => {
       // The refreshed roster FIRST, then the dialog: closing it hands focus back
@@ -444,12 +441,11 @@ function MemberRow({
 
   const reactivate = useMutation({
     mutationFn: async () => {
-      const { error: err } = await api.POST("/users/{id}/reactivate", {
-        params: { path: { id: member.id } },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(
+        await api.POST("/users/{id}/reactivate", {
+          params: { path: { id: member.id } },
+        }),
+      );
     },
     onSuccess: async () => {
       await refresh();

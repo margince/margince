@@ -7,7 +7,7 @@ import type {
   DecisionDeckItem,
   StagedDecision,
 } from "../design-system/decisiondeck";
-import { isAlreadyDecided, ProblemError, throwProblem } from "./common";
+import { isAlreadyDecided, ProblemError, unwrap } from "./common";
 
 // Sending the Brief's staging tray: what one verdict does, and what a whole
 // tray does.
@@ -56,13 +56,12 @@ async function sendOne(
   const path =
     verdict === "accept" ? "/approvals/{id}/approve" : "/approvals/{id}/reject";
   try {
-    const { error } = await api.POST(path, {
-      params: { path: { id: approval.id } },
-      ...(verdict === "reject" ? { body: { reason: "" } } : {}),
-    });
-    if (error) {
-      throwProblem(error);
-    }
+    unwrap(
+      await api.POST(path, {
+        params: { path: { id: approval.id } },
+        ...(verdict === "reject" ? { body: { reason: "" } } : {}),
+      }),
+    );
     return { alreadyDecided: false };
   } catch (error) {
     if (error instanceof ProblemError && isAlreadyDecided(error.problem)) {
@@ -105,12 +104,11 @@ async function sendBundle(
       : "/approval-bundles/{bundle_id}/reject";
   // No body at all on a rejection: the deck takes no reason, and an empty
   // string would be recorded as one the reader gave.
-  const { data, error } = await api.POST(path, {
-    params: { path: { bundle_id: bundleId } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.POST(path, {
+      params: { path: { bundle_id: bundleId } },
+    }),
+  );
   // Deciding a bundle is not all-or-nothing: the response reports each member,
   // and a member somebody else answered first comes back `already_decided`
   // rather than as an error. Reading `false` here regardless — which this did —

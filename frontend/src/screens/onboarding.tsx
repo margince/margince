@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import {
   ManualCompanySetup,
   useCompanyContextCapabilities,
@@ -375,14 +375,12 @@ export function onboardingDraftPayload(values: CompanyForm) {
 }
 
 export async function writeWizardState(body: PutOnboardingState) {
-  const { data, error } = await api.PUT("/onboarding/state", {
-    params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-    body,
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.PUT("/onboarding/state", {
+      params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+      body,
+    }),
+  );
 }
 
 export function wizardStateBody(input: {

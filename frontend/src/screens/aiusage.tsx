@@ -13,7 +13,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import { tierLabel } from "./ai-decision-labels";
 import { useRouting } from "./ai-routing-query";
 import { DecisionSummaryRow } from "./aiusage-decisions";
-import { QueryGate, throwProblem, useMe } from "./common";
+import { QueryGate, unwrap, useMe } from "./common";
 import "./aiusage.css";
 import { calendarMonth } from "../format/calendarday";
 import { viewerZone } from "../format/timezone";
@@ -322,10 +322,11 @@ export function useAiUsage(month: Month, enabled: boolean) {
     enabled,
     queryKey: ["ai-usage", month],
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/usage", {
-        params: { query: month },
-      });
-      if (error) throwProblem(error);
+      const data = unwrap(
+        await api.GET("/ai/usage", {
+          params: { query: month },
+        }),
+      );
       if (!data?.budget || !Array.isArray(data.days)) {
         throw new Error("malformed AI usage response");
       }

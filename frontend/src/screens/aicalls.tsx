@@ -16,7 +16,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { tierLabel } from "./ai-decision-labels";
 import { CallDetailPanel } from "./aicalls-detail";
-import { QueryGate, QueryStates, throwProblem, useMe } from "./common";
+import { QueryGate, QueryStates, unwrap, useMe } from "./common";
 import { settingsHref } from "./settingsrouting";
 import "./aicalls.css";
 
@@ -33,17 +33,17 @@ function useCallTrace(task: string, filter: CallFilter, enabled: boolean) {
     queryKey: ["ai-calls", task, filter],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/ai/calls", {
-        params: {
-          query: {
-            cursor: pageParam ?? undefined,
-            task: task || undefined,
-            ...filter,
+      return unwrap(
+        await api.GET("/ai/calls", {
+          params: {
+            query: {
+              cursor: pageParam ?? undefined,
+              task: task || undefined,
+              ...filter,
+            },
           },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
@@ -89,9 +89,7 @@ export function useLastCallAt(): LastCall {
     // while the page is open. A minute is the resolution it reads at.
     refetchInterval: 60_000,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/calls", {});
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/ai/calls", {}));
     },
   });
   // Read through the grant, not only around it. A revoked grant disables the

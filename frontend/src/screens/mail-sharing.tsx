@@ -9,7 +9,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // The workspace mail-sharing posture: ON by default, captured mail is
 // readable by every colleague who can see the contact — the thing that makes
@@ -97,13 +97,11 @@ export function MailSharingCard() {
   const [pendingShared, setPendingShared] = useState<boolean | null>(null);
   const save = useMutation({
     mutationFn: async (mailSharing: boolean) => {
-      const { data, error } = await api.PATCH("/capture/settings", {
-        body: { mail_sharing: mailSharing },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/capture/settings", {
+          body: { mail_sharing: mailSharing },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["capture-settings"], data);
@@ -114,13 +112,11 @@ export function MailSharingCard() {
 
   const saveShared = useMutation({
     mutationFn: async (allowed: boolean) => {
-      const { data, error } = await api.PATCH("/capture/settings", {
-        body: { shared_posture_allowed: allowed },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/capture/settings", {
+          body: { shared_posture_allowed: allowed },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["capture-settings"], data);

@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import { worklistKey } from "./worklist.queries";
 
 // Brief's reads, in one place. The screen fans out to five of them and each is
@@ -83,11 +83,7 @@ export function useBriefRefresh() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/brief");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/brief"));
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["brief"], data ?? null);
@@ -127,27 +123,23 @@ export function useBriefItemMark() {
   return useMutation({
     mutationFn: async (variables: BriefMarkRequest) => {
       if (variables.mark === "snooze") {
-        const { data, error } = await api.POST("/brief/items/{itemId}/snooze", {
-          params: { path: { itemId: variables.itemId } },
-          body: { snoozed_until: variables.snoozedUntil },
-        });
-        if (error) {
-          throwProblem(error);
-        }
-        return data;
+        return unwrap(
+          await api.POST("/brief/items/{itemId}/snooze", {
+            params: { path: { itemId: variables.itemId } },
+            body: { snoozed_until: variables.snoozedUntil },
+          }),
+        );
       }
       // The three bodyless verbs share one call. `unsnooze` rides here rather
       // than in its own mutation because it takes the same cache work as the
       // others — the item moves between the brief and the worklist lane either
       // way, and a second mutation would be a second answer to where it goes.
       const path = MARK_PATHS[variables.mark];
-      const { data, error } = await api.POST(path, {
-        params: { path: { itemId: variables.itemId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST(path, {
+          params: { path: { itemId: variables.itemId } },
+        }),
+      );
     },
     onSuccess: (updated) => {
       queryClient.setQueryData<MorningBrief | null>(["brief"], (current) =>
@@ -207,10 +199,7 @@ export function useWeeklyReviewIndex(): UseQueryResult<readonly string[]> {
   return useQuery({
     queryKey: ["weekly-review-index"],
     queryFn: async (): Promise<readonly string[]> => {
-      const { data, error } = await api.GET("/weekly-reviews");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/weekly-reviews"));
       // Never undefined out of this hook. React Query refuses an undefined
       // result, and a payload without the field is a server that answered
       // something else — which must read as "no weeks", not as a crash that

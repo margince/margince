@@ -8,7 +8,7 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";
-import { throwProblem, useMe } from "./common";
+import { unwrap, useMe } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
 import {
@@ -26,20 +26,19 @@ async function fetchTemplatesPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<OfferTemplate>> {
-  const { data, error } = await api.GET("/offer-templates", {
-    params: {
-      query: {
-        sort: query.sort || undefined,
-        include_archived: query.includeArchived || undefined,
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        ...query.filters,
+  const data = unwrap(
+    await api.GET("/offer-templates", {
+      params: {
+        query: {
+          sort: query.sort || undefined,
+          include_archived: query.includeArchived || undefined,
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          ...query.filters,
+        },
       },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {
@@ -114,43 +113,39 @@ export function OfferTemplatesAdmin() {
   });
 
   const createTemplate = async (values: Record<string, string>) => {
-    const { data, error } = await api.POST("/offer-templates", {
-      body: {
-        name: values.name.trim(),
-        locale: values.locale || "de-DE",
-        is_default: values.is_default === "true",
-        layout: {
-          header: values.header || undefined,
-          footer: values.footer || undefined,
+    return unwrap(
+      await api.POST("/offer-templates", {
+        body: {
+          name: values.name.trim(),
+          locale: values.locale || "de-DE",
+          is_default: values.is_default === "true",
+          layout: {
+            header: values.header || undefined,
+            footer: values.footer || undefined,
+          },
         },
-      },
-    });
-    if (error) {
-      throwProblem(error);
-    }
-    return data;
+      }),
+    );
   };
 
   const updateTemplate =
     (tpl: OfferTemplate) => async (values: Record<string, unknown>) => {
       // PUT full-replace (unlike product's merge-PATCH): every writable
       // field is supplied on every call — an omitted one would reset it.
-      const { data, error } = await api.PUT("/offer-templates/{id}", {
-        params: { path: { id: tpl.id }, ...ifMatch(tpl.version) },
-        body: {
-          name: String(values.name).trim(),
-          locale: String(values.locale),
-          is_default: values.is_default === "true",
-          layout: {
-            header: (values.header as string) || undefined,
-            footer: (values.footer as string) || undefined,
+      return unwrap(
+        await api.PUT("/offer-templates/{id}", {
+          params: { path: { id: tpl.id }, ...ifMatch(tpl.version) },
+          body: {
+            name: String(values.name).trim(),
+            locale: String(values.locale),
+            is_default: values.is_default === "true",
+            layout: {
+              header: (values.header as string) || undefined,
+              footer: (values.footer as string) || undefined,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     };
 
   // The per-row affordances, in a column that exists only while at least one of
@@ -193,13 +188,11 @@ export function OfferTemplatesAdmin() {
             recordKey="offer-template"
             onArchived={() => list.refetch()}
             archive={async () => {
-              const { data, error } = await api.DELETE(
-                "/offer-templates/{id}",
-                { params: { path: { id: tpl.id } } },
+              const data = unwrap(
+                await api.DELETE("/offer-templates/{id}", {
+                  params: { path: { id: tpl.id } },
+                }),
               );
-              if (error) {
-                throwProblem(error);
-              }
               return data ?? tpl;
             }}
           />

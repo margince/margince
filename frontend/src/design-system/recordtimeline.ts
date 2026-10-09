@@ -9,7 +9,7 @@ import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { startOfDayInZone } from "../format/timezone";
 import { entityTimelineKeys } from "../screens/activitykeys";
-import { throwProblem } from "../screens/common";
+import { unwrap } from "../screens/common";
 import type { ISODate } from "./dateinput";
 
 type Activity = components["schemas"]["Activity"];
@@ -202,14 +202,19 @@ export function useRecordTimeline(
     getNextPageParam: (last: ActivityPage) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/activities", {
-        params: {
-          query: timelineQueryParams(entityType, id, filters, zone, pageParam),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/activities", {
+          params: {
+            query: timelineQueryParams(
+              entityType,
+              id,
+              filters,
+              zone,
+              pageParam,
+            ),
+          },
+        }),
+      );
       // A 200 with no body is a page with no rows and no edge. `isSuccess`
       // says nothing about whether the body arrived, and a page read off an
       // absent one crashed the record before any row was drawn.

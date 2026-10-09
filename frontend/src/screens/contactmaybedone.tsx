@@ -5,7 +5,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { useClaimSettle, useTaskUpdate } from "./taskactions";
 
 // The verbs of a promise card that asks whether our last email kept it. The
@@ -100,13 +100,13 @@ function useMomentDismiss() {
       contactId: string;
       body: components["schemas"]["DismissContactMomentRequest"];
     }) => {
-      const { error } = await api.POST("/contacts/{id}/moment/dismiss", {
-        params: { path: { id: contactId } },
-        body,
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/contacts/{id}/moment/dismiss", {
+          params: { path: { id: contactId } },
+          body,
+        }),
+        t,
+      );
     },
     onSuccess: (_data, { contactId }) =>
       queryClient.invalidateQueries({ queryKey: ["contact360", contactId] }),

@@ -11,7 +11,7 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import "./linkedin-reach.css";
 
 // Which accounts a member's imported network reaches (ADR-0078 §2.1b) — the
@@ -44,13 +44,11 @@ function useLinkedInReach() {
   return useQuery({
     queryKey: REACH_KEY,
     queryFn: async (): Promise<LinkedInReach> => {
-      const { data, error } = await api.GET("/me/linkedin-reach", {
-        params: { query: { limit: REACH_PAGE_LIMIT } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/me/linkedin-reach", {
+          params: { query: { limit: REACH_PAGE_LIMIT } },
+        }),
+      );
     },
   });
 }

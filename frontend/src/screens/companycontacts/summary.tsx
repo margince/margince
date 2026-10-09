@@ -24,6 +24,7 @@ import {
   problemCodeOf,
   problemMessageOf,
   throwProblem,
+  unwrap,
   useViewerId,
 } from "../common";
 import { EntityRef } from "../entityref";
@@ -634,17 +635,18 @@ function useCommitteeWrites(
       });
     },
     mutationFn: async (seat: SeatPatch) => {
-      const { error } = await api.PATCH("/relationships/{id}", {
-        // The conditional write. A colleague may have changed this seat while
-        // the page was open, and without the version the confirmation would
-        // overwrite them — the losing write leaving no trace, which is the one
-        // outcome a concurrent edit must not have.
-        params: { path: { id: seat.relationshipId }, ...ifMatch(seat.version) },
-        body: { role: seat.role },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/relationships/{id}", {
+          // The conditional write. A colleague may have changed this seat while the
+          // page was open. Without the version, the confirmation would overwrite
+          // their change and leave no trace of it.
+          params: {
+            path: { id: seat.relationshipId },
+            ...ifMatch(seat.version),
+          },
+          body: { role: seat.role },
+        }),
+      );
     },
     onSuccess: refresh,
   });

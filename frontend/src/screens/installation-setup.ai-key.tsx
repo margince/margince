@@ -7,7 +7,7 @@ import { Field, TextInput } from "../design-system/atoms";
 import { ServiceAccountKeyField } from "../design-system/serviceaccountkeyfield";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import type { SetupProvider } from "./setup-providers";
 import { VertexLocationField } from "./vertex-location";
 
@@ -43,31 +43,29 @@ export function useBindModels() {
         ...host,
         ...(vars.location ? { location: vars.location } : {}),
       };
-      const { error } = await api.PUT("/ai/routing", {
-        body: {
-          // The choice's own profile rather than a question: cloud_frontier
-          // for a vendor bound to keep no EU promise (the server refuses an
-          // unpinned broker under eu_hosted), eu_hosted for Vertex at an EU
-          // location. Asking a first-time admin to choose a location ladder
-          // before they have bound anything asks what they cannot yet know.
-          profile: vars.profile,
-          tiers: {
-            local_small: binding,
-            cheap_cloud: binding,
-            premium: binding,
-            frontier: binding,
+      unwrap(
+        await api.PUT("/ai/routing", {
+          body: {
+            // The choice's own profile, not a question. cloud_frontier for a vendor
+            // bound to keep no EU promise (the server refuses an unpinned broker under
+            // eu_hosted), eu_hosted for Vertex at an EU location. A first-time admin
+            // cannot yet answer a location ladder before binding anything.
+            profile: vars.profile,
+            tiers: {
+              local_small: binding,
+              cheap_cloud: binding,
+              premium: binding,
+              frontier: binding,
+            },
+            embeddings: {
+              provider: vars.provider,
+              model: vars.embedModel,
+              ...host,
+              ...(embedLocation ? { location: embedLocation } : {}),
+            },
           },
-          embeddings: {
-            provider: vars.provider,
-            model: vars.embedModel,
-            ...host,
-            ...(embedLocation ? { location: embedLocation } : {}),
-          },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+        }),
+      );
     },
     // No invalidation: re-reading the setup report moves the screen on, and
     // the binding is the moment the ignition marks. The refetch waits for the
