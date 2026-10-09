@@ -12,8 +12,12 @@ import {
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import {
+  CORRECTABLE,
+  type CorrectableField,
+  FIELD_LABELS,
+} from "./confirmfields";
 import { PrivacyNotice } from "./confirmprivacy";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
 import { SubscriptionConfirm } from "./confirmsubscription";
@@ -36,20 +40,6 @@ import "./confirm.css";
 // page that leads with the ask reads as advertising rather than as the Art. 14
 // notice it is. Neither answer is pre-selected: a pre-ticked box is void under
 // Art. 4(11) and Recital 32, settled in Planet49.
-
-// The fields the page shows, in the order it shows them. `company` is
-// deliberately absent from the correctable set: which company employs
-// somebody is a relationship the workspace maintains, and correcting it would
-// mean creating or merging a company record.
-const CORRECTABLE = ["full_name", "title", "email", "phone"] as const;
-type CorrectableField = (typeof CORRECTABLE)[number];
-
-const FIELD_LABELS: Record<CorrectableField, MessageKey> = {
-  full_name: "confirm.field.fullName",
-  title: "confirm.field.title",
-  email: "confirm.field.email",
-  phone: "confirm.field.phone",
-};
 
 export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
   const t = useT();

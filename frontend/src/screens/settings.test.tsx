@@ -10,7 +10,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
 import { SIGN_OFF_QUERY } from "./composesignoff";
-import { AuditLogCard, SettingsScreen, tabContent } from "./settings";
+import { SettingsScreen, tabContent } from "./settings";
 import {
   auditEntry,
   IDLE_JOB_HEALTH,
@@ -20,6 +20,7 @@ import {
   renderSettings,
   settingsBackend,
 } from "./settings.testkit";
+import { AuditLogCard } from "./settings-audit";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 import { settingsHref } from "./settingsrouting";
 

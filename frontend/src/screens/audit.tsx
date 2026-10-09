@@ -44,7 +44,7 @@ export function humanizeToken(token: string): string {
   return token.replace(/_/g, " ");
 }
 
-const ACTOR_ICON: Record<AuditLogEntry["actor_type"], LucideIcon> = {
+export const ACTOR_ICON: Record<AuditLogEntry["actor_type"], LucideIcon> = {
   human: CircleUser,
   agent: Bot,
   system: Cog,
@@ -127,11 +127,9 @@ export function actorAttribution(
     ? { qualifierName: entry.agent_client }
     : { qualifierKey };
   // A machine acting under a human's authority READS AS THAT HUMAN.
-  if (entry.on_behalf_of && meUserId && entry.on_behalf_of === meUserId) {
-    return { labelKey: "audit.you", ...qualifier };
-  }
-  if (entry.on_behalf_of_name) {
-    return { name: entry.on_behalf_of_name, ...qualifier };
+  const authority = humanAuthority(entry, meUserId);
+  if (authority) {
+    return { ...authority, ...qualifier };
   }
   if (entry.passport_id) {
     // A GRANT was presented and yet no human resolved behind it. That is a
@@ -152,6 +150,20 @@ export function actorAttribution(
   // machine word actor_type happens to carry. The id is the readable,
   // workspace-chosen name of the thing that acted.
   return { identifier: machineIdentifier(entry), ...qualifier };
+}
+
+// A recorded human no directory entry names is an unknown member, not a gap.
+function humanAuthority(
+  entry: ActorFields,
+  meUserId: string | undefined,
+): { labelKey: MessageKey } | { name: string } | undefined {
+  if (entry.on_behalf_of && meUserId && entry.on_behalf_of === meUserId) {
+    return { labelKey: "audit.you" };
+  }
+  if (entry.on_behalf_of_name) {
+    return { name: entry.on_behalf_of_name };
+  }
+  return entry.on_behalf_of ? { labelKey: "audit.unknownMember" } : undefined;
 }
 
 // machineIdentifier is the machine's own id, with a typed fallback for the one

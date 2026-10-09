@@ -627,7 +627,7 @@ export const auditEntries = [
     on_behalf_of_name: "Marcus Brandt",
     action: "send_email",
     entity_type: "activity",
-    entity_id: null,
+    entity_id: "01a11ea4-10cb-7576-ad76-0e5a3f9bbfae",
     occurred_at: "2026-07-05T06:00:00Z",
   },
   {

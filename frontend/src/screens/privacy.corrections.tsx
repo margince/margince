@@ -11,56 +11,44 @@ import { useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { Button, EmptyState, Textarea } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Textarea,
+} from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
+import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { LoadMoreButton, problemMessageOf, unwrap } from "./common";
+import {
+  LoadMoreButton,
+  problemMessageOf,
+  QueryStates,
+  unwrap,
+} from "./common";
+import { correctableFieldLabel } from "./confirmfields";
+import { EntityRef } from "./entityref";
 
 type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
+type Resolution = "accepted" | "rejected";
 
-/**
- * What subjects proposed through their own confirm links, and who decides.
- *
- * The table has carried its resolution columns since it shipped and nothing
- * ever wrote them: a contact could type a correction into the link we mailed
- * them, the row was filed, and no colleague could list it, see it, or act on
- * it. Every correction anybody has ever sent is still waiting.
- *
- * A CORRECTION IS ONLY REVIEWABLE AS A COMPARISON. "She says Schmidt, we hold
- * Schmitt" is the decision; either half alone is not, which is why the row
- * shows the proposed value beside the field it is about rather than as a bare
- * string somebody has to go and check.
- *
- * Its own file because privacy.tsx is frozen at its length (fe-file-length
- * waivers), and a lane is a lane: this one owns its query, its rows and its
- * decision.
- *
- * It sits beneath the formal request queue on the settings page, because a
- * correction is the same act arriving informally: somebody typed it into the
- * link we mailed them rather than filing a rights request, and the officer
- * answering one is the officer answering the other.
- */
+// A correction is only reviewable as a comparison ("she says Schmidt, we hold
+// Schmitt"). A row shows the proposal beside what the record holds now.
 export function ConfirmSubmissionsPanel() {
   const t = useT();
-  const { locale } = useLocale();
   const queryClient = useQueryClient();
-  // `useCanWrite`, not `useCan`: the seat ceiling is enforced before RBAC, so a
-  // read seat holding the grant is still refused every POST — the control it
-  // was shown could only ever 403.
+  // `useCanWrite`, not `useCan`: the seat ceiling refuses a read seat's POST
+  // even when it holds the grant.
   const canDecide = useCanWrite("contact", "update");
-  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [deciding, setDeciding] = useState<ConfirmSubmission | null>(null);
   const [note, setNote] = useState("");
-  const [failure, setFailure] = useState("");
 
-  // PAGED, because the queue is as long as the subjects make it. A limit with
-  // no continuation answered the first page and said nothing about the rest, so
-  // a reviewer who worked to the bottom of the list had seen the oldest fifty
-  // and none of what arrived after — and the screen gave no sign a tail
-  // existed. The screen is what a reviewer actually works, so the fix has to
-  // reach here and not only the wire.
+  // Paged, because the queue is as long as the contacts make it.
   const query = useInfiniteQuery({
     queryKey: ["confirm-submissions"],
     initialPageParam: FIRST_PAGE,
@@ -77,12 +65,9 @@ export function ConfirmSubmissionsPanel() {
   });
 
   const resolve = useMutation({
-    // A VARIABLE, never a closure over render state: the row being decided and
-    // the note typed about it both travel with the call, so a re-render between
-    // the click and the response cannot retarget it.
     mutationFn: async (command: {
       id: string;
-      resolution: "accepted" | "rejected";
+      resolution: Resolution;
       note: string;
     }) => {
       return unwrap(
@@ -96,157 +81,219 @@ export function ConfirmSubmissionsPanel() {
       );
     },
     onSuccess: async () => {
-      setDecidingId(null);
+      setDeciding(null);
       setNote("");
-      setFailure("");
       await queryClient.invalidateQueries({
         queryKey: ["confirm-submissions"],
       });
-      // The contact's own card too: an accepted correction wrote a field, and a
-      // page still showing the old value would disagree with the record.
+      // An accepted correction wrote a field the contact's own page shows.
       await queryClient.invalidateQueries({ queryKey: ["contact"] });
     },
-    onError: (err: unknown) => setFailure(problemMessageOf(err, t)),
   });
 
-  const tz = viewerZone();
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   return (
     <Panel title={t("privacy.corrections")}>
       <PanelBody>
         <PanelIntro>{t("privacy.correctionsSub")}</PanelIntro>
-        {failure ? <ErrorLine>{failure}</ErrorLine> : null}
-        {/* A FAILED READ IS NOT AN EMPTY QUEUE. Coercing an undefined answer
-            to [] told the reviewer nothing was waiting when the read had in
-            fact failed, which is the one wrong thing a work queue can say. */}
-        <ErrorLine error={query.error} />
-        {!query.isError && rows.length === 0 ? (
-          <EmptyState title={t("privacy.correctionsEmpty")}>
-            {t("privacy.correctionsEmptySub")}
-          </EmptyState>
-        ) : (
-          <ul>
-            {rows.map((row) => (
-              <CorrectionRow
-                key={row.id}
-                row={row}
-                locale={locale}
-                tz={tz}
-                canDecide={canDecide}
-                deciding={decidingId === row.id}
-                note={note}
-                pending={resolve.isPending}
-                onNote={setNote}
-                onOpen={() => {
-                  setDecidingId(row.id);
-                  setNote("");
-                  setFailure("");
-                }}
-                onDecide={(resolution) =>
-                  resolve.mutate({ id: row.id, resolution, note })
-                }
-              />
-            ))}
-            <LoadMoreButton query={query} />
-          </ul>
-        )}
       </PanelBody>
+      {query.isSuccess && rows.length > 0 ? (
+        <>
+          <CorrectionTable
+            rows={rows}
+            canDecide={canDecide}
+            onDecide={(row) => {
+              resolve.reset();
+              setNote("");
+              setDeciding(row);
+            }}
+          />
+          {query.hasNextPage && (
+            <PanelBody>
+              <LoadMoreButton query={query} />
+            </PanelBody>
+          )}
+        </>
+      ) : (
+        <PanelBody>
+          <QueryStates query={query} pendingLabel={t("privacy.corrections")}>
+            <EmptyState>{t("privacy.correctionsEmpty")}</EmptyState>
+          </QueryStates>
+        </PanelBody>
+      )}
+      <DecideModal
+        row={deciding}
+        note={note}
+        pending={resolve.isPending}
+        error={resolve.error ? problemMessageOf(resolve.error, t) : null}
+        onNote={setNote}
+        onClose={() => setDeciding(null)}
+        onDecide={(row, resolution) =>
+          resolve.mutate({ id: row.id, resolution, note })
+        }
+      />
     </Panel>
   );
 }
 
-/**
- * One proposal, and what the reviewer needs to answer it.
- *
- * THE NOTE IS OFFERED ON BOTH ANSWERS and matters most on a rejection. An
- * accepted correction explains itself — the field now holds what the subject
- * said — but "we did not change it" records no reason at all, and the subject
- * who asked is entitled to one when they ask again.
- */
-function CorrectionRow({
-  row,
-  locale,
-  tz,
+function CorrectionTable({
+  rows,
   canDecide,
-  deciding,
-  note,
-  pending,
-  onNote,
-  onOpen,
   onDecide,
 }: Readonly<{
-  row: ConfirmSubmission;
-  locale: ReturnType<typeof useLocale>["locale"];
-  tz: string;
+  rows: ConfirmSubmission[];
   canDecide: boolean;
-  deciding: boolean;
-  note: string;
-  pending: boolean;
-  onNote: (value: string) => void;
-  onOpen: () => void;
-  onDecide: (resolution: "accepted" | "rejected") => void;
+  onDecide: (row: ConfirmSubmission) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const tz = viewerZone();
+  const columns: DataTableColumn<ConfirmSubmission>[] = [
+    {
+      key: "contact",
+      header: t("privacy.correctionContact"),
+      // Who, first: accepting either of two identical proposals changes a
+      // different record.
+      render: (row) => (
+        <EntityRef
+          kind="contact"
+          id={row.contact_id}
+          name={row.contact_name ?? t("privacy.correctionUnnamed")}
+        />
+      ),
+    },
+    {
+      key: "change",
+      header: t("privacy.correctionChange"),
+      grow: true,
+      render: (row) => <ChangeCell row={row} />,
+    },
+    {
+      key: "received",
+      header: t("privacy.correctionReceived"),
+      render: (row) => formatDate(row.submitted_at, locale, tz),
+    },
+    {
+      key: "kind",
+      header: t("privacy.correctionKind"),
+      render: (row) =>
+        row.field ? (
+          <Badge>{t("privacy.correctionKindCorrection")}</Badge>
+        ) : (
+          <Badge tone="warning">{t("privacy.correctionKindRemoval")}</Badge>
+        ),
+    },
+  ];
+  if (canDecide) {
+    columns.push({
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      fold: "end",
+      align: "end",
+      render: (row) => (
+        <span className="cell-actions">
+          <Button
+            aria-label={t("privacy.correctionDecideNamed", {
+              name: row.contact_name ?? t("privacy.correctionUnnamed"),
+            })}
+            aria-haspopup="dialog"
+            onClick={() => onDecide(row)}
+          >
+            {t("privacy.correctionDecide")}
+          </Button>
+        </span>
+      ),
+    });
+  }
   return (
-    <li>
-      <div>
-        {/* WHO, first. This queue spans every contact, and two of them
-            proposing the same title on the same day are indistinguishable
-            without it — while accepting either changes a different record. */}
-        <span>{row.contact_name ?? t("privacy.correctionUnnamed")}</span>
-        <span>{row.field ?? t("privacy.correctionRemoval")}</span>
-        {/* The subject's own words. A correction shown without them is a
-            decision nobody can make. */}
-        {/* BOTH HALVES. A correction is only reviewable as a comparison —
-            "she says Schmidt, we hold Schmitt" is the decision, and the
-            proposal alone is not. */}
-        {row.proposed_value ? (
-          <span>
-            {/* Not a catalog key: an arrow between two values carries no
-                words to translate, and three identical entries read as a
-                translation nobody did. */}
-            {row.current_value
-              ? `${row.current_value} → ${row.proposed_value}`
-              : row.proposed_value}
-          </span>
-        ) : null}
-      </div>
-      <span>{formatDate(row.submitted_at, locale, tz)}</span>
-      {canDecide && !deciding ? (
-        <Button onClick={onOpen}>{t("privacy.correctionDecide")}</Button>
-      ) : null}
-      {deciding ? (
-        <div>
+    <DataTable
+      label={t("privacy.corrections")}
+      bleed
+      fold
+      columns={columns}
+      rows={rows}
+      rowKey={(row) => row.id}
+    />
+  );
+}
+
+function ChangeCell({ row }: Readonly<{ row: ConfirmSubmission }>) {
+  const t = useT();
+  if (!row.field) {
+    return <>{t("privacy.correctionRemoval")}</>;
+  }
+  const label = correctableFieldLabel(row.field);
+  return (
+    <CellStack>
+      <span>{label ? t(label) : row.field}</span>
+      {/* Not a catalog key: an arrow between two values has no words to translate. */}
+      <span className="t-caption">
+        {row.current_value
+          ? `${row.current_value} → ${row.proposed_value ?? ""}`
+          : row.proposed_value}
+      </span>
+    </CellStack>
+  );
+}
+
+// The note matters most on a rejection: an accepted correction explains itself,
+// and the contact who asks again is owed the reason it was not.
+function DecideModal({
+  row,
+  note,
+  pending,
+  error,
+  onNote,
+  onClose,
+  onDecide,
+}: Readonly<{
+  row: ConfirmSubmission | null;
+  note: string;
+  pending: boolean;
+  error: string | null;
+  onNote: (value: string) => void;
+  onClose: () => void;
+  onDecide: (row: ConfirmSubmission, resolution: Resolution) => void;
+}>) {
+  const t = useT();
+  const name = row?.contact_name ?? t("privacy.correctionUnnamed");
+  return (
+    <ConfirmModal
+      open={row !== null}
+      onClose={onClose}
+      title={t("privacy.correctionDialogTitle", { name })}
+      // A removal is acknowledged here, not performed: the rights case opened
+      // when it arrived is where it is answered.
+      confirmLabel={
+        row?.field
+          ? t("privacy.correctionAccept")
+          : t("privacy.correctionAcknowledge")
+      }
+      onConfirm={() => row && onDecide(row, "accepted")}
+      actionsLead={
+        <Button
+          variant="ghost"
+          disabled={pending}
+          onClick={() => row && onDecide(row, "rejected")}
+        >
+          {t("privacy.correctionReject")}
+        </Button>
+      }
+      pending={pending}
+      error={error}
+    >
+      {row && <ChangeCell row={row} />}
+      <Field label={t("privacy.correctionNote")}>
+        {(control) => (
           <Textarea
+            {...control}
             value={note}
-            onChange={(e) => onNote(e.target.value)}
-            placeholder={t("privacy.correctionNote")}
+            onChange={(event) => onNote(event.target.value)}
             maxLength={500}
           />
-          {/* The queue's own action row, shared with the request lane above
-              it: two verbs a hand apart should sit a hand apart on
-              both. */}
-          <div className="dsr-actions">
-            <Button disabled={pending} onClick={() => onDecide("accepted")}>
-              {/* A REMOVAL IS ACKNOWLEDGED, not performed here. Accepting one
-                  records that somebody read it; what the contact asked for is
-                  a rights case, opened when the proposal arrived, and
-                  answering it is that case's business. A button reading
-                  "accept and update" would claim this removed them. */}
-              {row.field
-                ? t("privacy.correctionAccept")
-                : t("privacy.correctionAcknowledge")}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={pending}
-              onClick={() => onDecide("rejected")}
-            >
-              {t("privacy.correctionReject")}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </li>
+        )}
+      </Field>
+    </ConfirmModal>
   );
 }

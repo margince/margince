@@ -228,7 +228,7 @@ func (s *Store) ListLists(ctx context.Context, filter ListFilter) ([]listRow, bo
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		where := []string{"true"}
+		where := []string{predicateAlways}
 		if len(filter.Sharing) > 0 {
 			where = append(where, fmt.Sprintf("l.sharing = ANY($%d)", arg(filter.Sharing)))
 		}

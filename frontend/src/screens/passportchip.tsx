@@ -22,21 +22,3 @@ export function ResolvedPassportChip({
   const fromList = usePassportName(passportId);
   return <PassportChip name={agentClient ?? fromList} />;
 }
-
-// AuditPassportChip is the chip for one compliance-log row.
-//
-// A component rather than two props at the call site.
-//
-// That screen is held at its current length by a waiver that may only fall.
-export function AuditPassportChip({
-  entry,
-}: Readonly<{
-  entry: { passport_id?: string | null; agent_client?: string | null };
-}>) {
-  return (
-    <ResolvedPassportChip
-      passportId={entry.passport_id ?? ""}
-      agentClient={entry.agent_client}
-    />
-  );
-}

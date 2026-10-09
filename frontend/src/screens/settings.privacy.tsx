@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { NoticeCasesCard } from "./noticecases";
-import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
+import { PrivacyInboxCard } from "./privacy";
 import { ConfirmSubmissionsPanel } from "./privacy.corrections";
+import { ConsentPurposesCard } from "./privacy.purposes";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
 

@@ -2,7 +2,12 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -15,11 +20,8 @@ import { PrivacyInboxCard } from "./privacy";
 
 // Who is answering an erasure request, on the one field that says so.
 //
-// A `Select` whose value matches no option paints its placeholder, and with no
-// placeholder a non-breaking space in placeholder styling — which is exactly
-// what the disabled unassigned em dash looks like. So a request that IS assigned
-// read as unassigned whenever the assignee could not be named, and the next
-// officer to open it reassigned statutory work off the colleague doing it.
+// A `Select` whose value matches no option paints a blank face, so an assigned
+// request whose holder could not be named read as unassigned.
 //
 // The roster walk still builds the picker's OFFERED list, but the assignee's
 // own name is a separate by-id read (`GET /users/names`) with its own
@@ -129,13 +131,12 @@ function stub(
         "https://test.local",
       );
       if (url.pathname.endsWith("/me")) {
-        // The queue reads on `privacy_request:read`: its rows name the contacts
-        // who exercised an Art. 15/17 right, so a reader needs that grant to
-        // reach any of the rows this file is about.
+        // The queue reads on `privacy_request:read`, and the picker is offered
+        // only to a seat that may work the request.
         return json(
           meFixture({
             roles: ["admin"],
-            allow: { privacy_request: ["read"] },
+            allow: { privacy_request: ["read", "update"] },
           }),
         );
       }
@@ -196,13 +197,11 @@ describe("an assignee the picker's own list does not offer", () => {
     const { user, picker } = await openAssignee();
 
     expect(picker).toHaveTextContent(en["ref.notInRoster"]);
-    // The em dash is the face of a request assigned to NOBODY. This one is
-    // assigned, and a DPO who reads it as unassigned reassigns the work off the
-    // colleague doing it with the statutory clock running.
-    expect(picker).not.toHaveTextContent("—");
+    // A DPO who reads an assigned request as unassigned reassigns the work off
+    // the colleague doing it with the statutory clock running.
+    expect(picker).not.toHaveTextContent(en["notice.unassigned"]);
 
-    // Legible without being offered, exactly as the unassigned entry is:
-    // re-choosing the holder this request already has changes nothing.
+    // Legible without being offered: re-choosing the holder changes nothing.
     await user.click(picker);
     expect(
       screen.getByRole("option", { name: en["ref.notInRoster"] }),
@@ -226,7 +225,7 @@ describe("an assignee the picker's own list does not offer", () => {
     // answering a statutory request, made on the evidence of nothing having
     // arrived yet.
     expect(picker).toHaveTextContent(en["common.loading"]);
-    expect(picker).not.toHaveTextContent("—");
+    expect(picker).not.toHaveTextContent(en["notice.unassigned"]);
   });
 
   it("says the name failed to load, never that the holder departed, when the read is refused", async () => {
@@ -242,7 +241,9 @@ describe("an assignee the picker's own list does not offer", () => {
 
     const { picker } = await openAssignee();
 
-    await screen.findByText(en["ref.nameLoadFailed"]);
+    await within(screen.getByRole("dialog")).findByText(
+      en["ref.nameLoadFailed"],
+    );
     expect(picker).toHaveTextContent(en["ref.nameLoadFailed"]);
     expect(picker).not.toHaveTextContent(en["ref.notInRoster"]);
   });
@@ -261,7 +262,9 @@ describe("an assignee the picker's own list does not offer", () => {
 
     const { picker } = await openAssignee();
 
-    expect(await screen.findByText("Fara Nolan")).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole("dialog")).findByText("Fara Nolan"),
+    ).toBeInTheDocument();
     expect(picker).toHaveTextContent("Fara Nolan");
     expect(await screen.findByText(en["state.partial"])).toBeInTheDocument();
   });

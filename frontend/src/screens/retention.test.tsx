@@ -133,14 +133,23 @@ function render(ui: ReactNode) {
   );
 }
 
+const SCOPE_NAMES: Record<string, string> = {
+  "activity/transcript": "Call transcripts",
+  "deal/won": "Won deals",
+  "deal/lost": "Lost deals",
+};
+
 async function findRow(scope: string): Promise<HTMLElement> {
-  return screen.findByTestId(`retention-row-${scope}`);
+  const name = await screen.findByText(SCOPE_NAMES[scope]);
+  const row = name.closest("tr");
+  if (!row) {
+    throw new Error(`no table row holds ${scope}`);
+  }
+  return row;
 }
 
 // The window, the action, the basis and the Enabled switch are committed
-// together, so they live in the dialog the row's Edit verb opens rather than in
-// a panel that unfolds under the row. Every assertion about the editor is
-// therefore scoped to the DIALOG, and the row keeps only what it does tonight.
+// together, so they live in the dialog the row's Edit verb opens.
 async function openEditor(scope: string): Promise<HTMLElement> {
   const row = await findRow(scope);
   await userEvent.click(within(row).getByRole("button", { name: /edit/i }));
@@ -161,19 +170,65 @@ describe("RetentionCard rows", () => {
     expect(
       within(suppressed).getByText(/paused by retain-only mode/i),
     ).toBeInTheDocument();
-    // Not just a badge: the row states the consequence, because "enabled but
-    // inert" is the one thing a reader cannot infer from the other columns.
+    // The consequence is said once, by the posture row above the ladder, and
+    // not repeated under every row it holds back.
+    expect(screen.getByText(/whatever a policy below says/i)).toBeVisible();
     expect(
-      within(suppressed).getByText(/does not act until the mode/i),
-    ).toBeInTheDocument();
+      within(suppressed).queryByText(/does not act until the mode/i),
+    ).not.toBeInTheDocument();
 
-    // Archiving retains, so the posture leaves it alone — and this row must
-    // carry none of that copy, or the indicator would mean nothing.
+    // Archiving retains, so the posture leaves it alone. An acting row carries
+    // no status at all: the intro says once that enabled policies act on the schedule.
     const acting = await findRow("deal/won");
-    expect(within(acting).getByText(/acting nightly/i)).toBeInTheDocument();
     expect(
       within(acting).queryByText(/paused by retain-only mode/i),
     ).not.toBeInTheDocument();
+    expect(within(acting).queryByText(/disabled/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/enabled policies act on the data retention schedule/i),
+    ).toBeVisible();
+  });
+
+  it("tones each action by what it destroys", async () => {
+    backend({
+      retainOnly: false,
+      policies: [
+        TRANSCRIPTS,
+        WON_DEALS,
+        { ...WON_DEALS, id: "lost", scope: "deal/lost", action: "anonymize" },
+      ],
+    });
+    render(<RetentionCard />);
+
+    const badge = async (scope: string, action: RegExp) =>
+      within(await findRow(scope))
+        .getByText(action)
+        .closest(".badge");
+    expect(await badge("activity/transcript", /^erase$/i)).toHaveClass(
+      "badge-danger",
+    );
+    expect(await badge("deal/lost", /^anonymize$/i)).toHaveClass(
+      "badge-warning",
+    );
+    expect(await badge("deal/won", /^archive$/i)).not.toHaveClass(
+      "badge-danger",
+      "badge-warning",
+    );
+  });
+
+  it("reads the window in years when it is whole years", async () => {
+    backend({
+      retainOnly: false,
+      policies: [{ ...TRANSCRIPTS, retain_days: 90 }, WON_DEALS],
+    });
+    render(<RetentionCard />);
+
+    expect(
+      within(await findRow("deal/won")).getByText("7 years"),
+    ).toBeInTheDocument();
+    expect(
+      within(await findRow("activity/transcript")).getByText("90 days"),
+    ).toBeInTheDocument();
   });
 
   it("offers a retry when the ladder itself could not be read", async () => {
@@ -227,8 +282,8 @@ describe("RetentionCard rows", () => {
     expect(
       within(row).getByText(/its window is preserved/i),
     ).toBeInTheDocument();
-    // Still on screen with its window intact — the whole point of E2.
-    expect(within(row).getByText(/2,555 days/i)).toBeInTheDocument();
+    // Still on screen with its window intact.
+    expect(within(row).getByText("7 years")).toBeInTheDocument();
   });
 
   it("disables a policy through enabled:false rather than by deleting it", async () => {
@@ -377,14 +432,47 @@ describe("RetentionCard rows", () => {
   });
 });
 
+describe("a refused policy write", () => {
+  it("keeps the editor open over the server's refusal", async () => {
+    backend({
+      retainOnly: false,
+      overrides: {
+        [`PATCH /retention-policies/${WON_DEALS.id}`]: () =>
+          jsonResponse(
+            {
+              title: "Forbidden",
+              status: 403,
+              code: "permission_denied",
+              detail: "this seat may not change retention",
+            },
+            403,
+          ),
+      },
+    });
+    render(<RetentionCard />);
+
+    const dialog = await openEditor("deal/won");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: /save policy/i }),
+    );
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      /do not have permission/i,
+    );
+    expect(screen.getByRole("dialog")).toBe(dialog);
+  });
+});
+
 describe("the retain-only posture", () => {
   it("writes the posture and re-renders every row's suppression", async () => {
     const sent = backend({ retainOnly: false });
     render(<RetentionCard />);
 
-    // Off to begin with: the destructive policy is acting.
+    // Off to begin with: the destructive policy is acting, so it says nothing.
     const before = await findRow("activity/transcript");
-    expect(within(before).getByText(/acting nightly/i)).toBeInTheDocument();
+    expect(
+      within(before).queryByText(/paused by retain-only mode/i),
+    ).not.toBeInTheDocument();
 
     await userEvent.click(
       await screen.findByRole("switch", { name: /retain-only mode/i }),

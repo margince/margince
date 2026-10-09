@@ -228,7 +228,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// rather than as "this installation cannot hold one".
 		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)).
 			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
-			WithLegalHoldWriter(NewLegalHoldSeam(pool)),
+			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
+			WithRecordLabeler(newAttentionNames(InstallationDB(pool))),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the

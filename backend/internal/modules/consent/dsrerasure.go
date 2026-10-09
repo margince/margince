@@ -58,10 +58,7 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 	}
 	var out dsrRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		current, err := scanDSR(tx.QueryRow(ctx, dsrSelectForUpdate, id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		current, err := lockDSR(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -95,11 +92,10 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 	return out, err
 }
 
-// finalizeErasureFulfil flips the FOR UPDATE-locked request to fulfilled and
-// appends the audit row, run inside the caller's held-lock transaction (never
-// on its own). The AND status guard mirrors UpdateDSR's finalize as defense in
-// depth — with the lock held it can only match, but a miss still maps to the
-// honest illegal-transition error rather than a silent no-op.
+// finalizeErasureFulfil flips the locked request to fulfilled and appends the
+// audit row, inside the caller's held-lock transaction. The `AND status` guard
+// can only match under that lock. A miss still answers as an illegal
+// transition, never a silent no-op.
 func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateDSRInput, current dsrRow) (dsrRow, error) {
 	// THE RESOLUTION COMES OUT, and subject_ref deliberately does NOT.
 	//
@@ -122,16 +118,19 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 	// way — the audit trail, or a column the tombstone does not touch — which
 	// is a change to how a fulfilment re-finds its subject rather than to what
 	// this statement writes.
-	row := tx.QueryRow(ctx, `
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	assignee := dsrAssigneeSet(in, arg)
+	row := tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE data_subject_request SET
 			  status = 'fulfilled',
-			  assignee_id = coalesce($2, assignee_id),
+			  %s,
 			  resolution = CASE
-			    WHEN coalesce($3, resolution) IS NULL THEN NULL ELSE 'erased' END,
+			    WHEN coalesce($%d, resolution) IS NULL THEN NULL ELSE 'erased' END,
 			  contact_id = NULL
-			WHERE id = $1 AND status = $4
-			RETURNING `+dsrColumns,
-		id, in.AssigneeID, in.Resolution, current.Status)
+			WHERE id = $%d AND status = $%d
+			RETURNING `+dsrColumns, assignee, arg(in.Resolution), arg(id), arg(current.Status)),
+		args...)
 	out, err := scanDSR(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -139,11 +138,7 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 		}
 		return dsrRow{}, err
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "data_subject_request", id, map[string]any{
-		fieldStatus: current.Status,
-	}, map[string]any{
-		fieldStatus: out.Status, fieldResolution: in.Resolution != nil,
-	}); err != nil {
+	if err := auditDSRUpdate(ctx, tx, current, out, in.Resolution != nil); err != nil {
 		return dsrRow{}, err
 	}
 	return out, nil

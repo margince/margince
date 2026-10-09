@@ -200,6 +200,21 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     );
   });
 
+  it("rules the boundary between a bleeding list and a bleeding table", () => {
+    const rules = cssRules(panelCss());
+    for (const [first, second] of [
+      [".settinglist-bleed", ".table-scroll-bleed"],
+      [".table-scroll-bleed", ".settinglist-bleed"],
+    ]) {
+      const seam = rules.find(
+        (rule) => rule.selector === `.panel > ${first} + ${second}`,
+      );
+      expect(declaredValue(seam?.block ?? "", "border-top")).toBe(
+        "1px solid var(--borderSubtle)",
+      );
+    }
+  });
+
   // A group head renders as a `.panel-body`, so the body under it matches the
   // body-after-body seam at equal specificity and only sheet order decides.
   it("draws no seam between a group head and the body it names", () => {

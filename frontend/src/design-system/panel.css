@@ -133,6 +133,12 @@
 .panel-grouphead + .panel-body::before {
   content: none;
 }
+/* Two bleeding blocks meet edge to edge, so a border serves; a pseudo-element
+   inside the table's scroll box would scroll away with the table. */
+.panel > .settinglist-bleed + .table-scroll-bleed,
+.panel > .table-scroll-bleed + .settinglist-bleed {
+  border-top: 1px solid var(--borderSubtle);
+}
 
 /* An empty state inside a card is a SENTENCE, not a stage.
  *

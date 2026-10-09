@@ -6,6 +6,7 @@
 package consent
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -65,5 +66,46 @@ func TestTheAgendaSaysWhenADutyWasRecorded(t *testing.T) {
 	}
 	if !got[0].OpenedAt.After(got[0].DueAt) {
 		t.Errorf("a duty recorded today for a 2020 deadline reads opened %v, due %v", got[0].OpenedAt, got[0].DueAt)
+	}
+}
+
+// The agenda and the queue say what each deadline rests on: how the contact
+// arrived, when, and who recorded it.
+func TestADutyCarriesTheAcquisitionItsDeadlineRunsFrom(t *testing.T) {
+	e := setupChannelConsent(t)
+	acquired := time.Date(2025, 3, 31, 9, 0, 0, 0, time.UTC)
+	var acq ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
+		VALUES ($1, 'referral', $2, $3) RETURNING id`,
+		e.contact, acquired, "human:"+e.user.String()).Scan(&acq); err != nil {
+		t.Fatalf("seeding the acquisition: %v", err)
+	}
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		return OpenNoticeCaseTx(e.ctx, tx, NoticeCaseInput{
+			ContactID: e.contact, AcquisitionID: acq, Rule: RuleArt14, DueAt: AddMonths(acquired, 1),
+		})
+	}); err != nil {
+		t.Fatalf("recording the duty: %v", err)
+	}
+
+	agenda, err := e.store.OpenNoticeCasesDueSoonest(privacyOperator(e), NoticeAgendaInput{Limit: 10})
+	if err != nil || len(agenda) != 1 {
+		t.Fatalf("reading the agenda: %d cases, %v", len(agenda), err)
+	}
+	detail, err := e.store.GetNoticeCase(privacyOperator(e), agenda[0].ID)
+	if err != nil {
+		t.Fatalf("reading the duty: %v", err)
+	}
+	for read, evidence := range map[string]*NoticeAcquisition{"agenda": agenda[0].Acquisition, "detail": detail.Acquisition} {
+		if evidence == nil {
+			t.Fatalf("the %s read carries no acquisition, so its deadline reads as authoritative", read)
+		}
+		if evidence.Kind != "referral" || evidence.OccurredAt == nil || !evidence.OccurredAt.Equal(acquired) {
+			t.Errorf("the %s read rests on %s at %v, want a referral on %v", read, evidence.Kind, evidence.OccurredAt, acquired)
+		}
+		if evidence.CapturedByName == nil || *evidence.CapturedByName != "Rep" {
+			t.Errorf("the %s read names the recording seat %v, want its display name", read, evidence.CapturedByName)
+		}
 	}
 }

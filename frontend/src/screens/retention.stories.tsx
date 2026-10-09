@@ -106,8 +106,8 @@ type Story = StoryObj<typeof RetentionCard>;
 // The posture off: every policy acts as authored.
 export const LadderActing: Story = { render: retention(false) };
 
-// The posture on: the erase and anonymize rows are enabled and inert, and each
-// says why; the archive row is untouched because archiving retains.
+// The posture on: the erase and anonymize rows are enabled and inert and carry
+// a paused badge; the archive row is untouched because archiving retains.
 export const RetainOnly: Story = { render: retention(true) };
 
 // A seat that may read the ladder and change none of it: the posture switch is
@@ -118,19 +118,14 @@ export const ReadOnlyPosture: Story = {
   render: retention(true, {}, RETENTION_READER),
 };
 
-// The same page in dark, because the two things this screen says are both said
-// in colour-adjacent ways. The posture Switch is ON, so its track carries the
-// accent fill against `--bgElevated` and the thumb has to stay visible on it —
-// the one control in the settings tree whose state is a shape rather than a word.
-// And the suppressed rows say "enabled and inert" with a `--textMeta` caption
-// beside a badge, which is the contrast pair most likely to collapse when the
-// ground goes dark.
+// Dark, with the posture on: the switch's accent track against `--bgElevated`,
+// and the action and paused badges in warning and danger on the dark ground.
 export const RetainOnlyDark: Story = {
   globals: { theme: "dark" },
   render: retention(true),
 };
 
-// The inline authoring form, defaulting to the least destructive action.
+// The authoring form, defaulting to the least destructive action.
 export const CreateForm: Story = {
   render: retention(false),
   play: async ({ canvasElement }) => {
@@ -141,14 +136,15 @@ export const CreateForm: Story = {
   },
 };
 
-// The inline editor: window, action and basis, plus the Enabled switch that
-// pauses a rule without losing it.
+// The editor a row's Edit verb opens: window, action and basis, plus the
+// Enabled switch that pauses a rule without losing it.
 export const RowEditor: Story = {
   render: retention(true),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const row = await canvas.findByTestId("retention-row-deal/won");
-    await userEvent.click(within(row).getByRole("button", { name: /edit/i }));
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Edit Won deals" }),
+    );
   },
 };
 
@@ -198,4 +194,91 @@ export const Empty: Story = {
     "GET /retention-policies": () =>
       jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
   }),
+};
+
+// A rule switched off: kept with its window, and saying so on its row.
+export const DisabledPolicy: Story = {
+  render: retention(false, {
+    "GET /retention-policies": () =>
+      jsonResponse({
+        data: [
+          { ...WON_DEALS, enabled: false, suppressed_by_posture: false },
+          { ...LOST_DEALS, suppressed_by_posture: false },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+  }),
+};
+
+// At phone width each row folds: the record type and Edit, then the window and
+// the action under them.
+export const LadderPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: retention(true),
+};
+
+// The ladder in flight, beside a posture that has already answered.
+export const Loading: Story = {
+  render: retention(false, {
+    "GET /retention-policies": () => new Promise<Response>(() => undefined),
+  }),
+};
+
+// The ladder could not be read: the failure and its retry stand where the
+// rows would.
+export const LoadError: Story = {
+  render: retention(false, {
+    "GET /retention-policies": () =>
+      jsonResponse(
+        {
+          type: "https://errors.gradion.com/internal",
+          title: "Internal Server Error",
+          status: 500,
+          code: "internal",
+          detail: "The policy store is unreachable.",
+        },
+        500,
+      ),
+  }),
+};
+
+// A refused save keeps the editor open over the server's words.
+export const SaveRefused: Story = {
+  render: retention(false, {
+    [`PATCH /retention-policies/${WON_DEALS.id}`]: () =>
+      jsonResponse(
+        {
+          type: "https://errors.gradion.com/permission_denied",
+          title: "Forbidden",
+          status: 403,
+          code: "permission_denied",
+          detail: "This seat may not change retention.",
+        },
+        403,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Edit Won deals" }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: /save policy/i }));
+    await dialog.findByRole("alert");
+  },
+};
+
+// A seat with no retention authority: the card keeps its place and says why.
+export const Withheld: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () => jsonResponse(meFixture({ allow: {} })),
+    });
+    return (
+      <StoryProviders>
+        <RetentionCard />
+      </StoryProviders>
+    );
+  },
 };

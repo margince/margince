@@ -41,6 +41,9 @@ type Handlers struct {
 	// holds places and lifts a litigation hold. Nil until compose wires the
 	// seam, and the routes refuse rather than half-serving without it.
 	holds LegalHoldWriter
+	// labels names the record each audit row is about. Nil until compose wires
+	// the seam, and every entity_label then reads null.
+	labels RecordLabeler
 }
 
 // NewHandlers wires the transport over the installation-bound pool and the
@@ -101,6 +104,7 @@ func (h Handlers) ListAuditLog(w http.ResponseWriter, r *http.Request, params cr
 		httperr.Write(w, r, err)
 		return
 	}
+	labelAuditPage(r.Context(), h.labels, page.Entries)
 
 	data := make([]crmcontracts.AuditLogEntry, 0, len(page.Entries))
 	for _, e := range page.Entries {
@@ -131,6 +135,7 @@ func auditEntryToWire(e AuditEntry) (crmcontracts.AuditLogEntry, error) {
 		AgentClient:       e.AgentClient,
 		Action:            crmcontracts.AuditLogEntryAction(e.Action),
 		EntityType:        e.EntityType,
+		EntityLabel:       e.EntityLabel,
 		AuthorizationRule: e.AuthorizationRule,
 		OccurredAt:        e.OccurredAt,
 	}

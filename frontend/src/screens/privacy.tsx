@@ -1,324 +1,73 @@
 import {
   useInfiniteQuery,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { type ReactNode, useId, useMemo, useRef, useState } from "react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
+import { isOption } from "../app/options";
 import {
-  Badge,
   Button,
-  Card,
-  Checkbox,
   EmptyState,
   Field,
   Modal,
   SegmentedControl,
-  Textarea,
   TextInput,
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
-import { Select, type SelectOption } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDate } from "../format/format";
+import { Select } from "../design-system/select";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { humanizeToken } from "./audit";
+import { useT } from "../i18n";
 import {
   LoadMoreButton,
   ProblemError,
+  problemFieldErrorsOf,
   problemMessageOf,
   QueryGate,
   QueryStates,
   unwrap,
   useMe,
 } from "./common";
-import {
-  EntityRef,
-  RosterPartialNote,
-  rosterOwnerName,
-  useRoster,
-  useRosterPartial,
-} from "./entityref";
-import { useMemberName } from "./membernames";
 import { useLinkedCase } from "./privacy.caselink";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
+  DSR_KIND_LABEL,
   DSR_STATUS_FACETS,
-  type DsrStatus,
+  DSR_STATUS_LABEL,
   type DsrStatusFacet,
-  dsrKindTone,
   endOfDayInZone,
-  isOverdue,
-  isTerminal,
-  nextStatuses,
+  isIllegalTransition,
+  isLegalHold,
 } from "./privacy.logic";
 import { ErasureRefusals } from "./privacy.notices";
+import {
+  type DataSubjectRequest,
+  DsrDetail,
+  DsrTable,
+} from "./privacy.requests";
 import "./privacy.css";
-import { isOption } from "../app/options";
-import { ErrorLine } from "../design-system/errorline";
 
-type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
 type CreateDataSubjectRequest =
   components["schemas"]["CreateDataSubjectRequest"];
 type UpdateDataSubjectRequest =
   components["schemas"]["UpdateDataSubjectRequest"];
-type User = components["schemas"]["User"];
 type DsrKind = CreateDataSubjectRequest["kind"];
-
-// The two settings/privacy surfaces, extracted out of the 1309-line
-// settings.tsx (the audit.tsx extraction precedent): the consent-purpose
-// catalogue (G-3 adds create — POST /consent-purposes already routed, but
-// nothing in this app called it) and the DSR inbox. GET + POST only — there
-// is no PATCH or DELETE on /consent-purposes, so a purpose is append-only by
-// contract, not by convention; the create form says so up front.
-
-// The DSR closed status machine (consent/dsr.go's dsrTransitions) rejects an
-// illegal "<from> → <to>" move with a 422 validation_error whose ONE failing
-// field is "status" (writeConsentErr → httperr.Validation("status", "invalid",
-// reason)). That is the only field-level validation error this endpoint's
-// status changes can produce — the sibling "closing a request needs its
-// answer" case fails on "resolution", not "status" — so field "status" on a
-// validation_error is an unambiguous signal the request moved on underneath
-// us. Every other failure (permission_denied, an infra 500, a network error)
-// is a different kind of problem and must never wear that copy.
-function isIllegalTransition(problem: unknown): boolean {
-  if (!problem || typeof problem !== "object") return false;
-  const record = problem as Record<string, unknown>;
-  if (record.code !== "validation_error") return false;
-  const details = record.details;
-  if (!details || typeof details !== "object") return false;
-  const errors = (details as Record<string, unknown>).errors;
-  if (!Array.isArray(errors)) return false;
-  return errors.some(
-    (item) =>
-      item &&
-      typeof item === "object" &&
-      (item as Record<string, unknown>).field === "status",
-  );
-}
-
-// G-3: the purpose-create form — three inputs committed together, so it is the
-// BODY of the dialog the registry's "Add purpose" row opens rather than a card
-// unfolding inside the card. A stale create error must not outlive the edit
-// that could fix it, so every field's onChange clears it first (share.tsx:432's
-// dismissGrantError idiom).
-function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [key, setKey] = useState("");
-  const [label, setLabel] = useState("");
-  const [requiresDoi, setRequiresDoi] = useState(false);
-  const formId = useId();
-
-  const create = useMutation({
-    mutationFn: async () => {
-      return unwrap(
-        await api.POST("/consent-purposes", {
-          body: {
-            key: key.trim(),
-            label: label.trim(),
-            requires_double_opt_in: requiresDoi,
-          },
-        }),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["consent-purposes"] });
-      setKey("");
-      setLabel("");
-      setRequiresDoi(false);
-      onDone();
-    },
-  });
-
-  function dismissCreateError() {
-    if (create.isError) {
-      create.reset();
-    }
-  }
-
-  const ready = key.trim() !== "" && label.trim() !== "";
-  return (
-    <>
-      <form
-        id={formId}
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (ready && !create.isPending) create.mutate();
-        }}
-      >
-        <p>{t("privacy.purposeAppendOnly")}</p>
-        <Field label={t("privacy.purposeKey")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={key}
-              onChange={(event) => {
-                setKey(event.target.value);
-                dismissCreateError();
-              }}
-            />
-          )}
-        </Field>
-        <Field label={t("privacy.purposeLabel")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={label}
-              onChange={(event) => {
-                setLabel(event.target.value);
-                dismissCreateError();
-              }}
-            />
-          )}
-        </Field>
-        <Checkbox
-          label={t("privacy.purposeDoi")}
-          checked={requiresDoi}
-          onChange={(event) => {
-            setRequiresDoi(event.target.checked);
-            dismissCreateError();
-          }}
-        />
-        <ErrorLine error={create.error} />
-      </form>
-      <div className="actions">
-        <Button
-          type="submit"
-          form={formId}
-          variant="primary"
-          disabled={!ready || create.isPending}
-        >
-          {t("privacy.purposeCreate")}
-        </Button>
-      </div>
-    </>
-  );
-}
-
-export function ConsentPurposesCard() {
-  const t = useT();
-  // The probe itself, not just its answer: every role predicate reads false
-  // while /me is in flight, so branching on `!canAdminister` alone would flash
-  // the read-only line at an admin on every load.
-  const me = useMe();
-  // `consent_config:create`, which is what consent/store.go's CreatePurpose
-  // asks for. This was a role predicate whose own comment said it was interim —
-  // the object was governed upstream but absent from the shipped vocabulary, so
-  // there was no grant to ask for. There is now.
-  //
-  // `useCanWrite`, not `useCan`: the seat ceiling is enforced BEFORE RBAC
-  // (identity/admission.go), so a read seat holding the grant is still refused
-  // every POST. The control it was shown could only ever 403.
-  const canAdminister = useCanWrite("consent_config", "create");
-  const addTitleId = useId();
-  const [adding, setAdding] = useState(false);
-  const query = useQuery({
-    queryKey: ["consent-purposes"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/consent-purposes"));
-    },
-  });
-  // No bottom margin of its own: `.settings-stack` owns the gap between cards.
-  return (
-    <Panel
-      title={t("settings.purposes")}
-      // A create verb is not a setting, so it rides in the header. Authoring a
-      // purpose is an admin/ops act on a page every seat opens: a verb the
-      // server would refuse must not be offered, and the registry row's
-      // description states the read-only posture instead.
-      titleAction={
-        canAdminister ? (
-          <Button onClick={() => setAdding(true)}>
-            {t("privacy.addPurpose")}
-          </Button>
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        <PanelIntro>{t("settings.purposesSub")}</PanelIntro>
-        <SettingList>
-          {/* The registry is the card's subject, so it takes the full width.
-              The read-only posture is its description: a dropped verb has to
-              be said, beside the thing it is a posture about. */}
-          <SettingRow
-            label={t("privacy.purposesRegistry")}
-            description={
-              me.isSuccess && !canAdminister
-                ? t("privacy.purposesReadOnly")
-                : undefined
-            }
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                empty={(page) => page.data.length === 0}
-                pendingLabel={t("privacy.purposesRegistry")}
-              >
-                {(page) => (
-                  <div className="purpose-badges">
-                    {page.data.map((purpose) => (
-                      <Badge
-                        key={purpose.id}
-                        tone={
-                          purpose.requires_double_opt_in ? "warning" : undefined
-                        }
-                      >
-                        {purpose.label}
-                        {purpose.requires_double_opt_in ? " · DOI" : ""}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        <Modal
-          open={adding}
-          onClose={() => setAdding(false)}
-          labelledBy={addTitleId}
-          intent="form"
-        >
-          <Heading size="large" id={addTitleId} className="t-h2 modal-title">
-            {t("privacy.addPurpose")}
-          </Heading>
-          <PurposeCreateForm onDone={() => setAdding(false)} />
-        </Modal>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-// Matches a proper contact-id UUID; an external identifier (email, a partner's
-// own reference string) never does, so it stays raw text rather than a
-// dead EntityRef lookup against a record that was never a contact id.
-const SUBJECT_UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const DSR_KINDS: readonly DsrKind[] = ["access", "rectify", "erasure"];
 
-// The erasure fulfiller (consent/dsr.go) resolves subject_ref to a contact id
-// and erases that record — free text there cannot be erased, so an erasure
-// request must be opened against a picked contact, never typed in by hand.
-// No purpose-built contact-search endpoint exists yet (offers.tsx's company/product
-// pickers are RecordPicker's only other callers today), so this reuses the
-// contact list's own full-text `q` param, exactly as searchCompanyCandidates
-// reuses /companies.
+// An erasure resolves subject_ref to a contact id, so it is opened against a
+// picked contact; the contact list's own `q` search finds the candidates.
 async function searchContactCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
@@ -333,35 +82,37 @@ async function searchContactCandidates(
   }));
 }
 
-// G-2: the DSR-open form — kind, subject and deadline committed together, so it
-// is the body of the dialog the queue's "New request" row opens, the same shape
-// PurposeCreateForm takes above. kind flips the subject field's very shape: an
-// erasure locks onto
-// a picked contact (RecordPicker, uuid subject_ref) so the create form is
-// physically incapable of producing the free-text-erasure state the server
-// now refuses; access/rectify keep the free-text field the contract's
-// "contact id or external identifier" wording actually allows.
+type DsrDraft = Readonly<{
+  kind: DsrKind;
+  subjectRef: string;
+  contact: RecordPickerCandidate | null;
+  dueAt: string;
+}>;
+
+const EMPTY_DSR: DsrDraft = {
+  kind: "access",
+  subjectRef: "",
+  contact: null,
+  dueAt: "",
+};
+
+// Kind flips the subject field's shape: an erasure locks onto a picked contact,
+// so the form cannot produce the free-text erasure the server refuses.
 function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [kind, setKind] = useState<DsrKind>("access");
-  const [subjectRef, setSubjectRef] = useState("");
-  const [contact, setContact] = useState<RecordPickerCandidate | null>(null);
-  const [dueAt, setDueAt] = useState("");
+  const [draft, setDraft] = useState<DsrDraft>(EMPTY_DSR);
   const formId = useId();
-  // The statutory deadline is minted in the OPERATOR's own zone, the same
-  // zone the row later renders it back in (PrivacyInboxCard's tz below) —
-  // `new Date(dueAt).toISOString()` would instead read the date-only input
-  // as UTC midnight, silently rolling the picked day back a day for anyone
-  // west of UTC.
+  // Minted in the operator's zone, the one the row renders it back in. A bare
+  // `new Date(day)` reads the day as UTC midnight and rolls it back west of UTC.
   const tz = viewerZone();
 
   const create = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (request: DsrDraft) => {
       const body: CreateDataSubjectRequest = {
-        kind,
-        subject_ref: subjectRef.trim(),
-        due_at: endOfDayInZone(dueAt, tz),
+        kind: request.kind,
+        subject_ref: request.subjectRef.trim(),
+        due_at: endOfDayInZone(request.dueAt, tz),
       };
       return unwrap(
         await api.POST("/data-subject-requests", {
@@ -370,32 +121,23 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dsrs"] });
-      setKind("access");
-      setSubjectRef("");
-      setContact(null);
-      setDueAt("");
+      void queryClient.invalidateQueries({ queryKey: ["dsrs"] });
+      setDraft(EMPTY_DSR);
       onDone();
     },
   });
 
-  function dismissCreateError() {
+  function edit(next: Partial<DsrDraft>) {
+    setDraft((was) => ({ ...was, ...next }));
     if (create.isError) {
       create.reset();
     }
   }
 
-  function changeKind(next: DsrKind) {
-    setKind(next);
-    // The subject field's meaning changes with kind (a picked contact's uuid
-    // vs. free text) — carrying either value across the switch would let a
-    // stale value from the OTHER shape ride into the request unnoticed.
-    setSubjectRef("");
-    setContact(null);
-    dismissCreateError();
-  }
-
-  const ready = subjectRef.trim() !== "" && dueAt !== "";
+  const dueRefused = problemFieldErrorsOf(create.error).some(
+    (problem) => problem.field === "due_at",
+  );
+  const ready = draft.subjectRef.trim() !== "" && draft.dueAt !== "";
   return (
     <>
       <form
@@ -403,7 +145,7 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (ready && !create.isPending) create.mutate();
+          if (ready && !create.isPending) create.mutate(draft);
         }}
       >
         <Field label={t("privacy.kind")}>
@@ -412,64 +154,66 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
               {...control}
               options={DSR_KINDS.map((value) => ({
                 value,
-                label: humanizeToken(value),
+                label: t(DSR_KIND_LABEL[value]),
               }))}
-              value={kind}
+              value={draft.kind}
               onChange={(value) => {
-                if (isOption(value, DSR_KINDS)) changeKind(value);
+                // Neither subject shape carries across: a stale value of the
+                // other shape would ride into the request unnoticed.
+                if (isOption(value, DSR_KINDS)) {
+                  edit({ kind: value, subjectRef: "", contact: null });
+                }
               }}
             />
           )}
         </Field>
 
-        {kind === "erasure" ? (
+        {draft.kind === "erasure" ? (
           <div className="field">
             <span className="t-label">{t("privacy.contact")}</span>
             <RecordPicker
               label={t("privacy.contact")}
               searchTargets={searchContactCandidates}
-              selected={contact}
-              onPick={(candidate) => {
-                setContact(candidate);
-                setSubjectRef(candidate.id);
-                dismissCreateError();
-              }}
+              selected={draft.contact}
+              onPick={(candidate) =>
+                edit({ contact: candidate, subjectRef: candidate.id })
+              }
             />
             <p className="t-caption">{t("privacy.erasureNeedsContact")}</p>
           </div>
         ) : (
           <Field
             label={t("privacy.subjectRef")}
-            hint={kind === "access" ? t("privacy.accessManual") : undefined}
+            hint={
+              draft.kind === "access" ? t("privacy.accessManual") : undefined
+            }
           >
             {(control) => (
               <TextInput
                 {...control}
-                value={subjectRef}
-                onChange={(event) => {
-                  setSubjectRef(event.target.value);
-                  dismissCreateError();
-                }}
+                value={draft.subjectRef}
+                onChange={(event) => edit({ subjectRef: event.target.value })}
               />
             )}
           </Field>
         )}
 
-        <Field label={t("privacy.dueAt")}>
+        <Field
+          label={t("privacy.dueAt")}
+          required
+          error={dueRefused ? t("privacy.dueRequired") : undefined}
+        >
           {(control) => (
             <TextInput
               {...control}
               type="date"
-              value={dueAt}
-              onChange={(event) => {
-                setDueAt(event.target.value);
-                dismissCreateError();
-              }}
+              value={draft.dueAt}
+              onChange={(event) => edit({ dueAt: event.target.value })}
             />
           )}
         </Field>
 
-        <ErrorLine error={create.error} />
+        {!dueRefused && <ErrorLine error={create.error} />}
       </form>
       <div className="actions">
         <Button
@@ -485,375 +229,8 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   );
 }
 
-// The status badge tone, keyed on the closed DSR status machine — open carries
-// no tone. Keying on the union keeps a status added upstream a compile error
-// here rather than a silently untoned badge.
-const STATUS_TONE: Record<
-  DsrStatus,
-  "success" | "warning" | "danger" | undefined
-> = {
-  open: undefined,
-  in_progress: "warning",
-  fulfilled: "success",
-  rejected: "danger",
-};
-
-// nextStatuses(open|in_progress) only ever yields these three targets (the
-// TRANSITIONS DAG in privacy.logic.ts never routes to "open"); the fallback
-// return keeps this total without a needless fourth i18n key for a status
-// that can never reach here.
-function transitionLabelKey(status: DsrStatus): MessageKey {
-  if (status === "in_progress") return "privacy.inProgress";
-  if (status === "fulfilled") return "privacy.fulfil";
-  return "privacy.reject";
-}
-
-// Who a request can be assigned to, led by the unassigned entry. That entry is
-// a DISABLED option: the server coalesces an omitted assignee onto the stored
-// one, so no selection could unassign anybody, yet the state must stay legible.
-//
-// `current` is the request's own assignee when this list does not offer them
-// (deactivated, past the walk's bound, or a withheld agent seat). Without it the
-// select paints the unassigned em dash, and a DPO would reassign an erasure
-// request off its holder with a statutory clock running. It leads the list
-// because it is the state the field is in.
-function assigneeOptions(
-  users: readonly User[],
-  current: SelectOption | null,
-): SelectOption[] {
-  return [
-    current ?? { value: "", label: "—", disabled: true },
-    ...users.map((user) => ({ value: user.id, label: user.display_name })),
-  ];
-}
-
-// Whether the assignee is nobody the picker offers, asked only while the row
-// is open; the option built from this same fact is only rendered then too.
-function isUnoffered(
-  expanded: boolean,
-  assigneeId: string | null | undefined,
-  offered: readonly User[],
-): boolean {
-  return (
-    expanded &&
-    Boolean(assigneeId) &&
-    !offered.some((member) => member.id === assigneeId)
-  );
-}
-
-// The request's own assignee as an option, when `unoffered` says they are
-// nobody the picker offers, null otherwise. Named by id: an agent seat is
-// never offered (the is_agent filter above) but still has a name, and so
-// does a departed or deactivated holder.
-function unofferedAssignee(
-  assigneeId: string | null | undefined,
-  unoffered: boolean,
-  name: ReturnType<typeof useMemberName>,
-  t: ReturnType<typeof useT>,
-): SelectOption | null {
-  if (!assigneeId || !unoffered) {
-    return null;
-  }
-  return {
-    value: assigneeId,
-    label: rosterOwnerName(assigneeId, name, t, t("ref.notInRoster")),
-    // Disabled for the same reason the unassigned entry is: re-choosing the
-    // holder this request already has changes nothing, and an entry a reader can
-    // aim at has to be able to change something.
-    disabled: true,
-  };
-}
-
-/**
- * The verbs that move one request through its statuses.
- *
- * Its own component because the grant is its own question: consent/dsr.go's
- * UpdateDSR asks for `privacy_request:update`, a strictly WIDER grant than the
- * `read` that opened this queue. A reader delegated only the inbox used to be
- * shown every transition button and refused by each of them.
- *
- * `useCanWrite` rather than `useCan` — the seat ceiling refuses a read seat's
- * mutations above RBAC (identity/admission.go), so the grant alone is not the
- * answer.
- */
-function DsrTransitions({
-  status,
-  answered,
-  pending,
-  onTransition,
-}: Readonly<{
-  status: DataSubjectRequest["status"];
-  // Whether this request already carries the answer that closing one needs —
-  // the draft in the field or the one already stored, either satisfies the
-  // server, so the row resolves them to one fact before asking.
-  answered: boolean;
-  pending: boolean;
-  onTransition: (next: DataSubjectRequest["status"]) => void;
-}>) {
-  const t = useT();
-  const canWork = useCanWrite("privacy_request", "update");
-  if (!canWork) {
-    return null;
-  }
-  return (
-    <div className="dsr-actions">
-      {nextStatuses(status).map((next) => (
-        <Button
-          key={next}
-          disabled={
-            ((next === "fulfilled" || next === "rejected") && !answered) ||
-            pending
-          }
-          onClick={() => onTransition(next)}
-        >
-          {t(transitionLabelKey(next))}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
-// One DSR row: a summary that opens the case-work panel. Which row is open is
-// the CARD's state, because a queue keeps sibling rows visible while one case
-// is worked; `expanded` arrives as a prop, and only that row reads the roster.
-function DsrRow({
-  dsr,
-  expanded,
-  onToggle,
-  nowMs,
-  tz,
-  locale,
-  onFulfilErasure,
-}: Readonly<{
-  dsr: DataSubjectRequest;
-  expanded: boolean;
-  onToggle: () => void;
-  nowMs: number;
-  tz: string;
-  locale: Locale;
-  onFulfilErasure: (
-    dsr: DataSubjectRequest,
-    resolution: string,
-    // The row's summary toggle, named by id rather than handed over as an
-    // element: the erasure confirm lives at the card root and has to find it
-    // again AFTER the fulfil, when the transition button that staged it no
-    // longer exists to have carried a reference.
-    toggleId: string,
-  ) => void;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [resolution, setResolution] = useState(dsr.resolution ?? "");
-  const panelId = useId();
-  const toggleId = useId();
-
-  // Only fetched while this row's panel is actually open — the roster is the
-  // same shared ["users"] cache entry EntityRef and the share picker read.
-  const roster = useRoster("user", expanded);
-  const rosterPartial = useRosterPartial("user", expanded);
-  // The roster hook serves users and teams alike, so narrow to the entries that
-  // carry a contact's name rather than asserting the shape.
-  const members = (roster.data ?? []).flatMap((entry) =>
-    "display_name" in entry ? [entry] : [],
-  );
-  // Agent seats can't hold requireDSRAdmin's unbounded row scope (only a
-  // human admission can), so the picker never offers one — same is_agent
-  // filter as the share subject picker.
-  const assignableUsers = members.filter((member) => !member.is_agent);
-  const unoffered = isUnoffered(expanded, dsr.assignee_id, assignableUsers);
-  const assigneeName = useMemberName(unoffered ? dsr.assignee_id : null);
-  const currentAssignee = unofferedAssignee(
-    dsr.assignee_id,
-    unoffered,
-    assigneeName,
-    t,
-  );
-
-  const patch = useMutation({
-    mutationFn: async (body: UpdateDataSubjectRequest) => {
-      return unwrap(
-        await api.PATCH("/data-subject-requests/{id}", {
-          params: { path: { id: dsr.id } },
-          body,
-        }),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dsrs"] });
-    },
-    // The stale-row race: another officer decided this request first, so the
-    // transition this row offered is no longer legal server-side (422). This
-    // is NOT approvals' already_decided 409 — re-read via invalidation ONLY
-    // for that specific case; an assignee 403 or an infra 500 is not a race,
-    // and invalidating for those would just hide the real failure behind a
-    // refetch instead of explaining it.
-    onError: (error) => {
-      const problem = error instanceof ProblemError ? error.problem : null;
-      if (problem && isIllegalTransition(problem)) {
-        queryClient.invalidateQueries({ queryKey: ["dsrs"] });
-      }
-    },
-  });
-
-  function dismissPatchError() {
-    if (patch.isError) {
-      patch.reset();
-    }
-  }
-
-  function submitTransition(next: DsrStatus) {
-    // An erasure fulfil is the single most destructive action in the
-    // product, so it never goes through this plain PATCH — it routes to the
-    // typed-ERASE confirmation modal instead (which also handles the
-    // legal-hold 409). The resolution the operator already wrote here must
-    // ride along: the closingWithoutAnswer gate above requires one before
-    // this button is even clickable, and the modal has no field of its own
-    // to collect it again.
-    if (dsr.kind === "erasure" && next === "fulfilled") {
-      onFulfilErasure(dsr, resolution.trim(), toggleId);
-      return;
-    }
-    const body: UpdateDataSubjectRequest = { status: next };
-    const trimmed = resolution.trim();
-    // A blank resolution key would still be a value the server writes
-    // (coalesce only skips an omitted key, not an empty string) — omit it
-    // rather than risk clearing a resolution nothing here actually changed.
-    if (trimmed) {
-      body.resolution = trimmed;
-    }
-    patch.mutate(body);
-  }
-
-  const overdue = isOverdue(dsr.due_at, dsr.status, nowMs);
-  const terminal = isTerminal(dsr.status);
-  const patchProblem =
-    patch.error instanceof ProblemError ? patch.error.problem : null;
-  // Only the illegal-transition race gets the "moved on" copy; any other
-  // failure gets the server's own honest explanation instead of a specific
-  // claim about a race that never happened.
-  const patchErrorMessage = !patch.isError
-    ? null
-    : patchProblem && isIllegalTransition(patchProblem)
-      ? t("privacy.movedOn")
-      : problemMessageOf(patch.error, t);
-
-  return (
-    <li className="dsr-row">
-      <Button
-        id={toggleId}
-        className="dsr-row-toggle"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-      >
-        <Badge tone={dsrKindTone(dsr.kind)}>{humanizeToken(dsr.kind)}</Badge>
-        <span>{dsr.subject_ref}</span>
-        <Badge tone={STATUS_TONE[dsr.status]}>
-          {humanizeToken(dsr.status)}
-        </Badge>
-        <span className="t-caption dsr-due">
-          {t("settings.due", { date: formatDate(dsr.due_at, locale, tz) })}
-        </span>
-        {overdue && <Badge tone="danger">{t("privacy.overdue")}</Badge>}
-      </Button>
-      {expanded && (
-        <Card as="div" inset id={panelId} className="dsr-expanded">
-          <div className="form-stack">
-            <div className="field">
-              {SUBJECT_UUID_RE.test(dsr.subject_ref) ? (
-                <EntityRef kind="contact" id={dsr.subject_ref} />
-              ) : (
-                <span>{dsr.subject_ref}</span>
-              )}
-            </div>
-
-            <div className="field">
-              <Field
-                label={t("privacy.assignee")}
-                hint={t("privacy.assigneeUnassignable")}
-              >
-                {(control) => (
-                  <Select
-                    {...control}
-                    options={assigneeOptions(assignableUsers, currentAssignee)}
-                    value={dsr.assignee_id ?? ""}
-                    disabled={patch.isPending}
-                    onChange={(value) => patch.mutate({ assignee_id: value })}
-                  />
-                )}
-              </Field>
-              {/* Who this list leaves out is already its subject, so a roster
-                  that stopped short of the workspace belongs on the same line
-                  rather than being the one omission nobody is told about. */}
-              <RosterPartialNote partial={rosterPartial} />
-              {patch.isPending && (
-                <p className="t-caption">{t("common.saving")}</p>
-              )}
-            </div>
-
-            {/* The assignee select above and the transition buttons below
-                share this one `patch` mutation, and either can fail — a
-                closed request still offers reassignment, so this must render
-                regardless of `terminal`, not only inside the open-case
-                branch below (an assignment failure on a closed request would
-                otherwise be invisible). */}
-            {/* Announced, never standing: the row's badges do not move on a
-                refused write, so this line alone says the click changed nothing. */}
-            {patchErrorMessage && <ErrorLine>{patchErrorMessage}</ErrorLine>}
-
-            {terminal ? (
-              <p>{t("privacy.closed")}</p>
-            ) : (
-              <>
-                <Field
-                  label={t("privacy.resolution")}
-                  hint={t("privacy.resolutionRequired")}
-                >
-                  {(control) => (
-                    <Textarea
-                      {...control}
-                      value={resolution}
-                      onChange={(event) => {
-                        setResolution(event.target.value);
-                        dismissPatchError();
-                      }}
-                    />
-                  )}
-                </Field>
-                <DsrTransitions
-                  status={dsr.status}
-                  answered={Boolean(resolution.trim() || dsr.resolution)}
-                  pending={patch.isPending}
-                  onTransition={submitTransition}
-                />
-              </>
-            )}
-          </div>
-        </Card>
-      )}
-    </li>
-  );
-}
-
-// This mutation's ONE possible 409: fulfilling an erasure calls into the
-// erasure engine (EraseContact), and the ONLY thing that engine ever wraps in
-// ErrConflict is a contact under statutory legal hold — there is no second
-// conflict source on this call to confuse it with. So code === "conflict"
-// here is an unambiguous legal-hold signal, not a guess (unlike the
-// consent-purpose or record-grant 409s elsewhere in this codebase, which
-// carry a more specific discriminating code).
-function isLegalHold(problem: unknown): boolean {
-  if (!problem || typeof problem !== "object") return false;
-  return (problem as Record<string, unknown>).code === "conflict";
-}
-
-// The single most destructive action in the product: fulfilling an erasure
-// permanently wipes a contact across the whole system. Follows share.tsx's
-// revoke-confirm id-in-state pattern — ONE modal at the card root (never one
-// per row), gated by a typed "ERASE" rather than a plain confirm click. A
-// legal-hold 409 is a documented, lawful refusal (Art. 17(3)(b)), not a
-// malfunction — it gets its own honest copy ahead of the generic fallback,
-// same branch-before-generic shape as isIllegalTransition above.
+// Fulfilling an erasure wipes a contact across the whole system, so it waits on
+// a typed ERASE. A legal-hold 409 is a lawful refusal, told apart from a fault.
 function FulfilErasureModal({
   dsr,
   resolution,
@@ -863,31 +240,18 @@ function FulfilErasureModal({
   dsr: DataSubjectRequest | null;
   resolution: string;
   onClose: () => void;
-  // Passed through to the confirm: a fulfilled request is terminal, so the whole
-  // actions branch this was opened from — the button included — is gone by the
-  // time focus comes back.
   returnFocusTo: () => HTMLElement | null;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [typed, setTyped] = useState("");
 
-  // Both the staged request and the operator's resolution arrive as the
-  // mutation's variable rather than through this closure. react-query re-arms
-  // a mutation's options in a passive effect, so a confirm landing between the
-  // commit that stages a request and that effect runs the previous render's
-  // function. On the most destructive action in the product that matters twice
-  // over: read through a stale closure, `dsr` is null and the erasure refuses,
-  // and `resolution` is whatever the operator had typed one render ago.
   const patch = useMutation({
     mutationFn: async (
       fulfilment: Readonly<{ request: DataSubjectRequest; resolution: string }>,
     ) => {
       const body: UpdateDataSubjectRequest = { status: "fulfilled" };
-      // Same omit-if-blank rule as the row's own plain PATCH above: a blank
-      // resolution key would still be a value the server writes over
-      // whatever it already had stored, so it only rides along when there is
-      // something to write.
+      // Omitted when blank: an empty string is a value the server would write.
       if (fulfilment.resolution.trim()) {
         body.resolution = fulfilment.resolution.trim();
       }
@@ -899,23 +263,14 @@ function FulfilErasureModal({
       );
     },
     onSuccess: async () => {
-      // The re-read queue FIRST, then the dialog: closing it hands focus back to
-      // the row's summary, and a summary still reading "open" would announce the
-      // state this erasure just ended.
+      // The queue first, so focus lands on a drawer that already reads fulfilled.
       await queryClient.invalidateQueries({ queryKey: ["dsrs"] });
       setTyped("");
       onClose();
     },
-    // The same stale-row race DsrRow's own plain PATCH already handles: some
-    // other officer (or this same operator, from another tab) decided this
-    // request first, so the fulfil this modal was staged against is no
-    // longer legal server-side. Re-read the queue so the row behind this
-    // modal reflects what actually happened — retrying the confirm here
-    // could only 422 again the same way.
     onError: (error) => {
-      const errProblem = error instanceof ProblemError ? error.problem : null;
-      if (errProblem && isIllegalTransition(errProblem)) {
-        queryClient.invalidateQueries({ queryKey: ["dsrs"] });
+      if (error instanceof ProblemError && isIllegalTransition(error.problem)) {
+        void queryClient.invalidateQueries({ queryKey: ["dsrs"] });
       }
     },
   });
@@ -930,10 +285,8 @@ function FulfilErasureModal({
     patch.error instanceof ProblemError ? patch.error.problem : null;
   const held = problem !== null && isLegalHold(problem);
   const movedOn = problem !== null && isIllegalTransition(problem);
-  // A legal hold and a stale transition each get their own explanation
-  // ahead of the generic fallback — neither is a mistake a retry could fix,
-  // so ConfirmModal's generic inline-error slot (built for a validation
-  // mistake) is reserved for everything else.
+  // Neither a hold nor a race is a mistake a retry fixes. Both keep their own
+  // sentence and leave the generic slot to everything else.
   const errorMessage =
     patch.isError && !held && !movedOn
       ? problemMessageOf(patch.error, t)
@@ -946,10 +299,6 @@ function FulfilErasureModal({
       title={t("privacy.fulfilErasureTitle")}
       confirmLabel={t("privacy.erasureConfirm")}
       confirmVariant="danger"
-      // Once the server has reported the hold OR that the request moved on,
-      // retrying can only fail the same way again — neither can be resolved
-      // from this modal, so the confirm stays disabled until the operator
-      // closes it and re-opens against the request's current state.
       confirmDisabled={
         typed.trim().toUpperCase() !== "ERASE" || held || movedOn
       }
@@ -975,54 +324,27 @@ function FulfilErasureModal({
 
 export function PrivacyInboxCard() {
   const t = useT();
-  const { locale } = useLocale();
-  // useNow is the only clock touching rendering (format/now.ts) — isOverdue
-  // itself stays pure and takes the epoch ms this hook produces.
+  // The only clock touching rendering; isOverdue stays pure.
   const nowMs = useNow(60_000);
-  // FIX-1: due_at is a statutory deadline. A hardcoded zone shows the wrong
-  // calendar day to anyone outside it — the viewer's own resolved IANA zone
-  // is the only honest signal for "what date does THIS reader see"
-  // (share.tsx:290's precedent for the same problem on grant expiry).
-  const tz = viewerZone();
   const [facet, setFacet] = useState<DsrStatusFacet>("all");
-  // One case open at a time, and the open one IS the address: the worklist
-  // links here naming a case, so the row it named opens and a link copied back
-  // out reaches the same row (privacy.caselink.ts).
   const createTitleId = useId();
+  const detailTitleId = useId();
   const [creating, setCreating] = useState(false);
-  // Which request is staged for the destructive fulfil, not per-row — same
-  // id-in-state shape as share.tsx's revokingId, so ONE modal lives at the
-  // card root instead of one per row. Carries the resolution the row already
-  // had written, since the modal itself has no field to collect it again.
+  // One erasure confirm at the card root, carrying the answer the drawer drafted.
   const [fulfilling, setFulfilling] = useState<{
     dsr: DataSubjectRequest;
     resolution: string;
   } | null>(null);
-  // The staged row's summary toggle, remembered outside that state because the
-  // confirm resolves its focus target as it CLOSES — the moment `fulfilling` is
-  // already back to null. The toggle survives the fulfil and then reads the
-  // request's new status, which is what makes it the right landing place.
-  const stagedRowToggle = useRef<string | null>(null);
 
-  // `privacy_request:read`, which is what consent/dsr.go asks for.
-  //
-  // The queue's rows name data subjects who exercised an Art. 15/17 right, so
-  // the read is gated rather than merely rendered, and the fetch is disabled
-  // for anyone without it — which keeps a reader who came for the consent
-  // registry beside it from issuing a call that only 403s. It was the literal
-  // admin role until the queue got an object of its own.
+  // `privacy_request:read`: the rows name whoever exercised an Art. 15/17
+  // right, so the read is gated and never issued without the grant.
   const canSee = useCan("privacy_request", "read");
+  // Opening a request writes the contact it names (consent/dsr.go CreateDSR).
   const canOpenRequest = useCanWrite("contact", "update");
-  // The probe itself, not only its answer. Every capability predicate reads off
-  // the /me cache, so it is false while that read is in flight — and branching
-  // on `!canSee` alone flashed "the subject queue is not yours" at every
-  // administrator, on every load, until the session landed.
+  // The probe itself: every grant reads false while /me is in flight.
   const me = useMe();
 
-  // The facet is server-side (part of the queryKey and the query param), not
-  // a client re-slice of one big page — a re-slice would hide rows the
-  // server never told the pager about, breaking `has_more`/`next_cursor`
-  // (the house rule at history.tsx:258).
+  // Server-side facet: a client re-slice would break the pager's has_more.
   const query = useInfiniteQuery({
     queryKey: ["dsrs", facet],
     enabled: canSee,
@@ -1043,84 +365,43 @@ export function PrivacyInboxCard() {
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
 
-  // Both are memoised against the 60-second clock above: `useNow` re-renders
-  // this card every minute for the overdue badges, and without these the tick
-  // also re-flattened every loaded page and rebuilt the facet labels — the
-  // second of which then handed SegmentedControl a new object identity a
-  // minute at a time, for a set of five words that never change.
+  // Memoised against the minute tick, which would otherwise re-flatten every
+  // page and hand the facet bar a new labels object each minute.
   const pages = query.data?.pages;
   const rows = useMemo(
     () => pages?.flatMap((page) => page.data) ?? [],
     [pages],
   );
-  // The open row and the address, kept saying the same thing. It needs the
-  // loaded ids, so it sits below the query rather than beside the other state.
+  // The open request is the address: the worklist links here naming one.
   const { expandedId, linked, toggle } = useLinkedCase(
     useMemo(() => rows.map((dsr) => dsr.id), [rows]),
     query.hasNextPage && !query.isFetchingNextPage,
     query.fetchNextPage,
   );
+  const open = rows.find((dsr) => dsr.id === expandedId) ?? null;
   const facetLabels = useMemo(
-    () =>
-      Object.fromEntries(
-        DSR_STATUS_FACETS.map((value) => [
-          value,
-          value === "all" ? t("privacy.facetAll") : humanizeToken(value),
-        ]),
-      ) as Record<DsrStatusFacet, string>,
+    (): Record<DsrStatusFacet, string> => ({
+      all: t("privacy.facetAll"),
+      open: t(DSR_STATUS_LABEL.open),
+      in_progress: t(DSR_STATUS_LABEL.in_progress),
+      fulfilled: t(DSR_STATUS_LABEL.fulfilled),
+      rejected: t(DSR_STATUS_LABEL.rejected),
+    }),
     [t],
   );
 
-  // Honest state matrix (§3a): pending/error stay identical to every other
-  // list here; filtering happens server-side so an empty page after a facet
-  // change is a real "nothing matches", not a client-side hide.
-  let body: ReactNode;
+  let body: ReactNode = null;
   if (!canSee) {
-    // Withheld rather than absent: the card keeps its place on a tab an ops
-    // seat reaches for the consent registry, and says why it is empty. An
-    // absent card there would read as "no requests", which is a different
-    // claim entirely.
-    //
-    // Behind the probe, so this states a settled denial and not the absence of
-    // an answer — while /me is in flight nobody holds any role yet.
+    // Withheld rather than absent: an absent card would read as "no requests".
     body = (
       <QueryGate query={me} pendingLabel={t("privacy.inboxAdminOnly")}>
         {() => <EmptyState>{t("privacy.inboxAdminOnly")}</EmptyState>}
       </QueryGate>
     );
-  } else {
-    // The shared spelling of the loading and failure rungs, rather than a third
-    // hand-rolled copy: the placeholder announces itself as busy, and the
-    // failure is an assertive live region carrying the server's own explanation
-    // beside the retry. The hand-rolled pair said neither out loud, and it
-    // measured its own gaps in inline style objects.
+  } else if (!query.isSuccess || rows.length === 0) {
     body = (
-      <QueryStates query={query} pendingLabel={t("privacy.facetAll")}>
-        <LinkedCaseNotice linked={linked} />
-        {rows.length === 0 ? (
-          <EmptyState>{t("common.empty")}</EmptyState>
-        ) : (
-          <>
-            <ul className="dsr-list">
-              {rows.map((dsr) => (
-                <DsrRow
-                  key={dsr.id}
-                  dsr={dsr}
-                  expanded={expandedId === dsr.id}
-                  onToggle={() => toggle(dsr.id)}
-                  nowMs={nowMs}
-                  tz={tz}
-                  locale={locale}
-                  onFulfilErasure={(dsr, resolution, toggleId) => {
-                    stagedRowToggle.current = toggleId;
-                    setFulfilling({ dsr, resolution });
-                  }}
-                />
-              ))}
-            </ul>
-            <LoadMoreButton query={query} />
-          </>
-        )}
+      <QueryStates query={query} pendingLabel={t("privacy.loading")}>
+        <EmptyState>{t("common.empty")}</EmptyState>
       </QueryStates>
     );
   }
@@ -1128,77 +409,73 @@ export function PrivacyInboxCard() {
   return (
     <Panel
       title={t("settings.privacy")}
-      // The verb rides in the header so it stays put above a growing queue.
-      // Opening a request asks for `contact:update` (consent/dsr.go CreateDSR),
-      // not the inbox's grant: recording a request writes the contact it names.
+      // Opening a request asks `contact:update`, not the queue's grant.
       titleAction={
-        !canOpenRequest ? null : (
-          <Button onClick={() => setCreating(true)}>
+        canOpenRequest ? (
+          <Button aria-haspopup="dialog" onClick={() => setCreating(true)}>
             {t("privacy.newRequest")}
           </Button>
-        )
+        ) : null
       }
     >
       <PanelBody>
         <PanelIntro>{t("settings.privacySub")}</PanelIntro>
-        {/* One card's throw stays inside one card: this body renders a queue
-            of subject requests straight off the wire, and without a boundary
-            a single malformed row costs the reader the whole tab and the rail
-            they would have left by. */}
-        <CardBoundary>
-          <SettingList>
-            {/* The queue IS the subject, so it takes the full width — with its
-                own facet bar, because filtering belongs to the list it filters
-                and not to a row of its own. It stays a queue that expands in
-                place: an officer working one case keeps every sibling row and
-                the facet bar in sight, which a dialog would take away. */}
-            <SettingRow
-              label={t("privacy.queue")}
-              layout="stack"
-              control={
-                <div className="dsr-queue">
-                  {/* .filter-tabs puts the gap below the tabs so it holds for
-                      every body state (rows, empty, loading), not just a
-                      populated list. */}
-                  <div className="filter-tabs">
-                    <SegmentedControl
-                      options={DSR_STATUS_FACETS}
-                      value={facet}
-                      onChange={setFacet}
-                      labels={facetLabels}
-                    />
-                  </div>
-                  {body}
-                </div>
-              }
+        {canSee && (
+          <div className="filter-tabs">
+            <SegmentedControl
+              options={DSR_STATUS_FACETS}
+              value={facet}
+              onChange={setFacet}
+              labels={facetLabels}
+              label={t("privacy.facetLabel")}
             />
-          </SettingList>
-          <Modal
-            open={creating}
-            onClose={() => setCreating(false)}
-            labelledBy={createTitleId}
-            intent="form"
-          >
-            <Heading
-              size="large"
-              id={createTitleId}
-              className="t-h2 modal-title"
-            >
-              {t("privacy.newRequest")}
-            </Heading>
-            <NewDsrForm onDone={() => setCreating(false)} />
-          </Modal>
-          <FulfilErasureModal
-            dsr={fulfilling?.dsr ?? null}
-            resolution={fulfilling?.resolution ?? ""}
-            onClose={() => setFulfilling(null)}
-            returnFocusTo={() => {
-              const id = stagedRowToggle.current;
-              return id ? document.getElementById(id) : null;
-            }}
-          />
-        </CardBoundary>
+          </div>
+        )}
+        <LinkedCaseNotice linked={linked} />
+        {body}
       </PanelBody>
+      <CardBoundary>
+        {body === null && (
+          <>
+            <DsrTable rows={rows} nowMs={nowMs} onOpen={toggle} />
+            {query.hasNextPage && (
+              <PanelBody>
+                <LoadMoreButton query={query} />
+              </PanelBody>
+            )}
+          </>
+        )}
+        {open && (
+          <DsrDetail
+            key={open.id}
+            dsr={open}
+            titleId={detailTitleId}
+            nowMs={nowMs}
+            onClose={() => toggle(open.id)}
+            onFulfilErasure={(dsr, resolution) =>
+              setFulfilling({ dsr, resolution })
+            }
+          />
+        )}
+      </CardBoundary>
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        labelledBy={createTitleId}
+        intent="form"
+      >
+        <Heading size="large" id={createTitleId} className="t-h2 modal-title">
+          {t("privacy.newRequest")}
+        </Heading>
+        <NewDsrForm onDone={() => setCreating(false)} />
+      </Modal>
+      <FulfilErasureModal
+        dsr={fulfilling?.dsr ?? null}
+        resolution={fulfilling?.resolution ?? ""}
+        onClose={() => setFulfilling(null)}
+        // The fulfil verb is gone once the request closes; the drawer's title stays.
+        returnFocusTo={() => document.getElementById(detailTitleId)}
+      />
     </Panel>
   );
 }

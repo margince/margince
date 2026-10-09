@@ -70,6 +70,7 @@ type AuditEntry struct {
 	Action            string
 	EntityType        string
 	EntityID          *ids.UUID
+	EntityLabel       *string
 	Before            []byte
 	After             []byte
 	AuthorizationRule *string

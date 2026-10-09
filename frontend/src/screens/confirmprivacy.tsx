@@ -4,6 +4,10 @@
 import type { components } from "../api/schema";
 import { Card } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
+import {
+  type AcquisitionKind,
+  isAcquisitionKind,
+} from "../format/acquisitionkinds";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -19,7 +23,7 @@ type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
 // A kind with no entry falls back to the honest general sentence rather than
 // showing the token — a vocabulary that grows should not leak its spelling onto
 // a page a stranger reads.
-const SOURCE_LABEL: Record<string, MessageKey> = {
+const SOURCE_LABEL: Readonly<Record<AcquisitionKind, MessageKey>> = {
   subject_initiated: "privacynotice.source.subjectInitiated",
   customer_contract: "privacynotice.source.customerContract",
   requested_quote_or_meeting: "privacynotice.source.requested",
@@ -59,8 +63,9 @@ export function PrivacyNotice({
   const { locale } = useLocale();
   const tz = viewerZone();
 
-  const sourceKey =
-    SOURCE_LABEL[card.acquired_as] ?? "privacynotice.source.unknown";
+  const sourceKey = isAcquisitionKind(card.acquired_as)
+    ? SOURCE_LABEL[card.acquired_as]
+    : "privacynotice.source.unknown";
   const purposes = card.purposes ?? [];
 
   return (

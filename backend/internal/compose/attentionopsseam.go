@@ -76,6 +76,7 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int, sco
 		out = append(out, attention.NoticeCase{
 			ID: duty.ID, Rule: string(duty.Rule), OwnerID: duty.OwnerID,
 			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt, OpenedAt: duty.OpenedAt,
+			Acquisition: duty.Acquisition.Wire(),
 		})
 	}
 	return out, nil
