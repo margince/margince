@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealvalue"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -73,7 +74,7 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	// rather than in the module: the rate sheet is a table, and forecasting
 	// owns no tables. Without it every priced deal reaches the arithmetic with
 	// no base amount, counts as fx_missing, and every money headline is zero.
-	baseValue := BaseValueSQL(
+	baseValue := dealvalue.BaseValueSQL(
 		fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d")
 
 	// A deal belongs to this read if it is EXPECTED in the period or CLOSED in
