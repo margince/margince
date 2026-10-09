@@ -18,6 +18,8 @@ export function DataTable<Row>({
   onRowClick,
   label,
   bleed,
+  fold,
+  stickyFirst,
 }: Readonly<{
   columns: DataTableColumn<Row>[];
   rows: Row[];
@@ -27,28 +29,54 @@ export function DataTable<Row>({
   label: string;
   /** `TableScroll`'s `bleed`: the table spans the `Panel` it stands straight in. */
   bleed?: boolean;
+  /** Below 36rem of its own width each row folds onto two lines; see `DataTableColumn.fold`. */
+  fold?: boolean;
+  /** `TableScroll`'s `stickyFirst`: the first column stays put while the rest scrolls. */
+  stickyFirst?: boolean;
 }>) {
+  const title = foldTitle(columns);
+  // Not native semantics alone: a row laid out as flex loses its table role in Safari.
+  const role = (name: string) => (fold ? name : undefined);
   return (
-    <TableScroll label={label} bleed={bleed}>
-      <table className="table">
-        <thead>
-          <tr>
+    <TableScroll
+      label={label}
+      bleed={bleed}
+      stickyFirst={stickyFirst}
+      className={fold ? "table-scroll-fold" : undefined}
+    >
+      <table className="table" role={role("table")}>
+        <thead role={role("rowgroup")}>
+          <tr role={role("row")}>
             {columns.map((column) => (
-              <th key={column.key} className={columnClass(column)}>
-                {column.header}
+              <th
+                key={column.key}
+                className={columnClass(column)}
+                role={role("columnheader")}
+              >
+                {column.headerHidden ? (
+                  <span className="sr-only">{column.header}</span>
+                ) : (
+                  column.header
+                )}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody role={role("rowgroup")}>
           {rows.map((row) => (
             <tr
               key={rowKey(row)}
               className={onRowClick ? "rowlink" : undefined}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
+              role={role("row")}
             >
               {columns.map((column) => (
-                <td key={column.key} className={columnClass(column)}>
+                <td
+                  key={column.key}
+                  className={columnClass(column)}
+                  role={role("cell")}
+                  data-fold={fold ? foldPlace(column, title) : undefined}
+                >
                   {column.render(row)}
                 </td>
               ))}
@@ -63,6 +91,8 @@ export function DataTable<Row>({
 export type DataTableColumn<Row> = Readonly<{
   key: string;
   header: string;
+  /** The heading is read but not drawn: a column of verbs needs no word over it. */
+  headerHidden?: boolean;
   render: (row: Row) => ReactNode;
   // A column of FIGURES sits against the end of its cell, heading included, so
   // the digits of every row stack into a column the eye runs down; a figure
@@ -72,7 +102,25 @@ export type DataTableColumn<Row> = Readonly<{
   // figures it shows. Every other column sizes to its content, so the one that
   // grows is named rather than left to the browser's guess.
   grow?: boolean;
+  // Where the cell goes when a `fold` table folds. "hide" leaves sight but is
+  // still read, so it must not hold a control.
+  fold?: "title" | "end" | "hide";
 }>;
+
+function foldTitle<Row>(columns: DataTableColumn<Row>[]): string | undefined {
+  const named = columns.find((column) => column.fold === "title");
+  return (named ?? columns.find((column) => column.fold === undefined))?.key;
+}
+
+function foldPlace<Row>(
+  column: DataTableColumn<Row>,
+  title: string | undefined,
+): "title" | "end" | "hide" | "rest" {
+  if (column.key === title) {
+    return "title";
+  }
+  return column.fold === "end" || column.fold === "hide" ? column.fold : "rest";
+}
 
 // Both choices are a cell's own, so the heading and every row wear the same
 // class and cannot come apart.

@@ -128,7 +128,8 @@
   inset: 0 0 auto;
 }
 /* No seam between a group's head and the body under it: the head names that
-   body, and a rule between the two cut a label from what it labels. */
+   body, and a rule between the two cut a label from what it labels. The head is
+   itself a `.panel-body`, so this is declared after the seam rule it must beat. */
 .panel-grouphead + .panel-body::before {
   content: none;
 }

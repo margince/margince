@@ -1,0 +1,28 @@
+/* A vendor app's callback addresses: what the design system leaves to the
+   screen. */
+
+/* One line, cut at the cell's edge; the title and a selection still hold the
+   whole address. Zero width with a full floor, so the address never widens
+   the column it is cut to. */
+.oauthredirect-uri {
+  display: block;
+  inline-size: 0;
+  min-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Folded, the address takes the whole caption line rather than its content's
+   width, which is none. */
+td:has(> .oauthredirect-uri) {
+  flex: 1 1 100%;
+}
+
+.oauthredirect-redirect-title {
+  margin-block-end: var(--space-2);
+}
+
+.oauthredirect-notice:not(:empty) {
+  margin-block: var(--space-3);
+}

@@ -193,16 +193,21 @@ export function PanelGroupHead({
   title,
   level,
   action,
+  id,
 }: Readonly<{
   title: string;
   // Where the group sits in the outline: one under whatever heads the pane.
   level: "h3" | "h4";
   // The verb that opens one of these. Absent on a record nobody may write to.
   action?: ReactNode;
+  // For a table or region in the group to be named by this heading.
+  id?: string;
 }>) {
   return (
     <PanelBody className="panel-grouphead">
-      <Eyebrow as={level}>{title}</Eyebrow>
+      <Eyebrow as={level} id={id}>
+        {title}
+      </Eyebrow>
       {action}
     </PanelBody>
   );

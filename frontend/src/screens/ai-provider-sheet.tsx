@@ -356,6 +356,7 @@ function PriceTable({
                 {
                   key: "actions",
                   header: t("table.actions"),
+                  headerHidden: true,
                   align: "end" as const,
                   render: (r: SheetRow) => (
                     <div className="cell-actions">

@@ -5,7 +5,14 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
-import { PANEL_TONES, Panel, PanelBody, PanelIntro, PanelRow } from "./panel";
+import {
+  PANEL_TONES,
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+  PanelRow,
+} from "./panel";
 
 afterEach(cleanup);
 
@@ -90,6 +97,15 @@ describe("a titled panel is a region named by its title", () => {
 // reader is meant to READ told them all five were pressable. The default is
 // therefore inert, and a caller opts in only when the whole row is one press
 // target.
+describe("PanelGroupHead", () => {
+  it("puts its id on the heading, so a table in the group can be named by it", () => {
+    render(<PanelGroupHead title="Notes" level="h3" id="group-notes" />);
+    expect(screen.getByRole("heading", { name: "Notes", level: 3 }).id).toBe(
+      "group-notes",
+    );
+  });
+});
+
 describe("PanelRow separates the hairline from the press", () => {
   it("draws an inert row by default", () => {
     const { container } = render(<PanelRow>Renewal date</PanelRow>);
@@ -181,6 +197,26 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     }
     expect(insetOf(".panel-body + .panel-body::before")).toBe(
       "0 var(--padPanel) auto",
+    );
+  });
+
+  // A group head renders as a `.panel-body`, so the body under it matches the
+  // body-after-body seam at equal specificity and only sheet order decides.
+  it("draws no seam between a group head and the body it names", () => {
+    const rules = cssRules(panelCss());
+    const lastContent = (selector: string): number =>
+      rules
+        .map(
+          (rule) =>
+            rule.selector === selector &&
+            declaredValue(rule.block, "content") !== undefined,
+        )
+        .lastIndexOf(true);
+    const reset = lastContent(".panel-grouphead + .panel-body::before");
+    expect(reset).toBeGreaterThanOrEqual(0);
+    expect(declaredValue(rules[reset]?.block ?? "", "content")).toBe("none");
+    expect(reset).toBeGreaterThan(
+      lastContent(".panel-body + .panel-body::before"),
     );
   });
 

@@ -1,7 +1,12 @@
-import type { components } from "../api/schema";
-import { Select } from "../design-system/select";
+import { useMutation } from "@tanstack/react-query";
+import { useId } from "react";
+import { api } from "../api/client";
+import { holdsAdminRole } from "../app/capability";
+import { ErrorLine } from "../design-system/errorline";
+import { Select, type SelectOption } from "../design-system/select";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import type { QueryLike } from "./common";
+import { type QueryLike, unwrap } from "./common";
 import {
   type AssignableRole,
   roleLabel,
@@ -9,15 +14,16 @@ import {
   type useAssignableRoles,
 } from "./roles.queries";
 import type { Role } from "./users-invite-form";
-
-// The member roster's role column: the picker a row draws where the reader may
-// change a member's role, and the answer it reads back where they may not.
-
-type User = components["schemas"]["User"];
+import {
+  memberMutationKey,
+  offers,
+  type User,
+  useMemberBusy,
+  useMemberRefresh,
+} from "./users-members";
 
 // The roster together with the roles its pickers offer, read as one. A row
-// drawn before the roles arrive would show a member's role as unset, and a
-// reader who changes no roles never asks for them.
+// drawn before the roles arrive would show a member's role as unset.
 export function withRoles(
   members: QueryLike<User[]>,
   assignable: ReturnType<typeof useAssignableRoles>,
@@ -41,37 +47,142 @@ export function withRoles(
   };
 }
 
-// The role picker, held to the row language's measure so nine of them line up
-// at one x rather than each shrinking to its own answer's width.
-//
-// It draws only where a role is something this reader can CHANGE. The agent
-// seat has no role at all and a reader without the grant has a fact rather than
-// a control — both read as the row's `value`, decided by the caller, because a
-// picker the server would refuse promises something it cannot do.
+/** Why a member's role control is refused: a sentence elsewhere on the page, or its own. */
+export type RoleRefusal = Readonly<{ id: string }> | Readonly<{ text: string }>;
+
+export function roleRefusal(
+  member: User,
+  context: Readonly<{
+    roster: readonly User[];
+    roles: readonly AssignableRole[];
+    canChangeRole: boolean;
+    cardReasonId: string;
+    meId: string | undefined;
+    t: ReturnType<typeof useT>;
+  }>,
+): RoleRefusal | null {
+  const { roster, roles, t } = context;
+  if (!context.canChangeRole) {
+    return { id: context.cardReasonId };
+  }
+  const offered = offers(member, "change_role");
+  // A delegate's own role is often one they may not hand out, and "outside your
+  // access" would misname why their own row is refused.
+  if (!offered && member.id === context.meId) {
+    return soleActiveAdmin(member, roster)
+      ? { text: t("users.role.lastAdmin") }
+      : { text: t("users.role.own") };
+  }
+  const held = member.roles ?? [];
+  const heldAssignable =
+    held.length !== 1 || roles.some((role) => role.key === held[0]);
+  if (!heldAssignable) {
+    return { text: t("users.role.outside") };
+  }
+  if (offered) {
+    return null;
+  }
+  if (soleActiveAdmin(member, roster)) {
+    return { text: t("users.role.lastAdmin") };
+  }
+  return { text: t("users.role.outside") };
+}
+
+function soleActiveAdmin(member: User, roster: readonly User[]): boolean {
+  const activeAdmin = (u: User) =>
+    u.status === "active" && holdsAdminRole(u.roles);
+  return (
+    activeAdmin(member) &&
+    !roster.some((other) => other.id !== member.id && activeAdmin(other))
+  );
+}
+
+export function MemberRole({
+  member,
+  roles,
+  refusal,
+}: Readonly<{
+  member: User;
+  roles: readonly AssignableRole[];
+  refusal: RoleRefusal | null;
+}>) {
+  const t = useT();
+  const toast = useToast();
+  const refresh = useMemberRefresh();
+  const busy = useMemberBusy(member.id);
+  const reasonId = useId();
+  const errorId = useId();
+  const setRole = useMutation({
+    mutationKey: memberMutationKey(member.id, "role"),
+    mutationFn: async ({ id, role }: Readonly<{ id: string; role: Role }>) => {
+      unwrap(
+        await api.PATCH("/users/{id}/role", {
+          params: { path: { id } },
+          body: { role },
+        }),
+      );
+    },
+    onSuccess: async () => {
+      await refresh();
+      toast.show(t("users.roleSaved", { name: member.email }));
+    },
+  });
+  if (member.is_agent) {
+    return <span className="t-caption">{t("users.agentSeatRole")}</span>;
+  }
+  const described = [
+    refusal && ("id" in refusal ? refusal.id : reasonId),
+    setRole.isError ? errorId : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <span className="users-role">
+      <RoleCell
+        member={member}
+        roles={roles}
+        pending={busy}
+        refused={refusal !== null}
+        describedBy={described || undefined}
+        // A failed change falls back to the held role, so re-picking the same
+        // target still fires onChange.
+        inFlight={setRole.isPending ? setRole.variables.role : undefined}
+        onPick={(role) => setRole.mutate({ id: member.id, role })}
+      />
+      {refusal && "text" in refusal && (
+        <span id={reasonId} className="t-caption">
+          {refusal.text}
+        </span>
+      )}
+      <ErrorLine id={errorId} error={setRole.error} />
+    </span>
+  );
+}
+
+// Fixed width, so every row's picker starts and ends at one x.
 export function RoleCell({
   member,
   roles,
   pending,
+  refused = false,
+  describedBy,
   inFlight,
   onPick,
 }: Readonly<{
   member: User;
   roles: readonly AssignableRole[];
   pending: boolean;
+  refused?: boolean;
+  describedBy?: string;
   inFlight?: Role;
   onPick: (role: Role) => void;
 }>) {
   const t = useT();
   const label = roleLabel(t);
-  // `roles` on the member arrives only for a member administrator — which this
-  // control always has — and normally holds exactly one key. No key (an
-  // unassigned seat) and several keys both leave the select on its
-  // placeholder, because neither has one current role to show.
   const heldRoles = member.roles ?? [];
   const currentRole = heldRoles.length === 1 ? (heldRoles[0] ?? "") : "";
-  // A member holding SEVERAL roles is the case worth naming: any choice here
-  // replaces the whole set, so a neutral "Set role…" would let an admin strip
-  // privileges they never saw. The placeholder says what is held instead.
+  // Any choice replaces the whole set, so several held roles are named rather
+  // than hidden behind a neutral "Set role…".
   // plural-rule:allow the two arms name what is held and what to do, which is a
   // state the reader is in rather than two forms of one sentence
   const placeholder =
@@ -83,69 +194,34 @@ export function RoleCell({
         })
       : t("users.setRole");
   return (
-    // The unset state is the select's PLACEHOLDER, not an option: picking it
-    // back would set no role, so it belongs on the closed face and nowhere in
-    // the list. It is only ever seen when there is no single role to show.
-    //
-    // Its own `aria-label` rather than the row's label through `control`'s ARIA:
-    // the row names the MEMBER, and a combobox announcing itself as "Ada
-    // Active" would leave a reader to guess what picking from it does.
     <Select
-      className="settingrow-measure"
+      className="users-role-select"
       aria-label={t("users.setRoleFor", { name: member.display_name })}
+      aria-describedby={describedBy}
       value={inFlight ?? currentRole}
       placeholder={placeholder}
-      disabled={pending}
+      disabled={pending || refused}
       onChange={onPick}
-      options={roleOptions(t, roles)}
+      options={withHeld(roleOptions(t, roles), currentRole, label)}
     />
   );
 }
 
-// The stored name of a role this reader may assign, for a custom role's label.
+// A held role this reader may not hand out still names itself on the face.
+function withHeld(
+  options: SelectOption[],
+  held: string,
+  label: (key: string) => string,
+): SelectOption[] {
+  if (held === "" || options.some((option) => option.value === held)) {
+    return options;
+  }
+  return [...options, { value: held, label: label(held), disabled: true }];
+}
+
 function nameOf(
   roles: readonly AssignableRole[],
   key: string,
 ): string | undefined {
   return roles.find((role) => role.key === key)?.name;
-}
-
-// Whether a row draws the role picker. A member holding exactly one role the
-// reader may not hand out gets the role as a fact instead: a picker would show
-// it as unset, and every choice from it would be one the server refuses.
-export function drawsRolePicker(
-  member: User,
-  roles: readonly AssignableRole[],
-  canChangeRole: boolean,
-): boolean {
-  if (!canChangeRole || member.is_agent) {
-    return false;
-  }
-  const held = member.roles ?? [];
-  return held.length !== 1 || roles.some((role) => role.key === held[0]);
-}
-
-// The role a row reports rather than offers: the agent seat's, whose authority
-// is the passport granting it intersected with the contact that passport names,
-// and any member's for a reader who may not change it. `undefined` means the
-// row draws a picker instead.
-export function roleAnswer(
-  member: User,
-  roles: readonly AssignableRole[],
-  drawsPicker: boolean,
-  t: ReturnType<typeof useT>,
-): string | undefined {
-  if (member.is_agent) {
-    return t("users.agentSeatRole");
-  }
-  if (drawsPicker) {
-    return undefined;
-  }
-  const label = roleLabel(t);
-  const held = (member.roles ?? [])
-    .map((key) => label(key, nameOf(roles, key)))
-    .join(", ");
-  // A seat holding no role has nothing to report, and an empty value would
-  // draw an empty span where the answer belongs.
-  return held === "" ? undefined : held;
 }

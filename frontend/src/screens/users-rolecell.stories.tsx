@@ -30,13 +30,14 @@ function member(roles: string[]): components["schemas"]["User"] {
   };
 }
 
-function cell(roles: string[], pending = false) {
+function cell(roles: string[], pending = false, refused = false) {
   return () => (
     <StoryProviders>
       <RoleCell
         member={member(roles)}
-        roles={ROLES}
+        roles={refused ? ROLES.filter((role) => role.key !== "admin") : ROLES}
         pending={pending}
+        refused={refused}
         onPick={() => undefined}
       />
     </StoryProviders>
@@ -59,3 +60,6 @@ export const SeveralRoles: Story = {
 };
 
 export const Applying: Story = { render: cell(["rep"], true) };
+
+// A role this reader may not hand out still names itself on the refused face.
+export const Refused: Story = { render: cell(["admin"], false, true) };

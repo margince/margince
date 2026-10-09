@@ -4,6 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { userEvent, within } from "storybook/test";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import { OAuthAppCard } from "./oauth-app";
 import { installFetchStub, jsonResponse } from "./story-utils";
@@ -168,4 +170,61 @@ export const MicrosoftAnyCompany: Story = {
       <OAuthAppCard provider="microsoft" />
     </Served>
   ),
+};
+
+// An installation behind a long host. Each address stays on one line, cut at
+// the cell's edge, and on a phone runs under its purpose with Copy beside it.
+const LONG_URIS = URIS.map((uri) => ({
+  ...uri,
+  url: uri.url.replace(
+    "api.brandt.example",
+    "crm.brandt-automotive-holding-international.example:8443/eu-central-1",
+  ),
+}));
+
+export const LongAddressesPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: CLIENT_ID,
+        source: "stored",
+        redirect_uris: LONG_URIS,
+      }}
+    >
+      <OAuthAppCard provider="google" />
+    </Served>
+  ),
+};
+
+// The browser refuses the clipboard: the notice lands above the table, not in
+// the row's cell.
+export const CopyRefused: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: CLIENT_ID,
+        source: "stored",
+        redirect_uris: LONG_URIS,
+      }}
+    >
+      <OAuthAppCard provider="google" />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    // Put back afterwards: the catalog renders many stories in one page.
+    const clipboard = stubClipboard("absent");
+    try {
+      const canvas = within(canvasElement);
+      await userEvent.click(
+        await canvas.findByRole("button", { name: "Copy Mailbox URI" }),
+      );
+      await canvas.findByText(/copy it manually/i);
+    } finally {
+      clipboard.restore();
+    }
+  },
 };

@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Disclosure } from "../design-system/atoms";
-import { DataTable } from "../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   type ResolveAnswer,
@@ -21,11 +21,6 @@ import { EntityRef } from "./entityref";
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
 type Resolution = { id: string; answer: ResolveAnswer };
-type CheckColumn = {
-  key: string;
-  header: string;
-  render: (check: InputCheck) => ReactNode;
-};
 
 // What should be checked before the call.
 //
@@ -291,7 +286,7 @@ function checkColumns(
   locale: Locale,
   zone: string,
   answer: (check: InputCheck, button: HTMLElement) => void,
-): CheckColumn[] {
+): DataTableColumn<InputCheck>[] {
   return [
     {
       key: "severity",
@@ -331,6 +326,7 @@ function checkColumns(
     {
       key: "answer",
       header: t("table.actions"),
+      headerHidden: true,
       render: (check) => (
         <div className="cell-actions">
           <Button onClick={(event) => answer(check, event.currentTarget)}>

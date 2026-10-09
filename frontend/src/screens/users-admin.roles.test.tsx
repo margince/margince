@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
+import { en } from "../i18n/en";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 import {
@@ -305,8 +306,8 @@ describe("UsersAdminCard role picker", () => {
   });
 
   // A custom role reads under the name its maker gave it, and is offered like
-  // any other. A role this reader may not hand out is a fact on the row rather
-  // than a picker whose every choice the server refuses.
+  // any other. A role this reader may not hand out stays on the face of a
+  // refused picker rather than reading as unset.
   it("names a custom role and offers only the roles the reader may assign", async () => {
     const user = userEvent.setup();
     const fieldSales = {
@@ -343,9 +344,12 @@ describe("UsersAdminCard role picker", () => {
     await waitFor(() => expect(screen.getByText("Ivy Invited")).toBeTruthy());
 
     expect(roleShown(rowFor("Ivy Invited"), "ivy invited")).toBe("Field sales");
-    // Ada holds admin, which this reader may not hand out.
-    expect(within(rowFor("Ada Active")).queryByRole("combobox")).toBeNull();
-    expect(within(rowFor("Ada Active")).getByText("Admin")).toBeTruthy();
+    // Ada holds admin, which this reader may not hand out: the picker still
+    // names it, refused, and says why.
+    const ada = rowFor("Ada Active");
+    expect(roleSelect(ada, "ada active").disabled).toBe(true);
+    expect(roleShown(ada, "ada active")).toBe("Admin");
+    expect(within(ada).getByText(en["users.role.outside"])).toBeTruthy();
 
     await user.click(roleSelect(rowFor("Nora None"), "nora none"));
     const offered = within(screen.getByRole("listbox"))

@@ -106,7 +106,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.sendInvite(r, email.String(), rawToken)
-	h.writeUserByID(w, r, userID, http.StatusCreated)
+	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
 }
 
 // ChangeUserRole (PATCH /users/{id}/role).
@@ -129,7 +129,7 @@ func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmc
 		httperr.Write(w, r, unknownRoleRefusal(err))
 		return
 	}
-	h.writeUserByID(w, r, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
+	h.writeUserByID(w, r, actor, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
 }
 
 // DeactivateUser (POST /users/{id}/deactivate).
@@ -156,7 +156,7 @@ func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 				"would leave nobody able to manage users — give another user the admin role first"))
 		return
 	}
-	h.writeUserByID(w, r, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
+	h.writeUserByID(w, r, actor, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
 }
 
 // ReactivateUser (POST /users/{id}/reactivate).
@@ -176,7 +176,7 @@ func (h Handlers) ReactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 				"whatever caused the suspension resolved instead")))
 		return
 	}
-	h.writeUserByID(w, r, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
+	h.writeUserByID(w, r, actor, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
 }
 
 // IssueUserPasswordLink (POST /users/{id}/password-link): mint a single-use
@@ -358,8 +358,8 @@ func (h Handlers) actor(w http.ResponseWriter, r *http.Request) (Identity, bool)
 // its role keys: an admin write answers the same shape the admin roster does,
 // and a member row that dropped them here would mean the field's presence
 // tracked the endpoint rather than the caller.
-func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, userID ids.UserID, status int) {
-	row, err := h.svc.GetUser(r.Context(), userID)
+func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, actor Identity, userID ids.UserID, status int) {
+	row, err := h.svc.GetUser(r.Context(), actor, userID)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -439,5 +439,5 @@ func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, unknownRoleRefusal(companyNotDescribedRefusal(err)))
 		return
 	}
-	h.writeUserByID(w, r, userID, http.StatusCreated)
+	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
 }

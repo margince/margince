@@ -65,7 +65,7 @@ To create a team in Margince, open **Settings → Teams** and choose **New team*
 2. Choose **New team**.
 3. Fill **Team name** (required), for example "DACH Sales".
 4. Choose **Create team**.
-To add colleagues, an Admin opens the team and ticks their names under **Team members**. You can add only active human users. Without the permission the page says "Your role cannot manage teams."
+To add colleagues, an Admin chooses the team's name and picks them under **Add member**. The remove button beside a member takes them off the team. You can add only active human users. Without the permission the page says "Your role cannot manage teams."
 Also called: group, squad, sales team.
 
 ### How do I change someone's seat from read to full?

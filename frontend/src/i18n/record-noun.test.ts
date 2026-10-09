@@ -325,8 +325,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "users.inviteOpen",
     "users.inviteSub",
     "users.inviteTitle",
-    "users.memberCount_one",
-    "users.memberCount_other",
     "users.membersTitle",
     "users.teamNobodyToAdd",
     "worklist.because.champion_unknown",

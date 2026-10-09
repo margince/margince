@@ -102,38 +102,26 @@ describe("UsersAdminCard", () => {
     expect(screen.getByRole("button", { name: /invite user/i })).toBeTruthy();
   });
 
-  it("carries the roster count and the invite verb in one card's header", async () => {
+  it("carries the invite verb in the card's header and no count or intro", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    // ONE card, because there is one subject. Inviting used to be a second card
-    // whose title, whose only row's label and whose button all read "Invite a
-    // member" — three copies of the same three words above the list a reader
-    // came for.
     expect(screen.getAllByRole("heading", { name: /^Users$/ })).toHaveLength(1);
-    const members = screen
+    const header = screen
       .getByRole("heading", { name: /^Users$/ })
-      .closest("section");
-    if (!(members instanceof HTMLElement)) {
-      throw new Error("the roster is not a card of its own");
-    }
-    // The count states what the roster holds — the deactivated member and the
-    // workspace's own agent seat included, because the read opts into both and a
-    // count that skipped either would disagree with the rows beneath it. The
-    // verb that adds to it stands beside the count, on the title's own line.
-    const header = members.querySelector(".panel-head");
+      .closest(".panel-head");
     if (!(header instanceof HTMLElement)) {
       throw new Error("the members card has no header band");
     }
-    expect(within(header).getByText("5 users")).toBeTruthy();
     expect(
       within(header).getByRole("button", { name: /invite user/i }),
     ).toBeTruthy();
-    // And the invite fields are not on the page until the dialog carries them.
-    expect(
-      within(members).queryByPlaceholderText("name@company.com"),
-    ).toBeNull();
+    // The page subtitle already says who is listed; a count pill and an intro
+    // repeating it are gone.
+    expect(screen.queryByText(/^\d+ users$/)).toBeNull();
+    expect(screen.queryByText(/including deactivated/i)).toBeNull();
+    expect(screen.queryByPlaceholderText("name@company.com")).toBeNull();
   });
 
   it("renders the include-inactive roster with per-status actions", async () => {
@@ -154,9 +142,9 @@ describe("UsersAdminCard", () => {
   });
 
   it("offers on a member only the verbs the server lists for them", async () => {
-    // The reader holds every user_admin verb, and Ada is an admin they may not
-    // touch: the server lists nothing on her, so her row draws no menu and
-    // reads her role back instead of offering a picker.
+    // The reader holds every user_admin verb, and Ada is the only admin. The
+    // server lists nothing on her, so her row draws no menu. Her picker is the
+    // same control, refused with the reason beside it.
     const routed = backend([]);
     vi.stubGlobal(
       "fetch",
@@ -183,36 +171,28 @@ describe("UsersAdminCard", () => {
     expect(
       within(ada).queryByRole("button", { name: /actions for/i }),
     ).toBeNull();
-    expect(within(ada).queryByRole("combobox")).toBeNull();
-    expect(within(ada).getByText("Admin")).toBeTruthy();
+    const picker = roleSelect(ada, "Ada Active");
+    expect(picker.disabled).toBe(true);
+    expect(roleShown(ada, "Ada Active")).toBe("Admin");
+    const reason = within(ada).getByText(en["users.role.lastAdmin"]);
+    expect(picker.getAttribute("aria-describedby")).toContain(reason.id);
     // The same reader keeps every verb on a member the server lists them on.
     expect(roleSelect(rowFor("Nora None"), "Nora None")).toBeTruthy();
   });
 
-  // A row is ONE line: the member's name over their address on the left, and on
-  // the right the role, the status and the menu holding the verbs. Nine members
-  // used to be nine 140px blocks — a full-width Select on its own line and two
-  // ghost buttons stacked under it — which read as nine cards rather than one
-  // list.
-  it("keeps a member's role, status and verbs in the row's one control column", async () => {
+  it("draws a member as one table row with their verbs behind the menu", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const row = rowFor("Ada Active");
     expect(within(row).getByText("ada@acme.test")).toBeTruthy();
-    const control = row.querySelector(".settingrow-control");
-    if (!(control instanceof HTMLElement)) {
-      throw new Error("the member row has no control column");
-    }
     expect(
-      within(control).getByRole("combobox", { name: /set role for ada/i }),
+      within(row).getByRole("combobox", { name: /set role for ada/i }),
     ).toBeTruthy();
-    expect(within(control).getByText("Active")).toBeTruthy();
     expect(
-      within(control).getByRole("button", { name: /actions for ada active/i }),
+      within(row).getByRole("button", { name: /actions for ada active/i }),
     ).toBeTruthy();
-    // The verbs are BEHIND the menu, so the closed row draws neither of them.
     expect(within(row).queryByText("Deactivate")).toBeNull();
     expect(within(row).queryByText(/set-password link/i)).toBeNull();
   });
@@ -461,7 +441,10 @@ describe("UsersAdminCard", () => {
     // whatever opened it, so hiding that item first would send focus, on close,
     // to a node that is gone. What it now offers is the opposite verb.
     await waitFor(() => expect(verbs.getByText("Reactivate")).toBeTruthy());
-    expect(document.activeElement).toBe(row);
+    expect(within(row).getByText("Deactivated")).toBeTruthy();
+    expect(document.activeElement).toBe(
+      document.getElementById("member-u-active"),
+    );
     expect(document.activeElement).not.toBe(document.body);
   });
 
@@ -631,7 +614,8 @@ describe("UsersAdminCard", () => {
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
 
-    const row = await screen.findByTestId("member-u-invited");
+    await screen.findByText("Ivy Invited");
+    const row = rowFor("Ivy Invited");
     expect(within(row).getByText("Invited")).toBeTruthy();
 
     // Both verbs stay reachable, and each closes a different hole. The link is

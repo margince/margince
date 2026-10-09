@@ -36,12 +36,12 @@ import {
 } from "./installation-setup.decline";
 import { AiBindRefused } from "./installation-setup.notices";
 import {
-  RedirectUris,
   useOAuthApp,
   useSetOAuthApp,
   type Vendor,
   vendorCopy,
 } from "./oauth-app";
+import { RedirectUris } from "./oauth-redirects";
 import { CORE_LABELS } from "./onboarding-core-label";
 import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name

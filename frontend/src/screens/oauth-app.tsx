@@ -4,12 +4,11 @@ import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { RedirectUriGroup } from "./oauth-redirects";
 
 /**
  * A connector OAuth app a mailbox connection is made through — Google's, or
@@ -132,123 +131,6 @@ function useRemoveOAuthApp(provider: Vendor) {
   });
 }
 
-// purposeLabel names one callback's flow. A lookup rather than a computed
-// message key, because the catalog is a closed union: a template key would type
-// as any string and a purpose the contract adds later would reach a reader as a
-// raw key rather than as words.
-//
-// Every purpose the contract declares has an arm. A missing one renders the raw
-// enum beside two translated rows, which is what a reader takes for a bug in the
-// list rather than in this switch.
-function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
-  switch (purpose) {
-    case "sign_in":
-      return t("oauthApp.redirect.sign_in");
-    case "mailbox_connect":
-      return t("oauthApp.redirect.mailbox_connect");
-    case "calendar_connect":
-      return t("oauthApp.redirect.calendar_connect");
-    default:
-      return purpose;
-  }
-}
-
-type RedirectUri = Readonly<{ purpose: string; url: string }>;
-
-// One callback address, with the verb that copies it.
-//
-// A component per row rather than one `copied` on the list: a failed copy has
-// something to SAY, and what it says belongs under the row the reader pressed.
-// It used to say nothing at all — the guard returned in silence, so on a
-// plain-http deployment this button was simply dead, which is the one outcome
-// the rest of the product already agreed not to ship.
-//
-// Which row reads Copied is the CARD's to decide, not the row's, so the label
-// comes from `copied` rather than from the hook: the clipboard holds one
-// address, and a row still claiming an earlier copy would send an operator to
-// paste the other row's URI into a vendor console, where a wrong callback
-// fails later and somewhere else.
-function RedirectUriRow({
-  uri,
-  copied,
-  onCopied,
-}: Readonly<{ uri: RedirectUri; copied: boolean; onCopied: () => void }>) {
-  const t = useT();
-  const purpose = purposeLabel(uri.purpose, t);
-  const copy = useClipboardCopy(
-    uri.url,
-    {
-      copy: t("oauthApp.redirectCopy", { purpose }),
-      copied: t("oauthApp.redirectCopied"),
-      remedy: t("oauthApp.redirectCopyFailed"),
-    },
-    onCopied,
-  );
-  return (
-    <>
-      <SettingRow
-        label={purpose}
-        value={<code>{uri.url}</code>}
-        control={
-          <Button onClick={copy.copy}>
-            {copied
-              ? t("oauthApp.redirectCopied")
-              : t("oauthApp.redirectCopy", { purpose })}
-          </Button>
-        }
-      />
-      {copy.notice}
-    </>
-  );
-}
-
-// RedirectUris lists the callback URLs an operator must register on their OAuth
-// client, one per purpose this deployment actually serves.
-//
-// The URLs come from the response and are never built here. They have one job —
-// to be byte-identical to what the vendor receives — and a second spelling in the
-// client is exactly how the two come apart. The backend derives them from the
-// functions that send them, held by a fitness test in both directions.
-//
-// An empty list renders nothing rather than an empty heading: a deployment that
-// serves none of a vendor's flows has nothing to register, and a bare heading
-// would read as a list that failed to load.
-export function RedirectUris({
-  uris,
-  sub,
-}: Readonly<{
-  uris: readonly RedirectUri[] | undefined;
-  sub: string;
-}>) {
-  const t = useT();
-  // The address the clipboard actually holds, not a flag per row.
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  // Absent and empty are the same answer here — nothing to register — and the
-  // field is contract-required, but a body that lost one hands over `undefined`
-  // anyway. This card shares a screen with the installation's own settings, so
-  // reading a length off nothing would take that whole page down over a list
-  // the reader could not have acted on.
-  if (!uris || uris.length === 0) {
-    return null;
-  }
-  return (
-    <div>
-      <p className="t-label">{t("oauthApp.redirectTitle")}</p>
-      <p className="t-caption">{sub}</p>
-      <SettingList>
-        {uris.map((uri) => (
-          <RedirectUriRow
-            key={uri.purpose}
-            uri={uri}
-            copied={copiedUrl === uri.url}
-            onCopied={() => setCopiedUrl(uri.url)}
-          />
-        ))}
-      </SettingList>
-    </div>
-  );
-}
-
 export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const t = useT();
   const copy = vendorCopy[provider];
@@ -277,11 +159,13 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const busy = save.isPending || remove.isPending;
   const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
   const failure = save.error ?? remove.error;
+  // A failed refetch keeps the old data while the gate above offers Retry.
+  const loaded = app.isError ? undefined : app.data;
 
   return (
     <Panel title={t(copy.title)}>
       <PanelBody>
-        <p className="t-body">{t(copy.sub)}</p>
+        <PanelIntro>{t(copy.sub)}</PanelIntro>
         <QueryGate query={app} pendingLabel={t(copy.title)}>
           {(status) => (
             <>
@@ -317,14 +201,22 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                   {t("oauthApp.pinnedToDirectory", { tenant: status.tenant })}
                 </p>
               )}
-              <RedirectUris
-                uris={status.redirect_uris}
-                sub={t(copy.redirectSub)}
-              />
+            </>
+          )}
+        </QueryGate>
+      </PanelBody>
+      {loaded && (
+        <>
+          <RedirectUriGroup
+            uris={loaded.redirect_uris}
+            sub={t(copy.redirectSub)}
+          />
+          <PanelBody>
+            <div className="form-stack">
               <Field
                 label={t("oauthApp.clientId")}
                 hint={
-                  status.source === "stored"
+                  loaded.source === "stored"
                     ? t("oauthApp.replaceHint")
                     : undefined
                 }
@@ -365,7 +257,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                       // rotation carries the pinning forward. Emptying the
                       // field is then a deliberate act, which is what widening
                       // an app to every company ought to be.
-                      value={tenant ?? status.tenant ?? ""}
+                      value={tenant ?? loaded.tenant ?? ""}
                       autoComplete="off"
                       disabled={!canManage || busy}
                       placeholder={t("oauthApp.tenantPlaceholder")}
@@ -385,7 +277,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                       {
                         clientId: clientId.trim(),
                         clientSecret: clientSecret.trim(),
-                        tenant: (tenant ?? status.tenant ?? "").trim(),
+                        tenant: (tenant ?? loaded.tenant ?? "").trim(),
                       },
                       {
                         onSuccess: () => {
@@ -400,11 +292,11 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                     );
                   }}
                 >
-                  {status.source === "stored"
+                  {loaded.source === "stored"
                     ? t("oauthApp.replace")
                     : t("oauthApp.store")}
                 </Button>
-                {status.source === "stored" && (
+                {loaded.source === "stored" && (
                   <Button
                     variant="danger"
                     pending={remove.isPending}
@@ -448,10 +340,10 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
               >
                 {t(copy.removeConfirmBody)}
               </ConfirmModal>
-            </>
-          )}
-        </QueryGate>
-      </PanelBody>
+            </div>
+          </PanelBody>
+        </>
+      )}
     </Panel>
   );
 }
