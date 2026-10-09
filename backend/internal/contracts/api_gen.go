@@ -4581,6 +4581,7 @@ func (e CompanyContextCapabilitiesRollout) Valid() bool {
 
 // Defines values for CompanyContextItemSource.
 const (
+	CompanyContextItemSourceAgent     CompanyContextItemSource = "agent"
 	CompanyContextItemSourceConnector CompanyContextItemSource = "connector"
 	CompanyContextItemSourceHuman     CompanyContextItemSource = "human"
 	CompanyContextItemSourceMigration CompanyContextItemSource = "migration"
@@ -4590,6 +4591,8 @@ const (
 // Valid indicates whether the value is a known member of the CompanyContextItemSource enum.
 func (e CompanyContextItemSource) Valid() bool {
 	switch e {
+	case CompanyContextItemSourceAgent:
+		return true
 	case CompanyContextItemSourceConnector:
 		return true
 	case CompanyContextItemSourceHuman:
@@ -4800,6 +4803,7 @@ func (e CompanyFactField) Valid() bool {
 
 // Defines values for CompanyFactSource.
 const (
+	CompanyFactSourceAgent           CompanyFactSource = "agent"
 	CompanyFactSourceConnector       CompanyFactSource = "connector"
 	CompanyFactSourceHuman           CompanyFactSource = "human"
 	CompanyFactSourceMigration       CompanyFactSource = "migration"
@@ -4810,6 +4814,8 @@ const (
 // Valid indicates whether the value is a known member of the CompanyFactSource enum.
 func (e CompanyFactSource) Valid() bool {
 	switch e {
+	case CompanyFactSourceAgent:
+		return true
 	case CompanyFactSourceConnector:
 		return true
 	case CompanyFactSourceHuman:
@@ -5079,6 +5085,7 @@ func (e CompanyProfileFieldField) Valid() bool {
 
 // Defines values for CompanyProfileFieldSource.
 const (
+	CompanyProfileFieldSourceAgent           CompanyProfileFieldSource = "agent"
 	CompanyProfileFieldSourceConnector       CompanyProfileFieldSource = "connector"
 	CompanyProfileFieldSourceHuman           CompanyProfileFieldSource = "human"
 	CompanyProfileFieldSourceMigration       CompanyProfileFieldSource = "migration"
@@ -5089,6 +5096,8 @@ const (
 // Valid indicates whether the value is a known member of the CompanyProfileFieldSource enum.
 func (e CompanyProfileFieldSource) Valid() bool {
 	switch e {
+	case CompanyProfileFieldSourceAgent:
+		return true
 	case CompanyProfileFieldSourceConnector:
 		return true
 	case CompanyProfileFieldSourceHuman:
@@ -5289,6 +5298,7 @@ func (e CompanySiteReadComparisonClassification) Valid() bool {
 
 // Defines values for CompanySiteReadComparisonCurrentSource.
 const (
+	CompanySiteReadComparisonCurrentSourceAgent           CompanySiteReadComparisonCurrentSource = "agent"
 	CompanySiteReadComparisonCurrentSourceConnector       CompanySiteReadComparisonCurrentSource = "connector"
 	CompanySiteReadComparisonCurrentSourceHuman           CompanySiteReadComparisonCurrentSource = "human"
 	CompanySiteReadComparisonCurrentSourceMigration       CompanySiteReadComparisonCurrentSource = "migration"
@@ -5299,6 +5309,8 @@ const (
 // Valid indicates whether the value is a known member of the CompanySiteReadComparisonCurrentSource enum.
 func (e CompanySiteReadComparisonCurrentSource) Valid() bool {
 	switch e {
+	case CompanySiteReadComparisonCurrentSourceAgent:
+		return true
 	case CompanySiteReadComparisonCurrentSourceConnector:
 		return true
 	case CompanySiteReadComparisonCurrentSourceHuman:

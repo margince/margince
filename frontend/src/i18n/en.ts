@@ -4349,6 +4349,7 @@ export const en = {
   "evidence.correctedValue": "Corrected value",
   "evidence.confirmedAt": "Confirmed by a person {when}",
   "evidence.humanSet": "Set by a person",
+  "evidence.agentSet": "Set by an agent",
   "acctCoverage.open": "Compare coverage",
   "acctCoverage.title": "Company coverage",
   "acctCoverage.contact": "Contact",

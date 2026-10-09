@@ -49117,7 +49117,7 @@ components:
           description: The human who confirmed the claim. Server-stamped, never accepted from a request body.
         field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number] }
         value: { type: string }
-        source: { type: string, enum: [human, site_read, connector, migration, technical_lookup] }
+        source: { type: string, enum: [human, agent, site_read, connector, migration, technical_lookup] }
         captured_by: { type: string, readOnly: true }
         evidence_snippet: { type: [string, 'null'] }
         source_url: { type: [string, 'null'], format: uri }
@@ -49189,7 +49189,7 @@ components:
         field: { type: string, enum: [founded_year, employee_range, phone, contact_email, location, service, product, capability, served_industry, company_size, geography, language, certification, partner, named_customer, technology, quantified_outcome, mail_provider, email_security, hosting_provider, operated_service] }
         value: { type: string }
         value_key: { type: string }
-        source: { type: string, enum: [human, site_read, connector, migration, technical_lookup] }
+        source: { type: string, enum: [human, agent, site_read, connector, migration, technical_lookup] }
         captured_by: { type: string, readOnly: true }
         evidence_snippet: { type: [string, 'null'] }
         source_url: { type: [string, 'null'], format: uri }
@@ -49241,7 +49241,7 @@ components:
       properties:
         key: { type: string }
         value: { type: string }
-        source: { type: string, enum: [human, site_read, connector, migration] }
+        source: { type: string, enum: [human, agent, site_read, connector, migration] }
         captured_by: { type: string, readOnly: true }
         source_url: { type: [string, 'null'], format: uri }
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
@@ -49311,7 +49311,7 @@ components:
         value_kind: { type: string, enum: [profile_field, fact] }
         classification: { type: string, enum: [new, machine_change, human_conflict, unchanged] }
         current_value: { type: [string, 'null'] }
-        current_source: { type: [string, 'null'], enum: [human, site_read, connector, migration, technical_lookup, null] }
+        current_source: { type: [string, 'null'], enum: [human, agent, site_read, connector, migration, technical_lookup, null] }
         proposed_value: { type: string }
 
     CompanySiteReadResolution:

@@ -230,6 +230,16 @@ export function EvidenceVerdict({
       </span>
     );
   }
+  // An agent's correction, said as an agent's. The automatic refresh leaves it
+  // alone, so the reader is told why the value stopped moving. It carries no
+  // time because nothing was verified.
+  if (claim.source === "agent") {
+    return (
+      <span className="evidence-verdict t-caption">
+        {t("evidence.agentSet")}
+      </span>
+    );
+  }
   if (!canEdit) {
     return null;
   }

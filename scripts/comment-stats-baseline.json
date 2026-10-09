@@ -1,7 +1,7 @@
 {
   "heavy_go_func_pct": 5.8,
-  "long_block_line_pct": 40.2,
-  "long_sentence_pct": 34.4,
+  "long_block_line_pct": 40.1,
+  "long_sentence_pct": 34.3,
   "tells_per_1k_words": 18.7,
   "words_per_sentence": 21.7
 }

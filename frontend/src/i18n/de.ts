@@ -4241,6 +4241,7 @@ export const de = {
   "evidence.correctedValue": "Korrigierter Wert",
   "evidence.confirmedAt": "Von einer Person bestätigt am {when}",
   "evidence.humanSet": "Von einer Person festgelegt",
+  "evidence.agentSet": "Von einem Agenten gesetzt",
   "acctCoverage.open": "Abdeckung vergleichen",
   "acctCoverage.title": "Abdeckung des Unternehmens",
   "acctCoverage.contact": "Kontakt",
