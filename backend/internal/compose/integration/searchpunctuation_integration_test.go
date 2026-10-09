@@ -13,9 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A last word that is only punctuation lexes to nothing. It is a stray key in
-// the search box, so it must never fail the request: it adds no prefix, and the
-// words before it still search.
+// A last word of only punctuation lexes to nothing. It adds no prefix and
+// never fails the request; the words before it still search.
 func TestSearchIgnoresALastWordMadeOfPunctuation(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()

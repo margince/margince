@@ -16,8 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// A host with no connection is answered the way a refused connection is, by
-// every door the seam has, so the scheduling module maps one sentinel.
+// A host with no connection reads as a refused one at every door of the seam.
 func TestSchedulingCalendarWithoutAConnectionReadsAsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	calendar := newSchedulingCalendar(e.Pool, capture.NewRegistry(e.DB(), nil, nil, nil))

@@ -56,9 +56,9 @@ func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider
 	return err
 }
 
-// calendarFor is the only door to the registry's calendar: a host with no
-// connection is told the same thing as one whose connection was refused, so a
-// caller maps one sentinel instead of two.
+// calendarFor is the only door to the registry's calendar. A host with no
+// connection reads as one whose connection was refused, so callers map one
+// sentinel.
 //
 //nolint:ireturn // optional connector capability
 func (c schedulingCalendar) calendarFor(ctx context.Context, host ids.UserID, provider string, write bool) (connector.CalendarScheduler, connector.Auth, error) {
