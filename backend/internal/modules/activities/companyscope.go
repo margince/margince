@@ -90,10 +90,15 @@ func CompanyLinkedActivityExistsPerCompany() string {
 // The deal arm deliberately does not exclude archived or lost deals: a set
 // stricter than the predicate would show a message on the timeline whose
 // account never gets a signal about it.
+//
+// The employment arm is bounded by when the message was sent. The set form has
+// no outer activity to read that from, so the arms join the activity.
 var companyArms = `FROM activity_link l
+		    JOIN activity la ON la.id = l.activity_id
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
-		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL`
+		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
+		      AND ` + employment.InPlaceAtSQL("r", "la.occurred_at")
 
 // participantEmployerArm is the READER's fourth arm: the employer of somebody
 // who is on the event as a participant rather than as a link.
@@ -120,6 +125,7 @@ var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
 		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
+		        AND ` + employment.InPlaceAtSQL("emp", "a.occurred_at") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
 // activityReachesCompany is the walk as a PREDICATE, for a query that aliases
@@ -172,15 +178,10 @@ func activityReachesCompany(operand string) string {
 // No workspace filter: activity_link, deal and relationship all carry FORCE
 // row-level security, and every caller runs inside WithWorkspaceTx.
 //
-// Known limit, and it matters more to a producer than to a reader: the
-// employment arm asks who a contact works for NOW, not who they worked for
-// when the message was sent. Mail exchanged with someone at a previous job
-// therefore reaches whoever employs them today. A timeline showing it is
-// arguably being helpful; a signal FILED against that account is a claim
-// nobody made. Bounding the arm by relationship.started_at is the fix, and it
-// is not available yet — contacts.plantEmploymentEdge writes no start date, so
-// the bound would resolve nothing (see the follow-up issue). Until then the
-// extractor's one-account rule carries most of the weight, since a contact
+// The employment arm reaches only mail sent while the edge was in place
+// (employment.InPlaceAtSQL). Mail from someone's previous job is therefore not
+// filed against their employer today. An edge with no date stays unbounded.
+// For those, the extractor's one-account rule carries the weight: a contact
 // with two live employers makes their conversations ambiguous and skipped.
 func CompanyReachSet() string {
 	return sprintf(`SELECT DISTINCT l.activity_id, o.company_id AS company_id

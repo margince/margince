@@ -5974,6 +5974,7 @@ public.relationship.deal_id uuid gen=- def=-
 public.relationship.employment_status text gen=- def=-
 public.relationship.ended_at date gen=- def=-
 public.relationship.ended_precision text gen=- def=-
+public.relationship.first_observed_at timestamp with time zone gen=- def=-
 public.relationship.id uuid NOT NULL gen=- def=uuidv7()
 public.relationship.is_current_primary boolean NOT NULL gen=- def=false
 public.relationship.kind text NOT NULL gen=- def=-
