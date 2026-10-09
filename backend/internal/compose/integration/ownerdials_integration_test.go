@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func dealIDsOf(t *testing.T, e *Env, ctx context.Context, in deals.ListDealsInput) []ids.UUID {
+func dealIDsOf(ctx context.Context, t *testing.T, e *Env, in deals.ListDealsInput) []ids.UUID {
 	t.Helper()
 	page, _, err := e.Deals.ListDeals(ctx, in)
 	if err != nil {
@@ -37,7 +37,7 @@ func dealIDsOf(t *testing.T, e *Env, ctx context.Context, in deals.ListDealsInpu
 	return out
 }
 
-func projectIDsOf(t *testing.T, e *Env, ctx context.Context, in projects.ListProjectsInput) []ids.UUID {
+func projectIDsOf(ctx context.Context, t *testing.T, e *Env, in projects.ListProjectsInput) []ids.UUID {
 	t.Helper()
 	page, _, err := e.Projects.ListProjects(ctx, in)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestTheDealListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
 	e.WsExec(t, `UPDATE deal SET owner_id = NULL WHERE id = $1`, unowned)
 
 	team := ids.From[ids.TeamKind](e.Team1)
-	got := dealIDsOf(t, e, e.Admin(), deals.ListDealsInput{OwnerTeamID: &team})
+	got := dealIDsOf(e.Admin(), t, e, deals.ListDealsInput{OwnerTeamID: &team})
 	want := []ids.UUID{mine, teammates}
 	byID := func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) }
 	slices.SortFunc(got, byID)
@@ -71,7 +71,7 @@ func TestTheDealListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
 	}
 
 	yes := true
-	if queue := dealIDsOf(t, e, e.Admin(), deals.ListDealsInput{Unassigned: &yes}); !slices.Equal(queue, []ids.UUID{unowned}) {
+	if queue := dealIDsOf(e.Admin(), t, e, deals.ListDealsInput{Unassigned: &yes}); !slices.Equal(queue, []ids.UUID{unowned}) {
 		t.Fatalf("unassigned=true returned %v, want only the unowned deal %v", queue, unowned)
 	}
 
@@ -105,7 +105,7 @@ func TestTheProjectOwnerDialsOnlyEverSubtractFromTheCallersList(t *testing.T) {
 		Objects:  map[string]principal.ObjectGrant{"project": {Read: true}},
 		RowScope: principal.RowScopeTeam,
 	})
-	visible := projectIDsOf(t, e, rep, projects.ListProjectsInput{})
+	visible := projectIDsOf(rep, t, e, projects.ListProjectsInput{})
 	own := ids.From[ids.TeamKind](e.Team1)
 	other := ids.From[ids.TeamKind](e.Team2)
 	yes := true
@@ -119,7 +119,7 @@ func TestTheProjectOwnerDialsOnlyEverSubtractFromTheCallersList(t *testing.T) {
 		{"owner_team_id=<another team>", projects.ListProjectsInput{OwnerTeamID: &other}, theirs.ID.UUID},
 		{"unassigned=true", projects.ListProjectsInput{Unassigned: &yes}, unowned.ID.UUID},
 	} {
-		got := projectIDsOf(t, e, rep, tc.in)
+		got := projectIDsOf(rep, t, e, tc.in)
 		if !slices.Equal(got, []ids.UUID{tc.want}) {
 			t.Errorf("%s returned %v, want only %v", tc.name, got, tc.want)
 		}
@@ -192,7 +192,7 @@ func TestTheTeamFilterNamesNobodyThroughAnArchivedTeam(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	e.SeedDeal(t, "Owned By Rep1", pipeline, open, &e.Rep1)
 	team := ids.From[ids.TeamKind](e.Team1)
-	if got := dealIDsOf(t, e, e.Admin(), deals.ListDealsInput{OwnerTeamID: &team}); len(got) != 1 {
+	if got := dealIDsOf(e.Admin(), t, e, deals.ListDealsInput{OwnerTeamID: &team}); len(got) != 1 {
 		t.Fatalf("before the archive, owner_team_id returned %d deals, want Rep1's one", len(got))
 	}
 
@@ -208,7 +208,7 @@ func TestTheTeamFilterNamesNobodyThroughAnArchivedTeam(t *testing.T) {
 		identity.UpdateTeamInput{Archived: &archived}); err != nil {
 		t.Fatalf("archiving Team1: %v", err)
 	}
-	if got := dealIDsOf(t, e, e.Admin(), deals.ListDealsInput{OwnerTeamID: &team}); len(got) != 0 {
+	if got := dealIDsOf(e.Admin(), t, e, deals.ListDealsInput{OwnerTeamID: &team}); len(got) != 0 {
 		t.Fatalf("owner_team_id=<an archived team> returned %v, want nothing", got)
 	}
 }

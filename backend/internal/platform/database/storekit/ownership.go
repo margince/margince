@@ -16,6 +16,9 @@ import (
 // CodeConflictingFilters refuses two owner dials sent at once.
 const CodeConflictingFilters = "conflicting_filters"
 
+// ownerIDColumn is the owner reference every owner-scoped record carries.
+const ownerIDColumn = "owner_id"
+
 // OwnershipClause spells owner_id, owner_team_id and unassigned as one
 // predicate, because they answer one question: whose rows. Two at once can
 // only match nothing, and an empty page looks like a real answer. So a pair
@@ -33,8 +36,11 @@ func OwnershipClause(owner *ids.UserID, team *ids.TeamID, unassigned *bool, arg 
 		}
 	}
 	if named > 1 {
-		return "", &PredicateError{Field: "owner_id", Code: CodeConflictingFilters,
-			Message: "owner_id, owner_team_id and unassigned each name a different set of rows; send one"}
+		return "", &PredicateError{
+			Field:   ownerIDColumn,
+			Code:    CodeConflictingFilters,
+			Message: "owner_id, owner_team_id and unassigned each name a different set of rows; send one",
+		}
 	}
 	switch {
 	case owner != nil:
@@ -60,9 +66,12 @@ func OwnershipClause(owner *ids.UserID, team *ids.TeamID, unassigned *bool, arg 
 // id. A cursor minted then is refused rather than compared against names.
 // table is a compile-time literal naming the list's own table.
 func OwnerNameSort(table string) SortField {
-	return SortField{Kind: fieldcatalog.TypeText, CursorField: "owner_name",
+	return SortField{
+		Kind:        fieldcatalog.TypeText,
+		CursorField: "owner_name",
 		Expr: func(_ context.Context, _ func(any) int) (string, error) {
 			return "(SELECT owner_sort.display_name FROM app_user owner_sort WHERE owner_sort.id = " +
 				table + ".owner_id AND owner_sort.archived_at IS NULL)", nil
-		}}
+		},
+	}
 }
