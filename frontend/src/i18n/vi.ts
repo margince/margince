@@ -899,6 +899,7 @@ export const vi = {
   "systemJob.stage_evidence_read": "Đọc bằng chứng giai đoạn deal",
   "systemJob.stage_progression": "Chuyển giai đoạn deal",
   "systemJob.stage_progression_outcome": "Kết quả giai đoạn deal",
+  "systemJob.suppression_journal_worker": "Xuất sổ ghi xóa dữ liệu",
   "systemJob.stored_object_reap_worker": "Dọn dẹp kho tệp",
   "systemJob.technical_backfill": "Tra cứu kỹ thuật còn tồn đọng",
   "systemJob.technical_lookup": "Tra cứu kỹ thuật công ty",

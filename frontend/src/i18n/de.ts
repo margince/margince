@@ -922,6 +922,7 @@ export const de = {
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
   "systemJob.stage_progression": "Phasenfortschritt",
   "systemJob.stage_progression_outcome": "Ergebnis des Phasenwechsels",
+  "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
   "systemJob.technical_lookup": "Technische Abfrage für Unternehmen",
