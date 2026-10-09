@@ -34,7 +34,9 @@ package gates
 
 import (
 	"io/fs"
+	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -48,12 +50,11 @@ const (
 	sendPermissionContract  = "api/crm.yaml"
 	sendPermissionFrontend  = "../frontend/src"
 	sendPermissionComponent = "../frontend/src/screens/sendpermission.tsx"
-	// composerSurface is the file this walk must always see. It stands where a
-	// COUNT floor stood, deliberately: a number tracks how many composers the
-	// app happens to have and gets edited down each time they consolidate, while
-	// a name fails when the walk goes blind — the one way a census breaks
-	// silently — and says which file to go looking for.
-	composerSurface = "screens/compose.tsx"
+	// composerSurface is the file this walk must always see. A count would follow
+	// how many composers the app has. A name fails when the walk goes blind, and
+	// it says which file to look for. The composer's send hook names the door,
+	// and compose.tsx renders the answer.
+	composerSurface = "screens/composesend.ts"
 )
 
 // silentSendSurfaces ratifies each surface that posts to a send door without
@@ -188,6 +189,42 @@ func asksTheEngine(source string) bool {
 		rendersSendPermission.MatchString(source)
 }
 
+// importStatement matches one import statement, across lines, with whether it
+// imports only types and the module it names.
+var importStatement = regexp.MustCompile(`(?s)\bimport\s+(type\s+)?[^;]*?\bfrom\s+"([^"]+)"`)
+
+// importsValueFrom reports whether source imports a value from the module
+// named base. A type-only import carries nothing that can send.
+func importsValueFrom(source, base string) bool {
+	for _, m := range importStatement.FindAllStringSubmatch(source, -1) {
+		if m[1] == "" && path.Base(m[2]) == base {
+			return true
+		}
+	}
+	return false
+}
+
+// hookAsksTheEngine reports whether a module that renders nothing is used only
+// by surfaces that ask the engine. A hook names the door, and the component
+// that calls it is what a rep sees, so that component must render the answer.
+func hookAsksTheEngine(rel string, sources map[string]string) bool {
+	if !strings.HasSuffix(rel, ".ts") {
+		return false
+	}
+	base := strings.TrimSuffix(path.Base(rel), ".ts")
+	importers := 0
+	for other, source := range sources {
+		if other == rel || !importsValueFrom(source, base) {
+			continue
+		}
+		if !asksTheEngine(source) {
+			return false
+		}
+		importers++
+	}
+	return importers > 0
+}
+
 // isSendSurfaceSource is the frontend production source the census sweeps:
 // TypeScript that renders, rather than a file that describes what renders.
 func isSendSurfaceSource(rel string) bool {
@@ -195,6 +232,36 @@ func isSendSurfaceSource(rel string) bool {
 		return false
 	}
 	return !describesRatherThanRenders(rel)
+}
+
+// sendSurfaceSources reads every frontend production source the census sweeps,
+// keyed by its path under src.
+func sendSurfaceSources(t *testing.T) map[string]string {
+	t.Helper()
+	sources := map[string]string{}
+	walkErr := filepath.WalkDir(sendPermissionFrontend, func(file string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		rel, relErr := filepath.Rel(sendPermissionFrontend, file)
+		if relErr != nil {
+			return relErr
+		}
+		rel = filepath.ToSlash(rel)
+		if !isSendSurfaceSource(rel) {
+			return nil
+		}
+		raw, readErr := os.ReadFile(file)
+		if readErr != nil {
+			return readErr
+		}
+		sources[rel] = string(raw)
+		return nil
+	})
+	if walkErr != nil {
+		t.Fatalf("walking the frontend: %v", walkErr)
+	}
+	return sources
 }
 
 func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
@@ -222,44 +289,23 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 			"this gate by naming it now renders something else, or nothing")
 	}
 
+	sources := sendSurfaceSources(t)
 	var seen, posting []string
-	walkErr := filepath.WalkDir(sendPermissionFrontend, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		rel, relErr := filepath.Rel(sendPermissionFrontend, path)
-		if relErr != nil {
-			return relErr
-		}
-		rel = filepath.ToSlash(rel)
-		if !isSendSurfaceSource(rel) {
-			return nil
-		}
-		raw, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return readErr
-		}
-		source := string(raw)
+	for _, rel := range slices.Sorted(maps.Keys(sources)) {
+		source := sources[rel]
 		if postsThroughADoor(source, doors) {
 			posting = append(posting, rel)
 		}
 		if !namesADoor(source, doors) {
-			return nil
+			continue
 		}
 		seen = append(seen, rel)
-		if asksTheEngine(source) || silentSendSurfaces.Waived(t, rel) {
-			return nil
+		if asksTheEngine(source) || hookAsksTheEngine(rel, sources) || silentSendSurfaces.Waived(t, rel) {
+			continue
 		}
 		t.Errorf("%s posts to a send door and never asks the engine: a rep learns a refusal by "+
 			"pressing Send. Render SendPermission fed by useSendPermission, or ratify the surface in "+
 			"silentSendSurfaces with what its silence costs", rel)
-		return nil
-	})
-	if walkErr != nil {
-		t.Fatalf("walking the frontend: %v", walkErr)
 	}
 	// A surface the CALL sees and the mention does not is one this gate stopped
 	// asking about, which is the failure that reports PASS. The reverse is fine
@@ -278,5 +324,36 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 	if !slices.Contains(seen, composerSurface) {
 		t.Fatalf("the walk saw %v and not %s: the census has stopped seeing its subject",
 			seen, composerSurface)
+	}
+}
+
+// A hook passes only when every component that calls it renders the answer.
+func TestASendHookIsJudgedByTheComponentsThatCallIt(t *testing.T) {
+	t.Parallel()
+	asks := `import { SendPermission } from "./sendpermission";
+import { useSend } from "./composesend";
+export const A = () => <SendPermission />;`
+	silent := `import { useSend } from "./composesend";
+export const B = () => null;`
+	typeOnly := `import type { Refusal } from "./composesend";
+export const C = () => null;`
+	cases := []struct {
+		name    string
+		rel     string
+		sources map[string]string
+		want    bool
+	}{
+		{"every caller asks", "screens/composesend.ts", map[string]string{"screens/a.tsx": asks}, true},
+		{"one caller is silent", "screens/composesend.ts",
+			map[string]string{"screens/a.tsx": asks, "screens/b.tsx": silent}, false},
+		{"a type import uses no door", "screens/composesend.ts",
+			map[string]string{"screens/a.tsx": asks, "screens/c.tsx": typeOnly}, true},
+		{"no caller proves nothing", "screens/composesend.ts", map[string]string{"screens/c.tsx": typeOnly}, false},
+		{"a component is judged on its own", "screens/composesend.tsx", map[string]string{"screens/a.tsx": asks}, false},
+	}
+	for _, c := range cases {
+		if got := hookAsksTheEngine(c.rel, c.sources); got != c.want {
+			t.Errorf("%s: hookAsksTheEngine = %v, want %v", c.name, got, c.want)
+		}
 	}
 }
