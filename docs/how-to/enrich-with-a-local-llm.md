@@ -157,15 +157,16 @@ the server, and belongs on its command line:
 vllm serve <model> \
   --max-model-len 40960 \
   --default-chat-template-kwargs '{"enable_thinking": false}' \
-  --reasoning-parser <parser> \
   --enable-prompt-tokens-details
 ```
+
+For a model that thinks, also add `--reasoning-parser <parser>`. The table lists the parsers.
 
 | flag | why |
 |---|---|
 | `--max-model-len 40960` | The agent loop plans its prompt against a window of 32,768 tokens and asks for output on top. A server started with less refuses those calls with a 400 (`max_tokens=… cannot be greater than max_model_len`). 40,960 is what the Ollama adapter asks for, so the two serve the same prompts. |
 | `--default-chat-template-kwargs '{"enable_thinking": false}'` | Qwen3 and Gemma 4 think by default. Measured on `Qwen3-14B` with a budget of 300 tokens and a JSON schema: 299 tokens of thinking, 29 seconds, and no answer (`content: null`, `finish_reason: length`). With this flag: the answer in 22 tokens and 2.4 seconds. A template that has no such value (`gpt-oss`, Mistral, Gemma 3) does not use it. |
-| `--reasoning-parser <parser>` | `qwen3`, `gemma4`, `openai_gptoss`, … Moves any thinking out of the answer into its own field. Without it, the thinking stays in the text that the product parses as JSON. Leave it out for a model that does not think. |
+| `--reasoning-parser <parser>` | Only for a model that thinks: `qwen3`, `gemma4`, `openai_gptoss`, … Moves any thinking out of the answer into its own field. Without it, the thinking stays in the text that the product parses as JSON. |
 | `--enable-prompt-tokens-details` | Reports cached prompt tokens, which the product records per call. Without it the count is always 0. |
 
 The binding in the routing config then needs only the model id and, if it is not

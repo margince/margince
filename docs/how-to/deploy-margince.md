@@ -201,8 +201,11 @@ Two gauges tell you when agent reads are refusing.
 no agent surface. `margince_agent_volume_answerable` is 0 where the bound could not read its store on
 its last attempt. Alert on `bound == 1 and answerable == 0`, and say this in the alert text:
 
-> Agent reads are refusing on this role. Human traffic is unaffected, so do not
-> drain the pod. Restore Redis.
+> Agent reads are refusing on this role. Draining the pod does not fix it.
+> Restore Redis.
+
+On a split role (`--inline-relay=false`), human traffic is unaffected and the pod stays ready. On
+the default api, the inline relay probes the same Redis, so `/readyz` fails and the pod drains anyway.
 
 Every role renders both gauges, including one that composed no meter, so an absent series means
 nobody is scraping. The signal follows the last attempt in both directions and clears on its own. Why

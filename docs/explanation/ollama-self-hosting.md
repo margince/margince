@@ -312,10 +312,13 @@ catches it after the fact; do not count on the format rule to hold it.
 
 ## 8. Run it again
 
-Pull `gemma4:12b`, and `gpt-oss:20b` for a local judge, as step 1 of
-[enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md) shows. Then:
+Start Ollama as step 1 of
+[enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md) shows. Then pull
+the model, and `gpt-oss:20b` only for a local judge, and run:
 
 ```bash
+ollama pull gemma4:12b
+ollama pull gpt-oss:20b
 # The committed records used the default cloud judge; a local judge works too:
 make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
   JUDGE=ollama:gpt-oss:20b TASK=capture_classify

@@ -417,6 +417,38 @@ a gate: a cached test file that runs `git` or `go` must declare its inputs.
 
 What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 
+### Why some jobs are shaped as they are
+
+- **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
+- **`craftsmanship` runs after `deterministic-gates`**, so a red build is never judged on how the code
+  reads.
+- **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
+  and the shard profiles cannot reach them.
+- **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
+  the slow `e2e` tests work through its part without running minutes past its siblings.
+- **`integration unit coverage`** exists because the shards run just the packages tagged for
+  integration. Without it, SonarCloud would see the packages with only unit tests at a false coverage
+  of about 0% for new code.
+- **A fan-in turns red, not skipped**, when a job in its lane fails. The aggregate reads a skip as "this
+  part was out of scope". The `frontend` fan-in checks its jobs before the merge half. So a red shard
+  ends the job, and does not hand the merge a partial set of blob reports.
+- **`vuln` runs on every backend change**, so a weak dependency that a PR *brings in* is reported before
+  merge. The daily run on `main` in `scheduled.yml` catches a weak spot made public after the merge.
+- **The license gate lives in `ci.yml`**, not in `sbom.yml`. It is a **gate**, and that workflow makes
+  build output. `sbom.yml` filters at the workflow level, so a PR that touches no dependency gets no
+  check run from it. A required check that never shows up blocks the merge forever. Gating at the job
+  level makes a path skip report as passing. The copy of the gate in `sbom.yml` fires just before a
+  signing run.
+- **`fe-quality`** is the only frontend job with a Go toolchain, because the composed lane needs the
+  output of `gen-composition`, which nothing else makes.
+- **`fe-unit` uploads a blob report, not an lcov.** One part measures only the part of the tree its
+  tests loaded, until the four are added up. Four is where the measure stops paying off; the comment
+  above the job holds the math.
+- **The SPA jobs run at the same time**, because they share no state. One after the other, the lane
+  needed about `340s`, of which vitest alone needed about `207s`.
+- **`live-boot`** exists because the integration shards never boot the api or run the seed script.
+  Without it, the seed that runs through the API and the boot proof would break with no one seeing.
+
 ### What `secret-scan` runs
 
 `make secret-scan` runs gitleaks over a clean `git archive HEAD` export, with the policy in
