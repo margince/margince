@@ -16,7 +16,8 @@
 #     vllm serve BAAI/bge-m3 --runner pooling --port 8001 --gpu-memory-utilization 0.1
 #
 # Each flag, and what leaving it out measured, is in
-# docs/reference/vllm-self-hosting.md section 1. The two that change answers:
+# docs/how-to/enrich-with-a-local-llm.md ("Serve the model with vLLM instead").
+# The two that change answers:
 # without enable_thinking=false Qwen3 thinks before every answer and a short
 # budget returns no answer at all; and this MLX build ships no sampling config,
 # so without the override vLLM samples at temperature 1.0.

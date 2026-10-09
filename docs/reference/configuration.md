@@ -1015,6 +1015,19 @@ longer written. Use `migrate reset-password` to change the password of a user wh
 | `--name` | (none) | (none) | database name (`recreate-db`, `drop-db`, `db-exists` only): the admin step of the integration lane that copies a database per package. Drop if it exists and create, drop if it exists, or print `true`/`false`. The drops are `WITH (FORCE)`, so a session that is still open is ended, and does not make the clean-up fail some of the time. It runs on the same owner DSN the migrations and tests use. So the lane needs no host psql, and a changed `MARGINCE_TEST_DSN` points at one cluster the whole way. A name (or template) over the name limit of the server (63 bytes by default) is refused, never cut short into the name of another database |
 | `--template` | (none) | (none) | template database to copy (`recreate-db` only): `CREATE DATABASE … TEMPLATE`, a fast file copy |
 
+## What the image entrypoint reads (api and worker)
+
+The image entrypoint scripts in `scripts/deploy/` read these before they start a binary. The binaries then
+resolve their other flags from the `MARGINCE_*` values above. The steps that use them are in
+[how-to/deploy-margince.md](../how-to/deploy-margince.md), and the template with notes is
+[`.env.example`](../../.env.example).
+
+| Env | Read by | Required | Meaning |
+|---|---|---|---|
+| `MARGINCE_OWNER_DSN` | api entrypoint | yes | owner-role DSN. The entrypoint runs `margince-migrate up` under it, and passes it on as `MARGINCE_SCHEMA_DSN` unless that is set |
+| `MARGINCE_DSN` | api and worker entrypoint | yes | app-role DSN the process serves under, through the `--dsn` fallback |
+| `MARGINCE_ADMIN_PASSWORD` | api entrypoint | first boot only | first-boot admin password. The entrypoint writes it to `/app/secrets/admin-password`, which the `password_file` in `margince.yaml` must name. Once a company exists it writes nothing, and warns if the value is still set |
+
 ## Other environment variables
 
 | Env | Default | Used by | Meaning |
@@ -1059,7 +1072,7 @@ longer written. Use `migrate reset-password` to change the password of a user wh
 - Margince refuses preferences on a binding that is not a broker on an OpenRouter host, and refuses
   keys it does not know. A key with a typing error would be dropped. The run would then report the
   default numbers under the name of a run with its own preferences.
-- The field set, and the measures behind the default, are in [openrouter.md](openrouter.md).
+- The field set, and the measures behind the default, are in [openrouter-upstream-choice.md](../explanation/openrouter-upstream-choice.md).
 ### `POST /v1/admin/reset-data`: the armed data reset
 
 `operations.allow_data_reset` in `margince.yaml` gates it, and its compiled default is **false in
@@ -1418,8 +1431,8 @@ serving the file, because RFC 9116 leaves it to the reader to judge when a file 
 log says to move the date.
 
 The api serves the file, since it holds this config, as `text/plain; charset=utf-8`. Route
-`/.well-known/security.txt` to the api by that path (see Routing in
-[deployment.md](../deployment.md)). If the ingress leaves it on the web service instead, the web tier
+`/.well-known/security.txt` to the api by that path (see
+[Route one host to two services](../how-to/deploy-margince.md#route-one-host-to-two-services)). If the ingress leaves it on the web service instead, the web tier
 answers 404, the same as an installation with no file.
 
 ### License
