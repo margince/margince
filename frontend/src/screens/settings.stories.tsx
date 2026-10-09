@@ -211,8 +211,7 @@ export const AgentsTabDark: Story = {
   render: tab("agents", agentsTabRoutes),
 };
 
-// At 390px, where the code example has to wrap inside the card rather than
-// widen it, and the language switch and its copy control share one line.
+// At 390px. The code example wraps inside the card instead of widening it.
 export const AgentsTabPhone: Story = {
   name: "Your agents — phone",
   globals: { viewport: { value: "phone" } },

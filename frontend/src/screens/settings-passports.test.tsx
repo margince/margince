@@ -216,9 +216,8 @@ describe("PassportCard — minting", () => {
     );
 
     const token = await within(dialog).findByText("mgp_live_0f3a91c4");
-    // Focus lands on the region holding it: the token is disclosed exactly
-    // once, so a reader whose focus stayed on the button would have to hunt
-    // for what they just made.
+    // Focus lands on the region holding it. The token is shown once, and a
+    // reader left on the button would have to hunt for it.
     const region = token.closest(".passport-token");
     expect(region).toBeTruthy();
     expect(region).toHaveFocus();
