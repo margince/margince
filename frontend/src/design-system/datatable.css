@@ -51,7 +51,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    column-gap: var(--space-2);
+    column-gap: var(--space-3);
     padding: var(--space-3);
     border-bottom: 1px solid var(--borderSubtle);
     transition: background-color var(--dur-state) var(--ease-out);
@@ -87,19 +87,14 @@
   .table-scroll-fold tr:has(> [data-fold="rest"]:not(:empty))::after {
     content: "";
     flex-basis: 100%;
-    block-size: var(--space-1);
     order: 2;
   }
+  /* Not row-gap: it falls on both sides of the line break, doubling the space
+     under line one. */
   .table-scroll-fold [data-fold="rest"] {
     order: 3;
+    margin-block-start: var(--space-1);
     font: var(--fontBodySmall);
     color: var(--textSecondary);
-  }
-  .table-scroll-fold
-    [data-fold="rest"]:not(:empty):has(
-      ~ [data-fold="rest"]:not(:empty)
-    )::after {
-    content: "·" / "";
-    padding-inline-start: var(--space-2);
   }
 }

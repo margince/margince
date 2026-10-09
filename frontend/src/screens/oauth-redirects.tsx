@@ -113,6 +113,7 @@ export function RedirectUriTable({
     {
       key: "copy",
       header: t("table.actions"),
+      headerHidden: true,
       fold: "end",
       align: "end",
       render: (uri) => (

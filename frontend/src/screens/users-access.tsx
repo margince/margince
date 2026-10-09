@@ -301,7 +301,7 @@ function TeamTable({
             {people ? (
               <button
                 type="button"
-                className="link-button users-team-open"
+                className="cell-link"
                 aria-haspopup="dialog"
                 onClick={() => onOpen(team.id)}
               >
@@ -349,6 +349,7 @@ function TeamTable({
     columns.push({
       key: "verbs",
       header: t("table.actions"),
+      headerHidden: true,
       align: "end",
       fold: "end",
       render: (team) => (

@@ -245,6 +245,7 @@ function GroupRoleGrants({
     {
       key: "remove",
       header: t("table.actions"),
+      headerHidden: true,
       fold: "end",
       align: "end",
       render: (row) => (

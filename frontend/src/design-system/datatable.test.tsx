@@ -10,7 +10,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { TableScroll } from "./atoms";
-import { DataTable } from "./datatable";
+import { DataTable, type DataTableColumn } from "./datatable";
 
 afterEach(() => {
   cleanup();
@@ -167,14 +167,14 @@ const MEMBER = {
   team: "",
 };
 
-const MEMBER_COLUMNS = [
+const MEMBER_COLUMNS: DataTableColumn<DemoMember>[] = [
   { key: "name", header: "Name", render: (row: DemoMember) => row.name },
   { key: "email", header: "Email", render: (row: DemoMember) => row.email },
   { key: "team", header: "Team", render: (row: DemoMember) => row.team },
   {
     key: "role",
     header: "Role",
-    fold: "end" as const,
+    fold: "end",
     render: (row: DemoMember) => row.role,
   },
 ];
@@ -252,6 +252,19 @@ it("keeps every folded cell under the heading that names it", () => {
   expect(screen.getByRole("table").getAttribute("role")).toBe("table");
 });
 
+it("reads a hidden heading to assistive tech and draws none of it", () => {
+  renderMembers(false, [
+    ...MEMBER_COLUMNS.slice(0, 3),
+    { ...MEMBER_COLUMNS[3], headerHidden: true },
+  ]);
+  const heading = screen.getByRole("columnheader", { name: "Role" });
+  expect(heading.firstElementChild?.className).toBe("sr-only");
+  expect(heading.firstElementChild?.textContent).toBe("Role");
+  expect(
+    screen.getByRole("columnheader", { name: "Name" }).children,
+  ).toHaveLength(0);
+});
+
 const datatableCss = () =>
   readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "datatable.css"),
@@ -267,6 +280,15 @@ it("hides a folded heading and an empty cell by clipping, never by display", () 
   expect(fold).toContain(':is(:empty, [data-fold="hide"])');
   expect(fold).toContain("clip-path: inset(50%);");
   expect(fold).not.toContain("display: none");
+});
+
+// A glyph between caption cells is left at a line's end, or leads the next
+// line, wherever a narrow row wraps; space alone cannot strand.
+it("separates a folded caption's cells by space, never by a glyph", () => {
+  const css = datatableCss();
+  const fold = css.slice(css.indexOf("@container table-fold"));
+  expect(fold).not.toMatch(/content:\s*"[^"]/);
+  expect(fold).toContain("column-gap: var(--space-3);");
 });
 
 it("folds on the table's own width rather than the viewport's", () => {

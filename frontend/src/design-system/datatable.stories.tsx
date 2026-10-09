@@ -305,7 +305,15 @@ const DEMO_MEMBERS: DemoMember[] = [
 ];
 
 const MEMBER_COLUMNS: DataTableColumn<DemoMember>[] = [
-  { key: "name", header: "Name", render: (member) => member.name },
+  {
+    key: "name",
+    header: "Name",
+    render: (member) => (
+      <button type="button" className="cell-link" aria-haspopup="dialog">
+        {member.name}
+      </button>
+    ),
+  },
   { key: "email", header: "Email", render: (member) => member.email },
   { key: "role", header: "Role", render: (member) => member.role },
   {
@@ -323,6 +331,7 @@ const MEMBER_COLUMNS: DataTableColumn<DemoMember>[] = [
   {
     key: "verbs",
     header: "Actions",
+    headerHidden: true,
     fold: "end",
     render: (member) => (
       <Button>{`Remove ${member.name.split(" ")[0]}`}</Button>
@@ -356,7 +365,8 @@ function cellBox(row: Element, selector: string) {
 
 // `fold` at a phone's width: the name and the trailing badge and verb share
 // line one, the rest run under them as a caption, and nothing scrolls sideways.
-// An empty cell (no status, never active) leaves no gap and no stray dot.
+// An empty cell (no status, never active) leaves no gap, and a caption cell
+// that wraps starts its line where the caption does.
 export const FoldedRecordsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -375,14 +385,22 @@ export const FoldedRecordsPhone: Story = {
         await expect(end.top).toBeLessThan(title.bottom);
         await expect(end.left).toBeGreaterThanOrEqual(title.right);
       }
-      for (const rest of cellBox(row, '[data-fold="rest"]')) {
+      const rests = cellBox(row, '[data-fold="rest"]');
+      for (const rest of rests) {
         await expect(rest.top).toBeGreaterThanOrEqual(title.bottom);
+      }
+      for (const [index, rest] of rests.entries()) {
+        const before = rests[index - 1];
+        if (before && rest.top >= before.bottom) {
+          await expect(rest.left).toBe(rests[0].left);
+        }
       }
     }
   },
 };
 
-// The same table with room for its columns keeps one line per row.
+// The same table with room for its columns keeps one line per row, and the
+// name's text starts on the edge its heading does.
 export const FoldedRecordsWide: Story = {
   render: () => <MembersPanel />,
   play: async ({ canvasElement }) => {
@@ -391,6 +409,13 @@ export const FoldedRecordsWide: Story = {
     const [row] = canvasElement.querySelectorAll("tbody tr");
     const tops = cellBox(row, "td").map((cell) => Math.round(cell.top));
     await expect(new Set(tops).size).toBe(1);
+    const heading = canvasElement.querySelector("th");
+    const name = row.querySelector(".cell-link")?.getBoundingClientRect();
+    if (heading === null || name === undefined) {
+      throw new Error("the members table drew no heading or no name");
+    }
+    const inset = Number.parseFloat(getComputedStyle(heading).paddingLeft);
+    await expect(name.left).toBe(heading.getBoundingClientRect().left + inset);
   },
 };
 

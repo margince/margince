@@ -27,11 +27,6 @@
   gap: var(--space-1);
 }
 
-/* A long team name wraps from its start like the caption under it. */
-.users-team-open {
-  text-align: start;
-}
-
 .users-team-faces {
   display: inline-flex;
   align-items: center;

@@ -53,7 +53,11 @@ export function DataTable<Row>({
                 className={columnClass(column)}
                 role={role("columnheader")}
               >
-                {column.header}
+                {column.headerHidden ? (
+                  <span className="sr-only">{column.header}</span>
+                ) : (
+                  column.header
+                )}
               </th>
             ))}
           </tr>
@@ -87,6 +91,8 @@ export function DataTable<Row>({
 export type DataTableColumn<Row> = Readonly<{
   key: string;
   header: string;
+  /** The heading is read but not drawn: a column of verbs needs no word over it. */
+  headerHidden?: boolean;
   render: (row: Row) => ReactNode;
   // A column of FIGURES sits against the end of its cell, heading included, so
   // the digits of every row stack into a column the eye runs down; a figure
