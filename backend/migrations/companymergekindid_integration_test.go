@@ -6,9 +6,9 @@
 package migrations_test
 
 // The companion of the foreign-key census for the other way a row names a
-// company: by (…entity_type, …entity_id), with no foreign key. The schema
-// cannot see that pair, so a table that points at a company this way has to be
-// found in the catalog, or it stays on the archived record unnoticed.
+// company: by an entity_type and entity_id pair, with no foreign key.
+// The schema cannot see that pair. A table pointing at a company this way must
+// be found in the catalog, or its rows stay on the archived record unnoticed.
 
 import (
 	"context"
@@ -36,8 +36,8 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 })
 
 // TestEveryCompanyKindIDReferenceJoinsTheMerge derives the pairs from the
-// catalog: a column ending in entity_id beside a column ending in entity_type,
-// whose closed vocabulary (when it has one) admits company.
+// catalog: an entity_id column beside an entity_type column.
+// A closed vocabulary that excludes company drops the pair.
 func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 	defer kindIDPairsTheMergeLeaves.AssertAllMatched(t)
 

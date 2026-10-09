@@ -5,8 +5,8 @@
 
 package contacts
 
-// What a company merge does with the rows that name a company by kind and id
-// rather than by a foreign key, and with the address the survivor lacks.
+// What a merge does with rows that name a record by kind and id. Those carry
+// no foreign key. The same file covers the LinkedIn address a survivor lacks.
 
 import (
 	"context"
@@ -42,7 +42,7 @@ func (e *dedupeEnv) setLinkedIn(ctx context.Context, t *testing.T, id ids.Compan
 	}
 }
 
-// A SIGNAL AND A FILE ABOUT THE RETIRED COMPANY ARE ABOUT THE SURVIVOR NOW.
+// A signal and a file about the retired company are about the survivor now.
 func TestMergingACompanyMovesTheRowsThatNameItByKindAndID(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
@@ -67,7 +67,7 @@ func TestMergingACompanyMovesTheRowsThatNameItByKindAndID(t *testing.T) {
 	}
 }
 
-// A SIGNAL ABOUT THE RETIRED CONTACT IS ABOUT THE SURVIVOR NOW.
+// A signal about the retired contact is about the survivor now.
 func TestMergingAContactMovesTheSignalsNamingIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -91,7 +91,7 @@ func TestMergingAContactMovesTheSignalsNamingIt(t *testing.T) {
 	}
 }
 
-// THE ADDRESS ON THE RETIRED COMPANY MOVES WHEN THE SURVIVOR HAS NONE.
+// The address on the retired company moves when the survivor has none.
 func TestMergingACompanyCarriesItsLinkedInAddressWhenTheSurvivorHasNone(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
@@ -110,7 +110,7 @@ func TestMergingACompanyCarriesItsLinkedInAddressWhenTheSurvivorHasNone(t *testi
 	}
 }
 
-// A SURVIVOR THAT HAS ITS OWN ADDRESS KEEPS IT.
+// A survivor that has its own address keeps it.
 func TestMergingACompanyKeepsTheSurvivorsOwnLinkedInAddress(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
@@ -130,7 +130,7 @@ func TestMergingACompanyKeepsTheSurvivorsOwnLinkedInAddress(t *testing.T) {
 	}
 }
 
-// AN ADDRESS ANOTHER LIVE COMPANY HOLDS IS A CONFLICT, NEVER A 500.
+// An address another live company holds is a conflict, never a 500.
 func TestAnAddressAnotherCompanyHoldsIsRefusedAsAConflict(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
