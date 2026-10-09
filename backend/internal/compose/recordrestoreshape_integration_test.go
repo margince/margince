@@ -169,8 +169,7 @@ func TestARestoreOfARecordOutsideTheCallersScopeIsNotFound(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a row-scope miss answered %v, want ErrNotFound", err)
 	}
-	var refusal RefusedRestore
-	if errors.As(err, &refusal) {
+	if refusal, ok := errors.AsType[RefusedRestore](err); ok {
 		t.Errorf("a row-scope miss answered the refusal %q; the gate is being asked "+
 			"AFTER the audit row is read, which discloses the record", refusal.Reason)
 	}

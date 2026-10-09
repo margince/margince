@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -45,9 +46,7 @@ import (
 func importerPerms() principal.Permissions {
 	perms := integration.AdminPerms
 	objects := make(map[string]principal.ObjectGrant, len(perms.Objects)+1)
-	for k, v := range perms.Objects {
-		objects[k] = v
-	}
+	maps.Copy(objects, perms.Objects)
 	objects["import_run"] = principal.ObjectGrant{Create: true}
 	perms.Objects = objects
 	return perms
@@ -101,20 +100,18 @@ func postLead(as context.Context, t *testing.T, e *integration.Env, req crmcontr
 func namespacedActivity() crmcontracts.CreateActivityRequest {
 	system := "mirror:hubspot"
 	return crmcontracts.CreateActivityRequest{
-		Kind: "email", Subject: strPtrIT("Betreff"), SourceSystem: &system,
-		SourceId: strPtrIT("emails:900"),
+		Kind: "email", Subject: new("Betreff"), SourceSystem: &system,
+		SourceId: new("emails:900"),
 	}
 }
 
 func namespacedLead() crmcontracts.CreateLeadRequest {
 	system := "mirror:hubspot"
 	return crmcontracts.CreateLeadRequest{
-		FullName: strPtrIT("Imported Lead"), SourceSystem: &system,
-		SourceId: strPtrIT("leads:501"), Source: "hubspot_import",
+		FullName: new("Imported Lead"), SourceSystem: &system,
+		SourceId: new("leads:501"), Source: "hubspot_import",
 	}
 }
-
-func strPtrIT(s string) *string { return &s }
 
 func TestADeclaredImporterLandsRowsInsideItsNamespace(t *testing.T) {
 	e := integration.Setup(t)
@@ -139,8 +136,8 @@ func TestADeclaredImporterLandsRowsInsideItsNamespace(t *testing.T) {
 	// What the namespace is FOR: the importer states who wrote the row in the
 	// create that lands it, not in a later rewrite.
 	authored := namespacedActivity()
-	authored.SourceId = strPtrIT("emails:901")
-	authored.SourceAuthorName = strPtrIT("Mutaz Suleiman")
+	authored.SourceId = new("emails:901")
+	authored.SourceAuthorName = new("Mutaz Suleiman")
 	status, written := postActivity(importer, t, e, authored)
 	if status != http.StatusCreated {
 		t.Fatalf("the authored activity answered %d, want 201", status)

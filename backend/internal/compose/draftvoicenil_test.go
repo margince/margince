@@ -24,6 +24,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -216,12 +217,7 @@ func voiceParameterPositions(files []*ast.File) map[string]int {
 
 // isVoiceBlockParameter reports whether a parameter name is the voice block's.
 func isVoiceBlockParameter(name string) bool {
-	for _, want := range voiceBlockParameterNames {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(voiceBlockParameterNames, name)
 }
 
 // calledFunctionName reads the name of the function a call targets, for both a

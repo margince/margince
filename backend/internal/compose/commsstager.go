@@ -90,6 +90,7 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 		Subject:         in.Subject,
 		Body:            in.Body,
 		HTMLBody:        in.HTMLBody,
+		InlineLogoKey:   in.InlineLogoKey,
 		FromName:        in.FromName,
 		Attachments:     commsFiles(in.Attachments),
 		ConsentPurpose:  in.ConsentPurpose,

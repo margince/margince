@@ -29,10 +29,14 @@ type invitationCalendar struct {
 	inspectErr error
 	checkErr   error
 	listErr    error
+	busyErr    error
 }
 
 func (c *invitationCalendar) Check(context.Context, ids.UserID, string) error { return c.checkErr }
 func (c *invitationCalendar) Busy(context.Context, ids.UserID, string, string, time.Time, time.Time) ([]connector.CalendarInterval, error) {
+	if c.busyErr != nil {
+		return nil, c.busyErr
+	}
 	return c.busy, nil
 }
 

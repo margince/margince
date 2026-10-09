@@ -51,7 +51,7 @@ func TestVoiceLiveSmoke(t *testing.T) {
 		"Der Punkt ist einfach: wenn der Kunde zweimal nachfragt, war die Antwort nicht klar genug. Kürzer schreiben.",
 		"Stop optimizing the deck. The pilot decides this deal, and the pilot needs two engineers for a week.",
 	}
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		text := filler[i%len(filler)] + " " + strings.Repeat("Wir bauen das Produkt so, dass ein Verkäufer es ohne Handbuch bedienen kann. ", 8)
 		register := "email"
 		if i%3 == 1 {

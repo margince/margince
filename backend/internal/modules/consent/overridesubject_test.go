@@ -36,12 +36,12 @@ import (
 func TestTheAllowDoorTakesNoLeadSubject(t *testing.T) {
 	t.Parallel()
 
-	in := reflect.TypeOf(AllowInput{})
+	in := reflect.TypeFor[AllowInput]()
 	if in.NumField() == 0 {
 		t.Fatal("AllowInput has no fields at all — this gate is reading the wrong type")
 	}
-	for i := range in.NumField() {
-		name := in.Field(i).Name
+	for field := range in.Fields() {
+		name := field.Name
 		if !strings.Contains(strings.ToLower(name), "lead") {
 			continue
 		}

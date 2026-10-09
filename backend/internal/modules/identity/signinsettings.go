@@ -9,6 +9,7 @@ package identity
 // and how, the same concern signinpolicy.go reads them back through.
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -70,7 +71,7 @@ var EnabledOidcProviders = settings.Define[[]string](
 				return fmt.Errorf("a provider key is at most %d characters", maxProviderKeyLen)
 			}
 			if strings.TrimSpace(key) == "" {
-				return fmt.Errorf("a provider key cannot be blank")
+				return errors.New("a provider key cannot be blank")
 			}
 			// Refused rather than trimmed, because the match downstream is
 			// exact: a key saved as " google" would store cleanly, report
@@ -167,7 +168,7 @@ func validateGroupRoleMap(m map[string]string) error {
 			return fmt.Errorf("a group name is at most %d characters", maxGroupKeyLen)
 		}
 		if strings.TrimSpace(group) == "" {
-			return fmt.Errorf("a group name cannot be blank")
+			return errors.New("a group name cannot be blank")
 		}
 		// Refused rather than trimmed, exactly like a provider key: the match
 		// against the token's groups claim is byte-exact, so " sales" would

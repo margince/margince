@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -36,7 +37,7 @@ const decisionGradingRule = "decision-rule-1"
 // request the site builds from it with the site's floors, and the grading rule.
 func DecisionScenarioStamps(scenarios []Scenario, census *aitasks.Registry) (map[string]string, error) {
 	if census == nil {
-		return nil, fmt.Errorf("aicert: decision stamp: no census supplied — only the census says which case builds a site's decision request")
+		return nil, errors.New("aicert: decision stamp: no census supplied — only the census says which case builds a site's decision request")
 	}
 	stamps := map[string]string{}
 	for _, sc := range scenarios {

@@ -53,7 +53,7 @@ function Card({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div
       style={{
-        background: "var(--bgCard)",
+        background: "var(--bgInset)",
         border: "1px solid var(--borderSubtle)",
         borderRadius: "var(--r-md)",
         display: "grid",

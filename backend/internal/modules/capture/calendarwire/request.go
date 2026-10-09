@@ -50,7 +50,7 @@ func Request(ctx context.Context, client *http.Client, token, method, address st
 		return resp.StatusCode, err
 	}
 	if len(content) > 4<<20 {
-		return resp.StatusCode, fmt.Errorf("calendar: response too large")
+		return resp.StatusCode, errors.New("calendar: response too large")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		class := connector.ErrUnreachable

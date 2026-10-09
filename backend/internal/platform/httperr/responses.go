@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Unauthorized is the shared 401.
@@ -84,7 +85,7 @@ func Validation(field, code, message string) *DetailedError {
 // edit alike. It answers the trimmed text, so what was accepted is what is stored.
 func RequireNonBlank(field, raw string) (string, error) {
 	name := strings.TrimSpace(raw)
-	if name == "" {
+	if !values.HasVisibleText(name) {
 		return "", Validation(field, "required", field+" is required")
 	}
 	return name, nil

@@ -31,6 +31,7 @@ import {
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
 import { useScrollRegion } from "./scrollregion";
+import { useWaited } from "./waited";
 import "./badge.css";
 import "./avatar.css";
 import "./atoms.css";
@@ -942,23 +943,7 @@ export function PendingBody({
   visible?: boolean;
   delayMs?: number;
 }>) {
-  const [waited, setWaited] = useState(delayMs === undefined);
-  useEffect(() => {
-    if (delayMs === undefined) {
-      // A caller that drops the delay wants the pending state NOW, and the
-      // effect has to say so: leaving `waited` where the previous delay left it
-      // hides the body for good, since nothing re-runs to release it.
-      setWaited(true);
-      return;
-    }
-    // The clock is per MOUNT and per delay, not per read. A pending body that
-    // stays mounted while one query replaces another keeps the time it has
-    // already served — a reader typing through a slow search watches one bar
-    // rather than a bar that blinks out on every keystroke.
-    setWaited(false);
-    const timer = setTimeout(() => setWaited(true), delayMs);
-    return () => clearTimeout(timer);
-  }, [delayMs]);
+  const waited = useWaited(delayMs);
   if (!waited) {
     return null;
   }
@@ -1201,8 +1186,7 @@ export { useScrollRegion } from "./scrollregion";
  * rather than a knob each page answers for.
  *
  * Reachability is `useScrollRegion`'s (scrollregion.ts): the tab stop and the
- * name arrive only while the box is actually holding something past its right
- * edge.
+ * name arrive only while the box holds something past its right edge.
  *
  * `label` is what the region is called ("Recent invoices", "Spend by task") and
  * is the caller's to translate. It is required rather than defaulted because a

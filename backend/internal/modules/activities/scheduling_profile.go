@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -121,18 +123,23 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 }
 
 func errCalendarNotConnected() error {
-	return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar before enabling bookings"}
+	return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar first"}
+}
+
+// unconnectedAsRefusal turns the provider seam's "no usable connection" into
+// the request the host can act on; every other error is not ours to rename.
+func unconnectedAsRefusal(err error) error {
+	if errors.Is(err, connector.ErrAuthRejected) {
+		return errCalendarNotConnected()
+	}
+	return err
 }
 
 // checkCalendarConnected asks the provider seam whether the host's calendar
 // answers. A host with no connection, or one the provider no longer honours,
 // is told to connect one: a request of theirs, never a server fault.
 func (s *Store) checkCalendarConnected(ctx context.Context, host ids.UserID, provider string) error {
-	err := s.calendar.Check(ctx, host, provider)
-	if errors.Is(err, connector.ErrAuthRejected) {
-		return errCalendarNotConnected()
-	}
-	return err
+	return unconnectedAsRefusal(s.calendar.Check(ctx, host, provider))
 }
 
 func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
@@ -201,11 +208,8 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 		return apperrors.ErrPermissionDenied
 	}
 	calendars, err := s.calendar.List(ctx, host, string(profile.Provider))
-	if errors.Is(err, connector.ErrAuthRejected) {
-		return errCalendarNotConnected()
-	}
 	if err != nil {
-		return err
+		return unconnectedAsRefusal(err)
 	}
 	available := map[string]bool{}
 	writable := false
@@ -234,7 +238,7 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 	if p.DurationMinutes < 15 || p.DurationMinutes > 480 || p.NoticeMinutes < 0 || p.NoticeMinutes > 10080 ||
 		p.HorizonDays < 1 || p.HorizonDays > 90 || p.BufferMinutes < 0 || p.BufferMinutes > 120 ||
-		len(p.Title) > 200 || len(p.Location) > 1000 || strings.TrimSpace(p.Title) == "" || p.CalendarId == "" {
+		utf8.RuneCountInString(p.Title) > 200 || utf8.RuneCountInString(p.Location) > 1000 || !values.HasVisibleText(p.Title) || p.CalendarId == "" {
 		return &SchedulingArgumentError{Field: "profile", Code: faultInvalid, Message: "Choose valid meeting details and availability limits"}
 	}
 	return nil

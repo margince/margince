@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -195,9 +196,11 @@ func (s *CallReadStore) ListCalls(
 		args = append(args, value)
 		return len(args)
 	}
+	var whereSb198 strings.Builder
 	for _, f := range filter.columns() {
-		where += fmt.Sprintf(" AND %s = $%d", f.column, addArg(f.value))
+		fmt.Fprintf(&whereSb198, " AND %s = $%d", f.column, addArg(f.value))
 	}
+	where += whereSb198.String()
 	if cursor != nil && *cursor != "" {
 		decoded, err := storekit.DecodeCursor(*cursor)
 		if err != nil {

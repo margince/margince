@@ -8,16 +8,10 @@ import { ContactTimelineTab } from "./contacttabs";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import "./contact360.css";
 
-// The contact's history tab: one chronology of what was said to them and what
-// changed about them.
-//
-// The dials are what this file is for. The cuts (All / Activities / Changes)
-// stood in the panel's head, where a row that wraps cannot stand — the head is
-// one fixed band, and a second row of pills made this panel's title sit at a
-// different height from every other panel on the page. They are in the body
-// now, in the same `timeline-header` block the account and project pages
-// already put them in: the cuts, then the row that narrows whichever cut is
-// open.
+// The contact's history tab. The dials are what this file is for. The cuts (All / Threads / Changes) sit
+// in the body, in the `timeline-header` block the account and project pages
+// use. The head is one fixed band, and a wrapped row of pills there put this
+// panel's title at a different height from every other panel.
 //
 // EVERY INSTANT IS FIXED, because `make fe-clock-drift` runs the suite at +200
 // days and a relative date would re-group the rows under a different day.

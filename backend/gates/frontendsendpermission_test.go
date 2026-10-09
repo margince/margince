@@ -97,7 +97,7 @@ func sendDoors(t *testing.T) []string {
 	carriesSenderReason := map[string]bool{}
 	var path, schema string
 	inSchemas := false
-	for _, line := range strings.Split(string(contract), "\n") {
+	for line := range strings.SplitSeq(string(contract), "\n") {
 		switch {
 		case line == "components:":
 			inSchemas = true

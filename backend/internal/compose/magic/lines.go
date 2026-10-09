@@ -104,7 +104,7 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 		Actor: crmcontracts.MagicActor{
 			Type:  crmcontracts.MagicActorType(e.ActorType),
 			Id:    e.ActorID,
-			Label: ptr(actorLabel(e)),
+			Label: new(actorLabel(e)),
 		},
 		// Undo is filled by judgeUndoOn once the page is drawn — it needs the
 		// transaction and the record, neither of which this dressing has.
@@ -218,8 +218,6 @@ func sentenceKey(s crmcontracts.MagicSentence) string {
 	}
 	return b.String()
 }
-
-func ptr[T any](v T) *T { return &v }
 
 // fieldsOf lifts an audit row's before/after blob.
 //

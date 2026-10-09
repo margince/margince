@@ -12,6 +12,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -89,9 +90,7 @@ func recordLogoWrite(ctx context.Context, tx pgx.Tx, id ids.CompanyID, slot Logo
 		return fmt.Errorf("audit company logo: %w", err)
 	}
 	changed := map[string]any{eventKeyDelta: map[string]any{auditKeyFields: delta}}
-	for key, value := range evidence {
-		changed[key] = value
-	}
+	maps.Copy(changed, evidence)
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventCompanyUpdated{
 		ChangedFields: changed,
 	}); err != nil {

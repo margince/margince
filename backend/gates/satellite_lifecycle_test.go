@@ -64,6 +64,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -216,7 +217,7 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 			t.Fatal(err)
 		}
 		current := ""
-		for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
+		for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
 			if m := createTableLine.FindStringSubmatch(line); m != nil {
 				current = m[1]
 				columns[current] = map[string]bool{}
@@ -398,10 +399,5 @@ func TestEveryPortCarriesTheTablesItsRegisterEntryClaims(t *testing.T) {
 // readsTable reports whether any statement names table as a FROM target.
 func readsTable(statements []string, table string) bool {
 	from := regexp.MustCompile(`(?i)\bFROM\s+` + regexp.QuoteMeta(table) + `\b`)
-	for _, statement := range statements {
-		if from.MatchString(statement) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(statements, from.MatchString)
 }

@@ -62,7 +62,7 @@ func rankedIDsIn(req model.Request) ([]string, error) {
 		return nil, fmt.Errorf("the re-order request has %d messages, want the single user turn", len(req.Messages))
 	}
 	var out []string
-	for _, line := range strings.Split(req.Messages[0].Content, "\n") {
+	for line := range strings.SplitSeq(req.Messages[0].Content, "\n") {
 		rest, listed := strings.CutPrefix(line, "- ")
 		if !listed {
 			continue

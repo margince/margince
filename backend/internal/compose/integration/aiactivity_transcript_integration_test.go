@@ -54,7 +54,7 @@ func newTranscriptFixture(t *testing.T) *transcriptFixture {
 	raw := "Anna: we will send the quote on Friday.\nBen: thanks."
 	sourceSystem := "transcript"
 	in, err := activities.LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "meeting", Subject: ptr("Acme kickoff"), Body: &raw,
+		Kind: "meeting", Subject: new("Acme kickoff"), Body: &raw,
 		SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {

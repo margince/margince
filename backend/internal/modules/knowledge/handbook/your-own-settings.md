@@ -178,12 +178,13 @@ To create an agent passport in Margince, open Settings → **Agents** and choose
 1. Enter an **Agent name**.
 2. Under **Agent permissions**, tick at least one: **Read records**, **Draft messages**, **Change records**, **Send messages**, **Buy contact data**.
 3. Choose **Mint passport**.
+4. Choose **Copy passport**, then **Download skill** for an AI tool, or **Copy example** for your own code.
 
 An agent can never do more than you can: every request checks your own permissions again.
 Also called: API key, access token, connect an AI agent.
 
-You also see the list of actions agents may use, and the connected agents, on the
-Agents page. Taking an agent off ends the whole connection, not one key. The
+You also see the list of actions agents may use, and the **Connected MCP clients**
+card, on the Agents page. Taking an agent off ends the whole connection, not one key. The
 agent loses access on its next call and cannot get it back. Connecting it again
 means approving access again.
 

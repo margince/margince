@@ -21,6 +21,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -204,12 +205,7 @@ func goIdent(value string) string {
 }
 
 func contains(set []string, value string) bool {
-	for _, s := range set {
-		if s == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(set, value)
 }
 
 func sameSet(a, b []string) bool {

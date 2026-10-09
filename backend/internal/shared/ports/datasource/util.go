@@ -185,12 +185,11 @@ func RejectNonCanonicalKeys(raw json.RawMessage, into any) error {
 // (an internal ignored field, a common idiom) must NOT silently disable
 // the backstop for the whole request type.
 func collectCanonicalKeys(t reflect.Type, out map[string]struct{}) (hasCatchAll bool) {
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		tag := field.Tag.Get("json")
 		name := tag
-		if comma := strings.IndexByte(tag, ','); comma >= 0 {
-			name = tag[:comma]
+		if before, _, ok := strings.Cut(tag, ","); ok {
+			name = before
 		}
 		if name == "-" {
 			if field.Type.Kind() == reflect.Map {

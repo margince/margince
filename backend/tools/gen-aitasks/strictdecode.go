@@ -86,6 +86,6 @@ func rejectSecondDocument(dec *yaml.Decoder) error {
 	case err != nil:
 		return fmt.Errorf("parsing contract: reading past the first document: %w", err)
 	default:
-		return fmt.Errorf("the contract carries more than one YAML document — everything after the first `---` is hashed into the generated fingerprint and compiled into no table; keep every task in one document")
+		return errors.New("the contract carries more than one YAML document — everything after the first `---` is hashed into the generated fingerprint and compiled into no table; keep every task in one document")
 	}
 }

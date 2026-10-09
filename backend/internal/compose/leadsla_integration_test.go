@@ -45,7 +45,7 @@ func breachedLeadEvent(t *testing.T, e *integration.Env, owner *pgx.Conn) (ids.U
 		t.Fatal(err)
 	}
 	_, _, err := activities.NewStore(e.DB()).LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: leadTestPtr("Incoming enquiry"), Direction: leadTestPtr("inbound"),
+		Kind: "email", Subject: new("Incoming enquiry"), Direction: new("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
 	})
 	if err != nil {

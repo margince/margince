@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -231,6 +232,10 @@ var composedIntents = map[string]bool{
 	// a different question from "who does this payload name". Read-only, and
 	// every record it names is read back through the datasource seam.
 	"resolve_entities": true,
+	// The agent's door to a record's files: the multipart attachment routes stay
+	// human-only, and both tools reach the same store those routes write and read.
+	"attach_document": true,
+	"list_documents":  true,
 }
 
 // An intent may write inside the workspace; it may NOT reach outside it.
@@ -452,23 +457,27 @@ func requiredRecordID(t *testing.T, inputSchema json.RawMessage) (string, bool) 
 
 func joinVerbs(verbs []string) string {
 	out := ""
+	var outSb459 strings.Builder
 	for i, v := range verbs {
 		if i > 0 {
-			out += ", "
+			outSb459.WriteString(", ")
 		}
-		out += v
+		outSb459.WriteString(v)
 	}
+	out += outSb459.String()
 	return out
 }
 
 func joinLines(lines []string) string {
 	out := ""
+	var outSb470 strings.Builder
 	for i, l := range lines {
 		if i > 0 {
-			out += "\n"
+			outSb470.WriteString("\n")
 		}
-		out += l
+		outSb470.WriteString(l)
 	}
+	out += outSb470.String()
 	return out
 }
 

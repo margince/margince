@@ -85,7 +85,7 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	starts := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
 	contract, err := store.CreateContract(owner, contracts.CreateContractInput{
 		CompanyID:  ids.From[ids.CompanyKind](company),
-		DealID:     idPtr(ids.From[ids.DealKind](deal)),
+		DealID:     new(ids.From[ids.DealKind](deal)),
 		Title:      "Framework agreement",
 		StartsOn:   &starts,
 		ValueBasis: "total",
@@ -167,7 +167,7 @@ func TestAReadShareOfARecordCannotDecideAChangeStagedAgainstIt(t *testing.T) {
 	if _, err := svc.Get(holder, staged); err != nil {
 		t.Fatalf("a write share does not open the staged change: %v", err)
 	}
-	if _, err := svc.Decide(holder, staged, false, StrPtr("not now")); err != nil {
+	if _, err := svc.Decide(holder, staged, false, new("not now")); err != nil {
 		t.Fatalf("deciding under a write share → %v, want allowed", err)
 	}
 }

@@ -12,7 +12,6 @@ package identity
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -153,7 +152,7 @@ func (s *Service) SeatType(ctx context.Context, workspaceID, humanID ids.UUID) (
 func (s *Service) liveUserTx(ctx context.Context, workspaceID, humanID ids.UUID, fn func(tx pgx.Tx, seatType string) error) error {
 	ctxWs, ok := principal.WorkspaceID(ctx)
 	if !ok || ctxWs != workspaceID {
-		return fmt.Errorf("crmauth: authority resolution outside the bound workspace")
+		return errors.New("crmauth: authority resolution outside the bound workspace")
 	}
 	// ONE SNAPSHOT, and it has to be asked for. The pool begins at READ
 	// COMMITTED, where every statement sees its own committed view — so a seat

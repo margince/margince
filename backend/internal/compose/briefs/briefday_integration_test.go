@@ -74,11 +74,9 @@ func TestTwoBriefAssembliesOnOneMorningProduceOneRun(t *testing.T) {
 		errs    [2]error
 	)
 	for i := range runs {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			runs[i], created[i], errs[i] = b.engine.SnapshotRunForDay(b.repCtx, briefClock)
-		}()
+		})
 	}
 	wg.Wait()
 

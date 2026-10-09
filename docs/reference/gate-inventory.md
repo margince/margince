@@ -27,6 +27,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `analyticsrefusalkinds_test.go` | H2 | The contract's refusal kinds are the kinds the engine constructs, no more and no fewer. |
 | `analyticsvocabularylabels_test.go` | H3 | The question builder names the analytics vocabulary the server serves, no more and no fewer. |
 | `appviewfixtures_test.go` | H2 | Each MCP App view's test fixture has the member names of the Go result its tool returns. |
+| `attachmenttypes_test.go` | H3 | The file picker offers the kinds of file the server keeps, no more and no fewer. |
 | `auditcoherence_test.go` | H3 | The audit\_log action and actor\_type vocabularies in crm.yaml match the table's CHECK constraints. |
 | `authgrantobjects_test.go` | H2 | The objects platform/auth asks for by name are objects a role can hold. |
 | `authwaitparity_test.go` | H3 | How long an in-flight authentication may be held waiting on somebody else's server. |
@@ -74,6 +75,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendfilterfieldlabels_test.go` | H3 | Every core filter field the engine can name has a word on the builder screen. |
 | `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice: the server builds it in SQL (internal/compose/reportperiod.go) because that is what a report is actually cut by, and the browser builds it in TypeScript (frontend/src/format/fiscalyear.ts) to show an admin what the setting they are about to save will produce. |
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the same timestamp, or a card ages differently from the list that filed the deal stalled. |
+| `frontendjoblabels_test.go` | H3 | History names the system pass behind a change by its words, never by its key. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are different sizes by design. |
 | `frontendmagickeys_test.go` | H2 | Every sentence the receipt emits has a word for it, in the client that draws it and in the catalog that translates it. |
@@ -227,6 +229,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
+| `declinedwrite_test.go` | H2 | A conditional by-id write that declines to happen says so. |
 | `desktopmacosfloor_test.go` | H1 | Every macOS build script pins the bundle's OS floor before it compiles anything. |
 | `detachedwrites_test.go` | H2 | A detached write says what bounds it. |
 | `directmailbypass_test.go` | H2 | Who may hand a message straight to the SMTP relay, bypassing comms\_outbound. |
@@ -330,6 +333,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rightscasewriters_test.go` | H2 | Every proposal a data subject sends opens a case somebody owes an answer to. |
 | `rlsclaimsprose_test.go` | H2 | The prose says what bounds a read, and it is not row-level security. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook, at the root and in any directory that needs one of its own. |
+| `runledgerretention_test.go` | H3 | Every ledger of executions either states its window or says why it has none. |
 | `safetydefects_test.go` | H2 | Every declared stage-automation safety defect can actually stop a rule. |
 | `satellite_lifecycle_test.go` | H2 | Every table with a contact\_id column is reached by the retention anonymizer, the merge relink and the archive cascade, or says why not. |
 | `scrubbedentitytypes_test.go` | H2 | Which record types a scrub verb is ever written against. |
@@ -426,6 +430,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `agentgateinstalled_test.go` | H1 | `x-agent-access: human-only` is enforced by one line, and this holds it there. |
+| `agentskillprose_test.go` | H2 | The skill bundle's guides are Markdown pages a user reads, so they meet the house prose bar and cite nothing private. |
 | `aiprovenancenotice_test.go` | H1 | The AI provenance notice has one spelling, and it is draftfloor.AIProvenanceNotice. |
 | `approvalsameagent_test.go` | H2 | "Is this the agent that staged the proposal" has one spelling, and it is not passport equality. |
 | `arch_test.go` | H2 | The boundary rules between packages hold as a plain `go test`, with the package list derived from the tree so a new package is enrolled the moment it exists. |

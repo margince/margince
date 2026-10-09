@@ -27,6 +27,7 @@ package compose
 // authority the child re-derives before it runs anything.
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -129,7 +130,7 @@ func refuseUnrunnableJob(d extension.JobDeclaration) error {
 	// would be recorded, so this is refused whether or not the staging seam is
 	// ever wired.
 	if tier == mcp.TierConfirmationRequired {
-		return fmt.Errorf("a job may not request the confirm-first tier — a job has no caller, so its confirmation is one nobody could ever be asked for")
+		return errors.New("a job may not request the confirm-first tier — a job has no caller, so its confirmation is one nobody could ever be asked for")
 	}
 	scope, err := mcpScope(d.RequestedScope)
 	if err != nil {

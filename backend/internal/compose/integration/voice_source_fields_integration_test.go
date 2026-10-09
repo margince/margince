@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"maps"
 	"net/http"
 	"strings"
 	"testing"
@@ -19,9 +20,7 @@ func sampleBody(overrides AnyMap) AnyMap {
 		"source_label": "A sample", "source_ref": "sample-ref",
 		"content": "Plain prose that is the owner's own writing.",
 	}
-	for k, v := range overrides {
-		body[k] = v
-	}
+	maps.Copy(body, overrides)
 	return body
 }
 

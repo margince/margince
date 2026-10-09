@@ -1,11 +1,20 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { type ReactNode, useEffect } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { steppedClock } from "../testing/steppedclock";
+import { useArrivalFocus } from "./arrivalfocus";
 import { Button } from "./atoms";
+import { useFocusHandoff } from "./focushandoff";
+import { Heading } from "./heading";
 import {
   type Toast,
   type ToastOptions,
@@ -554,6 +563,156 @@ describe("a caller withdrawing its own message", () => {
     });
     act(() => toast().dismiss(saved));
     expect(screen.getByRole("status")).toHaveTextContent("Settings saved.");
+  });
+});
+
+describe("focus after the verb runs", () => {
+  function Row({
+    landing,
+    onTake,
+  }: Readonly<{ landing: () => HTMLElement | null; onTake: () => void }>) {
+    const row = useRef<HTMLDivElement | null>(null);
+    useFocusHandoff(row, landing);
+    return (
+      <div ref={row}>
+        <Button onClick={onTake}>take off</Button>
+      </div>
+    );
+  }
+
+  // The message is shown first and the row leaves after, handing focus to the
+  // block: the order a write that runs at once produces.
+  function Shortlist() {
+    const toast = useToast();
+    const [onList, setOnList] = useState(true);
+    const block = useRef<HTMLDivElement | null>(null);
+    const landing = useCallback(() => block.current, []);
+    return (
+      <div ref={block} tabIndex={-1} data-testid="block">
+        {onList && (
+          <Row
+            landing={landing}
+            onTake={() => {
+              toast.show(
+                "Taken off",
+                undo(() => setOnList(true)),
+              );
+              setOnList(false);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  it("hands focus back to where it was before it entered the toast", async () => {
+    const acting = steppedClock();
+    render(
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Shortlist />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    await acting.click(press("take off"));
+    expect(screen.getByTestId("block")).toHaveFocus();
+    act(() => press("Undo").focus());
+
+    await acting.click(press("Undo"));
+    wait(16);
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByTestId("block")).toHaveFocus();
+  });
+
+  it("moves focus nowhere when that place has left the page", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    const field = document.createElement("input");
+    document.body.append(field);
+    act(() => field.focus());
+    act(() => {
+      toast().show("Taken off", undo());
+    });
+    field.remove();
+    act(() => press("Undo").focus());
+
+    await acting.click(press("Undo"));
+    wait(16);
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("leaves focus alone when the verb takes that place off the page", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    const field = document.createElement("input");
+    document.body.append(field);
+    act(() => field.focus());
+    act(() => {
+      toast().show(
+        "Scheduled",
+        open(() => field.remove()),
+      );
+    });
+    act(() => press("Show all").focus());
+
+    await acting.click(press("Show all"));
+    wait(16);
+
+    expect(field.isConnected).toBe(false);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("keeps the focus a destination takes as it arrives", async () => {
+    function Destination() {
+      const title = useArrivalFocus<HTMLHeadingElement>();
+      return (
+        <Heading size="large" ref={title} tabIndex={-1}>
+          Scheduled sends
+        </Heading>
+      );
+    }
+    function Page() {
+      const toast = useToast();
+      const [arrived, setArrived] = useState(false);
+      return (
+        <>
+          <Button
+            onClick={() =>
+              toast.show(
+                "Scheduled",
+                open(() => setArrived(true)),
+              )
+            }
+          >
+            schedule
+          </Button>
+          {arrived && <Destination />}
+        </>
+      );
+    }
+    const acting = steppedClock();
+    render(
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Page />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    act(() => press("schedule").focus());
+    await acting.click(press("schedule"));
+    act(() => press("Show all").focus());
+
+    await acting.click(press("Show all"));
+    wait(16);
+
+    expect(
+      screen.getByRole("heading", { name: "Scheduled sends" }),
+    ).toHaveFocus();
   });
 });
 

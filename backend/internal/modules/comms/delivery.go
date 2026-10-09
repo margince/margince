@@ -68,6 +68,8 @@ type Delivery struct {
 	Bcc []string
 	// HTMLBody is the markup alternative, empty for a plain-text send.
 	HTMLBody string
+	// InlineLogoKey is the stored logo HTMLBody embeds, empty when none.
+	InlineLogoKey string
 	// FromName is the sender's display name; empty sends a bare address.
 	FromName string
 	// Attachments is what this message was staged to carry. Empty for the

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -86,8 +87,7 @@ func buildSchema(root reflect.Type, docs docIndex) (object, error) {
 func structNode(t reflect.Type, docs docIndex) (object, error) {
 	props := &object{}
 	var required []string
-	for i := range t.NumField() {
-		f := t.Field(i)
+	for f := range t.Fields() {
 		if inlined(f) {
 			// Refused rather than skipped. An inline embed's fields are decoded
 			// at THIS level, so skipping it emits a schema missing keys the
@@ -135,7 +135,7 @@ func constrain(node object, f reflect.StructField) (object, bool, error) {
 		return node, false, nil
 	}
 	mandatory := false
-	for _, opt := range strings.Split(tag, ",") {
+	for opt := range strings.SplitSeq(tag, ",") {
 		switch opt {
 		case "required":
 			mandatory = true
@@ -179,12 +179,7 @@ func inlined(f reflect.StructField) bool {
 	if !ok {
 		return false
 	}
-	for _, opt := range strings.Split(tag, ",")[1:] {
-		if opt == "inline" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(strings.Split(tag, ",")[1:], "inline")
 }
 
 // yamlName reads the field's yaml key, or reports that it has none.
@@ -253,7 +248,7 @@ func typeNode(t reflect.Type, docs docIndex) (object, error) {
 // specialNode covers the types whose YAML form is not their Go shape.
 func specialNode(t reflect.Type) (object, bool) {
 	switch t {
-	case reflect.TypeOf(deployconfig.Secret{}):
+	case reflect.TypeFor[deployconfig.Secret]():
 		// A reference, never a literal: the loader refuses anything else, and
 		// the pattern comes from the loader rather than being written twice.
 		var out object
@@ -265,7 +260,7 @@ func specialNode(t reflect.Type) (object, bool) {
 		// variable is worse than no example at all.
 		out.set("examples", []string{"${env:VARIABLE_NAME}", "${file:/run/secrets/name}"})
 		return out, true
-	case reflect.TypeOf(yaml.Node{}):
+	case reflect.TypeFor[yaml.Node]():
 		// The one free-form subtree: seeds.ai_routing is decoded later, by the
 		// ai package, against the shape under $defs.
 		var out object

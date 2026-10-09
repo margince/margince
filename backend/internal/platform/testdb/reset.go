@@ -36,7 +36,9 @@ package testdb
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -209,7 +211,7 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 	// gone, not that there is nothing to do. Reporting a clean reset for that is
 	// the same silent-success shape the settings above exist to eliminate.
 	if len(tables) == 0 {
-		return fmt.Errorf("no data tables in public or ext — call EnsureSchema before Reset; the schema is missing or was dropped")
+		return errors.New("no data tables in public or ext — call EnsureSchema before Reset; the schema is missing or was dropped")
 	}
 	unbaselined, err := reclaimBloat(ctx, tx)
 	if err != nil {
@@ -253,9 +255,7 @@ func baselineNewTables(ctx context.Context, q execQuerier, unbaselined []string)
 	}
 	merged := make(map[string]int64, len(sizes))
 	if recorded := emptySizes.Load(); recorded != nil {
-		for name, size := range *recorded {
-			merged[name] = size
-		}
+		maps.Copy(merged, *recorded)
 	}
 	for _, name := range unbaselined {
 		if size, ok := sizes[name]; ok {

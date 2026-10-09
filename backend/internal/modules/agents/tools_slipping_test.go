@@ -23,8 +23,6 @@ func fixedDate(day int) time.Time {
 	return time.Date(2026, time.June, day, 0, 0, 0, 0, time.UTC)
 }
 
-func int64Ptr(v int64) *int64 { return &v }
-
 // slippingFixture: two evidenced deals (one idle longer, one richer with
 // both stalled and overdue evidence) and two flagged-but-ungrounded ones
 // the no-guess gate must drop.
@@ -34,11 +32,11 @@ func slippingFixture() (older, richer, flagNoIdle, overdueNoDate SlippingDeal) {
 	closeDate := fixedDate(15)
 	older = SlippingDeal{
 		DealID: ids.MustParse("00000000-0000-7000-8000-00000000000a"), Name: "Acme renewal",
-		AmountMinor: int64Ptr(100_00), Stalled: true, LastActivityAt: &olderIdle, CreatedAt: fixedDate(1),
+		AmountMinor: new(int64(100_00)), Stalled: true, LastActivityAt: &olderIdle, CreatedAt: fixedDate(1),
 	}
 	richer = SlippingDeal{
 		DealID: ids.MustParse("00000000-0000-7000-8000-00000000000b"), Name: "Globex expansion",
-		AmountMinor: int64Ptr(900_00), Stalled: true, CloseOverdue: true,
+		AmountMinor: new(int64(900_00)), Stalled: true, CloseOverdue: true,
 		LastActivityAt: &richerIdle, CreatedAt: fixedDate(2), ExpectedCloseDate: &closeDate,
 	}
 	flagNoIdle = SlippingDeal{

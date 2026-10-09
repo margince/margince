@@ -397,7 +397,7 @@ func TestTheSetupTokenReachesTheLogOnlyWhenTheFileCouldNotBeWritten(t *testing.T
 // the handler happened to render.
 func loggedAttr(t *testing.T, records, key string) string {
 	t.Helper()
-	for _, line := range strings.Split(strings.TrimSpace(records), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(records), "\n") {
 		if line == "" {
 			continue
 		}

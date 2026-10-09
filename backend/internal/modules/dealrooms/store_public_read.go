@@ -35,6 +35,11 @@ const (
 // for access, the steward's name for the contact line, and the wording the
 // buyer reads at the top of the page.
 //
+// It answers for the deal as well as the room. A room is a place to work one
+// deal, so an archived deal has no room. Every buyer path reaches this read,
+// the writes through liveRoomForBuyerWrite. The deal's state binds them all
+// here rather than once per route.
+//
 // It reads the ROOM, not a frozen copy of it. A Deal Room is a place two sides
 // work in, not a document that goes to press: what the seller changes, the
 // buyer sees. The invitation is the gate — nobody without a seat reads
@@ -55,6 +60,7 @@ func readStanding(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (roomSt
 	err := tx.QueryRow(ctx,
 		`SELECT r.state, r.expires_at, r.closed_at, u.display_name, r.title, r.welcome_message
 		   FROM deal_room r
+		   JOIN deal d ON d.id = r.deal_id AND d.archived_at IS NULL
 		   LEFT JOIN app_user u ON u.id = r.steward_user_id
 		  WHERE r.id = $1 AND r.archived_at IS NULL`,
 		roomID).Scan(&st.state, &st.expiresAt, &st.closedAt, &st.stewardName, &st.title, &st.welcome)

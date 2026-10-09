@@ -90,7 +90,7 @@ func TestEveryAuditFilterFieldNarrowsTheRead(t *testing.T) {
 		t.Fatalf("an empty filter bound %d argument(s); it narrows nothing and should bind nothing", len(baseArgs))
 	}
 
-	shape := reflect.TypeOf(AuditFilter{})
+	shape := reflect.TypeFor[AuditFilter]()
 	judged := 0
 	for i := range shape.NumField() {
 		name := shape.Field(i).Name
@@ -275,29 +275,29 @@ func TestEveryPublishedAuditFilterReachesTheStore(t *testing.T) {
 	// takes it where the two are not spelled identically.
 	generatorSpellings := map[string]string{"EntityId": "EntityID", "BatchId": "BatchID"}
 
-	published := reflect.TypeOf(crmcontracts.ListAuditLogParams{})
-	stored := reflect.TypeOf(AuditFilter{})
-	for i := range published.NumField() {
-		name := published.Field(i).Name
+	published := reflect.TypeFor[crmcontracts.ListAuditLogParams]()
+	stored := reflect.TypeFor[AuditFilter]()
+	for field := range published.Fields() {
+		name := field.Name
 		if mapped, renamed := generatorSpellings[name]; renamed {
 			name = mapped
 		}
 		if _, carried := stored.FieldByName(name); !carried {
 			t.Errorf("the contract publishes an audit-log filter %q that AuditFilter does not carry — a caller who sends it is answered the unnarrowed list and told nothing",
-				published.Field(i).Name)
+				field.Name)
 		}
 	}
 	// And the reverse, which is the cheaper mistake and still a mistake: a
 	// store field nothing can reach is a narrowing no caller can ask for.
-	for i := range stored.NumField() {
-		name := stored.Field(i).Name
+	for field := range stored.Fields() {
+		name := field.Name
 		for spelling, mapped := range generatorSpellings {
 			if mapped == name {
 				name = spelling
 			}
 		}
 		if _, published := published.FieldByName(name); !published {
-			t.Errorf("AuditFilter carries %q and the contract publishes no such parameter — the narrowing exists and nobody can ask for it", stored.Field(i).Name)
+			t.Errorf("AuditFilter carries %q and the contract publishes no such parameter — the narrowing exists and nobody can ask for it", field.Name)
 		}
 	}
 }
@@ -339,9 +339,9 @@ func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
 	// The parameter each field is bound FROM, by name.
 	bound := boundFilterFields(handler)
 
-	shape := reflect.TypeOf(AuditFilter{})
-	for i := range shape.NumField() {
-		field := shape.Field(i).Name
+	shape := reflect.TypeFor[AuditFilter]()
+	for field := range shape.Fields() {
+		field := field.Name
 		want := field
 		if spelling, renamed := storeFieldSpellings[field]; renamed {
 			want = spelling

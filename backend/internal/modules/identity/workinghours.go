@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -84,12 +85,7 @@ func DefaultWorkingHours(zone string) WorkingHours {
 
 // Works reports whether the given ISO weekday is one this contact works.
 func (h WorkingHours) Works(weekday int) bool {
-	for _, day := range h.Days {
-		if day == weekday {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(h.Days, weekday)
 }
 
 // Location resolves the zone the hours are read on, refusing a name Go's

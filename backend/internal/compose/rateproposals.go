@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -91,7 +92,7 @@ func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, target
 func rateRefreshActor(ctx context.Context) (context.Context, error) {
 	decider, ok := principal.Actor(ctx)
 	if !ok {
-		return nil, fmt.Errorf("compose: rate refresh effect without a deciding principal")
+		return nil, errors.New("compose: rate refresh effect without a deciding principal")
 	}
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:rate-refresh",

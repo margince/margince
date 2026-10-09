@@ -33,21 +33,20 @@ import (
 func everyItemLane(out *crmcontracts.Attention) []*[]crmcontracts.AttentionItem {
 	var lanes []*[]crmcontracts.AttentionItem
 	value := reflect.ValueOf(out).Elem()
-	sliceType := reflect.TypeOf([]crmcontracts.AttentionItem(nil))
-	for i := range value.NumField() {
-		field := value.Field(i)
+	sliceType := reflect.TypeFor[[]crmcontracts.AttentionItem]()
+	for _, field := range value.Fields() {
 		// A required lane is addressable and gives its own pointer; an optional
 		// one already IS the pointer. Both assertions are guarded by the type
 		// test beside them rather than trusted — a panic inside a feed read
 		// would take down the whole day over a field somebody added.
 		if field.Type() == sliceType {
-			if lane, ok := field.Addr().Interface().(*[]crmcontracts.AttentionItem); ok {
+			if lane, ok := reflect.TypeAssert[*[]crmcontracts.AttentionItem](field.Addr()); ok {
 				lanes = append(lanes, lane)
 			}
 			continue
 		}
 		if field.Type() == reflect.PointerTo(sliceType) && !field.IsNil() {
-			if lane, ok := field.Interface().(*[]crmcontracts.AttentionItem); ok {
+			if lane, ok := reflect.TypeAssert[*[]crmcontracts.AttentionItem](field); ok {
 				lanes = append(lanes, lane)
 			}
 		}

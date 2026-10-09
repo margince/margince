@@ -99,20 +99,18 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
-- [connect-a-mailbox.md](how-to/connect-a-mailbox.md): connect a mailbox through Gmail, IMAP, Microsoft
-  or Google Calendar.
-- [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local Ollama model, with no
-  cloud key.
-- [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): see what tools a company runs, from
-  its public web data.
-- [check-a-vat-number.md](how-to/check-a-vat-number.md): check the VAT number of a company with the EU
-  register.
+- [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
+  and calendar capture need.
+- [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
+  vLLM, with no cloud key.
+- [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): turn on the public lookup of what
+  a company runs.
+- [check-a-vat-number.md](how-to/check-a-vat-number.md): turn on VAT number checks against the EU
+  register, and find why one gets no answer.
 - [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md): which mail goes out through which server.
-- [connect-telegram.md](how-to/connect-telegram.md): connect a Telegram bot to a workspace.
-- [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md): import your own LinkedIn
-  contacts.
+- [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
-  companies.
+  companies over MCP or REST.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a
   cloud model provider.
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
@@ -132,8 +130,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
-- [tune-ai-requests.md](how-to/tune-ai-requests.md): read what model calls cost, and set how each task
-  calls its model.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md): build the desktop app for macOS or
   Windows.
 - [update-the-handbook.md](how-to/update-the-handbook.md): change the handbook so **Ask your documents** can answer
@@ -146,7 +142,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.
   Generated.
-- [brief-priorities.md](reference/brief-priorities.md): how the app builds the morning list of work.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
 - [agent-tools.md](reference/agent-tools.md): each agent tool, and what it may do.
 - [mcp-info.md](reference/mcp-info.md): the MCP tools as a client sees them. Generated.
@@ -162,6 +157,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
   with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.
+- [ci-jobs.md](reference/ci-jobs.md): what each job of the merge check checks.
 - [ci-workflows.md](reference/ci-workflows.md): the GitHub workflows that run next to the merge check.
 - [platform-toolkit.md](reference/platform-toolkit.md): shared code for every module.
 - [gate-patterns.md](reference/gate-patterns.md): the kinds of check, and how each can miss things.
@@ -171,15 +167,14 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [configuration.md](reference/configuration.md): every setting of each program.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
-- [ollama-self-hosting.md](reference/ollama-self-hosting.md): local models in Ollama, measured on one
-  small machine.
-- [vllm-self-hosting.md](reference/vllm-self-hosting.md): the same machine with vLLM.
 - [ai-thinking.md](reference/ai-thinking.md): how much a model thinks before it answers, and where you
   set it.
-- [openrouter.md](reference/openrouter.md): how OpenRouter chooses a host, and the setting
-  we ship.
+- [ai-request-settings.md](reference/ai-request-settings.md): the time and thinking limits of each
+  task, and the call counts.
+- [ai-runtime-fields.md](reference/ai-runtime-fields.md): each field of the AI task contract, and of the
+  files that test a model.
 - [openrouter-routing-fields.md](reference/openrouter-routing-fields.md): each field of a `routing:`
-  setting.
+  setting, the default we ship, and region pins.
 - [make-targets.md](reference/make-targets.md): every `make` command.
 - [system-requirements.md](reference/system-requirements.md): what an installation needs, on one
   machine or on many.
@@ -248,8 +243,12 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 - [ai-runtime.md](explanation/ai-runtime.md): how an AI task chooses and calls its model.
 - [ai-provider-health.md](explanation/ai-provider-health.md): how we know a model provider is down.
-- [ai-request-settings.md](explanation/ai-request-settings.md): the time and thinking limits of each
-  task.
+- [ollama-self-hosting.md](explanation/ollama-self-hosting.md): local models in Ollama, measured on one
+  small machine in September 2026.
+- [vllm-self-hosting.md](explanation/vllm-self-hosting.md): the same machine with vLLM, measured the
+  same month.
+- [openrouter-upstream-choice.md](explanation/openrouter-upstream-choice.md): how OpenRouter chose a
+  host when we measured it, and why the default we ship is what it is.
 - [agent-surface.md](explanation/agent-surface.md): how an agent works.
 - [ai-provenance-notice.md](explanation/ai-provenance-notice.md): the line on a draft from a model, and
   the EU AI Act rule it does not meet.
@@ -265,6 +264,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 - [customer-requests.md](explanation/customer-requests.md): how the app finds and tracks what a customer
   asks for.
+- [home-and-worklist.md](explanation/home-and-worklist.md): how the app builds the morning list of work, and
+  the review that follows it.
 - [frontend-architecture.md](explanation/frontend-architecture.md): how the web app is built.
 - [pwa.md](explanation/pwa.md): the app you can install from the web.
 - [contact-record-page.md](explanation/contact-record-page.md): the contact record page.
@@ -283,7 +284,10 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 ### Run it in production
 
-- [deployment.md](deployment.md): run Margince on your own servers.
+- [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
+  something fails.
+- [deployment.md](deployment.md): the old page, now a pointer to the two above.
 - [desktop-distribution.md](explanation/desktop-distribution.md): the one folder that runs Margince on
   macOS or Windows, with no Docker.
 

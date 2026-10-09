@@ -368,9 +368,9 @@ func skippedWhenEmpty(field reflect.StructField) bool {
 // hold the declaration to.
 func TestTheTaggedFieldIsTheOneJSONActuallyWrites(t *testing.T) {
 	raw, err := json.Marshal(censusTagBreaksTheTieArgs{
-		censusTaggedRef: censusTaggedRef{TaggedRef: "from the tagged field"},
-		censusPlainRef:  censusPlainRef{Ref: "from the untagged one"},
-		Workspace:       "w",
+		TaggedRef: "from the tagged field",
+		Ref:       "from the untagged one",
+		Workspace: "w",
 	})
 	if err != nil {
 		t.Fatalf("marshalling the fixture: %v", err)

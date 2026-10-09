@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
@@ -175,7 +176,8 @@ func TestUndoingABulkRemoveFromListKeepsEachMembersNoteAndAddedTime(t *testing.T
 		}
 	}
 	addedTimes := func() string {
-		return e.WsScalar(t, `SELECT string_agg(created_at::text, ',' ORDER BY entity_id) FROM list_member WHERE list_id = $1`, list.ID.UUID)
+		return e.WsScalar(t, `SELECT string_agg(concat_ws('|', id, added_by, created_at), ',' ORDER BY entity_id)
+			FROM list_member WHERE list_id = $1`, list.ID.UUID)
 	}
 	wasAdded := addedTimes()
 	engine := bulkEngineFor(e).withListsIf(true)
@@ -187,14 +189,20 @@ func TestUndoingABulkRemoveFromListKeepsEachMembersNoteAndAddedTime(t *testing.T
 	if err != nil || removed.Changed != 2 {
 		t.Fatalf("remove → %+v, %v", removed, err)
 	}
-	if _, err := engine.Undo(admin, ids.UUID(removed.BatchId), ""); err != nil {
-		t.Fatalf("undo: %v", err)
+	undone, err := engine.Undo(admin, ids.UUID(removed.BatchId), "")
+	if err != nil || undone.Changed != 2 {
+		t.Fatalf("undo → %+v, %v", undone, err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM list_member_event e
+		WHERE e.list_id = $1 AND e.action = 'added' AND e.reason = 'bulk' AND e.note IS NULL
+		  AND EXISTS (SELECT 1 FROM audit_log a WHERE a.batch_id = $2 AND a.occurred_at = e.occurred_at)`, listID, ids.UUID(undone.BatchId)); n != 2 {
+		t.Errorf("%d undo history rows carry no note, want both: the note is the adder's, not the undoer's", n)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM list_member WHERE list_id = $1 AND note = $2`, listID, orig); n != 2 {
 		t.Errorf("%d members came back with their own note, want 2", n)
 	}
 	if got := addedTimes(); got != wasAdded {
-		t.Errorf("members came back added at %s, want their original %s", got, wasAdded)
+		t.Errorf("members came back as %s, want their original rows %s", got, wasAdded)
 	}
 }
 
@@ -236,9 +244,7 @@ func TestAReadOnlySeatIsToldItMayNotWriteAContactCompanyOrDealChange(t *testing.
 	// want of a read; the seat here reads all three and writes none.
 	readOnly := integration.ReadOnlyPerms
 	readOnly.Objects = map[string]principal.ObjectGrant{}
-	for object, grant := range integration.ReadOnlyPerms.Objects {
-		readOnly.Objects[object] = grant
-	}
+	maps.Copy(readOnly.Objects, integration.ReadOnlyPerms.Objects)
 	readOnly.Objects["company"] = principal.ObjectGrant{Read: true}
 	viewer := e.As(e.Rep3, []ids.UUID{e.Team2}, readOnly)
 	title, industry, renamed := "VP", "Software", "Renamed"

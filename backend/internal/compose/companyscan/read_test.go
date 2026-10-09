@@ -112,8 +112,7 @@ func TestABudgetDeferralPassesThroughForTheCarrierToSnoozeOn(t *testing.T) {
 	if !errors.As(err, &deferral) || !deferral.NextAttemptAt.Equal(resumes) {
 		t.Fatalf("err = %v, want the deferral itself", err)
 	}
-	var broken *LaneError
-	if errors.As(err, &broken) {
+	if _, ok := errors.AsType[*LaneError](err); ok {
 		t.Error("a deferral was reported as the lane breaking; the carrier would fail the job instead of snoozing it")
 	}
 }
@@ -154,7 +153,7 @@ func TestTheReadKeepsAtMostItsCapAndSaysNothingOfTheRest(t *testing.T) {
 	in, _ := scanInput()
 	in.Messages = nil
 	var findings []map[string]any
-	for i := 0; i < maxFindings+2; i++ {
+	for i := range maxFindings + 2 {
 		message := MessageIn{
 			ID: ids.NewV7(), Kind: "email", Direction: "inbound", At: scanAt,
 			Text: "Can you confirm the delivery window for unit " + string(rune('A'+i)) + "?",

@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer states the notes were saved as a note on the timeline, not as a file or document, which the criterion explicitly excludes.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer tells the reader that the meeting notes file (visit-notes.md) is now stored on Aachener Metallwerke's company record, as a file, document or attachment. Answer no if it says the notes were saved as a note, activity or timeline entry instead of as a file, or if it never says the notes file was stored.",
+  "answer": "I saved the visit notes on Aachener Metallwerke GmbH as a note on their timeline, with the full text of the file. The logo is an image, so I left it out."
+}

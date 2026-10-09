@@ -222,7 +222,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `verified_at` | `timestamp with time zone` |  | When a human last confirmed this claim. |
 | `verified_by` | `uuid` |  | The human who confirmed the claim. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `source` | `text`, default `'site_read'::text` | yes | One of `human`, `site_read`, `connector`, `migration`, `technical_lookup`. |
+| `source` | `text`, default `'site_read'::text` | yes | One of `human`, `agent`, `site_read`, `connector`, `migration`, `technical_lookup`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | The row's version, for the `If-Match` a correction or a removal sends. |
 
@@ -239,7 +239,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_fact_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
 - `company_fact_field_vocab`: `CHECK ((((category = 'company') AND (field = ANY (ARRAY['founded_year', 'employee_range', 'phone', 'contact_email', 'location']))) OR ((category = 'offering') AND (field = ANY (ARRAY['service', 'product', 'capability']))) OR ((category = 'market') AND (field = ANY (ARRAY['served_industry', 'company_size', 'geography', 'language']))) OR ((category = 'signal') AND (field = ANY (ARRAY['certification', 'partner', 'named_customer', 'technology', 'quantified_outcome', 'mail_provider', 'email_security', 'hosting_provider', 'operated_service'])))))`
 - `company_fact_site_evidence`: `CHECK (((source <> 'site_read') OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> '') AND (source_url IS NOT NULL) AND (source_url <> '') AND (confidence IS NOT NULL))))`
-- `company_fact_source_check`: `CHECK ((source = ANY (ARRAY['human', 'site_read', 'connector', 'migration', 'technical_lookup'])))`
+- `company_fact_source_check`: `CHECK ((source = ANY (ARRAY['human', 'agent', 'site_read', 'connector', 'migration', 'technical_lookup'])))`
 - `company_fact_technical_evidence`: `CHECK (((source <> 'technical_lookup') OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> '') AND (source_url IS NOT NULL) AND (source_url <> '') AND (retrieved_at IS NOT NULL))))`
 - `company_fact_value_key_cardinality`: `CHECK ((((category = 'company') AND (field <> 'location') AND (value_key = '')) OR ((category = 'company') AND (field = 'location') AND (value_key <> '')) OR ((category = ANY (ARRAY['offering', 'market', 'signal'])) AND (value_key <> ''))))`
 - `company_fact_verified_pair`: `CHECK (((verified_at IS NULL) = (verified_by IS NULL)))`
@@ -296,7 +296,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `verified_at` | `timestamp with time zone` |  | When a human last confirmed this claim. |
 | `verified_by` | `uuid` |  | The human who confirmed the claim. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `source` | `text`, default `'site_read'::text` | yes | One of `human`, `site_read`, `connector`, `migration`. |
+| `source` | `text`, default `'site_read'::text` | yes | One of `human`, `agent`, `site_read`, `connector`, `migration`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | The row's version, for the `If-Match` a correction sends. |
 
@@ -310,7 +310,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
 - `company_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['display_name', 'offer_summary', 'icp', 'value_proposition', 'usp', 'customer_pains', 'desired_outcomes', 'buying_center', 'buying_intents', 'common_objections', 'sales_motion', 'legal_name', 'registered_address', 'register_vat', 'industry', 'history', 'legal_form', 'register_court', 'register_number'])))`
-- `company_profile_field_source_check`: `CHECK ((source = ANY (ARRAY['human', 'site_read', 'connector', 'migration'])))`
+- `company_profile_field_source_check`: `CHECK ((source = ANY (ARRAY['human', 'agent', 'site_read', 'connector', 'migration'])))`
 - `company_profile_field_verified_pair`: `CHECK (((verified_at IS NULL) = (verified_by IS NULL)))`
 - `company_profile_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `company_profile_site_evidence`: `CHECK (((source <> 'site_read') OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> '') AND (source_url IS NOT NULL) AND (source_url <> '') AND (confidence IS NOT NULL))))`
@@ -926,13 +926,15 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## email_signature
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `body` | `text` | yes | The sign-off appended below every message this member sends, plain text. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
+| `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the workspace template's `{phone}`. |
+| `title` | `text`, default `''::text` | yes | The member's title, filled into the workspace template's `{title}`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |

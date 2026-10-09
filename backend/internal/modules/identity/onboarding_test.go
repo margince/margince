@@ -11,14 +11,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func stringPointer(value string) *string { return &value }
-
 func TestValidateOnboardingInputAcceptsPartialWizardChoices(t *testing.T) {
 	in := PutOnboardingStateInput{
 		Step:       OnboardingStepRead,
-		SourceMode: stringPointer(OnboardingSourceWebsite),
+		SourceMode: new(OnboardingSourceWebsite),
 		CompanyDraft: OnboardingCompanyDraft{
-			DisplayName: stringPointer(" Acme "),
+			DisplayName: new(" Acme "),
 		},
 	}
 
@@ -51,15 +49,15 @@ func TestValidateOnboardingInputRejectsInvalidCombinations(t *testing.T) {
 		{
 			name: "invalid website URL",
 			input: PutOnboardingStateInput{
-				Step: OnboardingStepRead, SourceMode: stringPointer(OnboardingSourceWebsite),
-				WebsiteURL: stringPointer("not a URL"),
+				Step: OnboardingStepRead, SourceMode: new(OnboardingSourceWebsite),
+				WebsiteURL: new("not a URL"),
 			},
 			field: "website_url",
 		},
 		{
 			name: "site read on manual path",
 			input: PutOnboardingStateInput{
-				Step: OnboardingStepConfirm, SourceMode: stringPointer(OnboardingSourceManual),
+				Step: OnboardingStepConfirm, SourceMode: new(OnboardingSourceManual),
 				SiteReadID: &readID,
 			},
 			field: "site_read_id",
@@ -107,7 +105,7 @@ func TestValidateOnboardingAdvancePinsCreatorAndMemberPaths(t *testing.T) {
 func TestOnboardingAuditImageExcludesDraftBusinessTruth(t *testing.T) {
 	state := OnboardingState{
 		Path: OnboardingPathCreator, Step: OnboardingStepConfirm, Version: 3,
-		CompanyDraft: OnboardingCompanyDraft{DisplayName: stringPointer("Secret draft")},
+		CompanyDraft: OnboardingCompanyDraft{DisplayName: new("Secret draft")},
 	}
 
 	image := onboardingAuditImage(state)

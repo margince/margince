@@ -282,11 +282,9 @@ func TestTwoRolesSealingAtOnceLeaveExactlyOneCopy(t *testing.T) {
 	var wg sync.WaitGroup
 	errs := make([]error, 2)
 	for i := range errs {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, errs[i] = compose.SealedSMTPPassword(sealCtx(), e.Pool, vault, cfg, env, log)
-		}()
+		})
 	}
 	wg.Wait()
 	for i, err := range errs {

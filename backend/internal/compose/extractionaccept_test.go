@@ -131,7 +131,7 @@ func TestBuildExtractionAcceptPatchDedupesRepeatedKeys(t *testing.T) {
 }
 
 func TestBuildExtractionAcceptPatchEditFlipsProvenanceToHuman(t *testing.T) {
-	edits := map[string]interface{}{"amount_minor": "200000"}
+	edits := map[string]any{"amount_minor": "200000"}
 	accepted, patch, err := buildExtractionAcceptPatch(crmcontracts.AcceptExtractionRequest{
 		FieldKeys: []string{"amount_minor", "name", "currency"},
 		Edits:     &edits,
@@ -157,7 +157,7 @@ func TestBuildExtractionAcceptPatchEditFlipsProvenanceToHuman(t *testing.T) {
 }
 
 func TestBuildExtractionAcceptPatchCoercesNumericEdit(t *testing.T) {
-	edits := map[string]interface{}{"amount_minor": float64(200000)}
+	edits := map[string]any{"amount_minor": float64(200000)}
 	accepted, patch, err := buildExtractionAcceptPatch(crmcontracts.AcceptExtractionRequest{
 		FieldKeys: []string{"amount_minor", "currency"},
 		Edits:     &edits,
@@ -171,7 +171,7 @@ func TestBuildExtractionAcceptPatchCoercesNumericEdit(t *testing.T) {
 }
 
 func TestBuildExtractionAcceptPatchRefusesNonScalarEdit(t *testing.T) {
-	edits := map[string]interface{}{"amount_minor": true}
+	edits := map[string]any{"amount_minor": true}
 	_, _, err := buildExtractionAcceptPatch(crmcontracts.AcceptExtractionRequest{
 		FieldKeys: []string{"amount_minor"},
 		Edits:     &edits,
@@ -181,7 +181,7 @@ func TestBuildExtractionAcceptPatchRefusesNonScalarEdit(t *testing.T) {
 
 func TestBuildExtractionAcceptPatchRefusesMalformedCoercions(t *testing.T) {
 	t.Run("amount_minor must parse as int64", func(t *testing.T) {
-		edits := map[string]interface{}{"amount_minor": "12,500.00"}
+		edits := map[string]any{"amount_minor": "12,500.00"}
 		_, _, err := buildExtractionAcceptPatch(crmcontracts.AcceptExtractionRequest{
 			FieldKeys: []string{"amount_minor"},
 			Edits:     &edits,
@@ -189,7 +189,7 @@ func TestBuildExtractionAcceptPatchRefusesMalformedCoercions(t *testing.T) {
 		requireAcceptRefusal(t, err, "field_keys[0]", "invalid_integer")
 	})
 	t.Run("expected_close_date must be a calendar date", func(t *testing.T) {
-		edits := map[string]interface{}{"expected_close_date": "end of Q3"}
+		edits := map[string]any{"expected_close_date": "end of Q3"}
 		_, _, err := buildExtractionAcceptPatch(crmcontracts.AcceptExtractionRequest{
 			FieldKeys: []string{"expected_close_date"},
 			Edits:     &edits,
@@ -197,7 +197,7 @@ func TestBuildExtractionAcceptPatchRefusesMalformedCoercions(t *testing.T) {
 		requireAcceptRefusal(t, err, "field_keys[0]", "invalid_date")
 	})
 	t.Run("currency must be ISO 4217", func(t *testing.T) {
-		edits := map[string]interface{}{"currency": "EURO"}
+		edits := map[string]any{"currency": "EURO"}
 		_, _, err := buildExtractionAcceptPatch(crmcontracts.AcceptExtractionRequest{
 			FieldKeys: []string{"currency"},
 			Edits:     &edits,

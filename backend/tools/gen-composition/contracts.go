@@ -155,16 +155,16 @@ func parseOverlay(raw []byte) ([]overlayAction, error) {
 	case err != nil:
 		return nil, fmt.Errorf("reading past the first document: %w", err)
 	default:
-		return nil, fmt.Errorf("the fragment carries more than one YAML document — only the first is composed; keep every action in one document")
+		return nil, errors.New("the fragment carries more than one YAML document — only the first is composed; keep every action in one document")
 	}
 	if doc.Overlay != overlayVersion {
 		return nil, fmt.Errorf("overlay %s is not a dialect this composer evaluates — write overlay: %s", doc.Overlay, overlayVersion)
 	}
 	if doc.Info.Title == "" || doc.Info.Version == "" {
-		return nil, fmt.Errorf("info.title and info.version are required — an overlay edits a published contract and may not be anonymous")
+		return nil, errors.New("info.title and info.version are required — an overlay edits a published contract and may not be anonymous")
 	}
 	if len(doc.Actions) == 0 {
-		return nil, fmt.Errorf("the fragment declares no actions — delete the file rather than shipping a no-op edit to the contract")
+		return nil, errors.New("the fragment declares no actions — delete the file rather than shipping a no-op edit to the contract")
 	}
 	for i, a := range doc.Actions {
 		if a.Target == "" {

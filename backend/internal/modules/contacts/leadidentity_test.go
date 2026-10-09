@@ -28,7 +28,7 @@ func TestLeadIdentityName(t *testing.T) {
 	}{
 		{
 			name: "a name is the name",
-			lead: crmcontracts.Lead{FullName: ptr("Vera Lindqvist")},
+			lead: crmcontracts.Lead{FullName: new("Vera Lindqvist")},
 			want: "Vera Lindqvist",
 		},
 		{
@@ -38,22 +38,22 @@ func TestLeadIdentityName(t *testing.T) {
 		},
 		{
 			name: "a name wins over an email",
-			lead: crmcontracts.Lead{FullName: ptr("Vera Lindqvist"), Email: email("vera@nordwind.example")},
+			lead: crmcontracts.Lead{FullName: new("Vera Lindqvist"), Email: email("vera@nordwind.example")},
 			want: "Vera Lindqvist",
 		},
 		{
 			name: "a present-but-empty full_name is not a name",
-			lead: crmcontracts.Lead{FullName: ptr(""), Email: email("vera@nordwind.example")},
+			lead: crmcontracts.Lead{FullName: new(""), Email: email("vera@nordwind.example")},
 			want: "vera@nordwind.example",
 		},
 		{
 			name: "padding is not a name either",
-			lead: crmcontracts.Lead{FullName: ptr("   "), Email: email("vera@nordwind.example")},
+			lead: crmcontracts.Lead{FullName: new("   "), Email: email("vera@nordwind.example")},
 			want: "vera@nordwind.example",
 		},
 		{
 			name: "a name keeps no padding into the ladder",
-			lead: crmcontracts.Lead{FullName: ptr("  Vera Lindqvist  ")},
+			lead: crmcontracts.Lead{FullName: new("  Vera Lindqvist  ")},
 			want: "Vera Lindqvist",
 		},
 		{
@@ -65,7 +65,7 @@ func TestLeadIdentityName(t *testing.T) {
 			// The case the promotion guard has to refuse: a full_name that
 			// exists, names nobody, and has no address standing behind it.
 			name: "an empty full_name and no email names nobody",
-			lead: crmcontracts.Lead{FullName: ptr("")},
+			lead: crmcontracts.Lead{FullName: new("")},
 			want: "",
 		},
 	} {
@@ -130,7 +130,7 @@ func TestEverySQLFallbackToAnEmailGuardsTheEmptyName(t *testing.T) {
 // hide what follows.
 func coalesceArguments(sql string) []string {
 	var stripped strings.Builder
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if cut := strings.Index(line, "--"); cut >= 0 {
 			line = line[:cut]
 		}

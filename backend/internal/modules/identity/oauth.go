@@ -354,7 +354,7 @@ func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 	if strings.TrimSpace(raw) == "" {
 		return []string{string(principal.ScopeRead)}, false, nil
 	}
-	for _, sc := range strings.Fields(raw) {
+	for sc := range strings.FieldsSeq(raw) {
 		if sc == scopeOfflineAccess {
 			offline = true
 			continue

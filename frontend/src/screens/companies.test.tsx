@@ -1987,13 +1987,8 @@ describe("CompanyScreen — the timeline says where it stops", () => {
     await waitFor(() =>
       expect(screen.getAllByText("Re: Lead Gen").length).toBeGreaterThan(0),
     );
-    // The tab opens on ALL, which merges the exchanges with the record's own
-    // changes — so the sentence is the merged view's, naming both kinds and
-    // the cuts that read further back.
     expect(
-      screen.getByText(
-        "Older entries are not shown because there are too many to order together. Select Activities or Changes to see further back.",
-      ),
+      screen.getByText("Only the most recent activities are shown."),
     ).toBeTruthy();
   });
 

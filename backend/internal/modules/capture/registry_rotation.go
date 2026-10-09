@@ -15,6 +15,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -64,7 +65,7 @@ func (s rotationSink) Rotated(ctx context.Context, auth connector.Auth) error {
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		return fmt.Errorf("capture: rotating a credential outside workspace context")
+		return errors.New("capture: rotating a credential outside workspace context")
 	}
 	wsID := ids.From[ids.WorkspaceKind](ws)
 

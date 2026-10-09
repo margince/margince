@@ -98,6 +98,9 @@ components:
         - activity.captured
         - activity.archived
         - activity.updated
+        - attachment.created
+        - attachment.updated
+        - attachment.archived
         - engagement.reply
         - comms.delivery_bounced
         - notice.created
@@ -1908,6 +1911,114 @@ components:
             The originating source system (capture ingestion only;
             absent on a direct log).
       additionalProperties: false
+
+    PublicEventAttachmentCreated:
+      type: object
+      x-event-type: attachment.created
+      x-entity-type: attachment
+      x-version: 1
+      description: >-
+        Payload for attachment.created. A file was uploaded against a record.
+
+        The attachment's own id is the envelope's `entity.id` and the uploader is
+        its `actor`, so neither is repeated here.
+
+        No filename, and no content. A filename is text a stranger or a rep
+        typed, and it can be the sensitive part by itself: "redundancy letter
+        Weber.pdf" states a fact about a named human to every subscriber of the
+        workspace. A subscriber that needs the name reads the attachment back
+        through the API under its own reader's permissions, which is the rule the
+        envelope follows for every record body.
+
+        An attachment that arrives with captured mail emits no event of its own.
+        The mail's own activity.captured covers it, and a second event for one
+        arrival would make one delivery look like two.
+      required:
+        - parent_type
+        - parent_id
+      additionalProperties: false
+      properties:
+        parent_type:
+          type: string
+          description: The kind of record the file hangs off. That record is also where the authority to change the file comes from (activity | contact | company | deal | lead | contract).
+        parent_id:
+          type: string
+          format: uuid
+          description: The record the file hangs off. A subscriber routes on this rather than on the attachment.
+        content_type:
+          type: [string, 'null']
+          description: The MIME type as stored, or null where the upload declared none.
+        byte_size:
+          type: [integer, 'null']
+          format: int64
+          description: The size counted while storing the bytes, not the length the upload declared. Null on a row stored before the column was counted, because the column is nullable and this mirrors it rather than inventing a zero.
+
+    PublicEventAttachmentUpdated:
+      type: object
+      x-event-type: attachment.updated
+      x-entity-type: attachment
+      x-version: 1
+      description: >-
+        Payload for attachment.updated. A file's metadata was edited: its
+        category, title, document state, pinning, or which document it
+        supersedes.
+
+        It carries which file changed and not what it now says. The omission is
+        the one attachment.created makes: a title is typed text just as a
+        filename is, so a delta carrying the new title would publish what the
+        filename rule withholds. A subscriber that needs the current metadata
+        reads the attachment back under its own permissions.
+      required:
+        - parent_type
+        - parent_id
+      additionalProperties: false
+      properties:
+        parent_type:
+          type: string
+          description: The kind of record the file hangs off.
+        parent_id:
+          type: string
+          format: uuid
+          description: The record the file hangs off.
+        content_type:
+          type: [string, 'null']
+          description: The MIME type as stored, or null where the upload declared none. A metadata edit does not change it.
+        byte_size:
+          type: [integer, 'null']
+          format: int64
+          description: The stored size. A metadata edit does not change it.
+
+    PublicEventAttachmentArchived:
+      type: object
+      x-event-type: attachment.archived
+      x-entity-type: attachment
+      x-version: 1
+      description: >-
+        Payload for attachment.archived. A file was archived off a record.
+
+        Archiving is this subsystem's delete: the row and the stored bytes stay,
+        and the file leaves every live listing. It carries the same shape as the
+        other two so a subscriber routes all three the same way, and the same
+        omissions for the same reasons.
+      required:
+        - parent_type
+        - parent_id
+      additionalProperties: false
+      properties:
+        parent_type:
+          type: string
+          description: The kind of record the file hung off.
+        parent_id:
+          type: string
+          format: uuid
+          description: The record the file hung off.
+        content_type:
+          type: [string, 'null']
+          description: The MIME type as stored, or null where the upload declared none.
+        byte_size:
+          type: [integer, 'null']
+          format: int64
+          description: The stored size.
 
     PublicEventActivityArchived:
       type: object

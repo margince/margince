@@ -25,6 +25,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -176,7 +177,7 @@ func decodeReviewDecision(raw json.RawMessage) (reviewDecision, error) {
 		return reviewDecision{}, fmt.Errorf("compose: reading the decision being approved: %w", err)
 	}
 	if out.ReviewID == "" {
-		return reviewDecision{}, fmt.Errorf("compose: the card names no review")
+		return reviewDecision{}, errors.New("compose: the card names no review")
 	}
 	return out, nil
 }

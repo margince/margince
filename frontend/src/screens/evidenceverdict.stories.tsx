@@ -206,3 +206,23 @@ export const RowMovedUnderYou: Story = {
     );
   },
 };
+
+/** An agent corrected this value under a passport. It is attributed to the
+ *  agent and not to the human who granted the passport, who never saw the
+ *  value, and it carries no time because nothing was verified. No verdict is
+ *  offered: like a contact's correction, it is already protected from the
+ *  automatic refresh, so there is nothing here awaiting a decision. */
+export const SetByAnAgent: Story = {
+  render: () => {
+    installFetchStub({});
+    return (
+      <StoryProviders>
+        <EvidenceVerdict
+          companyId={COMPANY}
+          claim={profileFieldClaim(COMPANY, { ...EXTRACTED, source: "agent" })}
+          canEdit
+        />
+      </StoryProviders>
+    );
+  },
+};

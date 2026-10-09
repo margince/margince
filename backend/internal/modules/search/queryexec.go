@@ -14,6 +14,7 @@ package search
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -153,7 +154,7 @@ func (e *QueryExecutor) Execute(ctx context.Context, plan ValidatedPlan) (QueryR
 		return result, nil
 	}
 	if e.columns == nil {
-		return QueryResult{}, fmt.Errorf("search: the query executor has no schema reader wired")
+		return QueryResult{}, errors.New("search: the query executor has no schema reader wired")
 	}
 	binding, err := e.bindPlan(ctx, plan)
 	if err != nil {

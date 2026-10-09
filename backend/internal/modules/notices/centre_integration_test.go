@@ -380,8 +380,7 @@ func TestNotificationCentreRefusesAPrincipalThatIsNotTheSeat(t *testing.T) {
 func TestNotificationCentreRefusesACursorItNeverMinted(t *testing.T) {
 	e := setupNotices(t)
 	_, err := e.store.ListFor(e.asUser(e.recipient), 10, "not-a-token-this-package-minted")
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 		t.Fatalf("a forged cursor answered %v, want the malformed-cursor refusal the transport turns into 422", err)
 	}
 }

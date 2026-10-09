@@ -64,11 +64,11 @@ func TestAnUnreadablePreferenceStillSends(t *testing.T) {
 		t.Fatal("no preference read found, so this test judged nothing")
 	}
 	fn := body[start:]
-	end := strings.Index(fn, "\n}")
-	if end < 0 {
+	before, _, ok := strings.Cut(fn, "\n}")
+	if !ok {
 		t.Fatal("the preference read has no closing brace — the walk is broken")
 	}
-	if !strings.Contains(fn[:end], "return false") {
+	if !strings.Contains(before, "return false") {
 		t.Error("the preference read does not fail open — an error reading a " +
 			"setting must not silence a rep's weekly")
 	}

@@ -75,10 +75,10 @@ func TestAnArchivedListIsReadOnlyUntilItIsRestored(t *testing.T) {
 	if _, err := store.AddMember(rep1, list.ID, add); err != nil {
 		t.Fatalf("adding after the restore: %v", err)
 	}
-	if err := store.RemoveMember(rep1, list.ID, add); err != nil {
+	if _, err := store.RemoveMember(rep1, list.ID, add); err != nil {
 		t.Fatalf("removing: %v", err)
 	}
-	if err := store.RemoveMember(rep1, list.ID, add); !errors.Is(err, collections.ErrNotMember) {
+	if _, err := store.RemoveMember(rep1, list.ID, add); !errors.Is(err, collections.ErrNotMember) {
 		t.Fatalf("removing a record no longer on the list answered %v, want not a member", err)
 	}
 }

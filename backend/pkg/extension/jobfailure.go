@@ -308,8 +308,7 @@ func (f *classifiedFailure) Unwrap() error { return f.cause }
 // failure inside a general one, and the outer call is the one that saw the whole
 // operation — the same precedence errors.As gives, for the same reason.
 func FailureClassOf(err error) (FailureClass, bool) {
-	var classified *classifiedFailure
-	if errors.As(err, &classified) {
+	if classified, ok := errors.AsType[*classifiedFailure](err); ok {
 		return classified.class, true
 	}
 	return FailureClass{}, false

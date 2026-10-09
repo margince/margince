@@ -55,9 +55,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 82 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 82 | 2760 | 1837 | 5183 | 15% | 18027 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 29130 |  |  | 88% |  |  |  |
+| `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 84 | 2760 | 1837 | 5183 | 15% | 18027 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29643 |  |  | 90% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 292 tokens, mean 354, across 82 served tools.
+Median 292 tokens, mean 352, across 84 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -162,7 +162,7 @@ listing once. Read a row as what that tool costs a menu.
 | `send_email` | 754 |  |
 | `read_lists` | 744 |  |
 | `preview_import` | 725 |  |
-| `log_activity` | 685 | 3 scenarios |
+| `log_activity` | 701 | 3 scenarios |
 | `create_record` | 667 |  |
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |
@@ -190,6 +190,7 @@ listing once. Read a row as what that tool costs a menu.
 | `check_availability` | 342 |  |
 | `search_report_evidence` | 335 |  |
 | `decide_approval` | 332 |  |
+| `attach_document` | 330 |  |
 | `forecast_input_checks` | 324 |  |
 | `demote_lead` | 317 |  |
 | `promote_lead` | 304 |  |
@@ -228,6 +229,7 @@ listing once. Read a row as what that tool costs a menu.
 | `create_tag` | 183 |  |
 | `list_channel_providers` | 174 |  |
 | `remove_tag` | 166 |  |
+| `list_documents` | 165 |  |
 | `read_project_360` | 156 |  |
 | `read_approval` | 154 |  |
 | `get_record_tags` | 144 |  |

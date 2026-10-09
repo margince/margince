@@ -105,12 +105,10 @@ func TestJoinLanesStopsTheLanesAndWaits(t *testing.T) {
 	var background sync.WaitGroup
 	observed := make(chan struct{})
 
-	background.Add(1)
-	go func() {
-		defer background.Done()
+	background.Go(func() {
 		<-ctx.Done() // only the stop can release this
 		close(observed)
-	}()
+	})
 
 	joinLanes(stop, &background, slog.New(slog.DiscardHandler))
 
@@ -130,11 +128,9 @@ func TestJoinLanesGivesUpOnALaneThatIgnoresCancellation(t *testing.T) {
 	_, stop := context.WithCancel(context.Background())
 	var background sync.WaitGroup
 	release := make(chan struct{})
-	background.Add(1)
-	go func() {
-		defer background.Done()
+	background.Go(func() {
 		<-release // deliberately deaf to the cancel
-	}()
+	})
 	t.Cleanup(func() { close(release) })
 
 	var log strings.Builder

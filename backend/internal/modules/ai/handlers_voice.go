@@ -53,6 +53,10 @@ type Handlers struct {
 	// providers is the process's record of which providers are answering, the
 	// same book the Router reads when it refuses a call.
 	providers *providerBook
+	// boundModels is what each lane serves now, read on every health request
+	// so a rebind moves the rows with it. Nil on a role that resolved no model
+	// path, where every attempt stays on its tier.
+	boundModels func() map[Tier]ModelRef
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the
@@ -292,8 +296,7 @@ func (h Handlers) DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request
 }
 
 func writeVoiceErr(w http.ResponseWriter, r *http.Request, err error) {
-	var ingest *CorpusIngestError
-	if errors.As(err, &ingest) {
+	if ingest, ok := errors.AsType[*CorpusIngestError](err); ok {
 		code := ingest.Code
 		if code == "" {
 			code = "invalid"

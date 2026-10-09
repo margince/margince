@@ -135,7 +135,7 @@ func TestASavedRunAnswersEachReaderUnderTheirOwnAuthority(t *testing.T) {
 	amount := int64(100_000)
 	// Six deals: above the floor of five, so the answer is served whole and a
 	// difference between readers cannot be the privacy floor withholding.
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 
@@ -170,13 +170,13 @@ func TestASavedRunAnswersEachReaderUnderTheirOwnAuthority(t *testing.T) {
 func TestASavedRunIsRecomputedRatherThanReplayed(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.askerCtx()
 	runID := e.saveRun(ctx, t, countAllDeals())
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		e.seedOpenDeal(t, "Later", 20, &e.Rep1, &amount, nil)
 	}
 
@@ -204,7 +204,7 @@ func TestASavedRunIsRecomputedRatherThanReplayed(t *testing.T) {
 func TestASavedRunIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
@@ -244,7 +244,7 @@ func TestAnUnknownRunIsNotFound(t *testing.T) {
 func TestASavedRunReturnsTheQuestionItSaved(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 
@@ -278,7 +278,7 @@ func TestASavedRunReturnsTheQuestionItSaved(t *testing.T) {
 func TestSavingTheSameQuestionTwiceMakesTwoRuns(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.askerCtx()
@@ -297,7 +297,7 @@ func TestSavingTheSameQuestionTwiceMakesTwoRuns(t *testing.T) {
 func TestSavingARunAuditsTheQuestionAndNotTheRows(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
@@ -329,7 +329,7 @@ func TestSavingARunAuditsTheQuestionAndNotTheRows(t *testing.T) {
 func TestACitedCellOpensToItsRecords(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.askerCtx()
@@ -357,7 +357,7 @@ func TestACitedCellOpensToItsRecords(t *testing.T) {
 func TestACitedCellIsRefusedWhenItNamesTheWrongNumberOfGroups(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.askerCtx()
@@ -402,7 +402,7 @@ func TestAnUnknownRunHasNoCellToExplain(t *testing.T) {
 func TestACitedCellIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
@@ -443,7 +443,7 @@ func (e *forecastEnv) explainRunCell(
 func TestAComposedReportResolvesItsFiguresFromTheRun(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.askerCtx()
@@ -484,7 +484,7 @@ func TestAWithheldFigureRendersAsWithheld(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// Two deals, under the floor of five.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.askerCtx()
@@ -513,7 +513,7 @@ func TestAWithheldFigureRendersAsWithheld(t *testing.T) {
 func TestAReportCitingAnUnreadableRunIsRefused(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
@@ -560,7 +560,7 @@ func (e *forecastEnv) render(
 func TestTheReportToolAndTheRouteRenderTheSameDocument(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.askerCtx()
@@ -633,7 +633,7 @@ func TestTheReportToolAndTheRouteRenderTheSameDocument(t *testing.T) {
 func TestTheReportToolRefusesALiteralBesideAHandle(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
 	}
 	ctx := e.askerCtx()

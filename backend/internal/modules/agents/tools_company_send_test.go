@@ -146,8 +146,7 @@ func TestAnUnsendableAccountStartedCallIsRefusedAtBothDoors(t *testing.T) {
 			t.Run(tc.name+"/"+door, func(t *testing.T) {
 				err := call(json.RawMessage(tc.args))
 
-				var badArgs *BadArgsError
-				if !errors.As(err, &badArgs) {
+				if _, ok := errors.AsType[*BadArgsError](err); !ok {
 					t.Fatalf("err = %v, want a BadArgsError naming %s", err, tc.names)
 				}
 				if !strings.Contains(err.Error(), tc.names) {
@@ -261,8 +260,7 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 		_, err := sendCompanyEmailTool{comms: &recordingComms{}, p: p}.
 			StageInfo(context.Background(), accountSendArgs(strings.Join(links, ",")))
 
-		var bad *BadArgsError
-		if !errors.As(err, &bad) {
+		if _, ok := errors.AsType[*BadArgsError](err); !ok {
 			t.Fatalf("StageInfo err = %v, want a BadArgsError refusing the oversized link array", err)
 		}
 		if len(p.read) != 0 {

@@ -75,7 +75,7 @@ func TestEveryScriptNamesColumnsTheSchemaHas(t *testing.T) {
 				// extension owns. Nothing to say about its columns.
 				continue
 			}
-			for _, raw := range strings.Split(m[2], ",") {
+			for raw := range strings.SplitSeq(m[2], ",") {
 				column := strings.TrimSpace(raw)
 				// Anything that is not a bare identifier is a function call or
 				// an expression that has wandered in through the regex.

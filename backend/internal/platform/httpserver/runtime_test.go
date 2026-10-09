@@ -79,7 +79,7 @@ func TestNoFamilyIsDeclaredTwiceAcrossTheTwoHalves(t *testing.T) {
 	})
 
 	seen := map[string]int{}
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if !strings.HasPrefix(line, "# TYPE ") {
 			continue
 		}
@@ -190,7 +190,7 @@ const goroutineProbeCount = 50
 
 func countGoroutines(t *testing.T) int {
 	t.Helper()
-	for _, line := range strings.Split(scrape(t, MetricsInput{}), "\n") {
+	for line := range strings.SplitSeq(scrape(t, MetricsInput{}), "\n") {
 		if after, found := strings.CutPrefix(line, "go_goroutines "); found {
 			n, err := strconv.Atoi(strings.TrimSpace(after))
 			if err != nil {

@@ -394,4 +394,21 @@ describe("a human's verdict on a machine's claim", () => {
     expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
     expect(screen.getByText(/Confirmed by a person/)).toBeTruthy();
   });
+
+  it("says an agent set a value, and does not offer to confirm it again", () => {
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        claim={profileFieldClaim(COMPANY, { ...field, source: "agent" })}
+        canEdit
+      />,
+    );
+    // An agent's correction is protected from the automatic refresh the way a
+    // contact's is, so the reader is told why the value stopped moving. It is
+    // attributed to the agent rather than to the human who granted the
+    // passport, who never saw this value.
+    expect(screen.getByText(/Set by an agent/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
+    expect(screen.queryByText(/Confirmed by a person/)).toBeNull();
+  });
 });

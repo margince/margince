@@ -63,7 +63,7 @@ type runCalls struct {
 // healthy one.
 func poolRunCalls(calls []ai.Call) (runCalls, error) {
 	if len(calls) == 0 {
-		return runCalls{}, fmt.Errorf("no model call was recorded, so there is nothing to score")
+		return runCalls{}, errors.New("no model call was recorded, so there is nothing to score")
 	}
 	first := calls[0]
 	for _, c := range calls {

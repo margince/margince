@@ -19,6 +19,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -132,11 +133,11 @@ func (t readLists) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 		}
 	case ListModeWhy:
 		if args.ListID == nil || args.RecordID == nil {
-			return nil, &BadArgsError{Cause: fmt.Errorf("why needs list_id and record_id")}
+			return nil, &BadArgsError{Cause: errors.New("why needs list_id and record_id")}
 		}
 	case ListModePreview:
 		if args.EntityType == "" || len(args.Definition) == 0 {
-			return nil, &BadArgsError{Cause: fmt.Errorf("preview needs entity_type and definition")}
+			return nil, &BadArgsError{Cause: errors.New("preview needs entity_type and definition")}
 		}
 	default:
 		return nil, &BadArgsError{Cause: fmt.Errorf("mode %q is not a read_lists mode", args.Mode)}
@@ -187,12 +188,12 @@ func checkListChange(args ListChange) error {
 	switch args.Mode {
 	case ListModeCreate:
 		if args.Name == nil || args.EntityType == "" {
-			return &BadArgsError{Cause: fmt.Errorf("create needs name and entity_type")}
+			return &BadArgsError{Cause: errors.New("create needs name and entity_type")}
 		}
 		return nil
 	case ListModeUpdate:
 		if args.ListID == nil || args.Version == nil {
-			return &BadArgsError{Cause: fmt.Errorf("update needs list_id and the version you read")}
+			return &BadArgsError{Cause: errors.New("update needs list_id and the version you read")}
 		}
 		return nil
 	case ListModeArchive, ListModeRestore:

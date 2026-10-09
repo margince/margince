@@ -102,7 +102,7 @@ func WithVoiceBuildEnqueue(inserter *jobs.Runner) Option {
 		s.voiceHandlers = s.WithVoiceBuildEnqueue(func(ctx context.Context, tx pgx.Tx, build ai.VoiceBuild) error {
 			actor, ok := principal.Actor(ctx)
 			if !ok {
-				return fmt.Errorf("compose: voice build enqueue without an acting principal")
+				return errors.New("compose: voice build enqueue without an acting principal")
 			}
 			return inserter.EnqueueTx(ctx, tx, VoiceBuildArgs{
 				Workspace:   storekit.MustWorkspace(ctx),

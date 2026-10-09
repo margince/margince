@@ -233,7 +233,7 @@ func parseVTT(content string) []speakerTurn {
 	var turns []speakerTurn
 	current := ""
 	inBlockComment := false
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		line = strings.TrimRight(line, "\r")
 		trimmed := strings.TrimSpace(line)
 		switch {

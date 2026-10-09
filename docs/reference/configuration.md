@@ -20,6 +20,46 @@ organization itself, so a call carries only the own credential of the caller. Th
 worked through, is in [tutorials/getting-started.md](../tutorials/getting-started.md).
 
 
+## Where a value comes from
+
+A value comes from the first source in its row that has one; "default" is the value in the code.
+The api and the worker follow the same rules, and each reads only the values it uses.
+
+| Kind of value | Sources, first match wins | When no source has a value |
+|---|---|---|
+| Flag or `MARGINCE_*` variable | flag → environment variable → default | The default. |
+| Key in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | The default. |
+| Setting an admin changes | value saved in the database → default | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
+| Seed in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | Used when the company is created, and again by a data reset. |
+| AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
+| SMTP password | `email.smtp.password` reference → the copy sealed in the vault | The relay is used with no password. |
+| License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
+
+**Posture.** `MARGINCE_ENV` picks the overlay; how the two files merge is in
+[The file layer is two files](#the-file-layer-is-two-files-a-base-and-the-postures-overlay).
+
+**Seeds.** These are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes,
+retention, starter automations, booking page, `ai_routing`). The api writes them in one transaction
+when it boots on a database with no company. Without `bootstrap_admin` it prints a one-time setup
+token instead. The user who claims the installation enters the company and the first admin, and
+the `seeds.*` values still apply.
+
+After that, editing `workspace` or `bootstrap_admin` changes
+nothing. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
+`seeds.*` again from the current file. Every other section of the file is read at each boot.
+
+**Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
+value. When a value fails the check of its setting, the save gets a 422 that names the setting. Editing
+`margince.yaml` never changes a saved setting.
+
+**Model binding.** The binding says which model serves each AI tier and which model embeds. It is a
+setting: `seeds.ai_routing` gives a new installation its first value, and Settings → AI changes it.
+Without a binding or `--ai-fake`, the worker does not start its AI runner or its embedding lane.
+
+**Secrets.** An empty bootstrap password or license reference is an error that names the field.
+Sealed copies of the SMTP password and the license are in
+[The vault also holds the two deployment credentials](#the-vault-also-holds-the-two-deployment-credentials).
+
 ## Common log flags (api, worker)
 
 | Flag | Env | Default | Values |
@@ -51,7 +91,7 @@ failures to stderr, with no logger you can set up.
 | `--metrics-access` | `MARGINCE_METRICS_ACCESS` | `token` | who `/metrics` serves. `token` needs `--metrics-token`; `open` serves any client that reaches the port. The api warns at boot each time it is open, and refuses to boot with `open` and a token together. See [Metrics access](#metrics-access) |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **Not used, and warns.** The binding is a stored setting. A new install declares it under `seeds.ai_routing` in `margince.yaml`; a running one changes it through Settings → AI / `PUT /v1/ai/routing`, with no restart. One case works another way: a role that started with nothing bound has no watcher, so restart it once after the first binding is stored. The flag stays registered, so an old command line still reads. A bound installation turns on the cold-start read-back, enrich per organization, the Morning-Brief `L2` order, and offers an AI drafts made again |
 | `--ai-fake` | (none) | `false` | offline fake model (dev/test only), used only when nothing else can serve: a stored binding that can serve comes before it. It serves when nothing is bound, or when the stored binding cannot be built, so a dev stack with no key still starts |
-| `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | the one true outside scheme+host for links a buyer sees (RFC 8058 unsubscribe and preference links) and for the Gmail/Graph OAuth callback. Needed to send marketing mail: a send refuses, and does not derive the link that carries the token from the request Host. See [Public base URL](#public-base-url) |
+| `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | the one true outside scheme+host for links a buyer sees (RFC 8058 unsubscribe and preference links) and for the Gmail/Graph OAuth callback. Also the API address in the Margince skill when `--api-base-url` is not set. Needed to send marketing mail: a send refuses, and does not derive the link that carries the token from the request Host. See [Public base URL](#public-base-url) |
 | (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed data provider adapter this process carries: `live` (default) the Surfe adapter, `offline` a fixed fake for a dev stack, `off` none. See [Licensed-data provider](#licensed-data-provider) |
 
 With `--inline-relay` (the default), a Redis Margince cannot reach fails the boot. Without a relay,
@@ -103,6 +143,16 @@ or one scoped to an interface. `MARGINCE_ENV=dev` or `test` lets in the `http://
 stack. Both the api and the worker refuse to boot on a value they cannot use. A send that carries a token
 refuses at send time. Settings → Connections shows the value set and whether it last
 answered.
+
+The Margince skill (`GET /v1/agent-bundle`) and the code example on the **Agent passports** card name
+the address a passport calls. `GET /v1/passports` returns it as `api_base_url`. It is `--api-base-url`,
+else `--public-base-url`, else the scheme and host the request came in on, with `/v1` added.
+`agentAPIOrigin.baseFor` in `backend/internal/compose/agentbundletransport.go` holds the rule.
+
+With neither base set, it reads the request's `Host`, and its `X-Forwarded-Proto` only from a peer in
+`--trusted-proxies`. Both answers are `no-store`: a browser cannot send a forged `Host` together with
+another user's cookie, and no shared cache can replay one. Behind a proxy that rewrites `Host`, set
+one of the two bases.
 
 ### Licensed-data provider
 
@@ -633,8 +683,9 @@ the network, as an E2E test against `gradion.com`. Another model must score the 
 pass. A normal read takes 10 to 25 seconds from start to end, based on how hard the origin slows the
 crawl.
 
-Without a declared model (`--ai-routing`/`--ai-fake`), the runner and the embedding lane do not
-start. The relay, retention, the workflow dispatch that events start (`cg:workflows`), and the clock
+The runner and the embedding lane start only on a stored model binding, or on `--ai-fake` for the
+offline fake model. A binding is stored through Settings → AI, or on a fresh install from
+`seeds.ai_routing` in `margince.yaml`. The relay, retention, the workflow dispatch that events start (`cg:workflows`), and the clock
 time scan always run. Shutdown is clean: subscriber handlers already running end their ack before
 the process stops.
 
@@ -725,7 +776,7 @@ sync.
 | `--microsoft-signin-tenant` | `MARGINCE_MICROSOFT_SIGNIN_TENANT` | api | the Entra **directory IDs** (GUIDs, in a `,` list) whose members may sign in through `/auth/oidc/microsoft/*`, on the same client as Graph capture. Defaults to `--graph-tenant` when that already names a directory, not an authority alias. When not set, a Microsoft app stored under Settings signs members in on the directory it is pinned to, and an app with no pin signs nobody in; when set, this list wins over the pin. Add the callback the api prints at boot (`<api-base>/v1/auth/oidc/microsoft/callback`) to the redirect URIs of the Entra app, and grant it the `openid profile email` delegated permissions. See [Microsoft sign-in tenants](#microsoft-sign-in-tenants) |
 | `--connector-state-key` | `MARGINCE_CONNECTOR_STATE_KEY` | api | HMAC key (≥32 bytes) that signs the OAuth connect `state`; required for both connect steps |
 | `--mcp-apps-base-url` | `MARGINCE_MCP_APPS_BASE_URL` | api | the origin the api reads the MCP App view documents from (`GET <origin>/mcp-apps/<view>.html`), read once at start and again from time to time. Defaults to `--public-base-url`, which the connector gate already needs, so where `/mcp` is served the value cannot be empty. The api must reach the value, which can differ from what the public can reach: a container may have no ingress hairpin routing, outside DNS or egress. A CDN origin works, and is a good fit. The scheme must be `https` unless the host is a literal loopback or private address (or `localhost`); a host name in clear text such as `http://web.internal` is refused at boot, naming the setting. With the connector gate off, nothing is read |
-| `--api-base-url` | `MARGINCE_API_BASE_URL` | api | the base of the api that the outside can reach, for the OAuth callback `redirect_uri`; defaults to `--public-base-url`. Set it only when the api and the SPA each have their own origin (such as dev). Telegram needs no public address of its own: its ingress long-polls. Google sign-in (`/auth/oidc/google/*`) uses this `redirect_uri` too, which you must add to `Authorized redirect URIs` of the Google app **in the Google Cloud Console**. Sign-in needs no new credentials past the app (stored under Settings or the `MARGINCE_GMAIL_*` pair) and that Console edit; without it every try ends in `redirect_uri_mismatch`. The routes mount when the state key and this base are set; the login page shows the button once a client is found |
+| `--api-base-url` | `MARGINCE_API_BASE_URL` | api | the base of the api that the outside can reach, for the OAuth callback `redirect_uri` and the API address in the Margince skill (see [Public base URL](#public-base-url)); defaults to `--public-base-url`. Set it only when the api and the SPA each have their own origin (such as dev). Telegram needs no public address of its own: its ingress long-polls. Google sign-in (`/auth/oidc/google/*`) uses this `redirect_uri` too, which you must add to `Authorized redirect URIs` of the Google app **in the Google Cloud Console**. Sign-in needs no new credentials past the app (stored under Settings or the `MARGINCE_GMAIL_*` pair) and that Console edit; without it every try ends in `redirect_uri_mismatch`. The routes mount when the state key and this base are set; the login page shows the button once a client is found |
 | `--gmail-pubsub-topic` | `MARGINCE_GMAIL_PUBSUB_TOPIC` | worker | Gmail `Pub/Sub` topic (`projects/<p>/topics/<t>`); turns on the push-watch register and renew job (empty = poll only) |
 | `--gmail-push-token` | `MARGINCE_GMAIL_PUSH_TOKEN` | api | shared secret on the `Pub/Sub` push subscription URL; turns on `POST /webhooks/gmail` (empty = no route) |
 | `--gmail-push-audience` / `--gmail-push-service-account` | `MARGINCE_GMAIL_PUSH_AUDIENCE` / `MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT` | api | OIDC audience + signing service account email; set both, and the push webhook also checks the Google OIDC token |
@@ -974,6 +1025,19 @@ longer written. Use `migrate reset-password` to change the password of a user wh
 | `--name` | (none) | (none) | database name (`recreate-db`, `drop-db`, `db-exists` only): the admin step of the integration lane that copies a database per package. Drop if it exists and create, drop if it exists, or print `true`/`false`. The drops are `WITH (FORCE)`, so a session that is still open is ended, and does not make the clean-up fail some of the time. It runs on the same owner DSN the migrations and tests use. So the lane needs no host psql, and a changed `MARGINCE_TEST_DSN` points at one cluster the whole way. A name (or template) over the name limit of the server (63 bytes by default) is refused, never cut short into the name of another database |
 | `--template` | (none) | (none) | template database to copy (`recreate-db` only): `CREATE DATABASE … TEMPLATE`, a fast file copy |
 
+## What the image entrypoint reads (api and worker)
+
+The image entrypoint scripts in `scripts/deploy/` read these before they start a binary. The binaries then
+resolve their other flags from the `MARGINCE_*` values above. The steps that use them are in
+[how-to/deploy-margince.md](../how-to/deploy-margince.md), and the template with notes is
+[`.env.example`](../../.env.example).
+
+| Env | Read by | Required | Meaning |
+|---|---|---|---|
+| `MARGINCE_OWNER_DSN` | api entrypoint | yes | owner-role DSN. The entrypoint runs `margince-migrate up` under it, and passes it on as `MARGINCE_SCHEMA_DSN` unless that is set |
+| `MARGINCE_DSN` | api and worker entrypoint | yes | app-role DSN the process serves under, through the `--dsn` fallback |
+| `MARGINCE_ADMIN_PASSWORD` | api entrypoint | first boot only | first-boot admin password. The entrypoint writes it to `/app/secrets/admin-password`, which the `password_file` in `margince.yaml` must name. Once a company exists it writes nothing, and warns if the value is still set |
+
 ## Other environment variables
 
 | Env | Default | Used by | Meaning |
@@ -1018,7 +1082,7 @@ longer written. Use `migrate reset-password` to change the password of a user wh
 - Margince refuses preferences on a binding that is not a broker on an OpenRouter host, and refuses
   keys it does not know. A key with a typing error would be dropped. The run would then report the
   default numbers under the name of a run with its own preferences.
-- The field set, and the measures behind the default, are in [openrouter.md](openrouter.md).
+- The field set, and the measures behind the default, are in [openrouter-upstream-choice.md](../explanation/openrouter-upstream-choice.md).
 ### `POST /v1/admin/reset-data`: the armed data reset
 
 `operations.allow_data_reset` in `margince.yaml` gates it, and its compiled default is **false in
@@ -1283,6 +1347,39 @@ The `uploads:` block sets the request size each route that carries a **file** ma
 route stays on the 1 MiB JSON limit. That limit is a security rule, and you cannot change it. Some
 handlers read the body with no limit of their own, and two of those routes need no sign-in.
 
+One JSON route reads more. `POST /mcp` with `Content-Type: application/json` takes up to 8 MiB
+(`agents.MaxMCPRequestBytes`), because `attach_document` carries a file in the call as base64. That
+leaves room for a file of about 6.2 MB. `attach_document` takes the smaller of that and
+`uploads.attachment_mb`. You cannot change the 8 MiB or the 6.2 MB limit. A request over 8 MiB gets
+`413`, with the limit named.
+
+Only one tool may use the 8 MiB body. Every other tool refuses input over 1 MiB before it runs,
+because `ToolSpec.MaxArgsBytes` starts at the JSON limit and only `attach_document` raises it.
+
+One process holds at most 4 MCP requests over 1 MiB at once (`maxLargeMCPBodiesInFlight` in
+`backend/internal/modules/agents/httpmcp.go`). Each one sits in memory many times while it is
+read. Each agent may hold only one of them, and its second gets `429`. When all 4 are in use, the next gets `503` with
+`Retry-After: 1`. When it states a `Content-Length`, it gets that answer before its body is read.
+
+Once a request holds a place, the rest of its body must come within
+10 seconds (`largeBodyReadDeadline`). If it does not, the answer is `408`, and the place is free
+again.
+
+Every upload that adds a document, from the app or from `attach_document`, must be one of the kinds
+in `attachmentTypes` (`backend/internal/modules/activities/attachmenttypes.go`). In the app, any
+other kind gets `422 unsupported_file_type`. Over MCP, `attach_document` answers with a tool error
+(`isError: true`) that names the same code, and the HTTP status stays `200`. HTML and archive files are accepted, because Margince only hands a
+stored file back as a download. `.svg` files and programs are refused.
+
+The declared type must be in the table. When the file name ends in a type from the table too, the
+file is stored under that type. Windows, for one, declares a `.csv` file as
+`application/vnd.ms-excel`.
+
+In every other case the declared type is kept, and the name does not
+matter. An empty or `application/octet-stream` type, which browsers send for `.msg` and `.md`, is
+read from the file name. Margince does not look at the bytes. Files that come in with an email are
+stored in any kind, as a record of what was sent.
+
 | Key | Default | Route |
 |---|---|---|
 | `uploads.attachment_mb` | `25` | `POST /v1/attachments`, the documents surface |
@@ -1344,8 +1441,8 @@ serving the file, because RFC 9116 leaves it to the reader to judge when a file 
 log says to move the date.
 
 The api serves the file, since it holds this config, as `text/plain; charset=utf-8`. Route
-`/.well-known/security.txt` to the api by that path (see Routing in
-[deployment.md](../deployment.md)). If the ingress leaves it on the web service instead, the web tier
+`/.well-known/security.txt` to the api by that path (see
+[Route one host to two services](../how-to/deploy-margince.md#route-one-host-to-two-services)). If the ingress leaves it on the web service instead, the web tier
 answers 404, the same as an installation with no file.
 
 ### License
@@ -1527,11 +1624,11 @@ from `PUT /ai/routing`.
 The `base_url` of a decision provider is the whole endpoint URL, and Margince sends to it as
 written; it adds nothing.
 
-`base_url` for the providers on the OpenAI wire (`openai_compatible`, `openai`, and `vllm`) is the
-**root of the vendor host**, with no version part. The adapter adds `/v1/chat/completions` (or
-`/v1/responses`), so a base that ends in `/v1` would have it twice (`…/v1/v1/…` → 404). Use
-`https://api.mistral.ai`, not `https://api.mistral.ai/v1`. `gemini` is the other way round: its
-default base keeps the `/v1beta` part, and the paths are written from that version.
+`base_url` for the providers whose adapter adds `/v1` (`openai_compatible`, `openai`, `vllm` and
+`anthropic`) is the **root of the vendor host**. The adapter adds `/v1/chat/completions` (or
+`/v1/responses`, `/v1/messages`). A base that ends in `/v1` is stored and dialled as its root, so
+`https://api.mistral.ai/v1` and `https://api.mistral.ai` reach the same place. `gemini` is the other
+way round: its default base keeps the `/v1beta` part, and the paths are written from that version.
 
 `location` belongs to `gemini_vertex` only. It is set on the provider (and may be set again on
 `embeddings:`), and refused on every other provider.
@@ -1577,7 +1674,7 @@ itself.
   A **captured** attachment carries the type read from its bytes. If the sender claims another type,
   Margince records that claim and does not use it. So someone outside can change the lane only
   through the bytes they sent. A file **uploaded through the API** carries the type its uploader
-  declared, not read from the bytes.
+  declared, or the one its file name gives (see [uploads](#uploads)). It is not read from the bytes.
 
   Before the bytes become a wire part, that type has to hold up. A file that claims a kind with a
   clear signature (PNG, JPEG, GIF, WebP, BMP, PDF, HEIC, HEIF) must carry that signature. A file

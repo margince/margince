@@ -61,6 +61,8 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceMeeting:           destinationToday,
 	crmcontracts.WorklistItemSourceMeetingOutcome:    destinationToday,
 	crmcontracts.WorklistItemSourceWeeklyCommitment:  destinationToday,
+	crmcontracts.WorklistItemSourceAwaitingReply:     destinationToday,
+	crmcontracts.WorklistItemSourceMeetingFollowUp:   destinationToday,
 	crmcontracts.WorklistItemSourceTask:              destinationToday,
 	crmcontracts.WorklistItemSourceConversationClaim: destinationToday,
 	crmcontracts.WorklistItemSourceBriefItem:         destinationToday,
@@ -160,12 +162,6 @@ func ClassifiedSources() []crmcontracts.WorklistItemSource {
 // error on a reader's queue.
 func DestinationOfSource(source crmcontracts.WorklistItemSource) crmcontracts.WorklistItemDestination {
 	return destinationOfSource[source]
-}
-
-// destinationPtr is the wire field's shape: optional, so an older client that
-// never heard of the field keeps working, and always sent by this server.
-func destinationPtr(at crmcontracts.WorklistItemDestination) *crmcontracts.WorklistItemDestination {
-	return &at
 }
 
 // sameDestination says whether these rows may be folded into one.

@@ -135,7 +135,7 @@ func (s stubTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
 		name = given
 	}
 	return TagDetail{
-		Tag:      Tag{TagID: tagID, Name: name, Archived: s.retired[tagID]},
+		TagID: tagID, Name: name, Archived: s.retired[tagID],
 		Contacts: 2, Companies: 1, Deals: 0,
 	}, nil
 }
@@ -251,8 +251,7 @@ func TestApplyTagRefusesAnUnknownNameRatherThanCoiningIt(t *testing.T) {
 func TestApplyTagRefusesWithNeitherIDNorName(t *testing.T) {
 	_, err := (applyTag{tags: stubTags{}}).Handle(context.Background(),
 		json.RawMessage(`{"record_type":"company","record_id":"`+ids.NewV7().String()+`"}`))
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("answered %v, want a BadArgsError naming tag_id or tag_name", err)
 	}
 }
@@ -303,7 +302,7 @@ func (r refusingTaggable) EnsureTaggable(context.Context, string, ids.UUID) erro
 }
 
 func (r refusingTaggable) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
-	return TagDetail{Tag: Tag{TagID: tagID, Name: knownTagName}}, nil
+	return TagDetail{TagID: tagID, Name: knownTagName}, nil
 }
 
 func (r refusingTaggable) RecordTags(_ context.Context, _ string, _ ids.UUID) (RecordTagsResult, error) {

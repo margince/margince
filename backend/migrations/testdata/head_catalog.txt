@@ -1941,6 +1941,7 @@ public.comms_outbound.html_body text gen=- def=-
 public.comms_outbound.id uuid NOT NULL gen=- def=-
 public.comms_outbound.in_reply_to text gen=- def=-
 public.comms_outbound.inflight_at timestamp with time zone gen=- def=-
+public.comms_outbound.inline_logo_key text gen=- def=-
 public.comms_outbound.instruction_id uuid gen=- def=-
 public.comms_outbound.link_id uuid gen=- def=-
 public.comms_outbound.list_unsubscribe text gen=- def=-
@@ -2350,7 +2351,7 @@ public.company_fact.company_fact_field_vocab CHECK ((((category = 'company'::tex
 public.company_fact.company_fact_pkey PRIMARY KEY (id)
 public.company_fact.company_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
 public.company_fact.company_fact_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
-public.company_fact.company_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text])))
+public.company_fact.company_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text])))
 public.company_fact.company_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL))))
 public.company_fact.company_fact_value_key_cardinality CHECK ((((category = 'company'::text) AND (field <> 'location'::text) AND (value_key = ''::text)) OR ((category = 'company'::text) AND (field = 'location'::text) AND (value_key <> ''::text)) OR ((category = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text])) AND (value_key <> ''::text))))
 public.company_fact.company_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
@@ -2524,7 +2525,7 @@ public.company_profile_field.company_profile_field_company_fkey FOREIGN KEY (com
 public.company_profile_field.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
 public.company_profile_field.company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text])))
 public.company_profile_field.company_profile_field_pkey PRIMARY KEY (id)
-public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
+public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
 public.company_profile_field.company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
 public.company_profile_field.company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_profile_field.company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
@@ -3743,6 +3744,8 @@ public.email_signature.email_signature_pkey PRIMARY KEY (id)
 public.email_signature.email_signature_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.email_signature.id uuid NOT NULL gen=- def=uuidv7()
 public.email_signature.owner_id uuid NOT NULL gen=- def=-
+public.email_signature.phone text NOT NULL gen=- def=''::text
+public.email_signature.title text NOT NULL gen=- def=''::text
 public.email_signature.trg_email_signature_updated CREATE TRIGGER trg_email_signature_updated BEFORE UPDATE ON public.email_signature FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.email_signature.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.email_signature.version bigint NOT NULL gen=- def=1
@@ -4068,6 +4071,7 @@ public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-
 public.forecast_contribution.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_contribution.in_best_case boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_evidence boolean NOT NULL gen=- def=false
+public.forecast_contribution.in_lost boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
@@ -4968,6 +4972,7 @@ public.list_member_event.list_member_event_entity_type_check CHECK ((entity_type
 public.list_member_event.list_member_event_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_member_event.list_member_event_pkey PRIMARY KEY (id)
 public.list_member_event.list_member_event_reason_check CHECK ((reason = ANY (ARRAY['chosen'::text, 'bulk'::text, 'record_archived'::text, 'record_restored'::text, 'evaluated'::text, 'filter_changed'::text, 'automation'::text])))
+public.list_member_event.member_note text gen=- def=-
 public.list_member_event.note text gen=- def=-
 public.list_member_event.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.list_member_event.reason text NOT NULL gen=- def=-
@@ -6137,6 +6142,7 @@ public.retention_policy.object_type text NOT NULL gen=- def=-
 public.retention_policy.retain_days integer NOT NULL gen=- def=-
 public.retention_policy.retention_policy_action_check CHECK ((action = ANY (ARRAY['archive'::text, 'anonymize'::text, 'erase'::text])))
 public.retention_policy.retention_policy_pkey PRIMARY KEY (id)
+public.retention_policy.retention_policy_retain_days_check CHECK (((retain_days >= 1) AND (retain_days <= 36500)))
 public.retention_policy.retention_policy_unique UNIQUE NULLS NOT DISTINCT (object_type, category)
 public.retention_policy_pkey CREATE UNIQUE INDEX retention_policy_pkey ON public.retention_policy USING btree (id)
 public.retention_policy_unique CREATE UNIQUE INDEX retention_policy_unique ON public.retention_policy USING btree (object_type, category) NULLS NOT DISTINCT

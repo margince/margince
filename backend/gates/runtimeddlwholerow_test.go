@@ -53,6 +53,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -170,7 +171,7 @@ func backendSQLCorpus(t *testing.T) []sqlStatement {
 		// between `$$` splits at its inner semicolons too — crudely, and in the
 		// safe direction: the pieces are smaller than the truth, so a star and
 		// a relation that really do belong together stay together.
-		for _, statement := range strings.Split(string(body), ";") {
+		for statement := range strings.SplitSeq(string(body), ";") {
 			out = append(out, sqlStatement{path: filepath.ToSlash(path), text: statement})
 		}
 		return nil
@@ -196,12 +197,7 @@ var wholeRowScope = gatekit.Scope{
 }
 
 func fileProjectsAWholeRow(_ string, file *ast.File) bool {
-	for _, text := range gatekit.SQLStatementsOf(file) {
-		if wholeRowProjection.MatchString(text) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(gatekit.SQLStatementsOf(file), wholeRowProjection.MatchString)
 }
 
 func TestNoStatementProjectsAWholeRowOfATableRuntimeDDLAlters(t *testing.T) {

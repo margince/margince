@@ -131,8 +131,7 @@ func TestAVerdictOutsideTheVocabularyDecidesNothing(t *testing.T) {
 	inbox := &fakeInbox{}
 	_, err := decideApprovalTool{inbox: inbox}.Handle(context.Background(),
 		json.RawMessage(`{"staged_action_id":"019fdba6-779b-72ce-8ace-7ddb290cd7cc","decision":"yes"}`))
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("err = %v, want a BadArgsError", err)
 	}
 	for _, want := range []string{"approve", "reject"} {

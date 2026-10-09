@@ -268,9 +268,7 @@ func (h Handlers) DownloadOfferPdf(w http.ResponseWriter, r *http.Request, id cr
 		filename = *offer.OfferNumber + ".pdf"
 	}
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{
-			ContentType: contentType, Filename: filename, Inline: true, Size: obj.Size,
-		},
+		ContentType: contentType, Filename: filename, Inline: true, Size: obj.Size,
 		Body: rc,
 	}, "offer pdf "+id.String())
 }

@@ -25,7 +25,7 @@ func logged(kind crmcontracts.ActivityKind, occurred time.Time, body string) crm
 	return crmcontracts.Activity{
 		Id:         openapi_types.UUID(ids.NewV7()),
 		Kind:       kind,
-		Subject:    strPtr("Trade fair"),
+		Subject:    new("Trade fair"),
 		Body:       &body,
 		OccurredAt: occurred,
 	}

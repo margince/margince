@@ -166,11 +166,11 @@ func auditEntryToWire(e AuditEntry) (crmcontracts.AuditLogEntry, error) {
 
 // decodeJSONObject renders a stored jsonb image for the wire; a NULL
 // column stays absent.
-func decodeJSONObject(raw []byte) (*map[string]interface{}, error) {
+func decodeJSONObject(raw []byte) (*map[string]any, error) {
 	if len(raw) == 0 {
 		return nil, nil
 	}
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return nil, err
 	}

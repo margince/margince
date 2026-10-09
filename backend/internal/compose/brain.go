@@ -426,7 +426,8 @@ func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Resp
 		return model.Response{}, runner.Meta{}, err
 	}
 	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
-	return resp, runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier)}, err
+	meta := runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier), Reject: func() { b.router.Reject(info) }}
+	return resp, meta, err
 }
 
 // PromptWindow is the window of the agent loop's own ladder, read fresh on

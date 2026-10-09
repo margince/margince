@@ -207,8 +207,7 @@ func isReservedLoopbackName(host string) bool {
 // keeps the fault — "invalid control character in URL" — and drops the string,
 // which on this path may be a credential.
 func parseFault(err error) error {
-	var uerr *url.Error
-	if errors.As(err, &uerr) {
+	if uerr, ok := errors.AsType[*url.Error](err); ok {
 		return uerr.Err
 	}
 	return err

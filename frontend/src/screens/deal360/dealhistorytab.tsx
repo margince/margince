@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The deal's History tab: ONE chronology, the same shape the lead's and the
-// contact's read off the same hook (leadhistory.tsx, contacttabs.tsx). What
-// was said about the deal and what was changed on it are one order of events,
-// not the record's audit sitting apart from its story.
+// The deal's History tab, read off the same hook as the lead's and the
+// contact's. All shows what was said about the deal, Changes what changed.
 //
-// The Changes cut swaps in the record-change audit (RecordHistoryTab) rather
-// than drawing the field edits as ordinary rows: that panel is the one
-// surface that can put a value back, and a second rendering of the same
-// changes beside it would be two answers to one question with only one of
-// them carrying the restore.
+// The Changes cut swaps in the record-change audit (RecordHistoryTab), the one
+// surface that can put a value back. A second rendering of the same changes
+// beside it would be a second answer without the restore.
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
@@ -18,7 +14,6 @@ import { useRecordZone } from "../../app/recordzone";
 import { GroupedTimelineList } from "../../design-system/composed";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
-  hasTimelineFilters,
   useRecordTimeline,
   useTimelineFilters,
 } from "../../design-system/recordtimeline";
@@ -61,9 +56,8 @@ export function DealHistoryTab({
     kind: "deal",
     recordId: deal.id,
     filter,
-    // A narrowed read is a question about what was said, so the record's own
-    // edits stand down: they are not meetings, and not what the reader asked.
-    narrowed: hasTimelineFilters(filters),
+    // RecordHistoryTab draws Changes here and pages its own feed.
+    changesInPanel: true,
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -112,13 +106,13 @@ export function DealHistoryTab({
           <div className="timeline-card">
             {chronologyNotice(
               "deal.timeline.empty",
+              filter,
+              chronology,
               {
-                loading: chronology.loading || timeline.isPending,
-                failed: chronology.failed || timeline.isError,
+                loading: timeline.isPending,
+                failed: timeline.isError,
                 assembled: timeline.isSuccess,
-                filter,
               },
-              chronology.entries.length,
               t,
             ) ?? (
               <GroupedTimelineList

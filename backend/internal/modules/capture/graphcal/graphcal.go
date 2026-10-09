@@ -316,7 +316,7 @@ func parseCursor(cur connector.Cursor) (cursorState, error) {
 	if cs.DeltaLink == "" {
 		// A stored-but-empty link is corruption, NOT a fresh calendar: stop
 		// rather than silently re-anchor and overwrite the watermark.
-		return cursorState{}, fmt.Errorf("graphcal: sync cursor carries no delta link")
+		return cursorState{}, errors.New("graphcal: sync cursor carries no delta link")
 	}
 	return cs, nil
 }

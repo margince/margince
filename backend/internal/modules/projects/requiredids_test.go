@@ -47,8 +47,7 @@ import (
 func requiredIDFields(t reflect.Type) []string {
 	uuidType := reflect.TypeFor[openapi_types.UUID]()
 	var names []string
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		if field.Type != uuidType {
 			continue
 		}
@@ -66,8 +65,7 @@ func requiredIDFields(t reflect.Type) []string {
 func completeBody(t *testing.T, shape reflect.Type, omit string) map[string]any {
 	t.Helper()
 	body := map[string]any{}
-	for i := 0; i < shape.NumField(); i++ {
-		field := shape.Field(i)
+	for field := range shape.Fields() {
 		tag := field.Tag.Get("json")
 		name, opts, _ := strings.Cut(tag, ",")
 		// Optional fields are left out entirely: a mapping must refuse the

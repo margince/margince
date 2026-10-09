@@ -59,8 +59,7 @@ func moduleDir(t *testing.T, modulePath string) string {
 	out, err := cmd.Output()
 	if err != nil {
 		stderr := ""
-		var exit *exec.ExitError
-		if errors.As(err, &exit) {
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
 			stderr = string(exit.Stderr)
 		}
 		t.Fatalf("locating module %s: %v\n%s", modulePath, err, stderr)

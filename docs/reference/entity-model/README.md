@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 294 |
-| Columns | 3503 |
+| Columns | 3508 |
 | Foreign keys | 476 |
 | Owning areas | 36 |
 
@@ -202,7 +202,7 @@ erDiagram
 | [`close_date_run`](deals.md#close_date_run) | deals | 15 | 2 |
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
-| [`comms_outbound`](comms.md#comms_outbound) | comms | 40 | 3 |
+| [`comms_outbound`](comms.md#comms_outbound) | comms | 41 | 3 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 17 | 2 |
@@ -267,7 +267,7 @@ erDiagram
 | [`deal_suggestion`](deals.md#deal_suggestion) | deals | 21 | 1 |
 | [`deal_suggestion_evidence`](deals.md#deal_suggestion_evidence) | deals | 7 | 0 |
 | [`dedupe_candidate`](contacts.md#dedupe_candidate) | contacts | 19 | 0 |
-| [`email_signature`](contacts.md#email_signature) | contacts | 7 | 0 |
+| [`email_signature`](contacts.md#email_signature) | contacts | 9 | 0 |
 | [`embed_store_binding`](search.md#embed_store_binding) | search | 6 | 0 |
 | [`embedding`](search.md#embedding) | search | 7 | 0 |
 | [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 3 | 0 |
@@ -284,7 +284,7 @@ erDiagram
 | [`finance_payment`](finance.md#finance_payment) | finance | 16 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
-| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 26 | 0 |
+| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 27 | 0 |
 | [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 26 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
@@ -308,7 +308,7 @@ erDiagram
 | [`list_evaluation`](collections.md#list_evaluation) | collections | 6 | 0 |
 | [`list_live_member`](collections.md#list_live_member) | collections | 5 | 0 |
 | [`list_member`](collections.md#list_member) | collections | 7 | 0 |
-| [`list_member_event`](collections.md#list_member_event) | collections | 10 | 0 |
+| [`list_member_event`](collections.md#list_member_event) | collections | 11 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
 | [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
 | [`mail_draft`](activities.md#mail_draft) | activities | 15 | 0 |

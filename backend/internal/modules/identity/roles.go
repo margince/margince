@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -325,8 +326,6 @@ func decodeRoleObjects(raw []byte) (map[string]storedGrant, error) {
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		return nil, fmt.Errorf("identity: role permissions document is unreadable: %w", err)
 	}
-	for object, grant := range doc.Objects {
-		out[object] = grant
-	}
+	maps.Copy(out, doc.Objects)
 	return out, nil
 }

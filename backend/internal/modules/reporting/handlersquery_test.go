@@ -27,3 +27,21 @@ func TestReportingQueryRetainsRepeatedAndCommaSeparatedSelections(t *testing.T) 
 		}
 	}
 }
+
+func TestReportingQueryNamingMetricsAloneCarriesNoDefaultCharts(t *testing.T) {
+	cases := map[string]struct{ metrics, blocks int }{
+		"metrics=meetings_held":                  {1, 0},
+		"metrics=meetings_held&blocks=stage_age": {1, 1},
+		"":                                       {3, 4},
+		"blocks=stage_age":                       {3, 1},
+	}
+	for query, want := range cases {
+		selection, err := SelectionFromQuery(httptest.NewRequest("GET", "/analytics/evaluate?"+query, nil).URL.Query())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(selection.Metrics) != want.metrics || len(selection.Blocks) != want.blocks || selection.Blocks == nil {
+			t.Errorf("%q: %d metrics and %v charts, want %d and %d", query, len(selection.Metrics), selection.Blocks, want.metrics, want.blocks)
+		}
+	}
+}

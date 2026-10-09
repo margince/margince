@@ -81,18 +81,39 @@ func plainForms(word string) []string {
 	forms := []string{word}
 	for _, suffix := range []string{"s", "es", "ed", "d", "ing", "er", "ers", "est", "ly", "'s", "’s"} {
 		base, ok := strings.CutSuffix(word, suffix)
-		if !ok || len(base) < 2 {
+		if !ok || !plainStem(base, suffix) {
 			continue
 		}
-		forms = append(forms, base, base+"e")
-		if strings.HasSuffix(base, "i") {
-			forms = append(forms, strings.TrimSuffix(base, "i")+"y")
+		forms = append(forms, base)
+		switch suffix {
+		case "ing", "ed", "er", "ers", "est":
+			forms = append(forms, base+"e")
+			if n := len(base); n > 2 && base[n-1] == base[n-2] {
+				forms = append(forms, base[:n-1])
+			}
 		}
-		if n := len(base); n > 2 && base[n-1] == base[n-2] {
-			forms = append(forms, base[:n-1])
+		if strings.HasSuffix(base, "i") && suffix != "s" && suffix != "ing" {
+			forms = append(forms, strings.TrimSuffix(base, "i")+"y")
 		}
 	}
 	return forms
+}
+
+// plainStem says whether base can be what is left of a word once suffix is cut.
+// A stem has a vowel, so "thing" is not "th" + "ing"; a bare "d" follows an "e",
+// so "band" is not "ban" + "d"; and "-ly", "-er" and "-est" need a stem of four
+// letters, so "apply", "reply" and "offer" do not reduce to "app", "rep", "off".
+func plainStem(base, suffix string) bool {
+	if !strings.ContainsAny(base, "aeiouy") {
+		return false
+	}
+	switch suffix {
+	case "d":
+		return strings.HasSuffix(base, "e")
+	case "ly", "er", "ers", "est":
+		return len(base) >= 4
+	}
+	return len(base) >= 2
 }
 
 // plainVocab keeps the two lists apart: a technical name matches only as
@@ -215,21 +236,20 @@ var plainPools = []struct{ prefix, list string }{
 }
 
 // plainCaps is the most general words each list may hold. 999 is the target: a
-// reader of one area meets fewer than 1,000 simple words. An area whose pages
-// needed more when they joined starts at that size, and its cap only goes down:
-// lower it when a list shrinks, and never raise it.
+// reader of one area meets fewer than 1,000 simple words. A cap above the target
+// must equal its list's size, so a list that shrinks pins its cap lower with it.
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
-	"docs/how-to/plain-words.txt":      1300,
-	"docs/explanation/plain-words.txt": 1500,
-	"docs/handbook/plain-words.txt":    1500,
-	"docs/reference/plain-words.txt":   1850,
-	plainProjectFile:                   2500,
+	"docs/how-to/plain-words.txt":      1387,
+	"docs/explanation/plain-words.txt": 1663,
+	"docs/handbook/plain-words.txt":    1406,
+	"docs/reference/plain-words.txt":   1771,
+	plainProjectFile:                   1808,
 }
 
 // glossaryLegacyMax is how many names may still lack a meaning: the names pages
-// used before they joined the bar. After that it only goes down.
-const glossaryLegacyMax = 1400
+// used before they joined the bar. It must equal that count, so it only goes down.
+const glossaryLegacyMax = 440
 
 const glossaryLegacyHeading = "## Names without a meaning yet"
 
@@ -238,10 +258,11 @@ var glossaryLegacyName = regexp.MustCompile("`([^`]+)`")
 var glossaryRow = regexp.MustCompile(`^\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*$`)
 
 // parseGlossary reads the glossary table: each term a plain page may use as a
-// technical name, and a meaning a reader can learn it from.
-func parseGlossary(doc string) (terms []string, problems []string) {
+// technical name, and a meaning a reader can learn it from. legacy counts the
+// names in the last section, which carry no meaning.
+func parseGlossary(doc string) (terms []string, legacy int, problems []string) {
 	seen := map[string]bool{}
-	legacy, inLegacy := 0, false
+	inLegacy := false
 	for _, line := range strings.Split(doc, "\n") {
 		if strings.HasPrefix(line, "## ") {
 			inLegacy = strings.TrimSpace(line) == glossaryLegacyHeading
@@ -272,11 +293,7 @@ func parseGlossary(doc string) (terms []string, problems []string) {
 		}
 		terms = append(terms, term)
 	}
-	if legacy > glossaryLegacyMax {
-		problems = append(problems, fmt.Sprintf("%d names lack a meaning; at most %d may. Give a new name a meaning in the table.",
-			legacy, glossaryLegacyMax))
-	}
-	return terms, problems
+	return terms, legacy, problems
 }
 
 func plainPoolFor(rel string) string {
@@ -300,6 +317,10 @@ func loadPlainPool(t *testing.T, rel string, names []string) plainVocab {
 		t.Errorf("%s lists %d words; the cap is %d. Replace a word on a page with a listed one before adding another.",
 			rel, len(general), limit)
 	}
+	if limit > plainWordCap && len(general) < limit {
+		t.Errorf("%s lists %d words under a cap of %d; lower its plainCaps entry to %d so the list cannot grow back.",
+			rel, len(general), limit, len(general))
+	}
 	if !sort.StringsAreSorted(general) {
 		t.Errorf("%s is not sorted; keep one word per line in byte order so a diff shows what was added", rel)
 	}
@@ -319,9 +340,17 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read %s: %v", glossaryFile, err)
 	}
-	names, problems := parseGlossary(string(glossary))
+	names, legacy, problems := parseGlossary(string(glossary))
 	for _, p := range problems {
 		t.Errorf("%s: %s", glossaryFile, p)
+	}
+	if legacy > glossaryLegacyMax {
+		t.Errorf("%s: %d names lack a meaning; at most %d may. Give a new name a meaning in the table.",
+			glossaryFile, legacy, glossaryLegacyMax)
+	}
+	if legacy < glossaryLegacyMax {
+		t.Errorf("%s: %d names lack a meaning; lower glossaryLegacyMax from %d to %d so the count cannot grow back.",
+			glossaryFile, legacy, glossaryLegacyMax, legacy)
 	}
 	pools := map[string]plainVocab{}
 	used := map[string]map[string]bool{}
@@ -411,6 +440,16 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 	if res.unknown["deals"] != 0 || res.unknown["opened"] != 0 {
 		t.Errorf("an inflection of a listed word was reported: %v", res.unknown)
 	}
+	for word, base := range map[string]string{"making": "make", "stopped": "stop", "cities": "city", "used": "use", "quickly": "quick"} {
+		if _, ok := plainMatch(word, plainVocab{general: map[string]bool{base: true}}); !ok {
+			t.Errorf("%q was not read as a form of %q", word, base)
+		}
+	}
+	for word, base := range map[string]string{"thing": "the", "apply": "app", "band": "ban", "offer": "off", "reply": "rep", "bring": "br"} {
+		if _, ok := plainMatch(word, plainVocab{general: map[string]bool{base: true}}); ok {
+			t.Errorf("%q passed as a form of the unrelated word %q", word, base)
+		}
+	}
 	if len(res.long) == 0 {
 		t.Error("a 21-word numbered step was not reported")
 	}
@@ -453,11 +492,11 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 			t.Errorf("%s reads %s, want %s", rel, got, want)
 		}
 	}
-	if terms, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n\n" +
-		glossaryLegacyHeading + "\n\n`nonce`, `cron`\n"); len(problems) != 0 || len(terms) != 3 {
-		t.Errorf("a meaning row and a legacy name were not both read: %v %v", terms, problems)
+	if terms, legacy, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n\n" +
+		glossaryLegacyHeading + "\n\n`nonce`, `cron`\n"); len(problems) != 0 || len(terms) != 3 || legacy != 2 {
+		t.Errorf("a meaning row and two legacy names were not all read: %v %d %v", terms, legacy, problems)
 	}
-	if _, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n| boundary | edge |"); len(problems) != 1 {
+	if _, _, problems := parseGlossary("| Term | Meaning |\n|---|---|\n| `pgvector` | Postgres vector search. |\n| boundary | edge |"); len(problems) != 1 {
 		t.Errorf("a glossary row with a two-word meaning was not reported: %v", problems)
 	}
 	if ok, _ := plainEnrolment("# A\n`<!-- prose:plain -->`"); ok {

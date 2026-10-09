@@ -2,7 +2,7 @@
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { FieldDiff, PassportChip } from "./trust";
+import { FieldDiff } from "./trust";
 
 afterEach(cleanup);
 const render = (ui: React.ReactNode) =>
@@ -27,12 +27,5 @@ describe("FieldDiff", () => {
   it("renders a cleared marker when the new value is null", () => {
     render(<FieldDiff oldValue="x" newValue={null} />);
     expect(screen.getByText("(cleared)")).toBeTruthy();
-  });
-});
-
-describe("PassportChip", () => {
-  it("shows the agent's passport id", () => {
-    render(<PassportChip id="psp_7Q3fa91" />);
-    expect(screen.getByText(/psp_7Q3fa91/)).toBeTruthy();
   });
 });

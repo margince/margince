@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -206,8 +207,8 @@ func (c *recordingCompleter) Complete(ctx context.Context, req model.Request) (m
 //
 //nolint:ireturn // SecretStripper IS the seam: the site chooses the implementation and this only carries it.
 func (c *recordingCompleter) stripper() model.SecretStripper {
-	for i := len(c.calls) - 1; i >= 0; i-- {
-		if s := c.calls[i].Request.SecretStripper; s != nil {
+	for _, v := range slices.Backward(c.calls) {
+		if s := v.Request.SecretStripper; s != nil {
 			return s
 		}
 	}

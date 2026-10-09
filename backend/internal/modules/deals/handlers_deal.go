@@ -137,6 +137,10 @@ func (h Handlers) UpdateDeal(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 
+	if err := refuseClosingFields(req); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	update := dealUpdateInput(req, ifVersion)
 	update.Clear = httperr.ClearedFields(r)
 	deal, err := h.store.UpdateDeal(r.Context(), pathID[ids.DealKind](id), update)

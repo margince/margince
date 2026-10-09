@@ -8,10 +8,15 @@ one record field per entry, in the flat form parse_scenario reads:
 
     must_end_with:
       - company "Emsland Ventilbau GmbH" lifecycle=prospect
+      - company "Aachener Metallwerke GmbH" document=<sha256> *.md
+      - company "Aachener Metallwerke GmbH" documents=1
 
 The record is found by its type and its WHOLE display name, then read back with
 read_record; the field's value, rendered the way must_call_with renders an
-argument, must equal what follows the `=`. It runs after the run and before the
+argument, must equal what follows the `=`. Two names are not fields: `document`
+holds when exactly one file on the record's Documents tab carries that checksum
+under a name the glob matches, and `documents` when the tab holds exactly that
+many files. Both are read with list_documents, so they see the tab a human sees. It runs after the run and before the
 lane restores the snapshot, through the lane's own passport. It is a reader
 with fixed calls, never a model.
 
@@ -25,6 +30,7 @@ a reader of the kept records sees what the world said beside what the model did.
 
 import argparse
 import collections
+import fnmatch
 import json
 import os
 import re
@@ -48,6 +54,11 @@ _ENTRY = re.compile(r'^([a-z_]+) "([^"]+)" ([A-Za-z_][A-Za-z0-9_]*)=(.+)$')
 # found by.
 _NAME_FIELD = {"company": "display_name"}
 
+# Not record fields: what list_documents answers about the record's files.
+_DOCUMENT = "document"
+_DOCUMENT_COUNT = "documents"
+_CHECKSUM = re.compile(r"^[0-9a-f]{64}$")
+
 # list_records answers 50 a page. A seeded world is a few pages; a cursor still
 # turning past this many is a reader going round in circles, not a big world.
 _PAGE_LIMIT = 50
@@ -66,7 +77,25 @@ def parse(entry):
     found = Expectation(*match.groups())
     if found.record_type not in _NAME_FIELD:
         raise ValueError(f"must_end_with entry {entry!r} names a type this reader cannot find by name")
+    if found.field == _DOCUMENT:
+        _document_wanted(found)
+    if found.field == _DOCUMENT_COUNT and not found.value.isdigit():
+        raise ValueError(f"documents wants a count of files, not {found.value!r}")
     return found
+
+
+def _document_wanted(want):
+    """(checksum, filename glob) of a document entry; ValueError when malformed.
+
+    The checksum is what proves the bytes arrived whole: a model copying base64
+    by hand can drop a character and still produce a file that decodes.
+    """
+    checksum, _, glob = want.value.partition(" ")
+    if not _CHECKSUM.match(checksum):
+        raise ValueError(f"{want.field} wants a lowercase sha256 hex checksum, not {checksum!r}")
+    if not glob.strip():
+        raise ValueError("document wants a filename glob after the checksum, such as *.md")
+    return checksum, glob.strip()
 
 
 def _data(session, tool, arguments):
@@ -110,6 +139,49 @@ def _matching(session, want):
     raise Unreadable(f"list_records was still paging after {_MAX_PAGES} pages of {want.record_type}")
 
 
+def _documents(session, record_type, record_id):
+    """Every file on the record's Documents tab, every page of it."""
+    found, cursor = [], None
+    for _ in range(_MAX_PAGES):
+        arguments = {"entity_type": record_type, "entity_id": record_id, "limit": _PAGE_LIMIT}
+        if cursor:
+            arguments["cursor"] = cursor
+        page = _data(session, "list_documents", arguments)
+        documents = page.get("documents")
+        if not isinstance(documents, list):
+            raise Unreadable(f"list_documents answered with no documents list: {str(page)[:200]}")
+        found += documents
+        cursor = page.get("next_cursor")
+        if not cursor:
+            return found
+    raise Unreadable(f"list_documents was still paging after {_MAX_PAGES} pages")
+
+
+def _document_problem(session, want, record_id):
+    """The problem line for a document entry, or "" when it holds."""
+    documents = _documents(session, want.record_type, record_id)
+    where = f'{want.record_type} "{want.name}"'
+    # A count, not a checksum, because a refused file can come back wrapped:
+    # an SVG packed into a zip is new bytes under a new name.
+    if want.field == _DOCUMENT_COUNT:
+        if len(documents) == int(want.value):
+            return ""
+        names = ", ".join(str(d.get("filename")) for d in documents) or "none"
+        return f"ended with {len(documents)} files on {where} ({names}), wanted {want.value}"
+    checksum, glob = _document_wanted(want)
+    carrying = [d for d in documents if d.get("checksum") == checksum]
+    if not carrying:
+        return f"ended with no file on {where} whose checksum is {checksum}"
+    # Twice is the record carrying one file two times, which list_documents
+    # exists to prevent, so it is scored like a duplicate record.
+    if len(carrying) > 1:
+        return f"ended with {len(carrying)} copies of the file on {where}"
+    name = str(carrying[0].get("filename"))
+    if not fnmatch.fnmatchcase(name, glob):
+        return f'ended with the file on {where} named "{name}", wanted {glob}'
+    return ""
+
+
 def _rendered(value):
     return value if isinstance(value, str) else json.dumps(value, separators=(",", ":"))
 
@@ -135,6 +207,13 @@ def end_state(session, entries):
         # run's own create — a duplicate the model made, and scored as one.
         if len(matches) > 1:
             problems.append(f'ended with {len(matches)} {want.record_type} records named "{want.name}"')
+            continue
+        if want.field in (_DOCUMENT, _DOCUMENT_COUNT):
+            problem = _document_problem(session, want, matches[0].get("id"))
+            if problem:
+                problems.append(problem)
+            else:
+                held.append(entry)
             continue
         fields = _data(session, "read_record", {"record_type": want.record_type, "id": matches[0].get("id")}).get("fields")
         if not isinstance(fields, dict) or want.field not in fields:

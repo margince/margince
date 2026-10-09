@@ -16,6 +16,7 @@ import (
 	"context"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -52,13 +53,15 @@ func TestAPercentileBelowTheSampleFloorIsBlankRatherThanWrong(t *testing.T) {
 		t.Helper()
 		rows := make([]any, 0, len(values))
 		holders := ""
+		var holdersSb55 strings.Builder
 		for i, v := range values {
 			if i > 0 {
-				holders += ", "
+				holdersSb55.WriteString(", ")
 			}
-			holders += "($" + strconv.Itoa(i+1) + "::int)"
+			holdersSb55.WriteString("($" + strconv.Itoa(i+1) + "::int)")
 			rows = append(rows, v)
 		}
+		holders += holdersSb55.String()
 		if len(values) == 0 {
 			holders = "(NULL::int)"
 			rows = nil

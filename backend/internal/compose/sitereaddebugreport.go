@@ -215,7 +215,7 @@ func wrongCompanySignal(seedURL string, merged []evidencedField) string {
 		return ""
 	}
 	reference := normalizeEvidence(parsed.Host + " " + displayName)
-	for _, token := range strings.Fields(normalizeEvidence(legalName)) {
+	for token := range strings.FieldsSeq(normalizeEvidence(legalName)) {
 		if legalEntityNoise[token] || len(token) < 3 {
 			continue
 		}

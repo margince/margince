@@ -135,6 +135,9 @@ export function AiProviderKeysCard() {
                   onOpen={() => {
                     setDraftHost(null);
                     setOpened(p.provider);
+                    // The list stays mounted while sheets open and close, so
+                    // a key set elsewhere shows only if opening reads again.
+                    query.refetch();
                   }}
                 />
               ))}

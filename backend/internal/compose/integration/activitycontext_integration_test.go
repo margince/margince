@@ -18,6 +18,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -597,12 +598,7 @@ func TestAnUnknownEventIsNotFound(t *testing.T) {
 }
 
 func containsRef(refs []datasource.EntityRef, want datasource.EntityRef) bool {
-	for _, ref := range refs {
-		if ref == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(refs, want)
 }
 
 func sectionNames(assembled retrieval.Context) []string {

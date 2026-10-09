@@ -29,13 +29,13 @@ func TestRenderStructsCarryEveryFieldTheyMirror(t *testing.T) {
 	}{
 		{
 			name:     "Scenario",
-			source:   reflect.TypeOf(Scenario{}),
-			rendered: reflect.TypeOf(scenarioForRender{}),
+			source:   reflect.TypeFor[Scenario](),
+			rendered: reflect.TypeFor[scenarioForRender](),
 		},
 		{
 			name:     "Expectations",
-			source:   reflect.TypeOf(Expectations{}),
-			rendered: reflect.TypeOf(expectForRender{}),
+			source:   reflect.TypeFor[Expectations](),
+			rendered: reflect.TypeFor[expectForRender](),
 		},
 	} {
 		t.Run(pair.name, func(t *testing.T) {
@@ -67,8 +67,8 @@ func (s tagSet) Difference(other tagSet) []string {
 
 func yamlTags(t reflect.Type) tagSet {
 	out := tagSet{}
-	for i := range t.NumField() {
-		name, _, _ := strings.Cut(t.Field(i).Tag.Get("yaml"), ",")
+	for field := range t.Fields() {
+		name, _, _ := strings.Cut(field.Tag.Get("yaml"), ",")
 		if name != "" && name != "-" {
 			out[name] = true
 		}

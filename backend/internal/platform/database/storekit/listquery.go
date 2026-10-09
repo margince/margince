@@ -22,6 +22,7 @@ package storekit
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
 	"strconv"
 	"strings"
@@ -93,9 +94,7 @@ func Column(kind string) SortField { return SortField{Kind: kind} }
 // they leave the vocabulary — and its 422 — for free.
 func SortVocabulary(core map[string]SortField, active []fieldcatalog.Column) map[string]SortField {
 	vocab := make(map[string]SortField, len(core)+len(active))
-	for name, field := range core {
-		vocab[name] = field
-	}
+	maps.Copy(vocab, core)
 	for _, c := range active {
 		if c.Type == fieldcatalog.TypeMultiselect {
 			continue

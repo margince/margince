@@ -77,7 +77,7 @@ func SaveReportRun(
 	if !ok {
 		// A run with no asker cannot be read back: Read serves only the asker,
 		// so a row with nobody in that column is one nothing can ever open.
-		return ids.UUID{}, fmt.Errorf("compose: saving a report run without an actor")
+		return ids.UUID{}, errors.New("compose: saving a report run without an actor")
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {

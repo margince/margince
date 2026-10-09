@@ -65,8 +65,7 @@ func TestWorksWithIsOnePairOneRowEitherWayRound(t *testing.T) {
 	_, err := store.CreateRelationship(rep, contacts.CreateRelationshipInput{
 		Kind: "works_with", ContactID: &birgitID, CounterpartyContactID: &annaID, Source: "manual",
 	})
-	var conflict *contacts.RelationshipConflictError
-	if !errors.As(err, &conflict) {
+	if _, ok := errors.AsType[*contacts.RelationshipConflictError](err); !ok {
 		t.Fatalf("the reversed pair → %v, want the uniqueness conflict", err)
 	}
 }

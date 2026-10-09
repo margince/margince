@@ -21,11 +21,11 @@ import (
 // write and was never told about.
 func TestTheCompanyReadPromptAndSchemaNameTheSameFields(t *testing.T) {
 	const lead = "Use only these fields: "
-	start := strings.Index(companyReadMessageSystem, lead)
-	if start < 0 {
+	_, after, ok := strings.Cut(companyReadMessageSystem, lead)
+	if !ok {
 		t.Fatalf("the company-read prompt no longer lists its fields after %q", lead)
 	}
-	listed, _, ended := strings.Cut(companyReadMessageSystem[start+len(lead):], ".")
+	listed, _, ended := strings.Cut(after, ".")
 	if !ended {
 		t.Fatalf("the company-read prompt's field list after %q never ends in a full stop", lead)
 	}

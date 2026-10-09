@@ -5,6 +5,7 @@ package ai
 
 import (
 	"io"
+	"maps"
 	"strings"
 	"sync"
 
@@ -388,8 +389,6 @@ func (m *callMetrics) observeTokensLocked(k routeKey, c Call) {
 
 func copyTaskCounters(source map[string]int64) map[string]int64 {
 	out := make(map[string]int64, len(source))
-	for key, value := range source {
-		out[key] = value
-	}
+	maps.Copy(out, source)
 	return out
 }

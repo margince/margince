@@ -215,12 +215,10 @@ func (w *knowledgeIngestWorker) readDocument(ctx context.Context, key string) (s
 // actionable sentence; anything else is a fault they cannot act on, so they get
 // a sentence that says so rather than an internal error.
 func ingestDetail(err error) string {
-	var full *knowledge.CorpusFullError
-	if errors.As(err, &full) {
+	if full, ok := errors.AsType[*knowledge.CorpusFullError](err); ok {
 		return full.Error()
 	}
-	var unsupported *knowledge.UnsupportedTypeError
-	if errors.As(err, &unsupported) {
+	if unsupported, ok := errors.AsType[*knowledge.UnsupportedTypeError](err); ok {
 		return unsupported.Error()
 	}
 	if errors.Is(err, ai.ErrProviderThrottled) {

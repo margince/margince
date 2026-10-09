@@ -40,10 +40,10 @@ func TestEveryPoolStatisticIsExported(t *testing.T) {
 		exported[counter.stat] = counter.name
 	}
 
-	stat := reflect.TypeOf(&pgxpool.Stat{})
+	stat := reflect.TypeFor[*pgxpool.Stat]()
 	var missing []string
-	for i := range stat.NumMethod() {
-		name := stat.Method(i).Name
+	for method := range stat.Methods() {
+		name := method.Name
 		if _, ok := exported[name]; !ok {
 			missing = append(missing, name)
 		}

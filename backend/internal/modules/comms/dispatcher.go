@@ -57,6 +57,8 @@ type Dispatcher struct {
 	// deployment fact and waiting does not change it.
 	relay    ControllerRelay
 	payloads PayloadVault
+	// images supplies what a message's markup embeds by content id.
+	images InlineImages
 	// requirements checks the composed message against what its jurisdiction
 	// demands. Nil on an installation that declares no country, and on every
 	// test store that has no opinion about compliance packs.

@@ -90,8 +90,7 @@ func TestAllowanceOverflowLockoutRecoversThroughReplaceBudget(t *testing.T) {
 		Config:           ai.BudgetConfig{TokensPerFullUser: ai.MaxMonthlyTokens},
 		ExpectedRevision: broken.Revision,
 	})
-	var invalid settings.InvalidValue
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[settings.InvalidValue](err); !ok {
 		t.Fatalf("a new overflowing value must be rejected, got %v", err)
 	}
 	stillBroken, err := store.ReadBudget(ctx)

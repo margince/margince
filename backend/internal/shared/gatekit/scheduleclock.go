@@ -240,7 +240,7 @@ func sqlOf(t testing.TB, file string) string {
 // it finds a line that was already correct.
 func assignmentsTo(text, column string) []string {
 	var found []string
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		before, rhs, ok := strings.Cut(line, column+" = ")
 		if !ok || endsInIdentifier(before) {
 			continue

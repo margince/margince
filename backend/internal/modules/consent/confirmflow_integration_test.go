@@ -368,11 +368,10 @@ func TestAnUnofferedFieldIsRefusedWithoutSpendingTheLink(t *testing.T) {
 	e := setupChannelConsent(t)
 	link := issueLink(t, e)
 
-	var invalid *ValidationError
 	_, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
 		Corrections: map[string]string{"owner_id": ids.NewV7().String()},
 	})
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("err = %v, want a validation error on the field", err)
 	}
 	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); err != nil {
@@ -502,8 +501,7 @@ func TestAContactWithNoAddressGetsNoConfirmLink(t *testing.T) {
 	e := setupChannelConsent(t)
 
 	_, err := e.store.IssueConfirmToken(e.ctx, e.contact)
-	var invalid *ValidationError
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("err = %v, want a validation error", err)
 	}
 	var minted int

@@ -109,7 +109,7 @@ func TestTheFoldIsPure(t *testing.T) {
 	now := time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
 	in := Inputs{LastInteraction: at(now, 7), Count90d: 9, Inbound90d: 4, Outbound90d: 5}
 	first := Compute(in, now)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if got := Compute(in, now); got != first {
 			t.Fatalf("run %d gave %+v, want %+v — the fold reads something outside its inputs", i, got, first)
 		}

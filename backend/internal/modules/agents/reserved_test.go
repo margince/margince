@@ -88,8 +88,7 @@ func TestSplitReservedRefusesAKeyItCannotHonour(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := splitReserved(json.RawMessage(tc.in))
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("err = %v, want a BadArgsError", err)
 			}
 			if !errors.Is(err, tc.want) {

@@ -31,6 +31,7 @@ package gates
 
 import (
 	"os"
+	"slices"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -102,10 +103,8 @@ func TestTheContractReachesTheFrontendLane(t *testing.T) {
 	if len(entries) == 0 {
 		t.Fatalf("the classifier's %q filter is empty — every frontend job would skip on every pull request, and a skipped job reads green", theFrontendFilter)
 	}
-	for _, entry := range entries {
-		if entry == contractPathspec {
-			return
-		}
+	if slices.Contains(entries, contractPathspec) {
+		return
 	}
 	t.Fatalf(`the classifier's %q filter no longer lists %q, so a pull request that changes only the contract skips every frontend job.
 

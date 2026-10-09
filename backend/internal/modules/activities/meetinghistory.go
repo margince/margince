@@ -21,6 +21,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -102,7 +103,7 @@ func recordMeetingTransition(ctx context.Context, tx pgx.Tx, in meetingTransitio
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return fmt.Errorf("activities: recording a meeting transition without an actor")
+		return errors.New("activities: recording a meeting transition without an actor")
 	}
 	// The pair travels together or not at all — the column CHECK says so, and
 	// half a key would index a transition nothing can match on replay.

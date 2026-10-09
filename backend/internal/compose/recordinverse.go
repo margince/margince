@@ -349,8 +349,7 @@ func (e Evaluator) fillStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Und
 		return refuse(ReasonNotRestorableByThisPath, "the statement only confirmed what the record showed"), true, nil
 	}
 	err := contacts.JudgeFillRetraction(ctx, tx, ids.From[ids.ContactKind](row.EntityID), fill)
-	var refusal *contacts.FillRetractionRefusal
-	if errors.As(err, &refusal) {
+	if refusal, ok := errors.AsType[*contacts.FillRetractionRefusal](err); ok {
 		return fillRefusal(refusal), true, nil
 	}
 	return Undoability{}, false, err
