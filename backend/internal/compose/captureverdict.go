@@ -126,7 +126,7 @@ func (e *CounterpartyVerdictEngine) CanJudge() bool { return e.brain != nil }
 // and that value is served to clients, so a `system:` spelling would be a
 // malformed field on the wire. Every sibling background writer that creates
 // records stamps `agent:` for the same reason.
-const verdictActor = contacts.CaptureVerdictActor
+const verdictActor = "agent:" + verdictReason
 
 // workspaceCtx adds the pass's provenance — the system actor its writes are
 // attributed to and a fresh correlation id — to a context whose WORKSPACE the

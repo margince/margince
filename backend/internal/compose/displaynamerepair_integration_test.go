@@ -39,12 +39,12 @@ func captureCounterparty(t *testing.T, e *integration.Env, display, email string
 	return res.ContactID
 }
 
-// learnSplitName puts a pair into the split columns and leaves full_name as it
-// was. That is the state the old fill left behind, which no current writer
-// produces any more, so it is planted directly.
-func learnSplitName(t *testing.T, e *integration.Env, id ids.ContactID, first, last string) {
+// learnSplitName puts first_name and the surname Welter into the split columns
+// and leaves full_name as it was. That is the state the old fill left behind,
+// which no current writer produces any more, so it is planted directly.
+func learnSplitName(t *testing.T, e *integration.Env, id ids.ContactID, first string) {
 	t.Helper()
-	e.WsExec(t, `UPDATE contact SET first_name = $2, last_name = $3 WHERE id = $1`, id, first, last)
+	e.WsExec(t, `UPDATE contact SET first_name = $2, last_name = 'Welter' WHERE id = $1`, id, first)
 }
 
 // runDisplayNameRepair drains the repair under the principal the nightly
@@ -70,7 +70,7 @@ func shownName(t *testing.T, e *integration.Env, id ids.ContactID) string {
 func TestTheRepairShowsTheLearnedNameInPlaceOfCapturesInitials(t *testing.T) {
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
-	learnSplitName(t, e, id, "Björn", "Welter")
+	learnSplitName(t, e, id, "Björn")
 
 	runDisplayNameRepair(t, e)
 
@@ -86,8 +86,10 @@ func TestTheRepairKeepsADisplayNameAnAgentChose(t *testing.T) {
 	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
 	first, last := "Robert", "Fischer"
 	for _, in := range []contacts.CreateContactInput{
-		{FullName: "Contact A (Nick)", Source: "manual",
-			Emails: []contacts.ContactEmailInput{{Email: "a@example.test", EmailType: "work", IsPrimary: true}}},
+		{
+			FullName: "Contact A (Nick)", Source: "manual",
+			Emails: []contacts.ContactEmailInput{{Email: "a@example.test", EmailType: "work", IsPrimary: true}},
+		},
 		{FullName: "Bobby", FirstName: &first, LastName: &last, Source: "manual"},
 	} {
 		created, err := e.Contacts.CreateContact(agent, in)
@@ -157,7 +159,7 @@ func TestTheRepairKeepsADisplayNameAHumanEdited(t *testing.T) {
 	if _, err := e.Contacts.UpdateContact(e.Admin(), id, contacts.UpdateContactInput{FullName: &typed}); err != nil {
 		t.Fatalf("a human renaming the contact: %v", err)
 	}
-	learnSplitName(t, e, id, "Björn", "Welter")
+	learnSplitName(t, e, id, "Björn")
 
 	runDisplayNameRepair(t, e)
 
@@ -176,7 +178,7 @@ func TestTheRepairKeepsADisplayNameAnAgentEdited(t *testing.T) {
 	if _, err := e.Contacts.UpdateContact(agent, id, contacts.UpdateContactInput{FullName: &chosen}); err != nil {
 		t.Fatalf("an agent renaming the contact: %v", err)
 	}
-	learnSplitName(t, e, id, "Björn", "Welter")
+	learnSplitName(t, e, id, "Björn")
 
 	runDisplayNameRepair(t, e)
 
@@ -197,7 +199,7 @@ func TestTheRepairKeepsADisplayNameAHumanRestored(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("a human restoring the contact's name: %v", err)
 	}
-	learnSplitName(t, e, id, "Björn", "Welter")
+	learnSplitName(t, e, id, "Björn")
 
 	runDisplayNameRepair(t, e)
 
@@ -230,7 +232,7 @@ func TestTheFillKeepsACapturedNameThatSaysMoreThanThePair(t *testing.T) {
 func TestTheRepairLeavesAContactWithABlankHalfAlone(t *testing.T) {
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
-	learnSplitName(t, e, id, " ", "Welter")
+	learnSplitName(t, e, id, " ")
 
 	runDisplayNameRepair(t, e)
 
