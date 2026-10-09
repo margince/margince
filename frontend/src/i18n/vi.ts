@@ -5118,6 +5118,19 @@ export const vi = {
   "settings.removedItem": "Đã gỡ “{name}”",
   "settings.removed": "Đã gỡ.",
   "settings.saved": "Đã lưu.",
+  "settings.signatureFromTemplate": "Mẫu của công ty",
+  "settings.signatureTemplateHint":
+    "Mẫu chữ ký của công ty ký thư của bạn. Mẫu điền tên, chức danh và số điện thoại của bạn.",
+  "settings.signatureTitle": "Chức danh",
+  "settings.signaturePhone": "Điện thoại",
+  "settings.signaturePreview": "Xem trước chữ ký",
+  "signatureTemplate.title": "Mẫu chữ ký email",
+  "signatureTemplate.sub":
+    "Một bố cục chữ ký cho mọi thành viên. Thư của mỗi thành viên điền tên, chức danh và số điện thoại của họ.",
+  "signatureTemplate.label": "Mẫu (HTML)",
+  "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
+  "signatureTemplate.hint":
+    "Dùng {name}, {title}, {phone} và {logo}, logo công ty được nhúng vào thư. Đoạn văn, ngắt dòng, đậm, nghiêng, gạch chân, liên kết, màu và cỡ chữ theo pixel trên span được giữ lại. Để trống sẽ tắt mẫu.",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Được thêm dưới mỗi thư bạn gửi, phía trên phần hủy đăng ký.",

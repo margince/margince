@@ -1651,6 +1651,14 @@ func (stubs) GetMorningDigest(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "GetMorningDigest")
 }
 
+func (stubs) GetEmailSignatureTemplate(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetEmailSignatureTemplate")
+}
+
+func (stubs) SaveEmailSignatureTemplate(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveEmailSignatureTemplate")
+}
+
 func (stubs) SendCompanyEmail(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SendCompanyEmailParams) {
 	httperr.NotImplemented(w, r, "SendCompanyEmail")
 }
