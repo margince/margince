@@ -48,7 +48,7 @@ func seatIdentity(
 		return values.Email{}, "", false
 	}
 	name := strings.TrimSpace(rawName)
-	if name == "" || utf8.RuneCountInString(name) > 255 {
+	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > 255 {
 		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
 		return values.Email{}, "", false
 	}
