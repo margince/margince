@@ -344,10 +344,16 @@ export const C = () => null;`
 		want    bool
 	}{
 		{"every caller asks", "screens/composesend.ts", map[string]string{"screens/a.tsx": asks}, true},
-		{"one caller is silent", "screens/composesend.ts",
-			map[string]string{"screens/a.tsx": asks, "screens/b.tsx": silent}, false},
-		{"a type import uses no door", "screens/composesend.ts",
-			map[string]string{"screens/a.tsx": asks, "screens/c.tsx": typeOnly}, true},
+		{
+			"one caller is silent", "screens/composesend.ts",
+			map[string]string{"screens/a.tsx": asks, "screens/b.tsx": silent},
+			false,
+		},
+		{
+			"a type import uses no door", "screens/composesend.ts",
+			map[string]string{"screens/a.tsx": asks, "screens/c.tsx": typeOnly},
+			true,
+		},
 		{"no caller proves nothing", "screens/composesend.ts", map[string]string{"screens/c.tsx": typeOnly}, false},
 		{"a component is judged on its own", "screens/composesend.tsx", map[string]string{"screens/a.tsx": asks}, false},
 	}
