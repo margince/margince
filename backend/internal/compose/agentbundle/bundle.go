@@ -11,6 +11,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"embed"
+	"errors"
 	"fmt"
 	"sync"
 	"text/template"
@@ -111,7 +112,7 @@ func withServer(apiBase string) ([]byte, error) {
 		return nil, fmt.Errorf("agentbundle: parsing the embedded contract: %w", err)
 	}
 	if len(doc.Content) == 0 || len(doc.Content[0].Content) == 0 {
-		return nil, fmt.Errorf("agentbundle: the embedded contract is empty; run make gen")
+		return nil, errors.New("agentbundle: the embedded contract is empty; run make gen")
 	}
 	root := doc.Content[0]
 	// The generator's DO NOT EDIT line is for this tree, not for the user's copy.

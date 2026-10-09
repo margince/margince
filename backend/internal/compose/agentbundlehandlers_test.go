@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/agentbundle"
 )
 
-// A handler refuses every passport when it, or one call down, calls auth.RequireHuman or
-// answers the missing session identity with a refusal: a passport never binds that identity.
-// So the skill must not list it. The router calls the operationId with its first letter raised.
+// A passport never binds the session identity. A handler refuses every passport when it,
+// or one call down, calls auth.RequireHuman or refuses a caller with no session identity.
+// The skill must not list it. The router calls the operationId with its first letter raised.
 func TestTheSkillListsNoOperationWhoseHandlerRequiresAHuman(t *testing.T) {
 	archive, err := (&agentbundle.Builder{}).Build("https://crm.example.test/v1")
 	if err != nil {
