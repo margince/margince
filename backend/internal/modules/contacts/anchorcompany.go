@@ -59,7 +59,12 @@ const (
 // CompanySourceHuman marks a company fact a user entered or confirmed by hand. It is
 // exported because a company-context fixture served in its place claims the same.
 const (
-	CompanySourceHuman    = "human"
+	CompanySourceHuman = "human"
+	// CompanySourceAgent marks a fact an agent corrected under a passport.
+	// It carries its own source because the granting human never saw the value,
+	// so 'human' would read as a confirmation nobody made. The automatic
+	// refresh leaves it alone, deciding from this column.
+	CompanySourceAgent    = "agent"
 	companySourceSiteRead = "site_read"
 )
 

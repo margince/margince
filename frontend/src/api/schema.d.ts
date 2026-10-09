@@ -35759,7 +35759,7 @@ export interface components {
             field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
             value: string;
             /** @enum {string} */
-            source: "human" | "site_read" | "connector" | "migration" | "technical_lookup";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup";
             readonly captured_by: string;
             evidence_snippet?: string | null;
             /** Format: uri */
@@ -35820,7 +35820,7 @@ export interface components {
             value: string;
             value_key: string;
             /** @enum {string} */
-            source: "human" | "site_read" | "connector" | "migration" | "technical_lookup";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup";
             readonly captured_by: string;
             evidence_snippet?: string | null;
             /** Format: uri */
@@ -35850,7 +35850,7 @@ export interface components {
             key: string;
             value: string;
             /** @enum {string} */
-            source: "human" | "site_read" | "connector" | "migration";
+            source: "human" | "agent" | "site_read" | "connector" | "migration";
             readonly captured_by: string;
             /** Format: uri */
             source_url?: string | null;
@@ -35917,7 +35917,7 @@ export interface components {
             classification: "new" | "machine_change" | "human_conflict" | "unchanged";
             current_value: string | null;
             /** @enum {string|null} */
-            current_source: "human" | "site_read" | "connector" | "migration" | "technical_lookup" | null;
+            current_source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | null;
             proposed_value: string;
         };
         CompanySiteReadResolution: {

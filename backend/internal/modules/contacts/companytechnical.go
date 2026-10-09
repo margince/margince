@@ -27,12 +27,12 @@ import (
 const companySourceTechnical = "technical_lookup"
 
 // technicalCapturedBy attributes the write to the lookup rather than to the
-// contact who pressed the button.
+// contact who pressed the button. It is an identity, and no rule reads its
+// prefix.
 //
-// The `agent:` prefix is load-bearing, not decoration: the fact upsert's
-// precedence guard tests `captured_by NOT LIKE 'human:%'`, so a technical row
-// stamped as a human would make itself un-refreshable and would also survive a
-// correction it should have yielded to.
+// What keeps a technical row refreshable is its source, 'technical_lookup': the
+// precedence guard spares 'human' and 'agent' rows only. So this lane may call
+// itself an agent here without gaining a correction's protection.
 const technicalCapturedBy = "agent:technical-lookup"
 
 // TechnicalLane names one public source. The lanes fail independently, which

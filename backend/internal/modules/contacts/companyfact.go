@@ -401,7 +401,7 @@ func upsertCompanyFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, by 
 			              source_url = EXCLUDED.source_url, confidence = EXCLUDED.confidence,
 			              source = EXCLUDED.source, captured_by = EXCLUDED.captured_by,
 			              site_read_id = EXCLUDED.site_read_id, captured_at = now()
-			WHERE company_fact.captured_by NOT LIKE 'human:%'`,
+			WHERE company_fact.source NOT IN ('human', 'agent')`,
 			in.CompanyID, f.Category, f.Field, f.Value, f.ValueKey,
 			f.EvidenceSnippet, f.SourceURL, f.Confidence, by, siteReadID)
 		if err != nil {
