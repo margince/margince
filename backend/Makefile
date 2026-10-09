@@ -674,6 +674,8 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentcontract -in api/crm.yaml -catalog migrations/testdata/head_catalog.txt \
+		-out internal/compose/agentbundle/agentcontract_gen.yaml -index internal/compose/agentbundle/agentindex_gen.txt
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-recordfields -in api/crm.yaml -out internal/modules/agents/recordshapes_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json -routing-go internal/modules/ai/routingschema_gen.go
@@ -693,7 +695,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
+	git diff --exit-code -- '*_gen.go' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.
@@ -702,7 +704,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# Same blind spot, same guard: a handbook page copied in by handbook-embed
 	# and never `git add`ed is untracked, so the diff above sees nothing while
 	# the binary would ship a page no reviewer read.
-	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md' ../docs/reference/ai-provider-outages.md ../docs/reference/benchmark.md internal/modules/agents/apps/actions.json)"; \
+	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt ../docs/reference/ai-provider-outages.md ../docs/reference/benchmark.md internal/modules/agents/apps/actions.json)"; \
 		[ -z "$$u" ] || { echo "drift: uncommitted generated page(s):" >&2; echo "$$u" >&2; exit 1; }
 
 # The MCP App admission vocabulary and the per-view action lists are AUTHORED in frontend/src/mcp-apps, where
