@@ -381,6 +381,9 @@ func admitBoot(
 	ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool,
 	vault keyvault.Vault, cfg workerConfig, deployCfg deployconfig.Config,
 ) error {
+	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
+		return err
+	}
 	if err := ensureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture); err != nil {
 		return err
 	}

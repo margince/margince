@@ -79,6 +79,11 @@ bootstrap_admin:
 #     port: 587
 #     username: privacy@example.com
 #     password: ${env:MARGINCE_SMTP_PASSWORD}
+#
+# The first boot that reads the password seals it into the key vault, and the
+# sealed copy answers once this line is gone. To stop using it (a relay that
+# takes no credential, or a password that has leaked), write `password: ${none}`:
+# the boot deletes the sealed copy and sends without authenticating.
 
 # Retention posture at first boot (optional). Consumed ONCE, when the api
 # bootstraps the company against an empty database — it is not re-read, and
