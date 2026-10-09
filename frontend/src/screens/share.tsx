@@ -30,13 +30,7 @@ import { formatDate, formatNumber, identifierNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  problemCodeOf,
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-} from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import {
   EntityRef,
   RosterPartialNote,
@@ -44,6 +38,11 @@ import {
   useRosterPartial,
 } from "./entityref";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
+import {
+  ApprovalRequiredError,
+  RevokeGrantDialog,
+  shareRefusalMessage,
+} from "./sharerevoke";
 import "./share.css";
 
 // The record-share screen: grant a user or team read/write on this one record,
@@ -205,11 +204,6 @@ function expiresAtFor(days: number): string | undefined {
 function accessLabel(level: Access, t: ReturnType<typeof useT>): string {
   return t(level === "write" ? "share.access.write" : "share.access.read");
 }
-
-// Marks a 403 whose code is `approval_required` (createRecordGrant/
-// revokeRecordGrant's 🟡 gate) so the render branch can show the honest
-// "queued for approval" copy instead of the raw problem detail.
-class ApprovalRequiredError extends Error {}
 
 async function fetchGrants(
   recordType: RecordType,
@@ -565,42 +559,10 @@ function ShareScreenBody({
     },
   });
 
-  const [revokingId, setRevokingId] = useState<string | null>(null);
-  const revoke = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/record-grants/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        if (error.code === "approval_required") {
-          throw new ApprovalRequiredError();
-        }
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: grantsKey });
-      setRevokingId(null);
-    },
-  });
+  const [revoking, setRevoking] = useState<RecordGrant | null>(null);
 
-  // A 403 approval_required and a 403 seat_tier_insufficient each need the
-  // surface's own sentence — the second one names the RECIPIENT's licence, not
-  // the actor's permission, and "forbidden" sends the reader looking in the
-  // wrong place. Every other refusal reads best in the server's words.
-  function honestMessage(error: unknown): string {
-    if (error instanceof ApprovalRequiredError) {
-      return t("share.approvalRequired");
-    }
-    if (problemCodeOf(error) === "seat_tier_insufficient") {
-      return t("share.seatCeiling");
-    }
-    return problemMessageOf(error, t);
-  }
-
-  const grantErrorMessage = grant.isError ? honestMessage(grant.error) : null;
-  const revokeErrorMessage = revoke.isError
-    ? honestMessage(revoke.error)
+  const grantErrorMessage = grant.isError
+    ? shareRefusalMessage(grant.error, t)
     : null;
 
   // A stale grant error, or a "nothing changed" from the last press, must not
@@ -875,7 +837,7 @@ function ShareScreenBody({
                   </div>
                   <Button
                     variant="danger"
-                    onClick={() => setRevokingId(g.id)}
+                    onClick={() => setRevoking(g)}
                     data-testid="revoke-grant"
                   >
                     {t("share.revoke")}
@@ -887,26 +849,12 @@ function ShareScreenBody({
         </QueryGate>
       </Panel>
 
-      <ConfirmModal
-        open={revokingId !== null}
-        onClose={() => {
-          setRevokingId(null);
-          revoke.reset();
-        }}
-        title={t("share.revoke")}
-        confirmLabel={t("share.revoke")}
-        confirmVariant="danger"
+      <RevokeGrantDialog
+        grant={revoking}
+        grantsKey={grantsKey}
+        onClose={() => setRevoking(null)}
         returnFocusTo={returnFocusToSubject}
-        onConfirm={() => {
-          if (revokingId) {
-            revoke.mutate(revokingId);
-          }
-        }}
-        pending={revoke.isPending}
-        error={revokeErrorMessage}
-      >
-        <p>{t("share.revokeConfirm")}</p>
-      </ConfirmModal>
+      />
 
       {downgrade !== null && (
         <ConfirmModal

@@ -1357,6 +1357,8 @@ export const de = {
   "share.downgradeBody":
     "{name} hat {from} auf diesen Datensatz und behält nur noch {to}. Die Änderung wird im Audit-Log festgehalten.",
   "share.downgradeConfirm": "Auf {to} reduzieren",
+  "share.versionSkew":
+    "Jemand hat diesen Zugriff geändert, nachdem du ihn geöffnet hast, deshalb wurde er nicht widerrufen. Die Liste zeigt jetzt den aktuellen Zugriff; widerrufe ihn erneut, wenn du das weiterhin willst.",
   "share.seatCeiling":
     "Ein Leseplatz kann keinen Schreibzugriff haben. Mache den Platz zuerst zu einem vollen Platz, oder gewähre Lesezugriff.",
   "share.whoHasAccess": "Geteilt mit",
