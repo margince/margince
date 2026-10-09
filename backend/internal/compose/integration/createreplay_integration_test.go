@@ -41,13 +41,11 @@ func TestAFormPressedTwiceMakesOneRecord(t *testing.T) {
 			statuses := make([]int, presses)
 			var wg sync.WaitGroup
 			for i := range presses {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+				wg.Go(func() {
 					var made AnyMap
 					statuses[i] = e.Call(t, http.MethodPost, tc.path, tc.body, headers, &made)
 					ids[i], _ = made["id"].(string)
-				}()
+				})
 			}
 			wg.Wait()
 
