@@ -57,7 +57,6 @@ import {
   AutonomyDot,
   EvidenceChip,
   FieldDiff,
-  PassportChip,
   toEvidence,
 } from "../design-system/trust";
 import { stable } from "../format/collate";
@@ -153,6 +152,8 @@ import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
 import { ProvidersStat } from "./ai-settings";
+import { ResolvedPassportChip } from "./passportchip";
+import { usePassports } from "./passports.queries";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
@@ -823,16 +824,7 @@ function PassportCard() {
 
   // Metadata only — the wire schema carries no token (PassportSummary),
   // so this list cannot re-disclose one.
-  const list = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const list = usePassports();
 
   const mint = useMutation({
     mutationFn: async () => {
@@ -1235,16 +1227,7 @@ function AgentToolsCard() {
       return data;
     },
   });
-  const passports = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const passports = usePassports();
   // Live, and minted by the human themselves. A connection's credential is
   // neither: it is minted fresh by the token exchange from whatever the human
   // ticked on the consent screen, so it was never a standalone passport a
@@ -1825,7 +1808,9 @@ function AuditLogRow({
               />
             </div>
           ))}
-          {entry.passport_id && <PassportChip id={entry.passport_id} />}
+          {entry.passport_id && (
+            <ResolvedPassportChip passportId={entry.passport_id} />
+          )}
           {entry.on_behalf_of && (
             <span className="t-caption">
               {t("settings.auditOnBehalf")} <span>{entry.on_behalf_of}</span>

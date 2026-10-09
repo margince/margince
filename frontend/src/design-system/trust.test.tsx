@@ -8,6 +8,7 @@ import {
   confidenceLevel,
   EvidenceChip,
   formatSourceLines,
+  PassportChip,
   ProvenanceTag,
   toEvidence,
 } from "./trust";
@@ -105,9 +106,42 @@ describe("ProvenanceTag", () => {
   // tone, a scheduled sweep would tell a reader a model decided something.
   it("reads a job the installation ran as the system, not as an agent", () => {
     render(
-      <ProvenanceTag provenance={{ kind: "system", job: "close-date" }} />,
+      <ProvenanceTag
+        provenance={{ kind: "system", job: "participant_backfill" }}
+      />,
     );
-    expect(claimsAModel("System task close-date")).toBe(false);
+    expect(claimsAModel("System task: Mail participant fill-in")).toBe(false);
+  });
+
+  // Principals are spelled with hyphens as often as with underscores.
+  it("names a pass whose principal is spelled with hyphens", () => {
+    render(
+      <ProvenanceTag provenance={{ kind: "system", job: "lead-sla-scan" }} />,
+    );
+    expect(
+      screen.getByText("System task: Lead response time check"),
+    ).toBeTruthy();
+  });
+
+  // The label is keyed by the principal the row carries, which is not always
+  // the job kind: employment_import_sweep acts as employment_import_worker.
+  it("names a job by the principal it acts as, not by its kind", () => {
+    render(
+      <ProvenanceTag
+        provenance={{ kind: "system", job: "employment_import_worker" }}
+      />,
+    );
+    expect(
+      screen.getByText("System task: Employment history import"),
+    ).toBeTruthy();
+  });
+
+  it("never prints the key of a job the catalogue does not name", () => {
+    render(
+      <ProvenanceTag provenance={{ kind: "system", job: "retention-sweep" }} />,
+    );
+    expect(badgeReading("System task").textContent).toBe("System task");
+    expect(screen.queryByText(/retention-sweep/)).toBeNull();
   });
 
   // The two unnamed cases: an agent behind a passport uuid, and a job that
@@ -188,6 +222,26 @@ describe("ProvenanceTag", () => {
 // WHERE in the source a claim came from. A quoted sentence with no address is
 // a claim the reader has to take on trust; a line reference is what lets them
 // go back to the exchange and check it.
+describe("PassportChip", () => {
+  const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+  it("names the passport it is handed, in the agent tone", () => {
+    render(<PassportChip name="Marcus's Claude" />);
+    expect(claimsAModel("Marcus's Claude")).toBe(true);
+  });
+
+  it("reads a blank name as no name", () => {
+    render(<PassportChip name="   " />);
+    expect(claimsAModel("An agent")).toBe(true);
+  });
+
+  it("says an agent acted when it has no name, and never shows an id", () => {
+    const { container } = render(<PassportChip />);
+    expect(claimsAModel("An agent")).toBe(true);
+    expect(container.textContent).not.toMatch(UUID);
+  });
+});
+
 describe("the lines an evidence chip was read from", () => {
   it("closes a run into one range and keeps a gap apart", () => {
     expect(formatSourceLines([12, 13, 14])).toBe("12–14");

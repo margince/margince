@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { type Translator, useT } from "../i18n";
+import { isMessageKey, type Translator, useT } from "../i18n";
 import { Badge } from "./atoms";
 import "./trust.css";
 
@@ -100,10 +100,10 @@ export function provenanceLabel(
       return provenance.agent
         ? t("trust.agentTag", { agent: provenance.agent })
         : t("trust.agentUnnamed");
-    case "system":
-      return provenance.job
-        ? t("trust.systemTag", { job: provenance.job })
-        : t("trust.systemUnnamed");
+    case "system": {
+      const job = provenance.job && systemJobLabel(provenance.job, t);
+      return job ? t("trust.systemTag", { job }) : t("trust.systemUnnamed");
+    }
     case "connector":
       return t("trust.connectorTag", { connector: provenance.connector });
     case "buyer":
@@ -113,6 +113,18 @@ export function provenanceLabel(
     case "human":
       return humanLabel(provenance, t, renderUser);
   }
+}
+
+/**
+ * systemJobLabel names a system pass by its words in the catalogue, never by
+ * its key. Every system principal the backend binds has a `systemJob.<name>`
+ * message, held there by backend/gates/frontendjoblabels_test.go. Hyphens read
+ * as underscores (`system:lead-sla-scan`). A name with no message gets no
+ * label, and the tag says only "System task".
+ */
+function systemJobLabel(job: string, t: Translator): string | undefined {
+  const key = `systemJob.${job.replaceAll("-", "_")}`;
+  return isMessageKey(key) ? t(key) : undefined;
 }
 
 // How a row somebody typed reads, which is four different answers rather than
