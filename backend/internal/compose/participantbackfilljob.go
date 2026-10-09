@@ -24,6 +24,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -90,7 +91,7 @@ func (w *participantBackfillWorker) backfillOneWorkspace(ctx context.Context, wo
 func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws ids.UUID) (int, error) {
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:participant_backfill",
+		Type: principal.PrincipalSystem, ID: contacts.DisplayNameRepairActor,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	total := 0

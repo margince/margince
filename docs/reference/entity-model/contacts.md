@@ -6,7 +6,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-43 columns · primary key `(id)` · referenced by 40 foreign keys
+43 columns · primary key `(id)` · referenced by 41 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -431,7 +431,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-32 columns · primary key `(id)` · referenced by 43 foreign keys
+32 columns · primary key `(id)` · referenced by 44 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1322,6 +1322,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `partner_cert_status_check`: `CHECK ((cert_status = ANY (ARRAY['applied', 'certified', 'suspended'])))`
+- `partner_certified_staff_check`: `CHECK ((certified_staff >= 0))`
 - `partner_company_id_key`: `UNIQUE (company_id)`
 - `partner_margin_tier_check`: `CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15', 'tier2_20', 'tier3_25']))))`
 - `partner_partner_fit_override_reason_check`: `CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0)))`

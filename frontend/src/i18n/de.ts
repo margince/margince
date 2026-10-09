@@ -1653,6 +1653,9 @@ export const de = {
   "list.filterOwnerMe": "In deiner Zuständigkeit",
   "list.filterOwnerAll": "Alle Zuständigen",
   "list.filterOwnerUnassigned": "Nicht zugewiesen",
+  "list.team": "Team",
+  "list.filterTeamAll": "Alle Teams",
+  "list.teamUnavailable": "Nicht verfügbares Team",
   "views.save": "Ansicht speichern",
   "views.saveConfirm": "Speichern",
   "views.saveTitle": "Diese Ansicht speichern",
@@ -2889,6 +2892,30 @@ export const de = {
   "tagAdmin.editTitle": "Tag bearbeiten",
   "tagAdmin.nameLabel": "Name",
   "tagAdmin.colorLabel": "Farbe",
+  "brief.coverage.source.tag_suggestion": "Vorgeschlagene Tags",
+  "worklist.untitled.tag_suggestion": "Ein Tag, auf den die Hinweise deuten",
+  "tagSuggestion.agent": "Tag-Vorschläge",
+  "tagSuggestion.citedHeading": "Vorgeschlagen wegen:",
+  "tagSuggestion.evidence": "{kind} · {subject} · {when}",
+  "tagSuggestion.noSubject": "Kein Betreff",
+  "tagSuggestion.kind.email": "E-Mail",
+  "tagSuggestion.kind.meeting": "Termin",
+  "tagSuggestion.kind.note": "Notiz",
+  "tagSuggestion.kind.call": "Anruf",
+  "tagSuggestion.accept": "Tag hinzufügen",
+  "tagSuggestion.dismiss": "Nicht dieser Tag",
+  "tagSuggestion.dismissed":
+    "Für alle verworfen. Der Vorschlag kommt nur wieder, wenn neuere Mails oder Notizen passen.",
+  "tagSuggestion.accepted": "{tag} zu {record} hinzugefügt.",
+  "tagSuggestion.decided":
+    "Über diesen Vorschlag wurde schon entschieden. Lade neu, um den Stand zu sehen.",
+  "tagSuggestion.unavailable":
+    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
+  "tagAdmin.descriptionLabel": "Wörter, die Interesse zeigen",
+  "tagAdmin.descriptionHint":
+    "Trenne Wörter oder Wendungen mit Kommas, zum Beispiel: Preise für Produkt X, Demo von Produkt X.",
+  "tagAdmin.suggestibleLabel":
+    "Diesen Tag vorschlagen, wenn Mails oder Terminnotizen diese Wörter enthalten",
   "tagAdmin.colorNone": "Keine Farbe",
   "tagAdmin.color.teal": "Petrol",
   "tagAdmin.color.amber": "Bernstein",
@@ -2954,6 +2981,20 @@ export const de = {
     "Füge dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tags suchen",
   "tags.alreadyAdded": "Bereits hinzugefügt",
+  "tags.offerCompanyTitle": "{company} auch mit {tag} taggen?",
+  "tags.offerCompanyAccept": "{company} taggen",
+  "tags.offerCompanyDone": "{tag} zu {company} hinzugefügt",
+  "tags.offerDismiss": "Nicht jetzt",
+  "tags.offerContactsTitle":
+    "Kontakte dieses Unternehmens auch mit {tag} taggen?",
+  "tags.offerContactsAccept": "Kontakte auswählen",
+  "tags.contactsTitle": "Kontakte mit {tag} taggen",
+  "tags.contactsLoading": "Kontakte werden geladen…",
+  "tags.contactsNone":
+    "Kein Kontakt, den du sehen kannst, arbeitet derzeit bei diesem Unternehmen.",
+  "tags.contactsAlready": "{name} (bereits getaggt)",
+  "tags.contactsTruncated": "Nur die ersten 200 Kontakte werden angezeigt.",
+  "tags.contactsContinue": "Weiter",
   "tags.catalogTruncatedTitle": "Liste gekürzt",
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
@@ -3534,13 +3575,14 @@ export const de = {
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
-  "deals.filterOwnerMe": "Meine Deals",
   "deals.totalsOwnerNotMeasurable":
     "Nur geladene Deals. Die Summen der zuständigen Person darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":
     "Nur geladene Deals. Die Phasensummen kennen keine Suche, daher wird keine gezeigt.",
+  "deals.totalsNoTeamFilter":
+    "Nur geladene Deals. Die Summen je Phase lassen sich nicht nach Team oder auf nicht zugewiesene Deals eingrenzen, darum steht hier keine.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Beliebiger Partner",
   "deals.filterMotion": "Geschäftsart",
@@ -3555,7 +3597,6 @@ export const de = {
   "deals.filterStageAll": "Alle Phasen",
   "deals.filterCompanyAll": "Alle Unternehmen",
   "deals.filterStalledAll": "Alle Deals",
-  "deals.filterOwnerAll": "Alle Zuständigen",
   "deals.filterPartnerAll": "Alle Quellen",
   "deals.unit": "Deals",
   "deals.bulkStage": "In Phase verschieben",
@@ -10508,6 +10549,7 @@ export const de = {
   "contact.rail.channelNotDeliverable": "Nicht zustellbar",
   "contact.drawer.close": "Schließen",
   "richtext.bold": "Fett",
+  "richtext.heading": "Überschrift",
   "richtext.italic": "Kursiv",
   "richtext.bulletList": "Aufzählung",
   "richtext.numberList": "Nummerierte Liste",

@@ -7993,6 +7993,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tag-suggestions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One open tag suggestion the caller may see, with the mail and notes it cites.
+         * @description A suggestion proposes a suggestible tag on a contact or company because captured
+         *     mail or a meeting note filed under that record matched the tag's description. It
+         *     is shown only to a reader who may read the record and EVERY activity it cites, so
+         *     a suggestion built from mail only its owner can read is shown to that owner alone.
+         *     Nothing is applied until somebody accepts it. `404` for a suggestion the caller
+         *     may not see, that was decided, or that no longer stands.
+         */
+        get: operations["getTagSuggestion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tag-suggestions/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply the suggested tag, as the caller.
+         * @description Applies the tag exactly as `applyTag` would, with the caller as the one who
+         *     applied it, and records the decision. The tag's audit row names the suggestion.
+         *     Needs write authority over the record. `409 suggestion_decided` when the
+         *     suggestion was already decided.
+         */
+        post: operations["acceptTagSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tag-suggestions/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the evidence does not earn the tag, for the whole workspace.
+         * @description Audited. The tag is suggested on this record again only on evidence newer than
+         *     the dismissal. Needs write authority over the record, like accepting does.
+         *     `409 suggestion_decided` when the suggestion was already decided.
+         */
+        post: operations["dismissTagSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tags": {
         parameters: {
             query?: never;
@@ -21780,7 +21859,7 @@ export interface components {
              *     rebound to another model drops the attempts of the one before it.
              */
             calls: number;
-            /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached. */
+            /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`), the provider's refusal of a malformed request (`request_rejected`), and the model outcomes `output_withheld` and `output_rejected` are not failures. */
             failures: number;
             /**
              * @description The most recent error this tier reported, absent when it reported none. It is the
@@ -21943,7 +22022,7 @@ export interface components {
             total: number;
             /**
              * Format: int64
-             * @description Logical calls whose last attempt failed.
+             * @description Logical calls whose last attempt served the caller nothing: it failed, or its answer was withheld or refused.
              */
             unanswered: number;
             /** @description The decision model first, then each tier in ladder order. */
@@ -21958,7 +22037,7 @@ export interface components {
             attempts: number;
             /**
              * Format: int64
-             * @description Logical calls this step answered.
+             * @description Logical calls this step answered and served to the caller.
              */
             answered: number;
             /** Format: int64 */
@@ -22107,7 +22186,7 @@ export interface components {
             /**
              * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
              *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-             *     Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+             *     Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
              *     `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
              *     `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
              */
@@ -22525,6 +22604,12 @@ export interface components {
          *     list S-E15.4c requires, not a diff of what changed), or errored
          *     because it could not be reversed — a single irreversible row never
          *     aborts the rest of the run.
+         *
+         *     A row the run CORRECTED rather than created is in none of them: undo
+         *     archives what a run landed, and a correction to a record another run
+         *     landed has nothing to archive and no previous value to restore.
+         *     `updates_not_reversed` counts those rows, so a reader is not told a
+         *     correction was taken back while it stands.
          */
         ImportUndoReport: {
             /** Format: uuid */
@@ -22532,6 +22617,8 @@ export interface components {
             status: components["schemas"]["ImportRunStatus"];
             /** @description Import-created rows that were untouched since and have been reversed (archived). */
             reversed_count: number;
+            /** @description Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`. */
+            updates_not_reversed?: number;
             /** @description Import-created rows a human edited since import, therefore left in place (A93). */
             kept: {
                 object: components["schemas"]["ImportObject"];
@@ -32678,6 +32765,12 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
+            /**
+             * @description Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+             *     carries a description of what interest looks like, and that description is what
+             *     the suggestion is matched against. Only Admin and Ops set it.
+             */
+            suggestible?: boolean;
             /** Format: int64 */
             version?: number;
             /** Format: date-time */
@@ -32743,6 +32836,12 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
+            /**
+             * @description Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+             *     carries a description of what interest looks like, and that description is what
+             *     the suggestion is matched against. Only Admin and Ops set it.
+             */
+            suggestible?: boolean;
             /** Format: int64 */
             version?: number;
             /** Format: date-time */
@@ -32752,6 +32851,36 @@ export interface components {
             /** Format: date-time */
             archived_at?: string | null;
             usage: components["schemas"]["TagUsage"];
+        };
+        /**
+         * @description A suggestible tag proposed on one contact or company from captured mail or meeting
+         *     notes, waiting for somebody to accept or dismiss it.
+         */
+        TagSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            state: "open" | "accepted" | "dismissed" | "superseded";
+            tag: components["schemas"]["RowTag"];
+            /** @enum {string} */
+            entity_type: "contact" | "company";
+            /** Format: uuid */
+            entity_id: string;
+            entity_name: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The activities the suggestion cites, newest first. */
+            evidence: components["schemas"]["TagSuggestionEvidence"][];
+        };
+        TagSuggestionEvidence: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @description The activity kind: email, meeting, note or call. */
+            kind: string;
+            /** @description Absent when the activity has none or it was redacted. */
+            subject?: string | null;
+            /** Format: date-time */
+            occurred_at: string;
         };
         /**
          * @description How many records of each advertised type carry this tag, counted within what the
@@ -32779,6 +32908,8 @@ export interface components {
             /** @enum {string} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | "none";
             description?: string;
+            /** @description Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held. */
+            suggestible?: boolean;
         };
         MergeTagsRequest: {
             /**
@@ -40578,6 +40709,8 @@ export interface components {
             duplicates_open?: number;
             /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`. */
             deal_suggestions_open?: number;
+            /** @description Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`. */
+            tag_suggestions_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
             /** @description How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
@@ -40644,7 +40777,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -41188,7 +41321,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -42074,7 +42207,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -47840,6 +47973,20 @@ export interface operations {
                 /** @description Read one Kanban column. */
                 stage_id?: string;
                 owner_id?: string;
+                /**
+                 * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+                 *     a team the caller cannot see returns their own visible rows filtered to nothing, not a
+                 *     wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+                 *     and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+                 *     (DM-VOCAB-OWN-1).
+                 */
+                owner_team_id?: string;
+                /**
+                 * @description `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+                 *     (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+                 *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+                 */
+                unassigned?: boolean;
                 company_id?: string;
                 /** @description Full-text query over the deal's name and description, plus a substring match on the name. */
                 q?: string;
@@ -47902,6 +48049,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createDeal: {
@@ -48207,6 +48355,20 @@ export interface operations {
                 /** @description The anchor company. A project has exactly one. */
                 company_id?: string;
                 owner_id?: string;
+                /**
+                 * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+                 *     a team the caller cannot see returns their own visible rows filtered to nothing, not a
+                 *     wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+                 *     and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+                 *     (DM-VOCAB-OWN-1).
+                 */
+                owner_team_id?: string;
+                /**
+                 * @description `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+                 *     (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+                 *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+                 */
+                unassigned?: boolean;
                 /** @description Omit for all phases; `phase != closed` is the open-projects slice the link ladder probes. */
                 phase?: "initiative" | "pursuing" | "delivering" | "closed";
                 /** @description Exact (case-insensitive) key lookup. */
@@ -48231,15 +48393,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description A sort or filter field outside the allow-list. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            422: components["responses"]["ValidationError"];
         };
     };
     createProject: {
@@ -56986,6 +57140,86 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    acceptTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The accepted suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    dismissTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dismissed suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listTags: {

@@ -17,3 +17,11 @@
   align-items: flex-end;
   flex-wrap: wrap;
 }
+
+/* A single newline in the body is a line the writer broke, as in the timeline. */
+.task-detail-body {
+  white-space: pre-wrap;
+}
+.task-detail-body .md {
+  font: inherit;
+}

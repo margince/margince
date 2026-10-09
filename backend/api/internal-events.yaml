@@ -282,6 +282,48 @@ components:
         A rep dismissed a suggestion for the whole workspace. The company is
         suggested again only on evidence newer than the dismissal.
       additionalProperties: false
+    InternalEventTagSuggestionCreated:
+      type: object
+      x-event-type: tag_suggestion.created
+      x-entity-type: ""
+      description: >-
+        The tag scout suggested a tag on a contact or company. Entity-less and
+        without the tag or the record, which keeps it off the subscribable set:
+        a suggestion built from mail only its owner may read is visible only to
+        that owner, and no webhook consumer can be held to that.
+      required:
+        - evidence_count
+      properties:
+        evidence_count:
+          type: integer
+          minimum: 1
+          description: How many activities the suggestion cites.
+      additionalProperties: false
+    InternalEventTagSuggestionAccepted:
+      type: object
+      x-event-type: tag_suggestion.accepted
+      x-entity-type: ""
+      description: >-
+        A user accepted a tag suggestion. The tagging itself is audited on the
+        tag; this records the decision.
+      additionalProperties: false
+    InternalEventTagSuggestionDismissed:
+      type: object
+      x-event-type: tag_suggestion.dismissed
+      x-entity-type: ""
+      description: >-
+        A user dismissed a tag suggestion for the whole workspace. The tag is
+        suggested on that record again only on evidence newer than the dismissal.
+      additionalProperties: false
+    InternalEventTagSuggestionSuperseded:
+      type: object
+      x-event-type: tag_suggestion.superseded
+      x-entity-type: ""
+      description: >-
+        A tag suggestion stopped standing without anybody deciding it: its tag
+        was retired or made unsuggestible, its record was archived or tagged, or
+        a cited activity went away.
+      additionalProperties: false
     InternalEventDealSuggestionSuperseded:
       type: object
       x-event-type: deal_suggestion.superseded

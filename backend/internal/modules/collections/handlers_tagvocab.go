@@ -154,7 +154,7 @@ func wireRecordTag(t RecordTag) crmcontracts.RecordTag {
 // identically — so the sentinel values do it instead: "none" clears a colour,
 // an empty string clears a description.
 func tagUpdateFrom(req crmcontracts.UpdateTagRequest) TagUpdate {
-	out := TagUpdate{Name: req.Name}
+	out := TagUpdate{Name: req.Name, Suggestible: req.Suggestible}
 	if req.Color != nil {
 		var color *string
 		if *req.Color != clearColor {
@@ -198,6 +198,7 @@ func wireTagDetail(t tagRow, usage TagUsage) crmcontracts.TagDetail {
 		Name:        t.Name,
 		Color:       color,
 		Description: t.Description,
+		Suggestible: &t.Suggestible,
 		Version:     &version,
 		CreatedAt:   &t.CreatedAt,
 		UpdatedAt:   &t.UpdatedAt,
@@ -227,6 +228,7 @@ func wireTag(t tagRow) crmcontracts.Tag {
 		Name:        t.Name,
 		Color:       color,
 		Description: t.Description,
+		Suggestible: &t.Suggestible,
 		Version:     &version,
 		CreatedAt:   &t.CreatedAt,
 		UpdatedAt:   &t.UpdatedAt,

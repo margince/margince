@@ -236,7 +236,6 @@ func TestKeysetClause_SortMismatchIsTypedMismatch(t *testing.T) {
 func TestKeysetClause_UnparseableSortKeyIsMalformed(t *testing.T) {
 	vocab := SortVocabulary(map[string]SortField{
 		"created_at": Column(KindTimestamp),
-		"owner_id":   Column(KindUUID),
 	}, []fieldcatalog.Column{
 		{Name: "cf_score", Type: fieldcatalog.TypeNumber},
 		{Name: "cf_budget", Type: fieldcatalog.TypeCurrency},
@@ -250,7 +249,6 @@ func TestKeysetClause_UnparseableSortKeyIsMalformed(t *testing.T) {
 		"cf_budget":    "12.50",
 		"cf_renewal":   "July 11",
 		"cf_strategic": "maybe",
-		"owner_id":     "not-a-uuid",
 		"created_at":   "yesterday",
 	} {
 		t.Run(field, func(t *testing.T) {
@@ -268,19 +266,16 @@ func TestKeysetClause_UnparseableSortKeyIsMalformed(t *testing.T) {
 	}
 }
 
-// The kinds the custom-column filter grammar does not cover — uuid and
-// timestamptz core columns — accept exactly their Postgres text forms as
-// cursor keys and bind under their own casts, so a legitimately minted
-// token round-trips.
+// The timestamptz core columns are a kind the custom-column grammar does not
+// cover. Their cursor keys take Postgres's text form and bind under their own
+// cast, so a minted token round-trips.
 func TestKeysetClause_CoreKindKeysRoundTrip(t *testing.T) {
 	vocab := SortVocabulary(map[string]SortField{
 		"updated_at": Column(KindTimestamp),
-		"owner_id":   Column(KindUUID),
 	}, nil)
 	at, id := time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ids.NewV7()
 
 	for field, tc := range map[string]struct{ key, wantCast string }{
-		"owner_id":   {key: ids.NewV7().String(), wantCast: "::uuid"},
 		"updated_at": {key: "2026-07-11 12:00:00.123456+00", wantCast: "::timestamptz"},
 	} {
 		t.Run(field, func(t *testing.T) {

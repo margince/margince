@@ -135,6 +135,7 @@ export function useUpdateTag() {
       name?: string;
       color?: TagColorEdit;
       description?: string;
+      suggestible?: boolean;
     }) => {
       const { id, version, ...body } = input;
       // Inside the mutation, not at the call site: a throw here becomes this

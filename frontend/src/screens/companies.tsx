@@ -119,11 +119,11 @@ import {
   ListTable,
   listFetchLimit,
   useListQuery,
-  useOwnerChips,
   useTagChips,
 } from "./listquery";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
+import { useOwnerChips } from "./ownerdials";
 import { PartnerTab } from "./partners";
 import {
   type OpenReceipt,

@@ -88,7 +88,7 @@ var unofferedSeamFilters = gatekit.Waive(map[string]string{
 //
 // WHY THEY ARE NOT SIMPLY ADDED HERE. Each one enters the runner's system
 // prompt: list_records' input schema is rendered into it, so a filter name is
-// model-visible text. Measured on this tree, offering all eleven moves the
+// model-visible text. Measured on this tree, offering the first eleven moved the
 // published catalog from 24,331 to 24,389 tokens — comfortably inside the
 // headroom, and beside the point. What it also does is move the prompt, which
 // takes one certification site's best record out of `current` and owes the
@@ -112,6 +112,10 @@ var deferredSeamFilters = gatekit.Waive(map[string]string{
 	"lead.sla_state":        "the first-response state (formulas §18); #828",
 	"lead.owner_team_id":    "the team arm of the ownership dial; #828",
 	"lead.unassigned":       "the unowned-queue arm of the ownership dial; #828",
+	"deal.owner_team_id":    "the team arm of the ownership dial; #828",
+	"deal.unassigned":       "the unowned-queue arm of the ownership dial; #828",
+	"project.owner_team_id": "the team arm of the ownership dial; #828",
+	"project.unassigned":    "the unowned-queue arm of the ownership dial; #828",
 })
 
 func TestEveryDeclaredFilterTheStoreBindsIsOfferedToTheSeam(t *testing.T) {

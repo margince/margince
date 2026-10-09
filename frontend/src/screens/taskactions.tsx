@@ -19,6 +19,7 @@ import {
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
+import { Markdown } from "../design-system/markdown";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
@@ -336,7 +337,12 @@ export function TaskDetailModal({
         <ErrorLine error={query.error} />
         {task && (
           <div className="form-stack">
-            {task.body && <p className="t-body">{task.body}</p>}
+            {/* Markdown, as the timeline draws the same body. */}
+            {task.body && (
+              <div className="t-body task-detail-body">
+                <Markdown source={task.body} autolink />
+              </div>
+            )}
             <div className="t-caption task-detail-meta">
               {task.due_at ? (
                 <span>

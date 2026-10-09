@@ -36,22 +36,19 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
-import {
-  Button,
-  Field,
-  Modal,
-  Textarea,
-  TextInput,
-} from "../design-system/atoms";
+import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { useT } from "../i18n";
+import { outgoingBody } from "./activitybody";
+import { ActivityBodyField } from "./activitybodyfield";
 import { useActivity } from "./activityread";
 import { throwProblem } from "./common";
 import { useMeetingOutcome } from "./taskactions";
+import { isTranscriptActivity } from "./transcriptread";
 import { worklistKey } from "./worklist.queries";
 
 // The two statuses the dialog can record. `canceled` is deliberately absent:
@@ -150,6 +147,7 @@ function MeetingOutcomeDialog({
   // The SAME read the task detail makes, and keyed the same way, so a write
   // that invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
+  const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
   // Seeded from the read, once, during render rather than in an effect — an
   // effect paints the empty form first, and a reader who types into that frame
   // has their words replaced when the seed lands.
@@ -169,6 +167,7 @@ function MeetingOutcomeDialog({
       draft: OutcomeDraft;
       version: number | undefined;
       zone: string;
+      transcript: boolean;
     }) => {
       const { error } = await api.PATCH("/activities/{id}", {
         params: {
@@ -180,7 +179,7 @@ function MeetingOutcomeDialog({
           subject: input.draft.subject.trim(),
           // An emptied box clears the note rather than storing "": null is what
           // the column holds for a meeting nobody has written about.
-          body: input.draft.body.trim() || null,
+          body: outgoingBody(input.draft.body, input.transcript),
           // Noon on the picked day, in the RECORD's zone — the same instant
           // activitybody mints for a backdated entry, so a meeting moved by a
           // day here and one logged by hand land on the same timeline heading.
@@ -223,6 +222,7 @@ function MeetingOutcomeDialog({
                 draft,
                 version: meeting.data?.version,
                 zone: recordZone,
+                transcript,
               });
             }}
           >
@@ -278,21 +278,16 @@ function MeetingOutcomeDialog({
                 />
               )}
             </Field>
-            <Field
+            {/* The editor Log activity writes with; a transcript keeps its
+                lines, which a citation points at. */}
+            <ActivityBodyField
               label={t("log.body")}
               hint={t("worklist.verb.meetingBodyHint")}
-            >
-              {(control) => (
-                <Textarea
-                  {...control}
-                  rows={6}
-                  value={draft.body}
-                  onChange={(event) =>
-                    setDraft({ ...draft, body: event.target.value })
-                  }
-                />
-              )}
-            </Field>
+              transcript={transcript}
+              rows={6}
+              value={draft.body}
+              onChange={(body) => setDraft({ ...draft, body })}
+            />
             <ErrorLine error={save.error} />
           </form>
           <div className="actions">

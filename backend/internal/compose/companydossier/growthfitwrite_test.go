@@ -123,34 +123,56 @@ func TestAGroundedReplyIsServedAsTheModelsWithItsClaims(t *testing.T) {
 	}
 }
 
-// The model proposes; the counting decides. A confident band over four facts
-// is exactly the failure DOSS-FORM-2 exists to catch, so the floor overrules
-// it — and takes the reasoning with it, because "not enough evidence" beside
-// four confident reasons reads as a band the surface is merely too shy to say.
-func TestTheCompletenessFloorOverrulesAConfidentModelAndWithholdsItsReasons(t *testing.T) {
+// countingLane answers like scriptedLane and records how often it was asked.
+type countingLane struct {
+	reply string
+	calls *int
+}
+
+func (l countingLane) Complete(context.Context, model.Request) (model.Response, error) {
+	*l.calls++
+	return model.Response{Text: l.reply}, nil
+}
+
+// The model proposes; the counting decides. Below the floor the counting
+// abstains whatever band is proposed, so the model is not asked at all. A call
+// there costs a full retry ladder and cannot change the answer. With no records
+// the reply has nothing to cite, so every rung refuses it.
+func TestBelowTheCompletenessFloorTheModelIsNotAsked(t *testing.T) {
 	thin := Input{
 		CompanyID: fourOfSeven().CompanyID,
 		ProfileFields: []crmcontracts.CompanyProfileField{
 			machineField("offer_summary", "Load-shifting software", assessedAt.Add(-24*time.Hour)),
 		},
 	}
+	cases := map[string]Input{
+		"one record of seven": thin,
+		"no records at all":   {CompanyID: thin.CompanyID},
+	}
+	for name, in := range cases {
+		t.Run(name, func(t *testing.T) {
+			calls := 0
+			lane := countingLane{reply: citing("strong", thin), calls: &calls}
 
-	got, by, _ := WriteGrowthFit(context.Background(), scriptedLane{reply: citing("strong", thin)}, thin, true, at, string(textlang.English))
+			got, by, laneFailed := WriteGrowthFit(context.Background(), lane, in, true, at, string(textlang.English))
 
-	if got.Band != crmcontracts.GrowthFitBandUnknown {
-		t.Errorf("band = %q, want unknown — one of seven cannot support a judgment", got.Band)
-	}
-	if !got.Claims.empty() {
-		t.Error("the abstention carried the model's reasons, which reads as a band withheld out of shyness")
-	}
-	// Nothing the model produced survives — its band was discarded and its
-	// claims withheld — so attributing what is served to the model would pass
-	// the floor's answer off as the model's.
-	if by != crmcontracts.WrittenByDeterministic {
-		t.Errorf("generated_by = %q, want deterministic — every word served here came from the counting", by)
-	}
-	if got.NextStep == "" {
-		t.Error("the abstention names nothing to gather")
+			if calls != 0 {
+				t.Errorf("the model was asked %d times for a company the floor abstains on", calls)
+			}
+			if got.Band != crmcontracts.GrowthFitBandUnknown || !got.Claims.empty() {
+				t.Errorf("band = %q with claims, want a bare unknown", got.Band)
+			}
+			if by != crmcontracts.WrittenByDeterministic {
+				t.Errorf("generated_by = %q, want deterministic — every word served here came from the counting", by)
+			}
+			// The abstention is the answer, not an outage, so it may be cached.
+			if laneFailed {
+				t.Error("an abstention the floor decided reported a failed lane, so it is never cached")
+			}
+			if !strings.HasPrefix(got.NextStep, "find out ") {
+				t.Errorf("next step = %q, want the gap to close", got.NextStep)
+			}
+		})
 	}
 }
 

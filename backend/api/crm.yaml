@@ -4709,6 +4709,22 @@ paths:
         - name: owner_id
           in: query
           schema: { type: string, format: uuid }
+        - name: owner_team_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+            (DM-VOCAB-OWN-1).
+        - name: unassigned
+          in: query
+          schema: { type: boolean }
+          description: |
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+            (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: company_id
           in: query
           schema: { type: string, format: uuid }
@@ -4793,6 +4809,7 @@ paths:
               schema: { $ref: '#/components/schemas/DealListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Deals]
       operationId: createDeal
@@ -5002,6 +5019,22 @@ paths:
         - name: owner_id
           in: query
           schema: { type: string, format: uuid }
+        - name: owner_team_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+            (DM-VOCAB-OWN-1).
+        - name: unassigned
+          in: query
+          schema: { type: boolean }
+          description: |
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+            (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: phase
           in: query
           schema: { type: string, enum: [initiative, pursuing, delivering, closed] }
@@ -5022,11 +5055,7 @@ paths:
               schema: { $ref: '#/components/schemas/ProjectListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '422':
-          description: A sort or filter field outside the allow-list.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Projects]
       operationId: createProject
@@ -12518,6 +12547,81 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ------------------------------ /tags -------------------------------------
+  /tag-suggestions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Tags]
+      operationId: getTagSuggestion
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: One open tag suggestion the caller may see, with the mail and notes it cites.
+      description: |
+        A suggestion proposes a suggestible tag on a contact or company because captured
+        mail or a meeting note filed under that record matched the tag's description. It
+        is shown only to a reader who may read the record and EVERY activity it cites, so
+        a suggestion built from mail only its owner can read is shown to that owner alone.
+        Nothing is applied until somebody accepts it. `404` for a suggestion the caller
+        may not see, that was decided, or that no longer stands.
+      responses:
+        '200':
+          description: The suggestion.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tag-suggestions/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Tags]
+      operationId: acceptTagSuggestion
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Apply the suggested tag, as the caller.
+      description: |
+        Applies the tag exactly as `applyTag` would, with the caller as the one who
+        applied it, and records the decision. The tag's audit row names the suggestion.
+        Needs write authority over the record. `409 suggestion_decided` when the
+        suggestion was already decided.
+      responses:
+        '200':
+          description: The accepted suggestion.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /tag-suggestions/{id}/dismiss:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Tags]
+      operationId: dismissTagSuggestion
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Record that the evidence does not earn the tag, for the whole workspace.
+      description: |
+        Audited. The tag is suggested on this record again only on evidence newer than
+        the dismissal. Needs write authority over the record, like accepting does.
+        `409 suggestion_decided` when the suggestion was already decided.
+      responses:
+        '200':
+          description: The dismissed suggestion.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /tags:
     get:
       tags: [Tags]
@@ -31498,7 +31602,7 @@ components:
             rebound to another model drops the attempts of the one before it.
         failures:
           type: integer
-          description: How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached.
+          description: How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`), the provider's refusal of a malformed request (`request_rejected`), and the model outcomes `output_withheld` and `output_rejected` are not failures.
         last_sentinel:
           type: string
           description: |
@@ -31629,7 +31733,7 @@ components:
         task: { type: string }
         window: { type: string }
         total: { type: integer, format: int64, description: 'Logical calls in the window, cache hits excluded.' }
-        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt failed.' }
+        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt served the caller nothing: it failed, or its answer was withheld or refused.' }
         steps: { type: array, items: { $ref: '#/components/schemas/AiFlowStep' }, description: 'The decision model first, then each tier in ladder order.' }
     AiFlowStep:
       type: object
@@ -31640,7 +31744,7 @@ components:
         provider: { type: string }
         model: { type: string }
         attempts: { type: integer, format: int64 }
-        answered: { type: integer, format: int64, description: 'Logical calls this step answered.' }
+        answered: { type: integer, format: int64, description: 'Logical calls this step answered and served to the caller.' }
         p50_ms: { type: integer, format: int64 }
         gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
     AiDeferredWork:
@@ -31811,10 +31915,12 @@ components:
             turned the call away and said nothing about why, so the model was never reached and
             no claim is made about the cause.
 
-            Two codes are outcomes rather than failures: a model was reached and decided.
+            Three codes are not failures. Two are outcomes, where a model was reached and decided.
             `output_withheld` — the provider declined to deliver the answer: a refusal, a
-            safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request
-            malformed, which is a defect on the calling side.
+            safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the
+            task's own check refused the answer on every attempt, so the caller was served nothing.
+            The third, `request_rejected`, is the provider's refusal rather than a model outcome:
+            its own error code named the request malformed, which is a defect on the calling side.
 
             `timeout` — the attempt's deadline stopped it: the task's model call timeout on a
             ladder attempt, its decision model timeout on a decision attempt. A failure like
@@ -32266,11 +32372,26 @@ components:
         list S-E15.4c requires, not a diff of what changed), or errored
         because it could not be reversed — a single irreversible row never
         aborts the rest of the run.
+
+        A row the run CORRECTED rather than created is in none of them: undo
+        archives what a run landed, and a correction to a record another run
+        landed has nothing to archive and no previous value to restore.
+        `updates_not_reversed` counts those rows, so a reader is not told a
+        correction was taken back while it stands.
       required: [run_id, status, reversed_count, kept, errored]
       properties:
         run_id: { type: string, format: uuid }
         status: { $ref: '#/components/schemas/ImportRunStatus' }
         reversed_count: { type: integer, minimum: 0, description: 'Import-created rows that were untouched since and have been reversed (archived).' }
+        updates_not_reversed:
+          type: integer
+          minimum: 0
+          description: >-
+            Rows this run corrected rather than created, which undo leaves
+            corrected. A row count, from the run's own report: two rows naming
+            one record count twice. Absent or zero means the run corrected
+            nothing, and what it did reverse is `reversed_count`, `kept` and
+            `errored`.
         kept:
           type: array
           description: 'Import-created rows a human edited since import, therefore left in place (A93).'
@@ -44309,6 +44430,12 @@ components:
         # size in both themes. Mirrors the tag_color_check constraint.
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
+        suggestible:
+          type: boolean
+          description: |
+            Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+            carries a description of what interest looks like, and that description is what
+            the suggestion is matched against. Only Admin and Ops set it.
         # The If-Match precondition a caller sends back when they rename this
         # tag. Without it on the read, a client has nothing to quote and every
         # rename is last-write-wins.
@@ -44387,11 +44514,45 @@ components:
         name: { type: string, maxLength: 64 }
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
+        suggestible:
+          type: boolean
+          description: |
+            Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+            carries a description of what interest looks like, and that description is what
+            the suggestion is matched against. Only Admin and Ops set it.
         version: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
         usage: { $ref: '#/components/schemas/TagUsage' }
+
+    TagSuggestion:
+      type: object
+      description: |
+        A suggestible tag proposed on one contact or company from captured mail or meeting
+        notes, waiting for somebody to accept or dismiss it.
+      required: [id, state, tag, entity_type, entity_id, entity_name, created_at, evidence]
+      properties:
+        id: { type: string, format: uuid }
+        state: { type: string, enum: [open, accepted, dismissed, superseded] }
+        tag: { $ref: '#/components/schemas/RowTag' }
+        entity_type: { type: string, enum: [contact, company] }
+        entity_id: { type: string, format: uuid }
+        entity_name: { type: string }
+        created_at: { type: string, format: date-time }
+        evidence:
+          type: array
+          description: The activities the suggestion cites, newest first.
+          items: { $ref: '#/components/schemas/TagSuggestionEvidence' }
+
+    TagSuggestionEvidence:
+      type: object
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string, description: 'The activity kind: email, meeting, note or call.' }
+        subject: { type: [string, 'null'], description: Absent when the activity has none or it was redacted. }
+        occurred_at: { type: string, format: date-time }
 
     TagUsage:
       type: object
@@ -44421,6 +44582,9 @@ components:
         name: { type: string, maxLength: 64 }
         color: { type: string, enum: [teal, amber, rose, slate, sky, violet, lime, orange, none] }
         description: { type: string }
+        suggestible:
+          type: boolean
+          description: Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held.
 
     MergeTagsRequest:
       type: object
@@ -54329,6 +54493,7 @@ components:
             `needs_you` has always had.
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
         deal_suggestions_open: { type: integer, minimum: 0, description: "Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`." }
+        tag_suggestions_open: { type: integer, minimum: 0, description: "Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`." }
         meetings:
           type: integer
           minimum: 0
@@ -54466,7 +54631,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
+          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -55031,7 +55196,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -55955,7 +56120,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
