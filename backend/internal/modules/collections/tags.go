@@ -27,17 +27,19 @@ type tagRow struct {
 	Name        string
 	Color       *string
 	Description *string
+	// Suggestible lets the tag scout propose this tag from captured evidence.
+	Suggestible bool
 	Version     int64
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	ArchivedAt  *time.Time
 }
 
-const tagColumns = `id, name, color, description, version, created_at, updated_at, archived_at`
+const tagColumns = `id, name, color, description, suggestible, version, created_at, updated_at, archived_at`
 
 func scanTag(r pgx.Row) (tagRow, error) {
 	var t tagRow
-	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.Description, &t.Version,
+	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.Description, &t.Suggestible, &t.Version,
 		&t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt)
 	return t, err
 }
@@ -213,7 +215,7 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 	var out taggableRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var applyErr error
-		out, applyErr = applyTagTx(ctx, tx, tagID, entityType, entityID)
+		out, applyErr = applyTagTx(ctx, tx, tagID, entityType, entityID, nil)
 		return applyErr
 	})
 	return out, err
@@ -239,7 +241,7 @@ func (s *Store) ApplyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, enti
 	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
 		return taggableRow{}, err
 	}
-	return applyTagTx(ctx, tx, tagID, entityType, entityID)
+	return applyTagTx(ctx, tx, tagID, entityType, entityID, nil)
 }
 
 // applyTagTx is the write itself, shared by both entry points above so a change
@@ -248,7 +250,8 @@ func (s *Store) ApplyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, enti
 //
 // The gates are the callers' — each runs them before reaching here, because a
 // transaction is the wrong place to discover a caller had no authority.
-func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) (taggableRow, error) {
+// evidence lands on the audit row: an accepted suggestion names itself there.
+func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID, evidence map[string]any) (taggableRow, error) {
 	var out taggableRow
 	err := func() error {
 		var archived *time.Time
@@ -282,7 +285,7 @@ func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType stri
 		if err != nil {
 			return err
 		}
-		_, err = auditTagLink(ctx, tx, tagID, tagApplied, linkImage{EntityType: entityType, EntityID: entityID})
+		_, err = auditTagLink(ctx, tx, tagID, tagApplied, linkImage{EntityType: entityType, EntityID: entityID}, evidence)
 		return err
 	}()
 	return out, err
@@ -294,8 +297,8 @@ const (
 	tagRemoved = "removed"
 )
 
-func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string, link linkImage) (ids.UUID, error) {
-	return storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{change: link})
+func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string, link linkImage, evidence map[string]any) (ids.UUID, error) {
+	return storekit.AuditEventWithEvidence(ctx, tx, "update", "tag", tagID.UUID, map[string]any{change: link}, evidence)
 }
 
 // EnsureTaggable refuses a record this caller may not tag.

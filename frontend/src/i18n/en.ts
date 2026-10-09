@@ -2863,6 +2863,30 @@ export const en = {
   "tagAdmin.editTitle": "Edit tag",
   "tagAdmin.nameLabel": "Name",
   "tagAdmin.colorLabel": "Color",
+  "brief.coverage.source.tag_suggestion": "Suggested tags",
+  "worklist.untitled.tag_suggestion": "A tag the evidence suggests",
+  "tagSuggestion.agent": "Tag suggestions",
+  "tagSuggestion.citedHeading": "Suggested because of:",
+  "tagSuggestion.evidence": "{kind} · {subject} · {when}",
+  "tagSuggestion.noSubject": "No subject",
+  "tagSuggestion.kind.email": "Email",
+  "tagSuggestion.kind.meeting": "Meeting",
+  "tagSuggestion.kind.note": "Note",
+  "tagSuggestion.kind.call": "Call",
+  "tagSuggestion.accept": "Add tag",
+  "tagSuggestion.dismiss": "Not this tag",
+  "tagSuggestion.dismissed":
+    "Dismissed for everyone. It comes back only if newer mail or notes match.",
+  "tagSuggestion.accepted": "{tag} added to {record}.",
+  "tagSuggestion.decided":
+    "Someone already decided this suggestion. Reload to see where it stands.",
+  "tagSuggestion.unavailable":
+    "The suggestion could not be read. Try again later.",
+  "tagAdmin.descriptionLabel": "Words that show interest",
+  "tagAdmin.descriptionHint":
+    "Separate words or phrases with commas, for example: pricing for Product X, Product X demo.",
+  "tagAdmin.suggestibleLabel":
+    "Suggest this tag when mail or meeting notes use these words",
   "tagAdmin.colorNone": "No color",
   "tagAdmin.color.teal": "Teal",
   "tagAdmin.color.amber": "Amber",

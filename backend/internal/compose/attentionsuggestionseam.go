@@ -7,6 +7,7 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
@@ -29,4 +30,24 @@ func (a attentionDealSuggestions) OpenSuggestions(ctx context.Context, limit int
 
 func (a attentionDealSuggestions) CountOpen(ctx context.Context) (int, error) {
 	return a.store.CountOpenSuggestions(ctx)
+}
+
+// attentionTagSuggestions binds the needs_you lane's tag suggestions to the
+// collections store that owns them.
+type attentionTagSuggestions struct{ store *collections.Store }
+
+func (a attentionTagSuggestions) OpenTagSuggestions(ctx context.Context, limit int) ([]crmcontracts.TagSuggestion, error) {
+	list, err := a.store.OpenTagSuggestions(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]crmcontracts.TagSuggestion, 0, len(list))
+	for _, suggestion := range list {
+		out = append(out, collections.WireTagSuggestion(suggestion))
+	}
+	return out, nil
+}
+
+func (a attentionTagSuggestions) CountOpenTagSuggestions(ctx context.Context) (int, error) {
+	return a.store.CountOpenTagSuggestions(ctx)
 }

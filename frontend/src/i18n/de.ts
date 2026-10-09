@@ -2802,6 +2802,30 @@ export const de = {
   "tagAdmin.editTitle": "Tag bearbeiten",
   "tagAdmin.nameLabel": "Name",
   "tagAdmin.colorLabel": "Farbe",
+  "brief.coverage.source.tag_suggestion": "Vorgeschlagene Tags",
+  "worklist.untitled.tag_suggestion": "Ein Tag, auf den die Hinweise deuten",
+  "tagSuggestion.agent": "Tag-Vorschläge",
+  "tagSuggestion.citedHeading": "Vorgeschlagen wegen:",
+  "tagSuggestion.evidence": "{kind} · {subject} · {when}",
+  "tagSuggestion.noSubject": "Kein Betreff",
+  "tagSuggestion.kind.email": "E-Mail",
+  "tagSuggestion.kind.meeting": "Termin",
+  "tagSuggestion.kind.note": "Notiz",
+  "tagSuggestion.kind.call": "Anruf",
+  "tagSuggestion.accept": "Tag hinzufügen",
+  "tagSuggestion.dismiss": "Nicht dieser Tag",
+  "tagSuggestion.dismissed":
+    "Für alle verworfen. Der Vorschlag kommt nur wieder, wenn neuere Mails oder Notizen passen.",
+  "tagSuggestion.accepted": "{tag} zu {record} hinzugefügt.",
+  "tagSuggestion.decided":
+    "Über diesen Vorschlag wurde schon entschieden. Lade neu, um den Stand zu sehen.",
+  "tagSuggestion.unavailable":
+    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
+  "tagAdmin.descriptionLabel": "Wörter, die Interesse zeigen",
+  "tagAdmin.descriptionHint":
+    "Trenne Wörter oder Wendungen mit Kommas, zum Beispiel: Preise für Produkt X, Demo von Produkt X.",
+  "tagAdmin.suggestibleLabel":
+    "Diesen Tag vorschlagen, wenn Mails oder Terminnotizen diese Wörter enthalten",
   "tagAdmin.colorNone": "Keine Farbe",
   "tagAdmin.color.teal": "Petrol",
   "tagAdmin.color.amber": "Bernstein",

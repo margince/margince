@@ -4,7 +4,14 @@
 import { useState } from "react";
 
 import { useCan, useCanWrite } from "../app/capability";
-import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import {
+  Button,
+  Checkbox,
+  Field,
+  Modal,
+  Textarea,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
@@ -304,6 +311,10 @@ function TagDialog({
   // Narrowed, not asserted: the Select hands back a string, and a value that is
   // not one of the four would reach the API as a colour the server refuses.
   const [color, setColor] = useState<TagColor | "">(existing?.color ?? "");
+  const [description, setDescription] = useState(existing?.description ?? "");
+  const [suggestible, setSuggestible] = useState(
+    existing?.suggestible ?? false,
+  );
   const create = useCreateTag();
   const update = useUpdateTag();
   const pending = create.isPending || update.isPending;
@@ -332,6 +343,8 @@ function TagDialog({
           // "none" clears, because an absent field and a null field decode to
           // the same thing in the request type.
           color: color === "" ? "none" : color,
+          description: description.trim(),
+          suggestible,
         },
         { onSuccess: onClose },
       );
@@ -350,7 +363,11 @@ function TagDialog({
       title={existing ? t("tagAdmin.editTitle") : t("tagAdmin.addTitle")}
       intent="form"
       confirmLabel={existing ? t("tagAdmin.save") : t("tagAdmin.create")}
-      confirmDisabled={name.trim() === "" || unversioned}
+      confirmDisabled={
+        name.trim() === "" ||
+        unversioned ||
+        undescribedSuggestion(suggestible, description)
+      }
       pending={pending}
       error={
         unversioned
@@ -381,6 +398,16 @@ function TagDialog({
           />
         )}
       </Field>
+      {/* Suggestions are switched on for a word that exists, so a new word is
+          coined first and described when it is edited. */}
+      {existing && (
+        <SuggestionFields
+          description={description}
+          onDescription={setDescription}
+          suggestible={suggestible}
+          onSuggestible={setSuggestible}
+        />
+      )}
       {near.length > 0 && (
         <Callout
           tone="warning"
@@ -398,6 +425,49 @@ function TagDialog({
         </Callout>
       )}
     </ConfirmModal>
+  );
+}
+
+// The server refuses a suggested tag with no description to match against, so
+// the dialog does too.
+function undescribedSuggestion(suggestible: boolean, description: string) {
+  return suggestible && description.trim() === "";
+}
+
+/** What interest in a tag looks like, and whether captured mail may suggest it. */
+function SuggestionFields({
+  description,
+  onDescription,
+  suggestible,
+  onSuggestible,
+}: Readonly<{
+  description: string;
+  onDescription: (next: string) => void;
+  suggestible: boolean;
+  onSuggestible: (next: boolean) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <Field
+        label={t("tagAdmin.descriptionLabel")}
+        hint={t("tagAdmin.descriptionHint")}
+      >
+        {(control) => (
+          <Textarea
+            {...control}
+            value={description}
+            rows={3}
+            onChange={(event) => onDescription(event.target.value)}
+          />
+        )}
+      </Field>
+      <Checkbox
+        label={t("tagAdmin.suggestibleLabel")}
+        checked={suggestible}
+        onChange={(event) => onSuggestible(event.currentTarget.checked)}
+      />
+    </>
   );
 }
 

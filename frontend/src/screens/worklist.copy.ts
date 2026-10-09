@@ -723,6 +723,7 @@ export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
   deal_suggestion: true,
+  tag_suggestion: true,
   task: true,
   weekly_commitment: true,
   brief_item: true,

@@ -74,6 +74,7 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// the deal it proposes, `dismiss` records that it is not one, and `open`
 	// reaches the company through the routing table.
 	"deal_suggestion":      {"decide", "dismiss", "open"},
+	"tag_suggestion":       {"decide", "dismiss", "open"},
 	"introduction_request": {"decide", "open"},
 	// Drawn by NoticeAcknowledge rather than through the routing table.
 	"notice": {"acknowledge", "open"},
@@ -338,7 +339,10 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			Domain: "mckinsey.com", Reason: "Nothing on the site named a company.",
 			AskedAt: readInstant,
 		}}}).
-		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}})
+		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}}).
+		WithTagSuggestions(&stubTagSuggestions{rows: []crmcontracts.TagSuggestion{
+			tagSuggestionRow(crmcontracts.TagSuggestionEntityTypeContact),
+		}})
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)
