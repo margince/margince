@@ -384,16 +384,15 @@ beforeEach(() => {
 // clobber what the administrator typed.
 const EXPECTED_READS = 2;
 
-// The dossier case below waits out the whole poll cadence — five rounds of
-// EXPECTED_READS at READ_POLL_MS — and three default waiters beside it. A test
-// may spend the SUM of its waiters' budgets without any one of them failing, so
-// its own ceiling has to cover that; the suite's is derived for tests that wait
-// at the default. Stated here rather than borrowed, with the same measured
-// allowance for the work between the waits that the suite ceiling uses, so both
-// rest on one measurement instead of two guesses (issue 1144).
+// The dossier case below waits out the whole poll cadence: five rounds of
+// EXPECTED_READS at READ_POLL_MS. It also runs five default waiters. A test
+// may spend the SUM of its waiters' budgets without any one of them failing,
+// so its own ceiling has to cover that. The suite's is derived for tests that
+// wait at the default. The allowance for the work between the waits is the one
+// the suite ceiling uses, so both rest on one measurement.
 const DOSSIER_TEST_MS =
   READ_POLL_MS * EXPECTED_READS * 5 +
-  ASYNC_UTIL_TIMEOUT_MS * 3 +
+  ASYNC_UTIL_TIMEOUT_MS * 5 +
   SLOWEST_MEASURED_TEST_MS;
 
 /**

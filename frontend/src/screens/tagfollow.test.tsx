@@ -13,6 +13,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  ASYNC_UTIL_TIMEOUT_MS,
+  SLOWEST_MEASURED_TEST_MS,
+} from "../../vitest.budget";
 
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { en } from "../i18n/en";
@@ -109,6 +113,9 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+const ELEVEN_WAITS_TEST_MS =
+  ASYNC_UTIL_TIMEOUT_MS * 11 + SLOWEST_MEASURED_TEST_MS;
 
 describe("tagging a contact offers the tag to their company", () => {
   it("applies it to the company on one press", async () => {
@@ -244,8 +251,10 @@ describe("tagging a company offers the tag to its contacts", () => {
     return { sent, annaTagReads };
   }
 
-  // Eleven waits in sequence, one second each, so it states its own ceiling.
-  it("lists current contacts, marks who carries it, and tags the ticked ones in bulk", async () => {
+  // Eleven default waits in sequence, so it states its own ceiling.
+  it("lists current contacts, marks who carries it, and tags the ticked ones in bulk", {
+    timeout: ELEVEN_WAITS_TEST_MS,
+  }, async () => {
     const user = userEvent.setup();
     const { sent, annaTagReads } = mountCompany();
     await applyProductX(user);
@@ -306,7 +315,7 @@ describe("tagging a company offers the tag to its contacts", () => {
         },
       },
     ]);
-  }, 12_000);
+  });
 
   it("writes nothing to the contacts when the reader dismisses the offer", async () => {
     const user = userEvent.setup();
