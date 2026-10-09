@@ -128,7 +128,7 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 	for _, field := range []struct {
 		name  string
 		value *string
-	}{{"title", title}, {"phone", phone}} {
+	}{{fieldTitle, title}, {fieldPhone, phone}} {
 		if runes := fieldRunes(field.value); runes > SignatureFieldMaxRunes {
 			return EmailSignature{}, &SignatureTooLongError{Field: field.name, Max: SignatureFieldMaxRunes, Runes: runes}
 		}
