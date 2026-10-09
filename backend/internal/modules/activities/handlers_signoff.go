@@ -20,8 +20,8 @@ func (h Handlers) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// The contract requires the key; an empty string is a blank composer.
-	if _, present := httperr.PresentField(r, fieldBody); !present {
-		writeStoreErr(w, r, &RequiredFieldError{Field: fieldBody})
+	if err := httperr.RequireSent(r, fieldBody, fieldBody+" is required"); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	var subject string

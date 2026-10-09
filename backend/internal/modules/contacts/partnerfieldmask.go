@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -71,6 +72,25 @@ func clearsTheCallerMayMake(ctx context.Context, tx pgx.Tx, cleared []string) ([
 	return slices.DeleteFunc(slices.Clone(cleared), func(field string) bool {
 		return slices.Contains(*probe[0].MaskedFields, field)
 	}), nil
+}
+
+// partnerClearable are the nullable fields the upsert sets to NULL. The write is
+// one upsert statement rather than a storekit.Patch, so ApplyClears has no patch
+// to act on; this set and its refusal are the same contract. gate_metrics
+// clears both numbers it carries.
+var partnerClearable = []string{
+	partnerFieldMarginTier, "next_step", "next_step_due_at", "served_segments", "gate_metrics",
+}
+
+// refuseUnclearablePartnerFields answers an explicit null on a field this
+// record cannot set to nothing, so it is not accepted and silently dropped.
+func refuseUnclearablePartnerFields(cleared []string) error {
+	for _, field := range cleared {
+		if !slices.Contains(partnerClearable, field) {
+			return &storekit.NotClearableError{Field: field}
+		}
+	}
+	return nil
 }
 
 // refuseMaskedPartnerSort refuses an order over a column this caller's role

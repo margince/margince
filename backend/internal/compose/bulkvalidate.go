@@ -14,8 +14,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// maxBulkTaskSubject is BulkTask.subject's maxLength in the contract, in characters.
-const maxBulkTaskSubject = 500
+// The contract's caps on a bulk change's free text, in characters.
+const (
+	maxBulkTaskSubject = 500
+	maxBulkNote        = 500
+)
 
 // The parameters a bulk change can name beside its verb and items.
 const (
@@ -89,9 +92,18 @@ func validateBulkParams(change bulkChange, need, why string) error {
 	if change.task != nil && !values.HasVisibleText(change.task.Subject) {
 		return httperr.Validation("task.subject", "required", "create_task needs a subject: what has to be done")
 	}
+	return checkBulkTextLimits(change)
+}
+
+// checkBulkTextLimits holds the free text of a change to the contract's caps.
+func checkBulkTextLimits(change bulkChange) error {
 	if change.task != nil && utf8.RuneCountInString(change.task.Subject) > maxBulkTaskSubject {
 		return httperr.Validation("task.subject", "too_long",
 			fmt.Sprintf("a task subject holds at most %d characters", maxBulkTaskSubject))
+	}
+	if change.note != nil && utf8.RuneCountInString(*change.note) > maxBulkNote {
+		return httperr.Validation(bulkParamNote, "too_long",
+			fmt.Sprintf("a note holds at most %d characters", maxBulkNote))
 	}
 	return nil
 }

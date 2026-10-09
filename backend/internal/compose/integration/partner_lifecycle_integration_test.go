@@ -22,6 +22,7 @@ type partnerWire struct {
 	CertStatus        string         `json:"cert_status"`
 	PartnerRole       string         `json:"partner_role"`
 	RelationshipStage string         `json:"relationship_stage"`
+	MarginTier        *string        `json:"margin_tier"`
 	NextStep          *string        `json:"next_step"`
 	NextStepDueAt     *string        `json:"next_step_due_at"`
 	ServedSegments    []string       `json:"served_segments"`
@@ -154,6 +155,7 @@ func TestPartnerNullableFieldsClearOnNullAndKeepWhenOmitted(t *testing.T) {
 	if status := e.Call(t, "PUT", path, AnyMap{
 		"partner_role": "consulting", "margin_tier": "tier2_20", "next_step": "Send the one-pager",
 		"next_step_due_at": "2026-08-01", "served_segments": []string{"fintech"},
+		"gate_metrics": AnyMap{"certified_staff": 4, "retention_rate": 87},
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("seeding the partner → %d", status)
 	}
@@ -162,21 +164,29 @@ func TestPartnerNullableFieldsClearOnNullAndKeepWhenOmitted(t *testing.T) {
 	if status := e.Call(t, "PUT", path, AnyMap{"partner_role": "consulting"}, nil, &kept); status != http.StatusOK {
 		t.Fatalf("an edit that names no nullable field → %d", status)
 	}
-	if kept.NextStep == nil || kept.NextStepDueAt == nil || len(kept.ServedSegments) != 1 {
+	if kept.MarginTier == nil || kept.GateMetrics["retention_rate"] != 87 || kept.NextStep == nil || kept.NextStepDueAt == nil || len(kept.ServedSegments) != 1 {
 		t.Fatalf("an omitted field was cleared: %+v", kept)
 	}
 
-	var cleared struct {
-		partnerWire
-		MarginTier *string `json:"margin_tier"`
-	}
+	var cleared partnerWire
 	if status := e.Call(t, "PUT", path, AnyMap{
 		"partner_role": "consulting", "margin_tier": nil, "next_step": nil,
-		"next_step_due_at": nil, "served_segments": nil,
+		"next_step_due_at": nil, "served_segments": nil, "gate_metrics": nil,
 	}, nil, &cleared); status != http.StatusOK {
 		t.Fatalf("a body of nulls → %d", status)
 	}
 	if cleared.MarginTier != nil || cleared.NextStep != nil || cleared.NextStepDueAt != nil || len(cleared.ServedSegments) != 0 {
 		t.Fatalf("a null left a value behind: %+v", cleared)
+	}
+	if _, ok := cleared.GateMetrics["retention_rate"]; ok {
+		t.Fatalf("gate_metrics null left retention_rate behind: %v", cleared.GateMetrics)
+	}
+
+	// A null on a field this record cannot clear is a stated refusal, never a
+	// 200 that changed nothing.
+	for _, field := range []string{"cert_status", "relationship_stage"} {
+		if status := e.Call(t, "PUT", path, AnyMap{"partner_role": "consulting", field: nil}, nil, nil); status != 422 {
+			t.Fatalf("%s: null → %d, want 422", field, status)
+		}
 	}
 }

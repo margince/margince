@@ -101,8 +101,8 @@ type UpsertPartnerInput struct {
 	NextStep          *string
 	NextStepDueAt     *time.Time
 	ServedSegments    *[]string
-	// Cleared names the nullable fields the caller sent as an explicit null.
-	// A nil pointer above means "leave it alone" and cannot say "clear it".
+	// Cleared names the fields the caller sent as an explicit null; a nil
+	// pointer above means "leave it alone" and cannot say "clear it".
 	Cleared []string
 	// The fit-override pair is store-seam only: the contract exposes
 	// partner_fit_score/…_override_reason read-only, so no handler maps
@@ -188,6 +188,9 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 	// company mutation, so the company's own write grant is required too; the
 	// partner grant alone must not become a side door onto companies.
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+		return crmcontracts.Partner{}, err
+	}
+	if err := refuseUnclearablePartnerFields(in.Cleared); err != nil {
 		return crmcontracts.Partner{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -304,8 +307,8 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 		  partner_role = EXCLUDED.partner_role,
 		  cert_status = coalesce($3, partner.cert_status),
 		  margin_tier = CASE WHEN 'margin_tier' = ANY($15) THEN NULL ELSE coalesce($4, partner.margin_tier) END,
-		  certified_staff = coalesce($5, partner.certified_staff),
-		  retention_rate = coalesce($6, partner.retention_rate),
+		  certified_staff = CASE WHEN 'gate_metrics' = ANY($15) THEN 0 ELSE coalesce($5, partner.certified_staff) END,
+		  retention_rate = CASE WHEN 'gate_metrics' = ANY($15) THEN NULL ELSE coalesce($6, partner.retention_rate) END,
 		  relationship_stage = coalesce($8, partner.relationship_stage),
 		  next_step = CASE WHEN 'next_step' = ANY($15) THEN NULL ELSE coalesce($9, partner.next_step) END,
 		  next_step_due_at = CASE WHEN 'next_step_due_at' = ANY($15) THEN NULL ELSE coalesce($10, partner.next_step_due_at) END,
